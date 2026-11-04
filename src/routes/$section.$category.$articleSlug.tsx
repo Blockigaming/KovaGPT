@@ -1,3 +1,4 @@
+import { migratedPublicPath } from "@/lib/public-url-migrations.mjs";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { PublicDetailPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
@@ -5,6 +6,10 @@ import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import { findReviewPage } from "@/lib/review-page-content";
 export const Route = createFileRoute("/$section/$category/$articleSlug")({
   loader: async ({ params }) => {
+    const migrated = migratedPublicPath(
+      `/${params.section}/${params.category}/${params.articleSlug}`,
+    );
+    if (migrated) throw redirect({ to: migrated as never, statusCode: 301, replace: true });
     const key = `${params.section}/${params.category}/${params.articleSlug}`;
     const reviewPage = findReviewPage(key);
     if (reviewPage) throw redirect({ to: `/review/${reviewPage.slug}` as never, replace: true });

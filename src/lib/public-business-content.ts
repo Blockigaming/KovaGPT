@@ -2,27 +2,27 @@ import type { PublicDetailPage } from "@/lib/public-detail-content";
 import { PUBLIC_BUSINESS_PATHS } from "@/lib/seo-policy.mjs";
 
 const TITLE_OVERRIDES = new Map<string, string>([
-  ["amex-chatgpt-business-credit", "Business credit program availability"],
+  ["amex-kovagpt-business-credit", "Business credit program availability"],
   ["customer-stories", "KovaGPT business examples"],
   ["fine-tuning-gpt-4o-webinar", "Fine-tuning evaluation session"],
   ["frontier", "KovaGPT for complex organization workflows"],
   ["guaranteed-capacity", "Capacity planning for KovaGPT"],
-  ["chatgpt-business-smb-guide", "KovaGPT guide for small and midsize businesses"],
-  ["chatgpt-usage-and-adoption-patterns-at-work", "AI adoption patterns at work"],
+  ["kovagpt-business-smb-guide", "KovaGPT guide for small and midsize businesses"],
+  ["kovagpt-usage-and-adoption-patterns-at-work", "AI adoption patterns at work"],
   ["how-openai-uses-codex", "How teams use coding agents"],
   ["inside-gpt5-our-best-model-for-work", "Choosing an AI mode for work"],
   ["the-state-of-enterprise-ai-2025-report", "Enterprise AI readiness guide"],
-  ["download-the-chatgpt-work-guide-for-sales-teams", "AI work guide for sales teams"],
+  ["download-the-kovagpt-work-guide-for-sales-teams", "AI work guide for sales teams"],
   ["gartner-2026-agentic-coding-leader", "Independent analyst recognition status"],
-  ["how-our-sales-team-uses-chatgpt-work", "How sales teams can use KovaGPT"],
-  ["new-in-chatgpt-for-business-april-updates-2025", "KovaGPT business update status"],
-  ["new-in-chatgpt-for-work-march-updates-2025", "KovaGPT work update status"],
+  ["how-our-sales-team-uses-kovagpt-work", "How sales teams can use KovaGPT"],
+  ["new-in-kovagpt-for-business-april-updates-2025", "KovaGPT business update status"],
+  ["new-in-kovagpt-for-work-march-updates-2025", "KovaGPT work update status"],
   ["openai-presence", "KovaGPT service availability"],
   [
     "solving-complex-problems-with-openai-o1-models",
     "Solving complex problems with reasoning modes",
   ],
-  ["updates-to-chatgpt-business-plans-livestream-june-2025", "KovaGPT plan update status"],
+  ["updates-to-kovagpt-business-plans-livestream-june-2025", "KovaGPT plan update status"],
 ]);
 
 const titleFromPath = (path: string) => {

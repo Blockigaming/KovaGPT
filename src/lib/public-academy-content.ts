@@ -137,7 +137,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Discuss organization needs", to: "/contact-sales" },
   },
   {
-    slug: "chatgpt-for-education",
+    slug: "kovagpt-for-education",
     title: "AI assistance for education",
     description:
       "Evaluate KovaGPT for teaching and learning with academic integrity, privacy, accessibility, and educator oversight.",
@@ -157,7 +157,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open Study", to: "/study" },
   },
   {
-    slug: "chatgpt-for-work",
+    slug: "kovagpt-for-work",
     title: "Use KovaGPT for everyday work",
     description:
       "Structure everyday KovaGPT work with clear briefs, approved context, review checkpoints, and human-owned decisions.",
@@ -177,7 +177,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open KovaGPT", to: "/" },
   },
   {
-    slug: "chatgpt-sites",
+    slug: "kovagpt-sites",
     title: "Publish a focused site from reviewed content",
     description:
       "Plan and publish a Kova site with an explicit audience, content hierarchy, accessibility checks, and final review.",
@@ -197,7 +197,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open Sites", to: "/sites" },
   },
   {
-    slug: "chatgpt-work",
+    slug: "kovagpt-work",
     title: "Coordinate multi-step work with KovaGPT",
     description:
       "Use KovaGPT Work for bounded research, files, analysis, drafting, and execution with visible progress and controls.",
@@ -217,7 +217,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open KovaGPT", to: "/" },
   },
   {
-    slug: "chatgpt-work/how-business-operations-teams-use-codex",
+    slug: "kovagpt-work/how-business-operations-teams-use-codex",
     title: "Coding assistance for business operations",
     description:
       "Help operations teams automate bounded technical work with KovaGPT while preserving controls, tests, and process ownership.",
@@ -237,7 +237,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open coding guidance", to: "/code-helper" },
   },
   {
-    slug: "chatgpt-work/how-data-science-teams-use-codex",
+    slug: "kovagpt-work/how-data-science-teams-use-codex",
     title: "Coding assistance for data science teams",
     description:
       "Use KovaGPT for data-science code, diagnostics, and documentation with reproducible inputs and validated results.",
@@ -257,7 +257,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open coding guidance", to: "/code-helper" },
   },
   {
-    slug: "chatgpt-work/how-sales-teams-use-codex",
+    slug: "kovagpt-work/how-sales-teams-use-codex",
     title: "Coding assistance for sales operations",
     description:
       "Use KovaGPT to improve sales-operation tooling with consent-aware data handling, tests, and human-controlled outreach.",
@@ -461,7 +461,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Open Code Helper", to: "/code-helper" },
   },
   {
-    slug: "how-to-use-chatgpt-work-for-everyday-tasks",
+    slug: "how-to-use-kovagpt-work-for-everyday-tasks",
     title: "Use Kova Work for everyday tasks",
     description:
       "Plan everyday research, files, analysis, and drafting in Kova Work with explicit steps and review points.",
@@ -681,7 +681,7 @@ const topics: readonly AcademyTopic[] = [
     action: { label: "Explore Kova workflows", to: "/use-cases" },
   },
   {
-    slug: "using-chatgpt",
+    slug: "using-kovagpt",
     title: "Use KovaGPT effectively",
     description:
       "Learn the core KovaGPT loop: describe the outcome, provide context, inspect the draft, and refine with evidence.",

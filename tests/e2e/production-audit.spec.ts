@@ -13,7 +13,7 @@ const routes = [
   "/apps",
   "/audit-log",
   "/changelog",
-  "/chatgpt-alternative",
+  "/kovagpt-alternative",
   "/code-helper",
   "/context-packs",
   "/files",

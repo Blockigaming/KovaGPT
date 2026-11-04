@@ -35,6 +35,7 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
+import { Route as KovagptAlternativeRouteImport } from './routes/kovagpt-alternative'
 import { Route as KovasRouteImport } from './routes/kovas'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
@@ -359,6 +360,11 @@ const ImagesRoute = ImagesRouteImport.update({
 const KnowledgeGraphRoute = KnowledgeGraphRouteImport.update({
   id: '/knowledge-graph',
   path: '/knowledge-graph',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KovagptAlternativeRoute = KovagptAlternativeRouteImport.update({
+  id: '/kovagpt-alternative',
+  path: '/kovagpt-alternative',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KovasRoute = KovasRouteImport.update({
@@ -1400,6 +1406,7 @@ export interface FileRoutesByFullPath {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovagpt-alternative': typeof KovagptAlternativeRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
@@ -1623,6 +1630,7 @@ export interface FileRoutesByTo {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovagpt-alternative': typeof KovagptAlternativeRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
@@ -1847,6 +1855,7 @@ export interface FileRoutesById {
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/kovagpt-alternative': typeof KovagptAlternativeRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
@@ -2072,6 +2081,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovagpt-alternative'
     | '/kovas'
     | '/library'
     | '/login'
@@ -2295,6 +2305,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovagpt-alternative'
     | '/kovas'
     | '/library'
     | '/login'
@@ -2518,6 +2529,7 @@ export interface FileRouteTypes {
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/kovagpt-alternative'
     | '/kovas'
     | '/library'
     | '/login'
@@ -2742,6 +2754,7 @@ export interface RootRouteChildren {
   HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
+  KovagptAlternativeRoute: typeof KovagptAlternativeRoute
   KovasRoute: typeof KovasRoute
   LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
@@ -3109,6 +3122,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge-graph'
       fullPath: '/knowledge-graph'
       preLoaderRoute: typeof KnowledgeGraphRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kovagpt-alternative': {
+      id: '/kovagpt-alternative'
+      path: '/kovagpt-alternative'
+      fullPath: '/kovagpt-alternative'
+      preLoaderRoute: typeof KovagptAlternativeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kovas': {
@@ -4626,6 +4646,7 @@ const rootRouteChildren: RootRouteChildren = {
   HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
+  KovagptAlternativeRoute: KovagptAlternativeRoute,
   KovasRoute: KovasRoute,
   LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,

@@ -1,5 +1,6 @@
 import "./public-foundation.css";
 import "./spec400-public.css";
+import "./marketing-rework.css";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
@@ -15,7 +16,6 @@ const navigation = [
   { label: "Business", to: "/business" },
   { label: "Pricing", to: "/pricing" },
   { label: "Download", to: "/download" },
-  { label: "Review", to: "/review" },
 ] as const;
 
 function isCurrentPath(pathname: string, to: string) {
@@ -119,7 +119,7 @@ export function PublicHeader() {
         aria-label="Public navigation"
       >
         <Link
-          to="/"
+          to={"/overview" as never}
           className="flex min-h-11 min-w-0 max-w-full shrink-0 items-center gap-2 rounded-lg pr-2 font-semibold tracking-[-0.01em] outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <NovaLogo decorative className="h-6 w-6" />

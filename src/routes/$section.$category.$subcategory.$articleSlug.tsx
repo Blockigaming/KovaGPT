@@ -1,9 +1,14 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { migratedPublicPath } from "@/lib/public-url-migrations.mjs";
+import { createFileRoute, redirect, notFound } from "@tanstack/react-router";
 import { PublicDetailPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 
 export const Route = createFileRoute("/$section/$category/$subcategory/$articleSlug")({
   loader: async ({ params }) => {
+    const migrated = migratedPublicPath(
+      `/${params.section}/${params.category}/${params.subcategory}/${params.articleSlug}`,
+    );
+    if (migrated) throw redirect({ to: migrated as never, statusCode: 301, replace: true });
     if (params.section !== "business") throw notFound();
     const key = `${params.section}/${params.category}/${params.subcategory}/${params.articleSlug}`;
     const { PUBLIC_BUSINESS_PAGE_BY_KEY } = await import("@/lib/public-business-content");

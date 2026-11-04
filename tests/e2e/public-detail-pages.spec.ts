@@ -66,7 +66,7 @@ const responsiveRoutes = [
   "/business/ai-for-engineering",
   "/apps/google-drive",
   "/academy/ai-fundamentals",
-  "/academy/chatgpt-work/how-data-science-teams-use-codex",
+  "/academy/kovagpt-work/how-data-science-teams-use-codex",
   "/policies/privacy-policy/california-privacy-rights-reporting",
   "/business/solutions/finance/workflows",
   "/business/plugins/google-drive",

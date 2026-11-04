@@ -17,7 +17,7 @@ function watchForHydrationErrors(page: import("@playwright/test").Page) {
 
 test("the public comparison page is indexable, stable, and KovaGPT-branded", async ({ page }) => {
   const hydrationErrors = watchForHydrationErrors(page);
-  const response = await page.goto("/chatgpt-alternative", { waitUntil: "domcontentloaded" });
+  const response = await page.goto("/kovagpt-alternative", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
   expect(response?.headers()["x-robots-tag"]).toBe("index, follow");

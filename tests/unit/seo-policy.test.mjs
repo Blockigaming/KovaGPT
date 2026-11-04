@@ -13,7 +13,7 @@ import {
 } from "../../src/lib/seo-policy.mjs";
 
 test("only intentional public routes are indexable", () => {
-  for (const pathname of ["/", "/pricing", "/chatgpt-alternative", "/blog/best-ai-assistants"]) {
+  for (const pathname of ["/", "/pricing", "/kovagpt-alternative", "/blog/best-ai-assistants"]) {
     assert.equal(isPublicIndexableRoute(pathname), true, pathname);
     assert.equal(robotsDirectiveForRoute(pathname), "index, follow", pathname);
   }
@@ -36,7 +36,7 @@ test("route failures and not-found responses are never indexable", () => {
   for (const status of ["error", "notFound", "redirected"]) {
     assert.equal(robotsDirectiveForRoute("/", [status]), "noindex, nofollow", status);
     assert.equal(
-      robotsDirectiveForRoute("/chatgpt-alternative", ["success", status]),
+      robotsDirectiveForRoute("/kovagpt-alternative", ["success", status]),
       "noindex, nofollow",
       status,
     );

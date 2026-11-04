@@ -26,7 +26,7 @@ const AUDITED_PUBLIC_PATHS = new Set([
   "/code-helper",
   "/ai-writer",
   "/research-assistant",
-  "/chatgpt-alternative",
+  "/kovagpt-alternative",
   "/ai-humanizer",
   "/humanize-ai-text",
 ]);

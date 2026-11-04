@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { PublicWebsiteLayout } from "./PublicWebsite";
+import "./public-website.css";
+import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
 
 export function websitePageHead(item: WebsitePage) {
@@ -33,26 +34,28 @@ export function websitePageHead(item: WebsitePage) {
 export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
   const category = item.path.split("/")[1];
   return (
-    <PublicWebsiteLayout>
+    <PublicShell>
       <main id="main-content" tabIndex={-1} className="public-website-article">
         <nav className="public-website-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">KovaGPT</Link>
           <span aria-hidden="true"> / </span>
           <span aria-current="page">{item.title}</span>
         </nav>
-        <p className="public-article-label">
-          {category === "help"
-            ? "Help Center"
-            : category === "developers"
-              ? "Developers"
-              : category === "connections"
-                ? "Connections"
-                : "KovaGPT"}
-        </p>
-        <h1>{item.title}</h1>
-        <p className="public-article-lede">{item.description}</p>
-        {item.availability && <p className="public-availability">{item.availability}</p>}
-        {item.review && <p className="public-availability">{item.review}</p>}
+        <header className="kova-article-hero">
+          <p className="public-article-label">
+            {category === "help"
+              ? "Help Center"
+              : category === "developers"
+                ? "Developers"
+                : category === "connections"
+                  ? "Connections"
+                  : "KovaGPT"}
+          </p>
+          <h1>{item.title}</h1>
+          <p className="public-article-lede">{item.description}</p>
+          {item.availability && <p className="public-availability">{item.availability}</p>}
+          {item.review && <p className="public-availability">{item.review}</p>}
+        </header>
         <div className="public-article-body">
           <div>
             {item.sections.map((section, index) => (
@@ -94,6 +97,6 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
           </section>
         )}
       </main>
-    </PublicWebsiteLayout>
+    </PublicShell>
   );
 }

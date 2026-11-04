@@ -7,7 +7,7 @@ const TITLES: Readonly<Record<string, string>> = Object.freeze({
   "au-osa-compliance": "Australia online-safety contact status",
   "business/premium-offer": "Business premium offer status",
   "chat-model-feedback": "Chat model feedback options",
-  "chatgpt-pro-community": "Pro community request status",
+  "kovagpt-pro-community": "Pro community request status",
   "codex-enterprise-promo": "Enterprise coding promotion status",
   "codex-for-oss": "Open-source coding support status",
   "codex-labs": "Coding labs request status",

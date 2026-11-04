@@ -54,7 +54,7 @@ test("robots and sitemap share an explicit public/private boundary", async () =>
   assert.doesNotMatch(robots, /lovable/iu);
   assert.match(sitemap, /PUBLIC_SITEMAP_ENTRIES/u);
   assert.doesNotMatch(sitemap, /path:\s*["']\/(?:api|account|chat|projects|settings|work)/u);
-  assert.match(policy, /"\/chatgpt-alternative"/u);
+  assert.match(policy, /"\/kovagpt-alternative"/u);
 
   for (const { path } of PUBLIC_SITEMAP_ENTRIES) {
     if (path === "/") continue;
@@ -83,7 +83,7 @@ test("robots and sitemap share an explicit public/private boundary", async () =>
 });
 
 test("the comparison landing keeps KovaGPT dominant and avoids unverified claims", async () => {
-  const landing = await readSource("src/routes/chatgpt-alternative.tsx");
+  const landing = await readSource("src/routes/kovagpt-alternative.tsx");
 
   assert.match(landing, /h1="KovaGPT, built for focused AI work"/u);
   assert.match(landing, /independently developed and branded product/u);

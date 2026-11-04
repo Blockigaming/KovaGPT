@@ -689,7 +689,7 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     ],
   ),
   page(
-    "import-to-chatgpt",
+    "import-to-kovagpt",
     "Bring content into KovaGPT",
     "Import guidance",
     "Move supported content into KovaGPT without implying direct access to another service or account.",

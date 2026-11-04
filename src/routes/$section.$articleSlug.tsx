@@ -1,3 +1,4 @@
+import { migratedPublicPath } from "@/lib/public-url-migrations.mjs";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
@@ -8,6 +9,8 @@ import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
 import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 export const Route = createFileRoute("/$section/$articleSlug")({
   loader: async ({ params }) => {
+    const migrated = migratedPublicPath(`/${params.section}/${params.articleSlug}`);
+    if (migrated) throw redirect({ to: migrated as never, statusCode: 301, replace: true });
     const key = publicationKey(params.section, params.articleSlug);
     const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${key}`);
     if (websitePage) return { kind: "website" as const, item: websitePage };

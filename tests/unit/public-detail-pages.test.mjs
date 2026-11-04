@@ -189,7 +189,7 @@ test("Kova Academy provides every active original learning guide", () => {
         sourcePath.startsWith("/academy/") &&
         sourcePath !== "/academy/search-and-deep-research",
     )
-    .map(({ sourcePath }) => sourcePath.slice(1));
+    .map(({ sourcePath }) => sourcePath.slice(1).replaceAll("chatgpt", "kovagpt"));
   const actual = [...source.matchAll(/\bslug:\s*"([^"]+)"/gu)].map(
     (match) => `academy/${match[1]}`,
   );

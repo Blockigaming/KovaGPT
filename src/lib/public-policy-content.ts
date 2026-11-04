@@ -6,12 +6,12 @@ const TITLE_OVERRIDES = new Map<string, string>([
   ["au-online-safety-act", "Australia online safety information"],
   ["br-privacy-policy", "Brazil privacy information"],
   ["brazil-eca-digital", "Brazil digital child-safety information"],
-  ["chatgpt-sites-data-processing-addendum", "Sites data processing addendum"],
-  ["chatgpt-sites-terms", "Sites terms"],
+  ["kovagpt-sites-data-processing-addendum", "Sites data processing addendum"],
+  ["kovagpt-sites-terms", "Sites terms"],
   ["dec-2024-eu-terms", "December 2024 European terms"],
   ["eu-services-privacy-policy", "European services privacy information"],
   ["feb-2024-data-processing-addendum", "February 2024 data processing addendum"],
-  ["how-chatgpt-and-our-foundation-models-are-developed", "How KovaGPT AI services are assembled"],
+  ["how-kovagpt-and-our-foundation-models-are-developed", "How KovaGPT AI services are assembled"],
   ["jun-2023-privacy-policy", "June 2023 privacy policy archive"],
   ["kr-privacy-policy", "Korea privacy information"],
   ["oct-2024-eu-terms", "October 2024 European terms"],
@@ -23,7 +23,7 @@ const TITLE_OVERRIDES = new Map<string, string>([
   ["uk-tax-strategy", "United Kingdom tax strategy status"],
   ["unauthorized-openai-equity-transactions", "Unauthorized equity transaction notice"],
   ["us-privacy-policy", "United States privacy information"],
-  ["using-chatgpt-agent-in-line-with-our-policies", "Using KovaGPT agents within policy"],
+  ["using-kovagpt-agent-in-line-with-our-policies", "Using KovaGPT agents within policy"],
 ]);
 
 const titleFromSlug = (slug: string) => {

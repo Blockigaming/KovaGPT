@@ -10,7 +10,7 @@ const TITLES: Readonly<Record<string, string>> = Object.freeze({
   "an-update-on-disrupting-deceptive-uses-of-ai": "Disrupting deceptive AI use: safety approach",
   "argentinas-ai-opportunity": "Argentina's AI opportunity",
   "brazil-ai-moment-is-here": "Brazil's AI opportunity",
-  "college-students-and-chatgpt": "Supporting college students with AI",
+  "college-students-and-kovagpt": "Supporting college students with AI",
   "comment-on-ntia-ai-accountability-policy": "US AI accountability policy reference",
   "comments-to-the-ntia-on-data-center-growth-resilience-and-security":
     "Data-center growth, resilience, and security",
@@ -20,7 +20,7 @@ const TITLES: Readonly<Record<string, string>> = Object.freeze({
   "disrupting-malicious-uses-of-ai": "Disrupting malicious uses of AI",
   "eu-code-of-practice": "EU AI Code of Practice overview",
   "intellectual-freedom-by-design": "Intellectual freedom in AI product design",
-  "introducing-chatgpt-gov": "Public-sector AI workspace guidance",
+  "introducing-kovagpt-gov": "Public-sector AI workspace guidance",
   "introducing-openai-for-government": "KovaGPT public-sector service status",
   "introducing-the-intelligence-age": "Preparing institutions for advanced AI",
   "learning-accelerator": "AI learning accelerator status",

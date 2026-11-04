@@ -1,3 +1,5 @@
+import { PublicWebsiteArticle } from "@/components/public/PublicWebsiteArticle";
+import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
 import { useEffect, useState } from "react";
 import { ProductOverview } from "@/components/public/ProductOverview";
 import { PlanComparison } from "@/components/public/PlanComparison";
@@ -49,6 +51,12 @@ export function PublicFixture({ surface }: { surface: string }) {
     return () => window.removeEventListener("kova-fixture-page", select);
   }, []);
 
+  if (surface === "public-company" || surface === "public-features-chat") {
+    const path = surface === "public-company" ? "/company" : "/features/chat";
+    const item = PUBLIC_WEBSITE_PAGE_BY_PATH.get(path);
+    if (!item) throw new Error("Missing marketing fixture page");
+    return <PublicWebsiteArticle item={item} />;
+  }
   if (surface === "public-overview") return <ProductOverview />;
   if (surface === "public-comparison")
     return (

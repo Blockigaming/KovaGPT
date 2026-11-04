@@ -1,3 +1,4 @@
+import { migratedPublicPath } from "@/lib/public-url-migrations.mjs";
 import { createFileRoute, notFound, Link, redirect } from "@tanstack/react-router";
 import { PUBLICATIONS, PUBLICATION_SECTIONS } from "@/lib/publications";
 import { PublicPageView, PublicSite } from "@/components/public/PublicSite";
@@ -260,6 +261,8 @@ const label = (value: string) =>
     .join(" ");
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
+    const migrated = migratedPublicPath(`/${params.slug}`);
+    if (migrated) throw redirect({ to: migrated as never, statusCode: 301, replace: true });
     const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${params.slug}`);
     if (websitePage) return { kind: "website" as const, item: websitePage };
     if (["review", "bot", "legal"].includes(params.slug))
