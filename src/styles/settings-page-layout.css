@@ -8,6 +8,7 @@
 }
 .kova-settings-route section.kova-settings-page.kova-settings-dialog {
   position: relative;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   width: 100%;
