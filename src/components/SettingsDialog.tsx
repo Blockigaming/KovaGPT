@@ -1121,8 +1121,8 @@ export function SettingsDialog({
     }
   }, [mobileFocusRequest, mobileHome, tab]);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+  const content = (
+    <>
       <Surface
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
@@ -2650,6 +2650,14 @@ export function SettingsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+
+  return page ? (
+    content
+  ) : (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {content}
     </Dialog>
   );
 }
