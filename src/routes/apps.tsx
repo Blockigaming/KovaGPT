@@ -248,6 +248,7 @@ function AppCard({
   configured: boolean;
   onDetails: (trigger: HTMLButtonElement) => void;
 }) {
+  configured = configured && state !== "permission_incomplete";
   const pending = state === "connecting" || state === "syncing";
   const action = !configured
     ? "Coming soon"
@@ -281,7 +282,7 @@ function AppCard({
           className="spec400-plugin-card-action"
           data-coming-soon={!configured || undefined}
         >
-          {action}
+          {configured ? action : "Details"}
         </Button>
       </div>
     </li>

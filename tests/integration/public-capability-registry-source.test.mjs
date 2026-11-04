@@ -64,8 +64,8 @@ test("published mode and plan copy is derived from enforced source data", () => 
   assert.doesNotMatch(params, /trial_period_days:|trial_end:|price_data:/);
   assert.match(policy, /price\.id !== plan\.livePriceId/);
   assert.match(policy, /price\.lookup_key !== plan\.lookupKey/);
-  assert.match(pricing, /introductoryOfferForTier\("plus"\)/);
-  assert.match(pricing, /introductoryOfferForTier\("pro"\)/);
+  assert.doesNotMatch(pricing, /introductoryOfferForTier\("plus"\)/);
+  assert.doesNotMatch(pricing, /introductoryOfferForTier\("pro"\)/);
   assert.match(read("src/lib/introductory-offer.ts"), /CAPABILITY_REGISTRY\.plans\[tier\]/);
   assert.doesNotMatch(pricing, /30-day trial for eligible first-time subscribers/);
 });

@@ -114,16 +114,20 @@ function AuthAuthorityGate({ pending }: { pending: boolean }) {
   return (
     <dialog
       ref={dialog}
-      aria-label="Loading KovaGPT"
+      aria-label="Checking account"
       className="fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none border-0 bg-background p-0 text-foreground backdrop:bg-background"
       onCancel={(event) => event.preventDefault()}
     >
-      <div className="flex h-full flex-col px-6 py-5" aria-busy="true">
-        <span className="text-lg font-semibold tracking-tight">KovaGPT</span>
-        <div className="m-auto w-full max-w-2xl space-y-8 text-center">
-          <p className="text-3xl font-medium tracking-tight">What can I help with?</p>
-          <div className="h-28 rounded-3xl border border-border bg-muted/30" />
-        </div>
+      <div className="flex h-full" aria-busy="true" aria-hidden="true">
+        <aside className="hidden w-64 shrink-0 rounded-r-3xl border-r border-border p-5 md:block">
+          <div className="mb-10 h-8 w-28 animate-pulse rounded-lg bg-muted" />
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="mb-4 h-9 animate-pulse rounded-xl bg-muted" />
+          ))}
+        </aside>
+        <section className="flex min-w-0 flex-1 flex-col justify-end p-6">
+          <div className="mx-auto mb-6 h-32 w-full max-w-3xl animate-pulse rounded-3xl border border-border bg-muted/30" />
+        </section>
       </div>
     </dialog>
   );

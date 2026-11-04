@@ -52,7 +52,7 @@ function tab(records, initialOwner = "owner-a") {
     toast: { error: (message) => messages.push(message) },
     document: {
       documentElement: {
-        style: { setProperty: (k, v) => styles.set(k, v) },
+        style: { setProperty: (k, v) => styles.set(k, v), removeProperty: (k) => styles.delete(k) },
         dataset: {},
       },
     },

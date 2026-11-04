@@ -7,6 +7,11 @@ import { APPEARANCE_DEFAULTS } from "@/lib/appearance-preferences.mjs";
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
 export type Settings = {
+  interfaceColors?: Record<string, string>;
+  interfaceFont?: "system" | "serif" | "mono";
+  interfaceSize?: number;
+  settingsNavigationWidth?: number;
+  interfaceAccent?: string;
   displayName: string;
   email: string;
   extraFacts: string;

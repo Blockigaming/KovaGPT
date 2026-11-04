@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createContentLoader } from "../../scripts/publication/source-loader.mjs";
 
-test("both paid monthly plans publish the once-per-account first-month offer without new trials", () => {
+test("paid monthly plans keep their billing terms while pricing removes the offer section", () => {
   const { load } = createContentLoader();
   const registry = load("src/lib/capability-registry.ts").CAPABILITY_REGISTRY;
   const billingPlans = load("src/lib/billing-plans.ts").BILLING_PLANS;
@@ -14,17 +14,17 @@ test("both paid monthly plans publish the once-per-account first-month offer wit
   assert.equal(registry.plans.plus.monthlyPriceUsd, 16);
   assert.equal(registry.plans.pro.monthlyPriceUsd, 80);
   const pricing = readFileSync("src/routes/pricing.tsx", "utf8");
-  assert.match(pricing, /50% off the first paid month, once per account/);
-  assert.match(pricing, /Regular monthly pricing follows/);
+  assert.doesNotMatch(pricing, /50% off the first paid month, once per account/);
+  assert.doesNotMatch(pricing, /Regular monthly pricing follows/);
   const cards = [...pricing.matchAll(/<PlanCard\b[\s\S]*?\/>/g)].map(([card]) => card);
   for (const tier of ["plus", "pro"]) {
     const card = cards.find((value) => value.includes(`plans.${tier}.name`));
     assert.ok(card, `missing ${tier} card`);
-    assert.match(card, /note=\{MONTHLY_INTRO_NOTE\}/);
+    assert.doesNotMatch(card, /note=\{MONTHLY_INTRO_NOTE\}/);
     assert.match(card, /taxNotice/);
   }
   assert.doesNotMatch(pricing, /day trial|trial eligibility/);
-  assert.match(pricing, /regular renewal price and date, tax/);
+  assert.match(pricing, /payment, renewal price, tax/);
 });
 
 test("help copy distinguishes the new monthly offer, grandfathered trials and recoverable deletion", () => {

@@ -14,7 +14,7 @@ import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-
 import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
 import {
   Copy,
-  CornerDownRight,
+  Sparkles,
   Check,
   ImageIcon,
   Loader2,
@@ -130,9 +130,11 @@ function waitStageAt(startedAt: number): WaitStage {
 function StreamingStatus({
   activities,
   startedAt,
+  onSkipThinking,
 }: {
   activities?: import("@/lib/chat-store").Activity[];
   startedAt: number;
+  onSkipThinking?: () => void;
 }) {
   const [waitStage, setWaitStage] = useState<WaitStage>(() => waitStageAt(startedAt));
   const [elapsedSeconds, setElapsedSeconds] = useState(() =>
@@ -186,6 +188,7 @@ function StreamingStatus({
     else if (tool.includes("write")) label = "Writing draft";
     else label = active?.label ?? "Working";
   }
+  if (elapsedSeconds < 1) return null;
   return (
     <div
       className="kova-thinking-indicator flex min-h-8 flex-wrap items-center gap-2 py-1"
@@ -194,16 +197,26 @@ function StreamingStatus({
       aria-atomic="true"
       data-wait-stage={waitStage}
     >
-      <ol className="sr-only" aria-label="Response progress">
-        <li className="inline-flex items-center gap-1">
-          <Check className="h-3.5 w-3.5" aria-hidden="true" /> Request started
-        </li>
-        <li aria-hidden="true">/</li>
-        <li aria-current="step">{active ? "Tool in progress" : "Waiting for reply"}</li>
-      </ol>
-      <span key={label} className="text-sm font-medium text-muted-foreground">
-        {label}…
-      </span>
+      <details open className="min-w-0 flex-1">
+        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+          Thinking · {label}…
+        </summary>
+        <p className="py-2 text-xs text-muted-foreground">
+          Waiting for the model’s response. Tool activity below reflects completed or running
+          operations.
+        </p>
+        <MessageActivityList activities={activities} />
+      </details>
+      {onSkipThinking && (
+        <button
+          type="button"
+          className="rounded-lg px-3 py-1 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          title="Stop this attempt and request a faster answer in Default mode"
+          onClick={onSkipThinking}
+        >
+          Skip
+        </button>
+      )}
       {elapsedSeconds >= 8 && (
         <span role="timer" aria-live="off" className="text-xs text-muted-foreground">
           {elapsedSeconds}s elapsed
@@ -217,6 +230,7 @@ function ChatMessageInner({
   message,
   streaming,
   streamingStartedAt,
+  onSkipThinking,
   onFollowUp,
   onDraftPrompt,
   onRetry,
@@ -238,6 +252,7 @@ function ChatMessageInner({
   streaming?: boolean;
   /** Request start time survives chat navigation while the response remains active. */
   streamingStartedAt?: number;
+  onSkipThinking?: () => void;
   /** Executes an explicit editor improvement request. */
   onFollowUp?: (prompt: string) => void;
   /** Preserves the composer draft; invoke the returned focus handoff after dismissing a popup. */
@@ -979,7 +994,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            <MessageActivityList activities={message.activities} />
+            {!waitingForFirstToken && <MessageActivityList activities={message.activities} />}
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}
@@ -1006,6 +1021,7 @@ function ChatMessageInner({
                 <StreamingStatus
                   activities={message.activities}
                   startedAt={resolvedStreamingStartedAt}
+                  onSkipThinking={onSkipThinking}
                 />
               ) : (
                 (() => {
@@ -1563,7 +1579,7 @@ function ChatMessageInner({
           <nav className="kova-response-followups" aria-label="Suggested follow-ups">
             {normalizeResponseFollowups(message.followups).map((suggestion) => (
               <button type="button" key={suggestion} onClick={() => onSelectSuggestion(suggestion)}>
-                <CornerDownRight aria-hidden="true" />
+                <Sparkles aria-hidden="true" />
                 <span>{suggestion}</span>
               </button>
             ))}

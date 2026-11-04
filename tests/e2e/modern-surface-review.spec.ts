@@ -40,16 +40,10 @@ for (const theme of ["dark", "light"] as const) {
         ).toHaveCount(0);
       }
       if (path === "/pricing") {
-        const terms = page.getByText(/Cancellation, rejoining/);
-        await expect(terms).toBeHidden();
-        const summary = page
-          .locator("summary")
-          .filter({ hasText: "Offer details and eligibility" });
-        await summary.focus();
-        await page.keyboard.press("Enter");
-        await expect(terms).toBeVisible();
-        await page.keyboard.press("Enter");
-        await expect(terms).toBeHidden();
+        await expect(page.getByText("Offer details and eligibility", { exact: true })).toHaveCount(
+          0,
+        );
+        await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
       }
 
       expect(

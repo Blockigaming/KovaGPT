@@ -227,13 +227,13 @@ test("aligned Free Plus Pro cards share configured prices, feature order, allowa
     "Current plan",
   );
   assert.match(f.text(), /actual effective date, any proration/);
-  assert.match(f.text(), /50% off the first paid month, once per account/);
+  assert.doesNotMatch(f.text(), /50% off the first paid month, once per account/);
   assert.match(f.text(), /\$8 for the first month, then \$16\/month/);
   assert.match(f.text(), /\$40 for the first month, then \$80\/month/);
   assert.match(f.text(), /If eligible: \$8 for the first month/);
-  assert.match(f.text(), /Stripe Checkout confirms eligibility/);
-  assert.match(f.text(), /New subscriptions do not receive a free trial/);
-  assert.match(f.text(), /Existing trials and subscriptions keep their current terms/);
+  assert.doesNotMatch(f.text(), /Stripe Checkout confirms eligibility/);
+  assert.doesNotMatch(f.text(), /New subscriptions do not receive a free trial/);
+  assert.doesNotMatch(f.text(), /Existing trials and subscriptions keep their current terms/);
   assert.doesNotMatch(
     f.text(),
     /review proposal|Proposed first payment|Eligibility unverified|offer checkout remains unavailable|30-day trial for eligible|Get started|promo code|countdown/i,

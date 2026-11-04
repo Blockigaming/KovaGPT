@@ -6,13 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CAPABILITY_REGISTRY, PLAN_ALLOWANCE_COPY } from "@/lib/capability-registry";
 import { formatDisplayDateTime, type TimeFormatPreference } from "@/lib/time-format";
 import { resolveBillingPlan, type BillingTier } from "@/lib/billing-plans";
-import {
-  INTRODUCTORY_OFFER_LABEL,
-  INTRODUCTORY_OFFER_CHECKOUT_REVIEW,
-  INTRODUCTORY_OFFER_HISTORY,
-  INTRODUCTORY_OFFER_EXISTING,
-  introductoryOfferForTier,
-} from "@/lib/introductory-offer";
+import { introductoryOfferForTier } from "@/lib/introductory-offer";
 import type { SubscriptionSummary } from "@/utils/payments.functions";
 
 const TIERS = ["free", "plus", "pro"] as const;
@@ -194,11 +188,6 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
         Published monthly prices in USD, plus applicable tax. Stripe confirms the final charge
         before purchase.
       </p>
-      <div className="kova-billing-copy" aria-label="First-month offer">
-        <p>Eligible accounts: {INTRODUCTORY_OFFER_LABEL}. Regular monthly pricing follows.</p>
-        <p>{INTRODUCTORY_OFFER_CHECKOUT_REVIEW}</p>
-        <p>{INTRODUCTORY_OFFER_EXISTING}</p>
-      </div>
       {loading || error || !loggedIn || !summary ? (
         <p className="kova-billing-copy" role="status">
           {loading
@@ -295,7 +284,6 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
           );
         })}
       </div>
-      <p className="kova-billing-copy">{INTRODUCTORY_OFFER_HISTORY}</p>
       <p className="kova-billing-copy" id="billing-plan-change-help">
         {inheritedSubscription ? "Your shared plan is managed by the Family Sharing owner. " : ""}
         {summary?.hasBillingAccount && !summary.billingPortalAvailable

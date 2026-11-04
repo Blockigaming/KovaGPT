@@ -32,6 +32,8 @@ export async function enforceDailyMessageQuota(
       {
         error: `Today's ${thinking ? "Thinking" : "regular message"} allowance is used. It resets at midnight UTC.`,
         code: "daily_message_limit",
+        category: "quota_exceeded",
+        retryable: false,
         kind: thinking ? "thinking" : "regular",
       },
       { status: 429, headers: { "Cache-Control": "no-store" } },

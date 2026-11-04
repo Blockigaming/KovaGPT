@@ -31,7 +31,7 @@ function fixture({
       "@/lib/stripe": {
         getStripe: () => {
           if (!configured) throw Error("missing public configuration");
-          return Promise.resolve(null);
+          return Promise.resolve({});
         },
       },
       "@/utils/payments.functions": {

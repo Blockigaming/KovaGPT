@@ -144,9 +144,8 @@ test("only a verified Free summary opens the allowlisted monthly checkout", asyn
   }));
   f.click();
   await settle();
-  assert.deepEqual(JSON.parse(JSON.stringify(f.checkouts)), [
-    { priceId: "plus_monthly", userId: "account-one" },
-  ]);
+  assert.deepEqual(f.redirects, ["/subscribe?plan=plus_monthly"]);
+  assert.equal(f.checkouts.length, 0);
 });
 
 test("an account change or unmount invalidates pending plan verification", async () => {

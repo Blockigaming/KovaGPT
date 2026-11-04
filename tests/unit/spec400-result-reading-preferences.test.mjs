@@ -78,6 +78,7 @@ function fixture() {
   const themes = [];
   const root = {
     style: {
+      removeProperty: (key) => properties.delete(key),
       setProperty: (key, value) => {
         properties.set(key, value);
         writes.push([key, value]);

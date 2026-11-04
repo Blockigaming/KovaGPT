@@ -38,6 +38,22 @@ export type ConnectorItem = {
 
 export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
+    id: "granola",
+    label: "Granola",
+    description: "Planned connection for meeting notes and shared context.",
+    category: "Notes & Docs",
+    status: "planned",
+    domain: "granola.ai",
+  },
+  {
+    id: "tana",
+    label: "Tana",
+    description: "Planned connection for structured notes, tasks and workspace context.",
+    category: "Notes & Docs",
+    status: "planned",
+    domain: "tana.inc",
+  },
+  {
     id: "etoro",
     label: "eToro",
     description: "Planned eToro connection. Account eligibility and API access are unverified.",

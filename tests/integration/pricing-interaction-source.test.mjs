@@ -26,11 +26,8 @@ test("pricing keeps the published prices and production checkout lookup keys", a
     /pro_monthly:\s*\{[\s\S]*?lookupKey:\s*"pro_monthly",[\s\S]*?livePriceId:\s*"price_1UEw6FAEZlsb6DBYuksCKOBR"/,
   );
   assert.doesNotMatch(billingPlans, /price_1UAzhRAEZlsb6DBYlafU4mhc/);
-  assert.match(pricing, /useStripeCheckout\(\)/);
-  assert.match(
-    pricing,
-    /openCheckout\(\{\s*priceId,\s*customerEmail: user\?\.email,\s*userId: user\?\.id/,
-  );
+  assert.match(pricing, /useNavigate\(\)/);
+  assert.match(pricing, /navigate\(\{ to: "\/subscribe"[\s\S]*search: \{ plan: priceId \}/);
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.plus\.lookupKey!/);
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.pro\.lookupKey!/);
   assert.match(
@@ -68,29 +65,20 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   );
 });
 
-test("checkout uses an accessible modal with truthful loading and safe errors", async () => {
-  const [pricing, checkout] = await Promise.all([
+test("checkout uses an account-bound page with truthful loading and safe errors", async () => {
+  const [pricing, checkout, subscribe] = await Promise.all([
     read("src/routes/pricing.tsx"),
     read("src/components/StripeEmbeddedCheckout.tsx"),
+    read("src/routes/subscribe.tsx"),
   ]);
-
-  assert.match(pricing, /open=\{isOpen && owner !== null && checkoutOwner === owner\}/);
-  assert.match(pricing, /onOpenChange=\{\(open\) => !open && closeCheckout\(\)\}/);
-  assert.match(pricing, /<DialogTitle>Secure checkout<\/DialogTitle>/);
-  assert.match(pricing, /<DialogDescription>/);
-  assert.match(pricing, /aria-busy=\{checkoutStatus === "loading"\}/);
-  assert.match(pricing, /role="status" aria-live="polite"/);
-  assert.match(
-    pricing,
-    /role="status" aria-live="polite"[\s\S]*?<div\s+ref=\{checkoutRegionRef\}\s+aria-busy=/,
-  );
-  assert.match(pricing, /state === "loaded"/);
-  assert.match(pricing, /Secure checkout loaded/);
-  assert.doesNotMatch(pricing, /querySelector\("iframe"\)/);
-  assert.match(pricing, /onCloseAutoFocus=/);
-  assert.match(pricing, /requestAnimationFrame\(\(\) => trigger\.focus\(\)\)/);
-  assert.match(pricing, /\[&>button\]:h-11 \[&>button\]:w-11/);
-  assert.doesNotMatch(pricing, /fixed inset-0 z-50 bg-black\/70/);
+  assert.doesNotMatch(pricing, /<Dialog/);
+  assert.match(subscribe, /<main/);
+  assert.match(subscribe, /Complete your subscription/);
+  assert.match(subscribe, /Back to plans/);
+  assert.match(subscribe, /!isLoaded/);
+  assert.match(subscribe, /!isSignedIn/);
+  assert.match(subscribe, /key=\{`\$\{user\?\.id\}:\$\{plan\}`\}/);
+  assert.match(checkout, /data-checkout-state="error"/);
   assert.match(checkout, /const CHECKOUT_ERROR_MESSAGE =/);
   assert.match(checkout, /const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =/);
   assert.match(checkout, /result\.error === ACTIVE_SUBSCRIPTION_ERROR_MESSAGE/);

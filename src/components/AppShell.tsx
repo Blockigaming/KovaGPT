@@ -344,9 +344,7 @@ export function AppShell({
         onShare={setShareChatId}
         open={settingsWorkspace ? false : sidebarOpen}
         compactOnly={settingsWorkspace}
-        onToggle={() =>
-          settingsWorkspace ? void navigate({ to: "/" }) : setSidebarOpen((v) => !v)
-        }
+        onToggle={() => (settingsWorkspace ? undefined : setSidebarOpen((v) => !v))}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}

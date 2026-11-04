@@ -88,7 +88,7 @@ test("inline chat attachments consume upload quota but not durable storage quota
 test("main chat preserves the plan-limit dialog for authoritative 429 responses", () => {
   assert.match(
     homeChat,
-    /const quotaRejected =\s*err\.status === 429 && \(\/limit\/i\.test\(raw\) \|\| err\.category === "quota_exceeded"\)/u,
+    /const quotaRejected =\s*err\.status === 429 && err\.category === "quota_exceeded"/u,
   );
   const quotaRecovery = homeChat.slice(
     homeChat.indexOf("if (quotaRejected && isCurrentRetryScope())"),
