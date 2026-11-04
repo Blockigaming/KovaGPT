@@ -40,34 +40,12 @@ export function ProductOverview() {
         className="public-overview"
         data-ui-reference="grok-product-overview"
       >
-        <div className="kova-overview-intro">
-          <PublicHero
-            eyebrow="A little curiosity. A world of possibility."
-            title={
-              <>
-                Big ideas.
-                <br />
-                <span>Meet KovaGPT.</span>
-              </>
-            }
-            description="A space to think clearly, create something new, and move your ideas forward. Start with a question. See where it takes you."
-          >
-            <PublicAction to="/">Start a conversation</PublicAction>
-            <PublicAction to="/features" secondary>
-              Explore what’s possible
-            </PublicAction>
-          </PublicHero>
-          <div className="kova-idea-art" aria-hidden="true">
-            <div className="kova-idea-orbit" />
-            <div className="kova-idea-core">
-              <NovaLogo decorative />
-            </div>
-            <span className="kova-idea-note kova-idea-note-one">What if?</span>
-            <span className="kova-idea-note kova-idea-note-two">Make it clearer.</span>
-            <span className="kova-idea-note kova-idea-note-three">Let’s build on that.</span>
-            <span className="kova-idea-caption">Room for your next idea.</span>
-          </div>
-        </div>
+        <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
+          <PublicAction to="/">Open KovaGPT</PublicAction>
+          <PublicAction to="/download" secondary>
+            Use KovaGPT on the web
+          </PublicAction>
+        </PublicHero>
 
         <section
           className="public-workflow-example"
