@@ -440,6 +440,10 @@ test("archived chats can be removed from Settings data controls", async ({ page 
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   await page.reload();
   await waitForKovaHydration(page);
+  if (page.viewportSize()!.width < 1024) {
+    await openCurrentSettings(page);
+    await chooseSettingsSection(page, "Data control");
+  }
   await expect(page.getByRole("region", { name: "Archived chats" })).toContainText(
     "No archived chats",
   );

@@ -577,7 +577,7 @@ export function Sidebar({
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const content = drawerRef.current
       ?.closest(".kova-assistant, .kova-app-shell")
-      ?.querySelector<HTMLElement>(".kova-chat-main, .kova-app-content");
+      ?.querySelector<HTMLElement>(".kova-chat-main, .kova-app-content, .spec400-images");
     const previousInert = content?.inert ?? false;
     if (content) content.inert = true;
     const previousOverflow = document.body.style.overflow;

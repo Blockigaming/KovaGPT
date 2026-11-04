@@ -5,6 +5,7 @@ import {
   openCurrentSettings,
   chooseSettingsSection,
   revealSidebar,
+  dismissMobileSidebar,
 } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
@@ -55,6 +56,16 @@ async function capture(page: Page, info: TestInfo, name: string) {
 test("sidebar search and all main destinations keep honest service states", async ({
   page,
 }, info) => {
+  test.setTimeout(60_000);
+  const confirmSidebarState = async () => {
+    if (page.viewportSize()!.width < 1024) {
+      await dismissMobileSidebar(page);
+    } else {
+      await expect(
+        page.getByRole("navigation", { name: "Primary navigation", exact: true }),
+      ).toBeVisible();
+    }
+  };
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await coreFixture(page, "light", "plus");
@@ -84,6 +95,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
 
   await openSidebar(page);
   await page.getByRole("link", { name: "Images", exact: true }).click();
+  await expect(page).toHaveURL(/\/images$/);
+  await confirmSidebarState();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "Images", exact: true }),
   ).toBeVisible();
@@ -107,6 +120,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
   ]) {
     await openSidebar(page);
     await page.getByRole("link", { name, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
+    await confirmSidebarState();
     await expect(
       page.getByRole("main").getByRole("heading", { name: heading, exact: true }),
     ).toBeVisible();
@@ -125,6 +140,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
   }
   await openSidebar(page);
   await page.getByRole("link", { name: "Scheduled tasks", exact: true }).click();
+  await expect(page).toHaveURL(/\/scheduled-tasks$/);
+  await confirmSidebarState();
   await expect(page.getByRole("status", { name: "Scheduled Tasks Status" })).toContainText(
     "Scheduled execution is not available yet",
   );
@@ -140,6 +157,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
 
   await openSidebar(page);
   await page.getByRole("link", { name: "Plugins", exact: true }).click();
+  await expect(page).toHaveURL(/\/apps$/);
+  await confirmSidebarState();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
@@ -184,6 +203,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
     await expect(accountMenu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
   }
   await accountMenu.getByRole("menuitem", { name: "Help", exact: true }).click();
+  await expect(page).toHaveURL(/\/help$/);
   await expect(
     page.getByRole("main").getByRole("heading", { name: "How can we help?" }),
   ).toBeVisible();

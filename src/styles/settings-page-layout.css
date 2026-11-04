@@ -40,12 +40,22 @@
   align-items: center;
   gap: 8px;
 }
-.kova-settings-page-toolbar > button,
-.kova-settings-page-actions > button {
+.kova-settings-page .kova-settings-page-control {
   width: 44px;
   height: 44px;
+  flex: none;
   border-radius: 50%;
-  background: var(--background);
+}
+.kova-settings-navigation-close {
+  display: none;
+}
+.kova-settings-route section.kova-settings-page .kova-settings-navigation-heading {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+  min-height: 80px;
+  padding: 12px 0;
 }
 .kova-settings-route .kova-settings-page-header {
   flex-shrink: 0;
@@ -65,7 +75,7 @@
   height: 100%;
   max-height: none;
   margin: 0;
-  padding: 24px 16px 16px;
+  padding: 0 16px 16px;
   background: var(--surface-sidebar, var(--sidebar));
   /* Delineate the settings navigation even when the global sidebar collapses. */
   border-right: 1px solid var(--border);
@@ -83,6 +93,10 @@
   background: transparent;
 }
 .kova-settings-route section.kova-settings-page .kova-settings-content-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--background);
   box-sizing: border-box;
   flex-shrink: 0;
   width: 100%;
@@ -139,11 +153,13 @@
     display: flex;
     width: 100%;
     flex: 1 1 0;
-    padding: max(24px, var(--safe-top, 0px)) 16px 24px;
+    padding: var(--safe-top, 0px) 16px 24px;
     background: var(--background);
   }
-  .kova-settings-route .kova-settings-navigation-heading {
-    display: block;
+  .kova-settings-route .kova-settings-navigation-close,
+  .kova-settings-route .kova-settings-content-header .kova-settings-page-actions {
+    display: flex;
+    margin-inline-start: auto;
   }
   .kova-settings-route section.kova-settings-page .kova-settings-content.mobile-hidden,
   .kova-settings-route section.kova-settings-page .kova-settings-sidebar.mobile-hidden {
@@ -159,8 +175,8 @@
     flex: none;
   }
   .kova-settings-route section.kova-settings-page .kova-settings-content-header {
-    min-height: 80px;
-    padding: 16px;
+    min-height: 64px;
+    padding: 10px 16px !important;
   }
   .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
     padding: 16px 16px max(24px, var(--safe-bottom, 0px));

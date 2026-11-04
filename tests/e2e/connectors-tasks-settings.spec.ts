@@ -25,8 +25,9 @@ test("Settings remains reachable from the responsive shell", async ({ page }) =>
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  await openCurrentSettings(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Settings", level: 1, exact: true }),
-  ).toBeVisible();
+  const settings = await openCurrentSettings(page);
+  await expect(settings.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
+  await expect(settings.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
 });

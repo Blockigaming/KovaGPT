@@ -289,6 +289,7 @@ export function SettingsDialog({
   const usageStatusRef = useRef<HTMLDivElement>(null);
   const settingsSearchRef = useRef<HTMLInputElement>(null);
   const contentHeadingRef = useRef<HTMLHeadingElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const pendingMobileFocusRef = useRef<"content" | "navigation" | null>(null);
   const [mobileFocusRequest, setMobileFocusRequest] = useState(0);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
@@ -1121,9 +1122,38 @@ export function SettingsDialog({
     }
   }, [mobileFocusRequest, mobileHome, tab]);
 
+  useEffect(() => {
+    if (page && contentScrollRef.current) contentScrollRef.current.scrollTop = 0;
+  }, [page, tab]);
+
   const closeForNavigation = () => {
     if (!page) onOpenChange(false);
   };
+
+  const pageBack = page && (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="kova-settings-page-control"
+      aria-label="Back to previous page"
+      onClick={() => onOpenChange(false)}
+    >
+      <ArrowLeft aria-hidden="true" />
+    </Button>
+  );
+  const pageClose = page && (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="kova-settings-page-control"
+      aria-label="Close settings"
+      onClick={() => onOpenChange(false)}
+    >
+      <X aria-hidden="true" />
+    </Button>
+  );
 
   const content = (
     <>
@@ -1238,28 +1268,12 @@ export function SettingsDialog({
           </div>
         </DialogHeader>
 
-        {page ? (
+        {page && !loggedIn ? (
           <div className="kova-settings-page-toolbar">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Back to previous page"
-              onClick={() => onOpenChange(false)}
-            >
-              <ArrowLeft aria-hidden="true" />
-            </Button>
+            {pageBack}
             <div className="kova-settings-page-actions">
               {pageUtilities}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Close settings"
-                onClick={() => onOpenChange(false)}
-              >
-                <X aria-hidden="true" />
-              </Button>
+              {pageClose}
             </div>
           </div>
         ) : null}
@@ -1303,8 +1317,12 @@ export function SettingsDialog({
               aria-label="Settings navigation"
             >
               <div className="kova-settings-navigation-heading">
-                <h2>Settings</h2>
-                <p>Make Kova yours</p>
+                {pageBack}
+                <div>
+                  <h2>Settings</h2>
+                  <p>Make Kova yours</p>
+                </div>
+                {page ? <div className="kova-settings-navigation-close">{pageClose}</div> : null}
               </div>
               <label className="kova-settings-search">
                 <Search aria-hidden="true" />
@@ -1346,6 +1364,7 @@ export function SettingsDialog({
             </aside>
 
             <div
+              ref={contentScrollRef}
               className={`kova-settings-content flex-1 overflow-hidden flex flex-col ${mobileHome ? "mobile-hidden" : "mobile-content"}`}
             >
               <header className="kova-settings-content-header">
@@ -1373,6 +1392,12 @@ export function SettingsDialog({
                   <Check aria-hidden="true" />
                   Updated
                 </span>
+                {page ? (
+                  <div className="kova-settings-page-actions">
+                    {pageUtilities}
+                    {pageClose}
+                  </div>
+                ) : null}
               </header>
               {parentTab ? (
                 <div className="px-7 py-2">

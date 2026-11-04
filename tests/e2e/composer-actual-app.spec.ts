@@ -4,6 +4,7 @@ import { coreFixture } from "./core-app-fixture";
 import {
   openResponseOptions,
   revealSidebar,
+  dismissMobileSidebar,
   openCurrentSettings,
   chooseSettingsSection,
 } from "./current-ui";
@@ -367,14 +368,9 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
 
   await page.goto("/");
   await waitForKovaHydration(page);
-  // The fixture restores its closed sidebar preference on every navigation.
-  // Resolve the visible action if the returning preference closes the sidebar.
-  await revealSidebar(page);
-  await page
-    .getByRole("button", { name: "New chat", exact: true })
-    .filter({ visible: true })
-    .first()
-    .click();
+  const sidebar = await revealSidebar(page);
+  await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
+  if (page.viewportSize()!.width < 1024) await dismissMobileSidebar(page);
   await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();

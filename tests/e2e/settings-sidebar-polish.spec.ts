@@ -33,6 +33,39 @@ test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ pag
   await expect(sidebar).toBeVisible();
 });
 
+test("sidebar keeps separate desktop and phone preferences across Images and reload", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop-1440x900");
+  await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const desktop = page.getByRole("navigation", { name: "Primary navigation", exact: true });
+  await desktop.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
+  const rail = page.getByRole("navigation", { name: "Collapsed navigation", exact: true });
+  await expect(rail).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open menu", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
+  await drawer.getByRole("link", { name: "Images", exact: true }).click();
+  await expect(page).toHaveURL(/\/images$/);
+  await expect(drawer).toBeVisible();
+  await expect(page.locator(".spec400-images")).toHaveAttribute("inert", "");
+  await page.reload();
+  await waitForKovaHydration(page);
+  await expect(drawer).toBeVisible();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(rail).toBeVisible();
+  await expect(page.locator(".spec400-images")).not.toHaveAttribute("inert", "");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  await expect(drawer).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Images", exact: true })).toBeVisible();
+});
+
 test("desktop Settings width is editable and Back restores the originating page", async ({
   page,
 }, info) => {
@@ -64,8 +97,14 @@ test("desktop Settings width is editable and Back restores the originating page"
   await width.press("Home");
   await expect(width).toHaveAttribute("aria-valuenow", "200");
   await expect(navigation).toHaveCSS("width", "200px");
+  const pane = settings.locator(".kova-settings-content");
+  await pane.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await navigation.getByRole("tab", { name: "Profile", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
+  await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
   await settings.getByRole("button", { name: "Back to previous page", exact: true }).click();
   await expect(page).toHaveURL(previousUrl);
 });
@@ -82,6 +121,22 @@ test("appearance sliders stay reachable on a narrow phone", async ({ page }, inf
   await expect(width).toHaveAttribute("aria-valuenow", "440");
   await width.press("Home");
   await expect(width).toHaveAttribute("aria-valuenow", "200");
+  await size.press("End");
+  await expect(size).toHaveAttribute("aria-valuenow", "125");
+  const density = page.getByRole("combobox", { name: "Density", exact: true });
+  await expect(density).toHaveText("Comfortable");
+  await expect
+    .poll(() =>
+      density
+        .locator(":scope > span")
+        .first()
+        .evaluate((value) => {
+          const text = document.createRange();
+          text.selectNodeContents(value);
+          return text.getClientRects().length === 1 && value.scrollWidth <= value.clientWidth + 1;
+        }),
+    )
+    .toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width + 1,
   );

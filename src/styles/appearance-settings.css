@@ -133,9 +133,14 @@
   line-height: 1.5;
 }
 .kova-preference-row [data-slot="select-trigger"] {
-  width: min(156px, 100%);
+  width: min(11em, 100%);
   flex: none;
   background: var(--surface-secondary);
+}
+.kova-preference-row [data-slot="select-trigger"] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kova-preference-row.kova-preference-slider {
   display: grid;
@@ -177,7 +182,7 @@
   border-color: var(--border-subtle);
   background: var(--surface-secondary);
 }
-@container (max-width: 340px) {
+@container (max-width: 380px) {
   .kova-preference-row:has([data-slot="select-trigger"]) {
     display: grid;
     gap: 8px;

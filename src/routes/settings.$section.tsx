@@ -17,7 +17,7 @@ function SettingsPage() {
     ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS]
     : "personalization";
   return (
-    <AppShell utilitiesInHeader hideUtilities>
+    <AppShell utilitiesInHeader hideUtilities hideMobileTopBar>
       <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">
         {!valid ? (
           <p role="status">

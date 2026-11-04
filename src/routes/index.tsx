@@ -51,6 +51,7 @@ import {
 import { PanelLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
+import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
 import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
@@ -370,11 +371,7 @@ function KovaGPT() {
     }
   }, [activeId, storagePrincipal, editingMessage]);
 
-  // Start closed to avoid a flash-of-open sidebar on narrow viewports during
-  // SSR/hydration. On desktop we honor the persisted user preference so the
-  // sidebar remembers its collapsed state across reloads.
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarPreferenceRestored, setSidebarPreferenceRestored] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -382,34 +379,6 @@ function KovaGPT() {
     if (!sidebarOpen || !trigger) return;
     return focusReopenedSidebar(trigger);
   }, [sidebarOpen]);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mobile = window.matchMedia("(max-width: 1023px)").matches;
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open");
-    } catch {
-      /* ignore */
-    }
-    setSidebarOpen(saved === null ? !mobile : saved === "1");
-    setSidebarPreferenceRestored(true);
-  }, []);
-  useEffect(() => {
-    // An Auth principal change can remount this shell before restoration's
-    // state update commits. Never persist the SSR-closed placeholder as the
-    // user's preference while that decision is still pending.
-    if (!sidebarPreferenceRestored || typeof window === "undefined") return;
-    const mobile = window.matchMedia("(max-width: 1023px)").matches;
-    try {
-      localStorage.setItem(
-        mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open",
-        sidebarOpen ? "1" : "0",
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [sidebarOpen, sidebarPreferenceRestored]);
-
   const loadRecentLibraryFiles = useCallback(async () => {
     if (!isLoaded) return;
     const generation = storageGenerationRef.current;

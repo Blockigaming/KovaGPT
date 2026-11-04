@@ -1,18 +1,10 @@
 import { moveChatToTrash } from "@/lib/chat-trash";
 import { toast } from "sonner";
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useCallback,
-  useRef,
-  type ReactNode,
-} from "react";
+import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
+import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
@@ -57,10 +49,12 @@ export function AppShell({
   children,
   utilitiesInHeader = false,
   hideUtilities = false,
+  hideMobileTopBar = false,
 }: {
   children: ReactNode;
   utilitiesInHeader?: boolean;
   hideUtilities?: boolean;
+  hideMobileTopBar?: boolean;
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -98,40 +92,13 @@ export function AppShell({
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
   const conversations = principalReady ? conversationState.items : [];
-  // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
-  // narrow viewports; on desktop we restore the persisted user preference.
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarPreferenceRestored, setSidebarPreferenceRestored] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
   const sidebarKeyboardFocusRef = useRef(false);
   useEffect(() => {
     if (!sidebarOpen || !sidebarKeyboardFocusRef.current) return;
     sidebarKeyboardFocusRef.current = false;
     return focusReopenedSidebar();
   }, [sidebarOpen]);
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    const mobile = window.matchMedia("(max-width: 1023px)").matches;
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open");
-    } catch {
-      /* ignore */
-    }
-    setSidebarOpen(saved === null ? !mobile : saved === "1");
-    setSidebarPreferenceRestored(true);
-  }, []);
-  useEffect(() => {
-    if (!sidebarPreferenceRestored || typeof window === "undefined") return;
-    const mobile = window.matchMedia("(max-width: 1023px)").matches;
-    try {
-      localStorage.setItem(
-        mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open",
-        sidebarOpen ? "1" : "0",
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [sidebarOpen, sidebarPreferenceRestored]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
@@ -212,7 +179,7 @@ export function AppShell({
       },
       isLoaded ? userKey : undefined,
     );
-  }, [isLoaded, navigate, userKey]);
+  }, [isLoaded, navigate, setSidebarOpen, userKey]);
 
   const openSettings = useCallback(
     (tab?: string) => {
@@ -338,11 +305,13 @@ export function AppShell({
         data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <OfflineBanner />
-        <MobileTopBar
-          title={pageTitle}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onNewChat={handleNew}
-        />
+        {!hideMobileTopBar && (
+          <MobileTopBar
+            title={pageTitle}
+            onOpenSidebar={() => setSidebarOpen(true)}
+            onNewChat={handleNew}
+          />
+        )}
         {!utilitiesInHeader && !hideUtilities ? (
           <div className="kova-workspace-utilities flex shrink-0 justify-end">{utilities}</div>
         ) : null}
