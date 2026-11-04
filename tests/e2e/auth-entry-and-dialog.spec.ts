@@ -126,7 +126,9 @@ test("auth dialog has one semantic title, one contained close target, and Escape
   await page.goto("/pricing", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
-  const login = page.getByRole("button", { name: "Start Plus", exact: true }).first();
+  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
+  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
+  const login = page.getByRole("button", { name: "Sign in to continue", exact: true });
   await login.focus();
   await login.press("Enter");
 
@@ -177,7 +179,9 @@ test("auth dialog close button dismisses the dialog and restores focus", async (
   await page.goto("/pricing", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
-  const login = page.getByRole("button", { name: "Start Plus", exact: true }).first();
+  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
+  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
+  const login = page.getByRole("button", { name: "Sign in to continue", exact: true });
   await login.focus();
   await login.press("Enter");
 
