@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useUser } from "@/components/auth/ClerkSafe";
+import { useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { resolveBillingPlan } from "@/lib/billing-plans";
 
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/subscribe")({
   component: CheckoutPage,
 });
 function CheckoutPage() {
+  const { openSignIn } = useClerkSafe();
   const { plan } = Route.useSearch();
   const { user, isLoaded, isSignedIn } = useUser();
   return (
@@ -29,7 +30,13 @@ function CheckoutPage() {
         ) : !isLoaded ? (
           <div className="h-96 animate-pulse rounded-3xl bg-muted" aria-label="Checking account" />
         ) : !isSignedIn ? (
-          <p>Sign in before starting checkout.</p>
+          <button
+            type="button"
+            className="rounded-xl border border-border px-4 py-2"
+            onClick={() => openSignIn()}
+          >
+            Sign in to continue
+          </button>
         ) : (
           <StripeEmbeddedCheckout key={`${user?.id}:${plan}`} priceId={plan} userId={user?.id} />
         )}

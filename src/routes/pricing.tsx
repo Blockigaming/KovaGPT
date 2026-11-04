@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState, type MouseEvent as ReactMouseEvent } from "react";
-import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { PlanComparison } from "@/components/public/PlanComparison";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
@@ -113,18 +112,7 @@ export const Route = createFileRoute("/pricing")({
 function PricingPage() {
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded } = useUser();
-  const { openSignIn } = useClerk();
-  const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
-    if (!isLoaded) return;
-    if (isLoaded && !isSignedIn) {
-      try {
-        openSignIn();
-      } catch {
-        /* clerk not ready */
-      }
-      return;
-    }
+  const startCheckout = (priceId: string) => {
     void navigate({ to: "/subscribe" as never, search: { plan: priceId } as never });
   };
 
@@ -196,9 +184,7 @@ function PricingPage() {
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
-            onCta={(event) =>
-              startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!, event.currentTarget)
-            }
+            onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!)}
             features={CAPABILITY_REGISTRY.plans.plus.features}
           />
 
@@ -209,9 +195,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
-            onCta={(event) =>
-              startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
-            }
+            onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!)}
             features={CAPABILITY_REGISTRY.plans.pro.features}
           />
 

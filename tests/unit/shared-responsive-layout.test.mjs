@@ -122,7 +122,7 @@ test("signed-in desktop collapse restores focus to the replacement rail control"
   assert.match(sidebar, /const expandButtonRef = useRef<HTMLButtonElement \| null>\(null\)/);
   assert.match(
     sidebar,
-    /ref=\{expandButtonRef\}[\s\S]*?aria-label=\{compactOnly \? "Sidebar collapsed in Settings" : "Expand sidebar"\}/,
+    /ref=\{expandButtonRef\}[\s\S]*?aria-label=\{compactOnly \? "Back to chat" : "Expand sidebar"\}/,
   );
   assert.match(
     sidebar,
