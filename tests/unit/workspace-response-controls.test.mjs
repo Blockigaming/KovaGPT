@@ -104,3 +104,42 @@ test("imported interface preferences are bounded and cannot inject arbitrary CSS
   applyReadingPreferences(root, {});
   assert.equal(properties.has("--primary"), false);
 });
+
+test("daily message quota rejects with the popup category while unavailable accounting remains a service error", async () => {
+  const source = readFileSync("src/lib/message-quota.server.ts", "utf8");
+  const file = ts.createSourceFile(
+    "quota.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const declaration = file.statements
+    .find(
+      (node) => ts.isFunctionDeclaration(node) && node.name?.text === "enforceDailyMessageQuota",
+    )
+    .getText(file)
+    .replace(/^export /, "");
+  const code = ts.transpileModule(declaration, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const enforce = new Function(
+    "DAILY_PLAN_ALLOWANCES",
+    "loose",
+    `${code}; return enforceDailyMessageQuota;`,
+  )({ free: { regularMessages: 50, thinkingMessages: 10 } }, (value) => value);
+  const caller = (result) => ({
+    userId: "owner",
+    supabaseAdmin: { rpc: () => Promise.resolve(result) },
+  });
+  const rejected = await enforce(caller({ data: false, error: null }), "free", false);
+  assert.equal(rejected.status, 429);
+  assert.equal((await rejected.json()).category, "quota_exceeded");
+  const unavailable = await enforce(
+    caller({ data: null, error: { code: "unavailable" } }),
+    "free",
+    false,
+  );
+  assert.equal(unavailable.status, 503);
+  assert.equal((await unavailable.json()).category, undefined);
+});
