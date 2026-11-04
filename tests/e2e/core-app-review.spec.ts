@@ -275,14 +275,14 @@ test("project sections and account settings remain navigable and cancel safely",
   const searchSettings = settings.getByRole("textbox", { name: "Search settings", exact: true });
   if (await searchSettings.isVisible()) {
     await searchSettings.fill("subscription");
-    await expect(settings.getByRole("tab", { name: "Upgrade plan", exact: true })).toBeVisible();
+    await expect(settings.getByRole("tab", { name: "Subscriptions", exact: true })).toBeVisible();
     await expect(settings.getByRole("tab", { name: "Responses", exact: true })).toHaveCount(0);
   } else {
     await settings.getByRole("button", { name: "Section", exact: true }).click();
     await page
       .getByRole("combobox", { name: "Search sections", exact: true })
       .fill("Subscriptions");
-    await expect(page.getByRole("option", { name: "Upgrade plan", exact: true })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Subscriptions", exact: true })).toBeVisible();
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }

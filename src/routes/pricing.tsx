@@ -129,15 +129,15 @@ function PricingPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <a href="#main-content" className="sr-only focus:not-sr-only">
-        Skip to content
-      </a>
+    <div data-billing-page className="min-h-dvh bg-background text-foreground">
       <header className="flex items-center justify-between px-6 py-5">
-        <Link to="/" className="text-lg font-semibold">
+        <Link to="/" className="inline-flex h-11 items-center text-lg font-semibold">
           KovaGPT
         </Link>
-        <Link to="/" className="rounded-xl border border-border px-4 py-2 text-sm">
+        <Link
+          to="/"
+          className="inline-flex h-11 items-center rounded-xl border border-border px-4 text-sm"
+        >
           Back to chat
         </Link>
       </header>
@@ -281,6 +281,22 @@ function PricingPage() {
         </section>
       </main>
 
+      <footer className="border-t border-border px-6 py-6">
+        <nav
+          aria-label="Footer navigation"
+          className="mx-auto flex max-w-6xl flex-wrap gap-6 text-sm text-muted-foreground"
+        >
+          <Link to="/privacy" className="inline-flex min-h-11 items-center">
+            Privacy
+          </Link>
+          <Link to="/terms" className="inline-flex min-h-11 items-center">
+            Terms
+          </Link>
+          <Link to="/contact-support" className="inline-flex min-h-11 items-center">
+            Contact support
+          </Link>
+        </nav>
+      </footer>
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
     </div>
   );
