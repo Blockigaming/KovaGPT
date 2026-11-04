@@ -52,7 +52,7 @@ test("desktop Settings width is editable and Back restores the originating page"
   const thumb = (await width.boundingBox())!;
   const track = (await settings
     .locator('[data-slot="slider"]')
-    .filter({ has: width })
+    .filter({ has: page.getByRole("slider", { name: "Settings sidebar width" }) })
     .boundingBox())!;
   await page.mouse.move(thumb.x + thumb.width / 2, thumb.y + thumb.height / 2);
   await page.mouse.down();
