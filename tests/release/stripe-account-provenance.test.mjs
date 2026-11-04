@@ -5,14 +5,15 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("browser and server live credentials must target the approved Stripe account", async () => {
-  const [publicConfig, stripeClient, browserConfig, payments, envExample, rollout] = await Promise.all([
-    read("src/config/public-config.ts"),
-    read("src/lib/stripe.ts"),
-    read("src/lib/stripe-browser-config.ts"),
-    read("src/utils/payments.functions.ts"),
-    read(".env.example"),
-    read("docs/release/STRIPE_BILLING_ROLLOUT.md"),
-  ]);
+  const [publicConfig, stripeClient, browserConfig, payments, envExample, rollout] =
+    await Promise.all([
+      read("src/config/public-config.ts"),
+      read("src/lib/stripe.ts"),
+      read("src/lib/stripe-browser-config.ts"),
+      read("src/utils/payments.functions.ts"),
+      read(".env.example"),
+      read("docs/release/STRIPE_BILLING_ROLLOUT.md"),
+    ]);
 
   assert.match(publicConfig, /PUBLIC_STRIPE_ACCOUNT_ID = "acct_1UAeDgAEZlsb6DBY"/);
   assert.match(publicConfig, /PUBLIC_PAYMENTS_CLIENT_TOKEN = ""/);
