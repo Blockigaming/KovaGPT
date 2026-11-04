@@ -81,6 +81,16 @@
   width: 1.2em;
   height: 1.2em;
 }
+@media (pointer: coarse), (max-width: 1023px) {
+  .spec400-composer-trailing .spec400-primary-voice,
+  .spec400-composer-trailing [data-testid="stop-button"],
+  .spec400-composer-trailing [data-testid="send-button"] {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
 .spec400-composer-toolbar {
   display: flex;
   justify-content: space-between;
