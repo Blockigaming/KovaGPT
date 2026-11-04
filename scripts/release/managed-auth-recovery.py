@@ -46,7 +46,11 @@ PUBLIC_SQLSTATES = frozenset({"42601", "42703", "42883", "42704", "42501", "5701
 PUBLIC_STAGES = frozenset({"startup", "capture-authorization", "capture-source-config",
     "capture-client-tools", "capture-snapshot", "capture-catalog", "capture-dump",
     "capture-schema", "capture-coverage", "capture-rows", "capture-package",
-    "capture-encrypt", "capture-roundtrip", "capture-receipt", "capture-semantics", "restore-semantics", "restore"})
+    "capture-encrypt", "capture-roundtrip", "capture-receipt", "capture-semantics", "restore-semantics", "restore",
+    "restore-configuration", "restore-baseline", "restore-decrypt", "restore-inspect", "restore-schema",
+    "restore-data-render", "restore-data-import", "restore-verify"})
+PUBLIC_COMMANDS = frozenset({"gpg", "psql", "pg_dump", "pg_restore", "node", "python3", "other"})
+PUBLIC_COMMAND_STATUSES = frozenset({"nonzero", "signal", "timeout", "launch"})
 PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_enabled",
     "source_approval_mismatch", "source_build_approval_missing", "backup_passphrase_missing",
     "production_connection_rejected", "trusted_ca_bundle_required", "pg17_client_required",
@@ -108,6 +112,10 @@ def public_failure(exc):
             "code":code if code in PUBLIC_FAILURE_CODES else "unclassified_private_failure"}
     state=getattr(exc,"sqlstate",None)
     if type(state) is str and state in PUBLIC_SQLSTATES:result["sqlstate"]=state
+    command=getattr(exc,"command",None)
+    status=getattr(exc,"command_status",None)
+    if type(command) is str and command in PUBLIC_COMMANDS:result["command"]=command
+    if type(status) is str and status in PUBLIC_COMMAND_STATUSES:result["commandStatus"]=status
     detail=getattr(exc,"semantic_failure",None)
     if type(detail) is dict:
         module=semantic_module()
@@ -223,6 +231,16 @@ def child_limits():
     resource.setrlimit(resource.RLIMIT_FSIZE, (MAX_BYTES, MAX_BYTES))
 
 
+def command_failure(argv, status):
+    # Classify the fixed executable only. Never retain argv, stderr, exception
+    # text, database identifiers, values, paths, or a dynamic exit-code payload.
+    command = Path(argv[0]).name if isinstance(argv, (list, tuple)) and argv and type(argv[0]) is str else "other"
+    stopped = Stopped("private_command_unconfirmed")
+    stopped.command = command if command in PUBLIC_COMMANDS else "other"
+    stopped.command_status = status if status in PUBLIC_COMMAND_STATUSES else "launch"
+    return stopped
+
+
 def run(argv, env, *, data=None, output=None, timeout=TIMEOUT):
     # Stdout is file-backed and bounded before being read into memory. All
     # private files written by the child also have a kernel-enforced size cap.
@@ -232,7 +250,8 @@ def run(argv, env, *, data=None, output=None, timeout=TIMEOUT):
                                     stderr=subprocess.DEVNULL, timeout=remaining(timeout), check=False,
                                     preexec_fn=child_limits)
             check_deadline()
-            require(result.returncode == 0, "private_command_unconfirmed")
+            if result.returncode != 0:
+                raise command_failure(argv, "signal" if result.returncode < 0 else "nonzero")
             if output is not None:
                 return None
             require(captured.tell() <= STDOUT_BYTES, "private_output_bound_exceeded")
@@ -240,8 +259,10 @@ def run(argv, env, *, data=None, output=None, timeout=TIMEOUT):
             data_out = captured.read(STDOUT_BYTES+1)
             check_deadline()
             return data_out
+    except subprocess.TimeoutExpired:
+        raise command_failure(argv, "timeout") from None
     except (OSError, subprocess.SubprocessError):
-        raise Stopped("private_command_unconfirmed") from None
+        raise command_failure(argv, "launch") from None
 
 
 def clean_pg_env(env):
@@ -1278,6 +1299,7 @@ def restore_write_preflight(env, target, approved, attestation):
 def restore(env, archive, output):
     require(env.get("KOVA_AUTH_RECOVERY_CONFIRMATION") in {"RESTORE_ISOLATED", "RESTORE_EMPTY_ISOLATED"},
             "restore_not_enabled")
+    mark_stage("restore-configuration")
     a = attest(env)  # isolation is established BEFORE receiving plaintext
     baseline_mode = restore_baseline_mode(env, a)
     require(not env.get("PGPASSWORD"), "isolated_password_environment_rejected")
@@ -1294,6 +1316,7 @@ def restore(env, archive, output):
     with tempfile.TemporaryDirectory(prefix="kova-private-auth-restore-") as temp:
         work = Path(temp)
         os.chmod(work, 0o700)
+        mark_stage("restore-baseline")
         blank_catalog = None
         if baseline_mode == "empty-database":
             blank_catalog = empty_target_preflight(target, approved, a, work, "before-decrypt")
@@ -1306,7 +1329,9 @@ def restore(env, archive, output):
             empty_target_identity(target, approved, require_blank=False)
             require(attest(env) == a, "isolation_attestation_changed")
         plain = work/"payload.tar"
+        mark_stage("restore-decrypt")
         crypt(env, phrase, archive, plain, decrypt=True)
+        mark_stage("restore-inspect")
         extracted = work/"payload"
         extracted.mkdir(mode=0o700)
         bounded_archive(plain, extracted)
@@ -1338,7 +1363,7 @@ def restore(env, archive, output):
             mark_stage("restore-semantics")
             source_semantics=json.loads((extracted/"extension-semantic-source.json").read_bytes())
             verify_semantic_source(source_semantics,manifest,env,a)
-            mark_stage("restore")
+            mark_stage("restore-inspect")
         if baseline_mode == "managed-baseline":
             proof = target_observation(target, source_catalog)
             require(proof["observed"]["serverVersionNum"] == 170006, "target_postgres_patch_mismatch")
@@ -1376,9 +1401,11 @@ def restore(env, archive, output):
         restore_write_preflight(env, target, approved, a)
         # Every owner/ACL is retained. Managed definitions are not replayed over
         # the exact matching baseline. Any conflict aborts this transaction.
+        mark_stage("restore-schema")
         run(["pg_restore","--no-password","--exit-on-error","--single-transaction",
              "--section=pre-data","--section=post-data","--use-list",str(selected),
              "--dbname",approved["uri"],str(extracted/"full.dump")],target)
+        mark_stage("restore-data-render")
         data_selected = work/"data-restore.list"
         extension_tables = {(r["schema"],r["name"]) for r in supplement["tables"]} if supplement is not None else set()
         extension_sequences = {(r["schema"],r["name"]) for r in supplement["sequences"]} if supplement is not None else set()
@@ -1418,11 +1445,12 @@ def restore(env, archive, output):
         if source_semantics is not None:
             mark_stage("restore-semantics")
             verify_semantic_target(target,source_semantics,manifest)
-            mark_stage("restore")
+        mark_stage("restore-data-import")
         restore_write_preflight(env, target, approved, a)
         run(["psql","-X","--no-password","--quiet","--single-transaction","--set","ON_ERROR_STOP=1",
              "--command","SET session_replication_role=replica","--file",str(data_sql),
              "--command","SET session_replication_role=origin"],target,output=subprocess.DEVNULL)
+        mark_stage("restore-verify")
         require(encoded(row_fingerprints(target, source_catalog)) == (extracted/"rows.json").read_bytes(), "restored_table_state_mismatch")
         for row in budgeted(expected_sequences):
             actual = json.loads(psql(target,f'SELECT jsonb_build_object(\'value\',last_value::text,\'called\',is_called) FROM "{row["schema"]}"."{row["name"]}";\n'))
