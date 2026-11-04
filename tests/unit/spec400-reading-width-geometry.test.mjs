@@ -168,7 +168,13 @@ for (const readingWidth of [680, 760, 900]) {
         "--safe-right": `${safeRight}px`,
       };
       applyReadingPreferences(
-        { style: { setProperty: (key, value) => (variables[key] = value) }, dataset: {} },
+        {
+          style: {
+            setProperty: (key, value) => (variables[key] = value),
+            removeProperty: (key) => delete variables[key],
+          },
+          dataset: {},
+        },
         { readingWidth },
       );
       const padding = Math.max(gutter, safeLeft) + Math.max(gutter, safeRight);

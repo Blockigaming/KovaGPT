@@ -197,7 +197,7 @@ function StreamingStatus({
       aria-atomic="true"
       data-wait-stage={waitStage}
     >
-      <details className="min-w-0 flex-1">
+      <details open className="min-w-0 flex-1">
         <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
           Thinking · {label}…
         </summary>
@@ -994,7 +994,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            <MessageActivityList activities={message.activities} />
+            {!waitingForFirstToken && <MessageActivityList activities={message.activities} />}
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}

@@ -17,6 +17,7 @@ const menus = Object.fromEntries(
 );
 const { MessageActivityList } = loadUiModule("src/components/MessageActivityList.tsx", {
   "lucide-react": icons,
+  "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
 });
 const { PromptMessage } = loadUiModule("src/components/PromptMessage.tsx", {
   "lucide-react": icons,

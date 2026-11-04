@@ -168,13 +168,14 @@ test("deferred checkout opens a recoverable configuration error without payment 
   await waitForKovaHydration(page);
   const start = page.getByRole("button", { name: "Start Plus", exact: true });
   await start.click();
-  const dialog = page.getByRole("dialog", { name: "Secure checkout", exact: true });
+  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
+  const dialog = page.getByRole("main");
   await expect(dialog.locator('[data-checkout-state="error"]')).toBeVisible();
   await expect(dialog).toContainText("Checkout couldn't load");
   await page.screenshot({ path: `${evidence}/checkout-unconfigured-error.png` });
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(start).toBeFocused();
+  await page.getByRole("link", { name: "Back to plans", exact: true }).click();
+  await expect(page).toHaveURL(/\/pricing/);
+  await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
   expect(stripeRequests).toEqual([]);
 });
 
