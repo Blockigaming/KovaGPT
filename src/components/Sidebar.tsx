@@ -1505,7 +1505,7 @@ export function Sidebar({
                 <CustomizeGlyph aria-hidden="true" />
               </button>
             </RailTooltip>
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
@@ -1718,7 +1718,7 @@ export function Sidebar({
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <button type="button" className="kova-account-main" aria-label="Account menu">
                       <span className="kova-account-avatar">
