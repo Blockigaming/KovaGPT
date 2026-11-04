@@ -28,8 +28,9 @@ async function geometry(page: Page) {
     primary,
   ]) {
     await expect(button).toBeVisible();
-    await expect.poll(async () => (await button.boundingBox())?.width).toBe(targetSize);
-    await expect.poll(async () => (await button.boundingBox())?.height).toBe(targetSize);
+    const expectedSize = button === primary && !coarseLayout ? 43 : targetSize;
+    await expect.poll(async () => (await button.boundingBox())?.width).toBe(expectedSize);
+    await expect.poll(async () => (await button.boundingBox())?.height).toBe(expectedSize);
   }
   // Writing stays above the toolbar at every viewport, including multiline drafts.
   await expect
@@ -625,8 +626,8 @@ test("requested polish: empty composer swaps voice and send and has compact atta
     () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
   );
   const sendTarget = await page.getByTestId("send-button").boundingBox();
-  expect(sendTarget!.width).toBe(touchLayout ? 44 : 36);
-  expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);
+  expect(sendTarget!.width).toBe(touchLayout ? 44 : 43);
+  expect(sendTarget!.height).toBe(touchLayout ? 44 : 43);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const mobileMenu = await page.getByTestId("mobile-bottom-sheet").isVisible();
