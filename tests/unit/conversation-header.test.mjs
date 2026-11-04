@@ -702,6 +702,10 @@ test("composer action disc uses a compact desktop control and full phone target"
   );
   assert.match(
     css,
+    /\.spec400-composer-trailing \.spec400-primary-voice,[\s\S]*\[data-testid="send-button"\] \{\s*width: 43px;\s*height: 43px;\s*min-width: 43px;\s*min-height: 43px/,
+  );
+  assert.match(
+    css,
     /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,
   );
   assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
