@@ -368,6 +368,10 @@
     border-radius: 0;
     padding-top: var(--safe-top);
     padding-bottom: var(--safe-bottom);
+    background: var(--background);
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content {
+    background: var(--background);
   }
   [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
     top: max(12px, var(--safe-top));
