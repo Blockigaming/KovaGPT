@@ -3143,6 +3143,81 @@ function KovaGPT() {
       </Suspense>
     ) : null;
 
+  const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
+  const desktopToolbar = chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
+    <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
+      <div
+        hidden={sidebarOpen || Boolean(isSignedIn)}
+        className="flex items-center gap-1 mr-2 shrink-0"
+      >
+        <button
+          onClick={(event) => {
+            readingAnchorControllerRef.current?.capture();
+            sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
+            setSidebarOpen(true);
+          }}
+          className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
+          aria-label="Open sidebar"
+          title="Open sidebar"
+        >
+          <PanelLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="flex items-center min-w-0 flex-1 relative">
+        <div className="spec400-chat-title">
+          {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "KovaGPT"}
+        </div>
+        {selectedWorkflowSkill ? (
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={clearWorkflowSkill}
+            disabled={isStreaming}
+            className="ml-2 max-w-56 text-muted-foreground"
+            aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
+            title="Clear skill"
+          >
+            <span className="truncate">{selectedWorkflowSkill.name}</span>
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="ml-auto flex items-center gap-2 shrink-0">
+        {conversationActions()}
+        {isLoaded && isSignedIn && !chatStarted && (
+          <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
+            <TemporaryChatToggle
+              enabled={tempChat}
+              confirmed={tempChatConfirmed}
+              onToggle={(trigger) => {
+                temporaryTriggerRef.current = trigger;
+                temporaryReturnUrlRef.current = window.location.href;
+                setTemporaryChatEnabled(!tempChat);
+              }}
+            />
+          </Suspense>
+        )}
+        {isLoaded && !isSignedIn && !chatStarted ? (
+          <>
+            <SignInButton mode="modal">
+              <button className="kova-auth-primary h-10 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 active:scale-[0.98] transition">
+                Log in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="kova-auth-sign-up h-10 whitespace-nowrap rounded-full px-4 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition">
+                Sign up for free
+              </button>
+            </SignUpButton>
+          </>
+        ) : null}
+      </div>
+    </header>
+  ) : null;
+
   return (
     <div
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
@@ -3235,77 +3310,7 @@ function KovaGPT() {
               : undefined
           }
         />
-        <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
-          <div
-            hidden={sidebarOpen || Boolean(isSignedIn)}
-            className="flex items-center gap-1 mr-2 shrink-0"
-          >
-            <button
-              onClick={(event) => {
-                readingAnchorControllerRef.current?.capture();
-                sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
-                setSidebarOpen(true);
-              }}
-              className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
-              aria-label="Open sidebar"
-              title="Open sidebar"
-            >
-              <PanelLeft className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center min-w-0 flex-1 relative">
-            <div className="spec400-chat-title">
-              {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "KovaGPT"}
-            </div>
-            {selectedWorkflowSkill ? (
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={clearWorkflowSkill}
-                disabled={isStreaming}
-                className="ml-2 max-w-56 text-muted-foreground"
-                aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
-                title="Clear skill"
-              >
-                <span className="truncate">{selectedWorkflowSkill.name}</span>
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="ml-auto flex items-center gap-2 shrink-0">
-            {conversationActions()}
-            {isLoaded && isSignedIn && !chatStarted && (
-              <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
-                <TemporaryChatToggle
-                  enabled={tempChat}
-                  confirmed={tempChatConfirmed}
-                  onToggle={(trigger) => {
-                    temporaryTriggerRef.current = trigger;
-                    temporaryReturnUrlRef.current = window.location.href;
-                    setTemporaryChatEnabled(!tempChat);
-                  }}
-                />
-              </Suspense>
-            )}
-            {isLoaded && !isSignedIn && !chatStarted ? (
-              <>
-                <SignInButton mode="modal">
-                  <button className="kova-auth-primary h-10 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 active:scale-[0.98] transition">
-                    Log in
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="kova-auth-sign-up h-10 whitespace-nowrap rounded-full px-4 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition">
-                    Sign up for free
-                  </button>
-                </SignUpButton>
-              </>
-            ) : null}
-          </div>
-        </header>
+        {!showEmptyChat && desktopToolbar}
 
         {tempChat && chatStarted ? (
           <p
@@ -3378,7 +3383,7 @@ function KovaGPT() {
             role={result && !wideResult ? "tabpanel" : "region"}
             aria-labelledby={result && !wideResult ? "conversation-tab" : undefined}
           >
-            {!active || (active.messages.length === 0 && composerVoiceMode !== "voice") ? (
+            {showEmptyChat ? (
               <Suspense
                 fallback={
                   <p className="kova-home-loading" role="status">
@@ -3390,6 +3395,7 @@ function KovaGPT() {
                   owner={userKey}
                   firstName={user?.firstName}
                   chatId={activeId}
+                  toolbar={desktopToolbar}
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
                   onSelect={setActiveId}
                 >
