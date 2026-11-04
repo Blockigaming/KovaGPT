@@ -393,7 +393,10 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
   assert.match(notFound, /window\.history\.back\(\)/);
   assert.match(notFound, /<Link to="\/"/);
   assert.match(routeError, /await router\.invalidate\(\)/);
-  assert.match(routeError, /finally \{\s*reset\(\)/);
+  // Reset the error boundary before refreshing the route; a rejected refresh
+  // must still offer a full reload instead of leaving Retry stuck.
+  assert.match(routeError, /reset\(\);\s*try \{\s*await router\.invalidate\(\)/);
+  assert.match(routeError, /catch \{[\s\S]*?window\.location\.reload\(\)/);
   assert.match(routeError, /href="\/"/);
   assert.doesNotMatch(routeError, /error\.message|incidentId|createIncidentId/);
 });
