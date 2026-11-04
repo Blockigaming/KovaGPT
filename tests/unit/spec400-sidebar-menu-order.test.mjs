@@ -14,14 +14,16 @@ test("pinned chats do not consume the eight recent chat slots", () => {
 test("account menu uses the specified order and a separate destructive group", () => {
   const start = source.indexOf('className="kova-profile-menu"');
   const menu = source.slice(start, source.indexOf("</DropdownMenuContent>", start));
-  const labels = ["Profile", "Settings", "Usage", "Subscriptions", "Help", "Log out"];
-  let position = -1;
+  const labels = ["Personalization", "Profile", "Settings", "Help", "Log out"];
+  assert.ok(menu.includes('"Upgrade plan"'));
+  let position = menu.indexOf('"Upgrade plan"');
   for (const label of labels) {
     const match = menu.match(new RegExp(`>\\s*${label}\\s*<`));
     assert.ok(match, label);
     assert.ok(match.index > position, label);
     position = match.index;
   }
+  assert.doesNotMatch(menu, />\s*(?:Usage|Subscriptions)\s*</);
   assert.doesNotMatch(menu, /Customize sidebar/);
   assert.ok(menu.indexOf("<DropdownMenuSeparator") < menu.indexOf("Log out"));
 });

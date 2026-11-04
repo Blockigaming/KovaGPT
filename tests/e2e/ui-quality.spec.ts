@@ -131,8 +131,10 @@ test("empty workspace remains contained and composer focus is deliberate", async
     await expect(
       page.getByRole("button", { name: "Start with Write something", exact: true }),
     ).toHaveCount(0);
-    // Radix applies a short entrance transform. Wait for the real anchor gap,
-    // rather than sampling an in-flight animation or widening its tolerance.
+    // Allowance loading can change the menu height after its entrance animation.
+    // Check its anchor gap and viewport containment together after loading settles,
+    // instead of remeasuring separate geometry snapshots across a re-position.
+    await expect(menu.getByText(/Checking (today’s|your plan’s) upload allowance…/)).toBeHidden();
     await expect
       .poll(async () => {
         const [menuBox, anchorBox, side] = await Promise.all([
@@ -140,23 +142,21 @@ test("empty workspace remains contained and composer focus is deliberate", async
           attach.boundingBox(),
           menu.getAttribute("data-side"),
         ]);
-        if (!menuBox || !anchorBox) return false;
-        return side === "top"
-          ? menuBox.y + menuBox.height <= anchorBox.y - 7
-          : side === "bottom" && menuBox.y >= anchorBox.y + anchorBox.height + 7;
+        const viewport = page.viewportSize();
+        if (!menuBox || !anchorBox || !viewport) return false;
+        const hasGap =
+          side === "top"
+            ? menuBox.y + menuBox.height <= anchorBox.y - 7
+            : side === "bottom" && menuBox.y >= anchorBox.y + anchorBox.height + 7;
+        return (
+          hasGap &&
+          menuBox.x >= 11 &&
+          menuBox.x + menuBox.width <= viewport.width - 11 &&
+          menuBox.y >= 11 &&
+          menuBox.y + menuBox.height <= viewport.height - 11
+        );
       })
       .toBe(true);
-    const [menuBox, anchorBox] = await Promise.all([menu.boundingBox(), attach.boundingBox()]);
-    expect(menuBox).not.toBeNull();
-    expect(anchorBox).not.toBeNull();
-    const side = await menu.getAttribute("data-side");
-    expect(["top", "bottom"]).toContain(side);
-    if (side === "top") expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(anchorBox!.y - 7);
-    else expect(menuBox!.y).toBeGreaterThanOrEqual(anchorBox!.y + anchorBox!.height + 7);
-    expect(menuBox!.x).toBeGreaterThanOrEqual(11);
-    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width - 11);
-    expect(menuBox!.y).toBeGreaterThanOrEqual(11);
-    expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 11);
     const fileAction = menu.getByRole("button", { name: "Files", exact: true });
     await expect(fileAction).toBeVisible();
     // The SDK entrance scales the entire menu. Measure the target after that
