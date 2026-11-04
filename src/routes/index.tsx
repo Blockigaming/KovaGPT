@@ -1825,6 +1825,7 @@ function KovaGPT() {
     [historyAction],
   );
 
+  const skipThinkingRef = useRef<(() => void) | null>(null);
   const send = useCallback(
     async (
       text: string,
@@ -1836,6 +1837,7 @@ function KovaGPT() {
       requestId?: string,
       queuedSend?: NextPrompt,
       voiceRequest?: { signal: AbortSignal },
+      quickAnswer = false,
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1872,7 +1874,7 @@ function KovaGPT() {
         !_retryAttempt &&
         !requestId &&
         (!queuedSend || matchesNextPromptDraft(queuedSend, composerDraftRef.current));
-      const requestMode = queuedSend?.mode ?? mode;
+      const requestMode = quickAnswer ? "instant" : (queuedSend?.mode ?? mode);
       if (queuedSend) updateNextPrompt(null);
       else if (nextPromptRef.current)
         updateNextPrompt(
@@ -2018,6 +2020,33 @@ function KovaGPT() {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      skipThinkingRef.current =
+        quickAnswer || voiceRequest
+          ? null
+          : () => {
+              if (
+                !isCurrentRequest() ||
+                controller.signal.aborted ||
+                inFlightTargetRef.current?.assistantMessageId !== assistantMsg.id
+              )
+                return;
+              skipThinkingRef.current = null;
+              controller.abort(new DOMException(USER_STOP_REASON, "AbortError"));
+              retryGenerationRef.current += 1;
+              inFlightRef.current = false;
+              void send(
+                text,
+                atts,
+                retryTool,
+                0,
+                nextConvId,
+                priorMessages,
+                newId(),
+                undefined,
+                undefined,
+                true,
+              );
+            };
 
       let pendingContent = "";
       let assistantFrame: number | null = null;
@@ -2302,8 +2331,7 @@ function KovaGPT() {
             retryAfter?: number;
           };
           const raw = err.message || "Something went wrong";
-          const quotaRejected =
-            err.status === 429 && (/limit/i.test(raw) || err.category === "quota_exceeded");
+          const quotaRejected = err.status === 429 && err.category === "quota_exceeded";
           if (quotaRejected && isCurrentRetryScope()) {
             if (
               clearedComposerRevision !== null &&
@@ -2388,7 +2416,7 @@ function KovaGPT() {
               kind: "session-expired",
               signedIn: isSignedIn,
             });
-          if (isCurrentRetryScope())
+          if (isCurrentRetryScope() && !quotaRejected)
             toast.error(friendly, {
               description: requestId ? `Reference ID: ${requestId}` : undefined,
               action: canManualRetry
@@ -2417,7 +2445,25 @@ function KovaGPT() {
                   }
                 : undefined,
             });
-          updateAssistant(`\n\n_${detail}_`);
+          if (quotaRejected) {
+            controller.abort();
+            if (!assembledReply.trim()) {
+              setConversations((previous) =>
+                previous.map((conversation) =>
+                  conversation.id === nextConvId
+                    ? {
+                        ...conversation,
+                        messages: conversation.messages.filter(
+                          (message) => message.id !== assistantMsg.id,
+                        ),
+                      }
+                    : conversation,
+                ),
+              );
+            }
+          } else {
+            updateAssistant(`\n\n_${detail}_`);
+          }
         }
       } finally {
         voiceRequest?.signal.removeEventListener("abort", cancelVoiceRequest);
@@ -2973,6 +3019,11 @@ function KovaGPT() {
         }
         userKey={userKey}
         principalResolved={isLoaded}
+        onSkipThinking={
+          isStreaming && isLastAssistant && skipThinkingRef.current
+            ? () => skipThinkingRef.current?.()
+            : undefined
+        }
         streaming={isStreaming && isLastAssistant}
         streamingStartedAt={
           isStreaming &&

@@ -28,6 +28,7 @@ import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GoalsRouteImport } from './routes/goals'
@@ -60,6 +61,7 @@ import { Route as SitesRouteImport } from './routes/sites'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as StudyRouteImport } from './routes/study'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
+import { Route as SubscribeRouteImport } from './routes/subscribe'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TrustedContactsRouteImport } from './routes/trusted-contacts'
@@ -326,6 +328,11 @@ const DiscoveryRoute = DiscoveryRouteImport.update({
   path: '/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -484,6 +491,11 @@ const StudyRoute = StudyRouteImport.update({
 const StudyAssistantRoute = StudyAssistantRouteImport.update({
   id: '/study-assistant',
   path: '/study-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubscribeRoute = SubscribeRouteImport.update({
+  id: '/subscribe',
+  path: '/subscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SummaryRoute = SummaryRouteImport.update({
@@ -1393,6 +1405,7 @@ export interface FileRoutesByFullPath {
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/discovery': typeof DiscoveryRoute
+  '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -1425,6 +1438,7 @@ export interface FileRoutesByFullPath {
   '/status': typeof StatusRoute
   '/study': typeof StudyRoute
   '/study-assistant': typeof StudyAssistantRoute
+  '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/trusted-contacts': typeof TrustedContactsRoute
@@ -1616,6 +1630,7 @@ export interface FileRoutesByTo {
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/discovery': typeof DiscoveryRoute
+  '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -1648,6 +1663,7 @@ export interface FileRoutesByTo {
   '/status': typeof StatusRoute
   '/study': typeof StudyRoute
   '/study-assistant': typeof StudyAssistantRoute
+  '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/trusted-contacts': typeof TrustedContactsRoute
@@ -1840,6 +1856,7 @@ export interface FileRoutesById {
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/discovery': typeof DiscoveryRoute
+  '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
@@ -1872,6 +1889,7 @@ export interface FileRoutesById {
   '/status': typeof StatusRoute
   '/study': typeof StudyRoute
   '/study-assistant': typeof StudyAssistantRoute
+  '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/trusted-contacts': typeof TrustedContactsRoute
@@ -2065,6 +2083,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/context-packs'
     | '/discovery'
+    | '/download'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -2097,6 +2116,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/study'
     | '/study-assistant'
+    | '/subscribe'
     | '/summary'
     | '/terms'
     | '/trusted-contacts'
@@ -2288,6 +2308,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/context-packs'
     | '/discovery'
+    | '/download'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -2320,6 +2341,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/study'
     | '/study-assistant'
+    | '/subscribe'
     | '/summary'
     | '/terms'
     | '/trusted-contacts'
@@ -2511,6 +2533,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/context-packs'
     | '/discovery'
+    | '/download'
     | '/files'
     | '/getting-started'
     | '/goals'
@@ -2543,6 +2566,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/study'
     | '/study-assistant'
+    | '/subscribe'
     | '/summary'
     | '/terms'
     | '/trusted-contacts'
@@ -2735,6 +2759,7 @@ export interface RootRouteChildren {
   ContactSupportRoute: typeof ContactSupportRoute
   ContextPacksRoute: typeof ContextPacksRoute
   DiscoveryRoute: typeof DiscoveryRoute
+  DownloadRoute: typeof DownloadRoute
   FilesRoute: typeof FilesRoute
   GettingStartedRoute: typeof GettingStartedRoute
   GoalsRoute: typeof GoalsRoute
@@ -2767,6 +2792,7 @@ export interface RootRouteChildren {
   StatusRoute: typeof StatusRoute
   StudyRoute: typeof StudyRoute
   StudyAssistantRoute: typeof StudyAssistantRoute
+  SubscribeRoute: typeof SubscribeRoute
   SummaryRoute: typeof SummaryRoute
   TermsRoute: typeof TermsRoute
   TrustedContactsRoute: typeof TrustedContactsRoute
@@ -3062,6 +3088,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/files': {
       id: '/files'
       path: '/files'
@@ -3284,6 +3317,13 @@ declare module '@tanstack/react-router' {
       path: '/study-assistant'
       fullPath: '/study-assistant'
       preLoaderRoute: typeof StudyAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subscribe': {
+      id: '/subscribe'
+      path: '/subscribe'
+      fullPath: '/subscribe'
+      preLoaderRoute: typeof SubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/summary': {
@@ -4619,6 +4659,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactSupportRoute: ContactSupportRoute,
   ContextPacksRoute: ContextPacksRoute,
   DiscoveryRoute: DiscoveryRoute,
+  DownloadRoute: DownloadRoute,
   FilesRoute: FilesRoute,
   GettingStartedRoute: GettingStartedRoute,
   GoalsRoute: GoalsRoute,
@@ -4651,6 +4692,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatusRoute: StatusRoute,
   StudyRoute: StudyRoute,
   StudyAssistantRoute: StudyAssistantRoute,
+  SubscribeRoute: SubscribeRoute,
   SummaryRoute: SummaryRoute,
   TermsRoute: TermsRoute,
   TrustedContactsRoute: TrustedContactsRoute,

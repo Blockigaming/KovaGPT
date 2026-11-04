@@ -1637,7 +1637,8 @@ export const Route = createFileRoute("/api/chat")({
               tools: availableTools,
             });
             const outputCeiling = Number(body.max_completion_tokens);
-            let maximumProviderCalls = enableTools ? 9 : 1;
+            const paidToolHopLimit = 3;
+            let maximumProviderCalls = enableTools ? paidToolHopLimit + 1 : 1;
             let estimatedCost =
               estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
                 maximumProviderCalls +
@@ -1843,7 +1844,7 @@ export const Route = createFileRoute("/api/chat")({
             };
 
             if (enableTools) {
-              const MAX_TOOL_HOPS = freeConnectorBudget ? 1 : 3;
+              const MAX_TOOL_HOPS = freeConnectorBudget ? 1 : paidToolHopLimit;
               const MAX_TOOL_CALLS_TOTAL = 16;
               const PER_HOP_TIMEOUT_MS = 12_000;
               let totalToolCalls = 0;

@@ -347,3 +347,10 @@ function selectSubscriptionSummaryRow(
     rows.find((subscription) => hasVerifiedSubscriptionAccess(subscription, now)) ?? rows[0] ?? null
   );
 }
+
+// Publishable keys are public configuration, never secret Stripe credentials.
+// Runtime fallback keeps existing Azure images usable when Vite was built without the key.
+export const getBillingClientConfiguration = createServerFn({ method: "GET" }).handler(async () => {
+  const value = process.env.VITE_PAYMENTS_CLIENT_TOKEN || process.env.STRIPE_PUBLISHABLE_KEY || "";
+  return { publishableKey: /^pk_live_[A-Za-z0-9]+$/.test(value) ? value : "" };
+});

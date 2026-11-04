@@ -1,5 +1,5 @@
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { getStripe } from "@/lib/stripe";
 import { createCheckoutSession } from "@/utils/payments.functions";
@@ -12,7 +12,7 @@ interface Props {
 }
 
 const CHECKOUT_ERROR_MESSAGE =
-  "Secure checkout couldn't load. Close this window and try again. If the problem continues, contact support.";
+  "Secure checkout couldn't load. Return to plans and try again. If the problem continues, contact support.";
 const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =
   "You already have an active subscription. Manage your plan from the billing portal before starting a new one.";
 
@@ -39,6 +39,20 @@ export function StripeEmbeddedCheckout({ priceId, quantity, userId }: Props) {
       return null;
     }
   }, []);
+  useEffect(() => {
+    if (!stripe) return;
+    let current = true;
+    void stripe
+      .then((client) => {
+        if (current && !client) setCheckoutErrorMessage(CHECKOUT_ERROR_MESSAGE);
+      })
+      .catch(() => {
+        if (current) setCheckoutErrorMessage(CHECKOUT_ERROR_MESSAGE);
+      });
+    return () => {
+      current = false;
+    };
+  }, [stripe]);
 
   const fetchClientSecret = useCallback((): Promise<string> => {
     if (attempt.promise) return attempt.promise;

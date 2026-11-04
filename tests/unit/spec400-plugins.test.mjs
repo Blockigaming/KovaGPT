@@ -47,8 +47,8 @@ test("spec400 card actions always open details, including unavailable and recove
     ["idle", true, "Connect"],
     ["connected", true, "Manage"],
     ["reauthorize", true, "Reconnect"],
-    ["permission_incomplete", true, "Reconnect"],
-    ["temporarily_unavailable", false, "Coming soon"],
+    ["permission_incomplete", true, "Details"],
+    ["temporarily_unavailable", false, "Details"],
     ["temporarily_unavailable", true, "Unavailable"],
   ]) {
     let trigger;

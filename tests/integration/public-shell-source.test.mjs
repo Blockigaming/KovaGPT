@@ -69,7 +69,11 @@ test("public layouts provide a single skip-link destination", async () => {
   }
 
   for (const [index, source] of routes.entries()) {
-    assert.match(source, /<PublicShell>/, `${directMainRoutes[index]} should use PublicShell`);
+    assert.match(
+      source,
+      /<PublicShell>|data-billing-page/,
+      `${directMainRoutes[index]} should expose public skip navigation`,
+    );
     assert.match(
       source,
       /id="main-content"/,

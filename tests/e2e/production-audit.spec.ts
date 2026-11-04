@@ -72,7 +72,9 @@ test("guest account entry requires login and restores focus after dismissing aut
   ).toBeVisible();
   await page.goto("/pricing");
   await waitForKovaHydration(page);
-  const login = page.getByRole("button", { name: "Start Plus", exact: true });
+  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
+  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
+  const login = page.getByRole("button", { name: "Sign in to continue", exact: true });
   await login.click();
   const auth = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
   await expect(auth).toBeVisible();

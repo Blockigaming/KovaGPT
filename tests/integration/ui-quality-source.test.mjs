@@ -167,7 +167,7 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(footerLogo, /className="h-6 w-6"/);
   assert.match(seoLanding, /<PublicShell>/);
   assert.doesNotMatch(seoLanding, /<NovaLogo/);
-  assert.match(pricing, /<PublicShell>/);
+  assert.match(pricing, /data-billing-page/);
   assert.doesNotMatch(pricing, /<NovaLogo/);
   const recoveryLogo = openingTag(resetPassword, "NovaLogo", /\bmark\b/);
   assert.match(recoveryLogo, /className="mb-6 h-8 w-8"/);
@@ -416,10 +416,7 @@ test("streaming status reports only real activity instead of invented progressio
   assert.match(message, /"Taking a little longer"/);
   assert.match(message, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
   assert.match(message, /return \(\) => window\.clearInterval\(timer\)/);
-  assert.match(
-    message,
-    /<li aria-current="step">\{active \? "Tool in progress" : "Waiting for reply"\}/,
-  );
+  assert.match(message, /Thinking · \{label\}…/);
   assert.match(message, /elapsedSeconds >= 8 && \(\s*<span role="timer" aria-live="off"/);
   assert.doesNotMatch(message, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(message, /kova-thinking-indicator/);

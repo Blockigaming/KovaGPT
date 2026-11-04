@@ -301,7 +301,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     name: "Enterprise",
     priceLabel: "Custom",
     description:
-      "Discuss organizational requirements with Kova. Availability and commercial terms are confirmed in writing before purchase.",
+      "Plan organizational access, security requirements, deployment and support with Kova. Scope, availability and commercial terms are confirmed in writing before purchase.",
     features: [
       "Custom access determined through sales",
       "Requirements and security review",
