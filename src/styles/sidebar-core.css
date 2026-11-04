@@ -744,3 +744,13 @@ button.kova-auth-sign-up:hover {
   height: 100%;
   object-fit: cover;
 }
+
+/* The menu itself receives programmatic focus when it opens. */
+.kova-profile-menu:focus {
+  outline: none;
+}
+.kova-account-main:focus:not(:focus-visible),
+.kova-rail-account:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
