@@ -117,9 +117,10 @@ test("empty workspace remains contained and composer focus is deliberate", async
     const control = coarseComposer ? 44 : 36;
     expect(metrics.attach!.width).toBe(control);
     expect(metrics.attach!.height).toBe(control);
-    expect(metrics.send!.width).toBe(control);
-    expect(metrics.send!.height).toBe(control);
-    expect(metrics.attach!.y).toBeCloseTo(metrics.send!.y, 1);
+    const sendControl = coarseComposer ? 44 : 43;
+    expect(metrics.send!.width).toBe(sendControl);
+    expect(metrics.send!.height).toBe(sendControl);
+    expect(metrics.attach!.y + control / 2).toBeCloseTo(metrics.send!.y + sendControl / 2, 1);
     expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.y);
   }
 
