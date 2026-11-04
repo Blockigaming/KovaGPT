@@ -174,6 +174,7 @@ function fixture() {
     },
     nextPromptScope: scope(),
     nextPromptScopeRef: { current: scope() },
+    skipThinkingRef: { current: null },
     inFlightRef: { current: false },
     inFlightTargetRef: { current: null },
     abortRef: { current: null },
@@ -1006,7 +1007,7 @@ const discardButton = (panel) => panelButton(panel, "Discard kept version");
 
 for (const fields of [
   {},
-  { category: "model_provider_failure", retryable: true },
+  { category: "quota_exceeded", retryable: true },
   { message: "Allowance exhausted", category: "quota_exceeded", retryable: true },
 ]) {
   test(`quota rejection restores exact text and attachment references, with no automatic retry (${JSON.stringify(fields)})`, async () => {
@@ -1029,7 +1030,7 @@ for (const fields of [
     assert.equal(f.context.limitDialogs.length, 1);
     assert.equal(f.context.quotaRejectedDrafts.length, 0);
     assert.equal(f.context.retryableFailedResponsesRef.current.size, 0);
-    assert.equal(f.errors.at(-1)[1].action, undefined);
+    assert.equal(f.errors.length, 0);
     assert.equal(f.timers.length, 0);
     f.context.dispatch();
     assert.equal(f.requests.length, 1);

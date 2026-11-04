@@ -42,7 +42,10 @@ for (const width of [680, 760, 900]) {
   test(`reading width ${width} updates the single shared surface token without writing storage`, () => {
     const properties = new Map();
     const root = {
-      style: { setProperty: (key, value) => properties.set(key, value) },
+      style: {
+        setProperty: (key, value) => properties.set(key, value),
+        removeProperty: (key) => properties.delete(key),
+      },
       dataset: {},
     };
     appearance.applyReadingPreferences(root, { ...original, readingWidth: width });

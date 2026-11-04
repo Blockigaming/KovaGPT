@@ -51,8 +51,8 @@
 .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
   position: static;
   align-self: stretch;
-  width: 216px;
-  flex: 0 0 216px;
+  width: var(--kova-settings-navigation-width, 281px);
+  flex: 0 0 var(--kova-settings-navigation-width, 281px);
   height: 100%;
   max-height: none;
   margin: 0;
@@ -165,4 +165,17 @@
 }
 :root[data-kova-motion="reduced"] .kova-settings-route [role="tabpanel"] {
   animation: none;
+}
+
+@media (min-width: 768px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
+    resize: horizontal;
+    overflow: auto;
+    min-width: 200px;
+    max-width: 440px;
+    flex-basis: auto;
+  }
+}
+.kova-app-shell:has(.kova-settings-route) .kova-sidebar-rail {
+  border-inline-end: 1px solid var(--border);
 }

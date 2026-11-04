@@ -48,7 +48,10 @@ export function unauthorized(message = "Unauthorized") {
 }
 
 export function tooMany(message = "Daily limit reached") {
-  return jsonError(message, 429);
+  return Response.json(
+    { error: message, category: "quota_exceeded", code: "daily_usage" },
+    { status: 429, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function requireUser(request: Request): Promise<HttpAuthedCaller | Response> {

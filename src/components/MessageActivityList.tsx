@@ -1,4 +1,5 @@
 import { CalendarDays, FileText, Globe, Loader2, Mail } from "lucide-react";
+import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import type { Activity } from "@/lib/chat-store";
 
 export function MessageActivityList({ activities }: { activities?: Activity[] }) {
@@ -21,6 +22,9 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
               : tool.includes("drive") || tool.includes("file") || tool.includes("document")
                 ? FileText
                 : Globe;
+        const brand = Object.keys(PLUGIN_BRAND_ASSET_URLS).find(
+          (id) => tool.includes(id.replaceAll("-", "_")) || tool.includes(id),
+        );
         const status =
           activity.status === "running"
             ? "In progress"
@@ -35,7 +39,11 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
             className="kova-activity-row"
             data-status={activity.status}
           >
-            <Icon className="kova-activity-icon" aria-hidden="true" />
+            {brand ? (
+              <img src={PLUGIN_BRAND_ASSET_URLS[brand]} className="kova-activity-icon" alt="" />
+            ) : (
+              <Icon className="kova-activity-icon" aria-hidden="true" />
+            )}
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
               <span>{activity.label}</span>

@@ -49,6 +49,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChatProjectSubmenu } from "@/components/ChatProjectSubmenu";
 import { Button } from "@/components/ui/button";
@@ -424,7 +427,7 @@ export function Sidebar({
   }, [onToggle]);
 
   useEffect(() => {
-    if (open) return;
+    if (open || compactOnly) return;
     let gesture: { id: number; x: number; y: number; time: number } | null = null;
     const reset = () => {
       gesture = null;
@@ -438,7 +441,7 @@ export function Sidebar({
         !(target instanceof Element) ||
         !target.closest(".kova-assistant, .kova-app-shell") ||
         target.closest(
-          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+          'button, a, [role="button"], input, textarea, select, [contenteditable]:not([contenteditable="false"])',
         ) ||
         document.querySelector('[aria-modal="true"], dialog[open]') ||
         !window.getSelection()?.isCollapsed
@@ -469,12 +472,12 @@ export function Sidebar({
       }
       const dx = touch.clientX - gesture.x;
       const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 700 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
+      if (event.timeStamp - gesture.time > 700 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
         reset();
         return;
       }
-      // A clear, quick right swipe can start anywhere on the page.
-      if (dx >= 96 && dy <= 48 && dx >= dy * 2) {
+      // A clear left swipe opens from any non-interactive part of the page.
+      if (dx <= -72 && dy <= 48 && -dx >= dy * 2) {
         reset();
         swipeToggleRef.current();
       }
@@ -489,9 +492,9 @@ export function Sidebar({
       document.removeEventListener("touchend", reset);
       document.removeEventListener("touchcancel", reset);
     };
-  }, [open]);
+  }, [open, compactOnly]);
 
-  // Close the mobile drawer with a deliberate left swipe, without stealing
+  // Close the mobile drawer with a deliberate right swipe, without stealing
   // vertical scrolling or horizontal gestures from nested scrollable controls.
   useEffect(() => {
     if (!open) return;
@@ -505,7 +508,9 @@ export function Sidebar({
       const target = event.target;
       if (
         !(target instanceof Element) ||
-        target.closest('input, textarea, select, [contenteditable="true"]')
+        target.closest(
+          'button, a, [role="button"], input, textarea, select, [contenteditable="true"]',
+        )
       )
         return;
       for (let el: Element | null = target; el && el !== drawer; el = el.parentElement) {
@@ -539,7 +544,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (dx <= -72 && dy <= 48 && -dx >= dy * 2) {
+      if (dx >= 72 && dy <= 48 && dx >= dy * 2) {
         start = null;
         swipeToggleRef.current();
       }
@@ -1364,7 +1369,8 @@ export function Sidebar({
                     );
                   }}
                   className="kova-rail-button kova-sidebar-toggle"
-                  aria-label={compactOnly ? "Back to chat" : "Expand sidebar"}
+                  disabled={compactOnly}
+                  aria-label={compactOnly ? "Sidebar collapsed in Settings" : "Expand sidebar"}
                 >
                   {compactOnly ? (
                     <ArrowLeft aria-hidden="true" />
@@ -1626,21 +1632,6 @@ export function Sidebar({
             </section>
           </div>
 
-          {signedIn ? (
-            <div className="kova-sidebar-help">
-              <button
-                className="kova-nav-row"
-                type="button"
-                onClick={() => {
-                  closeAfterMobileNavigation("/help");
-                  onOpenHelp();
-                }}
-              >
-                {icon(CircleHelp)}
-                <span>Help</span>
-              </button>
-            </div>
-          ) : null}
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>
@@ -1662,68 +1653,60 @@ export function Sidebar({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="top" align="end" className="kova-profile-menu">
-                    <DropdownMenuLabel className="max-w-64 break-words font-normal">
-                      {accountEmail || "Email unavailable"}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {tierStatus === "ready" && tier !== "pro" ? (
-                      <>
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            closeAfterMobileNavigation("/settings/billing");
-                            onOpenSettings("billing");
-                          }}
-                        >
-                          <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Upgrade plan
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                      </>
-                    ) : null}
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/profile");
-                        onOpenSettings("personalization");
-                      }}
-                    >
+                    <DropdownMenuItem onSelect={() => onOpenSettings("personalization")}>
                       <UserRound className="mr-2 h-4 w-4" />
-                      Profile
+                      <span>
+                        {displayName}
+                        <small className="block text-muted-foreground">{planLabel}</small>
+                        <small className="block text-muted-foreground">
+                          {accountEmail || "Email unavailable"}
+                        </small>
+                      </span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/appearance");
-                        onOpenSettings("appearance");
-                      }}
-                    >
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onOpenSettings("billing")}>
+                      <Sparkles className="mr-2 h-4 w-4" /> Upgrade plan
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onOpenSettings("personalization")}>
+                      <Sparkles className="mr-2 h-4 w-4" /> Personalization
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onOpenSettings("personalization")}>
+                      <UserRound className="mr-2 h-4 w-4" /> Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onOpenSettings("appearance")}>
                       <SettingsIcon className="mr-2 h-4 w-4" /> Settings
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/usage");
-                        onOpenSettings("usage");
-                      }}
-                    >
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Usage
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/billing");
-                        onOpenSettings("billing");
-                      }}
-                    >
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Subscriptions
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/help");
-                        onOpenHelp();
-                      }}
-                    >
-                      <CircleHelp className="mr-2 h-4 w-4" /> Help
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <CircleHelp className="mr-2 h-4 w-4" /> Help
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuItem onSelect={onOpenHelp}>Help center</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a href="/settings/privacy">Privacy center</a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a href="/changelog">Release notes</a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a href="/download">Download apps</a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => onOpenSettings("shortcuts")}>
+                          Keyboard shortcuts
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <a href="/terms">Terms of Service</a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a href="/privacy">Privacy Policy</a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => onOpenSettings("report")}>
+                          Report a bug
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                     <DropdownMenuItem
                       onSelect={() => {
                         closeAfterMobileNavigation();

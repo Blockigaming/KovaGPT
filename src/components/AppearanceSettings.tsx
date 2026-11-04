@@ -112,6 +112,74 @@ export function AppearanceSettings({
           </div>
         ))}
       </div>
+      <div className="kova-preference-list">
+        <label className="kova-preference-row">
+          Interface font
+          <select
+            value={values.interfaceFont}
+            onChange={(event) =>
+              change({ interfaceFont: event.target.value as Settings["interfaceFont"] })
+            }
+          >
+            <option value="system">System</option>
+            <option value="serif">Serif</option>
+            <option value="mono">Monospace</option>
+          </select>
+        </label>
+        {[
+          ["background", "Background"],
+          ["foreground", "Text"],
+          ["card", "Panels"],
+          ["border", "Borders"],
+          ["sidebar", "Sidebar"],
+          ["muted", "Muted surfaces"],
+          ["muted-foreground", "Secondary text"],
+          ["accent", "Selected items"],
+        ].map(([key, label]) => (
+          <label className="kova-preference-row" key={key}>
+            {label}
+            <input
+              type="color"
+              value={values.interfaceColors[key] || "#808080"}
+              onChange={(event) =>
+                change({
+                  interfaceColors: { ...values.interfaceColors, [key]: event.target.value },
+                })
+              }
+            />
+          </label>
+        ))}
+        <label className="kova-preference-row">
+          Interface size <output>{values.interfaceSize}%</output>
+          <input
+            type="range"
+            min="85"
+            max="125"
+            step="5"
+            value={values.interfaceSize}
+            onChange={(event) => change({ interfaceSize: Number(event.target.value) })}
+          />
+        </label>
+        <label className="kova-preference-row">
+          Settings navigation width <output>{values.settingsNavigationWidth}px</output>
+          <input
+            type="range"
+            min="200"
+            max="440"
+            step="1"
+            value={values.settingsNavigationWidth}
+            onChange={(event) => change({ settingsNavigationWidth: Number(event.target.value) })}
+          />
+        </label>
+        <label className="kova-preference-row">
+          Accent color
+          <input
+            type="color"
+            value={values.interfaceAccent || "#808080"}
+            onChange={(event) => change({ interfaceAccent: event.target.value })}
+          />
+        </label>
+      </div>
       <section className="kova-appearance-preview" aria-label="Reading preview">
         <p className="text-xs text-muted-foreground mb-3">Preview</p>
         <p

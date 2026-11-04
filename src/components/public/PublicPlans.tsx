@@ -3,10 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 import { getSubscriptionSummary } from "@/utils/payments.functions";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 
 export function PublicPlans() {
@@ -14,7 +12,6 @@ export function PublicPlans() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
-  const [checkoutOwner, setCheckoutOwner] = useState<string | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
   const owner = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   const lifetime = useRef({ owner, active: true, generation: 0 });
@@ -24,7 +21,6 @@ export function PublicPlans() {
   }
   const inFlight = useRef(false);
   const summary = useServerFn(getSubscriptionSummary);
-  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   useEffect(() => {
     const state = lifetime.current;
     state.active = true;
@@ -34,10 +30,8 @@ export function PublicPlans() {
     };
   }, []);
   useEffect(() => {
-    closeCheckout();
-    setCheckoutOwner(null);
     setError(null);
-  }, [owner, closeCheckout]);
+  }, [owner]);
 
   const choosePlan = async (tier: "plus" | "pro") => {
     if (!isLoaded || inFlight.current) return;
@@ -67,8 +61,7 @@ export function PublicPlans() {
         window.location.assign("/settings/billing");
         return;
       }
-      setCheckoutOwner(owner);
-      openCheckout({ priceId, userId: owner });
+      window.location.assign(`/subscribe?plan=${encodeURIComponent(priceId)}`);
     } catch {
       if (current())
         setError("Your plan couldn’t be verified. Try again or contact billing support.");
@@ -207,21 +200,6 @@ export function PublicPlans() {
           {error} <Link to="/contact-support">Contact support</Link>
         </p>
       )}
-      <Dialog
-        open={isOpen && Boolean(owner) && checkoutOwner === owner}
-        onOpenChange={(open) => {
-          if (!open) closeCheckout();
-        }}
-      >
-        <DialogContent className="public-checkout-dialog">
-          <DialogTitle>Secure KovaGPT checkout</DialogTitle>
-          <DialogDescription>
-            Review your monthly subscription and total before paying. Closing this window does not
-            purchase a plan.
-          </DialogDescription>
-          <div key={owner}>{checkoutElement}</div>
-        </DialogContent>
-      </Dialog>
       <EnterpriseContactDialog open={contactOpen} onOpenChange={setContactOpen} />
     </section>
   );

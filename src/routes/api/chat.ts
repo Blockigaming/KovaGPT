@@ -1634,7 +1634,8 @@ export const Route = createFileRoute("/api/chat")({
               tools: availableTools,
             });
             const outputCeiling = Number(body.max_completion_tokens);
-            const maximumProviderCalls = enableTools ? 9 : 1;
+            // Three planning hops plus the final response; keep aligned with MAX_TOOL_HOPS.
+            const maximumProviderCalls = enableTools ? 4 : 1;
             let estimatedCost =
               estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
                 maximumProviderCalls +

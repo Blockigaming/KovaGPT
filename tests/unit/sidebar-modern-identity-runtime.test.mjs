@@ -54,7 +54,7 @@ function enclosingExpression(node) {
 const renderSidebar = (node, dependencies) =>
   compile(`return (${node.getText(sidebar)});`, dependencies);
 const emptyState = enclosingExpression(classElement("kova-sidebar-empty"));
-const help = enclosingExpression(classElement("kova-sidebar-help"));
+
 const footer = classElement("kova-sidebar-footer");
 const shared = {
   hideGuestLogin: false,
@@ -100,7 +100,7 @@ test("guest sidebar exposes one Help action, Subscriptions and concise login", (
     onOpenHelp: () => calls.push("help"),
     onOpenSettings: (tab) => calls.push(tab),
   };
-  assert.equal(compile(`return (${help});`, dependencies), null);
+  assert.doesNotMatch(read("src/components/Sidebar.tsx"), /className="kova-sidebar-help"/);
   const tree = renderSidebar(footer, dependencies);
   const helpButtons = all(tree).filter((node) => node.type === "button" && text(node) === "Help");
   assert.equal(helpButtons.length, 1);

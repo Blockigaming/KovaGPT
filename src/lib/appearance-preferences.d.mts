@@ -1,4 +1,9 @@
 export type AppearancePreferences = {
+  interfaceColors: Record<string, string>;
+  interfaceFont: "system" | "serif" | "mono";
+  interfaceSize: number;
+  settingsNavigationWidth: number;
+  interfaceAccent: string;
   mode: "dark" | "light" | "system";
   readingSize: 16 | 18 | 20;
   readingWidth: 680 | 760 | 900;

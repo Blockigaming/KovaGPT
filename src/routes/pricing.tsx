@@ -1,29 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
-import { PublicShell } from "@/components/public/PublicShell";
 import { PlanComparison } from "@/components/public/PlanComparison";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
-import {
-  INTRODUCTORY_OFFER_CHECKOUT_REVIEW,
-  INTRODUCTORY_OFFER_HISTORY,
-  INTRODUCTORY_OFFER_EXISTING,
-  introductoryOfferForTier,
-} from "@/lib/introductory-offer";
 
 const PRICING_TIERS = ["free", "plus", "pro"] as const;
-const MONTHLY_INTRO_NOTE =
-  "Eligible accounts: 50% off the first paid month, once per account. Regular monthly pricing follows.";
 
 function displayPrice(monthlyPriceUsd: number): string {
   return monthlyPriceUsd === 0 ? "$0" : `$${monthlyPriceUsd}`;
@@ -129,57 +112,9 @@ export const Route = createFileRoute("/pricing")({
 
 function PricingPage() {
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
-  const [checkoutOwner, setCheckoutOwner] = useState<string | null>(null);
-  const [checkoutStatus, setCheckoutStatus] = useState<"idle" | "loading" | "loaded" | "error">(
-    "idle",
-  );
-  const checkoutRegionRef = useRef<HTMLDivElement>(null);
-  const checkoutReturnFocusRef = useRef<HTMLButtonElement | null>(null);
-  const { user, isSignedIn, isLoaded } = useUser();
-  const owner = isLoaded && isSignedIn ? (user?.id ?? null) : null;
+  const navigate = useNavigate();
+  const { isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
-  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
-
-  useEffect(() => {
-    if (checkoutOwner !== null && checkoutOwner !== owner) {
-      closeCheckout();
-      setCheckoutOwner(null);
-    }
-  }, [owner, checkoutOwner, closeCheckout]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setCheckoutStatus("idle");
-      return;
-    }
-
-    const region = checkoutRegionRef.current;
-    if (!region) return;
-
-    const updateStatus = () => {
-      const state = region
-        .querySelector<HTMLElement>("[data-checkout-state]")
-        ?.getAttribute("data-checkout-state");
-      if (state === "error") {
-        setCheckoutStatus("error");
-      } else if (state === "loaded") {
-        setCheckoutStatus("loaded");
-      } else {
-        setCheckoutStatus("loading");
-      }
-    };
-
-    updateStatus();
-    const observer = new MutationObserver(updateStatus);
-    observer.observe(region, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-checkout-state"],
-    });
-    return () => observer.disconnect();
-  }, [isOpen]);
-
   const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
     if (!isLoaded) return;
     if (isLoaded && !isSignedIn) {
@@ -190,19 +125,19 @@ function PricingPage() {
       }
       return;
     }
-    if (!owner) return;
-    setCheckoutOwner(owner);
-    checkoutReturnFocusRef.current = trigger;
-    setCheckoutStatus("loading");
-    openCheckout({
-      priceId,
-      customerEmail: user?.email,
-      userId: user?.id,
-    });
+    void navigate({ to: "/subscribe" as never, search: { plan: priceId } as never });
   };
 
   return (
-    <PublicShell>
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="flex items-center justify-between px-6 py-5">
+        <Link to="/" className="text-lg font-semibold">
+          KovaGPT
+        </Link>
+        <Link to="/" className="rounded-xl border border-border px-4 py-2 text-sm">
+          Back to chat
+        </Link>
+      </header>
       <main
         id="main-content"
         tabIndex={-1}
@@ -220,27 +155,25 @@ function PricingPage() {
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
             Choose the plan that fits how you work. Some features depend on connected services.
           </p>
-        </section>
-
-        <section
-          aria-label="First-month offer"
-          className="kova-pricing-offer mx-auto mt-8 max-w-3xl space-y-2 border-y border-border py-4 text-sm leading-6"
-        >
-          <h2 className="font-semibold">First-month offer</h2>
-          <p>{MONTHLY_INTRO_NOTE}</p>
-          <details className="text-muted-foreground">
-            <summary className="cursor-pointer py-2 text-sm">Offer details and eligibility</summary>
-            <div className="space-y-3 pt-2">
-              <p>{INTRODUCTORY_OFFER_CHECKOUT_REVIEW}</p>
-              <p>{INTRODUCTORY_OFFER_HISTORY}</p>
-              <p>{INTRODUCTORY_OFFER_EXISTING}</p>
-            </div>
-          </details>
+          <nav
+            aria-label="Plan types"
+            className="mx-auto mt-6 inline-flex gap-1 rounded-full bg-muted p-1"
+          >
+            <a href="#free" className="rounded-full bg-background px-6 py-2 text-sm font-medium">
+              Personal
+            </a>
+            <a
+              href="#enterprise"
+              className="rounded-full px-6 py-2 text-sm font-medium hover:bg-background"
+            >
+              Business
+            </a>
+          </nav>
         </section>
 
         <section
           aria-label="KovaGPT plans"
-          className="mt-12 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4"
+          className="mt-12 grid items-stretch gap-5 md:grid-cols-4"
         >
           <PlanCard
             name={CAPABILITY_REGISTRY.plans.free.name}
@@ -260,8 +193,6 @@ function PricingPage() {
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
-            note={MONTHLY_INTRO_NOTE}
-            paymentNote={`If eligible: ${introductoryOfferForTier("plus")!.paymentCopy}`}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!, event.currentTarget)
             }
@@ -275,8 +206,6 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
-            note={MONTHLY_INTRO_NOTE}
-            paymentNote={`If eligible: ${introductoryOfferForTier("pro")!.paymentCopy}`}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
             }
@@ -303,8 +232,8 @@ function PricingPage() {
         </p>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
-          Stripe hosts checkout. Confirm the introductory discount eligibility, first-month amount,
-          regular renewal price and date, tax, and available payment methods before purchase.
+          Stripe hosts checkout. Review your payment, renewal price, tax, and available payment
+          methods before purchase.
         </p>
 
         <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
@@ -350,45 +279,7 @@ function PricingPage() {
       </main>
 
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
-
-      <Dialog
-        open={isOpen && owner !== null && checkoutOwner === owner}
-        onOpenChange={(open) => !open && closeCheckout()}
-      >
-        <DialogContent
-          className="gap-0 overflow-hidden p-0 sm:p-0 [&>button]:h-11 [&>button]:w-11"
-          onCloseAutoFocus={(event) => {
-            const trigger = checkoutReturnFocusRef.current;
-            if (!trigger?.isConnected) return;
-            event.preventDefault();
-            requestAnimationFrame(() => trigger.focus());
-          }}
-        >
-          <DialogHeader className="border-b border-border px-6 py-5 pr-16">
-            <DialogTitle>Secure checkout</DialogTitle>
-            <DialogDescription>
-              Checkout is hosted by Stripe. Review the final terms before purchase.
-            </DialogDescription>
-          </DialogHeader>
-          <p className="sr-only" role="status" aria-live="polite">
-            {checkoutStatus === "loading"
-              ? "Loading secure checkout"
-              : checkoutStatus === "loaded"
-                ? "Secure checkout loaded"
-                : checkoutStatus === "error"
-                  ? "Checkout unavailable"
-                  : ""}
-          </p>
-          <div
-            ref={checkoutRegionRef}
-            aria-busy={checkoutStatus === "loading"}
-            className="max-h-[calc(92dvh-6rem)] overflow-y-auto overscroll-contain"
-          >
-            {checkoutElement}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </PublicShell>
+    </div>
   );
 }
 

@@ -33,6 +33,8 @@ const requested = [
   ["custom-mcp", "Custom MCP connectors (bring your own server)"],
 ];
 const retained = [
+  ["granola", "Granola"],
+  ["tana", "Tana"],
   ["slack", "Slack"],
   ["plaid", "Plaid"],
   ["oura", "Oura"],

@@ -153,7 +153,11 @@ function pricingFixture(isSignedIn) {
   const f = reactFixture("src/routes/pricing.tsx", (exports) => exports.PricingPage, {
     sourceSuffix: "\nexport { PricingPage };",
     modules: {
-      "@tanstack/react-router": { createFileRoute: () => (config) => config },
+      "@tanstack/react-router": {
+        createFileRoute: () => (config) => config,
+        Link: "a",
+        useNavigate: () => (options) => calls.push({ type: "navigate", options }),
+      },
       "@/components/auth/ClerkSafe": {
         useUser: () => ({ ...auth }),
         useClerkSafe: () => ({ openSignIn: () => calls.push("sign-in") }),
@@ -190,28 +194,17 @@ function pricingFixture(isSignedIn) {
   return { ...f, calls, auth, checkout };
 }
 
-test("pricing withholds checkout immediately on logout, account switch, or unresolved identity and does not restore an old checkout", async () => {
-  for (const change of ["logout", "switch", "loading"]) {
-    const f = pricingFixture(true);
-    const plus = f
-      .nodes()
-      .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus");
-    plus.props.onCta({ currentTarget: {} });
-    f.render();
-    assert.equal(f.find("dialog").props.open, true);
-    if (change === "logout") f.auth.isSignedIn = false;
-    if (change === "switch") f.auth.user = { id: "other", email: "other@example.test" };
-    if (change === "loading") f.auth.isLoaded = false;
-    f.render();
-    assert.equal(f.find("dialog").props.open, false);
-    await f.flush();
-    assert.equal(f.checkout.open, false);
-    f.auth.isLoaded = true;
-    f.auth.isSignedIn = true;
-    f.auth.user = { id: "sample", email: "sample@example.test" };
-    await f.flush();
-    assert.equal(f.find("dialog").props.open, false);
-  }
+test("pricing uses a dedicated checkout route and never retains a payment modal", () => {
+  const f = pricingFixture(true);
+  f.nodes()
+    .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus")
+    .props.onCta({ currentTarget: {} });
+  assert.equal(f.calls[0].options.to, "/subscribe");
+  assert.equal(f.calls[0].options.search.plan, "plus_monthly");
+  assert.equal(
+    f.nodes().some((node) => node.type === "dialog"),
+    false,
+  );
 });
 
 test("pricing does not start checkout before identity resolves", () => {
@@ -236,31 +229,30 @@ test("pricing routes signed-in paid CTAs to canonical checkout and guests to sig
     for (const card of paid) {
       assert.ok(!card.props.ctaDisabled);
       assert.equal(card.props.cta, card.props.name === "Plus" ? "Start Plus" : "Upgrade to Pro");
-      assert.match(card.props.note, /first paid month, once per account/);
-      assert.match(card.props.paymentNote, /^If eligible: .*first month, then/);
+      assert.equal(card.props.note, undefined);
+      assert.equal(card.props.paymentNote, undefined);
       card.props.onCta({ currentTarget: {} });
       card.props.onCta({ currentTarget: {} });
     }
     assert.deepEqual(
-      f.calls,
+      JSON.parse(JSON.stringify(f.calls)),
       signedIn
         ? ["plus", "plus", "pro", "pro"].map((tier) => ({
-            type: "checkout",
+            type: "navigate",
             options: {
-              priceId: registry.CAPABILITY_REGISTRY.plans[tier].lookupKey,
-              customerEmail: "sample@example.test",
-              userId: "sample",
+              to: "/subscribe",
+              search: { plan: registry.CAPABILITY_REGISTRY.plans[tier].lookupKey },
             },
           }))
         : ["sign-in", "sign-in", "sign-in", "sign-in"],
     );
-    assert.match(f.text(), /Stripe Checkout confirms eligibility/);
+    assert.doesNotMatch(f.text(), /First-month offer|Offer details and eligibility/);
     assert.match(f.text(), /Plus and Pro are eligible for one-shot hosted Agent/);
     assert.match(f.text(), /approved-public-page Browser tasks/);
     assert.match(f.text(), /Interactive Work browser runs are currently unavailable/);
     assert.match(f.text(), /Paying OpenAI separately does not change your Kova plan/);
-    assert.match(f.text(), /Existing trials and subscriptions keep their current terms/);
-    assert.match(f.text(), /New subscriptions do not receive a free trial/);
+    assert.doesNotMatch(f.text(), /Existing trials and subscriptions keep their current terms/);
+    assert.doesNotMatch(f.text(), /New subscriptions do not receive a free trial/);
     assert.doesNotMatch(
       f.text(),
       /review proposal|Proposed first payment|Eligibility unverified|Offer checkout unavailable|30-day trial for eligible first-time subscribers/,
