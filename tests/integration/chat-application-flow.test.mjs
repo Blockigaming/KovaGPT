@@ -427,6 +427,7 @@ function composer(f) {
     storageGenerationRef: ref(0),
     retryGenerationRef: ref(0),
     inFlightRef: ref(false),
+    skipThinkingRef: ref(null),
     retryTimerRef: ref(null),
     guestPromptTurnsRef: ref(0),
     activeIdRef: ref(null),
