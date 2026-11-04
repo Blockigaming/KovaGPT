@@ -19,13 +19,11 @@ import {
   ArrowLeft,
   MessageSquare,
   ChevronDown,
-  BarChart3,
   LogOut,
   BriefcaseBusiness,
   Map,
   CircleHelp,
   Copy as CopyIcon,
-  CreditCard,
   Ellipsis,
   Pin,
   PinOff,
@@ -75,7 +73,6 @@ import {
   type SidebarLayout,
 } from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
-import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 import { isClearSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
 
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
@@ -88,8 +85,6 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   maps: Map,
   memory: Brain,
   settings: SettingsGlyph,
-  usage: BarChart3,
-  billing: CreditCard,
   notifications: Bell,
 };
 const ChatProjectDialog = lazy(() =>
@@ -156,7 +151,6 @@ export function Sidebar({
   const drawerRef = useRef<HTMLElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
-  const navigationOwnsFocusRef = useRef(false);
   const renameDialogRef = useRef<HTMLDialogElement | null>(null);
   const chatOptionsRefs = useRef(new globalThis.Map<string, HTMLButtonElement>());
   const renameReturnFocusRef = useRef<{ target: HTMLButtonElement | null; context: string } | null>(
@@ -369,7 +363,7 @@ export function Sidebar({
     changeLayout({ shortcuts: [...shortcuts] });
   const openChatSearch = () => {
     if (onOpenWorkspaceSearch) {
-      closeAfterMobileNavigation();
+      cancelPendingSelection();
       onOpenWorkspaceSearch();
     } else setSearchOpen((value) => !value);
   };
@@ -495,7 +489,7 @@ export function Sidebar({
     };
   }, [open]);
 
-  // Close the mobile drawer with a deliberate left swipe, without stealing
+  // Close the mobile drawer with a deliberate right swipe, without stealing
   // vertical scrolling or horizontal gestures from nested scrollable controls.
   useEffect(() => {
     if (!open) return;
@@ -579,7 +573,6 @@ export function Sidebar({
 
   useEffect(() => {
     if (!open || !mobileViewport) return;
-    navigationOwnsFocusRef.current = false;
     lastFocusedRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const content = drawerRef.current
@@ -682,7 +675,6 @@ export function Sidebar({
       document.body.style.overflow = previousOverflow;
       if (content) content.inert = previousInert;
       document.removeEventListener("keydown", onKeyDown);
-      if (navigationOwnsFocusRef.current) return;
       requestAnimationFrame(() => {
         // A newly opened account dialog owns focus; do not pull it back underneath.
         if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
@@ -717,16 +709,6 @@ export function Sidebar({
     return () => document.removeEventListener("keydown", escape);
   }, [open, mobileViewport, signedIn]);
 
-  const closeAfterMobileNavigation = (destination?: string) => {
-    cancelPendingSelection();
-    if (!open || !isMobileViewport()) return;
-    if (destination)
-      navigationOwnsFocusRef.current = requestDrawerNavigationFocus({
-        destination,
-        source: drawerRef.current,
-      });
-    swipeToggleRef.current();
-  };
   const closeRename = () => {
     const returnFocus = renameReturnFocusRef.current;
     renameReturnFocusRef.current = null;
@@ -779,7 +761,7 @@ export function Sidebar({
           event.altKey
         )
           return;
-        closeAfterMobileNavigation(to);
+        cancelPendingSelection();
       }}
     >
       {icon(Icon)}
@@ -835,7 +817,7 @@ export function Sidebar({
                 cancelPendingSelection();
                 const select = () => {
                   selectTimerRef.current = null;
-                  closeAfterMobileNavigation("/");
+                  cancelPendingSelection();
                   onSelect(conversation.id);
                 };
                 // Keep double-click rename on the current page; keyboard and touch stay immediate.
@@ -937,7 +919,7 @@ export function Sidebar({
                 cancelPendingSelection();
                 setProjectChoice(projectId);
                 setProjectChat(conversation);
-                closeAfterMobileNavigation();
+                cancelPendingSelection();
               }}
             />
           ) : null}
@@ -1000,7 +982,7 @@ export function Sidebar({
       <DropdownMenuSeparator />
       <DropdownMenuItem
         onSelect={() => {
-          closeAfterMobileNavigation("/settings/billing");
+          cancelPendingSelection();
           onOpenSettings("billing");
         }}
       >
@@ -1009,7 +991,7 @@ export function Sidebar({
       </DropdownMenuItem>
       <DropdownMenuItem
         onSelect={() => {
-          closeAfterMobileNavigation("/settings/general");
+          cancelPendingSelection();
           onOpenSettings("general");
         }}
       >
@@ -1018,7 +1000,7 @@ export function Sidebar({
       </DropdownMenuItem>
       <DropdownMenuItem
         onSelect={() => {
-          closeAfterMobileNavigation("/settings/profile");
+          cancelPendingSelection();
           onOpenSettings("personalization");
         }}
       >
@@ -1027,7 +1009,7 @@ export function Sidebar({
       </DropdownMenuItem>
       <DropdownMenuItem
         onSelect={() => {
-          closeAfterMobileNavigation("/settings/appearance");
+          cancelPendingSelection();
           onOpenSettings("appearance");
         }}
       >
@@ -1037,7 +1019,7 @@ export function Sidebar({
       <DropdownMenuSeparator />
       <DropdownMenuItem
         onSelect={() => {
-          closeAfterMobileNavigation("/help");
+          cancelPendingSelection();
           onOpenHelp();
         }}
       >
@@ -1046,7 +1028,7 @@ export function Sidebar({
       </DropdownMenuItem>
       <DropdownMenuItem
         onSelect={() => {
-          closeAfterMobileNavigation();
+          cancelPendingSelection();
           setLogoutConfirmOpen(true);
         }}
       >
@@ -1187,7 +1169,7 @@ export function Sidebar({
                 type="range"
                 min={240}
                 max={420}
-                step={10}
+                step={1}
                 value={layout.width}
                 onChange={(event) => changeLayout({ width: Number(event.target.value) })}
               />
@@ -1602,7 +1584,7 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => {
-                    closeAfterMobileNavigation("/");
+                    cancelPendingSelection();
                     onNew();
                   }}
                   className="kova-new-chat kova-nav-row"
@@ -1621,7 +1603,7 @@ export function Sidebar({
                   aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
                   onClick={() => {
                     if (onOpenWorkspaceSearch) {
-                      closeAfterMobileNavigation();
+                      cancelPendingSelection();
                       onOpenWorkspaceSearch();
                     } else setSearchOpen((value) => !value);
                   }}
@@ -1741,12 +1723,11 @@ export function Sidebar({
             ) : isLoaded ? (
               <div className="w-full">
                 <nav className="kova-guest-account-options" aria-label="Account options">
-                  {navLink("/pricing", "Subscriptions", CreditCard)}
                   <button
                     type="button"
                     className={navRow()}
                     onClick={() => {
-                      closeAfterMobileNavigation();
+                      cancelPendingSelection();
                       onOpenHelp();
                     }}
                   >
@@ -1758,7 +1739,7 @@ export function Sidebar({
                     className={navRow()}
                     aria-label="Settings"
                     onClick={() => {
-                      closeAfterMobileNavigation();
+                      cancelPendingSelection();
                       onOpenSettings("general");
                     }}
                   >

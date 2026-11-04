@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { loose } from "@/lib/supabase-loose";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { chatUsageWindows } from "@/lib/plan-usage-policy.mjs";
+import type { BillingTier } from "@/lib/billing-plans";
 
 export type DailyUsageDto = {
   date: string;
@@ -10,6 +14,76 @@ export type DailyUsageDto = {
   uploads: number;
   resetsAt: string; // next UTC midnight ISO
 };
+
+type ChatWindow = ReturnType<typeof chatUsageWindows>[number];
+export type PlanUsageDto = {
+  tier: BillingTier;
+  windows: (ChatWindow & { regularUsed: number; thinkingUsed: number })[];
+  images: number;
+  uploads: number;
+};
+
+export const getMyPlanUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: { ownerId: string }) => data)
+  .handler(async ({ context, data }): Promise<PlanUsageDto> => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const windows = chatUsageWindows(tier, now);
+    const ledgerStart = windows.find(({ id }) => id === "weekly")?.start.slice(0, 10) ?? today;
+    const short = windows.find(({ id }) => id === "five_hour");
+    const [ledger, shortWindow] = await Promise.all([
+      loose(context.supabase)
+        .from("daily_usage")
+        .select("usage_date, chats, thinking_chats, images, uploads")
+        .eq("user_id", context.userId)
+        .gte("usage_date", ledgerStart)
+        .lte("usage_date", today)
+        .abortSignal(AbortSignal.timeout(10_000)),
+      short
+        ? loose(supabaseAdmin)
+            .from("message_usage_short_window")
+            .select("regular_messages, thinking_messages")
+            .eq("user_id", context.userId)
+            .eq("window_start", short.start)
+            .abortSignal(AbortSignal.timeout(10_000))
+            .maybeSingle()
+        : null,
+    ]);
+    if (ledger.error || shortWindow?.error)
+      throw new Error("Usage data is temporarily unavailable.");
+    const rows: {
+      usage_date: string;
+      chats: number;
+      thinking_chats: number;
+      images: number;
+      uploads: number;
+    }[] = ledger.data ?? [];
+    const daily = rows.find(({ usage_date }) => usage_date === today);
+    const total = rows.reduce(
+      (sum, row) => ({
+        regularUsed: sum.regularUsed + row.chats - row.thinking_chats,
+        thinkingUsed: sum.thinkingUsed + row.thinking_chats,
+      }),
+      { regularUsed: 0, thinkingUsed: 0 },
+    );
+    return {
+      tier,
+      windows: windows.map((window) => ({
+        ...window,
+        ...(window.id === "five_hour"
+          ? {
+              regularUsed: shortWindow?.data?.regular_messages ?? 0,
+              thinkingUsed: shortWindow?.data?.thinking_messages ?? 0,
+            }
+          : total),
+      })),
+      images: daily?.images ?? 0,
+      uploads: daily?.uploads ?? 0,
+    };
+  });
 
 export const getMyDailyUsage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

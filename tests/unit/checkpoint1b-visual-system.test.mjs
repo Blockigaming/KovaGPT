@@ -41,7 +41,7 @@ const expected = {
   menu: "16px",
   panel: "24px",
   composer: "26px",
-  message: "20px",
+  message: "26px",
   output: "16px",
 };
 const rules = (path, fragment) => {

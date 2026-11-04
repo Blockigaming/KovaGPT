@@ -502,6 +502,7 @@ function composer(f) {
     createMemorySourceUpdater: () => no,
     normalizeResponseSources: () => [],
     safeLocale: () => "en-US",
+    tier: "free",
     personalityToInstruction: () => "",
     loadPersonality: no,
     USER_STOP_REASON: "kova_user_stopped_generation",

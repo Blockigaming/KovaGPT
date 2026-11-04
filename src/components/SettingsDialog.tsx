@@ -86,7 +86,7 @@ import {
   type ComponentProps,
 } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
+import { getMyPlanUsage, type PlanUsageDto } from "@/utils/usage.functions";
 import {
   createPortalSession,
   getSubscriptionSummary,
@@ -282,7 +282,7 @@ export function SettingsDialog({
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
   const [settingsQuery, setSettingsQuery] = useState("");
   const [mobileHome, setMobileHome] = useState(!initialTab);
-  const [usage, setUsage] = useState<DailyUsageDto | null>(null);
+  const [usage, setUsage] = useState<PlanUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageLoaded, setUsageLoaded] = useState(false);
   const [usageRetry, setUsageRetry] = useState(0);
@@ -475,11 +475,11 @@ export function SettingsDialog({
   const [clearMemoryBusy, setClearMemoryBusy] = useState(false);
 
   useEffect(() => {
-    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
+    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn || !userKey) return;
     let cancelled = false;
     setUsageLoaded(false);
     setUsageLoading(true);
-    getMyDailyUsage()
+    getMyPlanUsage({ data: { ownerId: userKey } })
       .then((u) => {
         if (!cancelled) setUsage(u);
       })
@@ -1121,6 +1121,10 @@ export function SettingsDialog({
     }
   }, [mobileFocusRequest, mobileHome, tab]);
 
+  const closeForNavigation = () => {
+    if (!page) onOpenChange(false);
+  };
+
   const content = (
     <>
       <Surface
@@ -1683,7 +1687,7 @@ export function SettingsDialog({
                   <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <Link
                       to="/memory"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="kova-button inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       Open Memory Center
@@ -1718,7 +1722,7 @@ export function SettingsDialog({
                       </p>
                     </div>
                     <Button asChild variant="outline">
-                      <Link to="/apps" onClick={() => onOpenChange(false)}>
+                      <Link to="/apps" onClick={closeForNavigation}>
                         Manage apps and permissions
                       </Link>
                     </Button>
@@ -1757,7 +1761,7 @@ export function SettingsDialog({
                 <section className="space-y-3">
                   <h3>Plan limits</h3>
                   <p className="text-sm text-muted-foreground">
-                    Daily activity shared across KovaGPT chat, image generation, and file uploads.
+                    Account-wide usage for chat, images, and file uploads.
                   </p>
                   <div
                     ref={usageStatusRef}
@@ -1769,12 +1773,7 @@ export function SettingsDialog({
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-sm">Today's usage</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {usage
-                            ? `Resets ${formatDisplayDateTime(usage.resetsAt, settings.timeFormat, { dateStyle: "medium", timeStyle: "short" })} (device time zone). Accounting resets at midnight UTC.`
-                            : "Daily counters reset at midnight UTC."}
-                        </p>
+                        <p className="text-sm">Current usage</p>
                       </div>
                       {subSummary?.effectiveTier && (
                         <span className="kova-settings-current-plan">
@@ -1791,7 +1790,7 @@ export function SettingsDialog({
                         Loading usage…
                       </div>
                     ) : usage ? (
-                      <PlanUsageBars tier={tier} usage={usage} />
+                      <PlanUsageBars usage={usage} />
                     ) : (
                       <div className="kova-settings-inline-error" role="alert">
                         <p>Usage data isn't available right now.</p>
@@ -1805,14 +1804,13 @@ export function SettingsDialog({
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
                   <p className="text-sm text-muted-foreground">
-                    Free includes one fifth of the Plus allowance. Plus is the baseline; Pro
-                    includes 15 times the Plus allowance. These daily progress bars show messages,
-                    images, and uploads. Token limits also apply, so longer conversations can reach
-                    an allowance sooner.
+                    Free chat usage resets daily. Plus has 5-hour and weekly chat limits, and Pro
+                    has a weekly chat limit. Each bar shows the higher of the regular and Thinking
+                    usage percentages. Token limits also apply to longer conversations.
                   </p>
                   <Link
                     to="/pricing"
-                    onClick={() => onOpenChange(false)}
+                    onClick={closeForNavigation}
                     className="mt-4 inline-flex min-h-11 items-center font-medium underline underline-offset-4"
                   >
                     Compare Kova plans
@@ -1836,7 +1834,7 @@ export function SettingsDialog({
                   portalLoading={portalLoading}
                   inheritedSubscription={inheritedSubscription}
                   onManage={handleManageBilling}
-                  onNavigate={() => onOpenChange(false)}
+                  onNavigate={closeForNavigation}
                   onViewChange={() => {
                     billingScopeRef.current.view += 1;
                   }}
@@ -1924,7 +1922,7 @@ export function SettingsDialog({
                         !subSummary?.hasBillingAccount && (
                           <Link
                             to="/pricing"
-                            onClick={() => onOpenChange(false)}
+                            onClick={closeForNavigation}
                             className="kova-billing-view-plans inline-flex items-center gap-2 text-sm"
                           >
                             View plans <ExternalLink className="w-4 h-4" aria-hidden="true" />
@@ -1949,23 +1947,14 @@ export function SettingsDialog({
                     aria-busy={usageLoading}
                   >
                     <div className="kova-billing-section-heading">
-                      <h3 id="billing-usage-heading">Usage today</h3>
-                      {usage && (
-                        <span className="kova-billing-reset">
-                          Resets{" "}
-                          {formatDisplayDateTime(usage.resetsAt, settings.timeFormat, {
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      )}
+                      <h3 id="billing-usage-heading">Current usage</h3>
                     </div>
                     {!loggedIn ? (
                       <p className="text-xs text-muted-foreground">Sign in to see your usage.</p>
                     ) : usageLoading && !usage ? (
                       <p className="text-xs text-muted-foreground">Loading usage…</p>
                     ) : usage ? (
-                      <PlanUsageBars tier={tier} usage={usage} />
+                      <PlanUsageBars usage={usage} />
                     ) : (
                       <p className="text-xs text-muted-foreground">
                         Usage data isn't available right now. If you need help understanding your
@@ -2077,35 +2066,35 @@ export function SettingsDialog({
                   <nav className="kova-billing-help-links" aria-label="Billing help and policies">
                     <Link
                       to="/getting-started"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
                       Getting started
                     </Link>
                     <Link
                       to="/contact-support"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
                       Contact support
                     </Link>
                     <Link
                       to="/privacy"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
                       Privacy policy
                     </Link>
                     <Link
                       to="/terms"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
                       Terms of service
                     </Link>
                     <Link
                       to="/refund"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
                       Refund policy
@@ -2191,7 +2180,7 @@ export function SettingsDialog({
               >
                 <Link
                   to="/trusted-contacts"
-                  onClick={() => onOpenChange(false)}
+                  onClick={closeForNavigation}
                   className="block rounded-lg border p-4 text-sm hover:bg-accent"
                 >
                   Manage voluntary trusted contacts
@@ -2241,7 +2230,7 @@ export function SettingsDialog({
                     Model-training preferences are not available in Settings. Review the{" "}
                     <Link
                       to="/privacy"
-                      onClick={() => onOpenChange(false)}
+                      onClick={closeForNavigation}
                       className="underline underline-offset-2 hover:text-foreground"
                     >
                       Privacy Policy
@@ -2420,7 +2409,7 @@ export function SettingsDialog({
                   Found a bug or something off? Send it to our team and we'll take a look.
                 </p>
                 <Button size="sm" asChild className="kova-settings-support-link">
-                  <Link to="/help" hash="support-form" onClick={() => onOpenChange(false)}>
+                  <Link to="/help" hash="support-form" onClick={closeForNavigation}>
                     <Bug className="w-4 h-4" />
                     Open bug report form
                   </Link>
@@ -2437,7 +2426,7 @@ export function SettingsDialog({
                   Get help, contact support, or browse common questions.
                 </p>
                 <Button size="sm" asChild className="kova-settings-support-link">
-                  <Link to="/help" onClick={() => onOpenChange(false)}>
+                  <Link to="/help" onClick={closeForNavigation}>
                     <LifeBuoy className="w-4 h-4" />
                     Open help center
                   </Link>
@@ -2457,11 +2446,11 @@ export function SettingsDialog({
                 <div className="text-xs text-muted-foreground space-y-1 pt-2">
                   <div>Version 1.0</div>
                   <div>
-                    <Link to="/privacy" onClick={() => onOpenChange(false)} className="underline">
+                    <Link to="/privacy" onClick={closeForNavigation} className="underline">
                       Privacy policy
                     </Link>
                     {" • "}
-                    <Link to="/terms" onClick={() => onOpenChange(false)} className="underline">
+                    <Link to="/terms" onClick={closeForNavigation} className="underline">
                       Terms of service
                     </Link>
                   </div>

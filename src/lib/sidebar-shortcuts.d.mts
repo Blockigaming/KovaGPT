@@ -6,9 +6,7 @@ export type SidebarShortcutId =
   | "apps"
   | "work"
   | "maps"
-  | "usage"
   | "settings"
-  | "billing"
   | "memory"
   | "notifications";
 export const SIDEBAR_SHORTCUTS_KEY: string;

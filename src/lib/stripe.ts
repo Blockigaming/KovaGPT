@@ -15,7 +15,9 @@ export function getStripe(): Promise<Stripe | null> {
     stripePromise = (async () => {
       const token = clientToken || (await getBillingClientConfiguration()).publishableKey;
       if (!token || !token.startsWith("pk_live_")) throw new Error("Live checkout is unavailable");
-      return loadStripe(token);
+      const stripe = await loadStripe(token);
+      if (!stripe) throw new Error("Stripe.js is unavailable");
+      return stripe;
     })().catch((error) => {
       stripePromise = null;
       throw error;

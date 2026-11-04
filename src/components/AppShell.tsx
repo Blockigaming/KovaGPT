@@ -64,7 +64,6 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const settingsWorkspace = pathname.startsWith("/settings/");
   const pageTitle =
     (
       {
@@ -110,21 +109,25 @@ export function AppShell({
     return focusReopenedSidebar();
   }, [sidebarOpen]);
   useLayoutEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined") return;
+    const mobile = window.matchMedia("(max-width: 1023px)").matches;
     let saved: string | null = null;
     try {
-      saved = localStorage.getItem("kova-sidebar-open");
+      saved = localStorage.getItem(mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open");
     } catch {
       /* ignore */
     }
-    setSidebarOpen(saved === null ? true : saved === "1");
+    setSidebarOpen(saved === null ? !mobile : saved === "1");
     setSidebarPreferenceRestored(true);
   }, []);
   useEffect(() => {
-    if (!sidebarPreferenceRestored || typeof window === "undefined" || window.innerWidth < 1024)
-      return;
+    if (!sidebarPreferenceRestored || typeof window === "undefined") return;
+    const mobile = window.matchMedia("(max-width: 1023px)").matches;
     try {
-      localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
+      localStorage.setItem(
+        mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open",
+        sidebarOpen ? "1" : "0",
+      );
     } catch {
       /* ignore */
     }
@@ -293,33 +296,6 @@ export function AppShell({
     <div
       className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
-      onTouchStart={(e) => {
-        const t = e.touches[0];
-        // Slightly wider edge zone + require a clear horizontal intent.
-        if (t && t.clientX < 28 && window.innerWidth < 1024) {
-          (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
-          (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
-        }
-      }}
-      onTouchMove={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        const start = el.dataset.swipeStart ? parseFloat(el.dataset.swipeStart) : NaN;
-        const startY = el.dataset.swipeY ? parseFloat(el.dataset.swipeY) : NaN;
-        if (!isNaN(start) && e.touches[0]) {
-          const dx = e.touches[0].clientX - start;
-          const dy = Math.abs(e.touches[0].clientY - startY);
-          // Open only on a deliberate right swipe; ignore mostly-vertical drags.
-          if (dx > 56 && dy < 36) {
-            setSidebarOpen(true);
-            delete el.dataset.swipeStart;
-            delete el.dataset.swipeY;
-          }
-        }
-      }}
-      onTouchEnd={(e) => {
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeY;
-      }}
     >
       <Sidebar
         conversations={conversations}
@@ -342,9 +318,8 @@ export function AppShell({
             .catch(() => toast.error("Your chat wasn't changed. Try again."));
         }}
         onShare={setShareChatId}
-        open={settingsWorkspace ? false : sidebarOpen}
-        compactOnly={settingsWorkspace}
-        onToggle={() => (settingsWorkspace ? undefined : setSidebarOpen((v) => !v))}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
@@ -352,20 +327,18 @@ export function AppShell({
 
       <div
         className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-        data-sidebar={!settingsWorkspace && sidebarOpen ? "open" : "closed"}
+        data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <OfflineBanner />
-        {!settingsWorkspace && (
-          <MobileTopBar
-            title={pageTitle}
-            onOpenSidebar={() => setSidebarOpen(true)}
-            onNewChat={handleNew}
-          />
-        )}
+        <MobileTopBar
+          title={pageTitle}
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={handleNew}
+        />
         {!utilitiesInHeader && !hideUtilities ? (
           <div className="kova-workspace-utilities flex shrink-0 justify-end">{utilities}</div>
         ) : null}
-        {!settingsWorkspace && !sidebarOpen && !user && (
+        {!sidebarOpen && !user && (
           <button
             type="button"
             onClick={(event) => {

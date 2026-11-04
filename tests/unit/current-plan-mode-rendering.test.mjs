@@ -197,7 +197,7 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
   const { registry } = fixture();
   for (const tier of ["plus", "pro"]) {
     const copy = [registry.plans[tier].description, ...registry.plans[tier].features].join(" ");
-    assert.match(copy, /messages per day/);
+    assert.match(copy, /Weekly: .* Thinking messages/);
     assert.match(copy, /limits still apply/);
     assert.doesNotMatch(copy, /unlimited/i);
   }
@@ -246,17 +246,17 @@ test("new usage ratios preserve prices and billing identifiers", () => {
   );
   for (const tier of ["plus", "pro"]) {
     assert.equal(registry.plans[tier].lookupKey, `${tier}_monthly`);
-    assert.match(registry.plans[tier].features[1], /messages per day/);
+    assert.match(registry.plans[tier].features[1], /Weekly: .* Thinking messages/);
     assert.equal(
       registry.plans[tier].features.at(-1),
       tier === "plus" ? "Enhanced memory when enabled" : "Extended memory when enabled",
     );
   }
   assert.deepEqual(Array.from(registry.plans.free.features.slice(1, 5)), [
-    "50 regular + 10 Thinking messages per day · one fifth of Plus usage",
+    "Daily: 50 regular + 10 Thinking messages",
     "8 image generations per day",
     "3 file uploads per day",
-    "Small published storage allowance",
+    "500 MB cloud storage",
   ]);
 });
 

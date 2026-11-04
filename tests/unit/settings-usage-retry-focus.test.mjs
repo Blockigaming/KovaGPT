@@ -28,7 +28,7 @@ const readEffect = nodes
     (node) =>
       ts.isCallExpression(node) &&
       node.expression.getText(file) === "useEffect" &&
-      node.arguments[0]?.getText(file).includes("getMyDailyUsage()"),
+      node.arguments[0]?.getText(file).includes("getMyPlanUsage("),
   )
   .arguments[0].getText(file);
 const unmountEffect = nodes
@@ -117,7 +117,7 @@ function fixture() {
     setUsageLoading: (value) => {
       state.usageLoading = value;
     },
-    getMyDailyUsage: () => {
+    getMyPlanUsage: () => {
       const request = deferred();
       pending.push(request);
       return request.promise;

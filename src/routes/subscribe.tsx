@@ -38,7 +38,16 @@ function CheckoutPage() {
             Sign in to continue
           </button>
         ) : (
-          <StripeEmbeddedCheckout key={`${user?.id}:${plan}`} priceId={plan} userId={user?.id} />
+          <>
+            <Link
+              to="/settings/$section"
+              params={{ section: "billing" }}
+              className="mb-4 inline-flex min-h-11 items-center text-sm underline underline-offset-4"
+            >
+              Manage an existing subscription
+            </Link>
+            <StripeEmbeddedCheckout key={`${user?.id}:${plan}`} priceId={plan} userId={user?.id} />
+          </>
         )}
       </section>
     </main>

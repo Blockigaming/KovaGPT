@@ -26,7 +26,7 @@ test("Stripe.js uses the pure entry and initializes only for an opened checkout"
   );
 
   assert.match(checkout, /const stripe = useMemo\(\(\) => \{[\s\S]*?return getStripe\(\)/);
-  assert.match(checkout, /<EmbeddedCheckoutProvider stripe=\{stripe\}/);
+  assert.match(checkout, /<EmbeddedCheckoutProvider key=\{attemptKey\} stripe=\{stripe\}/);
   assert.match(checkout, /if \(checkoutErrorMessage \|\| !stripe\)/);
   assert.match(
     hook,

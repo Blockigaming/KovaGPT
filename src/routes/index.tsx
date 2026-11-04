@@ -383,24 +383,28 @@ function KovaGPT() {
     return focusReopenedSidebar(trigger);
   }, [sidebarOpen]);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined") return;
+    const mobile = window.matchMedia("(max-width: 1023px)").matches;
     let saved: string | null = null;
     try {
-      saved = localStorage.getItem("kova-sidebar-open");
+      saved = localStorage.getItem(mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open");
     } catch {
       /* ignore */
     }
-    setSidebarOpen(saved === null ? true : saved === "1");
+    setSidebarOpen(saved === null ? !mobile : saved === "1");
     setSidebarPreferenceRestored(true);
   }, []);
   useEffect(() => {
     // An Auth principal change can remount this shell before restoration's
     // state update commits. Never persist the SSR-closed placeholder as the
     // user's preference while that decision is still pending.
-    if (!sidebarPreferenceRestored || typeof window === "undefined" || window.innerWidth < 1024)
-      return;
+    if (!sidebarPreferenceRestored || typeof window === "undefined") return;
+    const mobile = window.matchMedia("(max-width: 1023px)").matches;
     try {
-      localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
+      localStorage.setItem(
+        mobile ? "kova-mobile-sidebar-open" : "kova-sidebar-open",
+        sidebarOpen ? "1" : "0",
+      );
     } catch {
       /* ignore */
     }
@@ -2193,6 +2197,7 @@ function KovaGPT() {
                 : personalityToInstruction(
                     loadPersonality(isLoaded ? userKey : undefined),
                     isLoaded ? userKey : undefined,
+                    tier,
                   ) || undefined,
           }),
           signal: controller.signal,
@@ -2509,6 +2514,7 @@ function KovaGPT() {
       activeId,
       conversations,
       mode,
+      tier,
       autoTitle,
       settings,
       tempChat,
@@ -3144,79 +3150,80 @@ function KovaGPT() {
     ) : null;
 
   const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
-  const desktopToolbar = chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
-    <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
-      <div
-        hidden={sidebarOpen || Boolean(isSignedIn)}
-        className="flex items-center gap-1 mr-2 shrink-0"
-      >
-        <button
-          onClick={(event) => {
-            readingAnchorControllerRef.current?.capture();
-            sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
-            setSidebarOpen(true);
-          }}
-          className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
-          aria-label="Open sidebar"
-          title="Open sidebar"
+  const desktopToolbar =
+    chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
+      <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
+        <div
+          hidden={sidebarOpen || Boolean(isSignedIn)}
+          className="flex items-center gap-1 mr-2 shrink-0"
         >
-          <PanelLeft className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="flex items-center min-w-0 flex-1 relative">
-        <div className="spec400-chat-title">
-          {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "KovaGPT"}
-        </div>
-        {selectedWorkflowSkill ? (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={clearWorkflowSkill}
-            disabled={isStreaming}
-            className="ml-2 max-w-56 text-muted-foreground"
-            aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
-            title="Clear skill"
+          <button
+            onClick={(event) => {
+              readingAnchorControllerRef.current?.capture();
+              sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
+              setSidebarOpen(true);
+            }}
+            className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
+            aria-label="Open sidebar"
+            title="Open sidebar"
           >
-            <span className="truncate">{selectedWorkflowSkill.name}</span>
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </Button>
-        ) : null}
-      </div>
+            <PanelLeft className="w-5 h-5" />
+          </button>
+        </div>
 
-      <div className="ml-auto flex items-center gap-2 shrink-0">
-        {conversationActions()}
-        {isLoaded && isSignedIn && !chatStarted && (
-          <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
-            <TemporaryChatToggle
-              enabled={tempChat}
-              confirmed={tempChatConfirmed}
-              onToggle={(trigger) => {
-                temporaryTriggerRef.current = trigger;
-                temporaryReturnUrlRef.current = window.location.href;
-                setTemporaryChatEnabled(!tempChat);
-              }}
-            />
-          </Suspense>
-        )}
-        {isLoaded && !isSignedIn && !chatStarted ? (
-          <>
-            <SignInButton mode="modal">
-              <button className="kova-auth-primary h-10 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 active:scale-[0.98] transition">
-                Log in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="kova-auth-sign-up h-10 whitespace-nowrap rounded-full px-4 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition">
-                Sign up for free
-              </button>
-            </SignUpButton>
-          </>
-        ) : null}
-      </div>
-    </header>
-  ) : null;
+        <div className="flex items-center min-w-0 flex-1 relative">
+          <div className="spec400-chat-title">
+            {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "KovaGPT"}
+          </div>
+          {selectedWorkflowSkill ? (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={clearWorkflowSkill}
+              disabled={isStreaming}
+              className="ml-2 max-w-56 text-muted-foreground"
+              aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
+              title="Clear skill"
+            >
+              <span className="truncate">{selectedWorkflowSkill.name}</span>
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {conversationActions()}
+          {isLoaded && isSignedIn && !chatStarted && (
+            <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
+              <TemporaryChatToggle
+                enabled={tempChat}
+                confirmed={tempChatConfirmed}
+                onToggle={(trigger) => {
+                  temporaryTriggerRef.current = trigger;
+                  temporaryReturnUrlRef.current = window.location.href;
+                  setTemporaryChatEnabled(!tempChat);
+                }}
+              />
+            </Suspense>
+          )}
+          {isLoaded && !isSignedIn && !chatStarted ? (
+            <>
+              <SignInButton mode="modal">
+                <button className="kova-auth-primary h-10 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 active:scale-[0.98] transition">
+                  Log in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="kova-auth-sign-up h-10 whitespace-nowrap rounded-full px-4 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition">
+                  Sign up for free
+                </button>
+              </SignUpButton>
+            </>
+          ) : null}
+        </div>
+      </header>
+    ) : null;
 
   return (
     <div

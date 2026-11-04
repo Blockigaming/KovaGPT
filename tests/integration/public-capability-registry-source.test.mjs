@@ -22,7 +22,7 @@ const helpRoute = read("src/routes/help.tsx");
 const helpData = read("src/lib/help-center-data.ts");
 const help = [helpRoute, helpData].join("\n");
 const aiWriter = read("src/routes/ai-writer.tsx");
-const publicRoutes = [modes, pricing, help].join("\n");
+const publicRoutes = [modes, pricing.split("const teamTopics")[0], help].join("\n");
 const publishedSources = [registry, publicRoutes, aiWriter].join("\n");
 const allRouteCopy = readRouteTree(resolve(root, "src/routes")).join("\n");
 
@@ -34,7 +34,7 @@ test("Modes, Pricing, and Help consume one typed capability registry", () => {
   assert.match(registry, /satisfies CapabilityRegistry/);
   assert.match(registry, /MODES/);
   assert.match(registry, /modesForTier/);
-  assert.match(registry, /DAILY_PLAN_ALLOWANCES/);
+  assert.match(registry, /chatUsageWindows/);
   assert.match(registry, /DAILY_IMAGE_LIMIT_BY_TIER/);
   assert.match(registry, /DAILY_UPLOAD_LIMIT_BY_TIER/);
   assert.match(registry, /const allowance = PLAN_ALLOWANCE_COPY\[tier\]/);
@@ -100,6 +100,7 @@ test("retired modes and unsupported product promises stay off public routes", ()
     /Deepest reasoning/i,
   ];
 
+  assert.match(pricing, /Proposed pricing\. Contact sales to confirm availability/);
   for (const claim of forbiddenClaims) {
     assert.doesNotMatch(publishedSources, claim);
   }

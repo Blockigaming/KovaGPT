@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,8 @@ export function AppearanceSettings({
 }) {
   const values = appearanceValues(settings);
   const [notice, setNotice] = useState("");
+  const [interfaceSizeDraft, setInterfaceSizeDraft] = useState<number | null>(null);
+  const [navigationWidthDraft, setNavigationWidthDraft] = useState<number | null>(null);
   const change = (patch: Partial<Settings>) => {
     setNotice("");
     if (patch.mode) applyThemeMode(patch.mode);
@@ -149,28 +152,43 @@ export function AppearanceSettings({
             />
           </label>
         ))}
-        <label className="kova-preference-row">
-          Interface size <output>{values.interfaceSize}%</output>
-          <input
-            type="range"
-            min="85"
-            max="125"
-            step="5"
-            value={values.interfaceSize}
-            onChange={(event) => change({ interfaceSize: Number(event.target.value) })}
+        <div className="kova-preference-row kova-preference-slider">
+          <div>Interface size</div>
+          <output>{interfaceSizeDraft ?? values.interfaceSize}%</output>
+          <Slider
+            thumbProps={{
+              "aria-label": "Interface size",
+              "aria-valuetext": `${interfaceSizeDraft ?? values.interfaceSize}%`,
+            }}
+            min={85}
+            max={125}
+            step={1}
+            value={[interfaceSizeDraft ?? values.interfaceSize]}
+            onValueChange={([value]) => setInterfaceSizeDraft(value)}
+            onValueCommit={([value]) => {
+              setInterfaceSizeDraft(null);
+              change({ interfaceSize: value });
+            }}
           />
-        </label>
-        <label className="kova-preference-row">
-          Settings navigation width <output>{values.settingsNavigationWidth}px</output>
-          <input
-            type="range"
-            min="200"
-            max="440"
-            step="1"
-            value={values.settingsNavigationWidth}
-            onChange={(event) => change({ settingsNavigationWidth: Number(event.target.value) })}
+        </div>
+        <div className="kova-preference-row kova-preference-slider">
+          <div>Settings navigation width</div>
+          <output>{navigationWidthDraft ?? values.settingsNavigationWidth}px</output>
+          <Slider
+            thumbProps={{
+              "aria-label": "Settings navigation width",
+              "aria-valuetext": `${navigationWidthDraft ?? values.settingsNavigationWidth} pixels`,
+            }}
+            min={200}
+            max={440}
+            value={[navigationWidthDraft ?? values.settingsNavigationWidth]}
+            onValueChange={([value]) => setNavigationWidthDraft(value)}
+            onValueCommit={([value]) => {
+              setNavigationWidthDraft(null);
+              change({ settingsNavigationWidth: value });
+            }}
           />
-        </label>
+        </div>
         <label className="kova-preference-row">
           Accent color
           <input
@@ -193,6 +211,8 @@ export function AppearanceSettings({
         <Button
           variant="ghost"
           onClick={() => {
+            setInterfaceSizeDraft(null);
+            setNavigationWidthDraft(null);
             const reset = resetAppearance(settings);
             applyThemeMode(reset.mode);
             onChange(reset);

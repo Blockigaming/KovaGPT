@@ -120,6 +120,18 @@
   flex: none;
   background: var(--surface-secondary);
 }
+.kova-preference-row.kova-preference-slider {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+}
+.kova-preference-slider [data-slot="slider"] {
+  grid-column: 1 / -1;
+}
+.kova-preference-slider output {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
 .kova-appearance-settings > .kova-appearance-preview {
   margin-top: 24px;
   padding: 20px;

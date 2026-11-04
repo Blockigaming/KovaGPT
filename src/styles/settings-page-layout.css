@@ -4,7 +4,8 @@
   max-width: none;
   margin: 0;
   padding: 0;
-  height: 100dvh;
+  flex: 1;
+  min-height: 0;
 }
 .kova-settings-route section.kova-settings-page.kova-settings-dialog {
   position: relative;
@@ -177,6 +178,25 @@
     flex-basis: auto;
   }
 }
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  :root:not([data-kova-motion="reduced"])
+    .kova-settings-route
+    section.kova-settings-page
+    .kova-settings-sidebar {
+    transition: width var(--kova-motion-standard) var(--kova-ease);
+  }
+}
 .kova-app-shell:has(.kova-settings-route) .kova-sidebar-rail {
   border-inline-end: 1px solid var(--border);
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-content {
+  scroll-padding-block: 20px;
+}
+.kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
+  line-height: 1.5;
+}
+.kova-settings-route section.kova-settings-page .kova-settings-nav-item {
+  min-height: 42px;
+  font-size: 14px;
 }

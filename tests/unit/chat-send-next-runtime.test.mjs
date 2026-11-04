@@ -245,6 +245,7 @@ function fixture() {
     Intl,
     TypeError,
     safeLocale: () => "en-US",
+    tier: "free",
     personalityToInstruction: () => "",
     loadPersonality: () => null,
     withResponsePresentation: (profile) => profile,

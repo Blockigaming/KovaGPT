@@ -15,7 +15,11 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
 
   await expect(page.locator("main#main-content")).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1, name: "Upgrade your plan" })).toBeVisible();
-  await expect(page.locator("[data-pricing-plan]")).toHaveCount(4);
+  await expect(page.locator("[data-pricing-plan]")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Individual" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(page.getByText("$16", { exact: true })).toBeVisible();
   await expect(page.getByText("$80", { exact: true })).toBeVisible();
   await expect(page.getByText("+ applicable tax", { exact: true })).toHaveCount(2);
@@ -60,4 +64,16 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
       expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(2);
     }
   }
+
+  await page.getByRole("button", { name: "Teams & Enterprise" }).click();
+  await expect(page.getByRole("heading", { name: "Plans that grow with you" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Team", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Enterprise", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Standard seat" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Premium seat" })).toBeVisible();
+  await expect(page.locator("[data-pricing-plan]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Individual" }).click();
+  await expect(
+    page.getByRole("table", { name: "KovaGPT Free, Plus, and Pro plan comparison" }),
+  ).toBeVisible();
 });

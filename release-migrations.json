@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 207,
-  "latest": "20261101012355_kova_daily_message_modes_and_memory_tiers.sql",
+  "count": 209,
+  "latest": "20261104223100_scheduled_task_active_plan_caps.sql",
   "migrations": [
     {
       "order": 1,
@@ -4383,6 +4383,34 @@
         "kova_owned_session_guard",
         "kova_owned_session_guard"
       ],
+      "indexes": []
+    },
+    {
+      "order": 208,
+      "filename": "20261104223000_paid_message_usage_windows.sql",
+      "timestamp": "20261104223000",
+      "sha256": "0521ad2e1836784bdb07b6efdfa47cea6efc26cbbac52e008b8816e4254fc38f",
+      "tables": ["message_usage_short_window"],
+      "functions": ["try_consume_paid_message"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["message_usage_short_window"],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 209,
+      "filename": "20261104223100_scheduled_task_active_plan_caps.sql",
+      "timestamp": "20261104223100",
+      "sha256": "6a90862408d5cfc0f4e9849775a2cee746ce075c7d405188fb33030b7b3fb1b4",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
       "indexes": []
     }
   ]

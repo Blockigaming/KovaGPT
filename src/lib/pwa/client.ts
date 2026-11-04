@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
+import {
+  getCachedKovaSession,
+  getCapturedKovaPrincipal,
+  isKovaSessionActive,
+} from "@/lib/kova-auth-browser";
 export type PushDeviceBinding = {
   id: string;
   ownerId: string;
@@ -71,12 +76,11 @@ async function workerMessage(
 }
 let ownerEpoch: number | null = null;
 async function assertSessionOwner(ownerId: string | null, captured: number) {
-  const result = await withAbort(supabase.auth.getSession(), AbortSignal.timeout(10000));
-  if (
-    result.data.session?.user.id !== (ownerId ?? undefined) ||
-    activeOwner !== ownerId ||
-    generation !== captured
-  )
+  const deadline = AbortSignal.timeout(10000);
+  const sessionOwner = isKovaSessionActive()
+    ? (await withAbort(getCachedKovaSession(), deadline))?.accountId
+    : (await withAbort(supabase.auth.getSession(), deadline)).data.session?.user.id;
+  if (sessionOwner !== (ownerId ?? undefined) || activeOwner !== ownerId || generation !== captured)
     throw new Error("Your account changed.");
 }
 export function setPwaOwner(ownerId: string | null): Promise<void> {
@@ -150,22 +154,27 @@ export async function pushApi(
   const epoch = generation;
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(20000)]);
   deadline.throwIfAborted();
-  const session = await withAbort(supabase.auth.getSession(), deadline);
-  if (
-    deadline.aborted ||
-    activeOwner !== ownerId ||
-    epoch !== generation ||
-    session.error ||
-    session.data.session?.user.id !== ownerId ||
-    !session.data.session.access_token
-  )
+  let authorization: string | undefined;
+  if (isKovaSessionActive()) {
+    if (getCapturedKovaPrincipal()?.accountId !== ownerId) throw new Error("Your account changed.");
+  } else {
+    const session = await withAbort(supabase.auth.getSession(), deadline);
+    if (
+      session.error ||
+      session.data.session?.user.id !== ownerId ||
+      !session.data.session.access_token
+    )
+      throw new Error("Your account changed.");
+    authorization = `Bearer ${session.data.session.access_token}`;
+  }
+  if (deadline.aborted || activeOwner !== ownerId || epoch !== generation)
     throw new Error("Your account changed.");
   const response = await fetch(
     `/api/push${body ? "" : `?expectedUserId=${encodeURIComponent(ownerId)}`}`,
     {
       method: body ? "POST" : "GET",
       headers: {
-        Authorization: `Bearer ${session.data.session.access_token}`,
+        ...(authorization ? { Authorization: authorization } : {}),
         "X-Kova-Owner": ownerId,
         ...(body ? { "Content-Type": "application/json" } : {}),
       },

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { fixture, owner, chatA, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { chatUsageWindows, CHAT_USAGE_WINDOWS } from "../../src/lib/plan-usage-policy.mjs";
 
 test("a signed-out visitor must choose login or signup", async ({ page }) => {
   await fixture(page, "dark", false);
@@ -87,40 +88,36 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   expect(b!.x).toBeGreaterThanOrEqual(0);
   expect(b!.x + b!.width).toBeLessThanOrEqual(viewport.width + 1);
 });
-for (const [tier, limits] of [
-  ["free", { regular: 50, thinking: 10, images: 8, uploads: 3 }],
-  ["plus", { regular: 250, thinking: 50, images: 40, uploads: 15 }],
-  ["pro", { regular: 3750, thinking: 750, images: 600, uploads: 225 }],
-] as const)
+for (const tier of ["free", "plus", "pro"] as const)
   test(`${tier} settings display percentages from actual mode-specific usage`, async ({ page }) => {
     await fixture(page, "dark", true, false, tier);
-    const usage = {
-      chats: Math.floor(limits.regular / 2) + Math.floor(limits.thinking / 5),
-      thinking: Math.floor(limits.thinking / 5),
-      images: limits.images / 4,
-      uploads: limits.uploads,
-      resetsAt: "2026-11-02T00:00:00Z",
-    };
+    const windows = chatUsageWindows(tier).map((window) => ({
+      ...window,
+      regularUsed: Math.floor(window.regularLimit / 2),
+      thinkingUsed: Math.floor(window.thinkingLimit / 5),
+    }));
+    const usage = { tier, windows, images: 2, uploads: 1 };
     await page.route("**/_serverFn/**", (route) => {
       const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-      if (!functionNames.get(id)?.startsWith("getMyDailyUsage_")) return route.fallback();
+      if (!functionNames.get(id)?.startsWith("getMyPlanUsage_")) return route.fallback();
       return route.fulfill({ json: { result: usage, context: {} } });
     });
     for (const section of ["usage", "billing"]) {
       await page.goto(`/settings/${section}`);
       await waitForKovaHydration(page);
-      for (const [label, percent] of [
-        ["Regular messages", 50],
-        ["Thinking", 20],
-        ["Images", 25],
-        ["File uploads", 100],
-      ] as const) {
-        const bar = page.getByRole("progressbar", { name: `${label} used today`, exact: true });
+      await expect(page.getByRole("progressbar")).toHaveCount(windows.length);
+      for (const { id, regularUsed, regularLimit } of windows) {
+        const bar = page.getByRole("progressbar", {
+          name: `${CHAT_USAGE_WINDOWS[id]} chat usage`,
+          exact: true,
+        });
         await expect(bar).toHaveAttribute("aria-valuemax", "100");
-        await expect(bar).toHaveAttribute("aria-valuenow", String(percent));
-        await expect(bar).toHaveAttribute("aria-valuetext", `${percent}% used`);
+        await expect(bar).toHaveAttribute(
+          "aria-valuenow",
+          String(Math.floor((regularUsed / regularLimit) * 100)),
+        );
       }
-      await expect(page.locator(".kova-plan-usage")).not.toContainText(/\d+\s*\/\s*\d+/);
+      await expect(page.locator(".kova-plan-usage")).toContainText(/2 \/ \d+ images/);
     }
     await page.screenshot({
       path: `artifacts/ui-finish-${test.info().project.name}-${tier}-usage.png`,

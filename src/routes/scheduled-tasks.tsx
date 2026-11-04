@@ -252,45 +252,53 @@ function ScheduledTasksPage() {
     };
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
-  const loadTasks = useCallback(async () => {
-    if (pendingTaskIdsRef.current.size > 0) return;
-    if (!dataReady || dataGeneration !== generationRef.current || accessState !== "eligible")
-      return;
-    const generation = generationRef.current;
-    const request = ++listRequestRef.current;
-    setLoading(true);
-    try {
-      const next = await list({ data: { expectedUserId: userKey! } });
-      if (
-        generation !== generationRef.current ||
-        principalRef.current !== principal ||
-        request !== listRequestRef.current
-      )
+  const loadTasks = useCallback(
+    async (refreshAvailability = false) => {
+      if (pendingTaskIdsRef.current.size > 0) return;
+      if (!dataReady || dataGeneration !== generationRef.current || accessState !== "eligible")
         return;
-      taskListLoaded.current = true;
-      setTasks(next);
-      setLoadError(null);
-      setRunRefreshVersion((value) => value + 1);
-    } catch (error) {
-      if (
-        generation !== generationRef.current ||
-        principalRef.current !== principal ||
-        request !== listRequestRef.current
-      )
-        return;
-      const message = error instanceof Error ? error.message : "Failed to load tasks";
-      setLoadError(message);
-      toast.error(message);
-    } finally {
-      if (
-        generation === generationRef.current &&
-        principalRef.current === principal &&
-        request === listRequestRef.current
-      ) {
-        setLoading(false);
+      const generation = generationRef.current;
+      const request = ++listRequestRef.current;
+      setLoading(true);
+      try {
+        const data = { expectedUserId: userKey! };
+        const [next, availability] = await Promise.all([
+          list({ data }),
+          refreshAvailability ? checkEligible({ data }).catch(() => null) : null,
+        ]);
+        if (
+          generation !== generationRef.current ||
+          principalRef.current !== principal ||
+          request !== listRequestRef.current
+        )
+          return;
+        taskListLoaded.current = true;
+        if (availability) setExecutionAvailable(availability.executionAvailable);
+        setTasks(next);
+        setLoadError(null);
+        setRunRefreshVersion((value) => value + 1);
+      } catch (error) {
+        if (
+          generation !== generationRef.current ||
+          principalRef.current !== principal ||
+          request !== listRequestRef.current
+        )
+          return;
+        const message = error instanceof Error ? error.message : "Failed to load tasks";
+        setLoadError(message);
+        toast.error(message);
+      } finally {
+        if (
+          generation === generationRef.current &&
+          principalRef.current === principal &&
+          request === listRequestRef.current
+        ) {
+          setLoading(false);
+        }
       }
-    }
-  }, [accessState, dataGeneration, dataReady, list, principal, userKey]);
+    },
+    [accessState, checkEligible, dataGeneration, dataReady, list, principal, userKey],
+  );
 
   useEffect(() => {
     void loadTasks();
@@ -704,7 +712,7 @@ function ScheduledTasksPage() {
                   type="button"
                   ref={refreshButtonRef}
                   onClick={() => {
-                    if (!loading) void loadTasks();
+                    if (!loading) void loadTasks(true);
                   }}
                   aria-disabled={loading}
                   aria-busy={loading}
@@ -983,9 +991,13 @@ function ScheduledTasksPage() {
                     className="w-full border border-border bg-background pl-9 pr-3 text-sm"
                   />
                 </label>
-                <TabsList aria-label="Task filters">
+                <TabsList aria-label="Task filters" className="rounded-full">
                   {(["active", "paused", "all"] as TaskFilter[]).map((value) => (
-                    <TabsTrigger key={value} value={value} className="shrink-0 capitalize">
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="shrink-0 rounded-full capitalize"
+                    >
                       {value}{" "}
                       <span className="spec400-count">
                         {

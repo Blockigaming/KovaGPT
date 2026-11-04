@@ -100,7 +100,7 @@ test("plan cards expose aligned 44px actions and the flat ChatGPT pricing hierar
 
   assert.match(pricing, /id="pricing-title"/);
   assert.match(pricing, /aria-label="KovaGPT plans"/);
-  assert.match(pricing, /data-pricing-plan=\{name\.toLowerCase\(\)\}/);
+  assert.match(pricing, /data-pricing-plan=\{planId\}/);
   assert.match(pricing, /<article[\s\S]*?<h2[\s\S]*?<button[\s\S]*?<ul/);
   assert.match(pricing, /data-ui-reference="chatgpt-pricing-plan-card"/);
   assert.match(pricing, /md:row-span-6 md:h-full md:grid-rows-subgrid/);

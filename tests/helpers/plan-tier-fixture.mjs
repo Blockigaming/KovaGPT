@@ -33,7 +33,7 @@ export function planTierFixture({ configured = true } = {}) {
         getSupabaseClientConfigStatus: () => ({ configured }),
       },
     },
-    { window, document, queueMicrotask },
+    { window, document, queueMicrotask, clearTimeout, setTimeout: () => undefined },
   );
   const render = () => h.render(useTier);
   render();
