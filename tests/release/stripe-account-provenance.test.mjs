@@ -5,9 +5,11 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("browser and server live credentials must target the approved Stripe account", async () => {
-  const [publicConfig, stripeClient, envExample, rollout] = await Promise.all([
+  const [publicConfig, stripeClient, browserConfig, payments, envExample, rollout] = await Promise.all([
     read("src/config/public-config.ts"),
     read("src/lib/stripe.ts"),
+    read("src/lib/stripe-browser-config.ts"),
+    read("src/utils/payments.functions.ts"),
     read(".env.example"),
     read("docs/release/STRIPE_BILLING_ROLLOUT.md"),
   ]);
@@ -16,8 +18,11 @@ test("browser and server live credentials must target the approved Stripe accoun
   assert.match(publicConfig, /PUBLIC_PAYMENTS_CLIENT_TOKEN = ""/);
   assert.doesNotMatch(publicConfig, /pk_(?:live|test)_/);
   assert.doesNotMatch(publicConfig, /51TW1VcAHcChSIaIo/);
-  assert.match(stripeClient, /VITE_PAYMENTS_CLIENT_TOKEN/);
-  assert.match(stripeClient, /Live billing requires a Stripe pk_live publishable key/);
+  assert.match(browserConfig, /import\.meta\.env\.VITE_PAYMENTS_CLIENT_TOKEN/);
+  assert.match(stripeClient, /COMPILED_PAYMENTS_CLIENT_TOKEN/);
+  assert.match(stripeClient, /getBillingClientConfiguration\(\)/);
+  assert.match(stripeClient, /!token\.startsWith\("pk_live_"\)/);
+  assert.match(payments, /publishableKey: \/\^pk_live_/);
   assert.match(envExample, /VITE_PAYMENTS_CLIENT_TOKEN=/);
   assert.match(envExample, /STRIPE_LIVE_ACCOUNT_ID=/);
   assert.match(envExample, /acct_1UAeDgAEZlsb6DBY/);
