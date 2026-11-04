@@ -7,17 +7,22 @@ import {
   PUBLIC_WEBSITE_FOOTER,
 } from "../../src/lib/public-website-catalog.mjs";
 
-const evidence = "artifacts/public-website";
+function evidenceDirectory(projectName: string) {
+  const root = "artifacts/public-website";
+  return projectName ? `${root}/${projectName}` : root;
+}
 const inventory = JSON.parse(
   await readFile("docs/public-website/route-inventory.json", "utf8"),
 ) as { paths: string[] };
-test.beforeAll(async () => {
-  await mkdir(evidence, { recursive: true });
+test.beforeEach(async ({}, testInfo) => {
+  await mkdir(evidenceDirectory(testInfo.project.name), { recursive: true });
 });
 
 test("implemented homepage, pricing tabs, FAQ, original asset, and responsive evidence", async ({
   page,
-}) => {
+  context,
+}, testInfo) => {
+  const evidence = evidenceDirectory(testInfo.project.name);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
@@ -78,15 +83,21 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
     );
     expect(overflow, `horizontal overflow at ${width}`).toBe(false);
     if (width === 390) {
-      await page.goto("/");
-      await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "ready");
-      await page.evaluate(async () => {
-        await document.fonts.ready;
-        window.scrollTo(0, 0);
-      });
-      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-      await page.screenshot({ path: `${evidence}/mobile-hero.png` });
-      await page.screenshot({ path: `${evidence}/mobile-home.png`, fullPage: true });
+      // A fresh page avoids inheriting the FAQ focus and scroll position
+      // from the desktop screenshots.
+      const mobilePage = await context.newPage();
+      try {
+        await mobilePage.setViewportSize({ width, height });
+        mobilePage.on("pageerror", (error) => errors.push(error.message));
+        await mobilePage.goto("/");
+        await expect(mobilePage.locator("html")).toHaveAttribute("data-kova-hydration", "ready");
+        await mobilePage.evaluate(() => document.fonts.ready);
+        await expect.poll(() => mobilePage.evaluate(() => window.scrollY)).toBe(0);
+        await mobilePage.screenshot({ path: `${evidence}/mobile-hero.png` });
+        await mobilePage.screenshot({ path: `${evidence}/mobile-home.png`, fullPage: true });
+      } finally {
+        await mobilePage.close();
+      }
     }
   }
   expect(errors).toEqual([]);
@@ -95,7 +106,8 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
 test("every information route and footer destination resolves with meaningful content", async ({
   page,
   request,
-}) => {
+}, testInfo) => {
+  const evidence = evidenceDirectory(testInfo.project.name);
   const results: { path: string; status: number; title?: string }[] = [];
   const extras = [
     "/",
@@ -142,7 +154,8 @@ test("every information route and footer destination resolves with meaningful co
 
 test("email entry uses the existing auth route and does not submit a real account", async ({
   page,
-}) => {
+}, testInfo) => {
+  const evidence = evidenceDirectory(testInfo.project.name);
   await page.goto("/login?return_to=%2Fpricing%3Fplan%3Dplus_monthly");
   await page
     .getByRole("textbox", { name: "Email address", exact: true })
@@ -155,7 +168,8 @@ test("email entry uses the existing auth route and does not submit a real accoun
 
 test("deferred checkout opens a recoverable configuration error without payment requests", async ({
   page,
-}) => {
+}, testInfo) => {
+  const evidence = evidenceDirectory(testInfo.project.name);
   // This workflow deliberately builds without payment credentials. The fixture
   // owns authentication only; this is not real Stripe acceptance evidence.
   await installAuthenticatedFixture(page);
@@ -180,7 +194,8 @@ test("deferred checkout opens a recoverable configuration error without payment 
 
 // These are raw browser captures used to review and update the intentional
 // signed-out design change. The normal visual suite still compares committed baselines.
-test("collect exact guest visual baselines for review", async ({ browser }) => {
+test("collect exact guest visual baselines for review", async ({ browser }, testInfo) => {
+  const evidence = evidenceDirectory(testInfo.project.name);
   for (const [project, width, height] of [
     ["phone-390x844", 390, 844],
     ["desktop-1440x900", 1440, 900],
