@@ -65,7 +65,10 @@ import {
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
-import { FreeConnectorBudget } from "@/lib/ai/free-connector-budget.server";
+import {
+  FreeConnectorBudget,
+  connectedToolsUnavailableMessages,
+} from "@/lib/ai/free-connector-budget.server";
 import { planAllowance } from "@/lib/plan-usage-policy.mjs";
 
 import { routeAiModel } from "@/lib/ai/model-router.server";
@@ -1565,10 +1568,10 @@ export const Route = createFileRoute("/api/chat")({
               ? customKova.filterTools(connectionTools)
               : connectionTools;
             const googleBinding = googleContext?.binding ?? undefined;
-            const enableTools = availableTools.length > 0;
+            let enableTools = availableTools.length > 0;
 
             const freeConnectorRequest = enableTools && callerTier === "free";
-            const finalMessages = body.messages as unknown as ChatMsg[];
+            let finalMessages = body.messages as unknown as ChatMsg[];
             // A selected workflow resource may have influenced any earlier
             // assistant response (and therefore a durable conversation summary).
             // Tool planning gets a fresh, provenance-isolated transcript: only
@@ -1576,7 +1579,7 @@ export const Route = createFileRoute("/api/chat")({
             // instructions, and the user's current text request. The complete
             // conversation and resource bodies return only for the final call,
             // where no connector tools are available.
-            const toolPlanningMessages: ChatMsg[] = workflowSkill
+            let toolPlanningMessages: ChatMsg[] = workflowSkill
               ? [
                   {
                     role: "system",
@@ -1629,12 +1632,12 @@ export const Route = createFileRoute("/api/chat")({
                 { status: 503 },
               );
             }
-            const inputEstimate = estimateProviderInput({
+            let inputEstimate = estimateProviderInput({
               messages: body.messages,
               tools: availableTools,
             });
             const outputCeiling = Number(body.max_completion_tokens);
-            const maximumProviderCalls = enableTools ? 9 : 1;
+            let maximumProviderCalls = enableTools ? 9 : 1;
             let estimatedCost =
               estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
                 maximumProviderCalls +
@@ -1701,17 +1704,28 @@ export const Route = createFileRoute("/api/chat")({
                     freeConnectorBudget.finalInputTokenLimit,
                   freeConnectorBudget.planningOutputTokens + freeConnectorBudget.finalOutputTokens,
                 );
-              } catch {
-                return Response.json(
-                  {
-                    error:
-                      "This connected request exceeds the generation budget. Start a shorter conversation or narrow the request.",
-                    code: "request_budget",
-                    category: "bad_request",
-                    retryable: false,
-                    requestId,
-                  },
-                  { status: 413 },
+              } catch (error) {
+                if (
+                  !(error instanceof Error) ||
+                  error.message !== "connector_request_budget_exceeded"
+                )
+                  throw error;
+                // Optional connector discovery must not reject an ordinary chat
+                // turn. Keep every instruction/message, disclose that no private
+                // access occurred, and reserve the full single-call cost below.
+                // The connector budget itself and all account limits stay intact.
+                enableTools = false;
+                finalMessages = connectedToolsUnavailableMessages(finalMessages);
+                toolPlanningMessages = finalMessages;
+                body.messages = finalMessages;
+                inputEstimate = estimateProviderInput(
+                  prepareChatResponsesRequest({ ...body, stream: true }),
+                );
+                maximumProviderCalls = 1;
+                estimatedCost = estimateMaximumCostUsd(
+                  catalogModel,
+                  inputEstimate.tokens,
+                  outputCeiling,
                 );
               }
             }

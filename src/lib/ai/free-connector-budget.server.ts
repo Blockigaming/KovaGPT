@@ -8,6 +8,22 @@ type Usage = {
 };
 type Message = { role: string; content: unknown };
 
+/** Preserve the complete chat while making the missing optional access explicit. */
+export function connectedToolsUnavailableMessages<T extends Message>(messages: T[]): T[] {
+  const first = messages[0];
+  if (first?.role !== "system" || typeof first.content !== "string")
+    throw new Error("invalid_connector_fallback_context");
+  return [
+    {
+      ...first,
+      content:
+        first.content +
+        "\n\nCONNECTED ACCESS FOR THIS TURN: Optional connected-tool planning did not fit the generation allowance. Connected tools were not run; no new connected-tool results or external action receipts are available. Answer self-contained questions and questions supported by the conversation normally. If the request requires fresh private connected data or an external action, explain that connected access is unavailable for this turn. Never invent retrieved data or claim an action succeeded.",
+    },
+    ...messages.slice(1),
+  ];
+}
+
 const zeroUsage = (): Usage => ({
   inputTokens: 0,
   cachedInputTokens: 0,

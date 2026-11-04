@@ -10,13 +10,28 @@ const compiled = await build({
   platform: "node",
   format: "esm",
 });
-const { FreeConnectorBudget } = await import(
+const { FreeConnectorBudget, connectedToolsUnavailableMessages } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString("base64")}`
 );
 const finalMessages = [
   { role: "system", content: "Complete final instructions." },
   { role: "user", content: "Read my README." },
 ];
+
+test("optional-access disclosure preserves every instruction and conversation message without mutating its input", () => {
+  const original = structuredClone(finalMessages);
+  const result = connectedToolsUnavailableMessages(finalMessages);
+  assert.deepEqual(finalMessages, original);
+  assert.deepEqual(result.slice(1), original.slice(1));
+  assert.ok(result[0].content.startsWith(original[0].content));
+  assert.match(result[0].content, /Connected tools were not run/);
+  assert.match(result[0].content, /Never invent retrieved data or claim an action succeeded/);
+  for (const invalid of [[], [{ role: "user", content: "Hi" }], [{ role: "system", content: [] }]])
+    assert.throws(
+      () => connectedToolsUnavailableMessages(invalid),
+      /invalid_connector_fallback_context/,
+    );
+});
 function budget(overrides = {}) {
   return new FreeConnectorBudget({
     planningMessages: [
