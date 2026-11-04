@@ -171,10 +171,12 @@ function ErrorComponent({ reset }: ErrorComponentProps) {
           <Button
             type="button"
             onClick={async () => {
+              reset();
               try {
                 await router.invalidate();
-              } finally {
-                reset();
+              } catch {
+                // A failed route refresh must not strand the Retry control.
+                window.location.reload();
               }
             }}
             className="kova-state-primary"

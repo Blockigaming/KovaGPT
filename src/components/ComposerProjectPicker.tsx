@@ -60,6 +60,7 @@ export function ComposerProjectPicker({
   const canAccess = Boolean(open && principalId && !opening.current.invalidated);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [projectQuery, setProjectQuery] = useState("");
   const [navigationError, setNavigationError] = useState("");
   const [navigating, setNavigating] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -71,6 +72,10 @@ export function ComposerProjectPicker({
     canAccess && snapshot?.principalId === principalId && snapshot.cycle === cycle
       ? snapshot
       : null;
+
+  useEffect(() => {
+    if (open) setProjectQuery("");
+  }, [open, principalId]);
 
   useEffect(() => {
     mounted.current = true;
@@ -130,6 +135,13 @@ export function ComposerProjectPicker({
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
   }, [open, principalId]);
 
+  const matchingProjects =
+    visible?.status === "ready"
+      ? visible.projects.filter((project) =>
+          project.name.toLocaleLowerCase().includes(projectQuery.trim().toLocaleLowerCase()),
+        )
+      : [];
+
   const chooseProject = async (projectId: string) => {
     const scope = current.current;
     if (
@@ -183,6 +195,44 @@ export function ComposerProjectPicker({
             your current chat.
           </DialogDescription>
         </DialogHeader>
+        {visible?.status === "ready" ? (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="sr-only">Search projects</span>
+              <input
+                type="search"
+                aria-label="Search projects"
+                value={projectQuery}
+                onChange={(event) => setProjectQuery(event.target.value)}
+                placeholder="Search projects"
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              />
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-11 w-full justify-start rounded-xl"
+              disabled={navigationBlocked || navigating !== null}
+              onClick={async () => {
+                if (navigationPending.current || navigationBlocked) return;
+                navigationPending.current = true;
+                setNavigating("__new__");
+                setNavigationError("");
+                try {
+                  await navigate({ to: "/projects", search: { new: true } });
+                  if (mounted.current) onOpenChange(false);
+                } catch {
+                  if (mounted.current) setNavigationError("Could not open the new project form.");
+                } finally {
+                  navigationPending.current = false;
+                  if (mounted.current) setNavigating(null);
+                }
+              }}
+            >
+              {navigating === "__new__" ? "Opening…" : "+ New project"}
+            </Button>
+          </div>
+        ) : null}
         {!canAccess ? (
           <p role="status" className="text-sm text-muted-foreground">
             Close this picker and open it again after signing in to your account.
@@ -212,7 +262,7 @@ export function ComposerProjectPicker({
               </p>
             )}
             <ul className="max-h-[50dvh] space-y-2 overflow-y-auto">
-              {visible.projects.map((project) => (
+              {matchingProjects.map((project) => (
                 <li key={project.id}>
                   <Button
                     data-kova-button-shape="preserve"
@@ -235,6 +285,11 @@ export function ComposerProjectPicker({
                 </li>
               ))}
             </ul>
+            {matchingProjects.length === 0 ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                No matching projects.
+              </p>
+            ) : null}
           </div>
         )}
         {navigationError && (

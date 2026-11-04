@@ -80,8 +80,12 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   const menu = page.locator(".kova-profile-menu");
   await expect(menu).toBeVisible();
   const b = await menu.boundingBox();
-  expect(Math.abs(a!.x - b!.x)).toBeLessThan(2);
-  expect(Math.abs(a!.width - b!.width)).toBeLessThan(2);
+  // The expanded profile summary intentionally uses a wider menu than its trigger.
+  const viewport = page.viewportSize()!;
+  expect(b!.width).toBeGreaterThanOrEqual(Math.min(a!.width, 330, viewport.width - 24) - 2);
+  expect(b!.width).toBeLessThanOrEqual(330);
+  expect(b!.x).toBeGreaterThanOrEqual(0);
+  expect(b!.x + b!.width).toBeLessThanOrEqual(viewport.width + 1);
 });
 for (const [tier, limits] of [
   ["free", { regular: 50, thinking: 10, images: 8, uploads: 3 }],

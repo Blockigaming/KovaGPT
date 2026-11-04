@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
   max-width: 100%;
 }

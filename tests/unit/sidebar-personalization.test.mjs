@@ -178,7 +178,15 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   );
   assert.equal(property(mobile, "min-width"), "0");
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
-  assert.equal(property(mobile, "border-radius"), "0 24px 24px 0");
+  // The drawer itself now owns all rounded corners on mobile and desktop.
+  assert.equal(property(mobile, "border-radius"), "24px");
+  const desktopFrame = sharedRules.find(
+    (rule) =>
+      rule.parent.type === "root" &&
+      rule.selector === ".kova-sidebar[data-kova-core-sidebar]" &&
+      property(rule, "border-radius"),
+  );
+  assert.equal(property(desktopFrame, "border-radius"), "20px");
   assert.equal(tokens.get("--kova-sidebar-width"), "260px");
   assert.equal(tokens.get("--kova-sidebar-rail-width"), "60px");
   assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(320px, calc(100vw - 32px))");

@@ -169,9 +169,21 @@ test("sidebar search and all main destinations keep honest service states", asyn
 
   await openSidebar(page);
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "Upgrade plan", exact: true })).toBeVisible();
-  await page.getByRole("menuitem", { name: "Help", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Help center", exact: true }).click();
+  // Account controls follow the new seven-option menu, not the retired
+  // standalone Subscriptions item. Billing remains reachable via Upgrade plan.
+  const accountMenu = page.getByRole("menu");
+  await expect(accountMenu.getByText("Plus", { exact: true })).toBeVisible();
+  for (const label of [
+    "Upgrade plan",
+    "Personalization",
+    "Profile",
+    "Settings",
+    "Help",
+    "Log out",
+  ]) {
+    await expect(accountMenu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
+  }
+  await accountMenu.getByRole("menuitem", { name: "Help", exact: true }).click();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "How can we help?" }),
   ).toBeVisible();

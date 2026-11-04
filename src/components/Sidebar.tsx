@@ -40,7 +40,8 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
-import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
@@ -49,9 +50,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChatProjectSubmenu } from "@/components/ChatProjectSubmenu";
 import { Button } from "@/components/ui/button";
@@ -78,6 +76,7 @@ import {
 } from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
+import { isClearSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
 
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   images: ImagesGlyph,
@@ -152,6 +151,7 @@ export function Sidebar({
   compactOnly?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
+  const clerk = useClerkSafe();
   const { tier, status: tierStatus } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -178,6 +178,7 @@ export function Sidebar({
   const accountRef = useRef(user?.id);
   accountRef.current = user?.id;
   const [searchOpen, setSearchOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
@@ -427,7 +428,7 @@ export function Sidebar({
   }, [onToggle]);
 
   useEffect(() => {
-    if (open || compactOnly) return;
+    if (open) return;
     let gesture: { id: number; x: number; y: number; time: number } | null = null;
     const reset = () => {
       gesture = null;
@@ -441,7 +442,7 @@ export function Sidebar({
         !(target instanceof Element) ||
         !target.closest(".kova-assistant, .kova-app-shell") ||
         target.closest(
-          'button, a, [role="button"], input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+          'button, a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable]:not([contenteditable="false"])',
         ) ||
         document.querySelector('[aria-modal="true"], dialog[open]') ||
         !window.getSelection()?.isCollapsed
@@ -472,12 +473,12 @@ export function Sidebar({
       }
       const dx = touch.clientX - gesture.x;
       const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 700 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
+      if (event.timeStamp - gesture.time > 750 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
         reset();
         return;
       }
-      // A clear left swipe opens from any non-interactive part of the page.
-      if (dx <= -72 && dy <= 48 && -dx >= dy * 2) {
+      // Right-to-left opens, as requested; clear horizontal intent is required.
+      if (isClearSidebarSwipe({ open: false, dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
         reset();
         swipeToggleRef.current();
       }
@@ -492,9 +493,9 @@ export function Sidebar({
       document.removeEventListener("touchend", reset);
       document.removeEventListener("touchcancel", reset);
     };
-  }, [open, compactOnly]);
+  }, [open]);
 
-  // Close the mobile drawer with a deliberate right swipe, without stealing
+  // Close the mobile drawer with a deliberate left swipe, without stealing
   // vertical scrolling or horizontal gestures from nested scrollable controls.
   useEffect(() => {
     if (!open) return;
@@ -509,7 +510,7 @@ export function Sidebar({
       if (
         !(target instanceof Element) ||
         target.closest(
-          'button, a, [role="button"], input, textarea, select, [contenteditable="true"]',
+          'button:not(.kova-sidebar-scrim), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
         )
       )
         return;
@@ -544,7 +545,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (dx >= 72 && dy <= 48 && dx >= dy * 2) {
+      if (isClearSidebarSwipe({ open: true, dx, dy, elapsedMs: event.timeStamp - start.time })) {
         start = null;
         swipeToggleRef.current();
       }
@@ -980,10 +981,90 @@ export function Sidebar({
           : tier === "plus"
             ? "Plus"
             : "Free"
-        : "View your plan";
+        : "Plan unavailable";
+
+  const renderAccountMenu = (rail = false) => (
+    <DropdownMenuContent side={rail ? "right" : "top"} align="end" className="kova-profile-menu">
+      <DropdownMenuLabel className="kova-profile-menu-account">
+        <span className="kova-profile-menu-avatar" aria-hidden="true">
+          {avatarUrl ? <img src={avatarUrl} alt="" /> : accountInitial || <UserRound size={20} />}
+        </span>
+        <span className="min-w-0">
+          <strong className="block truncate">{displayName}</strong>
+          <small className="block truncate text-muted-foreground">{planLabel}</small>
+          <small className="block truncate text-muted-foreground">
+            {accountEmail || "Email unavailable"}
+          </small>
+        </span>
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onSelect={() => {
+          closeAfterMobileNavigation("/settings/billing");
+          onOpenSettings("billing");
+        }}
+      >
+        <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+        {tierStatus === "ready" && tier === "pro" ? "Manage plan" : "Upgrade plan"}
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onSelect={() => {
+          closeAfterMobileNavigation("/settings/general");
+          onOpenSettings("general");
+        }}
+      >
+        <CustomizeGlyph className="mr-2 h-4 w-4" aria-hidden="true" />
+        Personalization
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onSelect={() => {
+          closeAfterMobileNavigation("/settings/profile");
+          onOpenSettings("personalization");
+        }}
+      >
+        <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
+        Profile
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onSelect={() => {
+          closeAfterMobileNavigation("/settings/appearance");
+          onOpenSettings("appearance");
+        }}
+      >
+        <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+        Settings
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onSelect={() => {
+          closeAfterMobileNavigation("/help");
+          onOpenHelp();
+        }}
+      >
+        <CircleHelp className="mr-2 h-4 w-4" aria-hidden="true" />
+        Help
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onSelect={() => {
+          closeAfterMobileNavigation();
+          setLogoutConfirmOpen(true);
+        }}
+      >
+        <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+        Log out
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  );
 
   return (
     <>
+      {signedIn && (
+        <LogoutConfirmDialog
+          open={logoutConfirmOpen}
+          onOpenChange={setLogoutConfirmOpen}
+          onConfirm={() => clerk.signOut()}
+        />
+      )}
       {railDialogOpen ? (
         <dialog
           ref={railDialogRef}
@@ -1369,8 +1450,7 @@ export function Sidebar({
                     );
                   }}
                   className="kova-rail-button kova-sidebar-toggle"
-                  disabled={compactOnly}
-                  aria-label={compactOnly ? "Sidebar collapsed in Settings" : "Expand sidebar"}
+                  aria-label={compactOnly ? "Back to chat" : "Expand sidebar"}
                 >
                   {compactOnly ? (
                     <ArrowLeft aria-hidden="true" />
@@ -1425,20 +1505,23 @@ export function Sidebar({
                 <CustomizeGlyph aria-hidden="true" />
               </button>
             </RailTooltip>
-            <RailTooltip label="Settings">
-              <button
-                type="button"
-                className="kova-rail-account"
-                onClick={() => onOpenSettings("general")}
-                aria-label="Settings"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" />
-                ) : (
-                  <span aria-hidden="true">{accountInitial || <UserRound size={20} />}</span>
-                )}
-              </button>
-            </RailTooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="kova-rail-account"
+                  aria-label="Account menu"
+                  title="Account menu"
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" />
+                  ) : (
+                    <span aria-hidden="true">{accountInitial || <UserRound size={20} />}</span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              {renderAccountMenu(true)}
+            </DropdownMenu>
           </nav>
         </TooltipProvider>
       ) : null}
@@ -1652,71 +1735,7 @@ export function Sidebar({
                       <ChevronDown className="ml-auto h-4 w-4" aria-hidden="true" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="end" className="kova-profile-menu">
-                    <DropdownMenuItem onSelect={() => onOpenSettings("personalization")}>
-                      <UserRound className="mr-2 h-4 w-4" />
-                      <span>
-                        {displayName}
-                        <small className="block text-muted-foreground">{planLabel}</small>
-                        <small className="block text-muted-foreground">
-                          {accountEmail || "Email unavailable"}
-                        </small>
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => onOpenSettings("billing")}>
-                      <Sparkles className="mr-2 h-4 w-4" /> Upgrade plan
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onOpenSettings("personalization")}>
-                      <Sparkles className="mr-2 h-4 w-4" /> Personalization
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onOpenSettings("personalization")}>
-                      <UserRound className="mr-2 h-4 w-4" /> Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onOpenSettings("appearance")}>
-                      <SettingsIcon className="mr-2 h-4 w-4" /> Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <CircleHelp className="mr-2 h-4 w-4" /> Help
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem onSelect={onOpenHelp}>Help center</DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <a href="/settings/privacy">Privacy center</a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <a href="/changelog">Release notes</a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <a href="/download">Download apps</a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onOpenSettings("shortcuts")}>
-                          Keyboard shortcuts
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <a href="/terms">Terms of Service</a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <a href="/privacy">Privacy Policy</a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => onOpenSettings("report")}>
-                          Report a bug
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation();
-                        onOpenSettings("logout");
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
+                  {renderAccountMenu()}
                 </DropdownMenu>
               </>
             ) : isLoaded ? (

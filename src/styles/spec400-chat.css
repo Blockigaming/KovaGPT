@@ -65,6 +65,32 @@
   gap: 4px;
   min-width: 0;
 }
+.spec400-composer-trailing .spec400-primary-voice,
+.spec400-composer-trailing [data-testid="stop-button"],
+.spec400-composer-trailing [data-testid="send-button"] {
+  width: 43px;
+  height: 43px;
+  min-width: 43px;
+  min-height: 43px;
+  justify-content: center;
+  padding: 0;
+}
+.spec400-composer-trailing .spec400-primary-voice svg,
+.spec400-composer-trailing [data-testid="stop-button"] svg,
+.spec400-composer-trailing [data-testid="send-button"] svg {
+  width: 1.2em;
+  height: 1.2em;
+}
+@media (pointer: coarse), (max-width: 1023px) {
+  .spec400-composer-trailing .spec400-primary-voice,
+  .spec400-composer-trailing [data-testid="stop-button"],
+  .spec400-composer-trailing [data-testid="send-button"] {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
 .spec400-composer-toolbar {
   display: flex;
   justify-content: space-between;
