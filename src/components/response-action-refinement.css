@@ -30,9 +30,31 @@
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
   max-width: 100%;
+}
+.kova-user-message-actions {
+  margin-right: 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.kova-user-message-group:hover + .kova-user-message-actions,
+.kova-user-message-actions:hover,
+.kova-user-message-actions:focus-within {
+  opacity: 1;
+}
+.kova-user-message-actions button.kova-message-icon-action {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 7px;
+}
+@media (pointer: coarse) {
+  .kova-user-message-actions {
+    opacity: 1;
+  }
 }
 .kova-message-actions button.kova-message-icon-action {
   display: inline-flex;
