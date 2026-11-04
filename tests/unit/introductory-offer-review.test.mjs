@@ -207,7 +207,7 @@ test("pricing uses a dedicated checkout route and never retains a payment modal"
   );
 });
 
-test("pricing does not start checkout before identity resolves", () => {
+test("pricing opens the checkout page while identity is resolving", () => {
   const f = pricingFixture(true);
   f.auth.isLoaded = false;
   f.render();
@@ -215,11 +215,13 @@ test("pricing does not start checkout before identity resolves", () => {
     .nodes()
     .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus");
   plus.props.onCta({ currentTarget: {} });
-  assert.deepEqual(f.calls, []);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.calls)), [
+    { type: "navigate", options: { to: "/subscribe", search: { plan: "plus_monthly" } } },
+  ]);
   assert.equal(f.checkout.open, false);
 });
 
-test("pricing routes signed-in paid CTAs to canonical checkout and guests to sign-in without claiming eligibility", () => {
+test("pricing routes all paid CTAs to canonical checkout without claiming eligibility", () => {
   for (const signedIn of [true, false]) {
     const f = pricingFixture(signedIn);
     const paid = f
@@ -236,15 +238,13 @@ test("pricing routes signed-in paid CTAs to canonical checkout and guests to sig
     }
     assert.deepEqual(
       JSON.parse(JSON.stringify(f.calls)),
-      signedIn
-        ? ["plus", "plus", "pro", "pro"].map((tier) => ({
-            type: "navigate",
-            options: {
-              to: "/subscribe",
-              search: { plan: registry.CAPABILITY_REGISTRY.plans[tier].lookupKey },
-            },
-          }))
-        : ["sign-in", "sign-in", "sign-in", "sign-in"],
+      ["plus", "plus", "pro", "pro"].map((tier) => ({
+        type: "navigate",
+        options: {
+          to: "/subscribe",
+          search: { plan: registry.CAPABILITY_REGISTRY.plans[tier].lookupKey },
+        },
+      })),
     );
     assert.doesNotMatch(f.text(), /First-month offer|Offer details and eligibility/);
     assert.match(f.text(), /Plus and Pro are eligible for one-shot hosted Agent/);
