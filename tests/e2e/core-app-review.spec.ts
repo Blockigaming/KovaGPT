@@ -298,11 +298,11 @@ test("project sections and account settings remain navigable and cancel safely",
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }
-  await expect(
-    page.getByRole("navigation", { name: "Primary navigation", exact: true }),
-  ).toBeHidden();
+  const workspace = page.locator(".kova-app-content");
+  await expect(workspace).toHaveAttribute("data-sidebar", "open");
   await page.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
+  await expect(workspace).toHaveAttribute("data-sidebar", "open");
   const sidebar = await openSidebar(page);
   await sidebar
     .getByRole("navigation", { name: "KovaGPT features", exact: true })
