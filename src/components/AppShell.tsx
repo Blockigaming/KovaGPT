@@ -216,6 +216,13 @@ export function AppShell({
 
   const openSettings = useCallback(
     (tab?: string) => {
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        settingsReturnFocusRef.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setSettingsTab(tab);
+        setSettingsOpen(true);
+        return;
+      }
       void navigate({
         to: "/settings/$section" as never,
         params: { section: settingsSectionForTab(tab) } as never,

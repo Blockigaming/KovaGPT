@@ -31,7 +31,7 @@ test("chat interaction primitives retain bounded input, Stop, copy and focus fee
   const menuStyles = await read("src/styles/composer-core.css");
   const coreStyles = await read("src/styles/core-system.css");
   assert.match(input, /const limit = isMobileLayout \? 144 : 240/);
-  assert.match(input, /el\.style\.overflowY = el\.scrollHeight > limit \? "auto" : "hidden"/);
+  assert.match(input, /el\.style\.overflowY = contentHeight > limit \? "auto" : "hidden"/);
   assert.match(input, /onClick=\{onStop\}[\s\S]*?aria-label="Stop generating"/);
   assert.match(composerStyles, /\.spec400-toolbar-button:active,[^}]*background: var\(--muted\)/);
   assert.match(

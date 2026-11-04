@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ComponentProps, ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import { ResponseImage } from "./ResponseImage";
@@ -420,7 +429,7 @@ const markdownComponents: Components = {
   img: MarkdownImage,
 };
 
-export function ResponseMarkdown({
+export const ResponseMarkdown = memo(function ResponseMarkdown({
   children,
   boxLongProse = true,
   sources,
@@ -451,4 +460,4 @@ export function ResponseMarkdown({
       </ReactMarkdown>
     </MarkdownActionsContext.Provider>
   );
-}
+});

@@ -84,7 +84,10 @@ test("paid chat quotas honor the short and weekly windows and retain daily ledge
   try {
     await db.exec("reset role");
     await db.exec(
-      readFileSync("supabase/migrations/20261104223000_paid_message_usage_windows.sql", "utf8"),
+      readFileSync(
+        "supabase/migrations/20261104223000_kova_paid_message_usage_windows.sql",
+        "utf8",
+      ),
     );
     await db.exec("set role service_role");
     const send = async (thinking, weekly, short) =>

@@ -290,15 +290,18 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
-  const imageActions: ChatImageActions | undefined =
-    isSignedIn && principalResolved && userKey && principal && chatId
-      ? {
-          ownerId: principalResolved ? userKey : null,
-          scope: JSON.stringify([principal, chatId, message.id]),
-          temporary,
-          prepareAdd: () => prepareChatImageAttachment(principal, chatId),
-        }
-      : undefined;
+  const imageActions = useMemo<ChatImageActions | undefined>(
+    () =>
+      isSignedIn && principalResolved && userKey && principal && chatId
+        ? {
+            ownerId: userKey,
+            scope: JSON.stringify([principal, chatId, message.id]),
+            temporary,
+            prepareAdd: () => prepareChatImageAttachment(principal, chatId),
+          }
+        : undefined,
+    [chatId, isSignedIn, message.id, principal, principalResolved, temporary, userKey],
+  );
   const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const [copyFallbackOpen, setCopyFallbackOpen] = useState(false);
@@ -684,25 +687,28 @@ function ChatMessageInner({
   const saveFn = useServerFn(saveToLibrary);
   const saveImageFn = useServerFn(saveImageToLibrary);
   const imageSaveIds = useRef(new Map<string, string>());
-  const saveResponseImage = async (src: string, title: string) => {
-    if (!isSignedIn || !userKey)
-      throw new Error(
-        "Sign in to save generated images to Library. You can download this image now.",
-      );
-    let key = imageSaveIds.current.get(src);
-    if (!key) {
-      key = crypto.randomUUID();
-      imageSaveIds.current.set(src, key);
-    }
-    await saveImageFn({
-      data: {
-        expectedOwnerId: userKey,
-        idempotencyKey: key,
-        imageUrl: src,
-        title: title.slice(0, 200) || "Generated image",
-      },
-    });
-  };
+  const saveResponseImage = useCallback(
+    async (src: string, title: string) => {
+      if (!isSignedIn || !userKey)
+        throw new Error(
+          "Sign in to save generated images to Library. You can download this image now.",
+        );
+      let key = imageSaveIds.current.get(src);
+      if (!key) {
+        key = crypto.randomUUID();
+        imageSaveIds.current.set(src, key);
+      }
+      await saveImageFn({
+        data: {
+          expectedOwnerId: userKey,
+          idempotencyKey: key,
+          imageUrl: src,
+          title: title.slice(0, 200) || "Generated image",
+        },
+      });
+    },
+    [isSignedIn, saveImageFn, userKey],
+  );
 
   useEffect(() => {
     if (!principalResolved || !principal) return;
@@ -748,12 +754,23 @@ function ChatMessageInner({
     userKey,
   ]);
 
-  const artifactKind = useMemo(
-    () =>
-      isUser || splitGenerativeContent(message.content || "").some((part) => part.kind === "widget")
-        ? null
-        : detectArtifactKind(message.content || ""),
+  const cleanedResponse = useMemo(
+    () => (isUser ? "" : cleanAssistantText(message.content)),
     [isUser, message.content],
+  );
+  const chartParts = useMemo(() => extractCharts(cleanedResponse), [cleanedResponse]);
+  const canvasParts = useMemo(
+    () => (isUser || streaming ? [] : splitGenerativeContent(cleanedResponse)),
+    [cleanedResponse, isUser, streaming],
+  );
+  const hasWidget = canvasParts.some((part) => part.kind === "widget");
+  const artifactKind = useMemo(
+    () => (isUser || streaming || hasWidget ? null : detectArtifactKind(cleanedResponse)),
+    [cleanedResponse, hasWidget, isUser, streaming],
+  );
+  const responseChip = useMemo(
+    () => (artifactKind || streaming || isUser ? null : detectInfoChip(cleanedResponse)),
+    [artifactKind, cleanedResponse, isUser, streaming],
   );
   const editorContent = useMemo(() => {
     if (!artifactKind) return message.content;
@@ -1025,11 +1042,7 @@ function ChatMessageInner({
                 />
               ) : (
                 (() => {
-                  const cleaned = cleanAssistantText(message.content);
-                  const parts = extractCharts(cleaned);
-                  const hasChart = parts.some((part) => part.kind === "chart");
-                  const canvasParts = streaming ? [] : splitGenerativeContent(cleaned);
-                  const hasWidget = canvasParts.some((part) => part.kind === "widget");
+                  const hasChart = chartParts.some((part) => part.kind === "chart");
                   const markdown = hasWidget ? (
                     <div className="space-y-3">
                       {canvasParts.map((part, index) =>
@@ -1080,7 +1093,7 @@ function ChatMessageInner({
                     </div>
                   ) : hasChart ? (
                     <div className="space-y-2">
-                      {parts.map((part, index) =>
+                      {chartParts.map((part, index) =>
                         part.kind === "chart" ? (
                           <Suspense key={index} fallback={null}>
                             <ChatChart spec={part.spec} />
@@ -1105,16 +1118,14 @@ function ChatMessageInner({
                       onSaveImage={saveResponseImage}
                       imageActions={imageActions}
                     >
-                      {cleaned}
+                      {cleanedResponse}
                     </ResponseMarkdown>
                   );
-                  if (artifactKind || streaming) return markdown;
-                  const chip = detectInfoChip(cleaned);
-                  if (chip)
+                  if (responseChip)
                     return (
                       <InfoChip
-                        kind={chip}
-                        rawText={cleaned}
+                        kind={responseChip}
+                        rawText={cleanedResponse}
                         userKey={userKey}
                         principalResolved={principalResolved}
                       >
@@ -1217,7 +1228,7 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div
-              className="kova-message-actions kova-response-action-bar mt-1 max-w-full overflow-x-auto"
+              className="kova-message-actions kova-response-action-bar max-w-full overflow-x-auto"
               role="toolbar"
               aria-label="Response actions"
             >

@@ -260,9 +260,9 @@ body .prose-chat .kova-table-scroll:focus-visible {
 }
 .kova-response-followups {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   max-width: 100%;
-  margin-top: 16px;
+  margin-top: 6px;
 }
 .kova-response-followups button {
   display: flex;

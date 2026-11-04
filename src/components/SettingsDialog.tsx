@@ -1207,12 +1207,15 @@ export function SettingsDialog({
         >
           <div className="flex items-center justify-between gap-3">
             <div>
-              <DialogTitle
-                asChild={page}
-                className="kova-settings-main-title text-xl font-semibold tracking-tight font-display"
-              >
-                {page ? <h1>Settings</h1> : "Settings"}
-              </DialogTitle>
+              {page ? (
+                <h1 className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
+                  Settings
+                </h1>
+              ) : (
+                <DialogTitle className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
+                  Settings
+                </DialogTitle>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 {loggedIn
                   ? "Preferences save automatically, except forms with Save changes."

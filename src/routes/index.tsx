@@ -537,9 +537,14 @@ function KovaGPT() {
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = useCallback(
     (tab?: string) => {
-      // Attachment drafts and temporary chats intentionally exist only in this mounted workspace.
-      // Keep settings in place for those cases rather than losing private or unsaved work.
-      if (attachments.length || tempChat || isStreaming || result) {
+      // Keep Settings above the mobile drawer and preserve in-memory chat work.
+      if (
+        window.matchMedia("(max-width: 1023px)").matches ||
+        attachments.length ||
+        tempChat ||
+        isStreaming ||
+        result
+      ) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setSettingsTab(tab);
@@ -3489,7 +3494,7 @@ function KovaGPT() {
                     renderMessage={renderTranscriptMessage}
                   />
                 </Suspense>
-                <div className="spec400-composer-dock relative shrink-0 lg:pb-2 lg:pt-2">
+                <div className="spec400-composer-dock relative shrink-0">
                   {showJumpToLatest && (
                     <Button
                       variant="ghost"

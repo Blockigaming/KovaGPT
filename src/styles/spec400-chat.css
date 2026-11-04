@@ -22,11 +22,52 @@
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
   min-height: 0;
-  padding: 8px 10px 6px;
-  gap: 4px;
+  padding: 6px 8px;
+  gap: 2px;
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-input-region {
-  min-height: 32px;
+  min-height: 26px;
+}
+.spec400-chat-input[data-composer-surface="conversation"] {
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .spec400-chat-input[data-composer-surface="conversation"]
+    .spec400-composer:not(
+      :has(
+        .spec400-composer-input[data-multiline="true"],
+        .spec400-attachment-chips,
+        .spec400-selected-tool
+      )
+    ) {
+    display: grid;
+    grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 6px var(--composer-compact-padding);
+    gap: var(--composer-compact-gap);
+  }
+  .spec400-chat-input[data-composer-surface="conversation"]
+    .spec400-composer:not(
+      :has(
+        .spec400-composer-input[data-multiline="true"],
+        .spec400-attachment-chips,
+        .spec400-selected-tool
+      )
+    )
+    .spec400-composer-toolbar {
+    display: contents;
+  }
+  .spec400-chat-input[data-composer-surface="conversation"]
+    .spec400-composer:not(
+      :has(
+        .spec400-composer-input[data-multiline="true"],
+        .spec400-attachment-chips,
+        .spec400-selected-tool
+      )
+    )
+    .spec400-input-region {
+    padding-inline: 0;
+  }
 }
 .spec400-composer[data-focus-origin="keyboard"]:focus-within {
   outline: 2px solid var(--ring);
