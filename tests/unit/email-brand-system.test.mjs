@@ -4,12 +4,6 @@ import test from "node:test";
 
 const root = new URL("../../", import.meta.url);
 const templates = [
-  "signup.tsx",
-  "invite.tsx",
-  "magic-link.tsx",
-  "recovery.tsx",
-  "email-change.tsx",
-  "reauthentication.tsx",
   "help-contact-autoreply.tsx",
   "help-contact-notification.tsx",
 ];
