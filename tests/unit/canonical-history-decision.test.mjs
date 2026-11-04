@@ -266,6 +266,7 @@ test("reviewed forward extensions reject changed exception bodies despite update
   const source = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
   const baseline = { count: 157, migrations: source.migrations.slice(0, 157) };
   const filenames = [
+    "20261102231924_scheduled_task_private_fence_reads.sql",
     "20261018163000_daily_upload_identity.sql",
     "20261020183948_account_email_notifications.sql",
     "20261020195253_account_email_all_enabled_defaults.sql",
