@@ -282,7 +282,7 @@ test("settings navigation is centralized and routes every rendered category", ()
   assert.match(routeSource, /SETTINGS_SECTIONS\[section as keyof typeof SETTINGS_SECTIONS\]/);
   assert.match(
     routeSource,
-    /navigate\(\{ to: "\/settings\/\$section", params: \{ section: next \} \}\)/,
+    /navigate\(\{ to: "\/settings\/\$section", params: \{ section: next \}, replace: true \}\)/,
   );
   assert.match(settingsSource, /if \(page\) onSectionChange\?\.\(settingsSectionForTab\(value\)\)/);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);

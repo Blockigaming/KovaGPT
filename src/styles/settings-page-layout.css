@@ -25,15 +25,22 @@
   background: var(--background);
   overflow: hidden;
 }
-.kova-settings-page-actions {
-  position: absolute;
+.kova-settings-page-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(8px, var(--safe-top, 0px)) max(16px, var(--safe-right, 0px)) 8px
+    max(16px, var(--safe-left, 0px));
   z-index: 5;
-  top: max(12px, var(--safe-top, 0px));
-  right: max(16px, var(--safe-right, 0px));
+}
+.kova-settings-page-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+.kova-settings-page-toolbar > button,
 .kova-settings-page-actions > button {
   width: 44px;
   height: 44px;
@@ -53,8 +60,8 @@
 .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
   position: static;
   align-self: stretch;
-  width: var(--kova-settings-navigation-width, 281px);
-  flex: 0 0 var(--kova-settings-navigation-width, 281px);
+  width: var(--kova-settings-navigation-width, 280px);
+  flex: 0 0 auto;
   height: 100%;
   max-height: none;
   margin: 0;
@@ -82,7 +89,7 @@
   max-width: 900px;
   min-height: 80px;
   margin-inline: auto;
-  padding: 20px 72px 20px 28px;
+  padding: 20px clamp(16px, 3vw, 28px);
 }
 .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
   flex: none;
@@ -90,7 +97,9 @@
   width: 100%;
   max-width: 900px;
   margin-inline: auto;
-  padding: 20px 28px max(32px, var(--safe-bottom, 0px));
+  padding: 20px clamp(16px, 3vw, 28px) max(32px, var(--safe-bottom, 0px));
+  min-width: 0;
+  overflow-wrap: anywhere;
   animation: kova-settings-section-enter 160ms ease-out;
 }
 .kova-settings-route .kova-settings-page .kova-settings-back,
@@ -151,7 +160,7 @@
   }
   .kova-settings-route section.kova-settings-page .kova-settings-content-header {
     min-height: 80px;
-    padding: 16px 72px 16px 12px;
+    padding: 16px;
   }
   .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
     padding: 16px 16px max(24px, var(--safe-bottom, 0px));
@@ -171,11 +180,9 @@
 
 @media (min-width: 768px) {
   .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
-    resize: horizontal;
     overflow: auto;
     min-width: 200px;
-    max-width: 440px;
-    flex-basis: auto;
+    max-width: min(440px, max(200px, calc(100% - 344px)));
   }
 }
 @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {

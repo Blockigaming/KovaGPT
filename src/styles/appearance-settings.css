@@ -95,6 +95,23 @@
 .kova-preference-list {
   display: grid;
 }
+.kova-appearance-settings {
+  min-width: 0;
+  container-type: inline-size;
+}
+.kova-appearance-size {
+  margin-bottom: 28px;
+  padding: 16px clamp(12px, 4cqi, 22px) 0;
+  border-radius: var(--kova-radius-card);
+  background: var(--surface-secondary);
+}
+.kova-appearance-size h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.kova-appearance-size .kova-preference-row:last-child {
+  border-bottom: 0;
+}
 .kova-preference-row {
   display: flex;
   align-items: center;
@@ -116,7 +133,7 @@
   line-height: 1.5;
 }
 .kova-preference-row [data-slot="select-trigger"] {
-  width: 156px;
+  width: min(156px, 100%);
   flex: none;
   background: var(--surface-secondary);
 }
@@ -128,9 +145,31 @@
 .kova-preference-slider [data-slot="slider"] {
   grid-column: 1 / -1;
 }
+.kova-preference-slider [data-slot="slider-track"] {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.kova-preference-slider [data-slot="slider-track"] > span {
+  border-radius: inherit;
+  background: var(--muted-foreground);
+}
+.kova-preference-slider [data-slot="slider-thumb"] > span {
+  width: 16px;
+  height: 16px;
+  background: var(--foreground);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 24%);
+}
 .kova-preference-slider output {
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+}
+.kova-preference-slider-range {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  color: var(--muted-foreground);
+  font-size: 12px;
 }
 .kova-appearance-settings > .kova-appearance-preview {
   margin-top: 24px;
@@ -138,11 +177,12 @@
   border-color: var(--border-subtle);
   background: var(--surface-secondary);
 }
-@media (max-width: 479px) {
-  .kova-preference-row {
-    gap: 12px;
+@container (max-width: 340px) {
+  .kova-preference-row:has([data-slot="select-trigger"]) {
+    display: grid;
+    gap: 8px;
   }
   .kova-preference-row [data-slot="select-trigger"] {
-    width: 128px;
+    width: 100%;
   }
 }

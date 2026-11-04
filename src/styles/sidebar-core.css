@@ -372,6 +372,7 @@
   overflow: hidden;
   padding: 0 8px 12px;
   border: 0;
+  border-radius: 20px;
   transition:
     width var(--kova-motion-standard) var(--kova-ease),
     min-width var(--kova-motion-standard) var(--kova-ease),
@@ -747,7 +748,8 @@ button.kova-auth-sign-up:hover {
 
 /* The menu itself receives programmatic focus when it opens. */
 .kova-profile-menu[role="menu"] {
-  border-color: transparent;
+  width: min(330px, var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 16px));
+  border-radius: 18px;
   outline: none;
 }
 .kova-account-main:focus:not(:focus-visible),

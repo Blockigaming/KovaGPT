@@ -481,7 +481,7 @@ export function SettingsDialog({
     setUsageLoading(true);
     getMyPlanUsage({ data: { ownerId: userKey } })
       .then((u) => {
-        if (!cancelled) setUsage(u);
+        if (!cancelled) setUsage(Array.isArray(u?.windows) && u.windows.length > 0 ? u : null);
       })
       .catch(() => {
         if (!cancelled) setUsage(null);
@@ -1239,17 +1239,28 @@ export function SettingsDialog({
         </DialogHeader>
 
         {page ? (
-          <div className="kova-settings-page-actions">
-            {pageUtilities}
+          <div className="kova-settings-page-toolbar">
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Close settings"
+              aria-label="Back to previous page"
               onClick={() => onOpenChange(false)}
             >
-              <X aria-hidden="true" />
+              <ArrowLeft aria-hidden="true" />
             </Button>
+            <div className="kova-settings-page-actions">
+              {pageUtilities}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Close settings"
+                onClick={() => onOpenChange(false)}
+              >
+                <X aria-hidden="true" />
+              </Button>
+            </div>
           </div>
         ) : null}
 

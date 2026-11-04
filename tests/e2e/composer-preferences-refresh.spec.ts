@@ -19,7 +19,18 @@ for (const [tier, choices] of [
     await input.click();
     await expect(input).toHaveCSS("outline-style", "none");
     const composer = page.locator(".spec400-composer");
-    expect((await composer.boundingBox())!.height).toBeGreaterThanOrEqual(128);
+    const conversation = await composer.evaluate(
+      (node) => node.closest('[data-composer-surface="conversation"]') !== null,
+    );
+    const height = expect.poll(async () => (await composer.boundingBox())!.height);
+    if (conversation) {
+      const singleRow = await page.evaluate(
+        () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
+      );
+      await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+    } else {
+      await height.toBeGreaterThanOrEqual(128);
+    }
     if (tier === "free") {
       await expect(composer.getByTestId("model-selector-trigger")).toHaveCount(0);
       const thinking = composer.getByTestId("thinking-toggle");

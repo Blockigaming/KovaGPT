@@ -19,12 +19,12 @@ import {
   Folder,
   Files,
   AlertCircle,
-  Maximize2,
   SlidersHorizontal,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { ExpandViewIcon } from "@/components/ui/ExpandViewIcon";
 
 import {
   attachmentPreviewWindow,
@@ -1923,7 +1923,7 @@ export function ChatInput({
             disabled={disabled}
             onClick={() => setExpanded(true)}
           >
-            <Maximize2 aria-hidden="true" />
+            <ExpandViewIcon />
           </button>
         </div>
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (

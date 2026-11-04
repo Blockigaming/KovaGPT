@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { functionNames } from "./server-function-fixture";
 export { functionNames } from "./server-function-fixture";
@@ -10,6 +11,19 @@ export const origin = applicationUrl.origin;
 export const owner = "22222222-2222-4222-8222-222222222222";
 export const chatA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 export const chatB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+export function planUsageFixture(tier: "free" | "plus" | "pro") {
+  return {
+    tier,
+    windows: chatUsageWindows(tier).map((window) => ({
+      ...window,
+      regularUsed: 0,
+      thinkingUsed: 0,
+    })),
+    images: 0,
+    uploads: 0,
+  };
+}
+
 export async function fixture(
   page: Page,
   theme: "light" | "dark",
@@ -94,13 +108,15 @@ export async function fixture(
               deletion_requested_at: null,
             },
           ]
-        : name.startsWith("getMyDailyUsage_")
-          ? { chats: 0, images: 0, uploads: 0, resetsAt: "2026-10-17T00:00:00Z" }
-          : name.startsWith("getSubscriptionSummary_")
-            ? { effectiveTier: tier, tier }
-            : name.startsWith("getChatCustomRules_")
-              ? { instructions: "", enabled: false }
-              : [];
+        : name.startsWith("getMyPlanUsage_")
+          ? planUsageFixture(tier)
+          : name.startsWith("getMyDailyUsage_")
+            ? { chats: 0, images: 0, uploads: 0, resetsAt: "2026-10-17T00:00:00Z" }
+            : name.startsWith("getSubscriptionSummary_")
+              ? { effectiveTier: tier, tier }
+              : name.startsWith("getChatCustomRules_")
+                ? { instructions: "", enabled: false }
+                : [];
     return route.fulfill({ json: { result, context: {} } });
   });
   await page.route("**/api/library/items**", (route) =>

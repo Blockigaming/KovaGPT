@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { SettingsDialog, SETTINGS_SECTIONS } from "@/components/SettingsDialog";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -8,6 +8,8 @@ export const Route = createFileRoute("/settings/$section")({ component: Settings
 function SettingsPage() {
   const { section } = Route.useParams();
   const navigate = useNavigate();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
   const { user, isLoaded } = useUser();
   const [settings, setSettings] = useNovaSettings(user?.id ?? null, isLoaded);
   const valid = Object.prototype.hasOwnProperty.call(SETTINGS_SECTIONS, section);
@@ -32,10 +34,12 @@ function SettingsPage() {
             /* Shared storage-clear events update the surrounding shell. */
           }}
           onOpenChange={(open) => {
-            if (!open) void navigate({ to: "/" });
+            if (open) return;
+            if (canGoBack) router.history.back();
+            else void navigate({ to: "/", replace: true });
           }}
           onSectionChange={(next) =>
-            void navigate({ to: "/settings/$section", params: { section: next } })
+            void navigate({ to: "/settings/$section", params: { section: next }, replace: true })
           }
         />
       </main>

@@ -110,6 +110,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
   const modules = {
     react,
     "lucide-react": {},
+    "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
     "@tanstack/react-router": {
       useNavigate: () => () => {
         throw Error("Unexpected navigation");

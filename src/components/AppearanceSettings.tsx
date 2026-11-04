@@ -82,6 +82,54 @@ export function AppearanceSettings({
   ] as const;
   return (
     <div className="kova-appearance-settings" data-ui-reference="chatgpt.settings.appearance">
+      <section className="kova-appearance-size" aria-labelledby="appearance-layout-heading">
+        <h3 id="appearance-layout-heading">Layout size</h3>
+        <div className="kova-preference-row kova-preference-slider">
+          <div>Interface size</div>
+          <output>{interfaceSizeDraft ?? values.interfaceSize}%</output>
+          <Slider
+            thumbProps={{
+              "aria-label": "Interface size",
+              "aria-valuetext": `${interfaceSizeDraft ?? values.interfaceSize}%`,
+            }}
+            min={85}
+            max={125}
+            step={1}
+            value={[interfaceSizeDraft ?? values.interfaceSize]}
+            onValueChange={([value]) => setInterfaceSizeDraft(value)}
+            onValueCommit={([value]) => {
+              setInterfaceSizeDraft(null);
+              change({ interfaceSize: value });
+            }}
+          />
+          <div className="kova-preference-slider-range" aria-hidden="true">
+            <span>85%</span>
+            <span>125%</span>
+          </div>
+        </div>
+        <div className="kova-preference-row kova-preference-slider">
+          <div>Settings sidebar width</div>
+          <output>{navigationWidthDraft ?? values.settingsNavigationWidth}px</output>
+          <Slider
+            thumbProps={{
+              "aria-label": "Settings sidebar width",
+              "aria-valuetext": `${navigationWidthDraft ?? values.settingsNavigationWidth} pixels`,
+            }}
+            min={200}
+            max={440}
+            value={[navigationWidthDraft ?? values.settingsNavigationWidth]}
+            onValueChange={([value]) => setNavigationWidthDraft(value)}
+            onValueCommit={([value]) => {
+              setNavigationWidthDraft(null);
+              change({ settingsNavigationWidth: value });
+            }}
+          />
+          <div className="kova-preference-slider-range" aria-hidden="true">
+            <span>200 px</span>
+            <span>440 px</span>
+          </div>
+        </div>
+      </section>
       <div className="kova-preference-list">
         {rows.map(({ key, label, hint, options }) => (
           <div className="kova-preference-row" key={key}>
@@ -152,43 +200,6 @@ export function AppearanceSettings({
             />
           </label>
         ))}
-        <div className="kova-preference-row kova-preference-slider">
-          <div>Interface size</div>
-          <output>{interfaceSizeDraft ?? values.interfaceSize}%</output>
-          <Slider
-            thumbProps={{
-              "aria-label": "Interface size",
-              "aria-valuetext": `${interfaceSizeDraft ?? values.interfaceSize}%`,
-            }}
-            min={85}
-            max={125}
-            step={1}
-            value={[interfaceSizeDraft ?? values.interfaceSize]}
-            onValueChange={([value]) => setInterfaceSizeDraft(value)}
-            onValueCommit={([value]) => {
-              setInterfaceSizeDraft(null);
-              change({ interfaceSize: value });
-            }}
-          />
-        </div>
-        <div className="kova-preference-row kova-preference-slider">
-          <div>Settings navigation width</div>
-          <output>{navigationWidthDraft ?? values.settingsNavigationWidth}px</output>
-          <Slider
-            thumbProps={{
-              "aria-label": "Settings navigation width",
-              "aria-valuetext": `${navigationWidthDraft ?? values.settingsNavigationWidth} pixels`,
-            }}
-            min={200}
-            max={440}
-            value={[navigationWidthDraft ?? values.settingsNavigationWidth]}
-            onValueChange={([value]) => setNavigationWidthDraft(value)}
-            onValueCommit={([value]) => {
-              setNavigationWidthDraft(null);
-              change({ settingsNavigationWidth: value });
-            }}
-          />
-        </div>
         <label className="kova-preference-row">
           Accent color
           <input

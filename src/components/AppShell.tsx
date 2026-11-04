@@ -226,9 +226,10 @@ export function AppShell({
       void navigate({
         to: "/settings/$section" as never,
         params: { section: settingsSectionForTab(tab) } as never,
+        replace: pathname.startsWith("/settings/"),
       });
     },
-    [navigate],
+    [navigate, pathname],
   );
 
   useEffect(() => {

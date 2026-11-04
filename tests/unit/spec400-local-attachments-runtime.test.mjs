@@ -117,6 +117,7 @@ function fixture(
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},
+    "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
     "@tanstack/react-router": {
       useNavigate: () => () => {
         throw new Error("Unexpected navigation");

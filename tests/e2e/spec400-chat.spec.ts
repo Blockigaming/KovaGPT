@@ -6,13 +6,20 @@ import { waitForKovaHydration } from "./hydration";
 async function expectRestingComposer(page: Page) {
   const composer = page.locator(".spec400-composer");
   const compactDesktop = await page.evaluate(
-    () => innerWidth >= 1024 && !matchMedia("(any-pointer: coarse)").matches,
+    () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );
   await expect(composer).toHaveCSS("border-radius", "26px");
-  await expect(composer).toHaveCSS("display", "flex");
-  await expect.poll(async () => (await composer.boundingBox())?.height).toBeGreaterThanOrEqual(128);
+  const conversation = await composer.evaluate(
+    (node) => node.closest('[data-composer-surface="conversation"]') !== null,
+  );
+  const singleRow = conversation && compactDesktop;
+  await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
+  const height = expect.poll(async () => (await composer.boundingBox())!.height);
+  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+  else await height.toBeGreaterThanOrEqual(128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
+  if (singleRow) return compactDesktop;
   await expect
     .poll(() =>
       composer.evaluate((node) => {

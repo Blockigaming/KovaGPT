@@ -746,6 +746,7 @@ export function Sidebar({
   );
   const navLink = (to: string, label: string, Icon: SidebarGlyph, badge?: string) => (
     <Link
+      key={to}
       to={to as never}
       className={navRow(isOn(to))}
       aria-current={isOn(to) ? "page" : undefined}
@@ -886,29 +887,25 @@ export function Sidebar({
         >
           {onRename ? (
             <DropdownMenuItem onClick={() => beginRename(conversation)}>
-              <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+              <Pencil aria-hidden="true" />
               Rename
             </DropdownMenuItem>
           ) : null}
           {onTogglePin ? (
             <DropdownMenuItem onClick={(event) => beginPin(conversation, event.currentTarget)}>
-              {conversation.pinned ? (
-                <PinOff className="mr-2 h-4 w-4" />
-              ) : (
-                <Pin className="mr-2 h-4 w-4" />
-              )}
+              {conversation.pinned ? <PinOff /> : <Pin />}
               {conversation.pinned ? "Unpin" : "Pin"}
             </DropdownMenuItem>
           ) : null}
           {onShare ? (
             <DropdownMenuItem onClick={() => onShare(conversation.id)}>
-              <Share2 className="mr-2 h-4 w-4" />
+              <Share2 />
               Share
             </DropdownMenuItem>
           ) : null}
           {onDuplicate ? (
             <DropdownMenuItem onClick={() => onDuplicate(conversation.id)}>
-              <CopyIcon className="mr-2 h-4 w-4" />
+              <CopyIcon />
               Duplicate
             </DropdownMenuItem>
           ) : null}
@@ -919,7 +916,6 @@ export function Sidebar({
                 cancelPendingSelection();
                 setProjectChoice(projectId);
                 setProjectChat(conversation);
-                cancelPendingSelection();
               }}
             />
           ) : null}
@@ -933,13 +929,13 @@ export function Sidebar({
                 onArchive(conversation.id);
               }}
             >
-              <Archive className="mr-2 h-4 w-4" />
+              <Archive />
               Archive
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-destructive" onClick={() => onDelete(conversation.id)}>
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -986,7 +982,7 @@ export function Sidebar({
           onOpenSettings("billing");
         }}
       >
-        <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+        <Sparkles aria-hidden="true" />
         {tierStatus === "ready" && tier === "pro" ? "Manage plan" : "Upgrade plan"}
       </DropdownMenuItem>
       <DropdownMenuItem
@@ -995,7 +991,7 @@ export function Sidebar({
           onOpenSettings("general");
         }}
       >
-        <CustomizeGlyph className="mr-2 h-4 w-4" aria-hidden="true" />
+        <CustomizeGlyph aria-hidden="true" />
         Personalization
       </DropdownMenuItem>
       <DropdownMenuItem
@@ -1004,7 +1000,7 @@ export function Sidebar({
           onOpenSettings("personalization");
         }}
       >
-        <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
+        <UserRound aria-hidden="true" />
         Profile
       </DropdownMenuItem>
       <DropdownMenuItem
@@ -1013,7 +1009,7 @@ export function Sidebar({
           onOpenSettings("appearance");
         }}
       >
-        <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+        <SettingsIcon aria-hidden="true" />
         Settings
       </DropdownMenuItem>
       <DropdownMenuSeparator />
@@ -1023,7 +1019,7 @@ export function Sidebar({
           onOpenHelp();
         }}
       >
-        <CircleHelp className="mr-2 h-4 w-4" aria-hidden="true" />
+        <CircleHelp aria-hidden="true" />
         Help
       </DropdownMenuItem>
       <DropdownMenuItem
@@ -1032,7 +1028,7 @@ export function Sidebar({
           setLogoutConfirmOpen(true);
         }}
       >
-        <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+        <LogOut aria-hidden="true" />
         Log out
       </DropdownMenuItem>
     </DropdownMenuContent>

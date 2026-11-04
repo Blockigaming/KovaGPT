@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, Download, Maximize2, Check } from "lucide-react";
+import { Bookmark, Download, Check } from "lucide-react";
+import { ExpandViewIcon } from "./ui/ExpandViewIcon";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { ChatImage, type ChatImageActions } from "./ChatImage";
 import { downloadChatImage } from "@/lib/chat-image-actions";
@@ -87,7 +88,7 @@ export function ResponseImage({
           {downloading ? "Downloading…" : "Download"}
         </button>
         <button ref={viewButton} type="button" onClick={() => setFull(true)}>
-          <Maximize2 />
+          <ExpandViewIcon />
           View full size
         </button>
       </span>

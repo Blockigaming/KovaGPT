@@ -205,12 +205,6 @@
 .kova-sidebar-history {
   flex-shrink: 0;
 }
-.kova-profile-menu {
-  width: min(330px, calc(100vw - 24px)) !important;
-  min-width: min(280px, calc(100vw - 24px)) !important;
-  max-width: calc(100vw - 24px);
-  border-radius: 16px;
-}
 @media (prefers-reduced-motion: reduce) {
   .kova-thinking-toggle {
     transition: none;
