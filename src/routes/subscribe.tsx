@@ -13,7 +13,7 @@ function CheckoutPage() {
   const { plan } = Route.useSearch();
   const { user, isLoaded, isSignedIn } = useUser();
   return (
-    <main className="min-h-dvh bg-background text-foreground">
+    <main id="main-content" tabIndex={-1} className="min-h-dvh bg-background text-foreground">
       <header className="mx-auto flex max-w-5xl items-center justify-between border-b border-border px-6 py-5">
         <h1 className="text-xl font-semibold">Complete your subscription</h1>
         <Link to="/pricing" className="rounded-xl border border-border px-4 py-2">

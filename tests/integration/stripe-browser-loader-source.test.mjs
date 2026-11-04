@@ -22,7 +22,7 @@ test("Stripe.js uses the pure entry and initializes only for an opened checkout"
   assert.doesNotMatch(stripe.slice(0, stripe.indexOf("export function getStripe")), /loadStripe\(/);
   assert.match(
     initializer,
-    /if \(!stripePromise\)[\s\S]*stripePromise = loadStripe\(clientToken\)/,
+    /if \(!stripePromise\)[\s\S]*getBillingClientConfiguration\(\)[\s\S]*loadStripe\(token\)/,
   );
 
   assert.match(checkout, /const stripe = useMemo\(\(\) => \{[\s\S]*?return getStripe\(\)/);

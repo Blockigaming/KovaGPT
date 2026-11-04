@@ -130,6 +130,9 @@ function PricingPage() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
+      <a href="#main-content" className="sr-only focus:not-sr-only">
+        Skip to content
+      </a>
       <header className="flex items-center justify-between px-6 py-5">
         <Link to="/" className="text-lg font-semibold">
           KovaGPT
