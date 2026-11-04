@@ -156,12 +156,12 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.match(connectorGate, /!hasAttachments/u);
   assert.doesNotMatch(connectorGate, /!hasImages/u);
   const planningContext = chat.slice(
-    chat.indexOf("const toolPlanningMessages"),
-    chat.indexOf(": freeConnectorRequest", chat.indexOf("const toolPlanningMessages")),
+    chat.indexOf("let toolPlanningMessages"),
+    chat.indexOf(": freeConnectorRequest", chat.indexOf("let toolPlanningMessages")),
   );
   // Selected packages take precedence over the ordinary Free planner, whose
   // owner-scoped preferences and history must remain available without a package.
-  assert.match(planningContext, /const toolPlanningMessages[^=]*=\s*workflowSkill\s*\?/u);
+  assert.match(planningContext, /let toolPlanningMessages[^=]*=\s*workflowSkill\s*\?/u);
   assert.match(planningContext, /\{ role: "user", content: lastText \}/u);
   assert.doesNotMatch(planningContext, /finalMessages\.map/u);
   assert.doesNotMatch(

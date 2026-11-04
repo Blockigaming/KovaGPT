@@ -42,7 +42,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.ok(requestStart >= 0 && requestEnd > requestStart);
   const chatRequest = page.slice(requestStart, requestEnd);
   const toolGateStart = chatApi.indexOf("const googleContext");
-  const toolGateEnd = chatApi.indexOf("const enableTools", toolGateStart);
+  const toolGateEnd = chatApi.indexOf("let enableTools", toolGateStart);
   assert.ok(toolGateStart >= 0 && toolGateEnd > toolGateStart);
   const toolGate = chatApi.slice(toolGateStart, toolGateEnd);
 
