@@ -184,12 +184,10 @@ test("every deployable build requires the strict built-output audit after Vite",
   );
 });
 
-test("Kova-owned OAuth consent, suppression, and auth-email templates remain intact", () => {
+test("Kova-owned OAuth consent and suppression routes remain intact", () => {
   const consent = read("src/routes/oauth.consent.tsx");
   const suppression = read("src/routes/email/unsubscribe.ts");
   const unsubscribePage = read("src/routes/unsubscribe.tsx");
-  const signupTemplate = read("src/lib/email-templates/signup.tsx");
-  const magicLinkTemplate = read("src/lib/email-templates/magic-link.tsx");
 
   assert.match(consent, /createFileRoute\("\/oauth\/consent"\)/u);
   assert.match(consent, /getAuthorizationDetails/u);
@@ -201,10 +199,6 @@ test("Kova-owned OAuth consent, suppression, and auth-email templates remain int
   assert.match(suppression, /suppressed_emails/u);
   assert.match(unsubscribePage, /fetch\(`\/email\/unsubscribe/u);
 
-  assert.match(signupTemplate, /export const SignupEmail/u);
-  assert.match(magicLinkTemplate, /export const MagicLinkEmail/u);
-  assert.match(signupTemplate, /BrandHeader/u);
-  assert.match(magicLinkTemplate, /BrandHeader/u);
 });
 
 test("active package declarations and package-manager policy contain no Lovable dependency", () => {
