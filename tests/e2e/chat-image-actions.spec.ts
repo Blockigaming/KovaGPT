@@ -81,7 +81,20 @@ for (const role of ["user", "assistant"] as const) {
     const menu = page.getByRole("menu", { name: "Image actions", exact: true });
     const open = async () => {
       await image.scrollIntoViewIfNeeded();
-      await image.click({ button: "right" });
+      if (page.viewportSize()!.width < 1024) {
+        const box = (await image.boundingBox())!;
+        const touch = await page.context().newCDPSession(page);
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }],
+        });
+        try {
+          await expect(menu).toBeVisible();
+        } finally {
+          await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+          await touch.detach();
+        }
+      } else await image.click({ button: "right" });
       await expect(menu).toBeVisible();
       await expect(menu.getByRole("menuitem")).toHaveText(
         page.viewportSize()!.width < 1024
@@ -106,6 +119,12 @@ for (const role of ["user", "assistant"] as const) {
     if (page.viewportSize()!.width < 1024) {
       await menu.getByRole("menuitem", { name: "Copy", exact: true }).click();
       await expect.poll(() => page.evaluate(() => window.imageMenuCopies.length)).toBe(1);
+      expect(await page.evaluate(() => window.imageMenuCopies[0])).toEqual({
+        type: "image/png",
+        signature: [137, 80, 78, 71, 13, 10, 26, 10],
+        width: 120,
+        height: 80,
+      });
       expect(sends).toBe(0);
       return;
     }

@@ -99,12 +99,10 @@ try {
       "Voice references updated. Verify the resulting revision, signed-in /api/voice status, microphone transcription and saved-reply playback before declaring voice live.",
     );
   }
-} catch (error) {
-  // Azure subprocess output may contain configuration; do not dump it.
+} catch {
+  // Azure subprocess output and parse errors may contain configuration.
   console.error(
-    error?.status
-      ? "Azure could not complete the operation. Check sign-in, managed-identity vault access and the existing app."
-      : error.message,
+    "Voice setup could not complete. Check Azure sign-in, the existing web container, daily cap, model-signing policy and managed-identity Key Vault access.",
   );
   process.exitCode = 1;
 }

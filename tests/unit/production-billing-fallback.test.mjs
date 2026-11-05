@@ -39,6 +39,8 @@ function fixture({
   conflict = false,
   error = false,
   url = "https://billing.stripe.com/p/session_fixture",
+  configuration = "bpc_fixture",
+  configurationEnv = configuration ?? undefined,
 } = {}) {
   const calls = [];
   const client = {
@@ -112,10 +114,15 @@ function fixture({
     AbortSignal,
     "live",
     {},
-    () => "bpc_fixture",
+    () => configuration,
     billingReturnOriginConfigured,
     billingReturnUrls,
-    { env: { KOVA_BILLING_RETURN_ORIGIN: "https://kovagpt.com" } },
+    {
+      env: {
+        KOVA_BILLING_RETURN_ORIGIN: "https://kovagpt.com",
+        STRIPE_BILLING_PORTAL_CONFIGURATION_ID: configurationEnv,
+      },
+    },
     async () => {},
     () => ({
       billingPortal: {
@@ -201,4 +208,27 @@ test("closed historic Customers do not hide an older current subscription", asyn
   });
   assert.ok("url" in (await f.portal()));
   assert.equal(f.calls.find(([name]) => name === "portal")[1].customer, "cus_current");
+});
+
+test("an absent explicit configuration uses Stripe's default; malformed explicit configuration fails closed", async () => {
+  const current = { ...empty, tier: "plus", effectiveTier: "plus", activeSubscriptionCount: 1 };
+  const fallback = fixture({ summary: current, customers: ["cus_owned"], configuration: null });
+  assert.equal((await fallback.summary()).billingPortalAvailable, true);
+  assert.equal((await fallback.portal()).url, "https://billing.stripe.com/p/session_fixture");
+  assert.deepEqual(fallback.calls.find(([name]) => name === "portal")[1], {
+    customer: "cus_owned",
+    return_url: "https://kovagpt.com/",
+  });
+  const invalid = fixture({
+    summary: current,
+    customers: ["cus_owned"],
+    configuration: null,
+    configurationEnv: "invalid",
+  });
+  assert.equal((await invalid.summary()).billingPortalAvailable, false);
+  assert.match((await invalid.portal()).error, /configuration is invalid/);
+  assert.equal(
+    invalid.calls.some(([name]) => name === "portal"),
+    false,
+  );
 });

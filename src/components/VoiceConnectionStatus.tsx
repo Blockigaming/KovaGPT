@@ -16,21 +16,22 @@ export function VoiceConnectionStatus() {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const pending = useRef(false);
-  const request = useRef(0);
+  const request = useRef({ generation: 0 });
   useEffect(() => {
     setResult(null);
     setError("");
     pending.current = false;
     setBusy(false);
+    const lifetime = request.current;
     return () => {
-      request.current++;
+      lifetime.generation++;
     };
   }, [owner]);
   const check = async () => {
     if (!owner || pending.current) return;
     pending.current = true;
-    const token = ++request.current;
-    const active = () => current.current === owner && request.current === token;
+    const token = ++request.current.generation;
+    const active = () => current.current === owner && request.current.generation === token;
     setBusy(true);
     setError("");
     try {
@@ -46,7 +47,7 @@ export function VoiceConnectionStatus() {
     } catch {
       if (active()) setError("Voice status couldn't be checked. Try again.");
     } finally {
-      if (request.current === token) pending.current = false;
+      if (request.current.generation === token) pending.current = false;
       if (active()) setBusy(false);
     }
   };

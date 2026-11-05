@@ -77,7 +77,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Can I cancel anytime?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Open Billing in Settings to see the available subscription-management options and their effective dates.",
+                text: "Open Subscriptions in Settings to review cancellation and subscription-management options in Stripe.",
               },
             },
             {
@@ -93,7 +93,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Can I switch plans?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "If plan switching is supported, you can manage your subscription from your account settings.",
+                text: "Choose a plan on Pricing, then review the supported plan change and renewal details securely in Stripe.",
               },
             },
             {
@@ -261,22 +261,6 @@ function PricingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border px-6 py-6">
-        <nav
-          aria-label="Footer navigation"
-          className="mx-auto flex max-w-6xl flex-wrap gap-6 text-sm text-muted-foreground"
-        >
-          <Link to="/privacy" className="inline-flex min-h-11 items-center">
-            Privacy
-          </Link>
-          <Link to="/terms" className="inline-flex min-h-11 items-center">
-            Terms
-          </Link>
-          <Link to="/contact-support" className="inline-flex min-h-11 items-center">
-            Contact support
-          </Link>
-        </nav>
-      </footer>
       <PublicFooter />
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
     </div>

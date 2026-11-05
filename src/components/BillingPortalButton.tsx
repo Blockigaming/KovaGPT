@@ -17,22 +17,23 @@ export function BillingPortalButton({
   const current = useRef(scope);
   current.current = scope;
   const pending = useRef(false);
-  const request = useRef(0);
+  const request = useRef({ generation: 0 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     pending.current = false;
     setBusy(false);
     setError("");
+    const lifetime = request.current;
     return () => {
-      request.current++;
+      lifetime.generation++;
     };
   }, [scope]);
   const open = async () => {
     if (!owner || pending.current) return;
     pending.current = true;
-    const token = ++request.current;
-    const active = () => current.current === scope && request.current === token;
+    const token = ++request.current.generation;
+    const active = () => current.current === scope && request.current.generation === token;
     setBusy(true);
     setError("");
     try {
@@ -48,7 +49,7 @@ export function BillingPortalButton({
           error instanceof Error ? error.message : "Billing could not open. Please try again.",
         );
     } finally {
-      if (request.current === token) pending.current = false;
+      if (request.current.generation === token) pending.current = false;
       if (active()) setBusy(false);
     }
   };

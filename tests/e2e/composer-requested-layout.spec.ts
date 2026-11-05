@@ -127,13 +127,38 @@ test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attac
   const canvas = dialog.getByLabel("Drawing canvas");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Attach drawing", exact: true })).toBeDisabled();
+  await canvas.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
   const box = (await canvas.boundingBox())!;
-  await page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.4);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.6, { steps: 12 });
-  await page.mouse.up();
   const png = () => canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL());
+  const blank = await png();
+  if (page.viewportSize()!.width < 1024) {
+    const touch = await page.context().newCDPSession(page);
+    for (let index = 0; index <= 12; index++) {
+      await touch.send("Input.dispatchTouchEvent", {
+        type: index === 0 ? "touchStart" : "touchMove",
+        touchPoints: [
+          {
+            x: box.x + box.width * (0.25 + (index * 0.45) / 12),
+            y: box.y + box.height * (0.4 + (index * 0.2) / 12),
+          },
+        ],
+      });
+    }
+    await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await touch.detach();
+  } else {
+    await page.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.4);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.6, { steps: 12 });
+    await page.mouse.up();
+  }
   const drawn = await png();
+  expect(drawn).not.toBe(blank);
   await dialog.getByRole("button", { name: "Undo", exact: true }).click();
   expect(await png()).not.toBe(drawn);
   await expect(dialog.getByRole("button", { name: "Attach drawing", exact: true })).toBeDisabled();

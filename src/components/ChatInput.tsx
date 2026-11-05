@@ -20,7 +20,6 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
 import { ExpandViewIcon } from "@/components/ui/ExpandViewIcon";
 
 import {
@@ -39,7 +38,6 @@ import {
   formatPdfPageNumbers,
   type PdfExtractionMetadata,
 } from "@/lib/document-extraction/pdf-metadata.mjs";
-import { ComposerUploadAllowance } from "@/components/ComposerUploadAllowance";
 import { ComposerContextPanel } from "@/components/ComposerContextPanel";
 import { ComposerModelStatus } from "@/components/ComposerModelStatus";
 import { ComposerVoiceDialog } from "@/components/ComposerVoiceDialog";
@@ -267,7 +265,6 @@ export function ChatInput({
   const { user, isLoaded } = useUser();
   const fileAccountRef = useRef({ isLoaded, userId: user?.id ?? null });
   fileAccountRef.current = { isLoaded, userId: user?.id ?? null };
-  const navigate = useNavigate();
   const attachmentAutoSave = useLibraryAttachmentAutoSave(
     saveAttachmentsToLibrary && isLoaded && !disabled,
     user?.id ?? null,

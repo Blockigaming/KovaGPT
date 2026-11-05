@@ -611,30 +611,11 @@ test("requested polish: empty composer swaps voice and send and has compact atta
     .or(page.getByRole("dialog", { name: "Attach files and tools", exact: true }))
     .filter({ visible: true });
   await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
-  await expect(menu.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
-  if (mobileMenu) {
-    await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
-    await expect(menu.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
-  }
-  if (info.project.name === "desktop") {
-    await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
-    await expect(menu.getByRole("button", { name: "Camera", exact: true })).toHaveCount(0);
-  }
-  await menu
-    .locator("summary")
-    .filter({ hasText: /^Plugins$/ })
-    .click();
-  const logos = menu.locator("img.kova-composer-plugin-logo");
-  expect(await logos.count()).toBeGreaterThan(0);
-  await expect
-    .poll(() =>
-      logos.evaluateAll((images) =>
-        images.every(
-          (img) => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0,
-        ),
-      ),
-    )
-    .toBe(true);
+  await expect(menu.locator(".kova-composer-quick-menu button")).toHaveText(
+    mobileMenu
+      ? ["Camera", "Photos", "Files", "Projects", "Create Image", "Drawing"]
+      : ["Files", "Library", "Projects", "Create Image", "Drawing"],
+  );
   await page.screenshot({
     path: info.outputPath("polish-attachment-menu.png"),
     animations: "disabled",
