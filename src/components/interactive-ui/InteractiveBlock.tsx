@@ -168,7 +168,8 @@ function FormBody({
     }
     const clean: FormValues = {};
     for (const f of block.fields)
-      clean[f.id] = f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
+      clean[f.id] =
+        f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
@@ -281,7 +282,11 @@ function FieldControl({
       break;
     case "select":
       control = (
-        <Select value={String(value ?? "") || undefined} onValueChange={onChange} disabled={disabled}>
+        <Select
+          value={String(value ?? "") || undefined}
+          onValueChange={onChange}
+          disabled={disabled}
+        >
           <SelectTrigger {...common} className="min-h-11 sm:min-h-9">
             <SelectValue placeholder={field.placeholder ?? "Choose…"} />
           </SelectTrigger>
@@ -350,8 +355,16 @@ function FieldControl({
               </label>
             ))}
           </RadioGroup>
-          {field.help && <p id={helpId} className="mt-1 text-xs text-muted-foreground">{field.help}</p>}
-          {error && <p id={errorId} className="mt-1 text-xs text-destructive">{error}</p>}
+          {field.help && (
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+              {field.help}
+            </p>
+          )}
+          {error && (
+            <p id={errorId} className="mt-1 text-xs text-destructive">
+              {error}
+            </p>
+          )}
         </fieldset>
       );
     case "checkbox": {
@@ -379,8 +392,16 @@ function FieldControl({
               </label>
             ))}
           </div>
-          {field.help && <p id={helpId} className="mt-1 text-xs text-muted-foreground">{field.help}</p>}
-          {error && <p id={errorId} className="mt-1 text-xs text-destructive">{error}</p>}
+          {field.help && (
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+              {field.help}
+            </p>
+          )}
+          {error && (
+            <p id={errorId} className="mt-1 text-xs text-destructive">
+              {error}
+            </p>
+          )}
         </fieldset>
       );
     }
@@ -391,7 +412,11 @@ function FieldControl({
         {label}
       </Label>
       {control}
-      {field.help && <p id={helpId} className="text-xs text-muted-foreground">{field.help}</p>}
+      {field.help && (
+        <p id={helpId} className="text-xs text-muted-foreground">
+          {field.help}
+        </p>
+      )}
       {error && (
         <p id={errorId} className="text-xs text-destructive">
           {error}
@@ -433,7 +458,12 @@ function TableBody({
   const group = useId();
   return (
     <div>
-      <div className="-mx-1 overflow-x-auto px-1" role="region" aria-label={block.title} tabIndex={0}>
+      <div
+        className="-mx-1 overflow-x-auto px-1"
+        role="region"
+        aria-label={block.title}
+        tabIndex={0}
+      >
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
