@@ -42,7 +42,7 @@ export class BrowserRuntime {
     return this.sessions.shutdown();
   }
   auditLog(sessionId: string, ownerId: string) {
-    this.sessions.get(sessionId, ownerId);
+    this.sessions.get(sessionId, ownerId, false);
     return this.auditSink.list(sessionId);
   }
 
@@ -93,7 +93,7 @@ export class BrowserRuntime {
   }
 
   listTabs(sessionId: string, ownerId: string) {
-    const session = this.sessions.get(sessionId, ownerId);
+    const session = this.sessions.get(sessionId, ownerId, false);
     return [...session.tabs.keys()].map((id) => this.describeTab(session, id));
   }
 
