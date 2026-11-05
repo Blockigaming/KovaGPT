@@ -12,6 +12,8 @@ import { prepareChatImageAttachment } from "@/lib/chat-image-actions";
 import type { ResultDescriptor } from "./ArtifactEditor";
 import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-ui.mjs";
 import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
+import { splitInteractiveContent } from "@/lib/interactive-ui.mjs";
+import { InteractiveBlock } from "./interactive-ui/InteractiveBlock";
 import {
   Copy,
   Sparkles,
@@ -764,6 +766,44 @@ function ChatMessageInner({
     [cleanedResponse, isUser, streaming],
   );
   const hasWidget = canvasParts.some((part) => part.kind === "widget");
+  // Validated kova-interactive blocks render as native controls; everything else
+  // (including malformed or still-streaming blocks) stays ordinary markdown.
+  const submitInteractive = onFollowUp ?? undefined;
+  const renderResponseText = (text: string, key: React.Key | undefined) => {
+    const parts = isUser || streaming ? [] : splitInteractiveContent(text);
+    const markdown = (value: string, k?: React.Key) => (
+      <ResponseMarkdown
+        key={k}
+        sources={message.sources}
+        onSourceClick={openSource}
+        onSaveImage={saveResponseImage}
+        imageActions={imageActions}
+      >
+        {value}
+      </ResponseMarkdown>
+    );
+    if (!parts.some((part) => part.kind === "interactive")) return markdown(text, key);
+    return (
+      <div key={key} className="space-y-1">
+        {parts.map((part, i) =>
+          part.kind === "interactive" ? (
+            <InteractiveBlock
+              key={`i${i}:${part.block.id}`}
+              block={part.block}
+              storageKey={
+                temporary
+                  ? null
+                  : `kova-interactive:v1:${chatId ?? "local"}:${message.id}:${key ?? 0}:${part.index}:${part.block.id}`
+              }
+              onSubmit={submitInteractive}
+            />
+          ) : part.text.trim() ? (
+            markdown(part.text, `t${i}`)
+          ) : null,
+        )}
+      </div>
+    );
+  };
   const artifactKind = useMemo(
     () => (isUser || streaming || hasWidget ? null : detectArtifactKind(cleanedResponse)),
     [cleanedResponse, hasWidget, isUser, streaming],
@@ -1079,15 +1119,7 @@ function ChatMessageInner({
                             }
                           />
                         ) : part.text.trim() ? (
-                          <ResponseMarkdown
-                            key={index}
-                            sources={message.sources}
-                            onSourceClick={openSource}
-                            onSaveImage={saveResponseImage}
-                            imageActions={imageActions}
-                          >
-                            {part.text}
-                          </ResponseMarkdown>
+                          renderResponseText(part.text, index)
                         ) : null,
                       )}
                     </div>
@@ -1099,27 +1131,12 @@ function ChatMessageInner({
                             <ChatChart spec={part.spec} />
                           </Suspense>
                         ) : part.value.trim() ? (
-                          <ResponseMarkdown
-                            key={index}
-                            sources={message.sources}
-                            onSourceClick={openSource}
-                            onSaveImage={saveResponseImage}
-                            imageActions={imageActions}
-                          >
-                            {part.value}
-                          </ResponseMarkdown>
+                          renderResponseText(part.value, index)
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    <ResponseMarkdown
-                      sources={message.sources}
-                      onSourceClick={openSource}
-                      onSaveImage={saveResponseImage}
-                      imageActions={imageActions}
-                    >
-                      {cleanedResponse}
-                    </ResponseMarkdown>
+                    renderResponseText(cleanedResponse, undefined)
                   );
                   if (responseChip)
                     return (
