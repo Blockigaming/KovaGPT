@@ -12,6 +12,8 @@ import { prepareChatImageAttachment } from "@/lib/chat-image-actions";
 import type { ResultDescriptor } from "./ArtifactEditor";
 import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-ui.mjs";
 import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
+import { splitInteractiveContent } from "@/lib/interactive-ui.mjs";
+import { InteractiveBlock } from "./interactive-ui/InteractiveBlock";
 import {
   Copy,
   Sparkles,
@@ -1079,15 +1081,7 @@ function ChatMessageInner({
                             }
                           />
                         ) : part.text.trim() ? (
-                          <ResponseMarkdown
-                            key={index}
-                            sources={message.sources}
-                            onSourceClick={openSource}
-                            onSaveImage={saveResponseImage}
-                            imageActions={imageActions}
-                          >
-                            {part.text}
-                          </ResponseMarkdown>
+                          renderResponseText(part.text, index)
                         ) : null,
                       )}
                     </div>
@@ -1099,27 +1093,12 @@ function ChatMessageInner({
                             <ChatChart spec={part.spec} />
                           </Suspense>
                         ) : part.value.trim() ? (
-                          <ResponseMarkdown
-                            key={index}
-                            sources={message.sources}
-                            onSourceClick={openSource}
-                            onSaveImage={saveResponseImage}
-                            imageActions={imageActions}
-                          >
-                            {part.value}
-                          </ResponseMarkdown>
+                          renderResponseText(part.value, index)
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    <ResponseMarkdown
-                      sources={message.sources}
-                      onSourceClick={openSource}
-                      onSaveImage={saveResponseImage}
-                      imageActions={imageActions}
-                    >
-                      {cleanedResponse}
-                    </ResponseMarkdown>
+                    renderResponseText(cleanedResponse, undefined)
                   );
                   if (responseChip)
                     return (
