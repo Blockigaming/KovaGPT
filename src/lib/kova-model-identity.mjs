@@ -1,9 +1,9 @@
 /** Product names only. This catalog does not authorize or activate any route. */
 export const KOVA_MODEL_VERSION = "4.6";
 export const KOVA_MODEL_FAMILIES = Object.freeze([
-  Object.freeze({ id: "cosmo", label: "KovaGPT Model 4.6 Cosmo" }),
-  Object.freeze({ id: "orion", label: "KovaGPT Model 4.6 Orion" }),
-  Object.freeze({ id: "nova", label: "KovaGPT Model 4.6 Nova" }),
+  Object.freeze({ id: "cosmo", label: "Kova Argon 5" }),
+  Object.freeze({ id: "orion", label: "Kova Neon 4.6" }),
+  Object.freeze({ id: "nova", label: "Kova Xenon 4.6" }),
 ]);
 
 const FAMILY_BY_ROLE = Object.freeze({
