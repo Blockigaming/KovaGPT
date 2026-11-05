@@ -3,6 +3,56 @@ import { coreFixture } from "../e2e/core-app-fixture";
 import { owner, chatA } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
+async function watchInteractiveEvents(page: Page) {
+  await page.evaluate(() => {
+    const events: unknown[] = [];
+    Object.defineProperty(window, "__kovaInteractiveEvents", { value: events });
+    for (const type of ["pointerdown", "pointerup", "click", "submit", "input", "focusin"]) {
+      document.addEventListener(
+        type,
+        (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          const section = target.closest<HTMLElement>(".kova-interactive");
+          if (!section || events.length >= 100) return;
+          events.push({
+            type,
+            tag: target.tagName,
+            text: target.textContent?.trim().slice(0, 120),
+            id: target.id,
+            state: section.dataset.interactiveState,
+            value: target instanceof HTMLInputElement ? target.value : undefined,
+          });
+        },
+        true,
+      );
+    }
+  });
+}
+
+async function interactiveState(page: Page) {
+  return page.evaluate(() => ({
+    events: Reflect.get(window, "__kovaInteractiveEvents") as unknown[],
+    active: document.activeElement?.outerHTML.slice(0, 500),
+    forms: Array.from(document.querySelectorAll<HTMLElement>(".kova-interactive")).map(
+      (section) => ({
+        state: section.dataset.interactiveState,
+        text: section.innerText,
+        inputs: Array.from(section.querySelectorAll("input")).map((input) => ({
+          value: input.value,
+          invalid: input.getAttribute("aria-invalid"),
+          disabled: input.disabled,
+        })),
+      }),
+    ),
+    notices: Array.from(document.querySelectorAll('[role="status"], [role="alert"]')).map(
+      (node) => node.textContent,
+    ),
+    transcript: document.querySelector<HTMLElement>("[data-chat-transcript]")?.innerText,
+    pageText: document.body.innerText.slice(-7000),
+  }));
+}
+
 async function showBlocks(
   page: Page,
   theme: "dark" | "light",
@@ -50,6 +100,7 @@ async function showBlocks(
   await expect(page.locator(".kova-interactive form, .kova-interactive table")).toHaveCount(
     blocks.length,
   );
+  await watchInteractiveEvents(page);
 }
 
 for (const theme of ["dark", "light"] as const) {
@@ -249,7 +300,12 @@ for (const theme of ["dark", "light"] as const) {
       });
     });
     await table.getByRole("button", { name: submitLabel, exact: true }).click();
-    await expect.poll(() => submissions).toHaveLength(1);
+    try {
+      await expect.poll(() => submissions).toHaveLength(1);
+    } catch (error) {
+      console.log("INTERACTIVE_TABLE_LAYOUT", JSON.stringify(await interactiveState(page)));
+      throw error;
+    }
     expect(submissions[0]).toContain("Compare the details");
     expect(submissions[0]).toContain("Value 1 with additional detail");
     await expect(table).toHaveAttribute("data-interactive-state", "submitted");
@@ -279,30 +335,6 @@ test("repeated form IDs keep labels, validation, and submission on the correct f
     submitLabel: "Send preference",
   });
   await showBlocks(page, "dark", [make("First form"), make("Second form")]);
-  await page.evaluate(() => {
-    const events: unknown[] = [];
-    Object.defineProperty(window, "__kovaInteractiveEvents", { value: events });
-    for (const type of ["pointerdown", "pointerup", "click", "submit", "input", "focusin"]) {
-      document.addEventListener(
-        type,
-        (event) => {
-          const target = event.target;
-          if (!(target instanceof HTMLElement)) return;
-          const section = target.closest<HTMLElement>(".kova-interactive");
-          if (!section || events.length >= 100) return;
-          events.push({
-            type,
-            tag: target.tagName,
-            text: target.textContent?.trim().slice(0, 120),
-            id: target.id,
-            state: section.dataset.interactiveState,
-            value: target instanceof HTMLInputElement ? target.value : undefined,
-          });
-        },
-        true,
-      );
-    }
-  });
   const ids = await page
     .locator(".kova-interactive [id]")
     .evaluateAll((nodes) => nodes.map((node) => node.id));
@@ -329,25 +361,7 @@ test("repeated form IDs keep labels, validation, and submission on the correct f
   try {
     await expect.poll(() => messages).toHaveLength(1);
   } catch (error) {
-    const layout = await page.evaluate(() => ({
-      events: Reflect.get(window, "__kovaInteractiveEvents") as unknown[],
-      active: document.activeElement?.outerHTML.slice(0, 500),
-      forms: Array.from(document.querySelectorAll<HTMLElement>(".kova-interactive")).map(
-        (section) => ({
-          state: section.dataset.interactiveState,
-          text: section.innerText,
-          inputs: Array.from(section.querySelectorAll("input")).map((input) => ({
-            value: input.value,
-            invalid: input.getAttribute("aria-invalid"),
-            disabled: input.disabled,
-          })),
-        }),
-      ),
-      notices: Array.from(document.querySelectorAll('[role="status"], [role="alert"]')).map(
-        (node) => node.textContent,
-      ),
-      transcript: document.querySelector<HTMLElement>("[data-chat-transcript]")?.innerText,
-    }));
+    const layout = await interactiveState(page);
     console.log("INTERACTIVE_SUBMISSION_LAYOUT", JSON.stringify(layout));
     throw error;
   }
@@ -398,4 +412,36 @@ test("forms wait for chat history before accepting a submission", async ({ page 
   await expect.poll(() => messages).toHaveLength(1);
   expect(messages[0]).toContain("An answer sent after initialization");
   await expect(form).toHaveAttribute("data-interactive-state", "submitted");
+});
+
+test("table actions submit on the first mouse or touch press", async ({ page }, info) => {
+  await showBlocks(page, "light", [
+    {
+      version: 1,
+      type: "table",
+      id: "press",
+      title: "Choose an item",
+      columns: [{ id: "name", label: "Item" }],
+      rows: [{ id: "chosen", cells: ["The selected item"] }],
+      selection: "single",
+      submitLabel: "Send the selected item",
+    },
+  ]);
+  const table = page.getByRole("region", { name: "Choose an item", exact: true }).first();
+  await table.getByRole("radio", { name: "Select The selected item", exact: true }).check();
+  const submissions: string[] = [];
+  await page.route("**/api/chat", async (route) => {
+    submissions.push(String(route.request().postDataJSON().messages.at(-1).content));
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Your item was received."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  const submit = table.getByRole("button", { name: "Send the selected item", exact: true });
+  if (info.project.use.hasTouch) await submit.tap();
+  else await submit.click();
+  await expect.poll(() => submissions).toHaveLength(1);
+  expect(submissions[0]).toContain("The selected item");
+  await expect(table).toHaveAttribute("data-interactive-state", "submitted");
 });

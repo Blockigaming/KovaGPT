@@ -49,6 +49,10 @@ function writeStored(key: string | null, value: Stored) {
   }
 }
 
+function preserveActionFocus(event: React.PointerEvent<HTMLButtonElement>) {
+  if (event.button === 0) event.preventDefault();
+}
+
 export type InteractiveBlockProps = {
   block: Block;
   /** Stable per-response key; state and submissions persist under it. */
@@ -209,6 +213,7 @@ function FormBody({
         {hasFields && (
           <Button
             type="submit"
+            onPointerDown={preserveActionFocus}
             disabled={locked}
             className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           >
@@ -223,6 +228,7 @@ function FormBody({
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
             className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+            onPointerDown={preserveActionFocus}
             onClick={() => !locked && onSubmit({ action: action.id, values })}
           >
             {action.label}
@@ -555,6 +561,7 @@ function TableBody({
           type="button"
           className="mt-3 h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           disabled={locked || selected.length === 0}
+          onPointerDown={preserveActionFocus}
           onClick={() => onSubmit({ selected })}
         >
           {block.submitLabel ?? "Submit"}
