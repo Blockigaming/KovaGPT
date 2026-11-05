@@ -6,9 +6,8 @@ const ownerId = crypto.randomUUID(),
   runId = crypto.randomUUID(),
   sessionId = crypto.randomUUID();
 function fixture() {
-  const expiresAt = Date.now() + 290000,
-    calls = [],
-    checks = [];
+  let expiresAt = Date.now() + 290000;
+  const calls = [], checks = [];
   let retired = false,
     allowed = true,
     sequence = 1,
@@ -61,6 +60,7 @@ function fixture() {
     checks,
     command,
     setSequence: (n) => (sequence = n),
+    renew: () => (expiresAt = Date.now() + 900000),
     revoke: () => (allowed = false),
     retire: () => (retired = true),
     get network() {
