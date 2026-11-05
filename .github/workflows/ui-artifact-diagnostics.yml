@@ -24,6 +24,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import base64
           import json
           import pathlib
           import zipfile
@@ -32,19 +33,27 @@ jobs:
           for path in root.rglob("error-context.md"):
               print(str(path))
               print(path.read_text()[:18000])
+          for path in root.rglob("test-failed-1.png"):
+              encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+              for index in range(0, len(encoded), 4096):
+                  print("IMAGE_CHUNK:" + encoded[index:index + 4096])
           for path in root.rglob("trace.zip"):
               print(str(path))
               with zipfile.ZipFile(path) as archive:
                   for name in archive.namelist():
                       if name.endswith(".trace"):
                           events = [json.loads(line) for line in archive.read(name).splitlines()]
-                          calls = [event for event in events if event.get("type") == "before"]
-                          for event in calls[-14:]:
-                              print(json.dumps({key: event.get(key) for key in
-                                  ("type", "callId", "apiName", "method", "params")}))
+                          calls = [event for event in events if event.get("type") == "before"
+                              and event.get("method") in ("click", "check")]
+                          interesting = {event.get("callId") for event in calls
+                              if "Send all of these preferences" in str(event.get("params", {}))}
+                          for event in calls:
+                              print("TRACE_CALL:" + json.dumps({key: event.get(key) for key in
+                                  ("type", "callId", "method", "params")}))
                           for event in events:
-                              if event.get("type") == "after" and event.get("error"):
-                                  print(json.dumps({"callId": event.get("callId"), "error": event["error"]}))
+                              if event.get("callId") in interesting:
+                                  if event.get("type") in ("log", "input", "after"):
+                                      print("TRACE_EVENT:" + json.dumps(event))
                       if name.endswith(".network"):
                           for line in archive.read(name).splitlines():
                               event = json.loads(line)
