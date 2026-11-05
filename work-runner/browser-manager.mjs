@@ -55,10 +55,24 @@ export function createBrowserManager(
     protocol: "kova-browser-v1",
     available: true,
     origins: allowed,
-    maxSessionSeconds: 300,
+    idleTimeoutSeconds: 900,
     siteRulesVersion: 1,
     ...(publicWeb ? { publicWeb: true } : {}),
   };
+  function scheduleIdleReap(row) {
+    clearTimeout(row.idleTimer);
+    if (row.closed) return;
+    const remaining = Math.max(1, row.expiresAt - Date.now());
+    row.idleTimer = setTimeout(() => {
+      if (row.closed) return;
+      if (row.busy) {
+        scheduleIdleReap(row);
+        return;
+      }
+      void close(row).catch(() => undefined);
+    }, row.busy && remaining <= 1 ? 1000 : remaining);
+    row.idleTimer.unref?.();
+  }
   async function check(row, binding, signal) {
     if (
       signal?.aborted ||
@@ -78,14 +92,18 @@ export function createBrowserManager(
       signal,
     );
     if (
-      current.expiresAt !== row.expiresAt ||
+      current.expiresAt < row.expiresAt ||
+      current.expiresAt > Date.now() + 905000 ||
       (binding.phase === "check" && current.sequence !== binding.sequence)
     )
       fail();
+    row.expiresAt = current.expiresAt;
+    scheduleIdleReap(row);
     return current;
   }
   async function close(row) {
     row.closed = true;
+    clearTimeout(row.idleTimer);
     row.active?.controller.abort();
     sessions.delete(row.sessionId);
     retired.set(row.sessionId, row.expiresAt);
@@ -144,7 +162,7 @@ export function createBrowserManager(
         input.sequence > 1000000 ||
         !Number.isSafeInteger(input.expiresAt) ||
         input.expiresAt <= Date.now() ||
-        input.expiresAt > Date.now() + 300000 ||
+        input.expiresAt > Date.now() + 905000 ||
         Object.keys(input).some(
           (k) =>
             ![
@@ -244,7 +262,8 @@ export function createBrowserManager(
           !row ||
           row.ownerId !== input.ownerId ||
           row.runId !== input.runId ||
-          row.expiresAt !== input.expiresAt
+          input.expiresAt < row.expiresAt ||
+          input.expiresAt > Date.now() + 905000
         )
           fail();
         return run(row, input, binding, signal);
