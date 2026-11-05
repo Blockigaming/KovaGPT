@@ -1,4 +1,4 @@
-name: Inspect PR 578 saved UI diagnostics
+name: Inspect current PR 578 UI screenshots
 
 on:
   push:
@@ -13,52 +13,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Read the existing failed WebKit artifact
+      - name: Read the verified candidate screenshots
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          artifact-ids: "13444839567"
-          run-id: "42090819732"
+          artifact-ids: "13448761605,13449622614"
+          run-id: "42098485814"
           github-token: ${{ github.token }}
-          path: diagnostics
-      - name: Print synthetic page context and relevant trace events
+          path: screenshots
+      - name: Export selected synthetic screenshots for visual inspection
         shell: bash
         run: |
           python3 - <<'PY'
           import base64
           import json
           import pathlib
-          import zipfile
 
-          root = pathlib.Path("diagnostics")
-          for path in root.rglob("error-context.md"):
-              print(str(path))
-              print(path.read_text()[:18000])
-          for path in root.rglob("test-failed-1.png"):
+          root = pathlib.Path("screenshots")
+          for path in root.rglob("commit.txt"):
+              assert path.read_text().strip() == "423ae39552f9f948e0ebbdf10cfb75485bf65446"
+          scenes = {"dark--.png", "light--.png", "dark--library.png",
+                    "dark--settings-appearance.png", "light--settings-appearance.png",
+                    "response-actions.png"}
+          for path in sorted(root.rglob("*.png")):
+              name = str(path)
+              wanted = any(size in name for size in
+                  ("chromium-320", "chromium-landscape", "chromium-1440", "webkit-320"))
+              if not wanted or path.name not in scenes:
+                  continue
+              print("SHOT_BEGIN:" + json.dumps({"path": name}))
               encoded = base64.b64encode(path.read_bytes()).decode("ascii")
               for index in range(0, len(encoded), 4096):
-                  print("IMAGE_CHUNK:" + encoded[index:index + 4096])
-          for path in root.rglob("trace.zip"):
-              print(str(path))
-              with zipfile.ZipFile(path) as archive:
-                  for name in archive.namelist():
-                      if name.endswith(".trace"):
-                          events = [json.loads(line) for line in archive.read(name).splitlines()]
-                          calls = [event for event in events if event.get("type") == "before"
-                              and event.get("method") in ("click", "check")]
-                          interesting = {event.get("callId") for event in calls
-                              if "Send all of these preferences" in str(event.get("params", {}))}
-                          for event in calls:
-                              print("TRACE_CALL:" + json.dumps({key: event.get(key) for key in
-                                  ("type", "callId", "method", "params")}))
-                          for event in events:
-                              if event.get("callId") in interesting:
-                                  if event.get("type") in ("log", "input", "after"):
-                                      print("TRACE_EVENT:" + json.dumps(event))
-                      if name.endswith(".network"):
-                          for line in archive.read(name).splitlines():
-                              event = json.loads(line)
-                              snap = event.get("snapshot", {})
-                              url = snap.get("request", {}).get("url", "")
-                              if "/api/chat" in url:
-                                  print(json.dumps({"url": url, "status": snap.get("response", {}).get("status")}))
+                  print("SHOT_CHUNK:" + encoded[index:index + 4096])
+              print("SHOT_END")
           PY
