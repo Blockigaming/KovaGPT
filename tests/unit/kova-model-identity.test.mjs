@@ -12,9 +12,9 @@ import { KOVA_WORK_FAMILIES } from "../../src/lib/kova-work-policy.mjs";
 
 test("server-routed basic, advanced and premium responses use the approved exact names", () => {
   for (const [mode, tier, expected] of [
-    ["instant", "free", "Kova Argon 5"],
+    ["instant", "free", "Kova Argon 4.6"],
     ["thinking", "plus", "Kova Neon 4.6"],
-    ["max", "pro", "Kova Xenon 4.6"],
+    ["max", "pro", "Kova Xenon 5"],
   ]) {
     const route = routeModel({ task: "chat", mode, tier, text: "Hello" });
     const prompt = buildKovaModelIdentityInstructions({
@@ -38,7 +38,7 @@ test("identity follows authorized routing and locked Free requests have no respo
     () => routeModel({ task: "chat", mode: "max", tier: "free", text: "Hello" }),
     /mode_not_entitled/,
   );
-  assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "Kova Argon 5");
+  assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "Kova Argon 4.6");
   const upgraded = routeModel({
     task: "chat",
     mode: "medium",
@@ -62,7 +62,7 @@ test("later replies suppress repeated introductions and distinguish branding fro
   assert.match(prompt, /Vary the surrounding wording naturally/);
 });
 
-test("hosted Kova name discloses operator-confirmed underlying inference when asked", () => {\n  const prompt = buildKovaModelIdentityInstructions({\n    role: "DEFAULT_CHAT", modelId: "kova-argon-5", provider: "openrouter", hasAssistantHistory: false,\n  });\n  assert.match(prompt, /Kova Argon 5/);\n  assert.match(prompt, /OpenRouter \\(third-party hosted inference\\)/);\n});\n\ntest("unknown identities and unsafe metadata fail closed without echoing input", () => {
+test("hosted Kova name discloses operator-confirmed underlying inference when asked", () => {\n  const prompt = buildKovaModelIdentityInstructions({\n    role: "DEFAULT_CHAT", modelId: "kova-argon-4.6", provider: "openrouter", hasAssistantHistory: false,\n  });\n  assert.match(prompt, /Kova Argon 4.6/);\n  assert.match(prompt, /OpenRouter \\(third-party hosted inference\\)/);\n});\n\ntest("unknown identities and unsafe metadata fail closed without echoing input", () => {
   for (const role of ["UTILITY", "EMBEDDING", "cosmo", "__proto__", "constructor"])
     assert.throws(() => kovaModelIdentityForRole(role), /^Error: kova_model_identity_unavailable$/);
   const valid = {
@@ -85,7 +85,7 @@ test("hosted Kova name discloses operator-confirmed underlying inference when as
 test("catalogs share approved names without adding self-hosted routes", () => {
   assert.deepEqual(
     KOVA_MODEL_FAMILIES.map((family) => family.label),
-    ["Kova Argon 5", "Kova Neon 4.6", "Kova Xenon 4.6"],
+    ["Kova Argon 4.6", "Kova Neon 4.6", "Kova Xenon 5"],
   );
   assert.deepEqual(KOVA_CHAT_FAMILIES, KOVA_MODEL_FAMILIES.slice(0, 2));
   assert.equal(KOVA_WORK_FAMILIES, KOVA_MODEL_FAMILIES);
