@@ -54,13 +54,20 @@ export type InteractiveBlockProps = {
   /** Stable per-response key; state and submissions persist under it. */
   storageKey: string | null;
   /** Sends the submission as the user's next conversation message. Absent = read-only. */
-  onSubmit?: (message: string) => void;
+  onSubmit?: (message: string) => boolean | void;
+  disabledReason?: string;
 };
 
 /** Safe native renderer for validated kova-interactive blocks. No HTML, no scripts. */
-export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlockProps) {
+export function InteractiveBlock({
+  block,
+  storageKey,
+  onSubmit,
+  disabledReason,
+}: InteractiveBlockProps) {
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   useEffect(() => {
     setStored(readStored(storageKey));
     setHydrated(true);
@@ -74,11 +81,16 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
   };
   const submit = (submission: InteractiveSubmission) => {
     if (!onSubmit || submitted) return;
+    if (onSubmit(formatSubmission(block, submission)) === false) {
+      setSubmitError(true);
+      return;
+    }
+    setSubmitError(false);
     persist({ submission });
-    onSubmit(formatSubmission(block, submission));
   };
   const saveDraft = (draft: InteractiveSubmission) => {
     if (submitted) return;
+    setSubmitError(false);
     persist({ draft });
   };
   const headingId = useId();
@@ -117,13 +129,18 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
             onSubmit={submit}
           />
         ))}
+      {submitError && !submitted && (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          Your response was not sent. Check the chat status, then try again.
+        </p>
+      )}
       {submitted ? (
         <p role="status" className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Check className="h-4 w-4" aria-hidden="true" /> Sent
         </p>
       ) : !onSubmit && hydrated ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          This form is only active on the latest reply.
+          {disabledReason ?? "This form is only active on the latest reply."}
         </p>
       ) : null}
     </section>

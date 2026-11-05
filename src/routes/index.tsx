@@ -3039,7 +3039,23 @@ function KovaGPT() {
           );
         }}
         onDraftPrompt={isLastAssistant && !isStreaming ? prepareResponseDraft : undefined}
-        onFollowUp={isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined}
+        onFollowUp={
+          isLastAssistant && !isStreaming && isSignedIn && principalReady && historyReady
+            ? (prompt) => {
+                if (inFlightRef.current) return false;
+                // send acquires the request synchronously before its first await.
+                void send(prompt, []);
+                return inFlightRef.current;
+              }
+            : undefined
+        }
+        interactiveDisabledReason={
+          !isSignedIn
+            ? "Sign in to submit this form."
+            : !historyReady
+              ? "Chat history is not ready yet. Check the sync status."
+              : undefined
+        }
         onEdit={
           m.role === "user" && !isStreaming
             ? () => {

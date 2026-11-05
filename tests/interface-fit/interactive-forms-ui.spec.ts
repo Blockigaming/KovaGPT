@@ -3,7 +3,12 @@ import { coreFixture } from "../e2e/core-app-fixture";
 import { owner, chatA } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
-async function showBlocks(page: Page, theme: "dark" | "light", blocks: unknown[]) {
+async function showBlocks(
+  page: Page,
+  theme: "dark" | "light",
+  blocks: unknown[],
+  holdHistory = false,
+) {
   await coreFixture(page, theme, "plus");
   await page.addInitScript(
     ({ owner, chatA, content }) => {
@@ -20,6 +25,25 @@ async function showBlocks(page: Page, theme: "dark" | "light", blocks: unknown[]
         .join("\n\n"),
     },
   );
+  if (holdHistory) {
+    await page.addInitScript(() => {
+      const manager = navigator.locks;
+      const request = manager.request;
+      const ready = new Promise<void>((resolve) =>
+        window.addEventListener("kova-test-history-ready", () => resolve(), { once: true }),
+      );
+      manager.request = ((...args: unknown[]) => {
+        if (String(args[0]).startsWith("kova-chat-history:")) {
+          const callback = args.at(-1) as (lock: Lock | null) => unknown;
+          args[args.length - 1] = async (lock: Lock | null) => {
+            await ready;
+            return callback(lock);
+          };
+        }
+        return Reflect.apply(request, manager, args);
+      }) as typeof manager.request;
+    });
+  }
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(page.locator(".kova-interactive")).toHaveCount(blocks.length);
@@ -306,11 +330,7 @@ test("repeated form IDs keep labels, validation, and submission on the correct f
     await expect.poll(() => messages).toHaveLength(1);
   } catch (error) {
     const layout = await page.evaluate(() => ({
-      events: (
-        window as typeof window & {
-          __kovaInteractiveEvents: unknown[];
-        }
-      ).__kovaInteractiveEvents,
+      events: Reflect.get(window, "__kovaInteractiveEvents") as unknown[],
       active: document.activeElement?.outerHTML.slice(0, 500),
       forms: Array.from(document.querySelectorAll<HTMLElement>(".kova-interactive")).map(
         (section) => ({
@@ -335,4 +355,47 @@ test("repeated form IDs keep labels, validation, and submission on the correct f
   expect(messages[0]).toContain("Second answer");
   expect(messages[0]).not.toContain("First answer");
   await expect(second).toHaveAttribute("data-interactive-state", "submitted");
+});
+
+test("forms wait for chat history before accepting a submission", async ({ page }) => {
+  await showBlocks(
+    page,
+    "dark",
+    [
+      {
+        version: 1,
+        type: "form",
+        id: "readiness",
+        title: "A response that must wait",
+        fields: [{ id: "answer", label: "Your answer", kind: "text", required: true }],
+        submitLabel: "Send this answer",
+      },
+    ],
+    true,
+  );
+  const form = page.getByRole("region", { name: "A response that must wait", exact: true });
+  const answer = form.getByRole("textbox", { name: "Your answer", exact: false });
+  const submit = form.getByRole("button", { name: "Send this answer", exact: true });
+  await expect(answer).toBeDisabled();
+  await expect(submit).toBeDisabled();
+  await expect(form).toHaveAttribute("data-interactive-state", "readonly");
+  await expect(form).toContainText("Chat history is not ready yet. Check the sync status.");
+  await expect(form.getByRole("status")).toHaveCount(0);
+  await page.evaluate(() => window.dispatchEvent(new Event("kova-test-history-ready")));
+  await expect(answer).toBeEnabled();
+  await expect(submit).toBeEnabled();
+  const messages: string[] = [];
+  await page.route("**/api/chat", async (route) => {
+    messages.push(String(route.request().postDataJSON().messages.at(-1).content));
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Your answer was received."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await answer.fill("An answer sent after initialization");
+  await submit.click();
+  await expect.poll(() => messages).toHaveLength(1);
+  expect(messages[0]).toContain("An answer sent after initialization");
+  await expect(form).toHaveAttribute("data-interactive-state", "submitted");
 });

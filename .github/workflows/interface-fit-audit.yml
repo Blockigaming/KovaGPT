@@ -71,7 +71,12 @@ jobs:
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
           --project="${{ matrix.browser }}-390" --project="${{ matrix.browser }}-landscape"
-          --grep="repeated form IDs" --repeat-each=5
+          --grep="repeated form IDs|forms wait for chat history" --repeat-each=5
+      - name: Check wide composer initialization without observer errors
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-2560" --grep="dark workspace fits: /$"
+          --repeat-each=10
       - name: Check every workspace and settings section in both themes
         shell: bash
         run: |
