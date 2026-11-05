@@ -92,6 +92,7 @@ export function createBrowserManager(
       signal,
     );
     if (
+      (binding.actor === "owner" && current.expiresAt !== row.expiresAt) ||
       current.expiresAt < row.expiresAt ||
       current.expiresAt > Date.now() + 905000 ||
       (binding.phase === "check" && current.sequence !== binding.sequence)
@@ -266,6 +267,9 @@ export function createBrowserManager(
           input.expiresAt > Date.now() + 905000
         )
           fail();
+        // The owner's authenticated DB admission carries the renewed expiry.
+        // The subsequent authority check must match it exactly.
+        row.expiresAt = input.expiresAt;
         return run(row, input, binding, signal);
       });
     },
