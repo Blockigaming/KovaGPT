@@ -148,7 +148,9 @@ if (scope === "public") {
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
     await expect(notice).toBeVisible();
     const bounds = (await notice.boundingBox())!;
+    expect(bounds.height).toBeLessThanOrEqual(Math.min(page.viewportSize()!.height * 0.3, 256) + 1);
     for (const button of await notice.getByRole("button").all()) {
+      await button.scrollIntoViewIfNeeded();
       const box = (await button.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(bounds.x);
       expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width);

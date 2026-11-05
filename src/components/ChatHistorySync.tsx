@@ -270,7 +270,7 @@ export function ChatHistorySyncStatus() {
   const controller = controls.get(user.id);
   return (
     <div
-      className="mx-auto mt-2 w-[calc(100%-1.5rem)] max-w-3xl rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
+      className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
       aria-label="Chat history synchronization"
     >
       <p role="status" aria-live="polite" className="font-medium text-foreground/80">
