@@ -2084,6 +2084,10 @@ export function ChatInput({
             {isStreaming ? (
               <button
                 type="button"
+                onPointerDown={(event) => {
+                  // Keep keyboard/viewport geometry stable until this click lands.
+                  if (event.button === 0) event.preventDefault();
+                }}
                 onClick={onStop}
                 className="spec400-send-button"
                 aria-label="Stop generating"
@@ -2095,6 +2099,9 @@ export function ChatInput({
             ) : (
               <button
                 type="button"
+                onPointerDown={(event) => {
+                  if (event.button === 0) event.preventDefault();
+                }}
                 disabled={!canSubmit}
                 onClick={triggerSubmit}
                 className="spec400-send-button"

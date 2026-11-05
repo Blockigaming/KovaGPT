@@ -239,6 +239,7 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
     )
     .toBe(1);
   await page.getByRole("button", { name: "Stop generating" }).click();
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Retry stopped response" }).click();
   await expect
     .poll(() =>
