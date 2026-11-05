@@ -1436,7 +1436,7 @@ export const Route = createFileRoute("/api/chat")({
               stream: true,
               // A client cannot override this value: it is derived only from
               // the server-authorized mode and entitlement above.
-              max_completion_tokens: modelForPolicy(
+              max_completion_tokens: Math.min(modelForPolicy(
                 m.id === "instant"
                   ? "instant"
                   : m.id === "thinking"
@@ -1444,7 +1444,7 @@ export const Route = createFileRoute("/api/chat")({
                     : ["high", "extra_high", "max", "ultra"].includes(m.id)
                       ? "deep"
                       : "normal",
-              ).outputCeiling,
+              ).outputCeiling, isKovaHostedModelId(model) ? 4096 : 128000),
               messages: [
                 {
                   role: "system",
