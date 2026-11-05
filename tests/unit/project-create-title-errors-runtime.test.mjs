@@ -408,6 +408,7 @@ for (const interruption of [
 }
 
 function titleFixture() {
+  let historyReady = true;
   const b = base(),
     requests = [],
     loads = [],
@@ -430,7 +431,7 @@ function titleFixture() {
   const component = loadUiModule(
     "src/components/ChatProjectDialog.tsx",
     {
-      react: b.deps,
+      react: { ...b.deps, useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot() },
       "@tanstack/react-router": { Link: "Link" },
       "@tanstack/react-start": { useServerFn: (fn) => fn },
       "@/components/auth/ClerkSafe": { useUser: () => auth },
@@ -444,7 +445,11 @@ function titleFixture() {
         archiveConversation: async () => true,
         saveConversations: async () => true,
       },
-      "@/lib/chat-history-bridge": { chatHistorySnapshot: () => 0 },
+      "@/lib/chat-history-bridge": {
+        chatHistorySnapshot: () => 0,
+        canSendChatHistory: () => historyReady,
+        CHAT_HISTORY_CHANGED_EVENT: "kova:chat-history-changed",
+      },
       "@/lib/project-chat-move.mjs": { completeProjectChatMove },
       "@/lib/project-workspace.functions": {
         importChatToProject: (args) => {
@@ -481,6 +486,9 @@ function titleFixture() {
     error,
     render,
     find,
+    historyReady: (ready) => {
+      historyReady = ready;
+    },
     async ready() {
       loads.at(-1).resolve([{ id: "project-a", name: "Writable", role: "owner" }]);
       await settle();
@@ -498,6 +506,30 @@ function titleFixture() {
     unmount: () => b.h.unmount(),
   };
 }
+
+test("chat moves wait for writable history and recheck readiness at submission", async () => {
+  const f = titleFixture();
+  await f.ready();
+  f.type("Retained title");
+  // A readiness change can arrive between rendering and the user's click.
+  f.historyReady(false);
+  await f.submit();
+  assert.equal(f.requests.length, 0);
+  f.render();
+  const move = f.find((node) => node.type === "Button" && text(node) === "Move to project");
+  assert.equal(move.props.disabled, true);
+  assert.match(text(f.render()), /Chat history is not ready for moving chats/);
+  assert.equal(f.field().props.value, "Retained title");
+  f.historyReady(true);
+  f.render();
+  const send = f.submit();
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.requests[0].args.data.title, "Retained title");
+  f.requests[0].resolve({ id: "copied" });
+  await send;
+  f.render();
+  assert.match(text(f.render()), /Moved to\s+Writable/);
+});
 
 test("chat title validates on blur, links its field error, and clears immediately on correction", async () => {
   const f = titleFixture();
