@@ -52,9 +52,9 @@ export const MODEL_COST_PER_MTOK = Object.freeze({
   "gpt-5.6-terra": { input: 2, output: 12 },
   "gpt-5.6-sol": { input: 4, output: 20 },
   // Conservative ceiling for hosted Kova models reviewed as of 2026-11-05.
-  "kova-argon-5": { input: 0.20, output: 0.80 },
+  "kova-argon-4.6": { input: 0.20, output: 0.80 },
   "kova-neon-4.6": { input: 0.50, output: 1.50 },
-  "kova-xenon-4.6": { input: 3, output: 15 },
+  "kova-xenon-5": { input: 3, output: 15 },
   "gpt-image-1": { input: 5, output: 40 },
   // Current replacement; text input and image output estimates, checked 2026-10-24.
   "gpt-image-2.5-flare": { input: 5, output: 30 },
