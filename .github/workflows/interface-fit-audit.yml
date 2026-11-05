@@ -9,6 +9,8 @@ on:
       - tests/interface-fit/**
       - tests/e2e/core-app-fixture.ts
       - tests/e2e/hydration.ts
+      - tests/e2e/actual-app-fixture.ts
+      - tests/helpers/loopback-preview-headers.mjs
       - tests/fixtures/azure-local-network-guard.mjs
       - scripts/azure/local-preview.mjs
       - src/**
@@ -60,6 +62,11 @@ jobs:
             printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
           npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+      - name: Verify the actual application hydrates in this engine
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-390" --grep="dark workspace fits: /$"
+          --output="test-results/interface-fit/smoke-${{ matrix.browser }}"
       - name: Check every workspace and settings section in both themes
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts

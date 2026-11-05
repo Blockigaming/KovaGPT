@@ -12,6 +12,7 @@ export default defineConfig({
   testDir: "./tests/interface-fit",
   testMatch: "interface-fit-audit.spec.ts",
   timeout: 60_000,
+  globalTimeout: 600_000,
   workers: 3,
   retries: 0,
   outputDir: `test-results/interface-fit/${scope}-${engine ?? "all"}/screenshots`,
@@ -53,6 +54,15 @@ export default defineConfig({
         },
       },
       {
+        name: "chromium-short-phone",
+        use: {
+          browserName: "chromium",
+          viewport: { width: 320, height: 480 },
+          isMobile: true,
+          hasTouch: true,
+        },
+      },
+      {
         name: "chromium-landscape",
         use: {
           browserName: "chromium",
@@ -76,6 +86,10 @@ export default defineConfig({
       {
         name: "chromium-2560",
         use: { browserName: "chromium", viewport: { width: 2560, height: 1440 } },
+      },
+      {
+        name: "chromium-short-desktop",
+        use: { browserName: "chromium", viewport: { width: 1440, height: 390 } },
       },
       ...(["firefox", "webkit"] as const).flatMap((browserName) => [
         {

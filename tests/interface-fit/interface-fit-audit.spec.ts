@@ -147,6 +147,11 @@ if (scope === "public") {
     await waitForKovaHydration(page);
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
     await expect(notice).toBeVisible();
+    // The fixture ends offline. Wait for that final phase before measuring its
+    // controls, rather than scrolling an element replaced during initialization.
+    await expect(
+      notice.getByRole("button", { name: "Retry chat sync", exact: true }),
+    ).toBeVisible();
     const bounds = (await notice.boundingBox())!;
     expect(bounds.height).toBeLessThanOrEqual(Math.min(page.viewportSize()!.height * 0.3, 256) + 1);
     for (const button of await notice.getByRole("button").all()) {

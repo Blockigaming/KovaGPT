@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { functionNames } from "./server-function-fixture";
+import { loopbackPreviewHeaders } from "../helpers/loopback-preview-headers.mjs";
 export { functionNames } from "./server-function-fixture";
 
 const applicationUrl = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4189");
@@ -32,13 +33,18 @@ export async function fixture(
   tier: "free" | "plus" | "pro" = "free",
   options: { preserveStorageOnReload?: boolean } = {},
 ) {
-  await page
-    .context()
-    .route("**/*", (route) =>
-      new URL(route.request().url()).origin === origin
-        ? route.continue()
-        : route.abort("blockedbyclient"),
-    );
+  await page.context().route("**/*", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.origin !== origin) return route.abort("blockedbyclient");
+    if (url.protocol === "http:" && route.request().resourceType() === "document") {
+      const response = await route.fetch();
+      return route.fulfill({
+        response,
+        headers: loopbackPreviewHeaders(url.href, response.headers()),
+      });
+    }
+    return route.continue();
+  });
   await page.context().routeWebSocket("**/*", (socket) => socket.close());
   if (signedIn) await installAuthenticatedFixture(page, { tier, ...options });
   await page.addInitScript(
