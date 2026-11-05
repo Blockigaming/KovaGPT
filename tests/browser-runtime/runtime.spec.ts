@@ -120,3 +120,12 @@ test("blocks unsafe schemes, private networks, and non-allow-listed origins", as
     );
   }
 });
+
+test("expires inactive browser sessions after fifteen minutes", async () => {
+  const session = await runtime.createSession(sessionOptions());
+  expect(session.idleTimeoutMs).toBe(15 * 60_000);
+  const created = Date.parse(session.lastUsedAt);
+  expect(await runtime.sessions.sweep(created + 14 * 60_000)).toBe(0);
+  expect(await runtime.sessions.sweep(created + 15 * 60_000)).toBe(1);
+  expect(() => runtime.listTabs(session.id, "owner-a")).toThrow(BrowserRuntimeError);
+});
