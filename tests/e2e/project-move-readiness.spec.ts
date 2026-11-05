@@ -35,6 +35,8 @@ test("moving a chat waits for writable device history", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await revealSidebar(page);
+  if (page.viewportSize()!.width >= 1024)
+    await page.getByRole("button", { name: "Open chat Composer review chat", exact: true }).hover();
   await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
   await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
   const choice = page.getByRole("menuitem", { name: "Review project", exact: true });
