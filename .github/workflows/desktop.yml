@@ -30,6 +30,13 @@ jobs:
         with:
           node-version: 24
       - run: npm install --no-audit --no-fund
+      - name: Preserve dependency resolution
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: KovaGPT-desktop-dependency-lock
+          path: desktop/package-lock.json
+          retention-days: 14
       - run: npm test
       - run: npm run dist -- --${{ matrix.arch }}
         env:

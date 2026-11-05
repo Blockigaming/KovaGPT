@@ -91,6 +91,8 @@ export function ComposerDrawingDialog({
         strokes.current = [];
         redo.current = [];
         active.current = null;
+        attaching.current = false;
+        setBusy(false);
         filenameRef.current = `Drawing-${crypto.randomUUID().slice(0, 8)}.png`;
         repaint(canvas);
         setRevision(0);
@@ -133,6 +135,7 @@ export function ComposerDrawingDialog({
     if (!canvas || attaching.current || strokes.current.length === 0) return;
     attaching.current = true;
     active.current = null;
+    repaint();
     setBusy(true);
     setAttachmentError(null);
     try {
@@ -323,9 +326,11 @@ export function ComposerDrawingDialog({
             }}
             onPointerCancel={() => {
               active.current = null;
+              repaint();
             }}
             onLostPointerCapture={() => {
               active.current = null;
+              repaint();
             }}
           />
           <div className="kova-drawing-colors" role="group" aria-label="Drawing colors">
