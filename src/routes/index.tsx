@@ -48,7 +48,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { PanelLeft, X } from "lucide-react";
+import { ArrowDown, PanelLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
@@ -3145,6 +3145,27 @@ function KovaGPT() {
     ) : null;
 
   const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
+  const jumpToLatestButton = showJumpToLatest ? (
+    <Button
+      variant="ghost"
+      size="icon"
+      type="button"
+      onClick={() => {
+        const element = scrollRef.current;
+        if (!element) return;
+        nearBottomRef.current = true;
+        readingAnchorControllerRef.current?.followEnd();
+        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+        element.focus({ preventScroll: true });
+        setShowJumpToLatest(false);
+      }}
+      className="kova-topbar-button h-11 w-11 shrink-0 rounded-full p-2"
+      aria-label="Jump to latest message"
+      title="Jump to latest message"
+    >
+      <ArrowDown className="h-5 w-5" aria-hidden="true" />
+    </Button>
+  ) : null;
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
       <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
@@ -3188,6 +3209,7 @@ function KovaGPT() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
+          {jumpToLatestButton}
           {conversationActions()}
           {isLoaded && isSignedIn && !chatStarted && (
             <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
@@ -3295,7 +3317,16 @@ function KovaGPT() {
           userTier={tier}
           temporaryChat={tempChat}
           chatStarted={chatStarted}
-          conversationActions={conversationActions(true)}
+          conversationActions={
+            jumpToLatestButton ? (
+              <>
+                {jumpToLatestButton}
+                {conversationActions(true)}
+              </>
+            ) : (
+              conversationActions(true)
+            )
+          }
           onTemporaryChatChange={(enabled, trigger) => {
             temporaryTriggerRef.current = trigger;
             temporaryReturnUrlRef.current = window.location.href;
@@ -3486,25 +3517,6 @@ function KovaGPT() {
                   />
                 </Suspense>
                 <div className="spec400-composer-dock relative shrink-0">
-                  {showJumpToLatest && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() => {
-                        const el = scrollRef.current;
-                        if (!el) return;
-                        nearBottomRef.current = true;
-                        readingAnchorControllerRef.current?.followEnd();
-                        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-                        setShowJumpToLatest(false);
-                      }}
-                      className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 border border-border bg-card shadow-sm"
-                      aria-label="Jump to latest message"
-                    >
-                      Jump to latest
-                    </Button>
-                  )}
                   {editingMessage?.conversationId === active.id && (
                     <div
                       className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
