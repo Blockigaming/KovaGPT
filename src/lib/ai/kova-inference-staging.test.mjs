@@ -14,13 +14,13 @@ test("sends authenticated staging request with expected model", async () => {
   const response = await requestStagingInference({
     endpoint: "https://inference.example.com/",
     token: "test-staging-token-123",
-    modelId: "kova-argon-5",
+    modelId: "kova-argon-4.6",
     body: { messages: [{ role: "user", content: "hello" }], stream: true },
     fetchImpl: async (url, init) => {
       called = true;
       assert.equal(url, "https://inference.example.com/v1/chat/completions");
       assert.equal(init.headers.Authorization, "Bearer test-staging-token-123");
-      assert.equal(JSON.parse(init.body).model, "kova-argon-5");
+      assert.equal(JSON.parse(init.body).model, "kova-argon-4.6");
       return new Response("ok", { status: 200 });
     },
   });
