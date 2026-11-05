@@ -37,7 +37,8 @@ export async function fixture(
     const url = new URL(route.request().url());
     if (url.origin !== origin) return route.abort("blockedbyclient");
     if (url.protocol === "http:" && route.request().resourceType() === "document") {
-      const response = await route.fetch();
+      // Let the browser follow redirects so its URL and SSR markup agree.
+      const response = await route.fetch({ maxRedirects: 0 });
       return route.fulfill({
         response,
         headers: loopbackPreviewHeaders(url.href, response.headers()),
