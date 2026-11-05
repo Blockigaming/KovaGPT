@@ -97,7 +97,7 @@ test("enforces permissions and cleans expired sessions, artifacts, and processes
     code: "permission_denied",
   });
 
-  const expiring = await runtime.createSession({ ...sessionOptions(), lifetimeMs: 2_000 });
+  const expiring = await runtime.createSession({ ...sessionOptions(), idleTimeoutMs: 2_000 });
   const tab = await runtime.createTab(expiring.id, "owner-a", origin);
   await runtime.screenshot(expiring.id, "owner-a", tab.id);
   expect(await runtime.sessions.sweep(Date.now() + 3_000)).toBe(1);
