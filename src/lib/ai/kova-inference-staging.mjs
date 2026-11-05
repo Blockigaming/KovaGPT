@@ -4,7 +4,7 @@
  * Call only from an authenticated, server-side Kova route after authorization.
  */
 const ALLOWED_PATHS = new Set(["/v1/models", "/v1/chat/completions"]);
-const MODEL_IDS = new Set(["kova-xenon-1", "kova-neon-1", "kova-argon-1"]);
+const MODEL_IDS = new Set(["kova-xenon-4.6", "kova-neon-4.6", "kova-argon-5"]);
 
 export function validateInferenceEndpoint(endpoint) {
   if (typeof endpoint !== "string") throw new Error("inference_endpoint_required");
