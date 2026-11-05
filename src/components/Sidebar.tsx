@@ -463,7 +463,13 @@ export function Sidebar({
     const move = (event: TouchEvent) => {
       if (!gesture) return;
       const touch = event.touches[0];
-      if (event.touches.length !== 1 || touch.identifier !== gesture.id || !isMobileViewport()) {
+      if (
+        event.touches.length !== 1 ||
+        touch.identifier !== gesture.id ||
+        !isMobileViewport() ||
+        !window.getSelection()?.isCollapsed ||
+        document.querySelector('[aria-modal="true"], dialog[open]')
+      ) {
         reset();
         return;
       }
@@ -500,7 +506,12 @@ export function Sidebar({
     let start: { id: number; x: number; y: number; time: number } | null = null;
     const onStart = (event: TouchEvent) => {
       start = null;
-      if (!isMobileViewport() || event.touches.length !== 1 || !window.getSelection()?.isCollapsed)
+      if (
+        !isMobileViewport() ||
+        drawer.inert ||
+        event.touches.length !== 1 ||
+        !window.getSelection()?.isCollapsed
+      )
         return;
       const target = event.target;
       if (
@@ -523,6 +534,7 @@ export function Sidebar({
     const onMove = (event: TouchEvent) => {
       if (!start) return;
       if (
+        drawer.inert ||
         event.touches.length !== 1 ||
         !window.getSelection()?.isCollapsed ||
         event.timeStamp - start.time > 700

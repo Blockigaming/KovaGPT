@@ -105,6 +105,7 @@ test("quick deliberate right swipe closes once and removes listeners on cleanup"
 for (const scenario of [
   "selected before start",
   "selection during gesture",
+  "suspended drawer",
   "long press",
   "vertical scroll",
   "horizontal scroll",
@@ -122,6 +123,7 @@ for (const scenario of [
     }
     f.dispatch("touchstart");
     if (scenario === "selection during gesture") f.select();
+    if (scenario === "suspended drawer") f.target.parentElement.inert = true;
     if (scenario === "vertical scroll") f.dispatch("touchmove", { x: 190, y: 220, time: 50 });
     if (scenario === "multiple touches") f.dispatch("touchmove", { count: 2, time: 50 });
     if (scenario === "cancelled") f.dispatch("touchcancel");
