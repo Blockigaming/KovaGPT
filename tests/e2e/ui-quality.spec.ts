@@ -278,7 +278,12 @@ for (const theme of ["light", "dark"] as const) {
     );
     expect(hydrationErrors).toEqual([]);
     await page.evaluate(() => document.fonts.ready);
-    await expect(page.locator(".public-classroom img")).toHaveJSProperty("complete", true);
+    const heroImage = page.locator(".public-classroom img");
+    await expect(heroImage).toHaveJSProperty("complete", true);
+    await expect(heroImage).toHaveJSProperty("naturalWidth", 1312);
+    await page.locator(".public-website img").evaluateAll(async (images) => {
+      await Promise.all(images.map((image) => (image as HTMLImageElement).decode()));
+    });
     await expect(page.locator("#public-google-status")).toContainText("unavailable");
     await expect(page.locator("#public-github-status")).toContainText("coming soon");
     await expect(page).toHaveScreenshot(`account-entry-${theme}.png`, {

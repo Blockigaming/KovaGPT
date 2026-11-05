@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -18,10 +18,19 @@ import {
   loadConversations,
   saveConversations,
 } from "@/lib/chat-store";
-import { chatHistorySnapshot } from "@/lib/chat-history-bridge";
+import {
+  canSendChatHistory,
+  CHAT_HISTORY_CHANGED_EVENT,
+  chatHistorySnapshot,
+} from "@/lib/chat-history-bridge";
 import { completeProjectChatMove } from "@/lib/project-chat-move.mjs";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { importChatToProject } from "@/lib/project-workspace.functions";
+
+function subscribeHistoryReadiness(onChange: () => void) {
+  window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, onChange);
+  return () => window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, onChange);
+}
 
 export function ChatProjectDialog({
   open,
@@ -36,6 +45,11 @@ export function ChatProjectDialog({
 }) {
   const { user, isLoaded, isSignedIn } = useUser();
   const principalId = isLoaded && isSignedIn ? (user?.id ?? "") : "";
+  const historyReady = useSyncExternalStore(
+    subscribeHistoryReadiness,
+    () => canSendChatHistory(principalId),
+    () => false,
+  );
   // The selected sidebar conversation belongs to the account that opened this dialog.
   // A later principal must explicitly select a chat again before any copy is allowed.
   const openedFor = useRef(principalId);
@@ -162,6 +176,7 @@ export function ChatProjectDialog({
       loading ||
       !open ||
       !canAccess ||
+      !canSendChatHistory(principalId) ||
       !conversation ||
       !selected ||
       !scope.open ||
@@ -385,12 +400,17 @@ export function ChatProjectDialog({
             )}
           </div>
         )}
+        {canAccess && !added && !historyReady && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Chat history is not ready for moving chats. Check the sync status.
+          </p>
+        )}
         <div className="flex justify-end gap-2">
           <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             {added ? "Done" : "Cancel"}
           </Button>
           {canAccess && !added && projects.length > 0 && !loadError && (
-            <Button disabled={busy || loading || !projectId} onClick={submit}>
+            <Button disabled={busy || loading || !projectId || !historyReady} onClick={submit}>
               {busy ? "Moving…" : "Move to project"}
             </Button>
           )}
