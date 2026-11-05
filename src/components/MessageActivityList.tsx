@@ -4,7 +4,7 @@ import type { Activity } from "@/lib/chat-store";
 
 export function MessageActivityList({ activities }: { activities?: Activity[] }) {
   const rows = activities?.filter((activity) => activity.tool !== "scheduled_task") ?? [];
-  if (!rows.length) return null;\n  const completed = rows.filter((activity) => activity.status === "done").length;\n  const running = rows.find((activity) => activity.status === "running");
+  if (!rows.length) return null;
   return (
     <ol
       className="kova-activity-list"
@@ -46,14 +46,22 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
             )}
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
-              <span>{activity.label}</span>\n              {activity.browser?.hostname && (\n                <span className="ml-2 inline-flex rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground" title="Observed browser website">\n                  {activity.browser.hostname}\n                </span>\n              )}
+              <span>{activity.label}</span>
+              {activity.browser?.hostname && (
+                <span className="ml-2 inline-flex rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground" title="Observed browser website">
+                  {activity.browser.hostname}
+                </span>
+              )}
             </span>
             {(activity.status === "failed" || activity.status === "canceled") && (
               <span className="shrink-0 text-xs" aria-hidden="true">
                 {status}
               </span>
             )}
-            {activity.status === "done" && (\n              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-label="Completed" />\n            )}\n            {activity.status === "running" && (
+            {activity.status === "done" && (
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-label="Completed" />
+            )}
+            {activity.status === "running" && (
               <Loader2
                 className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
                 aria-hidden="true"
