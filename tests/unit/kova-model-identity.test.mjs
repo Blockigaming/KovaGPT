@@ -58,11 +58,11 @@ test("later replies suppress repeated introductions and distinguish branding fro
   assert.match(prompt, /Do not repeat an introduction unless the user asks/);
   assert.doesNotMatch(prompt, /On the first assistant reply/);
   assert.match(prompt, /configured provider is Azure OpenAI/);
-  assert.match(prompt, /not an OpenAI model ID or proof of separately trained weights/);
+  assert.match(prompt, /not a foundation-model ID or proof of separately trained weights/);
   assert.match(prompt, /Vary the surrounding wording naturally/);
 });
 
-test("unknown identities and unsafe metadata fail closed without echoing input", () => {
+test("hosted Kova name discloses operator-confirmed underlying inference when asked", () => {\n  const prompt = buildKovaModelIdentityInstructions({\n    role: "DEFAULT_CHAT", modelId: "kova-argon-5", provider: "openrouter", hasAssistantHistory: false,\n  });\n  assert.match(prompt, /Kova Argon 5/);\n  assert.match(prompt, /OpenRouter \\(third-party hosted inference\\)/);\n});\n\ntest("unknown identities and unsafe metadata fail closed without echoing input", () => {
   for (const role of ["UTILITY", "EMBEDDING", "cosmo", "__proto__", "constructor"])
     assert.throws(() => kovaModelIdentityForRole(role), /^Error: kova_model_identity_unavailable$/);
   const valid = {
