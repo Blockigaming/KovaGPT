@@ -6,8 +6,8 @@
  */
 export const HOSTED_MODEL_MAP = Object.freeze({
   "kova-xenon-4.6": "moonshotai/kimi-k3",
-  "kova-neon-4.6": "deepseek/deepseek-v4.1-flash-1017",
-  "kova-argon-5": "qwen/qwen3.5-flash",
+  "kova-neon-4.6": "meta-llama/llama-4-maverick",
+  "kova-argon-5": "deepseek/deepseek-v4-flash-0731",
 });
 
 const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -15,7 +15,7 @@ const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 // Server-controlled provider price caps in USD per million tokens.
 const MODEL_PRICE_CEILINGS = Object.freeze({
   "kova-argon-5": { prompt: 0.20, completion: 0.80 },
-  "kova-neon-4.6": { prompt: 0.30, completion: 1.20 },
+  "kova-neon-4.6": { prompt: 0.50, completion: 1.50 },
   "kova-xenon-4.6": { prompt: 3.00, completion: 15.00 },
 });
 const MODEL_OUTPUT_LIMITS = Object.freeze({
@@ -61,6 +61,8 @@ export function prepareKovaHostedRequest(value) {
         throw new Error("invalid_hosted_image");
     }
   }
+  if (value.model === "kova-argon-5" && totalImages > 0)
+    throw new Error("hosted_model_vision_unavailable");
   if (value.tools !== undefined && (!Array.isArray(value.tools) || value.tools.length > 64))
     throw new Error("invalid_hosted_tools");
   if (value.stream !== undefined && typeof value.stream !== "boolean")
@@ -73,8 +75,8 @@ export function prepareKovaHostedRequest(value) {
     throw new Error("conflicting_hosted_token_limit");
   // Reasoning effort is an operator policy, never copied from untrusted callers.
   // The model's full depth is only available to the premium Xenon tier.
-  const effort = value.model === "kova-xenon-4.6" ? "max"
-    : value.model === "kova-neon-4.6" ? "medium" : null;
+  // Llama 4 Maverick does not expose a native reasoning-effort parameter.
+  const effort = value.model === "kova-xenon-4.6" ? "max" : null;
   const { model, max_completion_tokens, reasoning: _discard, ...rest } = value;
   const body = JSON.stringify({
     ...rest,
