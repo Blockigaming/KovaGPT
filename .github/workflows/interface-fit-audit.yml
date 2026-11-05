@@ -52,10 +52,13 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check candidate formatting
+        run: npm run format:check
       - name: Check the focused UI runtime regressions
         run: >-
           node --test tests/unit/chat-reading-anchor.test.mjs
           tests/unit/response-draft-actions-runtime.test.mjs tests/unit/jump-latest-placement.test.mjs
+          tests/unit/chat-history-presentation.test.mjs
       - name: Build the actual Node application
         run: npm run build:azure
       - name: Install browser and native libraries

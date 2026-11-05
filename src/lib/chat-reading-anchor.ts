@@ -204,6 +204,7 @@ export function createTranscriptReadingAnchorController(
   let knownTop = element.scrollTop;
   let userIntentPending = false;
   let gestureActive = false;
+  let controlGestureActive = false;
   const sizes = new Map<Element, [number, number]>();
   const previousOverflowAnchor = element.style.overflowAnchor;
   // This controller coordinates all observed transcript/message reflows, avoiding
@@ -236,7 +237,7 @@ export function createTranscriptReadingAnchorController(
       }) ?? null;
   };
   const compensate = () => {
-    if (!current() || captureFrame !== null || !anchor) return;
+    if (!current() || captureFrame !== null || controlGestureActive || !anchor) return;
     const result = restoreTranscriptReadingAnchor(element, anchor);
     knownTop = result.top;
     if (result.clamped || result.reason === "message-removed") capture();
@@ -270,8 +271,16 @@ export function createTranscriptReadingAnchorController(
       )
     )
       return;
-    if (event.type === "touchstart" || event.type === "pointerdown") gestureActive = true;
-    else {
+    if (event.type === "touchstart" || event.type === "pointerdown") {
+      gestureActive = true;
+      const target = event.target as Element | null;
+      controlGestureActive = Boolean(
+        target?.closest?.(
+          "button, input, textarea, select, label, a[href], [role=slider], [contenteditable=true]",
+        ),
+      );
+      if (controlGestureActive) queueCapture();
+    } else {
       userIntentPending = true;
       if (intentFrame === null)
         intentFrame =
@@ -281,8 +290,16 @@ export function createTranscriptReadingAnchorController(
           }) ?? null;
     }
   };
+  const onFocusIn = (event: Event) => {
+    // Native focus navigation wins over a cached reading position.
+    if (event.target !== element) queueCapture();
+  };
   const onGestureEnd = () => {
     gestureActive = false;
+    if (controlGestureActive) {
+      controlGestureActive = false;
+      queueCapture();
+    }
   };
   const observer = window?.ResizeObserver
     ? new window.ResizeObserver((entries) => {
@@ -330,6 +347,7 @@ export function createTranscriptReadingAnchorController(
     : null;
   mutations?.observe(element, { childList: true, subtree: true });
   element.addEventListener("scroll", onScroll, { passive: true });
+  element.addEventListener("focusin", onFocusIn);
   for (const type of ["wheel", "touchstart", "pointerdown", "keydown"])
     element.addEventListener(type, onIntent, { passive: true });
   for (const type of ["touchend", "touchcancel", "pointerup", "pointercancel"])
@@ -353,6 +371,7 @@ export function createTranscriptReadingAnchorController(
       mutations?.disconnect();
       sizes.clear();
       element.removeEventListener("scroll", onScroll);
+      element.removeEventListener("focusin", onFocusIn);
       for (const type of ["wheel", "touchstart", "pointerdown", "keydown"])
         element.removeEventListener(type, onIntent);
       for (const type of ["touchend", "touchcancel", "pointerup", "pointercancel"])

@@ -21,7 +21,25 @@ import {
   dispatchPrincipalBrowserStorageCleared,
 } from "@/lib/principal-browser-storage.mjs";
 
-const EMPTY: ChatHistoryStatus = {
+type ChatHistoryPresentation = ChatHistoryStatus & {
+  recoveryPhase?: ChatHistoryStatus["phase"];
+};
+
+export function chatHistoryPresentation(
+  previous: ChatHistoryPresentation,
+  next: ChatHistoryStatus,
+): ChatHistoryPresentation {
+  const recoverable = ["offline", "device_error", "blocked"].includes(next.phase);
+  const waiting = ["connecting", "saving_device", "syncing", "pending"].includes(next.phase);
+  const recoveryPhase = recoverable
+    ? next.phase
+    : previous.ownerId === next.ownerId && waiting
+      ? previous.recoveryPhase
+      : undefined;
+  return { ...next, recoveryPhase };
+}
+
+const EMPTY: ChatHistoryPresentation = {
   ownerId: null,
   phase: "local",
   error: null,
@@ -39,7 +57,7 @@ const subscribe = (listener: () => void) => {
   };
 };
 const publish = (value: ChatHistoryStatus) => {
-  current = value;
+  current = chatHistoryPresentation(current, value);
   for (const listener of listeners) listener();
 };
 
@@ -226,6 +244,7 @@ export function ChatHistorySyncStatus() {
     () => EMPTY,
   );
   const [busy, setBusy] = useState(false);
+  const working = busy || ["connecting", "saving_device", "syncing"].includes(state.phase);
   if (!user || state.ownerId !== user.id) return null;
   const labels: Record<string, string> = {
     local: "Earlier chat history remains on this device",
@@ -245,6 +264,7 @@ export function ChatHistorySyncStatus() {
     cleared: "Device history was cleared. Reload to resume account sync.",
   };
   const visible =
+    Boolean(state.recoveryPhase) ||
     state.migration > 0 ||
     state.conflicts.length > 0 ||
     ["offline", "device_error", "blocked", "other_tab", "unavailable", "cleared"].includes(
@@ -253,7 +273,7 @@ export function ChatHistorySyncStatus() {
   if (!visible) {
     return (
       <p className="sr-only" role="status" aria-live="polite">
-        {labels[state.phase] ?? "Chat sync is pending"}
+        {labels[state.recoveryPhase ?? state.phase] ?? "Chat sync is pending"}
       </p>
     );
   }
@@ -272,9 +292,10 @@ export function ChatHistorySyncStatus() {
     <div
       className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
       aria-label="Chat history synchronization"
+      aria-busy={working || undefined}
     >
       <p role="status" aria-live="polite" className="font-medium text-foreground/80">
-        {labels[state.phase] ?? "Chat sync is pending"}
+        {labels[state.recoveryPhase ?? state.phase] ?? "Chat sync is pending"}
       </p>
       {state.migration > 0 && (
         <div className="mt-2 space-y-2">
@@ -286,21 +307,29 @@ export function ChatHistorySyncStatus() {
             data-ui-reference="chatgpt.chat-history.control"
             variant="outline"
             className="rounded-md   font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
-            disabled={busy || !controller}
+            disabled={working || !controller}
             onClick={() => void act(() => controller?.migrate())}
           >
             Save existing chats to my account
           </Button>
         </div>
       )}
-      {["offline", "device_error", "blocked"].includes(state.phase) && (
+      {state.recoveryPhase && (
         <Button
           data-ui-reference="chatgpt.chat-history.control"
           variant="outline"
           className="mt-1 rounded-md   font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
-          disabled={busy || !controller}
+          disabled={working || !controller}
           onClick={() => void act(() => controller?.retry())}
         >
+          <span
+            className="inline-flex h-4 w-4 shrink-0 items-center justify-center"
+            aria-hidden="true"
+          >
+            {working && (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" />
+            )}
+          </span>
           Retry chat sync
         </Button>
       )}
@@ -347,7 +376,7 @@ export function ChatHistorySyncStatus() {
             data-ui-reference="chatgpt.chat-history.control"
             variant="link"
             className="mr-3 underline"
-            disabled={busy}
+            disabled={working}
             onClick={() => void act(() => controller?.resolve(conflict.id, "cloud"))}
           >
             Use account version
@@ -356,7 +385,7 @@ export function ChatHistorySyncStatus() {
             data-ui-reference="chatgpt.chat-history.control"
             variant="link"
             className="underline"
-            disabled={busy}
+            disabled={working}
             onClick={() => void act(() => controller?.resolve(conflict.id, "keep"))}
           >
             {conflict.epochChanged ? "Save device draft as a new chat" : "Keep device version"}
