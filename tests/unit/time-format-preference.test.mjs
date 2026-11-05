@@ -290,7 +290,7 @@ for (const [path, scope, expectedCalls] of [
       usage: { resetsAt: instant },
       subSummary: { currentPeriodEnd: instant },
     },
-    5,
+    3,
   ],
 ]) {
   test(`${path} uses the shared preference for every scoped timestamp consumer`, () => {
@@ -321,7 +321,11 @@ for (const [path, scope, expectedCalls] of [
           );
       }
     if (path.endsWith("SettingsDialog.tsx")) {
-      assert.match(source, /Accounting resets at midnight UTC/);
+      assert.match(source, /<PlanUsageBars usage=\{usage\} \/>/);
+      assert.match(
+        readFileSync("src/components/PlanUsageBars.tsx", "utf8"),
+        /file limits reset at midnight UTC/,
+      );
       assert.doesNotMatch(source, /currentPeriodEnd\)\.toLocaleDateString\(\)/);
       assert.match(source, /timeFormat=\{settings.timeFormat\}/);
     }

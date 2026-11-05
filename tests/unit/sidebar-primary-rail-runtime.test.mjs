@@ -89,6 +89,7 @@ function fixture(options = {}) {
       calls.push(["local-search", typeof value === "function" ? value(false) : value]),
     searchOpen: false,
     cancelPendingSelection: () => {},
+    closeAfterMobileNavigation: () => {},
     onOpenSettings: (tab) => calls.push(["settings", tab]),
     openRailPersonalization: (target) => calls.push(["customize", target]),
     requestAnimationFrame: (fn) => fn(),

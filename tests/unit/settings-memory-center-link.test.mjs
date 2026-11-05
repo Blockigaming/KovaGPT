@@ -51,13 +51,18 @@ test("Settings Memory exposes one ordinary, clearly named 44px Memory Center nav
 
 test("Memory Center navigation only dismisses Settings and leaves routing and settings semantics intact", () => {
   const source = attr(link, "onClick").expression.getText(settings);
+  const handler = findAll(
+    settings,
+    (node) => ts.isVariableDeclaration(node) && node.name.getText(settings) === source,
+  )[0].initializer.getText(settings);
   const values = [];
   const click = new Function(
     "onOpenChange",
-    ts.transpileModule(`return (${source});`, {
+    "page",
+    ts.transpileModule(`return (${handler});`, {
       compilerOptions: { target: ts.ScriptTarget.ES2022 },
     }).outputText,
-  )((value) => values.push(value));
+  )((value) => values.push(value), false);
   click({
     preventDefault() {
       throw new Error("Ordinary navigation must remain available");

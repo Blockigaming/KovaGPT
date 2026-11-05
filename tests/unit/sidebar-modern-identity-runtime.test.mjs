@@ -89,7 +89,7 @@ test("empty chat history reports one accurate state without duplicate guest copy
   );
 });
 
-test("guest sidebar exposes one Help action, Subscriptions and concise login", () => {
+test("guest sidebar exposes Help, Settings and concise login", () => {
   const calls = [];
   const dependencies = {
     ...shared,
@@ -106,13 +106,15 @@ test("guest sidebar exposes one Help action, Subscriptions and concise login", (
   assert.equal(helpButtons.length, 1);
   helpButtons[0].props.onClick();
   assert.deepEqual(calls, ["close", "help"]);
-  assert.equal(all(tree).find((node) => node.type === "a").props.href, "/pricing");
-  assert.ok(all(tree).some((node) => node.type === "a" && text(node) === "Subscriptions"));
+  const settings = all(tree).find((node) => node.type === "button" && text(node) === "Settings");
+  assert.ok(settings);
+  settings.props.onClick();
+  assert.deepEqual(calls, ["close", "help", "close", "general"]);
   assert.ok(all(tree).some((node) => node.type === "button" && text(node) === "Log in"));
   assert.ok(!all(tree).some((node) => node.props["aria-label"] === "Account menu"));
 });
 
-test("homepage can omit its duplicate guest login while preserving Help and Subscriptions", () => {
+test("homepage can omit its duplicate guest login while preserving Help and Settings", () => {
   const tree = renderSidebar(footer, {
     ...shared,
     hideGuestLogin: true,
@@ -124,7 +126,7 @@ test("homepage can omit its duplicate guest login while preserving Help and Subs
   });
   assert.ok(!all(tree).some((node) => node.type === "button" && text(node) === "Log in"));
   assert.ok(all(tree).some((node) => node.type === "button" && text(node) === "Help"));
-  assert.ok(all(tree).some((node) => node.type === "a" && text(node) === "Subscriptions"));
+  assert.ok(all(tree).some((node) => node.type === "button" && text(node) === "Settings"));
 });
 
 const mobileDeclaration = findNode(

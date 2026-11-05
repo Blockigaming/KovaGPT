@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 const source = readFileSync(new URL("../../src/routes/index.tsx", import.meta.url), "utf8");
 test("jump control anchors above the growing composer instead of viewport coordinates", () => {
-  assert.match(source, /relative shrink-0 lg:pb-2 lg:pt-2[\s\S]*?showJumpToLatest &&/);
+  assert.match(source, /spec400-composer-dock relative shrink-0[\s\S]*?showJumpToLatest &&/);
   const button = source.slice(
     source.indexOf("{showJumpToLatest && ("),
     source.indexOf("{editingMessage?.conversationId"),

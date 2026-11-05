@@ -65,6 +65,18 @@ test("comparison keeps each tier's mode and allowance data in the correct column
     ]),
   );
   const { PlanComparison } = loadUiModule("src/components/public/PlanComparison.tsx", {
+    "@/lib/plan-usage-policy.mjs": {
+      chatUsageWindows: (tier) => [
+        {
+          id: "weekly",
+          regularLimit: tiers.indexOf(tier) + 10,
+          thinkingLimit: tiers.indexOf(tier) + 20,
+        },
+      ],
+      DAILY_PLAN_ALLOWANCES: Object.fromEntries(
+        tiers.map((tier, index) => [tier, { images: index + 30, uploads: index + 40 }]),
+      ),
+    },
     "@/lib/capability-registry": {
       CAPABILITY_REGISTRY: { plans, modesByTier },
       PLAN_ALLOWANCE_COPY: allowances,
@@ -72,10 +84,20 @@ test("comparison keeps each tier's mode and allowance data in the correct column
   });
   const tree = PlanComparison();
   const rows = elements(tree, (node) => node.type === "tbody")[0].props.children.flat();
-  for (const [index, key] of ["mode", "chat", "image", "upload", "storage"].entries()) {
+  const expected = [
+    tiers.map((tier) => `${tier}-mode`),
+    tiers.map((_, index) => `${index + 10} / week`),
+    tiers.map((_, index) => `${index + 20} / week`),
+    tiers.map((_, index) => String(index + 30)),
+    tiers.map((_, index) => String(index + 40)),
+    tiers.map((tier) => `${tier}-storage`),
+  ];
+  for (const [index, values] of expected.entries()) {
     assert.deepEqual(
-      elements(rows[index], (node) => node.type === "td").map(text),
-      tiers.map((tier) => `${tier}-${key}`),
+      elements(rows[index], (node) => node.type === "td").map((cell) =>
+        text(cell).replace(/\s+/g, " ").trim(),
+      ),
+      values,
     );
   }
   assert.equal(elements(tree, (node) => node.props.role === "region")[0].props.tabIndex, 0);

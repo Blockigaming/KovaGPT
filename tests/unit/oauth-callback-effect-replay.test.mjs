@@ -69,7 +69,11 @@ function dialogFixture({ mode = "dual", github = true, rejected = false, inline 
       }),
     {
       globals: {
-        window: { location: { assign: (url) => redirects.push(url) } },
+        window: {
+          addEventListener() {},
+          removeEventListener() {},
+          location: { assign: (url) => redirects.push(url) },
+        },
       },
       modules: {
         "@/components/ui/dialog": {

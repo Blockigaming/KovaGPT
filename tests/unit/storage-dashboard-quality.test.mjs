@@ -117,11 +117,26 @@ test("guest browser estimates include the local chat workspace without reading a
 function storageServer({
   bytes = { data: { bytes_used: 128 }, error: null },
   library = { count: 2, error: null },
-  subscription = { data: { effectiveTier: "plus" }, error: null },
+  subscription = { data: "plus", error: null },
 } = {}) {
   const queries = [];
   const auth = Symbol("auth");
+  const admin = {
+    rpc(name, args) {
+      assert.equal(name, "effective_user_plan_tier");
+      assert.equal(args._user_id, "current-owner");
+      assert.deepEqual(Object.keys(args), ["_user_id"]);
+      return { abortSignal: async () => subscription };
+    },
+  };
+  const entitlement = loadUiModule(
+    "src/lib/billing-entitlement.server.ts",
+    { "@/lib/supabase-loose": { loose: (client) => client } },
+    { AbortSignal },
+  );
   const module = loadUiModule("src/utils/storage.functions.ts", {
+    "@/lib/billing-entitlement.server": entitlement,
+    "@/integrations/supabase/client.server": { supabaseAdmin: admin },
     "@tanstack/react-start": {
       createServerFn({ method }) {
         assert.equal(method, "GET");
@@ -161,10 +176,6 @@ function storageServer({
                 maybeSingle: async () => result,
                 then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
               };
-            },
-            rpc: async (name) => {
-              assert.equal(name, "current_subscription_summary");
-              return subscription;
             },
           },
         },
@@ -210,9 +221,9 @@ test("query errors and malformed counts never masquerade as empty cloud storage"
 
 test("unknown billing cannot invent a free or paid storage quota", async () => {
   for (const subscription of [
-    { data: { effectiveTier: "professional" }, error: null },
-    { data: { effectiveTier: "pro" }, error: { message: "unavailable" } },
-    { data: [{ effectiveTier: "pro" }], error: null },
+    { data: "professional", error: null },
+    { data: "pro", error: { message: "unavailable" } },
+    { data: ["pro"], error: null },
     { data: null, error: null },
   ]) {
     const result = await storageServer({ subscription }).run();

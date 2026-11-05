@@ -73,6 +73,7 @@ import {
   type SidebarLayout,
 } from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
+import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 import { isClearSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
 
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
@@ -151,6 +152,7 @@ export function Sidebar({
   const drawerRef = useRef<HTMLElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const navigationOwnsFocusRef = useRef(false);
   const renameDialogRef = useRef<HTMLDialogElement | null>(null);
   const chatOptionsRefs = useRef(new globalThis.Map<string, HTMLButtonElement>());
   const renameReturnFocusRef = useRef<{ target: HTMLButtonElement | null; context: string } | null>(
@@ -363,7 +365,7 @@ export function Sidebar({
     changeLayout({ shortcuts: [...shortcuts] });
   const openChatSearch = () => {
     if (onOpenWorkspaceSearch) {
-      cancelPendingSelection();
+      closeAfterMobileNavigation();
       onOpenWorkspaceSearch();
     } else setSearchOpen((value) => !value);
   };
@@ -573,6 +575,7 @@ export function Sidebar({
 
   useEffect(() => {
     if (!open || !mobileViewport) return;
+    navigationOwnsFocusRef.current = false;
     lastFocusedRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const content = drawerRef.current
@@ -675,6 +678,7 @@ export function Sidebar({
       document.body.style.overflow = previousOverflow;
       if (content) content.inert = previousInert;
       document.removeEventListener("keydown", onKeyDown);
+      if (navigationOwnsFocusRef.current) return;
       requestAnimationFrame(() => {
         // A newly opened account dialog owns focus; do not pull it back underneath.
         if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
@@ -709,6 +713,16 @@ export function Sidebar({
     return () => document.removeEventListener("keydown", escape);
   }, [open, mobileViewport, signedIn]);
 
+  const closeAfterMobileNavigation = (destination?: string) => {
+    cancelPendingSelection();
+    if (!open || !isMobileViewport()) return;
+    if (destination)
+      navigationOwnsFocusRef.current = requestDrawerNavigationFocus({
+        destination,
+        source: drawerRef.current,
+      });
+    swipeToggleRef.current();
+  };
   const closeRename = () => {
     const returnFocus = renameReturnFocusRef.current;
     renameReturnFocusRef.current = null;
@@ -762,7 +776,7 @@ export function Sidebar({
           event.altKey
         )
           return;
-        cancelPendingSelection();
+        closeAfterMobileNavigation(to);
       }}
     >
       {icon(Icon)}
@@ -818,7 +832,7 @@ export function Sidebar({
                 cancelPendingSelection();
                 const select = () => {
                   selectTimerRef.current = null;
-                  cancelPendingSelection();
+                  closeAfterMobileNavigation("/");
                   onSelect(conversation.id);
                 };
                 // Keep double-click rename on the current page; keyboard and touch stay immediate.
@@ -1599,7 +1613,7 @@ export function Sidebar({
                   aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
                   onClick={() => {
                     if (onOpenWorkspaceSearch) {
-                      cancelPendingSelection();
+                      closeAfterMobileNavigation();
                       onOpenWorkspaceSearch();
                     } else setSearchOpen((value) => !value);
                   }}
@@ -1723,7 +1737,7 @@ export function Sidebar({
                     type="button"
                     className={navRow()}
                     onClick={() => {
-                      cancelPendingSelection();
+                      closeAfterMobileNavigation();
                       onOpenHelp();
                     }}
                   >
@@ -1735,7 +1749,7 @@ export function Sidebar({
                     className={navRow()}
                     aria-label="Settings"
                     onClick={() => {
-                      cancelPendingSelection();
+                      closeAfterMobileNavigation();
                       onOpenSettings("general");
                     }}
                   >

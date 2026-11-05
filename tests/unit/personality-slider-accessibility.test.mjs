@@ -32,7 +32,7 @@ const { PersonalitySliders } = load("src/components/PersonalitySliders.tsx", {
   "@/components/ui/button": { Button: "button" },
   "@/components/ui/switch": { Switch: "button" },
   "@tanstack/react-router": { Link: "a" },
-  "@/hooks/useTier": { useTier: () => ({ tier: "plus" }), tierRank: () => 1 },
+  "@/hooks/useTier": { useTier: () => ({ tier: "pro" }), tierRank: () => 2 },
   "@/lib/principal-browser-storage.mjs": {
     browserStoragePrincipal: (key) => key,
     principalScopedStorageKey: (key, owner) => `${owner}:${key}`,
@@ -85,7 +85,8 @@ test("every personality slider thumb names its trait, describes its hint, and ex
     assert.equal(attr(slider, "aria-valuetext"), "5 out of 10");
     assert.equal(attr(slider, "aria-valuemin"), "1");
     assert.equal(attr(slider, "aria-valuemax"), "10");
-    assert.equal(attr(slider, "tabindex"), "0");
+    assert.equal(attr(slider, "data-disabled"), "");
+    assert.equal(attr(slider, "tabindex"), undefined, "unhydrated controls remain disabled");
   }
 });
 

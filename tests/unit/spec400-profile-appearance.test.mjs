@@ -87,6 +87,7 @@ function appearanceFixture(settings = original) {
         "@/lib/appearance-preferences.mjs": appearance,
         "@/lib/theme": { applyThemeMode: (mode) => modes.push(mode) },
         "@/styles/appearance-settings.css": {},
+        "@/components/ui/slider": { Slider: "slider" },
         "@/components/ui/select": Object.fromEntries(
           ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
             name,
@@ -316,11 +317,11 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   const route = readFileSync("src/routes/settings.$section.tsx", "utf8");
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
-  assert.match(route, /<AppShell utilitiesInHeader hideUtilities>/);
+  assert.match(route, /<AppShell utilitiesInHeader hideUtilities hideMobileTopBar>/);
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
-    /\.kova-settings-content-header\s*\{\s*min-height: 80px;\s*padding: 16px 72px 16px 12px;/,
+    /\.kova-settings-content-header\s*\{\s*min-height: 64px;\s*padding: 10px 16px !important;/,
   );
   assert.match(preview, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(preview, /width: 100%/);
