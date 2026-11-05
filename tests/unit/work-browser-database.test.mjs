@@ -284,3 +284,26 @@ test("owner payloads are exact, bounded, UUID-targeted and cannot smuggle browse
   ])
     assert.throws(() => parseBrowserOwnerInput({ ...base, ...change }));
 });
+
+
+test("active browser can be older than a day while renewed activity refreshes idle expiry", async () => {
+  const f = await fixture();
+  try {
+    await f.admit();
+    await f.db.query(
+      "update work_browser_sessions set created_at=statement_timestamp()-interval '2 days' where id=$1",
+      [session],
+    );
+    const renewed = await f.admit("snapshot", 1);
+    assert.equal(renewed.sequence, 2);
+    assert.ok(renewed.expiresAt - Date.now() > 14 * 60_000);
+    assert.ok(renewed.expiresAt - Date.now() < 15 * 60_000 + 5000);
+    const row = await f.db.query(
+      "select extract(epoch from (statement_timestamp()-created_at)) age from work_browser_sessions where id=$1",
+      [session],
+    );
+    assert.ok(Number(row.rows[0].age) >= 86400);
+  } finally {
+    await f.db.close();
+  }
+});
