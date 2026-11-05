@@ -725,6 +725,9 @@ export async function chatCompletions(
   const stream = body.stream === true;
   if (isKovaHostedModelId(body.model)) {
     // Independent opt-in. Never route a Kova alias to OpenAI by accident.
+    // Existing generation kill switch and capabilities remain authoritative.
+    const unavailable = providerUnavailableEnvelope(stream ? "streaming" : "chat");
+    if (unavailable) throw new AiProviderError(unavailable);
     // Capture and acceptance sessions fail closed until hosted parity is verified.
     const enabled = env("KOVA_HOSTED_INFERENCE_ENABLED") === "true";
     const captured = env("KOVA_REQUEST_CAPTURE_ENABLED");
