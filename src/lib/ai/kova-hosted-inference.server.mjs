@@ -5,9 +5,9 @@
  * and production latency are validated.
  */
 export const HOSTED_MODEL_MAP = Object.freeze({
-  "kova-xenon-4.6": "qwen/qwen3-32b",
-  "kova-neon-4.6": "qwen/qwen3-14b",
-  "kova-argon-5": "qwen/qwen3-8b",
+  "kova-xenon-4.6": "moonshotai/kimi-k3",
+  "kova-neon-4.6": "deepseek/deepseek-v4.1-flash-1017",
+  "kova-argon-5": "qwen/qwen3.5-flash",
 });
 
 const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
