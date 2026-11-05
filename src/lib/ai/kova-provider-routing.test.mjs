@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { chooseKovaProvider, migrationBucket, normalizeMigrationConfig } from "./kova-provider-routing.mjs";
 
 const eligible = {
-  modelId: "kova-argon-5",
+  modelId: "kova-argon-4.6",
   routingKey: "pseudonymous-user-1",
   healthy: true,
   requiredCapabilities: ["chat", "streaming", "tool_calls"],
