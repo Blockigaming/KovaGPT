@@ -152,13 +152,40 @@ if (scope === "public") {
     await expect(
       notice.getByRole("button", { name: "Retry chat sync", exact: true }),
     ).toBeVisible();
-    const bounds = (await notice.boundingBox())!;
-    expect(bounds.height).toBeLessThanOrEqual(Math.min(page.viewportSize()!.height * 0.3, 256) + 1);
-    for (const button of await notice.getByRole("button").all()) {
-      await button.scrollIntoViewIfNeeded();
-      const box = (await button.boundingBox())!;
-      expect(box.x).toBeGreaterThanOrEqual(bounds.x);
-      expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+    // Read a single layout snapshot: initialization may replace the notice
+    // between separate protocol calls, especially in WebKit.
+    const layout = await notice.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const buttons = [...element.querySelectorAll("button")];
+      const originalScroll = element.scrollTop;
+      element.scrollTop = element.scrollHeight;
+      const lastButton = buttons.at(-1)?.getBoundingClientRect();
+      const reachesLastButton = Boolean(
+        lastButton && lastButton.top >= bounds.top - 1 && lastButton.bottom <= bounds.bottom + 1,
+      );
+      element.scrollTop = originalScroll;
+      return {
+        height: bounds.height,
+        left: bounds.left,
+        right: bounds.right,
+        overflow: getComputedStyle(element).overflowY,
+        reachesLastButton,
+        buttons: buttons.map((button) => {
+          const box = button.getBoundingClientRect();
+          return { name: button.textContent?.trim(), left: box.left, right: box.right };
+        }),
+      };
+    });
+    expect(layout.height).toBeLessThanOrEqual(Math.min(page.viewportSize()!.height * 0.3, 256) + 1);
+    expect(layout.overflow).toBe("auto");
+    expect(layout.reachesLastButton).toBe(true);
+    expect(layout.buttons.map((button) => button.name)).toEqual([
+      "Save existing chats to my account",
+      "Retry chat sync",
+    ]);
+    for (const button of layout.buttons) {
+      expect(button.left).toBeGreaterThanOrEqual(layout.left);
+      expect(button.right).toBeLessThanOrEqual(layout.right);
     }
     await page.screenshot({ path: info.outputPath("sync-recovery.png") });
   });
