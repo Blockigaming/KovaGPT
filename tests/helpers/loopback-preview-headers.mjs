@@ -11,9 +11,14 @@ export function loopbackPreviewHeaders(url, headers) {
   return {
     ...headers,
     "content-security-policy": headers["content-security-policy"]
-      .split(";")
-      .map((directive) => directive.trim())
-      .filter((directive) => directive.toLowerCase() !== "upgrade-insecure-requests")
-      .join(";"),
+      .split(",")
+      .map((policy) =>
+        policy
+          .split(";")
+          .map((directive) => directive.trim())
+          .filter((directive) => directive.toLowerCase() !== "upgrade-insecure-requests")
+          .join(";"),
+      )
+      .join(","),
   };
 }

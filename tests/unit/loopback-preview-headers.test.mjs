@@ -35,3 +35,16 @@ test("HTTPS and non-loopback origins keep the complete production policy", () =>
     "x-test": "unchanged",
   });
 });
+
+test("merged CSP headers retain both independent policies without either HTTPS upgrade", () => {
+  const headers = {
+    "content-security-policy":
+      "default-src 'self'; upgrade-insecure-requests, script-src 'self' https://cdn.plaid.com; upgrade-insecure-requests",
+  };
+  const result = loopbackPreviewHeaders("http://127.0.0.1:4189/", headers);
+  assert.equal(
+    result["content-security-policy"],
+    "default-src 'self',script-src 'self' https://cdn.plaid.com",
+  );
+  assert.match(headers["content-security-policy"], /upgrade-insecure-requests/);
+});
