@@ -255,6 +255,30 @@ test("repeated form IDs keep labels, validation, and submission on the correct f
     submitLabel: "Send preference",
   });
   await showBlocks(page, "dark", [make("First form"), make("Second form")]);
+  await page.evaluate(() => {
+    const events: unknown[] = [];
+    Object.defineProperty(window, "__kovaInteractiveEvents", { value: events });
+    for (const type of ["pointerdown", "pointerup", "click", "submit", "input", "focusin"]) {
+      document.addEventListener(
+        type,
+        (event) => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          const section = target.closest<HTMLElement>(".kova-interactive");
+          if (!section || events.length >= 100) return;
+          events.push({
+            type,
+            tag: target.tagName,
+            text: target.textContent?.trim().slice(0, 120),
+            id: target.id,
+            state: section.dataset.interactiveState,
+            value: target instanceof HTMLInputElement ? target.value : undefined,
+          });
+        },
+        true,
+      );
+    }
+  });
   const ids = await page
     .locator(".kova-interactive [id]")
     .evaluateAll((nodes) => nodes.map((node) => node.id));
@@ -278,7 +302,35 @@ test("repeated form IDs keep labels, validation, and submission on the correct f
     });
   });
   await second.getByRole("button", { name: "Send preference", exact: true }).click();
-  await expect.poll(() => messages).toHaveLength(1);
+  try {
+    await expect.poll(() => messages).toHaveLength(1);
+  } catch (error) {
+    const layout = await page.evaluate(() => ({
+      events: (
+        window as typeof window & {
+          __kovaInteractiveEvents: unknown[];
+        }
+      ).__kovaInteractiveEvents,
+      active: document.activeElement?.outerHTML.slice(0, 500),
+      forms: Array.from(document.querySelectorAll<HTMLElement>(".kova-interactive")).map(
+        (section) => ({
+          state: section.dataset.interactiveState,
+          text: section.innerText,
+          inputs: Array.from(section.querySelectorAll("input")).map((input) => ({
+            value: input.value,
+            invalid: input.getAttribute("aria-invalid"),
+            disabled: input.disabled,
+          })),
+        }),
+      ),
+      notices: Array.from(document.querySelectorAll('[role="status"], [role="alert"]')).map(
+        (node) => node.textContent,
+      ),
+      transcript: document.querySelector<HTMLElement>("[data-chat-transcript]")?.innerText,
+    }));
+    console.log("INTERACTIVE_SUBMISSION_LAYOUT", JSON.stringify(layout));
+    throw error;
+  }
   expect(messages[0]).toContain("Second form");
   expect(messages[0]).toContain("Second answer");
   expect(messages[0]).not.toContain("First answer");

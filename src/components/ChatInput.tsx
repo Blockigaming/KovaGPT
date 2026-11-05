@@ -626,15 +626,27 @@ export function ChatInput({
     };
     resize();
     let width = el.getBoundingClientRect().width;
+    let resizeFrame: number | null = null;
     const observer = new ResizeObserver(() => {
       const nextWidth = el.getBoundingClientRect().width;
       if (nextWidth !== width) {
         width = nextWidth;
-        resize();
+        // Height writes during ResizeObserver delivery can trigger a loop error
+        // even when the next notification would be ignored by the width guard.
+        if (resizeFrame === null) {
+          resizeFrame = window.requestAnimationFrame(() => {
+            resizeFrame = null;
+            resize();
+            width = el.getBoundingClientRect().width;
+          });
+        }
       }
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+    };
   }, [value, isLoaded, user?.id, isMobileLayout, isCoarsePointer, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.

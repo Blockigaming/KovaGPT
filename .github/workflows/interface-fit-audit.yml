@@ -67,6 +67,11 @@ jobs:
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
           --project="${{ matrix.browser }}-390" --grep="dark workspace fits: /$"
           --output="test-results/interface-fit/smoke-${{ matrix.browser }}"
+      - name: Check repeated form submission through real clicks
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-390" --project="${{ matrix.browser }}-landscape"
+          --grep="repeated form IDs" --repeat-each=5
       - name: Check every workspace and settings section in both themes
         shell: bash
         run: |
