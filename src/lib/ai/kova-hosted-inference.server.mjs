@@ -12,11 +12,22 @@ export const HOSTED_MODEL_MAP = Object.freeze({
 
 const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_REQUEST_BYTES = 256 * 1024;
+// Server-controlled provider price caps in USD per million tokens.
+const MODEL_PRICE_CEILINGS = Object.freeze({
+  "kova-argon-5": { prompt: 0.20, completion: 0.80 },
+  "kova-neon-4.6": { prompt: 0.30, completion: 1.20 },
+  "kova-xenon-4.6": { prompt: 3.00, completion: 15.00 },
+});
+const MODEL_OUTPUT_LIMITS = Object.freeze({
+  "kova-argon-5": 4096,
+  "kova-neon-4.6": 8192,
+  "kova-xenon-4.6": 16384,
+});
 const ALLOWED_KEYS = new Set([
   "model", "messages", "stream", "temperature", "top_p",
   "max_tokens", "max_completion_tokens", "tools", "tool_choice",
   "response_format", "parallel_tool_calls", "stop", "seed",
-  "stream_options",
+  "stream_options", "reasoning",
 ]);
 
 export function isKovaHostedModelId(value) {
@@ -42,16 +53,27 @@ export function prepareKovaHostedRequest(value) {
   if (value.stream !== undefined && typeof value.stream !== "boolean")
     throw new Error("invalid_hosted_stream");
   const rawMax = value.max_completion_tokens ?? value.max_tokens ?? 2048;
-  if (!Number.isSafeInteger(rawMax) || rawMax < 1 || rawMax > 4096)
+  if (!Number.isSafeInteger(rawMax) || rawMax < 1 || rawMax > MODEL_OUTPUT_LIMITS[value.model])
     throw new Error("invalid_hosted_token_limit");
   if (value.max_tokens !== undefined && value.max_completion_tokens !== undefined &&
       value.max_tokens !== value.max_completion_tokens)
     throw new Error("conflicting_hosted_token_limit");
-  const { model, max_completion_tokens, ...rest } = value;
+  // Reasoning effort is an operator policy, never copied from untrusted callers.
+  // The model's full depth is only available to the premium Xenon tier.
+  const effort = value.model === "kova-xenon-4.6" ? "max"
+    : value.model === "kova-neon-4.6" ? "medium" : null;
+  const { model, max_completion_tokens, reasoning: _discard, ...rest } = value;
   const body = JSON.stringify({
     ...rest,
     model: HOSTED_MODEL_MAP[model],
     max_tokens: rawMax,
+    ...(effort ? { reasoning: { effort } } : {}),
+    provider: {
+      max_price: MODEL_PRICE_CEILINGS[model],
+      sort: "latency",
+      require_parameters: true,
+      allow_fallbacks: true,
+    },
   });
   if (Buffer.byteLength(body, "utf8") > MAX_REQUEST_BYTES)
     throw new Error("hosted_request_too_large");
