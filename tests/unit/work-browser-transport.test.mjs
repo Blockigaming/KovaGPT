@@ -39,7 +39,7 @@ test("signed public-web capabilities permit an empty allowlist only with explici
           protocol: "kova-browser-v1",
           available: true,
           origins: [],
-          maxSessionSeconds: 300,
+          idleTimeoutSeconds: 900,
           siteRulesVersion: 1,
           publicWeb,
         },
