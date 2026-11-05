@@ -16,9 +16,9 @@ const request = {
 
 test("all three Kova products map to fixed approved foundation IDs", () => {
   assert.deepEqual(HOSTED_MODEL_MAP, {
-    "kova-xenon-4.6": "qwen/qwen3-32b",
-    "kova-neon-4.6": "qwen/qwen3-14b",
-    "kova-argon-5": "qwen/qwen3-8b",
+    "kova-xenon-4.6": "moonshotai/kimi-k3",
+    "kova-neon-4.6": "deepseek/deepseek-v4.1-flash-1017",
+    "kova-argon-5": "qwen/qwen3.5-flash",
   });
   assert.equal(isKovaHostedModelId("kova-argon-5"), true);
   assert.equal(isKovaHostedModelId("__proto__"), false);
@@ -28,7 +28,7 @@ test("generates OpenRouter-compatible chat body without leaking Kova alias as up
   const prepared = prepareKovaHostedRequest(request);
   assert.equal(prepared.endpoint, "https://openrouter.ai/api/v1/chat/completions");
   const body = JSON.parse(prepared.body);
-  assert.equal(body.model, "qwen/qwen3-8b");
+  assert.equal(body.model, "qwen/qwen3.5-flash");
   assert.equal(body.max_tokens, 1200);
   assert.equal(body.max_completion_tokens, undefined);
   assert.equal(body.messages[0].content, "You are Kova.");
