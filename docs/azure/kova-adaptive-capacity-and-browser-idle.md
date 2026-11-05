@@ -3,7 +3,7 @@
 ## Approved product requirements
 
 - Kova website/gateway remains responsive; do not scale the customer-facing API to zero.
-- Kova Xenon 4.6, Neon 4.6 and Argon 5 use already-running pay-per-token inference providers until dedicated GPUs are economically justified. **Do not replace model versions when scaling.**
+- Kova Xenon 5, Neon 4.6 and Argon 5 use already-running pay-per-token inference providers until dedicated GPUs are economically justified. **Do not replace model versions when scaling.**
 - Adjust Kova gateway capacity **once per UTC day** from verified hourly prompt records and recurring hour-of-day patterns, while Azure's ordinary HTTP/concurrency autoscaling handles sudden traffic spikes between reviews.
 - Browser processes close after **15 minutes with no real activity**. Idle timer must not be reset by background status polling or presentation-only refreshes. Closing releases resources but cannot promise the provider stops charging immediately.
 - Never make an unlimited cost commitment. Preserve existing production revisions, secrets, connected-user state and OpenAI fallback.
