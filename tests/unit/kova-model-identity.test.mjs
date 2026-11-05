@@ -62,7 +62,18 @@ test("later replies suppress repeated introductions and distinguish branding fro
   assert.match(prompt, /Vary the surrounding wording naturally/);
 });
 
-test("hosted Kova name discloses operator-confirmed underlying inference when asked", () => {\n  const prompt = buildKovaModelIdentityInstructions({\n    role: "DEFAULT_CHAT", modelId: "kova-argon-4.6", provider: "openrouter", hasAssistantHistory: false,\n  });\n  assert.match(prompt, /Kova Argon 4.6/);\n  assert.match(prompt, /OpenRouter \\(third-party hosted inference\\)/);\n});\n\ntest("unknown identities and unsafe metadata fail closed without echoing input", () => {
+test("hosted Kova name discloses operator-confirmed underlying inference when asked", () => {
+  const prompt = buildKovaModelIdentityInstructions({
+    role: "DEFAULT_CHAT",
+    modelId: "kova-argon-4.6",
+    provider: "openrouter",
+    hasAssistantHistory: false,
+  });
+  assert.match(prompt, /Kova Argon 4.6/);
+  assert.match(prompt, /OpenRouter \\(third-party hosted inference\\)/);
+});
+
+test("unknown identities and unsafe metadata fail closed without echoing input", () => {
   for (const role of ["UTILITY", "EMBEDDING", "cosmo", "__proto__", "constructor"])
     assert.throws(() => kovaModelIdentityForRole(role), /^Error: kova_model_identity_unavailable$/);
   const valid = {
