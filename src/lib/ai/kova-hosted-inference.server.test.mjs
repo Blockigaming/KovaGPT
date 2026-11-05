@@ -17,8 +17,8 @@ const request = {
 test("all three Kova products map to fixed approved foundation IDs", () => {
   assert.deepEqual(HOSTED_MODEL_MAP, {
     "kova-xenon-4.6": "moonshotai/kimi-k3",
-    "kova-neon-4.6": "deepseek/deepseek-v4.1-flash-1017",
-    "kova-argon-5": "qwen/qwen3.5-flash",
+    "kova-neon-4.6": "meta-llama/llama-4-maverick",
+    "kova-argon-5": "deepseek/deepseek-v4-flash-0731",
   });
   assert.equal(isKovaHostedModelId("kova-argon-5"), true);
   assert.equal(isKovaHostedModelId("__proto__"), false);
@@ -28,7 +28,7 @@ test("generates OpenRouter-compatible chat body without leaking Kova alias as up
   const prepared = prepareKovaHostedRequest(request);
   assert.equal(prepared.endpoint, "https://openrouter.ai/api/v1/chat/completions");
   const body = JSON.parse(prepared.body);
-  assert.equal(body.model, "qwen/qwen3.5-flash");
+  assert.equal(body.model, "deepseek/deepseek-v4-flash-0731");
   assert.equal(body.max_tokens, 1200);
   assert.equal(body.max_completion_tokens, undefined);
   assert.equal(body.messages[0].content, "You are Kova.");
@@ -85,8 +85,8 @@ test("rejects disabled credential, upstream errors and wrong content type", asyn
 
 test("each Kova tier has distinct upstream budget and reasoning policy", () => {
   for (const [alias, expectedModel, effort, max] of [
-    ["kova-argon-5", "qwen/qwen3.5-flash", undefined, 4096],
-    ["kova-neon-4.6", "deepseek/deepseek-v4.1-flash-1017", "medium", 8192],
+    ["kova-argon-5", "deepseek/deepseek-v4-flash-0731", undefined, 4096],
+    ["kova-neon-4.6", "meta-llama/llama-4-maverick", undefined, 8192],
     ["kova-xenon-4.6", "moonshotai/kimi-k3", "max", 16384],
   ]) {
     const prepared = prepareKovaHostedRequest({
@@ -117,6 +117,13 @@ test("multimodal Kova models accept bounded inline user image without remote fet
     ],
   });
   assert.equal(JSON.parse(prepared.body).messages[0].content[1].type, "image_url");
+  assert.throws(() => prepareKovaHostedRequest({
+    ...request, model: "kova-argon-5",
+    messages: [{ role: "user", content: [
+      { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
+    ] }],
+  }), /hosted_model_vision_unavailable/);
+
   assert.throws(() => prepareKovaHostedRequest({
     ...request,
     messages: [{ role: "user", content: [
