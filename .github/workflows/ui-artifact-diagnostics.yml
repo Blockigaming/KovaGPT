@@ -16,8 +16,8 @@ jobs:
       - name: Read the verified candidate screenshots
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          artifact-ids: "13452980146,13451822166"
-          run-id: "42105131134"
+          artifact-ids: "13453325906,13451803602"
+          run-id: "42106199124"
           github-token: ${{ github.token }}
           path: screenshots
       - name: Export selected synthetic screenshots for visual inspection
@@ -30,7 +30,7 @@ jobs:
 
           root = pathlib.Path("screenshots")
           for path in root.rglob("commit.txt"):
-              assert path.read_text().strip() == "4e637df89a0babb6aecf35862a355297f05041db"
+              assert path.read_text().strip() == "8607e61497ac434349c88e217c084f335237056c"
           scenes = {"dark--.png", "light--.png", "dark--library.png",
                     "dark--settings-appearance.png", "light--settings-appearance.png",
                     "response-actions.png", "chat-loading.png"}
