@@ -30,7 +30,7 @@ jobs:
     name: Application fit (${{ matrix.browser }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -78,7 +78,7 @@ jobs:
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
           --project="${{ matrix.browser }}-320" --project="${{ matrix.browser }}-landscape"
-          --grep="interactive fields, long actions|table actions submit on the first|sync retries keep recovery controls stable" --repeat-each=5
+          --grep="interactive fields, long actions|table actions submit on the first|sync retries keep recovery controls stable|conversation loading keeps composer" --repeat-each=5
       - name: Check repeated form submission through real clicks
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts

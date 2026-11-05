@@ -47,6 +47,15 @@ async function expectContained(page: Page, route: string) {
   const main = page.locator("main#main-content");
   await expect(main, `${route}: one main landmark`).toHaveCount(1);
   await expect(main).toBeVisible();
+  if (scope === "workspace" && route === "/") {
+    await expect(main.locator("[data-chat-transcript]")).toBeVisible();
+    await expect(
+      main.getByRole("article", { name: "KovaGPT response", exact: true }),
+    ).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "More chat actions", exact: true }),
+    ).toBeVisible();
+  }
   await page.evaluate(() => document.fonts.ready);
   const layout = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,
@@ -247,6 +256,41 @@ if (scope === "public") {
     const after = await measure();
     expect(after.buttons).toEqual(before.buttons);
     expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+  });
+
+  test("conversation loading keeps composer at the bottom", async ({ page }, info) => {
+    await coreFixture(page, "dark", "plus");
+    let release!: () => void;
+    let heldModules = 0;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/assets/ActiveChatTranscript-*.js", async (route) => {
+      heldModules++;
+      await pending;
+      await route.continue();
+    });
+    const dock = page.locator(".spec400-composer-dock");
+    let loadingBottom = 0;
+    try {
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await waitForKovaHydration(page);
+      await expect.poll(() => heldModules).toBeGreaterThan(0);
+      await expect(page.locator("[data-chat-transcript-loading]")).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
+      ).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      loadingBottom = await dock.evaluate((node) => node.getBoundingClientRect().bottom);
+      await page.screenshot({ path: info.outputPath("chat-loading.png") });
+    } finally {
+      release();
+    }
+    await expect(page.locator("[data-chat-transcript-loading]")).toHaveCount(0);
+    await expectContained(page, "/");
+    const loadedBottom = await dock.evaluate((node) => node.getBoundingClientRect().bottom);
+    expect(loadedBottom).toBeGreaterThanOrEqual(page.viewportSize()!.height - 24);
+    expect(Math.abs(loadingBottom - loadedBottom)).toBeLessThanOrEqual(1);
   });
 
   for (const theme of ["dark", "light"] as const) {

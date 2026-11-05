@@ -3496,7 +3496,27 @@ function KovaGPT() {
               </Suspense>
             ) : (
               <>
-                <Suspense fallback={null}>
+                <Suspense
+                  fallback={
+                    <div
+                      className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-5 py-4"
+                      role="status"
+                      aria-label="Loading conversation"
+                      aria-busy="true"
+                      data-chat-transcript-loading="true"
+                    >
+                      <span className="sr-only">Loading conversation…</span>
+                      <div
+                        aria-hidden="true"
+                        className="ml-auto max-h-12 min-h-0 w-1/2 flex-1 rounded-[var(--kova-radius-message)] bg-muted motion-safe:animate-pulse"
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="max-h-24 min-h-0 w-3/4 flex-[2] rounded-[var(--kova-radius-message)] bg-muted motion-safe:animate-pulse"
+                      />
+                    </div>
+                  }
+                >
                   <ActiveChatTranscript
                     key={transcriptScope}
                     active={active}

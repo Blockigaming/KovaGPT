@@ -15,7 +15,8 @@ export default defineConfig({
       ? ["interface-fit-audit.spec.ts", "interactive-forms-ui.spec.ts"]
       : "interface-fit-audit.spec.ts",
   timeout: 60_000,
-  globalTimeout: 600_000,
+  // Nine sizes per engine include controlled loading and retry scenarios.
+  globalTimeout: 720_000,
   workers: 3,
   retries: 0,
   outputDir: `test-results/interface-fit/${scope}-${engine ?? "all"}/screenshots`,
