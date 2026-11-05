@@ -58,14 +58,16 @@ test("composer and attachment sheet stay reachable on narrow screens", async ({ 
   await expect(sheet).toBeHidden();
 });
 
-test("mobile workspaces and settings never overflow", async ({ page }) => {
-  for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
+for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
+  test(`mobile workspace ${route} never overflows`, async ({ page }) => {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     await expectNoPageOverflow(page);
-  }
+  });
+}
 
+test("mobile settings never overflow", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Open menu" }).click();
