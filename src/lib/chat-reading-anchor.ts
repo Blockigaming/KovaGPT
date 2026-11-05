@@ -318,7 +318,12 @@ export function createTranscriptReadingAnchorController(
     ? new window.MutationObserver(() => {
         if (!current()) return;
         syncMessages();
-        compensate();
+        // Focus and scrollIntoView can move a control into view before the browser
+        // delivers its scroll event. An unrelated control mutation must not undo
+        // that navigation when the transcript and message sizes are unchanged.
+        if (Math.abs(element.scrollTop - knownTop) > EPSILON && !layoutChanged())
+          queueCapture();
+        else compensate();
       })
     : null;
   mutations?.observe(element, { childList: true, subtree: true });

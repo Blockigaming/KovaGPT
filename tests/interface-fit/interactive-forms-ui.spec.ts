@@ -126,11 +126,11 @@ for (const theme of ["dark", "light"] as const) {
       const layout = await page.evaluate(() => {
         const selectors = [
           '[data-slot="select-trigger"]',
-          '[data-radix-popper-content-wrapper]',
+          "[data-radix-popper-content-wrapper]",
           '[data-slot="select-content"]',
-          '[data-radix-select-viewport]',
+          "[data-radix-select-viewport]",
           '[role="option"]',
-          '[data-chat-transcript]',
+          "[data-chat-transcript]",
           ".spec400-composer-dock",
         ].join(", ");
         return {
@@ -239,9 +239,7 @@ for (const theme of ["dark", "light"] as const) {
     await expect(search).toBeVisible();
     await search.getByRole("option", { name: "Focus message box", exact: true }).click();
     await expect(search).toBeHidden();
-    await expect(
-      page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
-    ).toBeFocused();
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeFocused();
   });
 }
 

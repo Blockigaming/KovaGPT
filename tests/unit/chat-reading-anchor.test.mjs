@@ -454,6 +454,23 @@ test("navigation capture flushes a pending manual-scroll rebase before the next 
   c.dispose();
 });
 
+test("control mutations before a focus scroll event preserve the newly visible passage", () => {
+  const f = fixture();
+  f.readInside();
+  const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  // Browser focus/scrollIntoView has moved the transcript, but scroll is still queued.
+  f.readInside(8, 2, 3);
+  const top = f.element.scrollTop;
+  const anchor = capture(f.element);
+  f.mutated();
+  assert.equal(f.element.scrollTop, top);
+  f.emit("scroll");
+  f.flush();
+  f.resized(590);
+  assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
+  c.dispose();
+});
+
 test("same passage survives React text-node replacement without a message/component change", () => {
   const f = fixture();
   f.readInside();
