@@ -11,7 +11,7 @@ export const HOSTED_MODEL_MAP = Object.freeze({
 });
 
 const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MAX_REQUEST_BYTES = 256 * 1024;
+const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 // Server-controlled provider price caps in USD per million tokens.
 const MODEL_PRICE_CEILINGS = Object.freeze({
   "kova-argon-5": { prompt: 0.20, completion: 0.80 },
@@ -43,11 +43,24 @@ export function prepareKovaHostedRequest(value) {
     throw new Error("invalid_hosted_request");
   if (value.messages.some((message) =>
     !message || typeof message !== "object" || Array.isArray(message) ||
-    !["system", "developer", "user", "assistant", "tool"].includes(message.role) ||
-    (Array.isArray(message.content) && message.content.some((part) =>
-      part?.type === "image_url" || part?.type === "input_image"
-    ))))
-    throw new Error("hosted_text_only");
+    !["system", "developer", "user", "assistant", "tool"].includes(message.role)))
+    throw new Error("invalid_hosted_messages");
+  // No provider-side fetch of user-supplied URLs. Uploaded images must arrive
+  // as bounded inline image data from Kova's authenticated attachment flow.
+  let totalImages = 0;
+  for (const message of value.messages) {
+    if (!Array.isArray(message.content)) continue;
+    if (message.content.length > 16) throw new Error("invalid_hosted_content");
+    for (const part of message.content) {
+      if (!part || typeof part !== "object" || Array.isArray(part)) throw new Error("invalid_hosted_content");
+      if (part.type === "text" && typeof part.text === "string") continue;
+      const url = part.type === "image_url" ? part.image_url?.url : null;
+      if (typeof url !== "string" ||
+          !/^data:image\\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url) ||
+          url.length > 5_000_000 || ++totalImages > 4)
+        throw new Error("invalid_hosted_image");
+    }
+  }
   if (value.tools !== undefined && (!Array.isArray(value.tools) || value.tools.length > 64))
     throw new Error("invalid_hosted_tools");
   if (value.stream !== undefined && typeof value.stream !== "boolean")
