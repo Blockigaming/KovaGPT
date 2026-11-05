@@ -134,8 +134,6 @@ export class BrowserSessionManager {
   }
 
   private expired(session: RuntimeSession, now = Date.now()) {
-    return (
-      now >= Date.parse(session.descriptor.expiresAt)
-    );
+    return now >= Date.parse(session.descriptor.expiresAt);
   }
 }
