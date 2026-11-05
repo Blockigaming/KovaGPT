@@ -85,7 +85,7 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
 
   return (
     <section
-      className="kova-interactive my-3 rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-5"
+      className="kova-interactive my-3 min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 text-card-foreground [overflow-wrap:anywhere] sm:p-5"
       aria-labelledby={headingId}
       data-interactive-type={block.type}
       data-interactive-state={submitted ? "submitted" : locked ? "readonly" : "open"}
@@ -145,6 +145,7 @@ function FormBody({
   onDraft: (values: FormValues) => void;
   onSubmit: (s: InteractiveSubmission) => void;
 }) {
+  const formId = useId();
   const [values, setValues] = useState<FormValues>(() => ({
     ...initialFormValues(block),
     ...(initial ?? {}),
@@ -163,12 +164,13 @@ function FormBody({
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) {
-      document.getElementById(`kova-field-${block.id}-${first}`)?.focus();
+      document.getElementById(`kova-field-${formId}-${first}`)?.focus();
       return;
     }
     const clean: FormValues = {};
     for (const f of block.fields)
-      clean[f.id] = f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
+      clean[f.id] =
+        f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
@@ -178,7 +180,7 @@ function FormBody({
       {block.fields.map((field) => (
         <FieldControl
           key={field.id}
-          formId={block.id}
+          formId={formId}
           field={field}
           value={values[field.id]}
           error={errors[field.id]}
@@ -188,7 +190,11 @@ function FormBody({
       ))}
       <div className="flex flex-wrap gap-2 pt-1">
         {hasFields && (
-          <Button type="submit" disabled={locked} className="min-h-11 sm:min-h-9">
+          <Button
+            type="submit"
+            disabled={locked}
+            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+          >
             {block.submitLabel ?? "Submit"}
           </Button>
         )}
@@ -199,7 +205,7 @@ function FormBody({
             variant={action.style === "primary" ? "default" : "outline"}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
-            className="min-h-11 sm:min-h-9"
+            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
             onClick={() => !locked && onSubmit({ action: action.id, values })}
           >
             {action.label}
@@ -281,7 +287,11 @@ function FieldControl({
       break;
     case "select":
       control = (
-        <Select value={String(value ?? "") || undefined} onValueChange={onChange} disabled={disabled}>
+        <Select
+          value={String(value ?? "") || undefined}
+          onValueChange={onChange}
+          disabled={disabled}
+        >
           <SelectTrigger {...common} className="min-h-11 sm:min-h-9">
             <SelectValue placeholder={field.placeholder ?? "Choose…"} />
           </SelectTrigger>
@@ -350,8 +360,16 @@ function FieldControl({
               </label>
             ))}
           </RadioGroup>
-          {field.help && <p id={helpId} className="mt-1 text-xs text-muted-foreground">{field.help}</p>}
-          {error && <p id={errorId} className="mt-1 text-xs text-destructive">{error}</p>}
+          {field.help && (
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+              {field.help}
+            </p>
+          )}
+          {error && (
+            <p id={errorId} className="mt-1 text-xs text-destructive">
+              {error}
+            </p>
+          )}
         </fieldset>
       );
     case "checkbox": {
@@ -379,8 +397,16 @@ function FieldControl({
               </label>
             ))}
           </div>
-          {field.help && <p id={helpId} className="mt-1 text-xs text-muted-foreground">{field.help}</p>}
-          {error && <p id={errorId} className="mt-1 text-xs text-destructive">{error}</p>}
+          {field.help && (
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+              {field.help}
+            </p>
+          )}
+          {error && (
+            <p id={errorId} className="mt-1 text-xs text-destructive">
+              {error}
+            </p>
+          )}
         </fieldset>
       );
     }
@@ -391,7 +417,11 @@ function FieldControl({
         {label}
       </Label>
       {control}
-      {field.help && <p id={helpId} className="text-xs text-muted-foreground">{field.help}</p>}
+      {field.help && (
+        <p id={helpId} className="text-xs text-muted-foreground">
+          {field.help}
+        </p>
+      )}
       {error && (
         <p id={errorId} className="text-xs text-destructive">
           {error}
@@ -433,7 +463,12 @@ function TableBody({
   const group = useId();
   return (
     <div>
-      <div className="-mx-1 overflow-x-auto px-1" role="region" aria-label={block.title} tabIndex={0}>
+      <div
+        className="-mx-1 overflow-x-auto px-1"
+        role="region"
+        aria-label={block.title}
+        tabIndex={0}
+      >
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
@@ -501,7 +536,7 @@ function TableBody({
       {selectable && (
         <Button
           type="button"
-          className="mt-3 min-h-11 sm:min-h-9"
+          className="mt-3 h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           disabled={locked || selected.length === 0}
           onClick={() => onSubmit({ selected })}
         >

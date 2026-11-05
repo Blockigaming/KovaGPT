@@ -10,7 +10,10 @@ if (!["workspace", "public"].includes(scope))
 
 export default defineConfig({
   testDir: "./tests/interface-fit",
-  testMatch: "interface-fit-audit.spec.ts",
+  testMatch:
+    scope === "workspace"
+      ? ["interface-fit-audit.spec.ts", "interactive-forms-ui.spec.ts"]
+      : "interface-fit-audit.spec.ts",
   timeout: 60_000,
   globalTimeout: 600_000,
   workers: 3,

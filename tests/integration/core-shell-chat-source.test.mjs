@@ -63,8 +63,8 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
   assert.match(sidebar, /aria-label="Primary navigation"/);
-  assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
-  assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
+  assert.match(sidebar, /aria-hidden=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
+  assert.match(sidebar, /inert=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
   assert.match(sidebar, />\s*Rename\s*</);
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
