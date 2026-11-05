@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { kovaIdentityInstruction } from "./kova-identity-policy.mjs";
 
 for (const [id, name] of [
-  ["kova-xenon-4.6", "Kova Xenon 4.6"],
+  ["kova-xenon-5", "Kova Xenon 5"],
   ["kova-neon-4.6", "Kova Neon 4.6"],
-  ["kova-argon-5", "Kova Argon 5"],
+  ["kova-argon-4.6", "Kova Argon 4.6"],
 ]) {
   test(`${name} uses its Kova identity and truthful provenance policy`, () => {
     const instruction = kovaIdentityInstruction(id);
