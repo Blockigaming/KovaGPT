@@ -128,7 +128,7 @@ if (scope === "public") {
     }
     await page.screenshot({ path: info.outputPath("response-actions.png") });
     await page.route("**/api/speech", (route) =>
-      route.fulfill({ status: 403, json: { error: "speech_not_eligible" } }),
+      route.fulfill({ status: 403, json: { error: "speech_model_not_eligible" } }),
     );
     await toolbar.getByRole("button", { name: "Read aloud", exact: true }).click();
     await expect(toolbar.getByRole("status")).toHaveText(
@@ -139,6 +139,21 @@ if (scope === "public") {
       await toolbar.evaluate((element) => element.scrollWidth - element.clientWidth),
     ).toBeLessThanOrEqual(1);
     await page.screenshot({ path: info.outputPath("response-actions-error.png") });
+  });
+
+  test("chat sync recovery controls stay inside their notice", async ({ page }, info) => {
+    await coreFixture(page, "dark", "plus");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    await expect(notice).toBeVisible();
+    const bounds = (await notice.boundingBox())!;
+    for (const button of await notice.getByRole("button").all()) {
+      const box = (await button.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(bounds.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+    }
+    await page.screenshot({ path: info.outputPath("sync-recovery.png") });
   });
 
   for (const theme of ["dark", "light"] as const) {
