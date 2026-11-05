@@ -117,7 +117,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     id: "kova-argon-5",
     endpoint: "responses", // Catalog compatibility; actual transport uses chat completions.
     reasoning: true,
-    vision: true,
+    vision: false,
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 4_096,
@@ -127,12 +127,12 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
   {
     id: "kova-neon-4.6",
     endpoint: "responses",
-    reasoning: true,
+    reasoning: false,
     vision: true,
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 8_192,
-    pricePerMillion: { input: 0.30, cachedInput: 0.30, output: 1.20 },
+    pricePerMillion: { input: 0.50, cachedInput: 0.50, output: 1.50 },
     tiers: ["free", "plus", "pro"],
   },
   {
