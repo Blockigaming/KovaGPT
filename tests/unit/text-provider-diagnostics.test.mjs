@@ -36,6 +36,7 @@ function subject(env = {}) {
         modelForPolicy: () => ({ id: "fixture-model" }),
       },
       "@/lib/ai/provider-transport.server.mjs": transport,
+    "@/lib/ai/kova-hosted-inference.server.mjs": { isKovaHostedModelId: () => false, requestKovaHostedChat: () => { throw Error("hosted disabled in fixture"); } },
     },
     env,
   );
