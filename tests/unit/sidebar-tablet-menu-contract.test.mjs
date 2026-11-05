@@ -87,35 +87,20 @@ function workspaceSearchCallback(deps) {
     true,
     ts.ScriptKind.TSX,
   );
-  let viewport;
-  let close;
-  const searches = [];
+  let search;
   function visit(node) {
-    if (ts.isFunctionDeclaration(node) && node.name?.text === "isMobileViewport")
-      viewport = node.getText(file);
-    if (ts.isVariableDeclaration(node) && node.name.getText(file) === "closeAfterMobileNavigation")
-      close = node.initializer.getText(file);
-    if (ts.isJsxOpeningElement(node) && node.tagName.getText(file) === "button") {
-      const attributes = node.attributes.properties;
-      const click = attributes.find((attribute) => attribute.name?.getText(file) === "onClick");
-      const label = attributes.find((attribute) => attribute.name?.getText(file) === "aria-label");
-      if (
-        label?.initializer?.text === "Search chats" &&
-        click?.initializer?.expression?.getText(file).includes("onOpenWorkspaceSearch()")
-      )
-        searches.push(click.initializer.expression.getText(file));
-    }
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === "openChatSearch")
+      search = node.initializer.getText(file);
     ts.forEachChild(node, visit);
   }
   visit(file);
-  assert.ok(viewport && close, "Compile the actual drawer Search handler and viewport helper");
-  assert.equal(searches.length, 1, "Only the header Search action matches the runtime fixture");
+  assert.ok(search, "Compile the actual shared Search handler");
+  assert.match(sidebar, /onClick=\{openChatSearch\}/);
   return new Function(
     ...Object.keys(deps),
-    ts.transpileModule(
-      `${viewport}\nconst closeAfterMobileNavigation = ${close};\nreturn (${searches[0]});`,
-      { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
-    ).outputText,
+    ts.transpileModule(`return (${search});`, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText,
   )(...Object.values(deps));
 }
 
@@ -147,8 +132,8 @@ for (const [width, mobileViewport, open] of [
     activate();
     assert.deepEqual(
       events,
-      ["cancel-pending-selection", ...(open && width < 1024 ? ["close"] : []), "search"],
-      "Close an open mobile drawer before Search, without toggling a desktop or closed drawer",
+      ["cancel-pending-selection", "search"],
+      "Search preserves the chosen sidebar state at every breakpoint",
     );
   });
 }

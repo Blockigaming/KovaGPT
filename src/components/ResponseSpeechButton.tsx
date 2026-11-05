@@ -80,7 +80,7 @@ export function ResponseSpeechButton({
     }
   };
   return (
-    <span className="inline-flex shrink-0 items-center gap-2">
+    <span className="inline-flex max-w-full shrink-0 flex-wrap items-center gap-2">
       <Button
         type="button"
         variant="ghost"
@@ -100,7 +100,10 @@ export function ResponseSpeechButton({
         )}
         {busy ? "Stop" : "Read aloud"}
       </Button>
-      <span role="status" className={error ? "text-xs text-destructive" : "sr-only"}>
+      <span
+        role="status"
+        className={error ? "min-w-0 max-w-full break-words text-xs text-destructive" : "sr-only"}
+      >
         {error ||
           (state === "loading" ? "Loading audio" : state === "playing" ? "Reading aloud" : "")}
       </span>

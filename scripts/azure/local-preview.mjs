@@ -7,6 +7,12 @@ const entry = fileURLToPath(new URL("../../dist/server/index.mjs", import.meta.u
 const guard = fileURLToPath(
   new URL("../../tests/fixtures/azure-local-network-guard.mjs", import.meta.url),
 );
+// Broad route audits need a longer preview than the small Azure smoke suite.
+// Keep the default and a hard upper bound; this never reaches the app's env.
+const durationArgument = process.argv.slice(2).find((arg) => arg.startsWith("--duration-ms="));
+const durationMs = durationArgument ? Number(durationArgument.split("=")[1]) : 180000;
+if (!Number.isSafeInteger(durationMs) || durationMs < 1000 || durationMs > 900000)
+  throw new Error("Local preview duration must be between 1000 and 900000 milliseconds");
 if (!existsSync(entry)) throw new Error("Run npm run build:azure first");
 
 // Deliberately do not inherit cloud credentials, database settings or NODE_OPTIONS.
@@ -30,7 +36,7 @@ function stop() {
   child.kill("SIGTERM");
   killTimer ??= setTimeout(() => child.kill("SIGKILL"), 5000);
 }
-const deadline = setTimeout(stop, 180000);
+const deadline = setTimeout(stop, durationMs);
 process.once("SIGTERM", stop);
 process.once("SIGINT", stop);
 child.once("error", () => {

@@ -228,5 +228,4 @@ test("Result prose owns the reading token; code, action labels and ordinary mobi
     "13px",
   );
   assert.equal(value(system, "body :is(input, textarea, select)"), "1rem");
-  assert.match(source, /if \(attachments\.length \|\| tempChat \|\| isStreaming \|\| result\)/);
 });

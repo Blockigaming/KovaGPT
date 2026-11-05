@@ -98,7 +98,7 @@ test("a retry retains its error control until a successful response", () => {
     source.indexOf("\n  useEffect", source.indexOf("  const loadTasks = useCallback")),
   );
   assert.doesNotMatch(
-    load.slice(0, load.indexOf("const next = await list")),
+    load.slice(0, load.indexOf("const [next, availability] = await Promise.all")),
     /setLoadError\(null\)/,
   );
   assert.match(load, /setTasks\(next\);\s*setLoadError\(null\)/);

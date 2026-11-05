@@ -53,11 +53,11 @@ test("Memory Center navigation only dismisses Settings and leaves routing and se
   const source = attr(link, "onClick").expression.getText(settings);
   const values = [];
   const click = new Function(
-    "onOpenChange",
+    "closeForNavigation",
     ts.transpileModule(`return (${source});`, {
       compilerOptions: { target: ts.ScriptTarget.ES2022 },
     }).outputText,
-  )((value) => values.push(value));
+  )(() => values.push(false));
   click({
     preventDefault() {
       throw new Error("Ordinary navigation must remain available");
