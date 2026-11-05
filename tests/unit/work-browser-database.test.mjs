@@ -15,6 +15,7 @@ const migration = (
     [
       "20260905034000_work_browser_takeover.sql",
       "20260913022249_stabilize_work_browser_session_timestamps.sql",
+      "20261105220000_kova_browser_idle_15m_no_absolute_max.sql",
     ].map((name) =>
       readFile(new URL(`../../supabase/migrations/${name}`, import.meta.url), "utf8"),
     ),
@@ -113,14 +114,14 @@ test("session creation and expiry use one stable statement timestamp", async () 
       ).rows.map((row) => [row.column_name, row.column_default]),
     );
     assert.match(defaults.created_at, /statement_timestamp\(\)/u);
-    assert.match(defaults.expires_at, /statement_timestamp\(\).*00:05:00/u);
+    assert.match(defaults.expires_at, /statement_timestamp\(\).*00:15:00/u);
 
     await f.admit();
     const result = await f.db.query(
       "select extract(epoch from (expires_at-created_at)) seconds from work_browser_sessions where id=$1",
       [session],
     );
-    assert.equal(Number(result.rows[0].seconds), 300);
+    assert.equal(Number(result.rows[0].seconds), 900);
   } finally {
     await f.db.close();
   }
