@@ -150,7 +150,7 @@ export function createBrowserManager(
     capabilities,
     async probe() {
       for (const row of sessions.values()) if (row.expiresAt <= Date.now()) await close(row);
-      await factory.reapExpired();
+      await factory.reapExpired(new Set(sessions.keys()));
       return factory.probe();
     },
     async command(input, signal) {
