@@ -1,0 +1,69 @@
+name: One-time Kova Migration Prettier Repair
+on:
+  push:
+    branches:
+      - feat/kova-xenon-neon-argon-migration
+    paths:
+      - .github/workflows/kova-migration-format-repair.yml
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/feat/kova-xenon-neon-argon-migration'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feat/kova-xenon-neon-argon-migration
+          persist-credentials: true
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format only previously flagged migration files
+        run: |
+          npx --no-install prettier --write \
+            docs/azure/kova-adaptive-capacity-and-browser-idle.md \
+            scripts/azure/kova-daily-capacity-plan.mjs \
+            src/components/MessageActivityList.tsx \
+            src/lib/ai/kova-activity-events.mjs \
+            src/lib/ai/kova-activity-events.test.mjs \
+            src/lib/ai/kova-daily-capacity-policy.mjs \
+            src/lib/ai/kova-daily-capacity-policy.test.mjs \
+            src/lib/ai/kova-hosted-inference.server.mjs \
+            src/lib/ai/kova-hosted-inference.server.test.mjs \
+            src/lib/ai/kova-inference-staging.mjs \
+            src/lib/ai/kova-inference-staging.test.mjs \
+            src/lib/ai/kova-interactive-question.mjs \
+            src/lib/ai/kova-interactive-question.test.mjs \
+            src/lib/ai/kova-model-migration.mjs \
+            src/lib/ai/kova-model-migration.test.mjs \
+            src/lib/ai/kova-provider-routing.mjs \
+            src/lib/ai/kova-provider-routing.test.mjs \
+            src/lib/ai/model-catalog.server.ts \
+            src/lib/ai/model-config.mjs \
+            src/lib/ai/provider.server.ts \
+            src/routes/api/chat.ts \
+            tests/unit/image-provider-transport.test.mjs \
+            tests/unit/kova-selected-model-versions.test.mjs \
+            tests/unit/openai-standard-tier.test.mjs \
+            tests/unit/text-provider-diagnostics.test.mjs \
+            tests/unit/text-provider-swap.test.mjs
+      - name: Commit formatting changes to this branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "docs/azure/kova-adaptive-capacity-and-browser-idle.md" "scripts/azure/kova-daily-capacity-plan.mjs" "src/components/MessageActivityList.tsx" "src/lib/ai/kova-activity-events.mjs" "src/lib/ai/kova-activity-events.test.mjs" "src/lib/ai/kova-daily-capacity-policy.mjs" "src/lib/ai/kova-daily-capacity-policy.test.mjs" "src/lib/ai/kova-hosted-inference.server.mjs" "src/lib/ai/kova-hosted-inference.server.test.mjs" "src/lib/ai/kova-inference-staging.mjs" "src/lib/ai/kova-inference-staging.test.mjs" "src/lib/ai/kova-interactive-question.mjs" "src/lib/ai/kova-interactive-question.test.mjs" "src/lib/ai/kova-model-migration.mjs" "src/lib/ai/kova-model-migration.test.mjs" "src/lib/ai/kova-provider-routing.mjs" "src/lib/ai/kova-provider-routing.test.mjs" "src/lib/ai/model-catalog.server.ts" "src/lib/ai/model-config.mjs" "src/lib/ai/provider.server.ts" "src/routes/api/chat.ts" "tests/unit/image-provider-transport.test.mjs" "tests/unit/kova-selected-model-versions.test.mjs" "tests/unit/openai-standard-tier.test.mjs" "tests/unit/text-provider-diagnostics.test.mjs" "tests/unit/text-provider-swap.test.mjs"; then
+            echo "No formatting changes."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "docs/azure/kova-adaptive-capacity-and-browser-idle.md" "scripts/azure/kova-daily-capacity-plan.mjs" "src/components/MessageActivityList.tsx" "src/lib/ai/kova-activity-events.mjs" "src/lib/ai/kova-activity-events.test.mjs" "src/lib/ai/kova-daily-capacity-policy.mjs" "src/lib/ai/kova-daily-capacity-policy.test.mjs" "src/lib/ai/kova-hosted-inference.server.mjs" "src/lib/ai/kova-hosted-inference.server.test.mjs" "src/lib/ai/kova-inference-staging.mjs" "src/lib/ai/kova-inference-staging.test.mjs" "src/lib/ai/kova-interactive-question.mjs" "src/lib/ai/kova-interactive-question.test.mjs" "src/lib/ai/kova-model-migration.mjs" "src/lib/ai/kova-model-migration.test.mjs" "src/lib/ai/kova-provider-routing.mjs" "src/lib/ai/kova-provider-routing.test.mjs" "src/lib/ai/model-catalog.server.ts" "src/lib/ai/model-config.mjs" "src/lib/ai/provider.server.ts" "src/routes/api/chat.ts" "tests/unit/image-provider-transport.test.mjs" "tests/unit/kova-selected-model-versions.test.mjs" "tests/unit/openai-standard-tier.test.mjs" "tests/unit/text-provider-diagnostics.test.mjs" "tests/unit/text-provider-swap.test.mjs"
+          git commit -m 'style: format Kova migration files for CI'
+          git push origin HEAD:refs/heads/feat/kova-xenon-neon-argon-migration
