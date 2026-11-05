@@ -3,7 +3,6 @@ import {
   Brain,
   AudioLines,
   Mic,
-  PanelsTopLeft,
   Paperclip,
   Plug,
   Plus,
@@ -17,9 +16,7 @@ import {
   LibraryBig,
   Pencil,
   Folder,
-  Files,
   AlertCircle,
-  SlidersHorizontal,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
@@ -68,14 +65,7 @@ import { type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 import type { ComposerToolId, Conversation } from "@/lib/chat-store";
 
-import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +73,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
 const ComposerSignInDialog = lazy(() =>
@@ -93,11 +84,6 @@ const ComposerSignInDialog = lazy(() =>
 const ComposerProjectPicker = lazy(() =>
   import("@/components/ComposerProjectPicker").then((module) => ({
     default: module.ComposerProjectPicker,
-  })),
-);
-const ComposerToolsDialog = lazy(() =>
-  import("@/components/ComposerToolsDialog").then((module) => ({
-    default: module.ComposerToolsDialog,
   })),
 );
 
@@ -210,8 +196,6 @@ export function ChatInput({
   voiceMode,
   onVoiceModeChange,
   onVoiceSubmit,
-  responseSettings,
-  onResponseSettingsChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -333,12 +317,6 @@ export function ChatInput({
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const effectiveSendOnEnter = sendOnEnter ?? sharedSendOnEnter;
   const isMobileLayout = !isDesktop;
-  const [isAppleDevice, setIsAppleDevice] = useState(false);
-  useEffect(() => {
-    setIsAppleDevice(
-      typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent),
-    );
-  }, []);
   const isCoarsePointer = interaction === "touch";
 
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -347,9 +325,6 @@ export function ChatInput({
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false);
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const optionsReturnTriggerRef = useRef<HTMLElement | null>(null);
-  const optionsReturnUrlRef = useRef<string | undefined>(undefined);
   const [previewAttachment, setPreviewAttachment] = useState<PendingAttachment | null>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
   const [pastePreviewOpen, setPastePreviewOpen] = useState(false);
@@ -383,9 +358,6 @@ export function ChatInput({
   useEffect(() => {
     setContextOpen(false);
     setExpanded(false);
-    setOptionsOpen(false);
-    optionsReturnTriggerRef.current = null;
-    optionsReturnUrlRef.current = undefined;
     setPreviewAttachment(null);
     setPreviewOffset(0);
     setPastePreviewOpen(false);
@@ -396,17 +368,9 @@ export function ChatInput({
     setUtilityMenu(null);
     setLibraryOpen(false);
     setDrawingOpen(false);
-    setToolsOpening(null);
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
   const [drawingOpen, setDrawingOpen] = useState(false);
-  const toolsContext = attachmentContextRef.current;
-  const [toolsOpening, setToolsOpening] = useState<{
-    ownerId: string;
-    context: typeof toolsContext;
-  } | null>(null);
-  const toolsReturnTriggerRef = useRef<HTMLElement | null>(null);
-  const toolsReturnUrlRef = useRef<string | undefined>(undefined);
   const online = useSyncExternalStore(
     subscribeToOnlineStatus,
     getOnlineStatusSnapshot,
@@ -496,7 +460,6 @@ export function ChatInput({
     voiceReturnUrlRef.current = window.location.href;
     voiceDraftAppliedRef.current = false;
     setPlusOpen(false);
-    setOptionsOpen(false);
     setVoiceOpenMode(next);
   };
   const acceptVoiceTranscript = (text: string) => {
@@ -1251,6 +1214,7 @@ export function ChatInput({
     ]);
     setPlusOpen(false);
     setLibraryOpen(false);
+    setUtilityMenu(null);
     if (contextOpen) {
       contextReturnToInputRef.current = true;
       setContextOpen(false);
@@ -1277,7 +1241,7 @@ export function ChatInput({
           <input
             value={recentQuery}
             onChange={(event) => setRecentQuery(event.target.value)}
-            placeholder="Search files"
+            placeholder="Search Library files..."
             className="h-10 w-full rounded-[var(--kova-radius-input)] border border-border bg-[var(--surface-input)] px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </label>
@@ -1299,7 +1263,7 @@ export function ChatInput({
         </div>
       ) : visibleRecentLibraryFiles.length === 0 ? (
         <div className="px-3 py-3 text-sm text-muted-foreground">
-          No saved files yet. Files you save to your Library will appear here.
+          {recentQuery.trim() ? "No matching files." : "No saved files yet."}
         </div>
       ) : (
         <div className="max-h-64 overflow-y-auto p-1">
@@ -1314,7 +1278,11 @@ export function ChatInput({
                 onClick={() => attachLibraryFile(item)}
                 className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                {item.fileType?.startsWith("image/") ? (
+                  <ImageIcon className="h-4 w-4 shrink-0 text-pink-400" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{name}</span>
                   <span className="block truncate text-[11px] text-muted-foreground">
@@ -1349,322 +1317,116 @@ export function ChatInput({
 
   const renderComposerActions = (
     mobile: boolean,
-    section: "all" | "files" | "plugins" | "more" = "all",
+    section: "all" | "files" | "plugins" = "all",
     trigger: HTMLElement | null = plusTriggerRef.current,
   ) => {
     const closeActions = () => {
       setPlusOpen(false);
       setUtilityMenu(null);
     };
-    const rowClass = "kova-composer-action";
     const pickFile = (input: React.RefObject<HTMLInputElement | null>) => {
       closeActions();
       if (!requireFileAccount(trigger)) return;
       input.current?.click();
     };
-    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image")!;
     const openLibrary = () => {
       closeActions();
-      if (!isLoaded) return;
-      if (!user) {
-        setSignInRequest({
-          description:
-            "Sign in to choose saved Library files or upload files from this device. Your current message is unchanged.",
-          trigger,
-        });
-        return;
-      }
+      if (!requireFileAccount(trigger)) return;
       setLibraryOpen(true);
       onRecentLibraryRetry?.();
     };
-    if (section === "all") {
+    if (section === "plugins") {
       return (
-        <div className="kova-composer-quick-menu">
-          <button type="button" className={rowClass} onClick={() => pickFile(fileRef)}>
-            <Paperclip aria-hidden="true" />
-            <span>Files</span>
-          </button>
-          {mobile && (
-            <>
-              <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
-                <ImageIcon aria-hidden="true" />
-                <span>Photos</span>
-              </button>
-              <button type="button" className={rowClass} onClick={() => pickFile(cameraRef)}>
-                <Camera aria-hidden="true" />
-                <span>Camera</span>
-              </button>
-            </>
-          )}
-          <details className="kova-composer-menu-group">
-            <summary className={rowClass}>
-              <PanelsTopLeft aria-hidden="true" />
-              <span>Plugins</span>
-            </summary>
-            {renderComposerActions(mobile, "plugins", trigger)}
-          </details>
-          {!mobile && isAppleDevice && (
-            <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
-              <ImageIcon aria-hidden="true" />
-              <span>Photos</span>
-            </button>
-          )}
-          <details className="kova-composer-menu-group">
-            <summary className={rowClass}>
-              <SlidersHorizontal aria-hidden="true" />
-              <span>More tools</span>
-            </summary>
-            {renderComposerActions(mobile, "more", trigger)}
-          </details>
-        </div>
+        <ComposerPluginList
+          userId={isLoaded ? (user?.id ?? null) : null}
+          authLoaded={isLoaded}
+          conversations={user ? savedConversations : []}
+          navigationBlocked={Boolean(value.length || attachments.length || isStreaming || disabled)}
+          onRequireSignIn={(pluginId) => {
+            closeActions();
+            setSignInRequest({ description: "Sign in to manage your plugins.", pluginId, trigger });
+          }}
+          onNavigate={closeActions}
+        />
       );
     }
+    if (section === "files") return renderRecentLibraryFiles();
     return (
-      <>
-        {section === "more" && (
-          <div className="kova-composer-primary-actions" aria-label="Message preferences">
-            <button type="button" className={rowClass} onClick={() => openMessageSettings(trigger)}>
-              <Files aria-hidden="true" />
-              Context
+      <div className="kova-composer-quick-menu">
+        {mobile && (
+          <>
+            <button
+              type="button"
+              className="kova-composer-action"
+              onClick={() => pickFile(cameraRef)}
+            >
+              <Camera aria-hidden="true" />
+              <span>Camera</span>
             </button>
             <button
               type="button"
-              className={rowClass}
-              onClick={() => {
-                optionsReturnTriggerRef.current = trigger;
-                optionsReturnUrlRef.current = window.location.href;
-                closeActions();
-                setOptionsOpen(true);
-              }}
+              className="kova-composer-action"
+              onClick={() => pickFile(photoRef)}
             >
-              <SlidersHorizontal aria-hidden="true" />
-              Response options
+              <ImageIcon aria-hidden="true" />
+              <span>Photos</span>
             </button>
-          </div>
+          </>
         )}
-        {section !== "plugins" && (
-          <p className="spec400-attachment-limits">
-            Text and code: 256 KB. Images: 3 MB. PDF and Office: 10 MB.{" "}
-            {Math.max(0, 2 - attachments.length)} of 2 message slots available.{" "}
-            <ComposerUploadAllowance ownerId={isLoaded ? (user?.id ?? null) : null} />
-          </p>
+        <button type="button" className="kova-composer-action" onClick={() => pickFile(fileRef)}>
+          <Paperclip aria-hidden="true" />
+          <span>Files</span>
+        </button>
+        {!mobile && (
+          <button type="button" className="kova-composer-action" onClick={openLibrary}>
+            <LibraryBig aria-hidden="true" />
+            <span>Library</span>
+          </button>
         )}
-        {section !== "plugins" && (
-          <div className="kova-composer-primary-actions" aria-label="Attachment options">
-            {!mobile && (
-              <button type="button" className={rowClass} disabled={!isLoaded} onClick={openLibrary}>
-                <LibraryBig aria-hidden="true" />
-                <span>Library</span>
-              </button>
-            )}
-            {mobile && section === "files" && (
-              <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
-                <ImageIcon aria-hidden="true" />
-                <span>Photos</span>
-              </button>
-            )}
-            {mobile && section === "files" && (
-              <button type="button" className={rowClass} onClick={() => pickFile(cameraRef)}>
-                <Camera aria-hidden="true" />
-                <span>Camera</span>
-              </button>
-            )}
-            <button type="button" className={rowClass} onClick={() => pickFile(fileRef)}>
-              <Paperclip aria-hidden="true" />
-              <span>Upload a file</span>
-            </button>
-            {mobile && (
-              <button type="button" className={rowClass} disabled={!isLoaded} onClick={openLibrary}>
-                <LibraryBig aria-hidden="true" />
-                <span>Library</span>
-              </button>
-            )}
-            {section !== "more" && (attachments.length > 0 || onOpenChatContext) && (
-              <button
-                type="button"
-                className={rowClass}
-                aria-haspopup="dialog"
-                disabled={disabled || isStreaming}
-                onClick={() => openMessageSettings(trigger)}
-              >
-                <Files aria-hidden="true" />
-                <span>Context{attachments.length ? ` · ${attachments.length}` : ""}</span>
-              </button>
-            )}
-            {showChooseProject && section === "more" && (
-              <button
-                ref={projectTriggerRef}
-                type="button"
-                className={rowClass}
-                disabled={!isLoaded || disabled || isStreaming}
-                onClick={() => {
-                  closeActions();
-                  projectReturnUrlRef.current = window.location.href;
-                  if (!user) {
-                    setSignInRequest({
-                      description: "Sign in to open a project and use its instructions and files.",
-                      trigger,
-                    });
-                    return;
-                  }
-                  setProjectPickerOpen(true);
-                }}
-              >
-                <Folder aria-hidden="true" />
-                <span>Open a project</span>
-              </button>
-            )}
-            {section === "more" && (
-              <button
-                type="button"
-                className={rowClass}
-                disabled={!onToolSelect || disabled || isStreaming}
-                aria-pressed={selectedTool === "web_search"}
-                onClick={() => chooseTool(COMPOSER_TOOLS[0])}
-              >
-                <Globe aria-hidden="true" />
-                <span>Search the web</span>
-              </button>
-            )}
-            {section === "more" &&
-              COMPOSER_TOOLS.filter(
-                (tool) => tool.id === "data_analysis" || tool.id === "file_analysis",
-              ).map((tool) => (
-                <button
-                  key={tool.id}
-                  type="button"
-                  className={rowClass}
-                  disabled={!isLoaded || !onToolSelect || disabled || isStreaming}
-                  aria-pressed={selectedTool === tool.id}
-                  onClick={() => {
-                    if (!requireFileAccount(trigger)) return;
-                    chooseTool(tool);
-                  }}
-                >
-                  <tool.icon aria-hidden="true" />
-                  <span>{tool.label}</span>
-                </button>
-              ))}
-            {section === "more" && (
-              <button
-                type="button"
-                className={rowClass}
-                aria-haspopup="dialog"
-                disabled={!isLoaded || disabled || isStreaming}
-                onClick={() => {
-                  const account = fileAccountRef.current;
-                  if (
-                    !account.isLoaded ||
-                    account.userId !== (user?.id ?? null) ||
-                    attachmentContextRef.current !== toolsContext
-                  )
-                    return;
-                  closeActions();
-                  if (!user) {
-                    setSignInRequest({
-                      description:
-                        "Sign in to run Agent tasks or use audio tools. Your current message is unchanged.",
-                      trigger,
-                    });
-                    return;
-                  }
-                  toolsReturnTriggerRef.current = trigger;
-                  toolsReturnUrlRef.current = window.location.href;
-                  setToolsOpening({ ownerId: user.id, context: toolsContext });
-                }}
-              >
-                <SlidersHorizontal aria-hidden="true" />
-                <span>Tasks and audio</span>
-              </button>
-            )}
-            {!mobile && section === "more" && (
-              <>
-                <button
-                  type="button"
-                  className={rowClass}
-                  onClick={() => {
-                    closeActions();
-                    if (!requireFileAccount(trigger)) return;
-                    setDrawingOpen(true);
-                  }}
-                >
-                  <Pencil aria-hidden="true" />
-                  <span>Drawings</span>
-                </button>
-                <button
-                  type="button"
-                  className={rowClass}
-                  aria-label="Create Image"
-                  disabled={
-                    !isLoaded || (Boolean(user) && !onToolSelect) || disabled || isStreaming
-                  }
-                  title={
-                    !user
-                      ? "Log in to create images"
-                      : !onToolSelect
-                        ? "Image creation is unavailable in this conversation"
-                        : "Create an image in this chat"
-                  }
-                  onClick={() => {
-                    if (!isLoaded || disabled || isStreaming) return;
-                    if (!user) {
-                      closeActions();
-                      setSignInRequest({
-                        description:
-                          "Sign in to create images. Your current message has not been sent or changed.",
-                        trigger,
-                      });
-                      return;
-                    }
-                    chooseTool(imageTool);
-                  }}
-                >
-                  <ImagePlus aria-hidden="true" />
-                  <span>
-                    Create Image
-                    {!user ? (
-                      <small>Log in to create images</small>
-                    ) : !onToolSelect ? (
-                      <small>Unavailable in this conversation</small>
-                    ) : null}
-                  </span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
-        {section === "plugins" && (
-          <ComposerPluginList
-            userId={isLoaded ? (user?.id ?? null) : null}
-            authLoaded={isLoaded}
-            conversations={user ? savedConversations : []}
-            navigationBlocked={Boolean(
-              value.length || attachments.length || isStreaming || disabled,
-            )}
-            onRequireSignIn={(pluginId) => {
-              closeActions();
-              setSignInRequest({
-                description:
-                  "Sign in to review this plugin’s connection and permissions. No plugin is connected automatically.",
-                pluginId,
-                trigger,
-              });
-            }}
-            onNavigate={closeActions}
-          />
-        )}
-      </>
+        <button
+          type="button"
+          className="kova-composer-action"
+          disabled={!isLoaded || disabled || isStreaming}
+          onClick={() => {
+            closeActions();
+            if (!requireFileAccount(trigger)) return;
+            projectTriggerRef.current = trigger as HTMLButtonElement | null;
+            projectReturnUrlRef.current = window.location.href;
+            setProjectPickerOpen(true);
+          }}
+        >
+          <Folder aria-hidden="true" />
+          <span>Projects</span>
+        </button>
+        <button
+          type="button"
+          className="kova-composer-action"
+          disabled={!isLoaded || (Boolean(user) && !onToolSelect) || disabled || isStreaming}
+          aria-pressed={selectedTool === "image"}
+          onClick={() => {
+            closeActions();
+            if (!requireFileAccount(trigger)) return;
+            chooseTool(COMPOSER_TOOLS.find((tool) => tool.id === "image")!);
+          }}
+        >
+          <ImagePlus aria-hidden="true" />
+          <span>Create Image</span>
+        </button>
+        <button
+          type="button"
+          className="kova-composer-action"
+          disabled={!isLoaded || disabled || isStreaming}
+          onClick={() => {
+            closeActions();
+            if (!requireFileAccount(trigger)) return;
+            setDrawingOpen(true);
+          }}
+        >
+          <Pencil aria-hidden="true" />
+          <span>Drawing</span>
+        </button>
+      </div>
     );
-  };
-
-  const openMessageSettings = (trigger: HTMLElement | null) => {
-    contextTriggerRef.current = trigger;
-    contextReturnToInputRef.current = false;
-    contextSwitchingDialogRef.current = false;
-    contextReturnUrlRef.current = window.location.href;
-    setPlusOpen(false);
-    setUtilityMenu(null);
-    setContextOpen(true);
   };
 
   useEffect(() => {
@@ -1895,7 +1657,7 @@ export function ChatInput({
             onCompositionEnd={() => {
               composingRef.current = false;
             }}
-            placeholder={placeholder ?? "Describe what you need…"}
+            placeholder={placeholder ?? "Ask KovaGPT anything..."}
             rows={1}
             spellCheck
             autoComplete="off"
@@ -2006,10 +1768,8 @@ export function ChatInput({
                       if (
                         libraryOpen ||
                         drawingOpen ||
-                        toolsOpening ||
                         signInRequest ||
                         contextOpen ||
-                        optionsOpen ||
                         projectPickerOpen
                       )
                         event.preventDefault();
@@ -2131,7 +1891,11 @@ export function ChatInput({
               <Popover
                 key={section}
                 open={utilityMenu === section}
-                onOpenChange={(next) => setUtilityMenu(next ? section : null)}
+                onOpenChange={(next) =>
+                  setUtilityMenu((current) =>
+                    next ? section : current === section ? null : current,
+                  )
+                }
               >
                 <PopoverTrigger asChild>
                   <button
@@ -2157,7 +1921,13 @@ export function ChatInput({
                   align="start"
                   collisionPadding={12}
                   onCloseAutoFocus={(event) => {
-                    if (libraryOpen || contextOpen || signInRequest) event.preventDefault();
+                    if (
+                      (utilityMenu && utilityMenu !== section) ||
+                      libraryOpen ||
+                      contextOpen ||
+                      signInRequest
+                    )
+                      event.preventDefault();
                   }}
                 >
                   {renderComposerActions(false, section)}
@@ -2165,138 +1935,7 @@ export function ChatInput({
               </Popover>
             ))
           : null}
-        <div className="kova-composer-tray-preferences">
-          {(showAddMenu || readOnlyContext) && (
-            <button
-              type="button"
-              className="spec400-toolbar-button spec400-toolbar-icon"
-              aria-label="Context"
-              title="Files, instructions, and saved material"
-              aria-haspopup="dialog"
-              aria-expanded={contextOpen}
-              disabled={disabled && !readOnlyContext}
-              onClick={(event) => openMessageSettings(event.currentTarget)}
-            >
-              <Files aria-hidden="true" />
-              <span>Context</span>
-              {attachments.length > 0 && (
-                <span className="spec400-context-count">{attachments.length}</span>
-              )}
-            </button>
-          )}
-          <Popover open={optionsOpen} onOpenChange={setOptionsOpen}>
-            {optionsReturnTriggerRef.current ? <PopoverAnchor virtualRef={plusTriggerRef} /> : null}
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="spec400-toolbar-button spec400-toolbar-icon"
-                disabled={disabled}
-                aria-label="Options"
-                title="Response format, length, and tone"
-                aria-haspopup="dialog"
-                aria-expanded={optionsOpen}
-                onClick={() => {
-                  optionsReturnTriggerRef.current = null;
-                }}
-              >
-                <SlidersHorizontal aria-hidden="true" />
-                <span>Options</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              role="dialog"
-              aria-label="Response options"
-              className="spec400-options-panel"
-              onCloseAutoFocus={(event) => {
-                if (!optionsReturnTriggerRef.current) return;
-                event.preventDefault();
-                restoreDialogFocus(optionsReturnTriggerRef.current, optionsReturnUrlRef.current);
-                optionsReturnTriggerRef.current = null;
-              }}
-              side="top"
-              align="start"
-              sideOffset={8}
-              collisionPadding={12}
-            >
-              <h2>Response options</h2>
-              <p>Preferences guide replies. Explicit instructions in your message take priority.</p>
-              {responseSettings && onResponseSettingsChange ? (
-                <>
-                  <label>
-                    Format
-                    <Select
-                      value={responseSettings.responseFormat ?? "automatic"}
-                      onValueChange={(value) =>
-                        onResponseSettingsChange({
-                          responseFormat: value as Settings["responseFormat"],
-                        })
-                      }
-                    >
-                      <SelectTrigger aria-label="Format" className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="automatic">Automatic</SelectItem>
-                        <SelectItem value="plain">Plain text</SelectItem>
-                        <SelectItem value="markdown">Markdown</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  <label>
-                    Length
-                    <Select
-                      value={responseSettings.responseLength}
-                      onValueChange={(value) =>
-                        onResponseSettingsChange({
-                          responseLength: value as Settings["responseLength"],
-                        })
-                      }
-                    >
-                      <SelectTrigger aria-label="Length" className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="short">Concise</SelectItem>
-                        <SelectItem value="medium">Standard</SelectItem>
-                        <SelectItem value="long">Detailed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  <label>
-                    Tone
-                    <Select
-                      value={responseSettings.responseTone ?? "direct"}
-                      onValueChange={(value) =>
-                        onResponseSettingsChange({
-                          responseTone: value as Settings["responseTone"],
-                        })
-                      }
-                    >
-                      <SelectTrigger aria-label="Tone" className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="direct">Direct</SelectItem>
-                        <SelectItem value="formal">Formal</SelectItem>
-                        <SelectItem value="conversational">Conversational</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  <p>
-                    {responseSettings.responseTone === "formal"
-                      ? "Use polished, professional language."
-                      : responseSettings.responseTone === "conversational"
-                        ? "Use a natural, friendly style."
-                        : "Get to the point with clear, straightforward language."}
-                  </p>
-                </>
-              ) : (
-                <p>Format, length, and tone preferences are available in Settings → Responses.</p>
-              )}
-              <p>Choose your model from the bottom of the message box.</p>
-            </PopoverContent>
-          </Popover>
-        </div>
+        {isDesktop ? <OpenDesktopAppButton /> : null}
       </div>
 
       {pasteOffer && (
@@ -2392,9 +2031,7 @@ export function ChatInput({
           onOpenChange={setPlusOpen}
           title="Attach"
           ariaLabel="Attach files and tools"
-          restoreFocus={
-            !contextOpen && !libraryOpen && !signInRequest && !optionsOpen && !toolsOpening
-          }
+          restoreFocus={!contextOpen && !libraryOpen && !signInRequest}
         >
           <div className="spec400-attach-menu">{renderComposerActions(true)}</div>
         </MobileBottomSheet>
@@ -2422,7 +2059,7 @@ export function ChatInput({
             value={value}
             onChange={(event) => onChange(event.target.value)}
             className="spec400-expanded-textarea"
-            placeholder="Describe what you need…"
+            placeholder="Ask KovaGPT anything..."
             disabled={disabled}
           />
           {(attachments.length > 0 || pasteOffer) && (
@@ -2696,32 +2333,6 @@ export function ChatInput({
             onClose={() => setSignInRequest(null)}
             returnFocusTarget={signInRequest.trigger}
             hasPendingMessage={Boolean(value.length || attachments.length || pasteOffer)}
-          />
-        </Suspense>
-      ) : null}
-      {isLoaded &&
-      toolsOpening &&
-      toolsOpening.context === toolsContext &&
-      toolsOpening.ownerId === user?.id ? (
-        <Suspense
-          fallback={
-            <p role="status" className="sr-only">
-              Opening tools…
-            </p>
-          }
-        >
-          <ComposerToolsDialog
-            ownerId={toolsOpening.ownerId}
-            onClose={() => setToolsOpening(null)}
-            onReturnFocus={() => {
-              if (
-                !fileAccountRef.current.isLoaded ||
-                fileAccountRef.current.userId !== toolsOpening.ownerId ||
-                attachmentContextRef.current !== toolsOpening.context
-              )
-                return;
-              restoreDialogFocus(toolsReturnTriggerRef.current, toolsReturnUrlRef.current);
-            }}
           />
         </Suspense>
       ) : null}

@@ -26,6 +26,10 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "@/components/OpenDesktopAppButton": {
+    OpenDesktopAppButton: () =>
+      React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
+  },
   "@/components/ComposerVoiceDialog": { ComposerVoiceDialog: empty },
   "@/components/ui/ExpandViewIcon": { ExpandViewIcon: empty },
   "@/components/ComposerUploadAllowance": { ComposerUploadAllowance: empty },
@@ -240,20 +244,20 @@ test("uploading and failed attachments retain their submission guard", () => {
   }
 });
 
-test("Options points to the shared model picker without an obsolete Thinking upgrade", () => {
+test("the tray omits the old Context and Options actions at every tier", () => {
   for (const userTier of ["free", "plus", "pro"]) {
     const html = render({ userTier }, signedInAccount, desktopLayout, true);
-    assert.match(html, /Choose your model from the bottom of the message box/);
+    assert.doesNotMatch(html, /aria-label="Context"|aria-label="Options"/);
     assert.doesNotMatch(html, /thinking-upgrade-button|Thinking is locked/);
     assert.deepEqual(upgradeActions, []);
   }
 });
 
-test("new and populated chats retain the approved Attach, Context, Options toolbar", () => {
+test("new and populated chats retain the Attach and expand controls", () => {
   for (const surface of ["empty", "conversation"]) {
     const html = render({ showAddMenu: true, showChooseProject: true, surface });
     assert.match(html, new RegExp(`data-composer-surface="${surface}"`));
-    for (const label of ["Message tools", "Attach", "Context", "Options", "Expand input"])
+    for (const label of ["Message tools", "Attach", "Expand input"])
       assert.match(html, new RegExp(`aria-label="${label}"`));
     assert.doesNotMatch(html, /kova-composer-utilities/);
     assertMicrophoneControls(html);
@@ -270,7 +274,7 @@ test("phone chat keeps one growing input and its model status beside the trailin
     );
     assert.match(html, /data-composer-surface="conversation"/);
     assert.match(html, /aria-label="Attach"/);
-    assert.match(html, /aria-label="Options"/);
+    assert.doesNotMatch(html, /aria-label="Options"/);
     assert.equal((html.match(/data-testid="send-button"/g) ?? []).length, 1);
     assert.doesNotMatch(html, /data-testid="stop-button"/);
     assertMicrophoneControls(html);
@@ -314,7 +318,7 @@ test("shared toolbar preserves specialized composer restrictions at every viewpo
     for (const surface of ["empty", "conversation"]) {
       const html = render({ surface, showAddMenu: false }, signedInAccount, viewport);
       assert.doesNotMatch(html, /aria-label="Attach"|aria-label="Context"/);
-      assert.match(html, /aria-label="Options"/);
+      assert.doesNotMatch(html, /aria-label="Options"/);
       assert.match(html, /aria-label="Expand input"/);
       assertMicrophoneControls(html);
     }

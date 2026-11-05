@@ -153,6 +153,7 @@ function fixture(
     "ComposerModelStatus",
     "MobileBottomSheet",
     "ResponsiveModelSelector",
+    "OpenDesktopAppButton",
     "ComposerDrawingDialog",
     "ComposerPluginList",
   ])
@@ -303,7 +304,7 @@ for (const entry of [
         },
       });
     if (entry === "drawing attach") assert.equal(await f.drawing().onAttach([file]), false);
-    if (entry === "drawing creation") await f.click("Drawings");
+    if (entry === "drawing creation") await f.click("Drawing");
     await f.flush();
     assert.ok(f.signIn());
     assert.equal(f.signIn().hasPendingMessage, true);
@@ -355,7 +356,7 @@ test("signed-in file selection, reads and drawing creation keep working", async 
   assert.deepEqual(f.quotas, []);
   assert.equal(f.saves.length, 1);
   assert.equal(f.signIn(), undefined);
-  await f.click("Drawings");
+  await f.click("Drawing");
   assert.equal(f.drawing().open, true);
   assert.equal(f.input().value, "Keep my draft");
 });
@@ -597,13 +598,14 @@ for (const [label, tool] of [
   ["Analyze data", "data_analysis"],
   ["Analyze files", "file_analysis"],
 ]) {
-  test(`${label} is selectable on desktop and phone and hands the explicit tool to Send`, async () => {
+  test(`${label} from an existing draft hands the explicit tool to Send on desktop and phone`, async () => {
     for (const layout of [
       { isDesktop: true, isMobile: false, interaction: "pointer" },
       { isDesktop: false, isMobile: true, interaction: "touch" },
     ]) {
       const f = fixture(
         {
+          selectedTool: tool,
           attachments:
             tool === "file_analysis"
               ? [
@@ -620,9 +622,7 @@ for (const [label, tool] of [
         { isLoaded: true, user: { id: "owner-a" } },
         layout,
       );
-      await f.click(label);
-      assert.deepEqual(f.toolChanges, [tool]);
-      assert.equal(f.button(label)["aria-pressed"], true);
+      assert.deepEqual(f.toolChanges, []);
       await f.click("Send message");
       assert.deepEqual(f.submittedTools, [tool]);
       assert.deepEqual([f.quotas, f.saves, f.reads], [[], [], []]);
@@ -631,8 +631,6 @@ for (const [label, tool] of [
 
   test(`guests cannot select or submit ${label}, including a queued draft`, async () => {
     const f = fixture();
-    await f.click(label);
-    assert.ok(f.signIn());
     assert.deepEqual(f.toolChanges, []);
     const submitted = fixture({ selectedTool: tool });
     await submitted.click("Send message");
@@ -739,11 +737,11 @@ test("removing a file also blocks a stale Send callback and queued file analysis
   assert.deepEqual(queued, ["file_analysis"]);
 });
 
-test("analysis selection toggles off and data analysis queues without any file or new allowance", async () => {
+test("image selection toggles off and data analysis queues without any file or new allowance", async () => {
   const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  await f.click("Analyze data");
-  await f.click("Analyze data");
-  assert.deepEqual(f.toolChanges, ["data_analysis", null]);
+  await f.click("Create Image");
+  await f.click("Create Image");
+  assert.deepEqual(f.toolChanges, ["image", null]);
   await f.click("Send message");
   assert.deepEqual(f.submittedTools, [null]);
   const queued = [];
@@ -793,79 +791,34 @@ test("stale analysis Send and queued Send callbacks cannot run for a replacement
   assert.deepEqual(queued, ["data_analysis"]);
 });
 
-test("task and audio tools open for the current account without sending or changing its draft", async () => {
-  const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  await f.click("Tasks and audio");
-  const tools = f.nodes().find((node) => node.type === "ComposerToolsDialog");
-  assert.ok(tools);
-  assert.equal(tools.props.ownerId, "owner-a");
-  assert.equal(f.input().value, "Keep my draft");
-  assert.deepEqual([f.submissions, f.quotas, f.saves, f.reads], [[], [], [], []]);
-  tools.props.onClose();
-  await f.flush();
-  assert.equal(
-    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
-    false,
-  );
+test("plus menus contain exactly the requested actions on each layout", () => {
+  for (const mobile of [false, true]) {
+    const f = fixture(
+      {},
+      { isLoaded: true, user: { id: "owner-a" } },
+      { isDesktop: !mobile, isMobile: mobile, interaction: mobile ? "touch" : "pointer" },
+    );
+    const menu = f.nodes().find((node) => node.props?.className === "kova-composer-quick-menu");
+    const labels = nodes(menu)
+      .filter((node) => node.type === "button")
+      .map((node) => text(node.props.children));
+    assert.deepEqual(
+      labels,
+      mobile
+        ? ["Camera", "Photos", "Files", "Projects", "Create Image", "Drawing"]
+        : ["Files", "Library", "Projects", "Create Image", "Drawing"],
+    );
+    assert.deepEqual([f.submissions, f.saves, f.reads], [[], [], []]);
+  }
 });
 
-test("task and audio tools require sign-in and reject an earlier account's opener", async () => {
-  const guest = fixture();
-  await guest.click("Tasks and audio");
-  assert.match(guest.signIn().description, /Sign in to run Agent tasks or use audio tools/);
-  assert.equal(
-    guest.nodes().some((node) => node.type === "ComposerToolsDialog"),
-    false,
-  );
+test("stale drawing openers cannot act for a replacement account", async () => {
   const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  const staleOpen = f.button("Tasks and audio").onClick;
+  const staleOpen = f.button("Drawing").onClick;
   await f.account({ isLoaded: true, user: { id: "owner-b" } });
   staleOpen();
   await f.flush();
-  assert.equal(
-    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
-    false,
-  );
-  await f.click("Tasks and audio");
-  assert.equal(
-    f.nodes().find((node) => node.type === "ComposerToolsDialog").props.ownerId,
-    "owner-b",
-  );
-});
-
-test("an open tools dialog disappears immediately when its account changes", async () => {
-  const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  const staleOpen = f.button("Tasks and audio").onClick;
-  await f.click("Tasks and audio");
-  await f.account({ isLoaded: true, user: { id: "owner-b" } });
-  assert.equal(
-    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
-    false,
-  );
-  await f.account({ isLoaded: true, user: { id: "owner-a" } });
-  staleOpen();
-  await f.flush();
-  assert.equal(
-    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
-    false,
-  );
-  assert.equal(f.input().value, "Keep my draft");
-});
-
-test("phone attachment sheet yields focus when task and audio tools open", async () => {
-  const f = fixture(
-    {},
-    { isLoaded: true, user: { id: "owner-a" } },
-    { isDesktop: false, isMobile: true, interaction: "touch" },
-  );
-  await f.click("Tasks and audio");
-  const sheet = f
-    .nodes()
-    .find((node) => node.type === "MobileBottomSheet" && node.props.title === "Attach");
-  assert.ok(sheet);
-  assert.equal(sheet.props.restoreFocus, false);
-  assert.equal(
-    f.nodes().find((node) => node.type === "ComposerToolsDialog").props.ownerId,
-    "owner-a",
-  );
+  assert.equal(f.drawing().open, false);
+  await f.click("Drawing");
+  assert.equal(f.drawing().open, true);
 });

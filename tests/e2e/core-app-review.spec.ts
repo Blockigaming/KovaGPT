@@ -72,7 +72,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await page.goto("/");
   await waitForKovaHydration(page);
   await openResponseOptions(page);
-  await expect(page.getByTestId("model-selector-trigger").filter({ visible: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Format", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();

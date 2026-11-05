@@ -30,6 +30,10 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "@/components/OpenDesktopAppButton": {
+    OpenDesktopAppButton: () =>
+      React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
+  },
   "@/components/ComposerVoiceDialog": { ComposerVoiceDialog: empty },
   "@/components/ui/ExpandViewIcon": { ExpandViewIcon: empty },
   "@/components/ComposerUploadAllowance": { ComposerUploadAllowance: empty },
@@ -218,9 +222,9 @@ test("spec400 typing stays available during generation and Stop stays visible", 
 test("spec400 desktop and mobile have the same toolbar and exact placeholder", () => {
   for (const device of [desktopLayout, phoneLayout]) {
     const html = render({ showAddMenu: true }, signedInAccount, device);
-    for (const label of ["Attach", "Context", "Options", "Expand input", "Send message"])
+    for (const label of ["Attach", "Expand input", "Send message"])
       assert.ok(controlProps.has(label), label);
-    assert.equal(textareaProps.placeholder, "Describe what you need…");
+    assert.equal(textareaProps.placeholder, "Ask KovaGPT anything...");
     assert.match(html, /spec400-composer-toolbar/);
   }
 });

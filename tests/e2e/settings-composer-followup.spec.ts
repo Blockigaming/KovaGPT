@@ -57,7 +57,7 @@ for (const theme of ["dark", "light"] as const) {
   });
 }
 
-test("a started chat hides its resource tray and keeps preferences available through Attach", async ({
+test("a started chat hides its resource tray and keeps preferences available in Settings", async ({
   page,
 }) => {
   await fixture(page, "dark", true, true);
@@ -68,7 +68,7 @@ test("a started chat hides its resource tray and keeps preferences available thr
   const options = await openResponseOptions(page);
   await expect(options).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeEnabled();
 });
 
 test("Type with voice replaces the composer inline and Escape preserves the draft", async ({

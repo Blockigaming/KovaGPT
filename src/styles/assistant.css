@@ -244,9 +244,9 @@
 }
 
 .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
-  flex: 1 0 auto;
-  justify-content: center;
-  padding-block: 2rem 5rem !important;
+  flex: none;
+  justify-content: flex-start;
+  padding-block: 0 !important;
 }
 
 .kova-assistant .kova-empty-chat .kova-greeting {

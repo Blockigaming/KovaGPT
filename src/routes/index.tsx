@@ -3291,7 +3291,7 @@ function KovaGPT() {
               : undefined
           }
         />
-        {!showEmptyChat && desktopToolbar}
+        {desktopToolbar}
 
         {tempChat && chatStarted ? (
           <p
@@ -3376,7 +3376,6 @@ function KovaGPT() {
                   owner={userKey}
                   firstName={user?.firstName}
                   chatId={activeId}
-                  toolbar={desktopToolbar}
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
                   onSelect={setActiveId}
                 >
@@ -3425,7 +3424,7 @@ function KovaGPT() {
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
                     onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Describe what you need…"
+                    placeholder="Ask KovaGPT anything..."
                     responseSettings={settings}
                     onResponseSettingsChange={(change) =>
                       setSettings((previous) => ({ ...previous, ...change }))
@@ -3561,7 +3560,7 @@ function KovaGPT() {
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
                     onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Describe what you need…"
+                    placeholder="Ask KovaGPT anything..."
                     responseSettings={settings}
                     onResponseSettingsChange={(change) =>
                       setSettings((previous) => ({ ...previous, ...change }))
