@@ -6,6 +6,7 @@ import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mj
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import {
   isKovaHostedModelId,
+  prepareKovaHostedRequest,
   requestKovaHostedChat,
 } from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
@@ -772,8 +773,10 @@ export async function streamingChatCompletions(
   return chatCompletions({ ...body, stream: true }, init);
 }
 
-/** Pure: the same conversion and final model mapping used by providerFetch. */
+/** Pure: estimate the same wire body that the selected model's transport sends. */
 export function prepareChatResponsesRequest(body: JsonObject): JsonObject {
+  if (isKovaHostedModelId(body.model))
+    return JSON.parse(prepareKovaHostedRequest(body).body) as JsonObject;
   return withProviderModel(toResponsesRequest(body), body.stream === true ? "streaming" : "chat");
 }
 

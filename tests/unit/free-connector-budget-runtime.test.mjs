@@ -832,3 +832,45 @@ test("an already consumed generation identifier never causes a second provider r
   assert.equal(f.providers.length, 0);
   assert.equal(f.reads.length, 0);
 });
+
+const hostedRouting = {
+  KOVA_HOSTED_INFERENCE_ENABLED: "true",
+  KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
+  KOVA_MODEL_ADVANCED_REASONING: "kova-neon-4.6",
+  KOVA_MODEL_PREMIUM_REASONING: "kova-xenon-5",
+};
+for (const [tier, mode, alias, foundation] of [
+  ["free", "instant", "kova-argon-4.6", "deepseek/deepseek-v4-flash-0731"],
+  ["plus", "thinking", "kova-neon-4.6", "meta-llama/llama-4-maverick"],
+  ["pro", "max", "kova-xenon-5", "moonshotai/kimi-k3"],
+]) {
+  test(`actual chat route admits ${alias} with its selected model and unchanged account admission`, async () => {
+    const f = fixture({ tier, mode, noTools: true, env: hostedRouting });
+    const { response, text } = await f.post();
+    assert.equal(response.status, 200, text);
+    assert.equal(f.providers.length, 1);
+    assert.equal(f.providers[0].model, alias);
+    assert.equal(f.normalizedProviders[0].model, foundation);
+    assert.equal(f.acquisitions.length, 1);
+    assert.equal(f.settlements.length, 1);
+    assert.equal(f.reads.length, 0);
+  });
+}
+
+test("Argon connector fallback retains the selected hosted model and complete conversation", async () => {
+  const f = fixture({
+    connectedTools: oversizedCatalog,
+    messages: ordinaryFollowUp,
+    env: hostedRouting,
+  });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, text);
+  assert.equal(f.providers.length, 1);
+  assert.equal(f.normalizedProviders[0].model, "deepseek/deepseek-v4-flash-0731");
+  const sent = JSON.stringify(f.normalizedProviders[0].messages);
+  for (const message of ordinaryFollowUp) assert.ok(sent.includes(message.content));
+  assert.ok(sent.includes("Connected tools were not run"));
+  assert.equal(f.reads.length, 0);
+  assert.equal(f.acquisitions.length, 1);
+  assert.equal(f.settlements.length, 1);
+});
