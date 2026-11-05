@@ -376,6 +376,8 @@ function taskLoadFixture() {
     accessState: "eligible",
     pendingTaskIdsRef,
     listRequestRef,
+    checkEligible: async () => ({ executionAvailable: true }),
+    setExecutionAvailable: (value) => events.push(["executionAvailable", value]),
     taskListLoaded: { current: false },
     useCallback: (fn) => fn,
     list: () => {
