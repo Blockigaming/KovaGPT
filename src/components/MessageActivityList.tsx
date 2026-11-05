@@ -4,7 +4,7 @@ import type { Activity } from "@/lib/chat-store";
 
 export function MessageActivityList({ activities }: { activities?: Activity[] }) {
   const rows = activities?.filter((activity) => activity.tool !== "scheduled_task") ?? [];
-  if (!rows.length) return null;\n  const completed = rows.filter((activity) => activity.status === "completed").length;\n  const running = rows.find((activity) => activity.status === "running");
+  if (!rows.length) return null;\n  const completed = rows.filter((activity) => activity.status === "done").length;\n  const running = rows.find((activity) => activity.status === "running");
   return (
     <ol
       className="kova-activity-list"
@@ -53,7 +53,7 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
                 {status}
               </span>
             )}
-            {activity.status === "completed" && (\n              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-label="Completed" />\n            )}\n            {activity.status === "running" && (
+            {activity.status === "done" && (\n              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-label="Completed" />\n            )}\n            {activity.status === "running" && (
               <Loader2
                 className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
                 aria-hidden="true"
