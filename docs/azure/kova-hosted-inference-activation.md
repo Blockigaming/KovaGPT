@@ -71,9 +71,9 @@ tested.
   autoscaling independently from daily capacity recommendations.
 - Daily planner: `node scripts/azure/kova-daily-capacity-plan.mjs hourly.json CURRENT_MAX`
   is **read-only**. It does not schedule or apply Azure changes.
-- Browser idle: isolated Playwright runtime defaults to 15 minutes on PR.
-  Production Work browser still has a separate 5-minute absolute authorization
-  contract requiring its own coordinated migration and tests.
+- Browser idle: both Playwright and Work browser staging code use a 15-minute
+  renewable inactivity lease and no absolute session age cap. The coordinated
+  PostgreSQL migration, runner image and web app deployment are **not live**.
 - Browser activity must describe observed operations; a progress animation is not
   evidence that a website actually opened.
 
