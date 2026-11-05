@@ -82,3 +82,45 @@ test("rejects disabled credential, upstream errors and wrong content type", asyn
     }),
   }), /hosted_response_invalid/);
 });
+
+test("each Kova tier has distinct upstream budget and reasoning policy", () => {
+  for (const [alias, expectedModel, effort, max] of [
+    ["kova-argon-5", "qwen/qwen3.5-flash", undefined, 4096],
+    ["kova-neon-4.6", "deepseek/deepseek-v4.1-flash-1017", "medium", 8192],
+    ["kova-xenon-4.6", "moonshotai/kimi-k3", "max", 16384],
+  ]) {
+    const prepared = prepareKovaHostedRequest({
+      ...request, model: alias, max_completion_tokens: max,
+    });
+    const body = JSON.parse(prepared.body);
+    assert.equal(body.model, expectedModel);
+    assert.equal(body.max_tokens, max);
+    assert.equal(body.reasoning?.effort, effort);
+    assert.equal(body.provider.sort, "latency");
+    assert.equal(body.provider.require_parameters, true);
+    assert.equal(body.provider.allow_fallbacks, true);
+    assert.ok(body.provider.max_price.prompt > 0);
+    assert.ok(body.provider.max_price.completion > 0);
+    assert.throws(() => prepareKovaHostedRequest({
+      ...request, model: alias, max_completion_tokens: max + 1,
+    }));
+  }
+});
+test("multimodal Kova models accept bounded inline user image without remote fetch URL", () => {
+  const prepared = prepareKovaHostedRequest({
+    ...request,
+    messages: [
+      { role: "user", content: [
+        { type: "text", text: "Describe this image." },
+        { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
+      ] },
+    ],
+  });
+  assert.equal(JSON.parse(prepared.body).messages[0].content[1].type, "image_url");
+  assert.throws(() => prepareKovaHostedRequest({
+    ...request,
+    messages: [{ role: "user", content: [
+      { type: "image_url", image_url: { url: "https://private.example/image.png" } },
+    ] }],
+  }));
+});
