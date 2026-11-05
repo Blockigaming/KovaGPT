@@ -13,7 +13,12 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
   const module = loadUiModule(
     "src/components/CommandPalette.tsx",
     {
-      react: { ...hooks.react, useDeferredValue: (value) => value, useMemo: (fn) => fn() },
+      react: {
+        ...hooks.react,
+        useLayoutEffect: hooks.react.useEffect,
+        useDeferredValue: (value) => value,
+        useMemo: (fn) => fn(),
+      },
       "react-dom": { flushSync: (fn) => fn() },
       "@tanstack/react-router": { Link: "Link" },
       "lucide-react": Object.fromEntries(

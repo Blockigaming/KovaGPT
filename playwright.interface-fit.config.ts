@@ -9,11 +9,15 @@ if (!["workspace", "public"].includes(scope))
   throw new Error(`Unknown interface audit scope: ${scope}`);
 
 export default defineConfig({
-  testDir: "./tests/interface-fit",
+  testDir: "./tests",
   testMatch:
     scope === "workspace"
-      ? ["interface-fit-audit.spec.ts", "interactive-forms-ui.spec.ts"]
-      : "interface-fit-audit.spec.ts",
+      ? [
+          "**/interface-fit/interface-fit-audit.spec.ts",
+          "**/interface-fit/interactive-forms-ui.spec.ts",
+          "**/e2e/sidebar-touch-selection.spec.ts",
+        ]
+      : "**/interface-fit/interface-fit-audit.spec.ts",
   timeout: 60_000,
   // Nine sizes per engine include controlled loading and retry scenarios.
   globalTimeout: 720_000,

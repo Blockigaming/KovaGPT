@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "@tanstack/react-router";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   Search,
@@ -219,7 +219,7 @@ export function CommandPalette({
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const shouldRestoreFocusRef = useRef(true);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     shouldRestoreFocusRef.current = true;
     returnFocusRef.current =
@@ -227,7 +227,8 @@ export function CommandPalette({
       (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 
     const returnTarget = returnFocusRef.current;
-    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    // Own keyboard focus before paint; Escape must work during the opening frame.
+    searchInputRef.current?.focus({ preventScroll: true });
 
     return () => {
       if (!shouldRestoreFocusRef.current) return;
