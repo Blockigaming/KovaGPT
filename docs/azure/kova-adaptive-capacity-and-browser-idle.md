@@ -16,11 +16,10 @@
   - One-step maximum change per day, 1 always-on minimum replica, hard ceiling of 4, conservative 72-hour downscale rule.
   - Invalid/stale/missing telemetry causes no scaling.
 - Read-only CLI: `node scripts/azure/kova-daily-capacity-plan.mjs hourly-metrics.json CURRENT_MAX_REPLICAS`.
-- Isolated `src/browser-runtime/session-manager.ts` now defaults to a 15-minute idle timeout. Its separate absolute lifetime remains 30 minutes.
-
-## Important separate Work browser implementation
-
-The current Work cloud browser uses independent `work-runner/browser-manager.mjs` and `src/lib/work-browser.server.ts` authority, with **300-second absolute sessions enforced in PostgreSQL** (table `work_browser_sessions`). Do **not** claim the full cloud-browser 15-minute idle requirement is implemented by updating `BrowserSessionManager`. It needs an independently reviewed database migration, sliding expiry semantics with a hard maximum session lifetime, runner-side expiry reaping, and tests for idle termination, owner handoff, and session/account deletion.
+- Both browser runtimes now use a renewable 15-minute idle lease, with **no absolute session age limit**. Session activity renews the deadline; status and catalog polling do not.
+- The separately protected Work browser was updated end-to-end: signed transport, runner manager, gVisor container, container worker and PostgreSQL authority.
+- New database migration: `supabase/migrations/20261105220000_kova_browser_idle_15m_no_absolute_max.sql`. This **has not been applied to production**. Deploy the application, runner image and DB migration as one staged contract; do not apply only half.
+- Existing identity, ownership, approval, egress and per-owner capacity limits remain enforced.
 
 ## Required Azure activation (not performed by this document)
 
