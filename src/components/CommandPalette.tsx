@@ -625,7 +625,7 @@ export function CommandPalette({
           {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
-            const className = `flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
+            const className = `flex h-auto min-h-11 w-full items-center gap-3 whitespace-normal rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
             const content = (
               <>
                 <Icon className="h-4 w-4 text-muted-foreground" />
@@ -634,7 +634,7 @@ export function CommandPalette({
                   <Star className="ml-auto h-3.5 w-3.5 fill-current" aria-label="Pinned command" />
                 ) : null}
                 {action.disabledReason ? (
-                  <span className="max-w-[45%] text-right text-[11px]">
+                  <span className="min-w-0 max-w-[45%] break-words text-right text-[11px]">
                     {action.disabledReason}
                   </span>
                 ) : null}

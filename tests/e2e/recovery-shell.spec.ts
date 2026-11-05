@@ -46,6 +46,28 @@ test("workspace search preserves the sidebar and restores its active dialog", as
   });
   await expect(search).toBeVisible();
   await expect(search).toHaveAttribute("aria-modal", "true");
+  const clippedLabels = await search.getByRole("option").evaluateAll((options) =>
+    options.flatMap((option) => {
+      const bounds = option.getBoundingClientRect();
+      return [...option.querySelectorAll(":scope > span")].flatMap((label) => {
+        // Chat/workspace titles deliberately use ellipses; command labels and
+        // explanations must remain readable within their own result rows.
+        if (getComputedStyle(label).textOverflow === "ellipsis") return [];
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        return [...range.getClientRects()].some(
+          (text) =>
+            text.left < bounds.left - 1 ||
+            text.right > bounds.right + 1 ||
+            text.top < bounds.top - 1 ||
+            text.bottom > bounds.bottom + 1,
+        )
+          ? [label.textContent]
+          : [];
+      });
+    }),
+  );
+  expect(clippedLabels, "Command labels and disabled reasons must fit their rows").toEqual([]);
   await expect(
     search.getByRole("combobox", { name: "Search workspace, commands, and chats", exact: true }),
   ).toBeFocused();
