@@ -6,12 +6,11 @@ KovaGPT retains its existing Azure Container App and always-warm API gateway.
 Only text inference is routed to already-running, usage-metered provider GPUs.
 There is **no dedicated Kova GPU server to purchase**.
 
-- **Kova Argon 5** -> `qwen/qwen3-8b`
-- **Kova Neon 4.6** -> `qwen/qwen3-14b`
-- **Kova Xenon 4.6** -> `qwen/qwen3-32b`
+- **Kova Argon 5** -> `qwen/qwen3.5-flash`
+- **Kova Neon 4.6** -> `deepseek/deepseek-v4.1-flash-1017`
+- **Kova Xenon 4.6** -> `moonshotai/kimi-k3`
 
-The aliases are Kova product identities; the base models are supplied by Qwen
-and the inference traffic is handled by OpenRouter and its selected providers.
+The aliases are Kova product identities; the underlying foundation models are supplied by Qwen, DeepSeek and Moonshot AI. Inference traffic is handled by OpenRouter and its selected providers. These are candidate mappings, not independently proven parity with OpenAI's fast/balanced/frontier lineup.
 Kova must accurately disclose foundation-model provenance when asked and
 respect license, data-handling, and customer-privacy requirements.
 
@@ -54,9 +53,7 @@ tested.
    upstream request-capture compatibility and model selection entitlement tests.
 2. Streaming and non-streaming sample messages for all three aliases;
    structured tool calls, user confirmation, and authorization across accounts.
-3. Verify image/document prompts never get sent to these text-only models.
-   Verify image generation and cloud-browser services remain independently
-   available through existing routes.
+3. Verify all three candidate models' multimodal input handling using bounded, inline image attachments; external image URLs must be rejected. Image generation and cloud-browser services remain independently available through their existing routes.
 4. Verify all quota, daily spending controls, per-user concurrency, request
    cancellation, and token usage settlement; compare provider invoice samples.
 5. Benchmark sustained and bursty **1 request/second aggregate** traffic,
@@ -85,3 +82,7 @@ tested.
 Adapter code, Kova model aliases, identity and accounting hooks: PR branch only.
 Cloud account/API key, Azure secrets, staging deployment, upstream compatibility,
 typecheck/CI, customer consent and live production cutover: NOT VERIFIED.
+
+## Tier quality acceptance
+
+Argon is speed-first (4096 tokens); Neon is balanced reasoning (8192 tokens); Xenon is max reasoning (16384 tokens). Their server-owned OpenRouter routing caps prices per 1M input/output tokens at Argon $0.20/$0.80, Neon $0.30/$1.20, Xenon $3.00/$15.00 and prioritizes low latency. These are price ceilings, not the cheapest advertised rates. Only launch after assessing real token usage, median/p95 first-token latency, tool calling, vision accuracy, and same-model failover, including hidden reasoning-token accounting.
