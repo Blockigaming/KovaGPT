@@ -96,12 +96,60 @@ export default defineConfig({
       },
       ...(["firefox", "webkit"] as const).flatMap((browserName) => [
         {
+          name: `${browserName}-320`,
+          use: {
+            browserName,
+            viewport: { width: 320, height: 700 },
+            isMobile: browserName === "webkit",
+            hasTouch: true,
+          },
+        },
+        {
           name: `${browserName}-390`,
-          use: { browserName, viewport: { width: 390, height: 844 }, hasTouch: true },
+          use: {
+            browserName,
+            viewport: { width: 390, height: 844 },
+            isMobile: browserName === "webkit",
+            hasTouch: true,
+          },
+        },
+        {
+          name: `${browserName}-short-phone`,
+          use: {
+            browserName,
+            viewport: { width: 320, height: 480 },
+            isMobile: browserName === "webkit",
+            hasTouch: true,
+          },
+        },
+        {
+          name: `${browserName}-landscape`,
+          use: {
+            browserName,
+            viewport: { width: 844, height: 390 },
+            isMobile: browserName === "webkit",
+            hasTouch: true,
+          },
+        },
+        {
+          name: `${browserName}-768`,
+          use: { browserName, viewport: { width: 768, height: 1024 }, hasTouch: true },
+        },
+        {
+          name: `${browserName}-1024`,
+          use: { browserName, viewport: { width: 1024, height: 768 }, hasTouch: true },
         },
         {
           name: `${browserName}-1440`,
           use: { browserName, viewport: { width: 1440, height: 900 } },
+        },
+        {
+          name: `${browserName}-2560`,
+          use: { browserName, viewport: { width: 2560, height: 1440 } },
+        },
+        {
+          name: `${browserName}-short-desktop`,
+          use: { browserName, viewport: { width: 1440, height: 390 } },
         },
       ]),
     ] satisfies PlaywrightTestProject[]
