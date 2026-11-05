@@ -6,9 +6,9 @@ KovaGPT retains its existing Azure Container App and always-warm API gateway.
 Only text inference is routed to already-running, usage-metered provider GPUs.
 There is **no dedicated Kova GPU server to purchase**.
 
-- **Kova Argon 5** -> `deepseek/deepseek-v4-flash-0731`
+- **Kova Argon 4.6** -> `deepseek/deepseek-v4-flash-0731`
 - **Kova Neon 4.6** -> `meta-llama/llama-4-maverick`
-- **Kova Xenon 4.6** -> `moonshotai/kimi-k3`
+- **Kova Xenon 5** -> `moonshotai/kimi-k3`
 
 The aliases are Kova product identities; the underlying foundation models are supplied by DeepSeek, Meta and Moonshot AI. Inference traffic is handled by OpenRouter and its selected providers. These are candidate mappings, not independently proven parity with OpenAI's fast/balanced/frontier lineup.
 Kova must accurately disclose foundation-model provenance when asked and
@@ -31,9 +31,9 @@ respect license, data-handling, and customer-privacy requirements.
 
 ```dotenv
 KOVA_HOSTED_INFERENCE_ENABLED=false
-KOVA_MODEL_DEFAULT_CHAT=kova-argon-5
+KOVA_MODEL_DEFAULT_CHAT=kova-argon-4.6
 KOVA_MODEL_ADVANCED_REASONING=kova-neon-4.6
-KOVA_MODEL_PREMIUM_REASONING=kova-xenon-4.6
+KOVA_MODEL_PREMIUM_REASONING=kova-xenon-5
 # OPENROUTER_API_KEY is an existing secure Azure secret reference only.
 ```
 
