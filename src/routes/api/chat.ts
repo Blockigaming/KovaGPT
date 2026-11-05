@@ -63,8 +63,10 @@ import {
   estimateMaximumCostUsd,
   modelForPolicy,
   OPENAI_TEXT_MODELS,
+  KOVA_HOSTED_TEXT_MODELS,
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
+import { isKovaHostedModelId } from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import {
   FreeConnectorBudget,
@@ -1122,7 +1124,9 @@ export const Route = createFileRoute("/api/chat")({
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
               modelId: model,
-              provider: getAiProviderConfig().provider,
+              provider: isKovaHostedModelId(model)
+                ? "openrouter"
+                : getAiProviderConfig().provider,
               hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
             });
 
@@ -1629,7 +1633,9 @@ export const Route = createFileRoute("/api/chat")({
                   ]
                 : finalMessages;
 
-            const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
+            const catalogModel = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
+              (entry) => entry.id === model,
+            );
             if (!catalogModel) {
               return Response.json(
                 { error: "AI model configuration is unavailable." },
