@@ -114,7 +114,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
  */
 export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
   {
-    id: "kova-argon-5",
+    id: "kova-argon-4.6",
     endpoint: "responses", // Catalog compatibility; actual transport uses chat completions.
     reasoning: true,
     vision: false,
@@ -136,7 +136,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     tiers: ["free", "plus", "pro"],
   },
   {
-    id: "kova-xenon-4.6",
+    id: "kova-xenon-5",
     endpoint: "responses",
     reasoning: true,
     vision: true,
