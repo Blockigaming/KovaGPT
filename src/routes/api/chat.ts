@@ -1444,7 +1444,7 @@ export const Route = createFileRoute("/api/chat")({
                     : ["high", "extra_high", "max", "ultra"].includes(m.id)
                       ? "deep"
                       : "normal",
-              ).outputCeiling, isKovaHostedModelId(model) ? 4096 : 128000),
+              ).outputCeiling, model === "kova-xenon-4.6" ? 16384 : model === "kova-neon-4.6" ? 8192 : isKovaHostedModelId(model) ? 4096 : 128000),
               messages: [
                 {
                   role: "system",
