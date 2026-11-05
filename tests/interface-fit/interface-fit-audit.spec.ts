@@ -147,49 +147,49 @@ if (scope === "public") {
     await waitForKovaHydration(page);
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
     await expect(notice).toBeVisible();
-    // The fixture ends offline. Wait for that final phase before measuring its
-    // controls, rather than scrolling an element replaced during initialization.
-    await expect(
-      notice.getByRole("button", { name: "Retry chat sync", exact: true }),
-    ).toBeVisible();
-    // Read a single layout snapshot: initialization may replace the notice
-    // between separate protocol calls, especially in WebKit.
-    const layout = await page.evaluate(() => {
-      const element = document.querySelector<HTMLElement>(
-        '[aria-label="Chat history synchronization"]',
-      )!;
-      const bounds = element.getBoundingClientRect();
-      const buttons = [...element.querySelectorAll("button")];
-      const originalScroll = element.scrollTop;
-      element.scrollTop = element.scrollHeight;
-      const lastButton = buttons.at(-1)?.getBoundingClientRect();
-      const reachesLastButton = Boolean(
-        lastButton && lastButton.top >= bounds.top - 1 && lastButton.bottom <= bounds.bottom + 1,
+    // Automatic retry briefly replaces the recovery controls. Wait for both
+    // buttons in the same snapshot used to measure their layout, so a phase
+    // transition between protocol calls cannot invalidate the measurement.
+    await expect(async () => {
+      const layout = await page.evaluate(() => {
+        const element = document.querySelector<HTMLElement>(
+          '[aria-label="Chat history synchronization"]',
+        )!;
+        const bounds = element.getBoundingClientRect();
+        const buttons = [...element.querySelectorAll("button")];
+        const originalScroll = element.scrollTop;
+        element.scrollTop = element.scrollHeight;
+        const lastButton = buttons.at(-1)?.getBoundingClientRect();
+        const reachesLastButton = Boolean(
+          lastButton && lastButton.top >= bounds.top - 1 && lastButton.bottom <= bounds.bottom + 1,
+        );
+        element.scrollTop = originalScroll;
+        return {
+          height: bounds.height,
+          left: bounds.left,
+          right: bounds.right,
+          overflow: getComputedStyle(element).overflowY,
+          reachesLastButton,
+          buttons: buttons.map((button) => {
+            const box = button.getBoundingClientRect();
+            return { name: button.textContent?.trim(), left: box.left, right: box.right };
+          }),
+        };
+      });
+      expect(layout.height).toBeLessThanOrEqual(
+        Math.min(page.viewportSize()!.height * 0.3, 256) + 1,
       );
-      element.scrollTop = originalScroll;
-      return {
-        height: bounds.height,
-        left: bounds.left,
-        right: bounds.right,
-        overflow: getComputedStyle(element).overflowY,
-        reachesLastButton,
-        buttons: buttons.map((button) => {
-          const box = button.getBoundingClientRect();
-          return { name: button.textContent?.trim(), left: box.left, right: box.right };
-        }),
-      };
-    });
-    expect(layout.height).toBeLessThanOrEqual(Math.min(page.viewportSize()!.height * 0.3, 256) + 1);
-    expect(layout.overflow).toBe("auto");
-    expect(layout.reachesLastButton).toBe(true);
-    expect(layout.buttons.map((button) => button.name)).toEqual([
-      "Save existing chats to my account",
-      "Retry chat sync",
-    ]);
-    for (const button of layout.buttons) {
-      expect(button.left).toBeGreaterThanOrEqual(layout.left);
-      expect(button.right).toBeLessThanOrEqual(layout.right);
-    }
+      expect(layout.overflow).toBe("auto");
+      expect(layout.reachesLastButton).toBe(true);
+      expect(layout.buttons.map((button) => button.name)).toEqual([
+        "Save existing chats to my account",
+        "Retry chat sync",
+      ]);
+      for (const button of layout.buttons) {
+        expect(button.left).toBeGreaterThanOrEqual(layout.left);
+        expect(button.right).toBeLessThanOrEqual(layout.right);
+      }
+    }).toPass({ timeout: 5_000 });
     await page.screenshot({ path: info.outputPath("sync-recovery.png") });
   });
 
