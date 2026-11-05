@@ -68,9 +68,15 @@ jobs:
           --project="${{ matrix.browser }}-390" --grep="dark workspace fits: /$"
           --output="test-results/interface-fit/smoke-${{ matrix.browser }}"
       - name: Check every workspace and settings section in both themes
-        run: >-
-          npx --no-install playwright test --config=playwright.interface-fit.config.ts
-          --project="${{ matrix.browser }}-390" --project="${{ matrix.browser }}-1440"
+        shell: bash
+        run: |
+          set -euo pipefail
+          projects=(--project="${{ matrix.browser }}-390" --project="${{ matrix.browser }}-1440")
+          if [[ "${{ matrix.browser }}" == "chromium" ]]; then
+            projects+=(--project=chromium-320 --project=chromium-short-phone --project=chromium-landscape)
+            projects+=(--project=chromium-768 --project=chromium-1024 --project=chromium-2560 --project=chromium-short-desktop)
+          fi
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts "${projects[@]}"
       - name: Record source provenance
         if: always()
         env:
