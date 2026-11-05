@@ -56,7 +56,7 @@ export function prepareKovaHostedRequest(value) {
       if (part.type === "text" && typeof part.text === "string") continue;
       const url = part.type === "image_url" ? part.image_url?.url : null;
       if (typeof url !== "string" ||
-          !/^data:image\\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url) ||
+          !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url) ||
           url.length > 5_000_000 || ++totalImages > 4)
         throw new Error("invalid_hosted_image");
     }
