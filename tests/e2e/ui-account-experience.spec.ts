@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { fixture, functionNames, owner } from "./actual-app-fixture";
+import { fixture, functionNames, owner, planUsageFixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { revealSidebar } from "./current-ui";
 
@@ -11,8 +11,17 @@ async function prepare(page: import("@playwright/test").Page) {
       functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!) ?? "";
     const result = name.startsWith("getMyPlanTier_")
       ? { ownerId: owner, tier: "free" }
-      : name.startsWith("getMyDailyUsage_")
-        ? { chats: 14, thinking: 2, images: 1, uploads: 1, resetsAt: "2026-11-02T00:00:00Z" }
+      : name.startsWith("getMyPlanUsage_")
+        ? {
+            ...planUsageFixture("free"),
+            windows: planUsageFixture("free").windows.map((window) => ({
+              ...window,
+              regularUsed: 12,
+              thinkingUsed: 2,
+            })),
+            images: 1,
+            uploads: 1,
+          }
         : name.startsWith("listMemoryCenter_")
           ? [
               {
@@ -58,12 +67,10 @@ test("Settings keeps a closed rail, shows percentage usage, and exposes editable
   await page.goto("/settings/usage");
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("progressbar", { name: "Regular messages used today" }),
+    page.getByRole("progressbar", { name: "Daily chat usage", exact: true }),
   ).toHaveAttribute("aria-valuenow", "24");
-  await expect(page.getByRole("progressbar", { name: "Thinking used today" })).toHaveAttribute(
-    "aria-valuenow",
-    "20",
-  );
+  await expect(page.getByRole("progressbar")).toHaveCount(1);
+  await expect(page.getByText(/12 \/ 50 regular · 2 \/ 10 Thinking/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Close settings", exact: true })).toBeVisible();
   await page.goto("/settings/memory");
   await waitForKovaHydration(page);
@@ -102,7 +109,15 @@ test("secondary-page chat menus include Rename, Pin, Share, project choices, and
   await expect(rename.getByRole("button", { name: "Save", exact: true })).toBeVisible();
   await expect(rename.getByRole("textbox")).toHaveValue("Composer review chat");
   await rename.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
+  await expect(rename).toBeHidden();
+  const options = page.getByRole("button", {
+    name: "Options for Composer review chat",
+    exact: true,
+  });
+  await expect(options).toBeFocused();
+  await expect(options).toHaveAttribute("aria-expanded", "false");
+  await options.click();
+  await expect(options).toHaveAttribute("aria-expanded", "true");
   const projectMenu = page.getByRole("menuitem", { name: "Move to project", exact: true });
   if (await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches))
     await projectMenu.click();

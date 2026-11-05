@@ -588,16 +588,18 @@
     gap: 40px;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 1023px) {
   .public-website-header {
-    padding: 21px 24px;
+    padding: max(21px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px))
+      21px max(24px, env(safe-area-inset-left, 0px));
   }
   .public-website-brand {
     font-size: 26px;
   }
   .public-website-hero {
     margin-top: 45px;
-    padding: 0 24px;
+    padding: 0 max(24px, env(safe-area-inset-right, 0px)) 0
+      max(24px, env(safe-area-inset-left, 0px));
     grid-template-columns: minmax(0, 1fr);
     gap: 42px;
   }
@@ -616,6 +618,9 @@
   .public-sign-in input,
   .public-sign-in form > button {
     min-height: 46px;
+  }
+  .public-sign-in input {
+    font-size: 16px;
   }
   .public-auth-switch button {
     min-height: 44px;

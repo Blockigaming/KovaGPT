@@ -82,7 +82,7 @@ test("sidebar glyphs and account avatars retain square viewports", () => {
   assert.equal(declaration(avatar, "height").value, "32px");
 });
 
-test("response actions retain 32px desktop density and 44px touch targets inside an overflow toolbar", () => {
+test("response actions retain 32px desktop density and 44px touch targets inside a wrapping toolbar", () => {
   const selector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const desktop = ruleFor(responseCss, selector);
@@ -94,7 +94,7 @@ test("response actions retain 32px desktop density and 44px touch targets inside
   }
   assert.ok(touch.source.start.line > desktop.source.start.line);
   const toolbar = ruleFor(responseCss, ".kova-message-actions");
-  assert.equal(declaration(toolbar, "flex-wrap").value, "nowrap");
+  assert.equal(declaration(toolbar, "flex-wrap").value, "wrap");
   assert.equal(declaration(toolbar, "min-width").value, "0");
   assert.equal(declaration(toolbar, "max-width").value, "100%");
   const source = read("src/components/ChatMessage.tsx");

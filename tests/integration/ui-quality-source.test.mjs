@@ -35,9 +35,27 @@ const uiQuality = await readFile("tests/e2e/ui-quality.spec.ts", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 
 function openingTag(source, name, marker) {
-  const matches = [...source.matchAll(new RegExp(`<${name}\\b[^>]*>`, "g"))]
-    .map(([tag]) => tag)
-    .filter((tag) => marker.test(tag));
+  // Arrow handlers contain ">" too; parse TSX so an attribute cannot truncate
+  // the tag before its accessible name and disabled-state assertions.
+  const file = ts.createSourceFile(
+    "component.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const matches = [];
+  function visit(node) {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText(file) === name
+    ) {
+      const tag = node.getText(file);
+      if (marker.test(tag)) matches.push(tag);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
   assert.equal(matches.length, 1, `one ${name} element must match ${marker}`);
   return matches[0];
 }
@@ -280,7 +298,7 @@ test("canonical reference styles own shell and composer contracts without retire
     assert.equal(compactAction[key], "32px");
     assert.equal(touchAction[key], "44px");
   }
-  assert.equal(declarations(responseStyles, ".kova-message-actions")["flex-wrap"], "nowrap");
+  assert.equal(declarations(responseStyles, ".kova-message-actions")["flex-wrap"], "wrap");
   assert.match(message, /kova-response-action-bar[^"\n]*overflow-x-auto/);
   assert.match(message, /kova-open-result-action[^"\n]*shrink-0[^"\n]*whitespace-nowrap/);
   assert.equal(declarations(menuStyles, ".kova-composer-menu").background, "var(--popover)");

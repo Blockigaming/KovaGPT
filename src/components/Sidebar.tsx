@@ -36,7 +36,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -122,6 +122,7 @@ export function Sidebar({
   onOpenSettings,
   onOpenHelp,
   onOpenWorkspaceSearch,
+  workspaceSearchOpen = false,
   hideGuestLogin = false,
   mapsReleaseApproved = false,
   compactOnly = false,
@@ -141,6 +142,7 @@ export function Sidebar({
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
   onOpenWorkspaceSearch?: () => void;
+  workspaceSearchOpen?: boolean;
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
@@ -376,7 +378,7 @@ export function Sidebar({
         }
         aria-label="Search chats"
         aria-haspopup="dialog"
-        aria-expanded={searchOpen}
+        aria-expanded={onOpenWorkspaceSearch ? workspaceSearchOpen : searchOpen}
         onClick={openChatSearch}
       >
         <SearchGlyph aria-hidden="true" />
@@ -403,7 +405,7 @@ export function Sidebar({
     setSearchQuery("");
     setSearchOpen(false);
   }, [user?.id, isLoaded, isSignedIn, cancelPendingSelection]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
     const update = () => setMobileViewport(media.matches);
     update();
@@ -637,7 +639,7 @@ export function Sidebar({
     document.addEventListener("focusin", onOpeningFocusMoved, true);
     openingFocusFrame = window.requestAnimationFrame(focusOpeningControl);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+      if (event.defaultPrevented || drawerRef.current?.inert) return;
       const nested =
         event.target instanceof Element
           ? event.target.closest('[role="menu"], [role="dialog"], [role="alertdialog"], dialog')
@@ -678,6 +680,14 @@ export function Sidebar({
       requestAnimationFrame(() => {
         // A newly opened account dialog owns focus; do not pull it back underneath.
         if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
+        const active = document.activeElement;
+        if (
+          active &&
+          active !== document.body &&
+          active !== document.documentElement &&
+          !drawer?.contains(active)
+        )
+          return;
         const previous = lastFocusedRef.current;
         if (previous?.isConnected && previous.offsetParent !== null) previous.focus();
         else
@@ -1394,8 +1404,8 @@ export function Sidebar({
         className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 lg:hidden"
         aria-label="Close navigation menu"
         data-state={open ? "open" : "closed"}
-        aria-hidden={!open || !mobileViewport}
-        disabled={!open}
+        aria-hidden={!open || !mobileViewport || workspaceSearchOpen}
+        disabled={!open || workspaceSearchOpen}
         tabIndex={-1}
       />
 
@@ -1409,8 +1419,8 @@ export function Sidebar({
             data-kova-core-rail=""
             data-kova-refined-sidebar=""
             data-state={collapsed ? "open" : "closed"}
-            aria-hidden={!collapsed}
-            inert={!collapsed}
+            aria-hidden={!collapsed || workspaceSearchOpen}
+            inert={!collapsed || workspaceSearchOpen}
           >
             <div className="kova-rail-header">
               <RailTooltip label={compactOnly ? "Back to chat" : "Expand sidebar"}>
@@ -1515,9 +1525,9 @@ export function Sidebar({
         data-ui-reference="chatgpt-sidebar"
         aria-label="Primary navigation"
         data-state={open ? "open" : "closed"}
-        aria-modal={open && mobileViewport ? true : undefined}
-        aria-hidden={collapsed ? true : undefined}
-        inert={collapsed ? true : undefined}
+        aria-modal={open && mobileViewport && !workspaceSearchOpen ? true : undefined}
+        aria-hidden={collapsed || workspaceSearchOpen ? true : undefined}
+        inert={collapsed || workspaceSearchOpen ? true : undefined}
         role={open && mobileViewport ? "dialog" : "navigation"}
       >
         <div className="kova-sidebar-inner">

@@ -303,6 +303,8 @@ function loginSurface(dialog, options = {}) {
       modules,
       globals: {
         window: {
+          addEventListener() {},
+          removeEventListener() {},
           location: { reload: () => events.push("reload"), replace: (path) => events.push(path) },
         },
       },

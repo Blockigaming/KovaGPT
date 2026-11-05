@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import { choosePickerValue } from "./select-control";
+// This fixture verifies mutation replay, independently of the host's timezone database.
+test.use({ timezoneId: "UTC" });
 type TaskBrowserFixture = {
   calls: Array<{ name: string; data: Record<string, unknown> }>;
   pending: Array<{
