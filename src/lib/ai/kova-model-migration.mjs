@@ -7,20 +7,20 @@
  */
 export const KOVA_MODEL_CATALOG = Object.freeze({
   xenon: Object.freeze({
-    id: "kova-xenon-1",
-    name: "Kova Xenon 1",
+    id: "kova-xenon-4.6",
+    name: "Kova Xenon 4.6",
     tier: "flagship",
     purpose: "Advanced reasoning, coding and multi-step agents",
   }),
   neon: Object.freeze({
-    id: "kova-neon-1",
-    name: "Kova Neon 1",
+    id: "kova-neon-4.6",
+    name: "Kova Neon 4.6",
     tier: "balanced",
     purpose: "General chat, research and connected tools",
   }),
   argon: Object.freeze({
-    id: "kova-argon-1",
-    name: "Kova Argon 1",
+    id: "kova-argon-5",
+    name: "Kova Argon 5",
     tier: "fast",
     purpose: "Low-latency chat and lightweight reasoning",
   }),
