@@ -1,3 +1,4 @@
+import { PublicFooter } from "@/components/PublicFooter";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -276,6 +277,7 @@ function PricingPage() {
           </Link>
         </nav>
       </footer>
+      <PublicFooter />
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
     </div>
   );

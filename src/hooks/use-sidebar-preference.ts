@@ -27,6 +27,9 @@ export function useSidebarPreference() {
   }, []);
 
   const setOpen = useCallback((next: SetStateAction<boolean>) => {
+    // Preserve the background navigation while Settings owns interaction.
+    if (typeof document !== "undefined" && document.querySelector('[data-settings-open="true"]'))
+      return;
     setPreference((current) => {
       if (!current) return current;
       const open = typeof next === "function" ? next(current.open) : next;

@@ -291,7 +291,7 @@ test("the conversation checklist collects sources, outputs and real browser meta
     .fill("Review the browser activity fixture");
   await page.getByTestId("send-button").click();
   await expect(page.getByText("Fixture browser session active.", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Outputs", exact: true }).click();
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
   const panel = page.locator(".kova-conversation-outputs");
   await expect(panel.getByRole("heading", { name: "Outputs", exact: true })).toBeVisible();
   for (const name of [

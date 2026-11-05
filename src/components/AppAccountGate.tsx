@@ -21,7 +21,9 @@ function SessionLoading() {
           <span className="kova-session-skeleton kova-session-header-action" />
         </header>
         <div className="kova-session-shell-body">
-          <p role="status">Checking your account…</p>
+          <p role="status" className="sr-only">
+            Loading KovaGPT…
+          </p>
           <div className="kova-session-skeleton kova-session-content-line" aria-hidden="true" />
           <div
             className="kova-session-skeleton kova-session-content-line-short"
@@ -40,10 +42,10 @@ export function AppAccountGate({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { isLoaded, isSignedIn } = useUser();
   if (!requiresAppAccount(pathname) || (isLoaded && isSignedIn)) return children;
-  if (!isLoaded && pathname !== "/") return <SessionLoading />;
+  if (!isLoaded) return <SessionLoading />;
   return (
     <Suspense fallback={<SessionLoading />}>
-      <AccountWelcome pending={!isLoaded} />
+      <AccountWelcome pending={false} />
     </Suspense>
   );
 }

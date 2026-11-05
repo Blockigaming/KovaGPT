@@ -158,3 +158,54 @@ test("Activity shows the latest fresh session and excludes stale tab counts", ()
   inventory.browser[0].browser.observedAt -= 600000;
   assert.equal(exports.ConversationActivitySummary({ inventory }), null);
 });
+
+test("Activity hides completed, stale and unbound cloud browsers and separates actual inputs", () => {
+  const fresh = {
+    id: "active",
+    label: "Browser",
+    status: "active",
+    browser: {
+      sessionId: "fixture",
+      tabCount: 1,
+      observedAt: Date.now(),
+      previewPath: "/api/browser/preview/fixture",
+    },
+  };
+  for (const last of [
+    { ...fresh, id: "completed", status: "completed" },
+    { ...fresh, browser: { ...fresh.browser, observedAt: Date.now() - 600000 } },
+    { id: "unbound", status: "active", label: "Recorded" },
+  ]) {
+    const value = { web: [], memory: [], attachments: [], browser: [fresh, last] };
+    assert.equal(
+      exports.ConversationSourcesView({ inventory: value, activeBrowserOnly: true }),
+      null,
+    );
+    assert.equal(exports.ConversationActivitySummary({ inventory: value }), null);
+  }
+  const value = {
+    web: [],
+    memory: [],
+    browser: [fresh],
+    attachments: [
+      {
+        id: "input",
+        name: "Actual input.txt",
+        attachmentKind: "text_file",
+        outputId: "m:attachment:0",
+      },
+    ],
+  };
+  const view = exports.ConversationSourcesView({
+    inventory: value,
+    activeBrowserOnly: true,
+    separateInputs: true,
+  });
+  assert.deepEqual(
+    nodes(view)
+      .filter((node) => node.type === "h2")
+      .map(text),
+    ["Inputs", "Cloud browser"],
+  );
+  assert.match(text(view), /Actual input.txt/);
+});

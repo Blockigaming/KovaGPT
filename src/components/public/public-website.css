@@ -697,3 +697,87 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* The same spacious rhythm applies to all catalog pages and their directory. */
+.public-website-article {
+  max-width: 1180px;
+  padding-block: clamp(48px, 7vw, 96px);
+}
+.public-website-article h1 {
+  max-width: 900px;
+  font-size: clamp(36px, 4.5vw, 58px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+.public-article-lede {
+  max-width: 760px;
+  font-size: 19px;
+  line-height: 1.65;
+  margin-top: 24px;
+}
+.public-article-body {
+  gap: 64px;
+  margin-top: 56px;
+}
+.public-article-body section {
+  margin-bottom: 36px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-secondary);
+}
+.public-article-body section h2 {
+  margin-bottom: 16px;
+}
+.public-article-body section p {
+  line-height: 1.75;
+}
+.kova-footer-directory {
+  margin-top: 40px;
+  padding-block: 24px;
+  border-block: 1px solid var(--border);
+}
+.kova-footer-directory summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  font-weight: 600;
+}
+.kova-footer-directory input {
+  width: min(100%, 420px);
+  margin: 16px 0 24px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
+  padding: 12px 16px;
+}
+.kova-footer-directory ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 4px 24px;
+  list-style: none;
+  padding: 0;
+}
+.kova-footer-directory a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.kova-footer-directory a:hover {
+  color: var(--foreground);
+}
+@media (max-width: 640px) {
+  .public-article-body {
+    gap: 28px;
+    margin-top: 32px;
+  }
+  .public-article-body section {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+}

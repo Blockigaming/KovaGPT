@@ -1525,6 +1525,8 @@ export const PUBLIC_WEBSITE_FOOTER = Object.freeze(
         ["Account deletion", "/security/account-deletion"],
         ["Billing", "/legal/billing"],
         ["Refunds", "/refund"],
+        ["Cookies and storage", "/legal/cookies"],
+        ["Service providers", "/security/subprocessors"],
         ["Vulnerability reporting", "/security/vulnerability-reporting"],
         ["Accessibility", "/accessibility"],
       ],

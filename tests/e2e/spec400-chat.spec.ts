@@ -115,10 +115,8 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await input.press(compactDesktop ? "Shift+Enter" : "Enter");
   await expect(input).toHaveValue("First line\n");
   await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
-  const context = page
-    .getByRole("button", { name: "Open Context", exact: true })
-    .filter({ visible: true });
-  await context.click();
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  await page.getByRole("button", { name: "Chat instructions and context", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Context", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(input).toHaveValue("First line\n");

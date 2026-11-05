@@ -14,8 +14,12 @@ export function ConversationSourcesPanel({
   browserPreview,
   browserTabCount,
   showActivity,
+  activeBrowserOnly = false,
+  separateInputs = false,
 }: {
   showActivity?: boolean;
+  activeBrowserOnly?: boolean;
+  separateInputs?: boolean;
   browserPreview?: ReactNode;
   browserTabCount?: number;
   conversation: Conversation;
@@ -33,6 +37,8 @@ export function ConversationSourcesPanel({
     <>
       <ConversationSourcesView
         inventory={inventory}
+        activeBrowserOnly={activeBrowserOnly}
+        separateInputs={separateInputs}
         browserPreview={browserPreview}
         browserTabCount={browserTabCount}
         showActivity={showActivity}

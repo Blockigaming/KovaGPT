@@ -1,4 +1,6 @@
-import { PUBLIC_WEBSITE_FOOTER } from "../../src/lib/public-website-catalog.mjs";
+import * as publicCatalog from "../../src/lib/public-website-catalog.mjs";
+import * as seoPolicy from "../../src/lib/seo-policy.mjs";
+import * as appAccess from "../../src/lib/app-access-policy.mjs";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -11,8 +13,10 @@ function fixture(initialPath = "/features") {
   let focusCount = 0;
   const dependencies = {
     "./public/public-website.css": {},
-    "@/lib/public-website-catalog.mjs": { PUBLIC_WEBSITE_FOOTER },
-    react: hooks.react,
+    "@/lib/public-website-catalog.mjs": publicCatalog,
+    "@/lib/seo-policy.mjs": seoPolicy,
+    "@/lib/app-access-policy.mjs": appAccess,
+    react: { ...hooks.react, useMemo: (factory) => factory() },
     "@tanstack/react-router": {
       Link: "Link",
       useRouterState: ({ select }) => select({ location: { pathname } }),
@@ -54,7 +58,7 @@ function fixture(initialPath = "/features") {
       pathname = value;
     },
     header: () => expand(hooks.render(PublicHeader)),
-    footer: () => expand(PublicFooter()),
+    footer: () => expand(hooks.render(PublicFooter)),
     attachToggle: (tree) => {
       const toggle = elements(tree, (node) => node.type === "button")[0];
       toggle.props.ref.current = {
@@ -168,7 +172,7 @@ test("footer columns adapt to available text width while preserving legal and he
   const nav = elements(tree, (node) => node.props["aria-label"] === "Footer navigation")[0];
   includesClasses(nav, ["kova-footer-nav"]);
   const links = elements(nav, (node) => node.type === "Link");
-  assert.equal(links.length, 58);
+  assert.equal(links.length, 60);
   for (const link of links) {
     assert.ok(text(link).trim());
     includesClasses(link, ["min-h-11"]);

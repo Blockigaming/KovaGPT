@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Copy, Download, ExternalLink, EyeOff, ImagePlus } from "lucide-react";
+import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "./ui/context-menu";
 import {
@@ -45,7 +45,7 @@ function hiddenMarkers(key: string | null): string[] {
   }
 }
 
-/** The same five actions for a message upload, a response image and its full-size viewer. */
+/** Desktop image actions and a single Copy action on touch devices. */
 export function ChatImage({
   src,
   alt,
@@ -71,6 +71,7 @@ export function ChatImage({
       : null;
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
+  const { isMobile } = useLayout();
   const imageRef = useRef<HTMLImageElement>(null);
   const showRef = useRef<HTMLButtonElement>(null);
   const lifetime = useRef({ marker, generation: 0, mounted: true });
@@ -186,6 +187,7 @@ export function ChatImage({
             referrerPolicy="no-referrer"
             tabIndex={0}
             aria-haspopup="menu"
+            style={isMobile ? { WebkitTouchCallout: "none" } : undefined}
             className={imageClassName}
             onKeyDown={(event) => {
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
@@ -205,25 +207,36 @@ export function ChatImage({
         {children}
       </span>
       <ContextMenuContent className="w-60" aria-label="Image actions">
-        <ContextMenuItem
-          disabled={busy}
-          onSelect={() => void run((allowed) => downloadChatImage(src, allowed))}
-        >
-          <Download className="h-4 w-4" aria-hidden="true" />
-          Download a copy
-        </ContextMenuItem>
-        <ContextMenuItem
-          onSelect={() => {
-            try {
-              openChatImage(src);
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : "Could not open the image.");
-            }
-          }}
-        >
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          Open image in new tab
-        </ContextMenuItem>
+        {!isMobile ? (
+          <>
+            <ContextMenuItem
+              onSelect={() => {
+                try {
+                  openChatImage(src);
+                } catch {
+                  toast.error("Could not open the image.");
+                }
+              }}
+            >
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              Open image in new tab
+            </ContextMenuItem>
+            <ContextMenuItem
+              disabled={busy || !actions}
+              onSelect={() =>
+                void run(async (allowed) => {
+                  if (!actions || !allowed()) return;
+                  const add = actions.prepareAdd();
+                  const file = await chatImageFile(src, allowed);
+                  if (allowed()) await add(file, allowed);
+                })
+              }
+            >
+              <ImagePlus className="h-4 w-4" aria-hidden="true" />
+              Add to chat
+            </ContextMenuItem>
+          </>
+        ) : null}
         <ContextMenuItem
           disabled={busy}
           onSelect={() =>
@@ -234,27 +247,17 @@ export function ChatImage({
           }
         >
           <Copy className="h-4 w-4" aria-hidden="true" />
-          Copy image
+          {isMobile ? "Copy" : "Copy image"}
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          disabled={busy || !actions}
-          onSelect={() =>
-            void run(async (allowed) => {
-              if (!actions || !allowed()) return;
-              const add = actions.prepareAdd();
-              const file = await chatImageFile(src, allowed);
-              if (allowed()) await add(file, allowed);
-            })
-          }
-        >
-          <ImagePlus className="h-4 w-4" aria-hidden="true" />
-          Add to chat
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={() => hide(true)}>
-          <EyeOff className="h-4 w-4" aria-hidden="true" />
-          Hide from chat
-        </ContextMenuItem>
+        {!isMobile ? (
+          <ContextMenuItem
+            disabled={busy}
+            onSelect={() => void run((allowed) => downloadChatImage(src, allowed))}
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Download a copy
+          </ContextMenuItem>
+        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   );

@@ -215,7 +215,7 @@ test("an unmounted or unavailable composer cannot accept an image handoff", () =
   assert.throws(() => image.prepareChatImageAttachment("user:owner-a", "chat-a"), /not ready/);
 });
 
-function menuFixture() {
+function menuFixture(mobile = false) {
   const hooks = createHookHarness(),
     storage = new Map(),
     listeners = new Map(),
@@ -226,6 +226,7 @@ function menuFixture() {
     "src/components/ChatImage.tsx",
     {
       react: { ...hooks.react, useMemo: (factory) => factory() },
+      "@/hooks/use-mobile": { useLayout: () => ({ isMobile: mobile }) },
       "lucide-react": Object.fromEntries(
         ["Copy", "Download", "ExternalLink", "EyeOff", "ImagePlus"].map((name) => [name, name]),
       ),
@@ -313,55 +314,26 @@ function menuFixture() {
   };
 }
 
-test("the same five functional menu actions hide reversibly without changing message data", async () => {
+test("desktop exposes exactly the requested image actions and attaches actual PNG bytes", async () => {
   const view = menuFixture();
   assert.deepEqual(
     view.menu().map((node) => text(node).trim()),
-    ["Download a copy", "Open image in new tab", "Copy image", "Add to chat", "Hide from chat"],
+    ["Open image in new tab", "Add to chat", "Copy image", "Download a copy"],
   );
   await view.choose("Add to chat");
   await settle();
   assert.equal(view.added.length, 1);
-  view.render();
-  view.choose("Hide from chat");
-  view.render();
-  assert.ok(view.show());
-  const saved = [...view.storage.values()][0];
-  assert.equal(saved.includes(data), false);
-  assert.equal(saved.includes("owner-a"), false);
-  assert.equal(JSON.parse(saved).length, 1);
-  view.show().props.onClick();
-  view.render();
-  assert.equal(view.menu().length, 5);
-  assert.equal(view.storage.values().next().value, "[]");
+  assert.equal(view.added[0].type, "image/png");
+  assert.deepEqual(Buffer.from(await view.added[0].arrayBuffer()), bytes);
+  assert.equal(view.storage.size, 0);
 });
 
-test("hidden image preferences are isolated by owner and cleared by account privacy reset", () => {
-  const view = menuFixture();
-  view.choose("Hide from chat");
-  view.render();
-  view.render({
-    actions: {
-      ownerId: "owner-b",
-      scope: "owner-b:chat-a:message-a",
-      temporary: false,
-      prepareAdd: () => async () => {},
-    },
-  });
-  view.render();
-  assert.equal(view.show(), undefined);
-  view.render({
-    actions: {
-      ownerId: "owner-a",
-      scope: "owner-a:chat-a:message-a",
-      temporary: false,
-      prepareAdd: () => async () => {},
-    },
-  });
-  view.render();
-  assert.ok(view.show());
-  view.storage.clear();
-  view.reset("owner-a");
-  view.render();
-  assert.equal(view.show(), undefined);
+test("mobile long press offers Copy only", () => {
+  const view = menuFixture(true);
+  assert.deepEqual(
+    view.menu().map((node) => text(node).trim()),
+    ["Copy"],
+  );
+  assert.equal(view.added.length, 0);
+  assert.equal(view.storage.size, 0);
 });

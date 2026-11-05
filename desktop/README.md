@@ -6,13 +6,13 @@ A real Electron desktop shell that displays https://kovagpt.com in its own nativ
 
 ```sh
 cd desktop
-npm install
+npm ci
 npm test
 npm start
 npm run dist
 ```
 
-The separate package does not change the web app's dependency tree. Electron and electron-builder are pinned. The Desktop app preview workflow builds Mac Apple Silicon, Mac Intel, Windows x64 and Linux x64 artifacts on PRs touching this directory. Preview builds are unsigned and are not automatically published. A ChromeOS device can install the existing web app from the browser; these native packages target macOS, Windows and Linux.
+The separate package does not change the web app's dependency tree. Electron, electron-builder and transitive dependencies are pinned in the lockfile. The Desktop app preview workflow builds Mac Apple Silicon, Mac Intel, Windows x64 and Linux x64 artifacts on PRs touching this directory. Preview builds are unsigned and are not automatically published. A ChromeOS device can install the existing web app from the browser; these native packages target macOS, Windows and Linux.
 
 `kovagpt://open` launches or focuses the installed app. Protocol links cannot supply URLs, commands or authentication tokens. macOS registration comes from the package; NSIS/deb integrate the protocol. AppImage integration depends on the Linux desktop.
 

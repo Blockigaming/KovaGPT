@@ -5,9 +5,11 @@ import { PublicShell } from "@/components/public/PublicShell";
 
 const SECTIONS: readonly LegalDocSection[] = [
   { id: "use", label: "Use of KovaGPT" },
+  { id: "eligibility", label: "Age and eligibility" },
   { id: "accuracy", label: "AI accuracy" },
   { id: "advice", label: "No professional advice" },
   { id: "content", label: "User content" },
+  { id: "providers", label: "Connected services and voice" },
   { id: "prohibited", label: "Prohibited use" },
   { id: "subscriptions", label: "Subscriptions" },
   { id: "account-security", label: "Account security" },
@@ -46,6 +48,7 @@ function TermsPage() {
         <LegalDocHero
           eyebrow="KovaGPT legal"
           title="Terms of Service"
+          meta="Last updated: November 5, 2026"
           description="By using KovaGPT, you agree to use the service responsibly and follow these terms."
         />
         <LegalDoc sections={SECTIONS}>
@@ -58,6 +61,14 @@ function TermsPage() {
             </p>
           </section>
 
+          <section id="eligibility" data-legal-section className="legal-section">
+            <h2>Age and eligibility</h2>
+            <p>
+              You must be at least 13 and meet any higher minimum age required in your location. If
+              you are under 18, use KovaGPT with permission from your parent or legal guardian. Do
+              not create an account for a child who does not meet these requirements.
+            </p>
+          </section>
           <section id="accuracy" data-legal-section className="legal-section">
             <h2>AI Accuracy</h2>
             <p>
@@ -82,6 +93,21 @@ function TermsPage() {
             </p>
           </section>
 
+          <section id="providers" data-legal-section className="legal-section">
+            <h2>Connected services and voice</h2>
+            <p>
+              Only connect accounts and submit content you are authorized to use. A connected
+              account does not give permission to access someone else's information. Voice
+              recordings and text selected for spoken replies are processed by the configured voice
+              provider, ElevenLabs. Review the Privacy Policy before using these features.
+            </p>
+            <p>
+              You retain your rights in the content you submit. You permit KovaGPT and the providers
+              required for your request to process that content to operate the requested feature. AI
+              output may be similar to output received by other users and can be subject to
+              third-party rights.
+            </p>
+          </section>
           <section id="prohibited" data-legal-section className="legal-section">
             <h2>Prohibited Use</h2>
             <p>
@@ -96,11 +122,18 @@ function TermsPage() {
             <p>
               Paid plans provide access to additional features and higher limits. Features and
               limits may change over time. You are responsible for managing your subscription. You
-              can cancel from your account settings; canceling stops future renewals but your
-              current plan may remain active until the end of the billing period.
+              can cancel using the Stripe billing portal from your account settings; canceling stops
+              future renewals but your current plan may remain active until the end of the billing
+              period.
             </p>
           </section>
 
+          <p className="legal-section">
+            Checkout shows the recurring price, billing period, any applicable tax and any
+            introductory offer before purchase. A plan change takes effect only after confirmation
+            in Stripe. See the Refund Policy for billing errors and refund requests. Nothing in
+            these terms excludes rights or remedies that cannot be excluded under applicable law.
+          </p>
           <section id="account-security" data-legal-section className="legal-section">
             <h2>Account Security</h2>
             <p>

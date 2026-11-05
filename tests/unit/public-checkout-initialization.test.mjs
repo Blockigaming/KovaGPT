@@ -28,6 +28,7 @@ function fixture({
         EmbeddedCheckout: "StripeFrame",
       },
       "@tanstack/react-router": { Link: "Link" },
+      "@/components/BillingPortalButton": { BillingPortalButton: "BillingPortalButton" },
       "lucide-react": { Loader2: "Loader" },
       "@/lib/stripe": {
         getStripe: () => {

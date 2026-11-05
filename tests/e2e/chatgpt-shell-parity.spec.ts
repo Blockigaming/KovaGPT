@@ -180,13 +180,12 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(page.getByText("Ready", { exact: true })).toBeVisible({ timeout: 15_000 });
 
     await expect(page.getByRole("button", { name: "Share chat" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "More chat actions" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("menuitem", { name: "Export chat" })).toHaveCount(0);
-
-    await page.getByRole("button", { name: "More chat actions" }).click();
-    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Activity", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "More chat actions", exact: true })).toHaveCount(
+      0,
+    );
+    await page.getByRole("button", { name: "Activity", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Outputs", exact: true })).toBeVisible();
   });
 
   test("guest desktop entry does not expose chat actions or execute a request", async ({

@@ -11,7 +11,7 @@ declare global {
 }
 
 for (const role of ["user", "assistant"] as const) {
-  test(`${role} image has five working context actions and reversible visibility`, async ({
+  test(`${role} image has the requested device-specific context actions`, async ({
     page,
   }, info) => {
     await fixture(page, "dark", true, true, "free", { preserveStorageOnReload: true });
@@ -83,13 +83,11 @@ for (const role of ["user", "assistant"] as const) {
       await image.scrollIntoViewIfNeeded();
       await image.click({ button: "right" });
       await expect(menu).toBeVisible();
-      await expect(menu.getByRole("menuitem")).toHaveText([
-        "Download a copy",
-        "Open image in new tab",
-        "Copy image",
-        "Add to chat",
-        "Hide from chat",
-      ]);
+      await expect(menu.getByRole("menuitem")).toHaveText(
+        page.viewportSize()!.width < 1024
+          ? ["Copy"]
+          : ["Open image in new tab", "Add to chat", "Copy image", "Download a copy"],
+      );
       const box = (await menu.boundingBox())!;
       const viewport = page.viewportSize()!;
       // Assert the first visible frame, while the opening animation is active.
@@ -105,6 +103,12 @@ for (const role of ["user", "assistant"] as const) {
       path: info.outputPath(`${role}-image-actions.png`),
       animations: "disabled",
     });
+    if (page.viewportSize()!.width < 1024) {
+      await menu.getByRole("menuitem", { name: "Copy", exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window.imageMenuCopies.length)).toBe(1);
+      expect(sends).toBe(0);
+      return;
+    }
     const downloaded = page.waitForEvent("download");
     await menu.getByRole("menuitem", { name: "Download a copy", exact: true }).click();
     const download = await downloaded;
@@ -140,20 +144,6 @@ for (const role of ["user", "assistant"] as const) {
     await expect(input).toHaveValue("Keep this draft exactly.");
     expect(sends).toBe(0);
 
-    await open();
-    await menu.getByRole("menuitem", { name: "Hide from chat", exact: true }).click();
-    const show = message.getByRole("button", { name: "Show image", exact: true });
-    await expect(show).toBeVisible();
-    await expect(image).toHaveCount(0);
-    await expect(input).toHaveValue("Keep this draft exactly.");
-    await expect
-      .poll(() => page.evaluate(() => getComputedStyle(document.body).pointerEvents))
-      .toBe("auto");
-    await page.reload();
-    await waitForKovaHydration(page);
-    await expect(show).toBeVisible();
-    await show.click();
-    await expect(image).toBeVisible();
     await expect(image).toHaveAttribute("src", original!);
     expect(sends).toBe(0);
   });

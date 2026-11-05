@@ -46,6 +46,11 @@ function RefundPage() {
           request appears abusive, or if the request does not meet our refund standards.
         </p>
 
+        <p>
+          Nothing in this policy limits a refund or other consumer right that applies under law. Do
+          not send a full payment-card number, password or security code when requesting billing
+          support.
+        </p>
         <h2>Payments</h2>
         <p>
           Paid subscriptions are processed through a secure payment provider. KovaGPT does not

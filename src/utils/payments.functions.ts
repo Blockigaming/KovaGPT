@@ -1,3 +1,4 @@
+import { subscriptionPortalFlow } from "@/lib/subscription-portal-flow.mjs";
 import { createServerFn } from "@tanstack/react-start";
 import { loose } from "@/lib/supabase-loose";
 import {
@@ -100,8 +101,12 @@ type PortalResult = { url: string } | { error: string };
 // not an email or browser-provided value, is the customer identity authority.
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: Record<string, never>) => data)
-  .handler(async ({ context }): Promise<PortalResult> => {
+  .validator((data: { priceId?: string }) => {
+    if (data.priceId !== undefined && !resolveBillingPlan(data.priceId))
+      throw new Error("Invalid priceId");
+    return { priceId: data.priceId };
+  })
+  .handler(async ({ data, context }): Promise<PortalResult> => {
     let customerId: string | null;
     try {
       customerId = await resolvePortalCustomer(context.userId);
@@ -110,16 +115,24 @@ export const createPortalSession = createServerFn({ method: "POST" })
     }
     if (!customerId) return { error: "No billing account found. Choose a plan to get started." };
     const configuration = billingPortalConfigurationId();
-    if (!configuration) {
+    if (process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID && !configuration) {
       return {
-        error: "The billing portal is not configured. Contact support for billing help.",
+        error: "The billing portal configuration is invalid. Contact support for billing help.",
       };
     }
     try {
       const stripe = createStripeClient(BILLING_ENV);
+      const plan = data.priceId ? resolveBillingPlan(data.priceId) : null;
+      const flow = plan
+        ? await subscriptionPortalFlow(stripe, customerId, plan, [
+            "prod_VB1Crlvg4utbCe",
+            "prod_VB1Cbp01TZ8hOI",
+          ])
+        : undefined;
       const portal = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        configuration,
+        ...(configuration ? { configuration } : {}),
+        ...(flow ? { flow_data: flow } : {}),
         // The browser cannot choose an arbitrary post-portal redirect.
         return_url: billingReturnUrls(process.env.KOVA_BILLING_RETURN_ORIGIN).portal,
       });
@@ -237,7 +250,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       hasBillingAccount,
       billingPortalAvailable:
         hasBillingAccount &&
-        !!billingPortalConfigurationId() &&
+        (!process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID || !!billingPortalConfigurationId()) &&
         billingReturnOriginConfigured(process.env.KOVA_BILLING_RETURN_ORIGIN),
     };
   });
