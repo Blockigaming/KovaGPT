@@ -50,12 +50,13 @@ test("related staging code and pricing configuration use the new names", () => {
     ".env.example",
   ]) {
     const source = readFileSync(path, "utf8");
-    assert.doesNotMatch(source, /kova-xenon-4\\.6|kova-argon-5/);
+    assert.equal(source.includes("kova-xenon-4.6"), false);
+    assert.equal(source.includes("kova-argon-5"), false);
   }
 });
 
 test("legacy effort picker does not mislabel all models as version 4.6", () => {
   const modes = readFileSync("src/lib/modes.ts", "utf8");
   assert.match(modes, /label: "Kova models"/);
-  assert.doesNotMatch(modes, /label: \`KovaGPT Model \${KOVA_MODEL_VERSION}\`/);
+  assert.equal(modes.includes("label: `KovaGPT Model " + "${KOVA_MODEL_VERSION}" + "`"), false);
 });
