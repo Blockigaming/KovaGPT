@@ -58,3 +58,8 @@ test("rejects invalid current capacity and target rates", () => {
   assert.throws(() => recommend(hourly(24), 0), /invalid_scaling_bounds/);
   assert.throws(() => recommend(hourly(24), 2, { sustainableRpsPerReplica: 0 }), /invalid_scaling_bounds/);
 });
+
+test("rejects unfinished hourly metrics so the planner never misreads partial traffic", () => {
+  const unfinished = [{ hourUtc: new Date(now).toISOString(), prompts: 10 }];
+  assert.equal(normalizeHourlyPromptStats(unfinished, now), null);
+});
