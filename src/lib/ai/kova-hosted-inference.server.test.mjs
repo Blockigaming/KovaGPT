@@ -106,9 +106,10 @@ test("each Kova tier has distinct upstream budget and reasoning policy", () => {
     }));
   }
 });
-test("multimodal Kova models accept bounded inline user image without remote fetch URL", () => {
+test("Maverick and Kimi accept bounded inline image inputs while original Flash stays text-only", () => {
   const prepared = prepareKovaHostedRequest({
     ...request,
+    model: "kova-xenon-4.6",
     messages: [
       { role: "user", content: [
         { type: "text", text: "Describe this image." },
