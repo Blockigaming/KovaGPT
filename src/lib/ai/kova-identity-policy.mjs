@@ -4,9 +4,9 @@
  * License and attribution requirements must also be met outside the chat.
  */
 export const KOVA_ASSISTANT_IDENTITY = Object.freeze({
-  "kova-xenon-1": "Kova Xenon 1",
-  "kova-neon-1": "Kova Neon 1",
-  "kova-argon-1": "Kova Argon 1",
+  "kova-xenon-4.6": "Kova Xenon 4.6",
+  "kova-neon-4.6": "Kova Neon 4.6",
+  "kova-argon-5": "Kova Argon 5",
 });
 
 export function kovaIdentityInstruction(modelId) {
