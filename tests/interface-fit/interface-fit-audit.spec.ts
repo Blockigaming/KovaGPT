@@ -154,7 +154,10 @@ if (scope === "public") {
     ).toBeVisible();
     // Read a single layout snapshot: initialization may replace the notice
     // between separate protocol calls, especially in WebKit.
-    const layout = await notice.evaluate((element) => {
+    const layout = await page.evaluate(() => {
+      const element = document.querySelector<HTMLElement>(
+        '[aria-label="Chat history synchronization"]',
+      )!;
       const bounds = element.getBoundingClientRect();
       const buttons = [...element.querySelectorAll("button")];
       const originalScroll = element.scrollTop;
