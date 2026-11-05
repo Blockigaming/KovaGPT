@@ -254,7 +254,7 @@ const labelOf = (field, value) => field.options?.find((o) => o.value === value)?
 
 /** Human-readable conversation message describing a submission. */
 export function formatSubmission(block, submission) {
-  const lines = [`**${block.title}**`];
+  const lines = [block.title];
   if (block.type === "form") {
     if (submission.action) {
       const action = block.actions.find((a) => a.id === submission.action);
