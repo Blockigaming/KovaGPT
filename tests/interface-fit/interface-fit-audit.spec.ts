@@ -271,7 +271,7 @@ if (scope === "public") {
       await route.continue();
     });
     const dock = page.locator(".spec400-composer-dock");
-    let loadingBottom = 0;
+    let loadingBottom!: number;
     try {
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);

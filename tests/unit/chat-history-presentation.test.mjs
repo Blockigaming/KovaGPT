@@ -15,9 +15,12 @@ const implementation = file.statements.find(
   (node) => ts.isFunctionDeclaration(node) && node.name?.text === "chatHistoryPresentation",
 );
 assert.ok(implementation);
-const compiled = ts.transpileModule(implementation.getText(file), {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
-}).outputText;
+const compiled = ts.transpileModule(
+  `${implementation.getText(file)}\nexport { chatHistoryPresentation };`,
+  {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  },
+).outputText;
 const { chatHistoryPresentation: present } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
 );

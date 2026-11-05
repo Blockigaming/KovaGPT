@@ -25,7 +25,7 @@ type ChatHistoryPresentation = ChatHistoryStatus & {
   recoveryPhase?: ChatHistoryStatus["phase"];
 };
 
-export function chatHistoryPresentation(
+function chatHistoryPresentation(
   previous: ChatHistoryPresentation,
   next: ChatHistoryStatus,
 ): ChatHistoryPresentation {
