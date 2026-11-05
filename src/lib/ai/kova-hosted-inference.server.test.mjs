@@ -8,7 +8,7 @@ import {
 } from "./kova-hosted-inference.server.mjs";
 
 const request = {
-  model: "kova-argon-5",
+  model: "kova-argon-4.6",
   stream: false,
   messages: [{ role: "system", content: "You are Kova." }, { role: "user", content: "Hello" }],
   max_completion_tokens: 1200,
@@ -16,11 +16,11 @@ const request = {
 
 test("all three Kova products map to fixed approved foundation IDs", () => {
   assert.deepEqual(HOSTED_MODEL_MAP, {
-    "kova-xenon-4.6": "moonshotai/kimi-k3",
+    "kova-xenon-5": "moonshotai/kimi-k3",
     "kova-neon-4.6": "meta-llama/llama-4-maverick",
-    "kova-argon-5": "deepseek/deepseek-v4-flash-0731",
+    "kova-argon-4.6": "deepseek/deepseek-v4-flash-0731",
   });
-  assert.equal(isKovaHostedModelId("kova-argon-5"), true);
+  assert.equal(isKovaHostedModelId("kova-argon-4.6"), true);
   assert.equal(isKovaHostedModelId("__proto__"), false);
 });
 
@@ -85,9 +85,9 @@ test("rejects disabled credential, upstream errors and wrong content type", asyn
 
 test("each Kova tier has distinct upstream budget and reasoning policy", () => {
   for (const [alias, expectedModel, effort, max] of [
-    ["kova-argon-5", "deepseek/deepseek-v4-flash-0731", undefined, 4096],
+    ["kova-argon-4.6", "deepseek/deepseek-v4-flash-0731", undefined, 4096],
     ["kova-neon-4.6", "meta-llama/llama-4-maverick", undefined, 8192],
-    ["kova-xenon-4.6", "moonshotai/kimi-k3", "max", 16384],
+    ["kova-xenon-5", "moonshotai/kimi-k3", "max", 16384],
   ]) {
     const prepared = prepareKovaHostedRequest({
       ...request, model: alias, max_completion_tokens: max,
@@ -109,7 +109,7 @@ test("each Kova tier has distinct upstream budget and reasoning policy", () => {
 test("Maverick and Kimi accept bounded inline image inputs while original Flash stays text-only", () => {
   const prepared = prepareKovaHostedRequest({
     ...request,
-    model: "kova-xenon-4.6",
+    model: "kova-xenon-5",
     messages: [
       { role: "user", content: [
         { type: "text", text: "Describe this image." },
@@ -119,7 +119,7 @@ test("Maverick and Kimi accept bounded inline image inputs while original Flash 
   });
   assert.equal(JSON.parse(prepared.body).messages[0].content[1].type, "image_url");
   assert.throws(() => prepareKovaHostedRequest({
-    ...request, model: "kova-argon-5",
+    ...request, model: "kova-argon-4.6",
     messages: [{ role: "user", content: [
       { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
     ] }],
