@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 209,
+  "migrationCount": 210,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -357,6 +357,7 @@
     "admit_scheduled_task_event",
     "admit_work_browser_owner",
     "admit_work_browser_owner",
+    "admit_work_browser_owner",
     "adopt_compatibility_candidate",
     "approve_developer_pricing_draft",
     "archive_project_template",
@@ -368,6 +369,7 @@
     "auth_email_challenge_expiry",
     "auth_user_exists",
     "auth_user_exists",
+    "authorize_work_browser",
     "authorize_work_browser",
     "authorize_work_browser",
     "authorize_workflow_skill_mutation",
@@ -3747,5 +3749,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "54eedacc0c589cbbfe3ad311b253531018ad04a3e3dcfa0b9e45fe9ba325d759"
+  "sha256": "5a293e76369ea8debc6d39e45cc96900fa55f2b2324f06b3f3e0349fbfd14487"
 }

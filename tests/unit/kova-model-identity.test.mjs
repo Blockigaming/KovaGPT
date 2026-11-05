@@ -70,7 +70,7 @@ test("hosted Kova name discloses operator-confirmed underlying inference when as
     hasAssistantHistory: false,
   });
   assert.match(prompt, /Kova Argon 4.6/);
-  assert.match(prompt, /OpenRouter \\(third-party hosted inference\\)/);
+  assert.match(prompt, /OpenRouter \(third-party hosted inference\)/);
 });
 
 test("unknown identities and unsafe metadata fail closed without echoing input", () => {

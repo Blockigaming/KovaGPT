@@ -39,7 +39,7 @@ test("server owns entitlement, context, tools, abort, and output ceilings", () =
   assert.match(chat, /messages\.slice\(-HISTORY_TURNS\)/);
   assert.match(chat, /MAX_TOOL_CALLS_TOTAL = 16/);
   assert.match(chat, /signal: request\.signal/);
-  assert.match(chat, /max_completion_tokens:\s*modelForPolicy/);
+  assert.match(chat, /max_completion_tokens:\s*Math\.min\(\s*modelForPolicy/);
   assert.match(catalog, /instant:[\s\S]{0,150}?maxOutput:\s*1_200/);
   assert.match(catalog, /deep:[\s\S]{0,150}?maxOutput:\s*16_000/);
 });

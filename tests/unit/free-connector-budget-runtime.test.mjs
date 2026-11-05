@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { build } from "esbuild";
 import ts from "typescript";
 import { createGitHubChatTools } from "../../src/lib/github-chat-read.server.mjs";
-import { planAllowance } from "../../src/lib/plan-usage-policy.mjs";
+import { chatUsageWindows, planAllowance } from "../../src/lib/plan-usage-policy.mjs";
 import { estimateProviderInput } from "../../src/lib/ai/token-estimator.server.ts";
 import { CONNECTION_FLOWS, canReadConnection } from "../../src/integrations/connection-flows.mjs";
 
@@ -254,10 +254,18 @@ function fixture(options = {}) {
       return q;
     },
     rpc(name, args) {
-      assert.equal(name, "try_consume_daily_message");
+      const paid = (options.tier ?? "free") !== "free";
+      assert.equal(name, paid ? "try_consume_paid_message" : "try_consume_daily_message");
       assert.equal(args._user_id, owner);
       messageReservations.push(args);
-      const result = { data: options.messageQuota !== false, error: null };
+      const result = {
+        data: paid
+          ? options.messageQuota === false
+            ? "weekly"
+            : "allowed"
+          : options.messageQuota !== false,
+        error: null,
+      };
       const query = {
         abortSignal: () => query,
         then: (yes, no) => Promise.resolve(result).then(yes, no),
@@ -784,8 +792,16 @@ test("resolved Lite and Medium use the regular allowance; reasoning modes use Th
     const f = fixture({ tier: "plus", mode, noTools: true });
     const { response, text } = await f.post();
     assert.equal(response.status, 200, text);
+    const windows = chatUsageWindows("plus");
+    const weekly = windows.find(({ id }) => id === "weekly");
+    const short = windows.find(({ id }) => id === "five_hour");
     assert.deepEqual(JSON.parse(JSON.stringify(f.messageReservations)), [
-      { _user_id: owner, _thinking: thinking, _regular_limit: 250, _thinking_limit: 50 },
+      {
+        _user_id: owner,
+        _thinking: thinking,
+        _weekly_limit: thinking ? weekly.thinkingLimit : weekly.regularLimit,
+        _short_limit: thinking ? short.thinkingLimit : short.regularLimit,
+      },
     ]);
     const blocked = fixture({ tier: "plus", mode, noTools: true, messageQuota: false });
     const denied = await blocked.post();

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import {
   formatSubmission,
+  INTELLIGENT_INTERFACE_NAME,
   initialFormValues,
   validateFormValues,
   type FormValue,
@@ -61,21 +62,30 @@ export type InteractiveBlockProps = {
 export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlockProps) {
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
+  const submittedRef = useRef(false);
   useEffect(() => {
-    setStored(readStored(storageKey));
+    const restored = readStored(storageKey);
+    submittedRef.current = !!restored.submission;
+    setStored(restored);
     setHydrated(true);
   }, [storageKey]);
 
   const submitted = stored.submission;
-  const locked = !!submitted || !onSubmit;
+  const locked = !hydrated || !!submitted || !onSubmit;
   const persist = (next: Stored) => {
     setStored(next);
     writeStored(storageKey, next);
   };
   const submit = (submission: InteractiveSubmission) => {
-    if (!onSubmit || submitted) return;
+    if (!onSubmit || locked || submittedRef.current) return;
+    submittedRef.current = true;
+    try {
+      onSubmit(formatSubmission(block, submission));
+    } catch (error) {
+      submittedRef.current = false;
+      throw error;
+    }
     persist({ submission });
-    onSubmit(formatSubmission(block, submission));
   };
   const saveDraft = (draft: InteractiveSubmission) => {
     if (submitted) return;
@@ -85,13 +95,16 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
 
   return (
     <section
-      className="kova-interactive my-3 rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-5"
+      className="kova-interactive my-3 min-w-0 rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-5"
       aria-labelledby={headingId}
       data-interactive-type={block.type}
       data-interactive-state={submitted ? "submitted" : locked ? "readonly" : "open"}
     >
       <header className="mb-3">
-        <h3 id={headingId} className="text-base font-semibold leading-snug">
+        <p className="mb-1 text-xs font-medium text-muted-foreground">
+          {INTELLIGENT_INTERFACE_NAME}
+        </p>
+        <h3 id={headingId} className="break-words text-base font-semibold leading-snug">
           {block.title}
         </h3>
         {block.description && (
@@ -200,7 +213,7 @@ function FormBody({
             variant={action.style === "primary" ? "default" : "outline"}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
-            className="min-h-11 sm:min-h-9"
+            className="h-auto min-h-11 max-w-full whitespace-normal break-words py-2 text-left sm:min-h-9"
             onClick={() => !locked && onSubmit({ action: action.id, values })}
           >
             {action.label}

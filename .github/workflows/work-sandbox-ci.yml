@@ -59,6 +59,8 @@ jobs:
           sudo /usr/local/bin/runsc install
           sudo systemctl reload docker
           /usr/local/bin/runsc --version
+          # Wait for the reloaded daemon before the production probe's short deadline.
+          timeout 30s docker --host unix:///var/run/docker.sock info --format '{{json .Runtimes}}'
 
       - name: Build the exact sandbox source into a local immutable image
         shell: bash
