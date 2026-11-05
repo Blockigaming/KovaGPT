@@ -252,7 +252,8 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
   const text = code.children
     .map((child) => (child.type === "text" ? child.value : ""))
     .join("")
-    .replace(/\n$/, "");
+    .replace(/
+$/, "");
   const writing = writingLanguages.has(language.toLowerCase());
   return (
     <ResponseContentBox
@@ -295,7 +296,8 @@ function separateTextOutputs(options: { boxLongProse: boolean } = { boxLongProse
         if (child.type !== "element") continue;
         if (child.tagName === "pre") {
           const start = child.position?.start.offset;
-          const firstLine = start === undefined ? "" : source.slice(start).split("\n")[0];
+          const firstLine = start === undefined ? "" : source.slice(start).split("
+")[0];
           const filename = /\b(?:filename|file)=(["'])(.*?)\1|\b(?:filename|file)=([^\s]+)/.exec(
             firstLine,
           );
