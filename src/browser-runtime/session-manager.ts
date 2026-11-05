@@ -13,7 +13,8 @@ import type {
 import { BrowserArtifactStore } from "./artifacts";
 
 const DEFAULT_LIFETIME_MS = 30 * 60_000;
-const DEFAULT_IDLE_MS = 5 * 60_000;
+// Idle browsers are released after 15 minutes with no authenticated operation.
+const DEFAULT_IDLE_MS = 15 * 60_000;
 
 export class PlaywrightEngineProvider implements EngineProvider {
   get(engine: BrowserEngine) {
