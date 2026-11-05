@@ -147,9 +147,7 @@ if (scope === "public") {
     await waitForKovaHydration(page);
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
     await expect(notice).toBeVisible();
-    // Automatic retry briefly replaces the recovery controls. Wait for both
-    // buttons in the same snapshot used to measure their layout, so a phase
-    // transition between protocol calls cannot invalidate the measurement.
+    // Measure recovery controls and their scroll reach in one rendered snapshot.
     await expect(async () => {
       const layout = await page.evaluate(() => {
         const element = document.querySelector<HTMLElement>(
@@ -191,6 +189,64 @@ if (scope === "public") {
       }
     }).toPass({ timeout: 5_000 });
     await page.screenshot({ path: info.outputPath("sync-recovery.png") });
+  });
+
+  test("sync retries keep recovery controls stable", async ({ page }) => {
+    await coreFixture(page, "dark", "plus");
+    let hold = false;
+    let heldRequests = 0;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/chat/history**", async (route) => {
+      if (hold) {
+        heldRequests++;
+        await pending;
+      }
+      await route.fulfill({ status: 503, json: { error: "Synthetic offline history" } });
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    await page.evaluate(() => document.fonts.ready);
+    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    await expect(
+      notice.getByRole("button", { name: "Retry chat sync", exact: true }),
+    ).toBeVisible();
+    await expect(notice).not.toHaveAttribute("aria-busy", "true");
+    const measure = () =>
+      page.evaluate(() => {
+        const notice = document.querySelector<HTMLElement>(
+          '[aria-label="Chat history synchronization"]',
+        )!;
+        return {
+          height: notice.getBoundingClientRect().height,
+          status: notice.querySelector('[role="status"]')?.textContent,
+          composerTop: document.querySelector(".spec400-composer")!.getBoundingClientRect().top,
+          buttons: Array.from(notice.querySelectorAll("button")).map((button) => ({
+            name: button.textContent?.trim(),
+            width: button.getBoundingClientRect().width,
+            height: button.getBoundingClientRect().height,
+          })),
+        };
+      });
+    const before = await measure();
+    hold = true;
+    try {
+      await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
+      await expect(notice).toHaveAttribute("aria-busy", "true");
+      const during = await measure();
+      expect(during.status).toBe(before.status);
+      expect(during.buttons).toEqual(before.buttons);
+      expect(Math.abs(during.height - before.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(during.composerTop - before.composerTop)).toBeLessThanOrEqual(1);
+    } finally {
+      release();
+    }
+    await expect(notice).not.toHaveAttribute("aria-busy", "true");
+    const after = await measure();
+    expect(after.buttons).toEqual(before.buttons);
+    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
   });
 
   for (const theme of ["dark", "light"] as const) {
