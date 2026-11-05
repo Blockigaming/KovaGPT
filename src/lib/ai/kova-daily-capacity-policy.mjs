@@ -24,7 +24,7 @@ export function normalizeHourlyPromptStats(samples, now = Date.now()) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
     const timestamp = Date.parse(entry.hourUtc);
     if (!Number.isFinite(timestamp) || timestamp % HOUR_MS !== 0 ||
-        timestamp > now || timestamp < now - 15 * 24 * HOUR_MS ||
+        timestamp + HOUR_MS > now || timestamp < now - 15 * 24 * HOUR_MS ||
         !safeInteger(entry.prompts, 0, 100_000_000) ||
         (entry.peakRps !== undefined &&
           (!Number.isFinite(entry.peakRps) || entry.peakRps < 0 || entry.peakRps > 100_000))) return null;
