@@ -6,11 +6,11 @@ KovaGPT retains its existing Azure Container App and always-warm API gateway.
 Only text inference is routed to already-running, usage-metered provider GPUs.
 There is **no dedicated Kova GPU server to purchase**.
 
-- **Kova Argon 5** -> `qwen/qwen3.5-flash`
-- **Kova Neon 4.6** -> `deepseek/deepseek-v4.1-flash-1017`
+- **Kova Argon 5** -> `deepseek/deepseek-v4-flash-0731`
+- **Kova Neon 4.6** -> `meta-llama/llama-4-maverick`
 - **Kova Xenon 4.6** -> `moonshotai/kimi-k3`
 
-The aliases are Kova product identities; the underlying foundation models are supplied by Qwen, DeepSeek and Moonshot AI. Inference traffic is handled by OpenRouter and its selected providers. These are candidate mappings, not independently proven parity with OpenAI's fast/balanced/frontier lineup.
+The aliases are Kova product identities; the underlying foundation models are supplied by DeepSeek, Meta and Moonshot AI. Inference traffic is handled by OpenRouter and its selected providers. These are candidate mappings, not independently proven parity with OpenAI's fast/balanced/frontier lineup.
 Kova must accurately disclose foundation-model provenance when asked and
 respect license, data-handling, and customer-privacy requirements.
 
@@ -53,7 +53,7 @@ tested.
    upstream request-capture compatibility and model selection entitlement tests.
 2. Streaming and non-streaming sample messages for all three aliases;
    structured tool calls, user confirmation, and authorization across accounts.
-3. Verify all three candidate models' multimodal input handling using bounded, inline image attachments; external image URLs must be rejected. Image generation and cloud-browser services remain independently available through their existing routes.
+3. Verify Kimi K3 and Llama 4 Maverick multimodal inputs using bounded inline images. The original DeepSeek V4 Flash is text-only: it must reject image inputs, not silently substitute a different base model. External image URLs must be rejected. Image generation and cloud-browser services remain independently available through their existing routes.
 4. Verify all quota, daily spending controls, per-user concurrency, request
    cancellation, and token usage settlement; compare provider invoice samples.
 5. Benchmark sustained and bursty **1 request/second aggregate** traffic,
@@ -85,4 +85,8 @@ typecheck/CI, customer consent and live production cutover: NOT VERIFIED.
 
 ## Tier quality acceptance
 
-Argon is speed-first (4096 tokens); Neon is balanced reasoning (8192 tokens); Xenon is max reasoning (16384 tokens). Their server-owned OpenRouter routing caps prices per 1M input/output tokens at Argon $0.20/$0.80, Neon $0.30/$1.20, Xenon $3.00/$15.00 and prioritizes low latency. These are price ceilings, not the cheapest advertised rates. Only launch after assessing real token usage, median/p95 first-token latency, tool calling, vision accuracy, and same-model failover, including hidden reasoning-token accounting.
+Argon is speed-first (4096 tokens); Neon is balanced reasoning (8192 tokens); Xenon is max reasoning (16384 tokens). Their server-owned OpenRouter routing caps prices per 1M input/output tokens at Argon $0.20/$0.80, Neon $0.50/$1.50, Xenon $3.00/$15.00 and prioritizes low latency. These are price ceilings, not the cheapest advertised rates. Only launch after assessing real token usage, median/p95 first-token latency, tool calling, vision accuracy, and same-model failover, including hidden reasoning-token accounting.
+
+### Model selection lock
+
+Owner-selected foundations are fixed: Xenon = Kimi K3 (`moonshotai/kimi-k3`), Neon = Llama 4 Maverick (`meta-llama/llama-4-maverick`), Argon = DeepSeek V4 Flash (`deepseek/deepseek-v4-flash-0731`, the pinned GA July 2026 snapshot). Never substitute Qwen3.5 Flash, DeepSeek V4.1 Flash or other models without the owner's explicit request. The original Argon model is text-only; any image-analysis tool must be a separately authorized capability, not a covert switch of the chosen base model. Test all model IDs and provider capabilities before enabling paid inference.
