@@ -2269,6 +2269,11 @@ function KovaGPT() {
         });
         if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
         flushAssistant();
+        controller.signal.throwIfAborted();
+        if (!assembledReply.trim() && !waitingForConfirmation)
+          throw Object.assign(new Error("KovaGPT returned an empty response. Try again."), {
+            retryable: true,
+          });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
 
