@@ -98,8 +98,18 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
         fail();
     },
     async reapExpired(activeSessions = new Set()) {
-      if (!(activeSessions instanceof Set) || activeSessions.size > 4 ||
-          [...activeSessions].some((id) => { try { workUuid(id); return false; } catch { return true; } }))
+      if (
+        !(activeSessions instanceof Set) ||
+        activeSessions.size > 4 ||
+        [...activeSessions].some((id) => {
+          try {
+            workUuid(id);
+            return false;
+          } catch {
+            return true;
+          }
+        })
+      )
         fail();
       const raw = await command(["ps", "-aq", "--filter", `label=${LABEL}`]);
       const ids = raw ? raw.split(/\s+/) : [];

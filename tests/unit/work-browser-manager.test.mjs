@@ -7,7 +7,8 @@ const ownerId = crypto.randomUUID(),
   sessionId = crypto.randomUUID();
 function fixture() {
   let expiresAt = Date.now() + 290000;
-  const calls = [], checks = [];
+  const calls = [],
+    checks = [];
   let retired = false,
     allowed = true,
     sequence = 1,
@@ -194,7 +195,6 @@ test("saved site blocks revoke an already loaded page before its next snapshot",
   assert.equal(executions, 1);
   assert.equal(closed, true);
 });
-
 
 test("active owner commands renew the 15-minute idle lease without any absolute age cap", async () => {
   const f = fixture();

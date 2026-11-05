@@ -63,14 +63,17 @@ export function createBrowserManager(
     clearTimeout(row.idleTimer);
     if (row.closed) return;
     const remaining = Math.max(1, row.expiresAt - Date.now());
-    row.idleTimer = setTimeout(() => {
-      if (row.closed) return;
-      if (row.busy) {
-        scheduleIdleReap(row);
-        return;
-      }
-      void close(row).catch(() => undefined);
-    }, row.busy && remaining <= 1 ? 1000 : remaining);
+    row.idleTimer = setTimeout(
+      () => {
+        if (row.closed) return;
+        if (row.busy) {
+          scheduleIdleReap(row);
+          return;
+        }
+        void close(row).catch(() => undefined);
+      },
+      row.busy && remaining <= 1 ? 1000 : remaining,
+    );
     row.idleTimer.unref?.();
   }
   async function check(row, binding, signal) {

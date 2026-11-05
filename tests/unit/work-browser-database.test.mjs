@@ -285,7 +285,6 @@ test("owner payloads are exact, bounded, UUID-targeted and cannot smuggle browse
     assert.throws(() => parseBrowserOwnerInput({ ...base, ...change }));
 });
 
-
 test("active browser can be older than a day while renewed activity refreshes idle expiry", async () => {
   const f = await fixture();
   try {
