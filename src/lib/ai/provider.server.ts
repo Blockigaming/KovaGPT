@@ -4,7 +4,10 @@ import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
 
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
-import { isKovaHostedModelId, requestKovaHostedChat } from "@/lib/ai/kova-hosted-inference.server.mjs";
+import {
+  isKovaHostedModelId,
+  requestKovaHostedChat,
+} from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
 import {
   AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE,
@@ -732,8 +735,7 @@ export async function chatCompletions(
     const enabled = env("KOVA_HOSTED_INFERENCE_ENABLED") === "true";
     const captured = env("KOVA_REQUEST_CAPTURE_ENABLED");
     const accepted = env("KOVA_GENERATION_ACCEPTANCE_ENABLED");
-    if (!enabled || (captured && captured !== "false") ||
-        (accepted && accepted !== "false")) {
+    if (!enabled || (captured && captured !== "false") || (accepted && accepted !== "false")) {
       throw new AiProviderError({
         error: "This Kova model is not yet available.",
         code: "provider_unavailable",

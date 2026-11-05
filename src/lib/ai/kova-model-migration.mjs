@@ -29,9 +29,10 @@ export const KOVA_MODEL_CATALOG = Object.freeze({
 export const KOVA_SELF_HOSTED_DEFAULT_ENABLED = false;
 
 export function resolveKovaModelAlias(alias) {
-  return Object.values(KOVA_MODEL_CATALOG).find(
-    (model) => model.id === alias || model.name === alias,
-  ) ?? null;
+  return (
+    Object.values(KOVA_MODEL_CATALOG).find((model) => model.id === alias || model.name === alias) ??
+    null
+  );
 }
 
 /**
@@ -45,11 +46,13 @@ export function eligibleForSelfHosted({
   requiredCapabilities = [],
   verifiedCapabilities = [],
 } = {}) {
-  return enabled === true &&
+  return (
+    enabled === true &&
     healthy === true &&
     Array.isArray(requiredCapabilities) &&
     Array.isArray(verifiedCapabilities) &&
-    requiredCapabilities.every((capability) =>
-      typeof capability === "string" && verifiedCapabilities.includes(capability)
-    );
+    requiredCapabilities.every(
+      (capability) => typeof capability === "string" && verifiedCapabilities.includes(capability),
+    )
+  );
 }

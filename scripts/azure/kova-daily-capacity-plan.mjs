@@ -29,7 +29,9 @@ export function planFromJson(json, currentMaxReplicas, now = Date.now()) {
 if (process.argv[1]?.endsWith("/kova-daily-capacity-plan.mjs")) {
   const [file, replicas] = process.argv.slice(2);
   if (!file || !/^\d+$/.test(replicas ?? "")) {
-    process.stderr.write("Usage: node scripts/azure/kova-daily-capacity-plan.mjs metrics.json currentMaxReplicas\n");
+    process.stderr.write(
+      "Usage: node scripts/azure/kova-daily-capacity-plan.mjs metrics.json currentMaxReplicas\n",
+    );
     process.exitCode = 2;
   } else {
     try {

@@ -34,7 +34,9 @@ function harness(extra = {}, models = {}) {
     console: { info() {}, warn() {}, error() {} },
     runtimeEnv: (name) => environment[name],
     isKovaHostedModelId: () => false,
-    requestKovaHostedChat: () => { throw new Error("hosted disabled in fixture"); },
+    requestKovaHostedChat: () => {
+      throw new Error("hosted disabled in fixture");
+    },
     maximumServerOutputForModel: () => 700,
     modelForPolicy: (policy) =>
       models[policy] ?? { id: policy === "instant" ? "gpt-5.6-luna" : "gpt-5.6-sol" },

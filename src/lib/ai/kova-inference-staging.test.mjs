@@ -4,10 +4,14 @@ import { requestStagingInference, validateInferenceEndpoint } from "./kova-infer
 
 test("rejects insecure and private inference endpoints", () => {
   for (const endpoint of [
-    "http://inference.example.com/", "https://localhost/",
-    "https://127.0.0.1/", "https://10.0.0.2/",
-    "https://inference.example.com/path", "https://user:pass@inference.example.com/",
-  ]) assert.throws(() => validateInferenceEndpoint(endpoint));
+    "http://inference.example.com/",
+    "https://localhost/",
+    "https://127.0.0.1/",
+    "https://10.0.0.2/",
+    "https://inference.example.com/path",
+    "https://user:pass@inference.example.com/",
+  ])
+    assert.throws(() => validateInferenceEndpoint(endpoint));
 });
 test("sends authenticated staging request with expected model", async () => {
   let called = false;
@@ -28,10 +32,15 @@ test("sends authenticated staging request with expected model", async () => {
   assert.equal(response.status, 200);
 });
 test("unknown model fails before network request", async () => {
-  await assert.rejects(requestStagingInference({
-    endpoint: "https://inference.example.com/",
-    token: "test-staging-token-123",
-    modelId: "unknown",
-    fetchImpl: () => { throw new Error("must not fetch"); },
-  }), /unknown_kova_model/);
+  await assert.rejects(
+    requestStagingInference({
+      endpoint: "https://inference.example.com/",
+      token: "test-staging-token-123",
+      modelId: "unknown",
+      fetchImpl: () => {
+        throw new Error("must not fetch");
+      },
+    }),
+    /unknown_kova_model/,
+  );
 });

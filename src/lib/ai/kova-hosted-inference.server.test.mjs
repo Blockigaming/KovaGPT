@@ -10,7 +10,10 @@ import {
 const request = {
   model: "kova-argon-4.6",
   stream: false,
-  messages: [{ role: "system", content: "You are Kova." }, { role: "user", content: "Hello" }],
+  messages: [
+    { role: "system", content: "You are Kova." },
+    { role: "user", content: "Hello" },
+  ],
   max_completion_tokens: 1200,
 };
 
@@ -40,10 +43,12 @@ test("rejects request-provided host and unknown model before network", () => {
 });
 
 test("rejects image inputs to text-only model, unsafe outputs and unbounded tokens", () => {
-  assert.throws(() => prepareKovaHostedRequest({
-    ...request,
-    messages: [{ role: "user", content: [{ type: "image_url", image_url: { url: "x" } }] }],
-  }));
+  assert.throws(() =>
+    prepareKovaHostedRequest({
+      ...request,
+      messages: [{ role: "user", content: [{ type: "image_url", image_url: { url: "x" } }] }],
+    }),
+  );
   assert.throws(() => prepareKovaHostedRequest({ ...request, max_completion_tokens: 50_000 }));
   assert.throws(() => prepareKovaHostedRequest({ ...request, max_tokens: 20 }));
 });
@@ -71,16 +76,25 @@ test("uses server key, preserves streaming response and supports cancellation", 
 
 test("rejects disabled credential, upstream errors and wrong content type", async () => {
   await assert.rejects(requestKovaHostedChat({ request, token: "missing" }), /api_key_unavailable/);
-  await assert.rejects(requestKovaHostedChat({
-    request, token: "this-is-a-test-only-server-key",
-    fetchImpl: async () => new Response("upstream detail", { status: 500 }),
-  }), /hosted_inference_unavailable/);
-  await assert.rejects(requestKovaHostedChat({
-    request, token: "this-is-a-test-only-server-key",
-    fetchImpl: async () => new Response("<html>wrong</html>", {
-      headers: { "content-type": "text/html" },
+  await assert.rejects(
+    requestKovaHostedChat({
+      request,
+      token: "this-is-a-test-only-server-key",
+      fetchImpl: async () => new Response("upstream detail", { status: 500 }),
     }),
-  }), /hosted_response_invalid/);
+    /hosted_inference_unavailable/,
+  );
+  await assert.rejects(
+    requestKovaHostedChat({
+      request,
+      token: "this-is-a-test-only-server-key",
+      fetchImpl: async () =>
+        new Response("<html>wrong</html>", {
+          headers: { "content-type": "text/html" },
+        }),
+    }),
+    /hosted_response_invalid/,
+  );
 });
 
 test("each Kova tier has distinct upstream budget and reasoning policy", () => {
@@ -90,7 +104,9 @@ test("each Kova tier has distinct upstream budget and reasoning policy", () => {
     ["kova-xenon-5", "moonshotai/kimi-k3", "max", 16384],
   ]) {
     const prepared = prepareKovaHostedRequest({
-      ...request, model: alias, max_completion_tokens: max,
+      ...request,
+      model: alias,
+      max_completion_tokens: max,
     });
     const body = JSON.parse(prepared.body);
     assert.equal(body.model, expectedModel);
@@ -101,9 +117,13 @@ test("each Kova tier has distinct upstream budget and reasoning policy", () => {
     assert.equal(body.provider.allow_fallbacks, true);
     assert.ok(body.provider.max_price.prompt > 0);
     assert.ok(body.provider.max_price.completion > 0);
-    assert.throws(() => prepareKovaHostedRequest({
-      ...request, model: alias, max_completion_tokens: max + 1,
-    }));
+    assert.throws(() =>
+      prepareKovaHostedRequest({
+        ...request,
+        model: alias,
+        max_completion_tokens: max + 1,
+      }),
+    );
   }
 });
 test("Maverick and Kimi accept bounded inline image inputs while original Flash stays text-only", () => {
@@ -111,24 +131,40 @@ test("Maverick and Kimi accept bounded inline image inputs while original Flash 
     ...request,
     model: "kova-xenon-5",
     messages: [
-      { role: "user", content: [
-        { type: "text", text: "Describe this image." },
-        { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
-      ] },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Describe this image." },
+          { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
+        ],
+      },
     ],
   });
   assert.equal(JSON.parse(prepared.body).messages[0].content[1].type, "image_url");
-  assert.throws(() => prepareKovaHostedRequest({
-    ...request, model: "kova-argon-4.6",
-    messages: [{ role: "user", content: [
-      { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
-    ] }],
-  }), /hosted_model_vision_unavailable/);
+  assert.throws(
+    () =>
+      prepareKovaHostedRequest({
+        ...request,
+        model: "kova-argon-4.6",
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } }],
+          },
+        ],
+      }),
+    /hosted_model_vision_unavailable/,
+  );
 
-  assert.throws(() => prepareKovaHostedRequest({
-    ...request,
-    messages: [{ role: "user", content: [
-      { type: "image_url", image_url: { url: "https://private.example/image.png" } },
-    ] }],
-  }));
+  assert.throws(() =>
+    prepareKovaHostedRequest({
+      ...request,
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "image_url", image_url: { url: "https://private.example/image.png" } }],
+        },
+      ],
+    }),
+  );
 });

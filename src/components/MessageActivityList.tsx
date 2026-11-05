@@ -48,7 +48,10 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
               <span className="sr-only">{status}: </span>
               <span>{activity.label}</span>
               {activity.browser?.hostname && (
-                <span className="ml-2 inline-flex rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground" title="Observed browser website">
+                <span
+                  className="ml-2 inline-flex rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground"
+                  title="Observed browser website"
+                >
                   {activity.browser.hostname}
                 </span>
               )}
@@ -59,7 +62,10 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
               </span>
             )}
             {activity.status === "done" && (
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-label="Completed" />
+              <CheckCircle2
+                className="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                aria-label="Completed"
+              />
             )}
             {activity.status === "running" && (
               <Loader2

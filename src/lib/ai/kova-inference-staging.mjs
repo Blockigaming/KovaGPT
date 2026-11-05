@@ -9,18 +9,30 @@ const MODEL_IDS = new Set(["kova-xenon-5", "kova-neon-4.6", "kova-argon-4.6"]);
 export function validateInferenceEndpoint(endpoint) {
   if (typeof endpoint !== "string") throw new Error("inference_endpoint_required");
   const url = new URL(endpoint);
-  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash ||
-      url.pathname !== "/" || !url.hostname) {
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== "/" ||
+    !url.hostname
+  ) {
     throw new Error("invalid_inference_endpoint");
   }
   // Reject direct loopback, private-address, and link-local endpoints.
   // In production also enforce an operator-managed hostname allowlist.
   const host = url.hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".localhost") ||
-      host.endsWith(".local") || host.endsWith(".internal") ||
-      host === "0.0.0.0" || host === "[::1]" ||
-      /^(10|127|169\.254|192\.168)\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host === "0.0.0.0" ||
+    host === "[::1]" ||
+    /^(10|127|169\.254|192\.168)\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+  ) {
     throw new Error("private_inference_endpoint");
   }
   return url.origin;
@@ -36,15 +48,18 @@ export function validateInferenceRequest({ path, modelId, body }) {
 }
 
 export async function requestStagingInference({
-  endpoint, token, path = "/v1/chat/completions",
-  modelId, body = {}, signal, fetchImpl = fetch,
+  endpoint,
+  token,
+  path = "/v1/chat/completions",
+  modelId,
+  body = {},
+  signal,
+  fetchImpl = fetch,
 }) {
   const origin = validateInferenceEndpoint(endpoint);
   validateInferenceRequest({ path, modelId, body });
   if (typeof token !== "string" || token.length < 16) throw new Error("inference_token_required");
-  const requestBody = path === "/v1/chat/completions"
-    ? { ...body, model: modelId }
-    : undefined;
+  const requestBody = path === "/v1/chat/completions" ? { ...body, model: modelId } : undefined;
   const response = await fetchImpl(origin + path, {
     method: path === "/v1/models" ? "GET" : "POST",
     headers: {

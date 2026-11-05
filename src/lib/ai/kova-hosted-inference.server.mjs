@@ -14,9 +14,9 @@ const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 // Server-controlled provider price caps in USD per million tokens.
 const MODEL_PRICE_CEILINGS = Object.freeze({
-  "kova-argon-4.6": { prompt: 0.20, completion: 0.80 },
-  "kova-neon-4.6": { prompt: 0.50, completion: 1.50 },
-  "kova-xenon-5": { prompt: 3.00, completion: 15.00 },
+  "kova-argon-4.6": { prompt: 0.2, completion: 0.8 },
+  "kova-neon-4.6": { prompt: 0.5, completion: 1.5 },
+  "kova-xenon-5": { prompt: 3.0, completion: 15.0 },
 });
 const MODEL_OUTPUT_LIMITS = Object.freeze({
   "kova-argon-4.6": 4096,
@@ -24,10 +24,21 @@ const MODEL_OUTPUT_LIMITS = Object.freeze({
   "kova-xenon-5": 16384,
 });
 const ALLOWED_KEYS = new Set([
-  "model", "messages", "stream", "temperature", "top_p",
-  "max_tokens", "max_completion_tokens", "tools", "tool_choice",
-  "response_format", "parallel_tool_calls", "stop", "seed",
-  "stream_options", "reasoning",
+  "model",
+  "messages",
+  "stream",
+  "temperature",
+  "top_p",
+  "max_tokens",
+  "max_completion_tokens",
+  "tools",
+  "tool_choice",
+  "response_format",
+  "parallel_tool_calls",
+  "stop",
+  "seed",
+  "stream_options",
+  "reasoning",
 ]);
 
 export function isKovaHostedModelId(value) {
@@ -35,15 +46,26 @@ export function isKovaHostedModelId(value) {
 }
 
 export function prepareKovaHostedRequest(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value) ||
-      !isKovaHostedModelId(value.model) ||
-      Object.keys(value).some((key) => !ALLOWED_KEYS.has(key)) ||
-      !Array.isArray(value.messages) || value.messages.length < 1 ||
-      value.messages.length > 256)
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    !isKovaHostedModelId(value.model) ||
+    Object.keys(value).some((key) => !ALLOWED_KEYS.has(key)) ||
+    !Array.isArray(value.messages) ||
+    value.messages.length < 1 ||
+    value.messages.length > 256
+  )
     throw new Error("invalid_hosted_request");
-  if (value.messages.some((message) =>
-    !message || typeof message !== "object" || Array.isArray(message) ||
-    !["system", "developer", "user", "assistant", "tool"].includes(message.role)))
+  if (
+    value.messages.some(
+      (message) =>
+        !message ||
+        typeof message !== "object" ||
+        Array.isArray(message) ||
+        !["system", "developer", "user", "assistant", "tool"].includes(message.role),
+    )
+  )
     throw new Error("invalid_hosted_messages");
   // No provider-side fetch of user-supplied URLs. Uploaded images must arrive
   // as bounded inline image data from Kova's authenticated attachment flow.
@@ -52,12 +74,16 @@ export function prepareKovaHostedRequest(value) {
     if (!Array.isArray(message.content)) continue;
     if (message.content.length > 16) throw new Error("invalid_hosted_content");
     for (const part of message.content) {
-      if (!part || typeof part !== "object" || Array.isArray(part)) throw new Error("invalid_hosted_content");
+      if (!part || typeof part !== "object" || Array.isArray(part))
+        throw new Error("invalid_hosted_content");
       if (part.type === "text" && typeof part.text === "string") continue;
       const url = part.type === "image_url" ? part.image_url?.url : null;
-      if (typeof url !== "string" ||
-          !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url) ||
-          url.length > 5_000_000 || ++totalImages > 4)
+      if (
+        typeof url !== "string" ||
+        !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url) ||
+        url.length > 5_000_000 ||
+        ++totalImages > 4
+      )
         throw new Error("invalid_hosted_image");
     }
   }
@@ -70,8 +96,11 @@ export function prepareKovaHostedRequest(value) {
   const rawMax = value.max_completion_tokens ?? value.max_tokens ?? 2048;
   if (!Number.isSafeInteger(rawMax) || rawMax < 1 || rawMax > MODEL_OUTPUT_LIMITS[value.model])
     throw new Error("invalid_hosted_token_limit");
-  if (value.max_tokens !== undefined && value.max_completion_tokens !== undefined &&
-      value.max_tokens !== value.max_completion_tokens)
+  if (
+    value.max_tokens !== undefined &&
+    value.max_completion_tokens !== undefined &&
+    value.max_tokens !== value.max_completion_tokens
+  )
     throw new Error("conflicting_hosted_token_limit");
   // Reasoning effort is an operator policy, never copied from untrusted callers.
   // The model's full depth is only available to the premium Xenon tier.
@@ -95,19 +124,12 @@ export function prepareKovaHostedRequest(value) {
   return { endpoint: HOSTED_CHAT_URL, body, alias: model };
 }
 
-export async function requestKovaHostedChat({
-  request,
-  token,
-  signal,
-  fetchImpl = fetch,
-} = {}) {
+export async function requestKovaHostedChat({ request, token, signal, fetchImpl = fetch } = {}) {
   if (typeof token !== "string" || token.trim().length < 16)
     throw new Error("hosted_api_key_unavailable");
   const prepared = prepareKovaHostedRequest(request);
   const timeoutSignal = AbortSignal.timeout(45_000);
-  const boundedSignal = signal
-    ? AbortSignal.any([signal, timeoutSignal])
-    : timeoutSignal;
+  const boundedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   const response = await fetchImpl(prepared.endpoint, {
     method: "POST",
     redirect: "error",
@@ -121,7 +143,11 @@ export async function requestKovaHostedChat({
     body: prepared.body,
   });
   if (!response.ok || response.redirected) {
-    try { await response.body?.cancel(); } catch { /* best effort */ }
+    try {
+      await response.body?.cancel();
+    } catch {
+      /* best effort */
+    }
     // Never leak provider-specific errors, private prompt contents or credentials.
     const error = new Error("kova_hosted_inference_unavailable");
     error.status = response.status === 429 ? 429 : 502;
@@ -129,7 +155,11 @@ export async function requestKovaHostedChat({
   }
   const type = response.headers.get("content-type")?.split(";", 1)[0].trim();
   if (type !== (request.stream === true ? "text/event-stream" : "application/json")) {
-    try { await response.body?.cancel(); } catch { /* best effort */ }
+    try {
+      await response.body?.cancel();
+    } catch {
+      /* best effort */
+    }
     throw new Error("kova_hosted_response_invalid");
   }
   return response;

@@ -121,7 +121,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 4_096,
-    pricePerMillion: { input: 0.20, cachedInput: 0.20, output: 0.80 },
+    pricePerMillion: { input: 0.2, cachedInput: 0.2, output: 0.8 },
     tiers: ["guest", "free", "plus", "pro"],
   },
   {
@@ -132,7 +132,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 8_192,
-    pricePerMillion: { input: 0.50, cachedInput: 0.50, output: 1.50 },
+    pricePerMillion: { input: 0.5, cachedInput: 0.5, output: 1.5 },
     tiers: ["free", "plus", "pro"],
   },
   {

@@ -20,16 +20,22 @@ test("self-hosted migration defaults off and fails closed", () => {
   assert.equal(KOVA_SELF_HOSTED_DEFAULT_ENABLED, false);
   assert.equal(eligibleForSelfHosted(), false);
   assert.equal(eligibleForSelfHosted({ enabled: true, healthy: false }), false);
-  assert.equal(eligibleForSelfHosted({
-    enabled: true,
-    healthy: true,
-    requiredCapabilities: ["chat", "tool_calls"],
-    verifiedCapabilities: ["chat"],
-  }), false);
-  assert.equal(eligibleForSelfHosted({
-    enabled: true,
-    healthy: true,
-    requiredCapabilities: ["chat", "tool_calls"],
-    verifiedCapabilities: ["chat", "tool_calls"],
-  }), true);
+  assert.equal(
+    eligibleForSelfHosted({
+      enabled: true,
+      healthy: true,
+      requiredCapabilities: ["chat", "tool_calls"],
+      verifiedCapabilities: ["chat"],
+    }),
+    false,
+  );
+  assert.equal(
+    eligibleForSelfHosted({
+      enabled: true,
+      healthy: true,
+      requiredCapabilities: ["chat", "tool_calls"],
+      verifiedCapabilities: ["chat", "tool_calls"],
+    }),
+    true,
+  );
 });

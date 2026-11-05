@@ -1124,9 +1124,7 @@ export const Route = createFileRoute("/api/chat")({
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
               modelId: model,
-              provider: isKovaHostedModelId(model)
-                ? "openrouter"
-                : getAiProviderConfig().provider,
+              provider: isKovaHostedModelId(model) ? "openrouter" : getAiProviderConfig().provider,
               hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
             });
 
@@ -1436,15 +1434,24 @@ export const Route = createFileRoute("/api/chat")({
               stream: true,
               // A client cannot override this value: it is derived only from
               // the server-authorized mode and entitlement above.
-              max_completion_tokens: Math.min(modelForPolicy(
-                m.id === "instant"
-                  ? "instant"
-                  : m.id === "thinking"
-                    ? "thinking"
-                    : ["high", "extra_high", "max", "ultra"].includes(m.id)
-                      ? "deep"
-                      : "normal",
-              ).outputCeiling, model === "kova-xenon-5" ? 16384 : model === "kova-neon-4.6" ? 8192 : isKovaHostedModelId(model) ? 4096 : 128000),
+              max_completion_tokens: Math.min(
+                modelForPolicy(
+                  m.id === "instant"
+                    ? "instant"
+                    : m.id === "thinking"
+                      ? "thinking"
+                      : ["high", "extra_high", "max", "ultra"].includes(m.id)
+                        ? "deep"
+                        : "normal",
+                ).outputCeiling,
+                model === "kova-xenon-5"
+                  ? 16384
+                  : model === "kova-neon-4.6"
+                    ? 8192
+                    : isKovaHostedModelId(model)
+                      ? 4096
+                      : 128000,
+              ),
               messages: [
                 {
                   role: "system",

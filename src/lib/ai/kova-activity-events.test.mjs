@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 import { validateKovaActivityEvent, kovaActivityDisplay } from "./kova-activity-events.mjs";
 
 const event = {
-  id: "tool-123", type: "web_search", state: "completed",
-  label: "Search results retrieved", domain: "example.com",
+  id: "tool-123",
+  type: "web_search",
+  state: "completed",
+  label: "Search results retrieved",
+  domain: "example.com",
   timestamp: 1793900000000,
 };
 test("renders verified completed web activity", () => {

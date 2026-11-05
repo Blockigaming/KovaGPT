@@ -28,7 +28,7 @@ The current Work cloud browser uses independent `work-runner/browser-manager.mjs
 2. Identify the authoritative source of **completed and admitted user prompts**, not merely client analytics. Aggregate hourly counts with hour-start UTC timestamps and 5-minute peak RPS, covering at least 72 hours before permitting downscales. Never include raw prompt content or private identifiers in the scaling metrics.
 3. Benchmark the CPU API gateway's sustainable throughput. Replace the policy's placeholder `sustainableRpsPerReplica: 2` only with measured capacity.
 4. Configure Container Apps live HTTP/concurrency autoscaling with min replicas 1 and an approved budget-limited max; verify both scale-out and scale-in under synthetic traffic.
-5. Schedule daily UTC recommendations through a narrowly scoped Azure job or existing production scheduler. Log the planned bound, metrics freshness and the *actual* Azure update result, if applying. Enforce idempotency, least privilege, rollback and a circuit breaker. Do not let the job change model IDs, production routing, secrets, images or regions.
+5. Schedule daily UTC recommendations through a narrowly scoped Azure job or existing production scheduler. Log the planned bound, metrics freshness and the _actual_ Azure update result, if applying. Enforce idempotency, least privilege, rollback and a circuit breaker. Do not let the job change model IDs, production routing, secrets, images or regions.
 6. Apply changes only after source checks, tests, Azure identity verification, budget/cost evaluation and owner-approved first deployment. Triggering the read-only planner alone is **not** automatic resizing.
 7. Deploy and verify the separate Work browser 15-minute idle expiry migration before changing its public timeout documentation.
 8. Verify the deployed Kova revision, external/model first-token latency, plugin calls, image routing, browser cleanup and the old revision as rollback target.
@@ -37,5 +37,5 @@ The current Work cloud browser uses independent `work-runner/browser-manager.mjs
 
 - An unavailable hosted inference provider follows the existing compatible fallback policy; do not send a partial streamed response through another model and present it as the same continuation.
 - If observed latency, errors or queue depth exceed safe thresholds, the live autoscaler should protect availability immediately; the daily planner is not a substitute.
-- Daily automatic *replica ceiling* adjustments change the potential spend. Treat a limit as safety guard, **not** as an Azure billing cap. Alert at budget thresholds, with a separate server-side hard quota for pay-per-token inference.
+- Daily automatic _replica ceiling_ adjustments change the potential spend. Treat a limit as safety guard, **not** as an Azure billing cap. Alert at budget thresholds, with a separate server-side hard quota for pay-per-token inference.
 - If active production capacity differs from the prior day's plan, do not force it down without reconciling the operator change.

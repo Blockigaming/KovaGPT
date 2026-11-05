@@ -6,12 +6,21 @@
 import { KOVA_MODEL_CATALOG } from "./kova-model-migration.mjs";
 
 const MODEL_IDS = new Set(Object.values(KOVA_MODEL_CATALOG).map((model) => model.id));
-const SAFE_CAPABILITIES = new Set(["chat", "streaming", "reasoning", "tool_calls", "vision", "file_analysis", "web_search", "embeddings", "image_generation"]);
+const SAFE_CAPABILITIES = new Set([
+  "chat",
+  "streaming",
+  "reasoning",
+  "tool_calls",
+  "vision",
+  "file_analysis",
+  "web_search",
+  "embeddings",
+  "image_generation",
+]);
 
 export function normalizeMigrationConfig(config = {}) {
   const percent = Number(config.rolloutPercent ?? 0);
-  const rolloutPercent = Number.isFinite(percent) && percent >= 0 && percent <= 100
-    ? percent : 0;
+  const rolloutPercent = Number.isFinite(percent) && percent >= 0 && percent <= 100 ? percent : 0;
   return {
     enabled: config.enabled === true,
     rolloutPercent,
@@ -43,16 +52,20 @@ export function chooseKovaProvider({
 } = {}) {
   const settings = normalizeMigrationConfig(config);
   const bucket = migrationBucket(routingKey);
-  if (!MODEL_IDS.has(modelId) ||
-      !settings.enabled ||
-      settings.emergencyRollback ||
-      !healthy ||
-      bucket === null ||
-      bucket >= settings.rolloutPercent ||
-      !Array.isArray(requiredCapabilities) ||
-      !Array.isArray(verifiedCapabilities) ||
-      requiredCapabilities.some((capability) => !SAFE_CAPABILITIES.has(capability) ||
-        !verifiedCapabilities.includes(capability))) {
+  if (
+    !MODEL_IDS.has(modelId) ||
+    !settings.enabled ||
+    settings.emergencyRollback ||
+    !healthy ||
+    bucket === null ||
+    bucket >= settings.rolloutPercent ||
+    !Array.isArray(requiredCapabilities) ||
+    !Array.isArray(verifiedCapabilities) ||
+    requiredCapabilities.some(
+      (capability) =>
+        !SAFE_CAPABILITIES.has(capability) || !verifiedCapabilities.includes(capability),
+    )
+  ) {
     return { provider: "existing", reason: "migration_not_eligible" };
   }
   return { provider: "kova_self_hosted", reason: "canary_eligible" };

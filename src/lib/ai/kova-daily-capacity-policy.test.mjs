@@ -42,10 +42,16 @@ test("rejects incomplete, duplicated and stale hourly telemetry", () => {
   const duplicate = hourly(24, 0);
   duplicate[1] = duplicate[0];
   assert.equal(normalizeHourlyPromptStats(duplicate, now), null);
-  assert.equal(recommend(hourly(24, 0).map((x) => ({
-    ...x,
-    hourUtc: new Date(Date.parse(x.hourUtc) - 5 * 24 * hour).toISOString(),
-  })), 2).reason, "stale_metrics");
+  assert.equal(
+    recommend(
+      hourly(24, 0).map((x) => ({
+        ...x,
+        hourUtc: new Date(Date.parse(x.hourUtc) - 5 * 24 * hour).toISOString(),
+      })),
+      2,
+    ).reason,
+    "stale_metrics",
+  );
 });
 
 test("never recommends spending beyond the hard replica ceiling", () => {
@@ -56,7 +62,10 @@ test("never recommends spending beyond the hard replica ceiling", () => {
 
 test("rejects invalid current capacity and target rates", () => {
   assert.throws(() => recommend(hourly(24), 0), /invalid_scaling_bounds/);
-  assert.throws(() => recommend(hourly(24), 2, { sustainableRpsPerReplica: 0 }), /invalid_scaling_bounds/);
+  assert.throws(
+    () => recommend(hourly(24), 2, { sustainableRpsPerReplica: 0 }),
+    /invalid_scaling_bounds/,
+  );
 });
 
 test("rejects unfinished hourly metrics so the planner never misreads partial traffic", () => {

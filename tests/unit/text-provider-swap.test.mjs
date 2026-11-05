@@ -34,7 +34,12 @@ function loadProvider(env, fetcher, generationEnabled = true) {
       maximumServerOutputForModel: () => 4096,
     },
     "@/lib/ai/provider-transport.server.mjs": transport,
-    "@/lib/ai/kova-hosted-inference.server.mjs": { isKovaHostedModelId: () => false, requestKovaHostedChat: () => { throw Error("hosted disabled in fixture"); } },
+    "@/lib/ai/kova-hosted-inference.server.mjs": {
+      isKovaHostedModelId: () => false,
+      requestKovaHostedChat: () => {
+        throw Error("hosted disabled in fixture");
+      },
+    },
   };
   new Function("exports", "require", "fetch", "console", output)(
     exports,
