@@ -107,9 +107,9 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
 ] as const;
 
 /**
- * Staged hosted inference catalog. These are Qwen foundation-model routing
+ * Staged hosted inference catalog. These are third-party foundation-model routing
  * aliases; they do not imply ownership of the base weights or quality parity.
- * Values are upstream USD/M-token estimates reviewed 2026-11-05.
+ * Values reserve conservative provider price ceilings in USD per 1M tokens.
  * Operator must re-check live prices/availability before activation.
  */
 export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
