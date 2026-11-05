@@ -417,7 +417,10 @@ export function CommandPalette({
       if (closesSidebarToFocus) onCloseSidebar?.();
       closePalette();
     });
-    document.querySelector<HTMLTextAreaElement>("textarea")?.focus({ preventScroll: true });
+    const composer = document.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Message KovaGPT"]',
+    );
+    composer?.focus({ preventScroll: true });
     platformEvents.publish("platform", "command.executed", { command: "focus-input" });
   };
 

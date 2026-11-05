@@ -116,9 +116,50 @@ for (const theme of ["dark", "light"] as const) {
     await expect(extra).toBeChecked();
     const format = form.getByRole("combobox", { name: "Format", exact: true });
     await format.click();
-    await page
-      .getByRole("option", { name: "An option with additional detail", exact: true })
-      .click();
+    const option = page.getByRole("option", {
+      name: "An option with additional detail",
+      exact: true,
+    });
+    try {
+      await expect(option).toBeInViewport({ ratio: 0.99 });
+    } catch (error) {
+      const layout = await page.evaluate(() => {
+        const selectors = [
+          '[data-slot="select-trigger"]',
+          '[data-radix-popper-content-wrapper]',
+          '[data-slot="select-content"]',
+          '[data-radix-select-viewport]',
+          '[role="option"]',
+          '[data-chat-transcript]',
+          ".spec400-composer-dock",
+        ].join(", ");
+        return {
+          viewport: { width: innerWidth, height: innerHeight },
+          controls: Array.from(document.querySelectorAll(selectors)).map((node) => {
+            const box = node.getBoundingClientRect();
+            const style = getComputedStyle(node);
+            return {
+              name: node.getAttribute("data-slot") || node.getAttribute("role") || node.tagName,
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height,
+              maxHeight: style.maxHeight,
+              minHeight: style.minHeight,
+              overflow: style.overflowY,
+              position: style.position,
+              transform: style.transform,
+              availableHeight: style.getPropertyValue("--radix-select-content-available-height"),
+              scrollTop: node.scrollTop,
+              parentScrollTop: node.parentElement?.scrollTop,
+            };
+          }),
+        };
+      });
+      console.log("INTERACTIVE_SELECT_LAYOUT", JSON.stringify(layout));
+      throw error;
+    }
+    await option.click();
     await expect(format).toContainText("An option with additional detail");
     const reminders = form.getByRole("switch", { name: "Include reminders", exact: true });
     await reminders.check();
@@ -188,6 +229,19 @@ for (const theme of ["dark", "light"] as const) {
     expect(submissions[0]).toContain("Compare the details");
     expect(submissions[0]).toContain("Value 1 with additional detail");
     await expect(table).toHaveAttribute("data-interactive-state", "submitted");
+    await expect(page.getByText("Your selection was received.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Control+K");
+    const search = page.getByRole("dialog", {
+      name: "Search workspace, chats, and actions",
+      exact: true,
+    });
+    await expect(search).toBeVisible();
+    await search.getByRole("option", { name: "Focus message box", exact: true }).click();
+    await expect(search).toBeHidden();
+    await expect(
+      page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
+    ).toBeFocused();
   });
 }
 
