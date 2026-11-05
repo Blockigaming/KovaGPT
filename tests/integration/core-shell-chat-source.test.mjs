@@ -74,7 +74,9 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.ok(!SIDEBAR_ITEMS.some((item) => item.to === "/work"));
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
   assert.match(sidebar, /cancelPendingSelection\(\);\s+onNew\(\);/);
-  assert.doesNotMatch(sidebar, /closeAfterMobileNavigation/);
+  assert.match(sidebar, /if \(!open \|\| !isMobileViewport\(\)\) return/);
+  assert.match(sidebar, /navigationOwnsFocusRef\.current = requestDrawerNavigationFocus/);
+  assert.match(sidebar, /closeAfterMobileNavigation\(to\)/);
   assert.equal(sidebarRule(".kova-sidebar[data-kova-core-sidebar]").margin, "0");
 });
 

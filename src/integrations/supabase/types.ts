@@ -1149,6 +1149,7 @@ export type Database = {
           pinned_at: string | null
           system_prompt: string | null
           updated_at: string
+          deletion_requested_at: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -1161,6 +1162,7 @@ export type Database = {
           pinned_at?: string | null
           system_prompt?: string | null
           updated_at?: string
+          deletion_requested_at?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -1173,6 +1175,7 @@ export type Database = {
           pinned_at?: string | null
           system_prompt?: string | null
           updated_at?: string
+          deletion_requested_at?: string | null
         }
         Relationships: []
       }
@@ -1356,6 +1359,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          folder_id: string | null
         }
         Insert: {
           content_text?: string | null
@@ -1371,6 +1375,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          folder_id?: string | null
         }
         Update: {
           content_text?: string | null
@@ -1386,8 +1391,17 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          folder_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_library_items_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "library_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_onboarding: {
         Row: {
@@ -1528,6 +1542,87 @@ export type Database = {
           },
         ]
       }
+      library_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_folders_parent_owner_fk"
+            columns: ["parent_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "library_folders"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      project_deletion_jobs: {
+        Row: {
+          attempt_count: number
+          attempt_id: string | null
+          completed_at: string | null
+          last_error_code: string | null
+          lease_until: string | null
+          owner_id: string
+          project_id: string
+          requested_at: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          attempt_id?: string | null
+          completed_at?: string | null
+          last_error_code?: string | null
+          lease_until?: string | null
+          owner_id: string
+          project_id: string
+          requested_at?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          attempt_id?: string | null
+          completed_at?: string | null
+          last_error_code?: string | null
+          lease_until?: string | null
+          owner_id?: string
+          project_id?: string
+          requested_at?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+
     }
     Views: {
       [_ in never]: never
@@ -1822,6 +1917,103 @@ export type Database = {
         Returns: boolean
       }
       user_plan_tier: { Args: { _user_id: string }; Returns: string }
+      abort_project_file_upload: {
+        Args: { p_attempt_id: string; p_file_id: string }
+        Returns: Json
+      }
+      claim_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string }
+        Returns: Json
+      }
+      acquire_project_file_upload_quota: {
+        Args: {
+          p_attempt_id: string
+          p_daily_limit: number
+          p_file_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      claim_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string; p_user_id: string }
+        Returns: Json
+      }
+      claim_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string }
+        Returns: Json
+      }
+      fail_project_deletion: {
+        Args: {
+          p_attempt_id: string
+          p_error_code: string
+          p_project_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      fail_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_file_id: string }
+        Returns: boolean
+      }
+      finalize_project_deletion: {
+        Args: {
+          p_attempt_id: string
+          p_project_id: string
+          p_user_id: string
+          p_retained_paths?: string[]
+        }
+        Returns: Json
+      }
+      finalize_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string; p_storage_removed?: boolean }
+        Returns: Json
+      }
+      finalize_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_file_id: string; p_storage_removed?: boolean }
+        Returns: Json
+      }
+      lock_project_for_file_operation: {
+        Args: { p_file_id: string }
+        Returns: string
+      }
+      release_project_storage_bytes: {
+        Args: { p_bytes: number; p_user_id: string }
+        Returns: number
+      }
+      renew_project_deletion: {
+        Args: { p_attempt_id: string; p_project_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      renew_stale_project_file_cleanup: {
+        Args: { p_attempt_id: string; p_file_id: string }
+        Returns: boolean
+      }
+      reserve_project_file_upload: {
+        Args: {
+          p_attempt_id: string
+          p_content_sha256: string
+          p_extension: string
+          p_file_cap: number
+          p_idempotency_key: string
+          p_kind: string
+          p_mime_type: string
+          p_name: string
+          p_project_id: string
+          p_size_bytes: number
+          p_storage_limit: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      restore_project_file_delete: {
+        Args: { p_attempt_id: string; p_file_id: string }
+        Returns: boolean
+      }
+      set_project_file_upload_state: {
+        Args: { p_attempt_id: string; p_file_id: string; p_status: string }
+        Returns: boolean
+      }
+
     }
     Enums: {
       project_role: "owner" | "editor" | "viewer"
