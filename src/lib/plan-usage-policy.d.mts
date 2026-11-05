@@ -15,3 +15,15 @@ export const DAILY_PLAN_ALLOWANCES: Readonly<
     }>
   >
 >;
+export type ChatUsageWindowId = "daily" | "five_hour" | "weekly";
+export const CHAT_USAGE_WINDOWS: Readonly<Record<ChatUsageWindowId, string>>;
+export function chatUsageWindows(
+  tier: "free" | "plus" | "pro",
+  now?: Date,
+): {
+  id: ChatUsageWindowId;
+  start: string;
+  resetsAt: string;
+  regularLimit: number;
+  thinkingLimit: number;
+}[];

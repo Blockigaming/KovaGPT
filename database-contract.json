@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 207,
+  "migrationCount": 209,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -185,6 +185,7 @@
     "mcp_oauth_grants",
     "mcp_oauth_requests",
     "mcp_oauth_tokens",
+    "message_usage_short_window",
     "moderation_actions",
     "notification_deliveries",
     "notification_preferences",
@@ -935,6 +936,7 @@
     "track_account_export_artifact_lifetime",
     "try_add_storage_bytes",
     "try_consume_daily_message",
+    "try_consume_paid_message",
     "try_increment_daily_usage",
     "try_increment_daily_usage",
     "try_increment_daily_usage",
@@ -1751,6 +1753,7 @@
     "mcp_oauth_grants",
     "mcp_oauth_requests",
     "mcp_oauth_tokens",
+    "message_usage_short_window",
     "moderation_actions",
     "notification_deliveries",
     "notification_preferences",
@@ -2423,6 +2426,7 @@
     "execute on function public.share_project_template(uuid,uuid,uuid,bigint,uuid,boolean) to service_role",
     "execute on function public.start_developer_checkout(uuid,uuid,jsonb),public.record_developer_checkout_discovery(uuid,uuid,text,text,boolean) to service_role",
     "execute on function public.try_consume_daily_message(uuid,boolean,integer,integer) to service_role",
+    "execute on function public.try_consume_paid_message(uuid, boolean, integer, integer)\n  to service_role",
     "execute on function public.update_agent_definition(uuid,integer,text,text,uuid,text[],boolean,text) to authenticated",
     "execute on function public.update_library_folder(uuid, uuid, text, uuid, boolean)\n  to service_role",
     "execute on function public.upsert_work_saved_record(uuid,uuid,uuid,text,text,jsonb,bigint)\n  to service_role",
@@ -2507,6 +2511,7 @@
     "select on table public.work_saved_records to authenticated",
     "select(id,inviter_id,recipient_id,inviter_email,recipient_email,purpose,policy_version,inviter_consented_at,\n  recipient_consented_at,state,revision,expires_at,created_at,updated_at) on public.trusted_contacts to authenticated",
     "select, delete on table public.connected_accounts to authenticated",
+    "select, insert, update on public.message_usage_short_window to service_role",
     "select, insert, update on table public.user_preferences to authenticated",
     "select, insert, update, delete on public.chat_branches to authenticated",
     "select, insert, update, delete on public.chat_branches to service_role",
@@ -3087,6 +3092,7 @@
     "all on function public.share_project_template(uuid,uuid,uuid,bigint,uuid,boolean) from public, anon, authenticated",
     "all on function public.start_developer_checkout(uuid,uuid,jsonb),public.record_developer_checkout_discovery(uuid,uuid,text,text,boolean) from public,anon,authenticated",
     "all on function public.try_consume_daily_message(uuid,boolean,integer,integer) from public,anon,authenticated",
+    "all on function public.try_consume_paid_message(uuid, boolean, integer, integer)\n  from public, anon, authenticated",
     "all on function public.update_agent_definition(uuid,integer,text,text,uuid,text[],boolean,text) from public, anon",
     "all on function public.update_library_folder(uuid, uuid, text, uuid, boolean)\n  from public, anon, authenticated",
     "all on function public.upsert_work_saved_record(uuid,uuid,uuid,text,text,jsonb,bigint)\n  from public, anon, authenticated",
@@ -3152,6 +3158,7 @@
     "all on public.mcp_oauth_client_export_rows from public,anon,authenticated",
     "all on public.mcp_oauth_clients,public.mcp_oauth_requests,public.mcp_oauth_grants,public.mcp_oauth_codes,public.mcp_oauth_tokens from public,anon,authenticated",
     "all on public.mcp_oauth_grant_export_rows from public,anon,authenticated",
+    "all on public.message_usage_short_window from public, anon, authenticated",
     "all on public.operational_events from anon",
     "all on public.processed_stripe_events from anon, authenticated",
     "all on public.processed_stripe_events from anon, authenticated",
@@ -3462,6 +3469,10 @@
     { "table": "public.mcp_oauth_grant_export_rows", "role": "authenticated", "granted": false },
     { "table": "public.mcp_oauth_grant_export_rows", "role": "public", "granted": false },
     { "table": "public.mcp_oauth_grant_export_rows", "role": "service_role", "granted": true },
+    { "table": "public.message_usage_short_window", "role": "anon", "granted": false },
+    { "table": "public.message_usage_short_window", "role": "authenticated", "granted": false },
+    { "table": "public.message_usage_short_window", "role": "public", "granted": false },
+    { "table": "public.message_usage_short_window", "role": "service_role", "granted": true },
     { "table": "public.operational_events", "role": "anon", "granted": false },
     { "table": "public.operational_events", "role": "authenticated", "granted": true },
     { "table": "public.organization_scim_user_export_rows", "role": "anon", "granted": false },
@@ -3736,5 +3747,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "ef34e988aae0d0b82f3c8769b55869d3482153dd71f0f39ad784f54be012a019"
+  "sha256": "54eedacc0c589cbbfe3ad311b253531018ad04a3e3dcfa0b9e45fe9ba325d759"
 }

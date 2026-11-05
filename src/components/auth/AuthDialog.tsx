@@ -76,6 +76,17 @@ export function AuthDialog({
     return () => clearTimeout(timer);
   }, [cooldown]);
 
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      submittingRef.current = false;
+      setLoading(false);
+      setLoadingMethod(null);
+    };
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, []);
+
   const isSignUp = mode === "sign-up";
   const emailValid = isValidEmail(email);
   // Preserve an explicit existing-account path during adoption. This never
@@ -127,6 +138,7 @@ export function AuthDialog({
       return;
     }
     if (!guard("google")) return;
+    let redirecting = false;
     try {
       rememberPostAuthRedirect();
       if (useKovaAuth) {
@@ -136,6 +148,7 @@ export function AuthDialog({
           `${window.location.pathname}${window.location.search}${window.location.hash}`,
         );
         window.location.assign(start.toString());
+        redirecting = true;
         return;
       }
       const { providerAuth } = await import("@/integrations/provider-auth");
@@ -150,7 +163,10 @@ export function AuthDialog({
         release();
         return;
       }
-      if (result.redirected) return;
+      if (result.redirected) {
+        redirecting = true;
+        return;
+      }
       onOpenChange(false);
     } catch (err) {
       console.error("[KovaAuth] Google authentication failed", {
@@ -158,7 +174,7 @@ export function AuthDialog({
       });
       toast.error("Google sign in could not start. Please try again.");
     } finally {
-      release();
+      if (!redirecting) release();
     }
   };
 
@@ -168,6 +184,7 @@ export function AuthDialog({
       return;
     }
     if (!guard("hosted-google")) return;
+    let redirecting = false;
     try {
       // The shared authority gate rejects active/rejected owned cookies and
       // unavailable probes. It never forces the client onto hosted authority.
@@ -185,13 +202,14 @@ export function AuthDialog({
       if (error) throw error;
       if (!data?.url) throw new Error("hosted_google_redirect_missing");
       window.location.assign(data.url);
+      redirecting = true;
     } catch (err) {
       console.error("[KovaAuth] Existing Google authentication failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
       toast.error("Google sign in could not start. Please try again.");
     } finally {
-      release();
+      if (!redirecting) release();
     }
   };
 
@@ -203,6 +221,7 @@ export function AuthDialog({
       return;
     }
     if (!guard("github")) return;
+    let redirecting = false;
     try {
       const context = await resolveLegacyAuthContext();
       context.assertCurrent();
@@ -217,10 +236,11 @@ export function AuthDialog({
       window.location.assign(
         validateHostedGitHubLoginRedirect(data.url, SUPABASE_BROWSER_CONFIG.url),
       );
+      redirecting = true;
     } catch {
       toast.error("GitHub sign in could not start. Please try again.");
     } finally {
-      release();
+      if (!redirecting) release();
     }
   };
 
@@ -265,10 +285,15 @@ export function AuthDialog({
               type="button"
               onClick={handleGoogle}
               disabled={loading || !googleAvailable}
+              aria-busy={loadingMethod === "google"}
               aria-describedby={!googleAvailable ? "public-google-status" : undefined}
             >
-              <GoogleIcon />
-              {loadingMethod === "google" ? "Connecting…" : "Continue with Google"}
+              {loadingMethod === "google" ? (
+                <Loader2 className="h-[18px] w-[18px] animate-spin" aria-hidden="true" />
+              ) : (
+                <GoogleIcon />
+              )}
+              Continue with Google
             </button>
             {!googleAvailable && (
               <p id="public-google-status" className="public-provider-status" role="status">
@@ -284,9 +309,14 @@ export function AuthDialog({
             type="button"
             onClick={handleHostedGoogle}
             disabled={loading || !hostedGoogleAvailable}
+            aria-busy={loadingMethod === "hosted-google"}
           >
-            <GoogleIcon />
-            {loadingMethod === "hosted-google" ? "Connecting…" : "Log in with existing Google"}
+            {loadingMethod === "hosted-google" ? (
+              <Loader2 className="h-[18px] w-[18px] animate-spin" aria-hidden="true" />
+            ) : (
+              <GoogleIcon />
+            )}
+            Log in with existing Google
           </button>
         )}
         {!showOwnedGoogle && hostedGooglePending && (
@@ -303,10 +333,15 @@ export function AuthDialog({
           type="button"
           onClick={() => void handleGithub()}
           disabled={loading || !githubAvailable}
+          aria-busy={loadingMethod === "github"}
           aria-describedby={!githubAvailable ? "public-github-status" : undefined}
         >
-          <img src={githubLogo} width={18} height={18} alt="" className="public-github-logo" />
-          {loadingMethod === "github" ? "Connecting…" : "Continue with GitHub"}
+          {loadingMethod === "github" ? (
+            <Loader2 className="h-[18px] w-[18px] animate-spin" aria-hidden="true" />
+          ) : (
+            <img src={githubLogo} width={18} height={18} alt="" className="public-github-logo" />
+          )}
+          Continue with GitHub
         </button>
         {!githubAvailable && (
           <p id="public-github-status" className="public-provider-status" role="status">

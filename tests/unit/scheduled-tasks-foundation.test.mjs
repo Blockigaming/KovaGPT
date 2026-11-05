@@ -745,17 +745,19 @@ test("native event readiness gates the real foundation before create and again a
   }
 });
 
-test("current task policy permits one Free task and preserves consent and plan-scaled capacity", async () => {
+test("current task policy permits two Free tasks and preserves consent and plan-scaled capacity", async () => {
   const db = await fixture();
   try {
     await db.exec("reset role");
     await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
+    await db.exec(sql("20261104223100_kova_scheduled_task_active_plan_caps.sql"));
     await db.query("update public.test_plans set tier='free' where user_id=$1", [owner]);
     await db.exec("set role service_role");
     await assert.rejects(mutate(db, "create", createPayload()), /execution_unavailable/);
     await activate(db);
     const task = await mutate(db, "create", createPayload());
     assert.ok(task.taskId);
+    assert.ok((await mutate(db, "create", createPayload())).taskId);
     await assert.rejects(mutate(db, "create", createPayload()), /capacity/);
     await mutate(db, "pause", {}, { id: task.taskId, revision: 1 });
     await assert.rejects(mutate(db, "create", createPayload()), /capacity/);

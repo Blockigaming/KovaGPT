@@ -282,7 +282,7 @@ test("settings navigation is centralized and routes every rendered category", ()
   assert.match(routeSource, /SETTINGS_SECTIONS\[section as keyof typeof SETTINGS_SECTIONS\]/);
   assert.match(
     routeSource,
-    /navigate\(\{ to: "\/settings\/\$section", params: \{ section: next \} \}\)/,
+    /navigate\(\{ to: "\/settings\/\$section", params: \{ section: next \}, replace: true \}\)/,
   );
   assert.match(settingsSource, /if \(page\) onSectionChange\?\.\(settingsSectionForTab\(value\)\)/);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
@@ -300,10 +300,10 @@ test("mobile settings drill-in moves focus with the visible panel", () => {
   assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\)/);
 });
 
-test("usage bars bind verified plan allowances to real daily counters and retain failure states", () => {
-  assert.match(settingsSource, /getMyDailyUsage\(\)/);
+test("usage bars bind verified plan allowances to real account counters and retain failure states", () => {
+  assert.match(settingsSource, /getMyPlanUsage\(\{ data: \{ ownerId: userKey \} \}\)/);
   assert.match(settingsSource, /getSubscriptionSummary/);
-  assert.match(settingsSource, /<PlanUsageBars tier=\{tier\} usage=\{usage\}/);
+  assert.match(settingsSource, /<PlanUsageBars usage=\{usage\}/);
   assert.match(settingsSource, /Loading usage/);
   assert.match(settingsSource, /Usage data isn't available right now/);
   assert.doesNotMatch(settingsSource, /52%/);
@@ -376,8 +376,8 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   assert.equal(page.height, "100%");
   assert.equal(
     styleRule(settingsPageStylesSource, ".kova-settings-route.kova-secondary-page").declarations
-      .height,
-    "100dvh",
+      .flex,
+    "1",
   );
   assert.equal(page["max-height"], "none");
   assert.equal(page.background, "var(--background)");

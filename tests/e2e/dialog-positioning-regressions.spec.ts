@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { coreFixture } from "./core-app-fixture";
-import { openCurrentSettings } from "./current-ui";
+import { dismissMobileSidebar, openCurrentSettings } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -101,14 +101,24 @@ for (const theme of ["light", "dark"] as const) {
     );
     await page.goto("/images");
     await waitForKovaHydration(page);
-    const modal = await openCurrentSettings(page);
+    const modal = page.locator(".kova-settings-dialog");
+    const mobile = page.viewportSize()!.width < 1024;
+    if (!mobile) {
+      const rail = page.getByRole("navigation", { name: "Collapsed navigation", exact: true });
+      await rail.getByRole("button", { name: "Account menu", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
+    } else {
+      await openCurrentSettings(page);
+    }
     await contained(page, modal);
     const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
     await expect(heading).toBeInViewport({ ratio: 1 });
     const close = modal.getByRole("button", { name: "Close settings", exact: true });
     await usableClose(page, close);
     await expect(modal).toHaveCSS("background-color", pageColor);
-    const content = modal.locator(".kova-settings-content");
+    const content = mobile
+      ? modal.getByRole("tabpanel").first()
+      : modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect
       .poll(() =>
@@ -122,7 +132,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
-    if (page.viewportSize()!.width >= 1024)
+    if (!mobile)
       await expect(
         page.getByRole("navigation", { name: "Collapsed navigation", exact: true }),
       ).toBeVisible();
@@ -133,8 +143,10 @@ for (const theme of ["light", "dark"] as const) {
     });
     await close.click();
     await expect(modal).toBeHidden();
-    await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/images$/);
+    await expect(
+      page.getByRole("textbox", { name: "Describe the image to generate" }),
+    ).toBeVisible();
   });
 
   test(`${theme}: Settings preserves a private image draft in its contained dialog`, async ({

@@ -2,9 +2,8 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Lock, Sparkles } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { useTier, tierRank } from "@/hooks/useTier";
+import { Sparkles } from "lucide-react";
+import { useTier, type Tier } from "@/hooks/useTier";
 import {
   browserStoragePrincipal,
   isPrincipalBrowserStorageClearedEvent,
@@ -138,14 +137,25 @@ export function loadAutoAdapt(userKey: string | null | undefined = undefined): b
 export function personalityToInstruction(
   p: Personality,
   userKey: string | null | undefined = undefined,
+  tier: Tier = "pro",
 ): string {
-  const notable = TRAITS.filter((t) => (p[t.key] ?? 5) !== 5).map((t) => {
-    const v = p[t.key];
-    return `${t.label.toLowerCase()}=${v}/10`;
-  });
-  const auto = loadAutoAdapt(userKey)
-    ? "Auto-adapt: continuously observe how the user writes (length, formality, humor, detail preference) and mirror their style. When they give feedback like 'shorter', 'more casual', 'more detail', apply it for the rest of the conversation."
-    : "";
+  const preset =
+    tier === "free"
+      ? PERSONALITY_PRESETS.slice(0, 3).find(({ values }) =>
+          TRAITS.every(({ key }) => p[key] === values[key]),
+        )
+      : null;
+  const traitsToUse = tier === "pro" || preset ? TRAITS : tier === "plus" ? TRAITS.slice(0, 5) : [];
+  const notable = traitsToUse
+    .filter((t) => (p[t.key] ?? 5) !== 5)
+    .map((t) => {
+      const v = p[t.key];
+      return `${t.label.toLowerCase()}=${v}/10`;
+    });
+  const auto =
+    tier === "pro" && loadAutoAdapt(userKey)
+      ? "Auto-adapt: continuously observe how the user writes (length, formality, humor, detail preference) and mirror their style. When they give feedback like 'shorter', 'more casual', 'more detail', apply it for the rest of the conversation."
+      : "";
   const traits = notable.length
     ? `Response tone (1=low, 10=high): ${notable.join(", ")}. Blend naturally; do not mention these settings.`
     : "";
@@ -161,7 +171,8 @@ export function PersonalitySliders({
 }) {
   const sliderId = useId();
   const { tier } = useTier();
-  const unlocked = tierRank(tier) >= tierRank("plus");
+  const traits = tier === "pro" ? TRAITS : tier === "plus" ? TRAITS.slice(0, 5) : [];
+  const presets = tier === "free" ? PERSONALITY_PRESETS.slice(0, 3) : PERSONALITY_PRESETS;
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const storageKey = principalResolved
     ? principalScopedStorageKey(STORAGE_KEY_BASE, userKey)
@@ -206,7 +217,7 @@ export function PersonalitySliders({
   }, [principal, principalResolved, userKey]);
 
   function update(key: TraitKey, v: number) {
-    if (!unlocked || !ready || !storageKey) return;
+    if (!ready || !storageKey) return;
     const next = { ...values, [key]: v };
     setValues(next);
     try {
@@ -217,7 +228,7 @@ export function PersonalitySliders({
   }
 
   function applyPreset(preset: Personality) {
-    if (!unlocked || !ready || !storageKey) return;
+    if (!ready || !storageKey) return;
     setValues(preset);
     try {
       safeBrowserStorage("localStorage")?.setItem(storageKey, JSON.stringify(preset));
@@ -238,7 +249,7 @@ export function PersonalitySliders({
   }
 
   function reset() {
-    if (!unlocked || !ready || !storageKey) return;
+    if (!ready || !storageKey) return;
     setValues(DEFAULT_PERSONALITY);
     try {
       safeBrowserStorage("localStorage")?.setItem(storageKey, JSON.stringify(DEFAULT_PERSONALITY));
@@ -254,30 +265,34 @@ export function PersonalitySliders({
           <Sparkles className="w-4 h-4 text-primary" />
           Personality
         </h3>
-        {unlocked && (
-          <Button
-            data-ui-reference="chatgpt.customization-preferences.control"
-            variant="ghost"
-            onClick={reset}
-            className="text-xs text-muted-foreground hover:text-foreground transition"
-          >
-            Reset
-          </Button>
-        )}
+        <Button
+          data-ui-reference="chatgpt.customization-preferences.control"
+          variant="ghost"
+          onClick={reset}
+          disabled={!ready}
+          className="text-xs text-muted-foreground hover:text-foreground transition"
+        >
+          Reset
+        </Button>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a preset or fine-tune 10 traits. Kova also adapts to how you write when Auto-adapt is
-        on.
+        {tier === "free"
+          ? "Choose a preset for how Kova responds."
+          : tier === "plus"
+            ? "Choose a preset and fine-tune five response traits."
+            : "Choose a preset, fine-tune ten response traits, or let Kova adapt to your style."}
       </p>
 
-      <div className={`mb-4 ${unlocked ? "" : "pointer-events-none opacity-70"}`}>
+      <div className={traits.length ? "mb-4" : undefined}>
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {PERSONALITY_PRESETS.map((preset) => (
+          {presets.map((preset) => (
             <Button
               data-ui-reference="chatgpt.customization-preferences.control"
               variant="outline"
               key={preset.id}
               onClick={() => applyPreset(preset.values)}
+              disabled={!ready}
+              aria-pressed={TRAITS.every(({ key }) => visibleValues[key] === preset.values[key])}
               className="text-xs px-2.5   border border-border bg-background/60 hover:bg-accent transition"
               title={preset.hint}
             >
@@ -285,70 +300,56 @@ export function PersonalitySliders({
             </Button>
           ))}
         </div>
-        <label className="flex min-h-11 items-center gap-3 text-sm text-muted-foreground cursor-pointer select-none">
-          <Switch
-            aria-label="Auto-adapt to me"
-            checked={visibleAutoAdapt}
-            onCheckedChange={toggleAuto}
-          />
-          <span>
-            <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns your
-            style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add
-            detail" and it adjusts.
-          </span>
-        </label>
-      </div>
-
-      <div
-        className={`grid gap-4 sm:grid-cols-2 ${unlocked ? "" : "pointer-events-none blur-[2px] opacity-70 select-none"}`}
-      >
-        {TRAITS.map((t) => (
-          <div key={t.key} className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <div>
-                <div id={`${sliderId}-${t.key}-label`} className="font-medium text-foreground">
-                  {t.label}
-                </div>
-                <div id={`${sliderId}-${t.key}-hint`} className="text-muted-foreground">
-                  {t.hint}
-                </div>
-              </div>
-              <span className="tabular-nums text-muted-foreground w-8 text-right">
-                {visibleValues[t.key]}
-              </span>
-            </div>
-            <Slider
-              data-ui-reference="chatgpt.customization-preferences.slider"
-              thumbProps={{
-                "aria-labelledby": `${sliderId}-${t.key}-label`,
-                "aria-describedby": `${sliderId}-${t.key}-hint`,
-                "aria-valuetext": `${visibleValues[t.key]} out of 10`,
-              }}
-              value={[visibleValues[t.key]]}
-              min={1}
-              max={10}
-              step={1}
-              onValueChange={(v) => update(t.key, v[0] ?? 5)}
+        {tier === "pro" && (
+          <label className="flex min-h-11 items-center gap-3 text-sm text-muted-foreground cursor-pointer select-none">
+            <Switch
+              aria-label="Auto-adapt to me"
+              checked={visibleAutoAdapt}
+              disabled={!ready}
+              onCheckedChange={toggleAuto}
             />
-          </div>
-        ))}
+            <span>
+              <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns
+              your style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or
+              "add detail" and it adjusts.
+            </span>
+          </label>
+        )}
       </div>
 
-      {!unlocked && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-sm">
-          <div className="text-center max-w-xs p-4">
-            <Lock className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-            <div className="text-sm font-medium mb-1">Included with Plus & Pro</div>
-            <p className="text-xs text-muted-foreground mb-3">
-              Customize KovaGPT's tone across 10 traits. Available on paid plans.
-            </p>
-            <Link
-              to="/pricing"
-              className="kova-button inline-block text-xs font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition"
-            >
-              Upgrade to Plus
-            </Link>
-          </div>
+      {traits.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {traits.map((t) => (
+            <div key={t.key} className="min-w-0 space-y-1.5 px-1">
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <div id={`${sliderId}-${t.key}-label`} className="font-medium text-foreground">
+                    {t.label}
+                  </div>
+                  <div id={`${sliderId}-${t.key}-hint`} className="text-muted-foreground">
+                    {t.hint}
+                  </div>
+                </div>
+                <span className="tabular-nums text-muted-foreground w-8 text-right">
+                  {visibleValues[t.key]}
+                </span>
+              </div>
+              <Slider
+                data-ui-reference="chatgpt.customization-preferences.slider"
+                thumbProps={{
+                  "aria-labelledby": `${sliderId}-${t.key}-label`,
+                  "aria-describedby": `${sliderId}-${t.key}-hint`,
+                  "aria-valuetext": `${visibleValues[t.key]} out of 10`,
+                }}
+                value={[visibleValues[t.key]]}
+                disabled={!ready}
+                min={1}
+                max={10}
+                step={1}
+                onValueChange={(v) => update(t.key, v[0] ?? 5)}
+              />
+            </div>
+          ))}
         </div>
       )}
     </div>

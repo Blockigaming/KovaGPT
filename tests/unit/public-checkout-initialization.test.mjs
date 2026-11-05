@@ -27,6 +27,7 @@ function fixture({
         EmbeddedCheckoutProvider: "StripeProvider",
         EmbeddedCheckout: "StripeFrame",
       },
+      "@tanstack/react-router": { Link: "Link" },
       "lucide-react": { Loader2: "Loader" },
       "@/lib/stripe": {
         getStripe: () => {

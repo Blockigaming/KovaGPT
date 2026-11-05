@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { loose } from "@/lib/supabase-loose";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import type { BillingTier } from "@/lib/billing-plans";
 
@@ -14,7 +15,7 @@ export type StorageDto = {
 export const getMyStorage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<StorageDto> => {
-    const [storage, library, subscription] = await Promise.all([
+    const [storage, library, tier] = await Promise.all([
       context.supabase
         .from("user_storage")
         .select("bytes_used")
@@ -24,7 +25,7 @@ export const getMyStorage = createServerFn({ method: "GET" })
         .from("user_library_items")
         .select("id", { count: "exact", head: true })
         .eq("user_id", context.userId),
-      loose(context.supabase).rpc("current_subscription_summary"),
+      resolveEffectiveBillingTier(supabaseAdmin, context.userId).catch(() => null),
     ]);
 
     if (storage.error || library.error) {
@@ -41,16 +42,6 @@ export const getMyStorage = createServerFn({ method: "GET" })
     ) {
       throw new Error("Cloud storage usage is unavailable. Please try again.");
     }
-    const summary =
-      !subscription.error &&
-      subscription.data &&
-      typeof subscription.data === "object" &&
-      !Array.isArray(subscription.data)
-        ? (subscription.data as Record<string, unknown>)
-        : null;
-    const value = summary?.effectiveTier;
-    const tier = value === "free" || value === "plus" || value === "pro" ? value : null;
-
     return {
       bytesUsed,
       libraryCount,

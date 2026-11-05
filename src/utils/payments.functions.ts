@@ -34,15 +34,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     return parsed;
   })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
-    if (!monthlyIntroBillingEnabled())
-      return { error: "Billing is awaiting its verified rollout. Contact support." };
     try {
       const plan = resolveBillingPlan(data.priceId);
       if (!plan) throw new Error("Invalid priceId");
       const userId = context.userId;
       const customerEmail =
         typeof context.claims.email === "string" ? context.claims.email : undefined;
-      const stripe = createStripeClient(BILLING_ENV);
 
       // Read every row for an early user-facing check. The adapter also scans
       // authoritative Stripe subscriptions; its durable per-account claim is
@@ -61,6 +58,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (hasStillActiveSubscription(subscriptionHistory ?? [])) {
         return { error: "You already have an active subscription. Manage it from Billing." };
       }
+      if (!monthlyIntroBillingEnabled())
+        return { error: "Billing is awaiting its verified rollout. Contact support." };
+      const stripe = createStripeClient(BILLING_ENV);
 
       const session = await createMonthlyIntroCheckout({
         stripe,

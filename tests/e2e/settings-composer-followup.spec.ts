@@ -11,6 +11,7 @@ for (const theme of ["dark", "light"] as const) {
     await page.goto("/settings/memory");
     await waitForKovaHydration(page);
     const surface = page.locator("section.kova-settings-page");
+    await expect(page.locator(".kova-topbar")).toHaveCount(0);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
     await expect(surface.getByRole("heading", { name: "Memory", exact: true })).toBeVisible();
@@ -29,7 +30,11 @@ for (const theme of ["dark", "light"] as const) {
         }),
       ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
+      const backToPreviousPage = surface.getByRole("button", { name: "Back to previous page" });
+      await expect(backToPreviousPage).toBeHidden();
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
+      await expect(backToPreviousPage).toBeVisible();
+      await expect(close).toBeVisible();
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
         await surface.locator("h1").evaluate((node) => {

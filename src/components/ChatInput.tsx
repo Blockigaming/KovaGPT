@@ -19,12 +19,12 @@ import {
   Folder,
   Files,
   AlertCircle,
-  Maximize2,
   SlidersHorizontal,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { ExpandViewIcon } from "@/components/ui/ExpandViewIcon";
 
 import {
   attachmentPreviewWindow,
@@ -564,6 +564,12 @@ export function ChatInput({
     const resize = () => {
       const limit = isMobileLayout ? 144 : 240;
       const minimum = 26;
+      if (!el.value) {
+        el.dataset.multiline = "false";
+        el.style.height = `${minimum}px`;
+        el.style.overflowY = "hidden";
+        return;
+      }
       const metrics = window.getComputedStyle(el);
       const singleLine = Math.max(
         parseFloat(metrics.minHeight) || 0,
@@ -572,7 +578,7 @@ export function ChatInput({
           parseFloat(metrics.paddingBottom),
       );
       const composer = el.closest<HTMLElement>(".spec400-composer");
-      if (composer && !isMobileLayout) {
+      if (composer && surface === "conversation" && !isMobileLayout && !isCoarsePointer) {
         // Measure against the compact text slot even while the draft is expanded.
         // Measuring only the current wider row would repeatedly expand/collapse
         // drafts that fit one wide line but not the compact input slot.
@@ -604,16 +610,18 @@ export function ChatInput({
         const previousWidth = el.style.width;
         el.style.width = `${compactWidth}px`;
         el.style.height = "0px";
-        el.dataset.multiline = String(el.scrollHeight > singleLine + 1);
+        const multiline = String(el.scrollHeight > singleLine + 1);
+        if (el.dataset.multiline !== multiline) el.dataset.multiline = multiline;
         el.style.width = previousWidth;
       } else {
         el.style.height = "0px";
-        el.dataset.multiline = String(el.scrollHeight > singleLine + 1);
+        const multiline = String(el.scrollHeight > singleLine + 1);
+        if (el.dataset.multiline !== multiline) el.dataset.multiline = multiline;
       }
-      el.style.height = "0px";
-      const height = Math.min(Math.max(el.scrollHeight, minimum), limit);
+      const contentHeight = el.scrollHeight;
+      const height = Math.min(Math.max(contentHeight, minimum), limit);
       el.style.height = `${height}px`;
-      el.style.overflowY = el.scrollHeight > limit ? "auto" : "hidden";
+      el.style.overflowY = contentHeight > limit ? "auto" : "hidden";
     };
     resize();
     let width = el.getBoundingClientRect().width;
@@ -626,7 +634,7 @@ export function ChatInput({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [value, isLoaded, user?.id, isMobileLayout, surface]);
+  }, [value, isLoaded, user?.id, isMobileLayout, isCoarsePointer, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
   useEffect(() => {
@@ -1915,7 +1923,7 @@ export function ChatInput({
             disabled={disabled}
             onClick={() => setExpanded(true)}
           >
-            <Maximize2 aria-hidden="true" />
+            <ExpandViewIcon />
           </button>
         </div>
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (

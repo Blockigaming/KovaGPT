@@ -2,11 +2,12 @@ import {
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
   MODES,
+  STORAGE_LIMITS_BYTES,
   modesForTier,
   type ModeId,
   type Tier,
 } from "@/lib/modes";
-import { DAILY_PLAN_ALLOWANCES } from "@/lib/plan-usage-policy.mjs";
+import { CHAT_USAGE_WINDOWS, chatUsageWindows } from "@/lib/plan-usage-policy.mjs";
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
 import { modeDisplayLabel } from "@/lib/mode-display-label";
 
@@ -112,24 +113,38 @@ const modesByTier: Record<Tier, readonly PublishedMode[]> = {
   pro: publishedModesForTier("pro"),
 };
 
+function chatAllowanceCopy(tier: Tier) {
+  return chatUsageWindows(tier)
+    .map(
+      ({ id, regularLimit, thinkingLimit }) =>
+        `${CHAT_USAGE_WINDOWS[id]}: ${regularLimit.toLocaleString("en-US")} regular + ${thinkingLimit.toLocaleString("en-US")} Thinking messages`,
+    )
+    .join(" · ");
+}
+
+function storageAllowanceCopy(tier: Tier) {
+  const megabytes = STORAGE_LIMITS_BYTES[tier] / 1024 ** 2;
+  return megabytes >= 1024 ? `${megabytes / 1024} GB` : `${megabytes} MB`;
+}
+
 export const PLAN_ALLOWANCE_COPY = {
   free: {
-    chat: `${DAILY_PLAN_ALLOWANCES.free.regularMessages} regular + ${DAILY_PLAN_ALLOWANCES.free.thinkingMessages} Thinking messages per day · one fifth of Plus usage`,
+    chat: chatAllowanceCopy("free"),
     image: `${DAILY_IMAGE_LIMIT_BY_TIER.free} image generations per day`,
     upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.free} file uploads per day`,
-    storage: "Small published storage allowance",
+    storage: storageAllowanceCopy("free"),
   },
   plus: {
-    chat: `${DAILY_PLAN_ALLOWANCES.plus.regularMessages} regular + ${DAILY_PLAN_ALLOWANCES.plus.thinkingMessages} Thinking messages per day · baseline usage`,
+    chat: chatAllowanceCopy("plus"),
     image: `${DAILY_IMAGE_LIMIT_BY_TIER.plus} image generations per day`,
     upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.plus} file uploads per day`,
-    storage: "Higher published storage allowance",
+    storage: storageAllowanceCopy("plus"),
   },
   pro: {
-    chat: `${DAILY_PLAN_ALLOWANCES.pro.regularMessages} regular + ${DAILY_PLAN_ALLOWANCES.pro.thinkingMessages} Thinking messages per day · 15× Plus usage`,
+    chat: chatAllowanceCopy("pro"),
     image: `${DAILY_IMAGE_LIMIT_BY_TIER.pro} image generations per day`,
     upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.pro} file uploads per day`,
-    storage: "Highest published storage allowance",
+    storage: storageAllowanceCopy("pro"),
   },
 } as const;
 
@@ -144,7 +159,7 @@ function planFeatures(tier: Tier): readonly string[] {
     allowance.chat,
     allowance.image,
     allowance.upload,
-    allowance.storage,
+    `${allowance.storage} cloud storage`,
     "Search and image generation when their configured providers are available",
   ];
   features.push(

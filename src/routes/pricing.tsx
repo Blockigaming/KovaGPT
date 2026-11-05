@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState, type MouseEvent as ReactMouseEvent } from "react";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
+import { NovaLogo } from "@/components/NovaLogo";
 import { PlanComparison } from "@/components/public/PlanComparison";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
@@ -110,6 +111,7 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  const [planType, setPlanType] = useState<"individual" | "organizations">("individual");
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const navigate = useNavigate();
   const startCheckout = (priceId: string) => {
@@ -119,7 +121,8 @@ function PricingPage() {
   return (
     <div data-billing-page className="min-h-dvh bg-background text-foreground">
       <header className="flex items-center justify-between px-6 py-5">
-        <Link to="/" className="inline-flex h-11 items-center text-lg font-semibold">
+        <Link to="/" className="inline-flex h-11 items-center gap-2 text-lg font-semibold">
+          <NovaLogo decorative />
           KovaGPT
         </Link>
         <Link
@@ -146,89 +149,81 @@ function PricingPage() {
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
             Choose the plan that fits how you work. Some features depend on connected services.
           </p>
-          <nav
+          <div
+            role="group"
             aria-label="Plan types"
             className="mx-auto mt-6 inline-flex gap-1 rounded-full bg-muted p-1"
           >
-            <a href="#free" className="rounded-full bg-background px-6 py-2 text-sm font-medium">
-              Personal
-            </a>
-            <a
-              href="#enterprise"
-              className="rounded-full px-6 py-2 text-sm font-medium hover:bg-background"
+            {(
+              [
+                ["individual", "Individual"],
+                ["organizations", "Teams & Enterprise"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={planType === value}
+                onClick={() => setPlanType(value)}
+                className="rounded-full px-4 py-2 text-sm font-medium transition-colors hover:bg-background/60 aria-pressed:bg-background sm:px-6"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {planType === "individual" ? (
+          <>
+            <section
+              aria-label="KovaGPT plans"
+              className="mt-12 grid items-stretch gap-5 md:grid-cols-3"
             >
-              Business
-            </a>
-          </nav>
-        </section>
+              <PlanCard
+                name="Kova Free"
+                planId="free"
+                price={displayPrice(CAPABILITY_REGISTRY.plans.free.monthlyPriceUsd)}
+                period="forever"
+                description={CAPABILITY_REGISTRY.plans.free.description}
+                cta="Free plan"
+                ctaDisabled
+                features={CAPABILITY_REGISTRY.plans.free.features}
+              />
 
-        <section
-          aria-label="KovaGPT plans"
-          className="mt-12 grid items-stretch gap-5 md:grid-cols-4"
-        >
-          <PlanCard
-            name={CAPABILITY_REGISTRY.plans.free.name}
-            price={displayPrice(CAPABILITY_REGISTRY.plans.free.monthlyPriceUsd)}
-            period="forever"
-            description={CAPABILITY_REGISTRY.plans.free.description}
-            cta="Free plan"
-            ctaDisabled
-            features={CAPABILITY_REGISTRY.plans.free.features}
-          />
+              <PlanCard
+                name="Kova Plus"
+                planId="plus"
+                price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
+                period="/ month"
+                taxNotice
+                description={CAPABILITY_REGISTRY.plans.plus.description}
+                cta="Start Plus"
+                highlight
+                onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!)}
+                features={CAPABILITY_REGISTRY.plans.plus.features}
+              />
 
-          <PlanCard
-            name={CAPABILITY_REGISTRY.plans.plus.name}
-            price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
-            period="/ month"
-            taxNotice
-            description={CAPABILITY_REGISTRY.plans.plus.description}
-            cta="Start Plus"
-            highlight
-            onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!)}
-            features={CAPABILITY_REGISTRY.plans.plus.features}
-          />
-
-          <PlanCard
-            name={CAPABILITY_REGISTRY.plans.pro.name}
-            price={displayPrice(CAPABILITY_REGISTRY.plans.pro.monthlyPriceUsd)}
-            period="/ month"
-            taxNotice
-            description={CAPABILITY_REGISTRY.plans.pro.description}
-            cta="Upgrade to Pro"
-            onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!)}
-            features={CAPABILITY_REGISTRY.plans.pro.features}
-          />
-
-          <PlanCard
-            name={CAPABILITY_REGISTRY.enterprise.name}
-            price={CAPABILITY_REGISTRY.enterprise.priceLabel}
-            period="annual agreement"
-            description={CAPABILITY_REGISTRY.enterprise.description}
-            cta="Contact sales"
-            enterprise
-            onCta={() => setEnterpriseOpen(true)}
-            features={CAPABILITY_REGISTRY.enterprise.features}
-          />
-        </section>
-
-        <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-6 text-muted-foreground">
-          Plus and Pro are eligible for one-shot hosted Agent and approved-public-page Browser tasks
-          in Work when the OpenAI service is configured and available. Usage limits apply.
-          Interactive Work browser runs are currently unavailable. Paying OpenAI separately does not
-          change your Kova plan.
-        </p>
-
-        <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
-          Stripe hosts checkout. Review your payment, renewal price, tax, and available payment
-          methods before purchase.
-        </p>
-
-        <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
-          Published daily allowances are listed above. Provider outages, maintenance, and account
-          eligibility can still limit a feature.
-        </p>
-
-        <PlanComparison />
+              <PlanCard
+                name="Kova Pro"
+                planId="pro"
+                price={displayPrice(CAPABILITY_REGISTRY.plans.pro.monthlyPriceUsd)}
+                period="/ month"
+                taxNotice
+                description={CAPABILITY_REGISTRY.plans.pro.description}
+                cta="Upgrade to Pro"
+                onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!)}
+                features={CAPABILITY_REGISTRY.plans.pro.features}
+              />
+            </section>
+            <PlanComparison />
+            <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
+              Stripe hosts checkout. Review your payment, renewal price, tax, and available payment
+              methods before purchase.
+            </p>
+          </>
+        ) : (
+          <OrganizationPlans onContact={() => setEnterpriseOpen(true)} />
+        )}
 
         <section aria-labelledby="pricing-faq-title" className="mt-20 border-t border-border pt-12">
           <h2 id="pricing-faq-title" className="text-2xl font-semibold tracking-[-0.02em]">
@@ -288,6 +283,7 @@ function PricingPage() {
 
 type CardProps = {
   name: string;
+  planId: string;
   price: string;
   period: string;
   description: string;
@@ -304,6 +300,7 @@ type CardProps = {
 
 function PlanCard({
   name,
+  planId,
   price,
   period,
   description,
@@ -319,8 +316,8 @@ function PlanCard({
 }: CardProps) {
   return (
     <article
-      id={name.toLowerCase()}
-      data-pricing-plan={name.toLowerCase()}
+      id={planId}
+      data-pricing-plan={planId}
       data-ui-reference="chatgpt-pricing-plan-card"
       className={`kova-plan-card relative grid rounded-2xl md:row-span-6 md:h-full md:grid-rows-subgrid border p-6 ${
         enterprise
@@ -371,5 +368,112 @@ function PlanCard({
         ))}
       </ul>
     </article>
+  );
+}
+
+const teamTopics = [
+  "Central billing and administration",
+  "Single sign-on",
+  "Organization-wide search",
+  "Microsoft 365 and connector controls",
+  "Managed desktop deployment",
+  "Mixing standard and premium seats",
+];
+const enterpriseTopics = [
+  "User and organization spend limits",
+  "Role-based permissions and SCIM",
+  "Audit logs and compliance reporting",
+  "Custom data retention",
+  "Network access controls and IP allowlisting",
+  "Security and healthcare compliance requirements",
+];
+
+function OrganizationPlans({ onContact }: { onContact: () => void }) {
+  return (
+    <section className="mt-12" aria-labelledby="organization-plans-title">
+      <h2 id="organization-plans-title" className="text-center text-3xl font-semibold">
+        Plans that grow with you
+      </h2>
+      <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted-foreground">
+        Proposed pricing. Contact sales to confirm availability, features, and terms.
+      </p>
+      <div className="mt-8 grid gap-5 md:grid-cols-2">
+        <article className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-6">
+          <div>
+            <p className="text-sm text-muted-foreground">2–150 users</p>
+            <h3 className="mt-1 text-2xl font-semibold">Team</h3>
+            <p className="mt-1 text-muted-foreground">Predictable usage per seat</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              {
+                name: "Standard seat",
+                annual: 20,
+                monthly: 25,
+                description: "More usage than Pro",
+              },
+              {
+                name: "Premium seat",
+                annual: 100,
+                monthly: 125,
+                description: "5× Standard seat usage",
+              },
+            ].map(({ name, annual, monthly, description }) => (
+              <div key={name} className="rounded-2xl bg-muted p-4">
+                <h4 className="font-medium">{name}</h4>
+                <p className="mt-2">
+                  <strong className="text-2xl">${annual}</strong> / seat / mo
+                </p>
+                <p className="text-xs text-muted-foreground">Billed annually</p>
+                <p className="mt-2 text-sm">${monthly} / seat / mo when billed monthly</p>
+                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+              </div>
+            ))}
+          </div>
+          <OrganizationTopics topics={teamTopics} />
+          <button
+            type="button"
+            onClick={onContact}
+            className="mt-auto min-h-11 rounded-full border border-border px-5 font-medium hover:bg-accent"
+          >
+            Contact sales about Team
+          </button>
+        </article>
+        <article className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-6">
+          <div>
+            <p className="text-sm text-muted-foreground">20+ users</p>
+            <h3 className="mt-1 text-2xl font-semibold">Enterprise</h3>
+            <p className="mt-1 text-muted-foreground">Flexible pooled usage</p>
+          </div>
+          <div className="rounded-2xl bg-muted p-4">
+            <p className="text-lg font-semibold">Seat price + usage at API rates</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              $20 per seat per month plus tax, billed annually. Usage costs vary by model and task.
+            </p>
+          </div>
+          <OrganizationTopics topics={enterpriseTopics} />
+          <button
+            type="button"
+            onClick={onContact}
+            className="mt-auto min-h-11 rounded-full border border-border px-5 font-medium hover:bg-accent"
+          >
+            Contact sales about Enterprise
+          </button>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function OrganizationTopics({ topics }: { topics: readonly string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold">Discuss with sales</h4>
+      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+        {topics.map((topic) => (
+          <li key={topic}>{topic}</li>
+        ))}
+      </ul>
+    </div>
   );
 }

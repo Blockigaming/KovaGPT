@@ -40,6 +40,7 @@ export function HomeWelcome({
   chatId,
   conversations,
   onSelect,
+  toolbar,
   children,
 }: {
   owner: string | null;
@@ -47,6 +48,7 @@ export function HomeWelcome({
   chatId: string | null;
   conversations: Conversation[];
   onSelect: (id: string) => void;
+  toolbar?: ReactNode;
   children: ReactNode;
 }) {
   const greeting = useHomeGreeting(owner, firstName, chatId);
@@ -56,6 +58,7 @@ export function HomeWelcome({
       data-ui-reference="grok.prompt-first-home"
       aria-labelledby="chat-greeting"
     >
+      {toolbar}
       <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
         <div
           data-ui-reference="claude.greeting"

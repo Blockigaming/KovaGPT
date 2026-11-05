@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { fixture, functionNames, owner } from "./actual-app-fixture";
+import { fixture, functionNames, owner, planUsageFixture } from "./actual-app-fixture";
 
 export const reviewProject = {
   id: "33333333-3333-4333-8333-333333333333",
@@ -75,6 +75,7 @@ export async function coreFixture(
       },
       isScheduledTasksEligible: { eligible: true, executionAvailable: false },
       listScheduledTaskOffers: { sent: [], received: [] },
+      getMyPlanUsage: planUsageFixture(tier),
       getMyDailyUsage: { chats: 3, images: 0, uploads: 0, resetsAt: "2026-10-17T00:00:00Z" },
       getSubscriptionSummary: {
         effectiveTier: tier,

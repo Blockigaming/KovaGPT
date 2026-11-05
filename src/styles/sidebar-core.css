@@ -18,8 +18,8 @@
   display: flex;
   width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
   min-width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
-  height: calc(100dvh - 16px);
-  margin: 8px 0 8px 8px;
+  height: 100dvh;
+  margin: 0;
   flex: 0 0 auto;
   flex-direction: column;
   overflow: hidden;
@@ -372,6 +372,7 @@
   overflow: hidden;
   padding: 0 8px 12px;
   border: 0;
+  border-radius: 20px;
   transition:
     width var(--kova-motion-standard) var(--kova-ease),
     min-width var(--kova-motion-standard) var(--kova-ease),
@@ -482,8 +483,8 @@ button.kova-sidebar-scrim {
 @media (max-width: 1023px) {
   .kova-sidebar[data-kova-core-sidebar] {
     position: fixed;
-    inset: 8px auto 8px 8px;
-    height: calc(100dvh - 16px);
+    inset: 0 auto 0 0;
+    height: 100dvh;
     margin: 0;
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
     min-width: 0;
@@ -743,4 +744,16 @@ button.kova-auth-sign-up:hover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* The menu itself receives programmatic focus when it opens. */
+.kova-profile-menu[role="menu"] {
+  width: min(330px, var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 16px));
+  border-radius: 18px;
+  outline: none;
+}
+.kova-account-main:focus:not(:focus-visible),
+.kova-rail-account:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
 }

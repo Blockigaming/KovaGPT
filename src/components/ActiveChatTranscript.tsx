@@ -121,7 +121,7 @@ export function ActiveChatTranscript({
     const el = scrollRef.current;
     if (!el) return;
     if (nearBottomRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
+      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
       setShowJumpToLatest(false);
     } else {
       setShowJumpToLatest(true);
@@ -171,7 +171,7 @@ export function ActiveChatTranscript({
       ref={scrollRef}
       data-chat-transcript="true"
       onScroll={updateNearBottom}
-      className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
+      className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain pb-5 pt-4 lg:pb-8 lg:pt-6"
       aria-label="Conversation"
     >
       {active.branchOrigin && (

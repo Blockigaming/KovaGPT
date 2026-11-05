@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
-import { DAILY_PLAN_ALLOWANCES } from "../../src/lib/plan-usage-policy.mjs";
+import { chatUsageWindows, DAILY_PLAN_ALLOWANCES } from "../../src/lib/plan-usage-policy.mjs";
 import { MEMORY_TIERS, conversationMemoryNotes } from "../../src/lib/memory-tier-policy.mjs";
 import {
   HELP_STAGES,
@@ -74,6 +74,50 @@ test("Free caps are independent, atomic and retained across upgrade; callers can
     assert.deepEqual(row, { chats: 61, thinking_chats: 10 });
     await db.exec("set role authenticated");
     await assert.rejects(send(false), /permission denied/);
+  } finally {
+    await db.close();
+  }
+});
+
+test("paid chat quotas honor the short and weekly windows and retain daily ledger counts", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261104223000_kova_paid_message_usage_windows.sql",
+        "utf8",
+      ),
+    );
+    await db.exec("set role service_role");
+    const send = async (thinking, weekly, short) =>
+      (
+        await db.query("select public.try_consume_paid_message($1,$2,$3,$4) as result", [
+          owner,
+          thinking,
+          weekly,
+          short,
+        ])
+      ).rows[0].result;
+    assert.deepEqual(
+      chatUsageWindows("plus").map(({ id }) => id),
+      ["five_hour", "weekly"],
+    );
+    assert.deepEqual(
+      chatUsageWindows("pro").map(({ id }) => id),
+      ["weekly"],
+    );
+    assert.equal(await send(false, 3, 1), "allowed");
+    assert.equal(await send(false, 3, 1), "five_hour");
+    assert.equal(await send(true, 3, 1), "allowed");
+    assert.equal(await send(false, 3, null), "allowed");
+    assert.equal(await send(false, 3, null), "allowed");
+    assert.equal(await send(false, 3, null), "weekly");
+    assert.deepEqual((await db.query("select chats, thinking_chats from daily_usage")).rows, [
+      { chats: 4, thinking_chats: 1 },
+    ]);
+    await db.exec("set role authenticated");
+    await assert.rejects(send(false, 3, 1), /permission denied/);
   } finally {
     await db.close();
   }

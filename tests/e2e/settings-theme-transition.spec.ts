@@ -163,7 +163,8 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   for (let index = 0; index < (await options.count()); index++) {
     await options.nth(index).scrollIntoViewIfNeeded();
     await expect(options.nth(index)).toBeVisible();
-    await expect(options.nth(index)).toBeInViewport({ ratio: 1 });
+    // Browser layout can report a subpixel clipped edge after scrolling.
+    await expect(options.nth(index)).toBeInViewport({ ratio: 0.99 });
     expect(
       await options.nth(index).evaluate((element: HTMLElement) => element.offsetHeight),
     ).toBeGreaterThanOrEqual(44);

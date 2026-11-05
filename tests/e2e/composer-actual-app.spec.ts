@@ -4,6 +4,7 @@ import { coreFixture } from "./core-app-fixture";
 import {
   openResponseOptions,
   revealSidebar,
+  dismissMobileSidebar,
   openCurrentSettings,
   chooseSettingsSection,
 } from "./current-ui";
@@ -32,20 +33,25 @@ async function geometry(page: Page) {
     await expect.poll(async () => (await button.boundingBox())?.width).toBe(expectedSize);
     await expect.poll(async () => (await button.boundingBox())?.height).toBe(expectedSize);
   }
-  // Writing stays above the toolbar at every viewport, including multiline drafts.
+  const conversation = await composer.evaluate(
+    (node) => node.closest('[data-composer-surface="conversation"]') !== null,
+  );
+  const singleRow =
+    conversation &&
+    (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
+  await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
+  const height = expect.poll(async () => (await composer.boundingBox())!.height);
+  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+  else await height.toBeGreaterThanOrEqual(128);
   await expect
     .poll(() =>
-      composer.evaluate((node) => {
+      composer.evaluate((node, oneRow) => {
         const input = node.querySelector("textarea")!.getBoundingClientRect();
         const attach = node.querySelector('[aria-label="Attach"]')!.getBoundingClientRect();
-        return {
-          display: getComputedStyle(node).display === "flex",
-          height: node.getBoundingClientRect().height >= 128,
-          alignment: input.bottom <= attach.top + 1,
-        };
-      }),
+        return oneRow ? attach.right <= input.left + 1 : input.bottom <= attach.top + 1;
+      }, singleRow),
     )
-    .toEqual({ display: true, height: true, alignment: true });
+    .toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
@@ -362,14 +368,9 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
 
   await page.goto("/");
   await waitForKovaHydration(page);
-  // The fixture restores its closed sidebar preference on every navigation.
-  // Resolve the visible action if the returning preference closes the sidebar.
-  await revealSidebar(page);
-  await page
-    .getByRole("button", { name: "New chat", exact: true })
-    .filter({ visible: true })
-    .first()
-    .click();
+  const sidebar = await revealSidebar(page);
+  await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
+  if (page.viewportSize()!.width < 1024) await dismissMobileSidebar(page);
   await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();

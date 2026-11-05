@@ -99,10 +99,7 @@ test("response actions retain 32px desktop density and 44px touch targets inside
   assert.equal(declaration(toolbar, "max-width").value, "100%");
   const source = read("src/components/ChatMessage.tsx");
   assert.match(source, /import "\.\/response-action-refinement\.css"/);
-  assert.match(
-    source,
-    /kova-message-actions kova-response-action-bar mt-1 max-w-full overflow-x-auto/,
-  );
+  assert.match(source, /kova-message-actions kova-response-action-bar max-w-full overflow-x-auto/);
   assert.match(source, /role="toolbar"\s+aria-label="Response actions"/);
 });
 

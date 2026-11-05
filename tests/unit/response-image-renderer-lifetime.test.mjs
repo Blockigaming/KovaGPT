@@ -26,6 +26,7 @@ function fixture(initial = {}) {
       (...args) => activeHooks.react[name](...args),
     ]),
   );
+  react.memo = (component) => component;
   react.useMemo = (factory, deps) => {
     const ref = react.useRef(null);
     if (!ref.current || deps.some((value, index) => !Object.is(value, ref.current.deps[index])))
@@ -39,16 +40,14 @@ function fixture(initial = {}) {
   };
   react.useContext = (context) => context.current;
   const icons = Object.fromEntries(
-    ["Bookmark", "Download", "Maximize2", "Check", "Copy", "ExternalLink"].map((name) => [
-      name,
-      name,
-    ]),
+    ["Bookmark", "Download", "Check", "Copy", "ExternalLink"].map((name) => [name, name]),
   );
   const image = loadUiModule(
     "src/components/ResponseImage.tsx",
     {
       react,
       "lucide-react": icons,
+      "./ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
       "./ui/dialog": { Dialog: "dialog", DialogContent: "dialog-content", DialogTitle: "title" },
       "./ChatImage": { ChatImage: "chat-image" },
       "@/lib/chat-image-actions": { downloadChatImage: async () => {} },

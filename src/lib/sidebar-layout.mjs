@@ -10,8 +10,6 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "maps", label: "Maps", to: "/maps" },
   { id: "memory", label: "Memory", to: "/memory" },
   { id: "settings", label: "Settings", to: "/settings/appearance" },
-  { id: "usage", label: "Usage", to: "/settings/usage" },
-  { id: "billing", label: "Billing", to: "/settings/billing" },
   { id: "notifications", label: "Notifications", to: "/notifications" },
 ]);
 export const DEFAULT_SIDEBAR_LAYOUT = Object.freeze({

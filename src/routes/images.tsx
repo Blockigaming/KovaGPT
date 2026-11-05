@@ -35,6 +35,7 @@ import {
   RefreshCw,
   Copy,
 } from "lucide-react";
+import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { settingsSectionForTab } from "@/lib/settings-types";
@@ -381,7 +382,7 @@ function ImagesPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -404,10 +405,10 @@ function ImagesPage() {
   const [savingImage, setSavingImage] = useState(false);
   const openSettings = useCallback(
     (tab?: string) => {
-      // Keep unsaved image work mounted. An empty workspace uses the shared
-      // full Settings route, with its closed navigation rail and close control.
+      // Keep Settings above the mobile drawer and preserve unsaved image work.
       if (
         tab !== "logout" &&
+        !window.matchMedia("(max-width: 1023px)").matches &&
         !prompt.trim() &&
         !editSelection &&
         !loading &&

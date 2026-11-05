@@ -1,18 +1,10 @@
 import { moveChatToTrash } from "@/lib/chat-trash";
 import { toast } from "sonner";
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useCallback,
-  useRef,
-  type ReactNode,
-} from "react";
+import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
+import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
@@ -57,14 +49,15 @@ export function AppShell({
   children,
   utilitiesInHeader = false,
   hideUtilities = false,
+  hideMobileTopBar = false,
 }: {
   children: ReactNode;
   utilitiesInHeader?: boolean;
   hideUtilities?: boolean;
+  hideMobileTopBar?: boolean;
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const settingsWorkspace = pathname.startsWith("/settings/");
   const pageTitle =
     (
       {
@@ -99,36 +92,13 @@ export function AppShell({
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
   const conversations = principalReady ? conversationState.items : [];
-  // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
-  // narrow viewports; on desktop we restore the persisted user preference.
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarPreferenceRestored, setSidebarPreferenceRestored] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
   const sidebarKeyboardFocusRef = useRef(false);
   useEffect(() => {
     if (!sidebarOpen || !sidebarKeyboardFocusRef.current) return;
     sidebarKeyboardFocusRef.current = false;
     return focusReopenedSidebar();
   }, [sidebarOpen]);
-  useLayoutEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem("kova-sidebar-open");
-    } catch {
-      /* ignore */
-    }
-    setSidebarOpen(saved === null ? true : saved === "1");
-    setSidebarPreferenceRestored(true);
-  }, []);
-  useEffect(() => {
-    if (!sidebarPreferenceRestored || typeof window === "undefined" || window.innerWidth < 1024)
-      return;
-    try {
-      localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
-  }, [sidebarOpen, sidebarPreferenceRestored]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
@@ -209,16 +179,24 @@ export function AppShell({
       },
       isLoaded ? userKey : undefined,
     );
-  }, [isLoaded, navigate, userKey]);
+  }, [isLoaded, navigate, setSidebarOpen, userKey]);
 
   const openSettings = useCallback(
     (tab?: string) => {
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        settingsReturnFocusRef.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setSettingsTab(tab);
+        setSettingsOpen(true);
+        return;
+      }
       void navigate({
         to: "/settings/$section" as never,
         params: { section: settingsSectionForTab(tab) } as never,
+        replace: pathname.startsWith("/settings/"),
       });
     },
-    [navigate],
+    [navigate, pathname],
   );
 
   useEffect(() => {
@@ -293,33 +271,6 @@ export function AppShell({
     <div
       className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
-      onTouchStart={(e) => {
-        const t = e.touches[0];
-        // Slightly wider edge zone + require a clear horizontal intent.
-        if (t && t.clientX < 28 && window.innerWidth < 1024) {
-          (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
-          (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
-        }
-      }}
-      onTouchMove={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        const start = el.dataset.swipeStart ? parseFloat(el.dataset.swipeStart) : NaN;
-        const startY = el.dataset.swipeY ? parseFloat(el.dataset.swipeY) : NaN;
-        if (!isNaN(start) && e.touches[0]) {
-          const dx = e.touches[0].clientX - start;
-          const dy = Math.abs(e.touches[0].clientY - startY);
-          // Open only on a deliberate right swipe; ignore mostly-vertical drags.
-          if (dx > 56 && dy < 36) {
-            setSidebarOpen(true);
-            delete el.dataset.swipeStart;
-            delete el.dataset.swipeY;
-          }
-        }
-      }}
-      onTouchEnd={(e) => {
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeY;
-      }}
     >
       <Sidebar
         conversations={conversations}
@@ -342,9 +293,8 @@ export function AppShell({
             .catch(() => toast.error("Your chat wasn't changed. Try again."));
         }}
         onShare={setShareChatId}
-        open={settingsWorkspace ? false : sidebarOpen}
-        compactOnly={settingsWorkspace}
-        onToggle={() => (settingsWorkspace ? undefined : setSidebarOpen((v) => !v))}
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
@@ -352,10 +302,10 @@ export function AppShell({
 
       <div
         className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-        data-sidebar={!settingsWorkspace && sidebarOpen ? "open" : "closed"}
+        data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <OfflineBanner />
-        {!settingsWorkspace && (
+        {!hideMobileTopBar && (
           <MobileTopBar
             title={pageTitle}
             onOpenSidebar={() => setSidebarOpen(true)}
@@ -365,7 +315,7 @@ export function AppShell({
         {!utilitiesInHeader && !hideUtilities ? (
           <div className="kova-workspace-utilities flex shrink-0 justify-end">{utilities}</div>
         ) : null}
-        {!settingsWorkspace && !sidebarOpen && !user && (
+        {!sidebarOpen && !user && (
           <button
             type="button"
             onClick={(event) => {

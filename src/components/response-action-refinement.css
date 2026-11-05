@@ -1,5 +1,4 @@
-/* ChatGPT transcript: quiet icon actions below a flat answer, with the user's
-   compact neutral bubble aligned to the opposite edge of the reading column. */
+/* Keep both message surfaces rounded and align their actions to the text. */
 .kova-message {
   scroll-margin-top: 80px;
 }
@@ -119,6 +118,17 @@
   font-family: var(--font-ui);
   line-height: 1.5;
 }
+.kova-message .kova-assistant-message {
+  box-sizing: border-box;
+  padding: 10px clamp(12px, 3vw, 16px);
+  border-radius: var(--kova-radius-message);
+  background: var(--surface-secondary);
+  overflow-wrap: anywhere;
+}
+.kova-message .kova-assistant-message .prose-chat > :last-child,
+.kova-message .kova-assistant-message .prose-chat > :has(+ .cursor-blink) {
+  margin-block-end: 0;
+}
 .kova-message-actions svg {
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -154,8 +164,9 @@ body .kova-response-menu[role="menu"] {
 /* Keep response actions aligned to the answer's leading edge rather than
    inheriting margins from surrounding message rows. */
 .kova-message-reading-column > .flex > .kova-response-action-bar {
-  margin-left: 0;
-  margin-right: auto;
+  margin-block-start: 2px;
+  margin-inline-end: auto;
+  padding-inline-start: 6px;
   justify-content: flex-start;
 }
 /* A single accessible keyboard focus treatment: avoid stacking browser
@@ -169,4 +180,7 @@ body .kova-response-menu[role="menu"] {
 .kova-selection-actions button:focus-visible {
   outline: 1px solid var(--ring);
   outline-offset: 2px;
+}
+.kova-response-action-bar button:focus-visible {
+  outline-offset: -2px;
 }

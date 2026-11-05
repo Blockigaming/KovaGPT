@@ -36,15 +36,20 @@
 }
 .kova-settings-reference .kova-settings-sidebar {
   display: flex;
-  width: 208px;
+  width: var(--kova-settings-navigation-width, 280px);
   min-width: 0;
   min-height: 0;
-  flex: 0 0 208px;
+  flex: 0 0 auto;
   flex-direction: column;
   overflow: hidden;
   border-right: 1px solid var(--border-subtle);
   padding: 20px 12px 16px;
   background: var(--surface-secondary);
+}
+@media (min-width: 768px) {
+  [role="dialog"].kova-settings-reference .kova-settings-sidebar {
+    max-width: min(440px, calc(100% - 344px));
+  }
 }
 .kova-settings-reference .kova-settings-sidebar-top {
   display: none;
@@ -363,6 +368,10 @@
     border-radius: 0;
     padding-top: var(--safe-top);
     padding-bottom: var(--safe-bottom);
+    background: var(--background);
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content {
+    background: var(--background);
   }
   [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
     top: max(12px, var(--safe-top));

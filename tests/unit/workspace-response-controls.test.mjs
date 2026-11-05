@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { chatUsageWindows, CHAT_USAGE_WINDOWS } from "../../src/lib/plan-usage-policy.mjs";
 import {
   appearanceValues,
   applyReadingPreferences,
@@ -124,10 +125,11 @@ test("daily message quota rejects with the popup category while unavailable acco
     compilerOptions: { target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const enforce = new Function(
-    "DAILY_PLAN_ALLOWANCES",
+    "chatUsageWindows",
+    "CHAT_USAGE_WINDOWS",
     "loose",
     `${code}; return enforceDailyMessageQuota;`,
-  )({ free: { regularMessages: 50, thinkingMessages: 10 } }, (value) => value);
+  )(chatUsageWindows, CHAT_USAGE_WINDOWS, (value) => value);
   const caller = (result) => ({
     userId: "owner",
     supabaseAdmin: { rpc: () => Promise.resolve(result) },

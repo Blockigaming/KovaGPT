@@ -205,12 +205,6 @@
 .kova-sidebar-history {
   flex-shrink: 0;
 }
-.kova-profile-menu {
-  width: min(330px, calc(100vw - 24px)) !important;
-  min-width: min(280px, calc(100vw - 24px)) !important;
-  max-width: calc(100vw - 24px);
-  border-radius: 16px;
-}
 @media (prefers-reduced-motion: reduce) {
   .kova-thinking-toggle {
     transition: none;
@@ -358,22 +352,23 @@
   position: relative;
   z-index: 1;
   border-radius: var(--kova-radius-composer);
-  padding: 16px !important;
-  min-height: 156px !important;
   box-shadow: 0 3px 16px #00000008;
 }
-.spec400-chat-input .spec400-composer-input-region {
-  min-height: 76px !important;
+.spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+  padding: 16px !important;
+  min-height: 156px !important;
 }
 .spec400-chat-input .spec400-composer-input {
-  min-height: 68px !important;
   font-size: 16px !important;
   line-height: 1.55 !important;
   padding: 2px 4px !important;
   border: 0 !important;
   background: transparent !important;
 }
-.spec400-chat-input .spec400-composer-toolbar {
+.spec400-chat-input[data-composer-surface="empty"] .spec400-composer-input {
+  min-height: 68px !important;
+}
+.spec400-chat-input[data-composer-surface="empty"] .spec400-composer-toolbar {
   margin-top: 8px;
 }
 .spec400-chat-input .spec400-composer-trailing {
@@ -395,7 +390,7 @@
   .kova-composer-tray[data-has-add-menu="true"] .kova-composer-tray-preferences {
     display: none;
   }
-  .spec400-chat-input .spec400-composer {
+  .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     padding: 12px !important;
     border-radius: var(--kova-radius-composer);
   }

@@ -62,6 +62,7 @@ function fixture({
         },
       },
       "@/lib/endpoint-reliability.mjs": { readResponseBytesBounded },
+      "@/lib/kova-auth-browser": { isKovaSessionActive: () => false },
     };
   vm.runInNewContext(
     ts.transpileModule(readFileSync("src/lib/pwa/client.ts", "utf8"), {

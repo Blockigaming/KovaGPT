@@ -167,10 +167,11 @@ for (const width of [320, 390, 768, 1440]) {
       ]);
       await expect(region.getByRole("rowheader")).toHaveText([
         "Chat modes",
-        "Chat",
-        "Images",
-        "Uploads",
-        "Storage",
+        "Regular messages",
+        "Thinking messages",
+        "Image generations / day",
+        "File uploads / day",
+        "Cloud storage",
       ]);
       const included = region.getByRole("columnheader", { name: "Included", exact: true });
       await expect

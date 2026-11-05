@@ -2,7 +2,7 @@
 // Never use the full Settings default to reset it: that would clear responses.
 export const APPEARANCE_DEFAULTS = Object.freeze({
   interfaceSize: 100,
-  settingsNavigationWidth: 281,
+  settingsNavigationWidth: 280,
   interfaceAccent: "",
   interfaceColors: {},
   interfaceFont: "system",

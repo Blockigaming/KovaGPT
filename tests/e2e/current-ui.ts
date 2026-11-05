@@ -61,6 +61,13 @@ export async function revealSidebar(page: Page) {
   return navigation;
 }
 
+export async function dismissMobileSidebar(page: Page) {
+  const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  await expect(drawer).toBeHidden();
+}
+
 export async function openCurrentSettings(page: Page) {
   await waitForKovaHydration(page);
   const surface = page.locator(".kova-settings-dialog");

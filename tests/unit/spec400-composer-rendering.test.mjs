@@ -31,6 +31,7 @@ const captureUpgrade = (factory) => (type, props, key) => {
 };
 const closedSurfaces = {
   "@/components/ComposerVoiceDialog": { ComposerVoiceDialog: empty },
+  "@/components/ui/ExpandViewIcon": { ExpandViewIcon: empty },
   "@/components/ComposerUploadAllowance": { ComposerUploadAllowance: empty },
   "@/components/ComposerContextPanel": { ComposerContextPanel: empty },
   "@/components/ComposerModelStatus": {

@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
+import { planUsageFixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 const origin = "http://127.0.0.1:4189";
@@ -67,17 +68,19 @@ async function fixture(page: Page, theme: "light" | "dark") {
       ? { ownerId: owner, tier: "free" }
       : name.startsWith("listProjects_")
         ? [project]
-        : name.startsWith("getMyDailyUsage_")
-          ? { chats: 3, images: 1, uploads: 2, resetsAt: "2026-10-17T00:00:00Z" }
-          : name.startsWith("getSubscriptionSummary_")
-            ? {
-                effectiveTier: "free",
-                tier: "free",
-                hasBillingAccount: false,
-                billingPortalAvailable: false,
-                activeSubscriptionCount: 0,
-              }
-            : [];
+        : name.startsWith("getMyPlanUsage_")
+          ? planUsageFixture("free")
+          : name.startsWith("getMyDailyUsage_")
+            ? { chats: 3, images: 1, uploads: 2, resetsAt: "2026-10-17T00:00:00Z" }
+            : name.startsWith("getSubscriptionSummary_")
+              ? {
+                  effectiveTier: "free",
+                  tier: "free",
+                  hasBillingAccount: false,
+                  billingPortalAvailable: false,
+                  activeSubscriptionCount: 0,
+                }
+              : [];
     return route.fulfill({ json: { result, context: {} } });
   });
   await page.route("**/api/library/folders**", (route) => route.fulfill({ json: { folders: [] } }));
