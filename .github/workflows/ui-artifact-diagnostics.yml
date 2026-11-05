@@ -16,8 +16,8 @@ jobs:
       - name: Read the verified candidate screenshots
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          artifact-ids: "13448761605,13449622614"
-          run-id: "42098485814"
+          artifact-ids: "13452980146,13451822166"
+          run-id: "42105131134"
           github-token: ${{ github.token }}
           path: screenshots
       - name: Export selected synthetic screenshots for visual inspection
@@ -30,14 +30,14 @@ jobs:
 
           root = pathlib.Path("screenshots")
           for path in root.rglob("commit.txt"):
-              assert path.read_text().strip() == "423ae39552f9f948e0ebbdf10cfb75485bf65446"
+              assert path.read_text().strip() == "4e637df89a0babb6aecf35862a355297f05041db"
           scenes = {"dark--.png", "light--.png", "dark--library.png",
                     "dark--settings-appearance.png", "light--settings-appearance.png",
-                    "response-actions.png"}
+                    "response-actions.png", "chat-loading.png"}
           for path in sorted(root.rglob("*.png")):
               name = str(path)
               wanted = any(size in name for size in
-                  ("chromium-320", "chromium-landscape", "chromium-1440", "webkit-320"))
+                  ("chromium-320", "chromium-390", "chromium-landscape", "chromium-1440", "webkit-320"))
               if not wanted or path.name not in scenes:
                   continue
               print("SHOT_BEGIN:" + json.dumps({"path": name}))
