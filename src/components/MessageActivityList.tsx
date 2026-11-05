@@ -46,7 +46,7 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
             )}
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
-              <span>{activity.label}</span>
+              <span>{activity.label}</span>\n              {activity.browser?.hostname && (\n                <span className="ml-2 inline-flex rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground" title="Observed browser website">\n                  {activity.browser.hostname}\n                </span>\n              )}
             </span>
             {(activity.status === "failed" || activity.status === "canceled") && (
               <span className="shrink-0 text-xs" aria-hidden="true">
