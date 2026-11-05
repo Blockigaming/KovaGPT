@@ -14,6 +14,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
     "src/components/CommandPalette.tsx",
     {
       react: { ...hooks.react, useDeferredValue: (value) => value, useMemo: (fn) => fn() },
+      "react-dom": { flushSync: (fn) => fn() },
       "@tanstack/react-router": { Link: "Link" },
       "lucide-react": Object.fromEntries(
         [
@@ -41,6 +42,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
       "@/components/auth/ClerkSafe": {
         useUser: () => ({ isLoaded: true, user: { id: "fixture-owner" } }),
       },
+      "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: true }) },
       "@/lib/principal-browser-storage.mjs": {
         browserStoragePrincipal: () => "fixture-owner",
         isPrincipalBrowserStorageClearedEvent: () => false,

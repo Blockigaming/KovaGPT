@@ -200,6 +200,35 @@ test("fast close cancels pending opening focus, including an already dequeued st
   assert.ok(!f.calls.some((call) => call[1] === "close sidebar"));
 });
 
+test("closing the drawer never steals a deliberate focus move into the page", () => {
+  const f = fixture({ visible: true });
+  f.tick();
+  f.drawer.dataset.state = "closed";
+  f.cleanup();
+  f.content.focus({ preventScroll: true });
+  f.tick();
+  assert.equal(f.document.activeElement, f.content);
+  assert.ok(!f.calls.some((call) => call[1] === "open menu"));
+});
+
+test("a suspended drawer leaves Escape and Tab to the active search dialog", () => {
+  const f = fixture({ visible: true });
+  f.drawer.inert = true;
+  for (const key of ["Tab", "Escape"]) {
+    const event = {
+      key,
+      target: f.document.body,
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+    };
+    f.dispatch("keydown", event);
+    assert.equal(event.defaultPrevented, false);
+  }
+  assert.ok(!f.calls.some((call) => call[0] === "toggle"));
+});
+
 for (const eventName of ["pointerdown", "focusin", "keydown"]) {
   test(`later ${eventName} cancels opening focus instead of stealing the user's next action`, () => {
     const f = fixture();

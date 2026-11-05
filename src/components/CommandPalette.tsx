@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   Search,
   SquarePen,
@@ -26,6 +27,7 @@ import { platformEvents } from "@/platform/events";
 import { applyThemeMode } from "@/lib/theme";
 import { searchConversations } from "@/lib/conversation-search";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useLayout } from "@/hooks/use-mobile";
 import {
   browserStoragePrincipal,
   isPrincipalBrowserStorageClearedEvent,
@@ -152,6 +154,8 @@ export function CommandPalette({
   onSelectArchived,
   onOpenSettings,
   returnFocusTarget,
+  sidebarOpen = false,
+  onCloseSidebar,
 }: {
   open: boolean;
   query: string;
@@ -167,7 +171,11 @@ export function CommandPalette({
   onSelectArchived: (conversation: Conversation) => void;
   onOpenSettings: () => void;
   returnFocusTarget?: HTMLElement | null;
+  sidebarOpen?: boolean;
+  onCloseSidebar?: () => void;
 }) {
+  const { isDesktop } = useLayout();
+  const closesSidebarToFocus = sidebarOpen && !isDesktop && !!onCloseSidebar;
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
@@ -312,6 +320,11 @@ export function CommandPalette({
     () =>
       quickActions
         .slice(1)
+        .map((action) =>
+          action.action === "focus-input" && closesSidebarToFocus
+            ? { ...action, label: "Close sidebar and focus message box" }
+            : action,
+        )
         .map((action) => ({
           ...action,
           score: fuzzyScore(`${action.label} ${(action.keywords ?? []).join(" ")}`, normalized),
@@ -325,7 +338,7 @@ export function CommandPalette({
             (pinnedCommands.includes(action.href ?? action.action ?? "") ? 20 : 0),
         }))
         .sort((a, b) => b.score - a.score),
-    [normalized, recentCommands, pinnedCommands],
+    [normalized, recentCommands, pinnedCommands, closesSidebarToFocus],
   );
   const visibleWorkspaceItems = useMemo(
     () =>
@@ -396,6 +409,18 @@ export function CommandPalette({
     });
   };
 
+  const focusMessageBox = () => {
+    suppressFocusRestore();
+    // Release the drawer before focusing, within this user gesture so mobile
+    // browsers can open the keyboard. Escape still restores the open drawer.
+    flushSync(() => {
+      if (closesSidebarToFocus) onCloseSidebar?.();
+      closePalette();
+    });
+    document.querySelector<HTMLTextAreaElement>("textarea")?.focus({ preventScroll: true });
+    platformEvents.publish("platform", "command.executed", { command: "focus-input" });
+  };
+
   const chooseActive = () => {
     const action = actionItems[activeIndex];
     if (action === "new-chat") {
@@ -419,10 +444,7 @@ export function CommandPalette({
       return;
     }
     if (action === "focus-input") {
-      suppressFocusRestore();
-      document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
-      platformEvents.publish("platform", "command.executed", { command: action });
-      closePalette();
+      focusMessageBox();
       return;
     }
     if (action === "theme") {
@@ -658,12 +680,7 @@ export function CommandPalette({
                   const targetIndex = actionItems.indexOf(action.action);
                   if (targetIndex >= 0) setActiveIndex(targetIndex);
                   if (action.action === "focus-input") {
-                    suppressFocusRestore();
-                    document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
-                    platformEvents.publish("platform", "command.executed", {
-                      command: action.action,
-                    });
-                    closePalette();
+                    focusMessageBox();
                   } else if (action.action === "theme") {
                     applyThemeMode(
                       document.documentElement.classList.contains("dark") ? "light" : "dark",

@@ -3228,6 +3228,7 @@ function KovaGPT() {
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         onOpenWorkspaceSearch={openCommandPalette}
+        workspaceSearchOpen={commandOpen}
         hideGuestLogin
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {
@@ -3763,6 +3764,8 @@ function KovaGPT() {
             onSelectArchived={(conversation) => historyAction("restore", conversation)}
             onOpenSettings={() => openSettings("general")}
             returnFocusTarget={commandReturnFocusRef.current}
+            sidebarOpen={sidebarOpen}
+            onCloseSidebar={() => setSidebarOpen(false)}
           />
         </Suspense>
       )}

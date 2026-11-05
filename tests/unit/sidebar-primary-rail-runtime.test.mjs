@@ -88,6 +88,7 @@ function fixture(options = {}) {
     setSearchOpen: (value) =>
       calls.push(["local-search", typeof value === "function" ? value(false) : value]),
     searchOpen: false,
+    workspaceSearchOpen: false,
     cancelPendingSelection: () => {},
     onOpenSettings: (tab) => calls.push(["settings", tab]),
     openRailPersonalization: (target) => calls.push(["customize", target]),
