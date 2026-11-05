@@ -36,7 +36,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -403,7 +403,7 @@ export function Sidebar({
     setSearchQuery("");
     setSearchOpen(false);
   }, [user?.id, isLoaded, isSignedIn, cancelPendingSelection]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
     const update = () => setMobileViewport(media.matches);
     update();

@@ -194,3 +194,43 @@ test("auth dialog close button dismisses the dialog and restores focus", async (
   await expect(dialog).toHaveCount(0);
   await expect(login).toBeFocused();
 });
+
+test("public sign-in stays stacked and readable on phones, rotation, and tablets", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "phone-390x844");
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const entry = page.locator(".public-website-hero-left");
+  const image = page.locator(".public-classroom");
+  for (const viewport of [
+    { width: 320, height: 700 },
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 844, height: 390 },
+    { width: 1024, height: 768 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(entry).toBeVisible();
+    await expect(image).toBeVisible();
+    await expect
+      .poll(async () => {
+        const left = (await entry.boundingBox())!;
+        const right = (await image.boundingBox())!;
+        return viewport.width < 1024
+          ? right.y >= left.y + left.height - 1
+          : right.x >= left.x + left.width;
+      })
+      .toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width + 1,
+    );
+    if (viewport.width < 1024) {
+      const email = page.locator(".public-sign-in input").first();
+      await expect(email).toBeVisible();
+      expect(
+        await email.evaluate((input) => parseFloat(getComputedStyle(input).fontSize)),
+      ).toBeGreaterThanOrEqual(16);
+    }
+  }
+});

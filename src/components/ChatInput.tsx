@@ -51,6 +51,7 @@ import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
 import { useLayout } from "@/hooks/use-mobile";
+import { composerKeyboardInset } from "@/lib/composer-keyboard-inset.mjs";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
 import {
@@ -642,15 +643,27 @@ export function ChatInput({
     const vv = window.visualViewport;
     if (!vv) return;
     const update = () => {
-      const bottomGap = window.innerHeight - (vv.height + vv.offsetTop);
-      setKbOffset(bottomGap > 40 ? bottomGap : 0);
+      setKbOffset(
+        composerKeyboardInset({
+          layoutHeight: window.innerHeight,
+          viewportHeight: vv.height,
+          viewportTop: vv.offsetTop,
+          scale: vv.scale,
+          focused: document.activeElement === ref.current,
+        }),
+      );
     };
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", update);
     update();
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", update);
+      setKbOffset(0);
     };
   }, [isMobileLayout]);
 

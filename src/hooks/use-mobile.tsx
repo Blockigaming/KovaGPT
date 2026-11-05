@@ -3,8 +3,8 @@ import * as React from "react";
 /**
  * Layout breakpoints (CSS pixels):
  *   mobile:  < 768  (phones only — iPhone SE up through Pro Max / large Android)
- *   tablet:  768–1199 (iPad portrait/landscape, small foldables)
- *   desktop: >= 1200 (laptops, standard monitors, wide displays)
+ *   tablet:  768–1023 (iPad portrait/landscape, small foldables)
+ *   desktop: >= 1024 (laptops, standard monitors, wide displays)
  *
  * These are intentional: the user asked that "mobile" mean phones only.
  * Tablets get their own layout mode.
@@ -69,7 +69,7 @@ export function useLayout() {
   const [mode, setMode] = React.useState<LayoutMode>("desktop");
   const [interaction, setInteraction] = React.useState<InteractionMode>("pointer");
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     let raf = 0;
     const update = () => {
       cancelAnimationFrame(raf);
@@ -82,7 +82,9 @@ export function useLayout() {
     window.addEventListener("orientationchange", update);
     const coarse = window.matchMedia("(pointer: coarse)");
     coarse.addEventListener?.("change", update);
-    update();
+    // Resolve the hydrated viewport before paint; defer only later resize events.
+    setMode(computeLayoutMode());
+    setInteraction(computeInteractionMode());
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", update);
