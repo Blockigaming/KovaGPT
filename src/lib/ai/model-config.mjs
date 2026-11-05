@@ -51,10 +51,10 @@ export const MODEL_COST_PER_MTOK = Object.freeze({
   "gpt-5.6-luna": { input: 0.2, output: 1.2 },
   "gpt-5.6-terra": { input: 2, output: 12 },
   "gpt-5.6-sol": { input: 4, output: 20 },
-  // Reviewed hosted Qwen API reference rates as of 2026-11-05.
-  "kova-argon-5": { input: 0.117, output: 0.455 },
-  "kova-neon-4.6": { input: 0.10, output: 0.22 },
-  "kova-xenon-4.6": { input: 0.08, output: 0.28 },
+  // Conservative ceiling for hosted Kova models reviewed as of 2026-11-05.
+  "kova-argon-5": { input: 0.20, output: 0.80 },
+  "kova-neon-4.6": { input: 0.30, output: 1.20 },
+  "kova-xenon-4.6": { input: 3, output: 15 },
   "gpt-image-1": { input: 5, output: 40 },
   // Current replacement; text input and image output estimates, checked 2026-10-24.
   "gpt-image-2.5-flare": { input: 5, output: 30 },
