@@ -325,7 +325,7 @@ function MemoryPage() {
             <p className="text-sm text-muted-foreground">
               {query || source !== "all"
                 ? "Try a different search or show all memory sources."
-                : "Account memories are not saved automatically. Use Save a reviewed memory from a response in an eligible already-synced chat, or add project context in a project."}
+                : "A brief summary is saved after each conversation’s first completed exchange when conversation memory is enabled in Settings. Temporary chats are never saved."}
             </p>
             {query || source !== "all" ? (
               <Button

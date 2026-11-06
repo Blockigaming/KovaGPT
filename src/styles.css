@@ -1980,3 +1980,10 @@ body {
 
 /* Chat selection is one full row, including its options target. Pointer focus
    must not paint a second shorter capsule over the title button. */
+
+/* Programmatic menu focus after a pointer click is not keyboard focus. */
+:root[data-kova-input-modality="pointer"]
+  :is(button, a, [role="button"], [role="menu"], [role="menuitem"], [role="tab"]):focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

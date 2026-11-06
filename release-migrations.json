@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 209,
-  "latest": "20261104223100_kova_scheduled_task_active_plan_caps.sql",
+  "count": 210,
+  "latest": "20261106022315_conversation_summary_short_chats.sql",
   "migrations": [
     {
       "order": 1,
@@ -4408,6 +4408,20 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 210,
+      "filename": "20261106022315_conversation_summary_short_chats.sql",
+      "timestamp": "20261106022315",
+      "sha256": "fca195bc05ca6069086a3c7496fbf316b75ce9f7c92b2d330ab7c21c6cd06044",
+      "tables": [],
+      "functions": ["persist_automatic_chat_memory"],
+      "destructive": true,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

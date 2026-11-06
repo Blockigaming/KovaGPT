@@ -84,12 +84,12 @@ export function ResponseSpeechButton({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => void click()}
         aria-label={busy ? "Stop reading aloud" : "Read aloud"}
         title={busy ? "Stop reading aloud" : "Read aloud"}
         aria-pressed={busy}
-        className="text-xs text-muted-foreground"
+        className="kova-message-icon-action text-muted-foreground"
       >
         {state === "loading" ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -98,7 +98,6 @@ export function ResponseSpeechButton({
         ) : (
           <Volume2 className="h-4 w-4" />
         )}
-        {busy ? "Stop" : "Read aloud"}
       </Button>
       <span
         role="status"

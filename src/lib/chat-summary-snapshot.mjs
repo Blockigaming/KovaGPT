@@ -153,11 +153,11 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
   if (typeof principal !== "string" || !principal) return { continue: false };
   const session = await sessionFor(principal, dependencies);
   if (!session) return { continue: false };
-  const state = await descriptorFor(active.id, session, dependencies);
+  let memoryUpdated = false;
   if (
     dependencies.automaticMemory === true &&
     !active.temporary &&
-    active.messages.length - (active.memoryStartIndex ?? 0) >= 4
+    active.messages.length - (active.memoryStartIndex ?? 0) >= 2
   ) {
     const response = await fetchForPrincipal(
       principal,
@@ -181,9 +181,12 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
       throw new Error("memory_notes_write_failed");
     }
     const saved = await response.json();
+    memoryUpdated = true;
     if (saved.saved && typeof window !== "undefined")
       window.dispatchEvent(new Event("kova-memory-sources-changed"));
   }
+  if (dependencies.contextSummaries === false) return { continue: false, memoryUpdated };
+  const state = await descriptorFor(active.id, session, dependencies);
   if (!state.enabled) return { continue: false };
   const payload = await createMemoryWritePayload(active, state.descriptor);
   if (!payload || dependencies.signal?.aborted) return { continue: false };
@@ -254,11 +257,24 @@ export function startMemoryWrites(active, principal, automaticMemory = false) {
 }
 
 export function scheduleMemoryWrites(active, principal, signal, automaticMemory = false) {
-  if (signal.aborted || active.messages.length - (active.memoryStartIndex ?? 0) < 4) return;
+  if (
+    signal.aborted ||
+    active.temporary ||
+    active.messages.length - (active.memoryStartIndex ?? 0) < 2
+  )
+    return;
+  const last = active.messages.at(-1);
+  if (
+    last?.role !== "assistant" ||
+    !last.content?.trim() ||
+    last.generationStatus ||
+    last.pendingImage
+  )
+    return;
   let cancel;
   const timer = setTimeout(() => {
     if (!signal.aborted) cancel = startMemoryWrites(active, principal, automaticMemory);
-  }, 4000);
+  }, 500);
   signal.addEventListener(
     "abort",
     () => {

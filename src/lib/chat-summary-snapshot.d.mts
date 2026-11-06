@@ -18,6 +18,7 @@ type Dependencies = {
   fetchImpl?: typeof fetch;
   signal?: AbortSignal;
   automaticMemory?: boolean;
+  contextSummaries?: boolean;
 };
 export function createChatSummarySnapshot(
   messages: Conversation["messages"],
@@ -39,7 +40,7 @@ export function writeMemoryForPrincipal(
   active: Conversation,
   principal: string,
   dependencies?: Dependencies,
-): Promise<{ continue: boolean }>;
+): Promise<{ continue: boolean; memoryUpdated?: boolean }>;
 export function startMemoryWrites(
   active: Conversation,
   principal: string,

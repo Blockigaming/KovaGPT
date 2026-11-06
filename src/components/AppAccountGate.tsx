@@ -40,7 +40,7 @@ export function AppAccountGate({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { isLoaded, isSignedIn } = useUser();
   if (!requiresAppAccount(pathname) || (isLoaded && isSignedIn)) return children;
-  if (!isLoaded && pathname !== "/") return <SessionLoading />;
+  if (!isLoaded) return <SessionLoading />;
   return (
     <Suspense fallback={<SessionLoading />}>
       <AccountWelcome pending={!isLoaded} />

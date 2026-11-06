@@ -16,6 +16,7 @@ import { splitInteractiveContent } from "@/lib/interactive-ui.mjs";
 import { InteractiveBlock } from "./interactive-ui/InteractiveBlock";
 import {
   Copy,
+  ArrowUp,
   Sparkles,
   Check,
   ImageIcon,
@@ -237,6 +238,7 @@ function ChatMessageInner({
   interactiveDisabledReason,
   onDraftPrompt,
   onRetry,
+  userTier,
   onBranch,
   onSaveMemory,
   onEdit,
@@ -261,7 +263,8 @@ function ChatMessageInner({
   interactiveDisabledReason?: string;
   /** Preserves the composer draft; invoke the returned focus handoff after dismissing a popup. */
   onDraftPrompt?: (prompt: string) => (() => void) | undefined;
-  onRetry?: () => void;
+  onRetry?: (options?: { webSearch?: boolean }) => void;
+  userTier?: "free" | "plus" | "pro";
   onBranch?: () => void;
   onSaveMemory?: (trigger: HTMLElement | null) => void;
   onEdit?: () => void;
@@ -507,6 +510,9 @@ function ChatMessageInner({
     }
   }, []);
 
+  const [retryInstruction, setRetryInstruction] = useState("");
+  const [retryMenuOpen, setRetryMenuOpen] = useState(false);
+  const retryFocusRef = useRef<(() => void) | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -643,24 +649,6 @@ function ChatMessageInner({
     lastSelectionRef.current = text;
     setSelectedText(text);
   }, []);
-  useEffect(() => {
-    // Selection changes fire continuously during dragging, and every rendered
-    // message is subscribed. Wait for the range to settle before showing a
-    // contextual toolbar so native text selection and browser Copy remain stable.
-    let pending: ReturnType<typeof setTimeout> | undefined;
-    const onSelectionChange = () => {
-      if (pending !== undefined) clearTimeout(pending);
-      pending = setTimeout(() => {
-        pending = undefined;
-        rememberSelection();
-      }, 120);
-    };
-    document.addEventListener("selectionchange", onSelectionChange);
-    return () => {
-      document.removeEventListener("selectionchange", onSelectionChange);
-      if (pending !== undefined) clearTimeout(pending);
-    };
-  }, [rememberSelection]);
   const openSelectionEdit = useCallback(
     async (instruction = "") => {
       // Snapshot the intended passage before focus or the lazy load can change selection.
@@ -1062,12 +1050,7 @@ function ChatMessageInner({
                 onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
               />
             ))}
-            <div
-              ref={bodyRef}
-              className="prose-chat"
-              onMouseUp={rememberSelection}
-              onKeyUp={rememberSelection}
-            >
+            <div ref={bodyRef} className="prose-chat">
               {message.pendingImage && !message.content ? (
                 <div
                   role="status"
@@ -1166,79 +1149,13 @@ function ChatMessageInner({
                 {onRetry && (
                   <button
                     type="button"
-                    onClick={onRetry}
+                    onClick={() => onRetry()}
                     className="rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label="Retry stopped response"
                   >
                     Retry
                   </button>
                 )}
-              </div>
-            )}
-            {!streaming && selectedText && (
-              <div
-                ref={selectionActionsRef}
-                className="kova-selection-actions mt-3 flex flex-wrap gap-2"
-                role="toolbar"
-                aria-label="Selected text actions"
-                onPointerDown={(event) => {
-                  // Only an intentional primary action keeps the native prose selection.
-                  // Text dragging, secondary clicks, and the browser menu remain native.
-                  if (
-                    event.isPrimary &&
-                    event.button === 0 &&
-                    event.target instanceof Element &&
-                    event.target.closest("button")
-                  )
-                    event.preventDefault();
-                }}
-                onBlur={(event) => {
-                  // When keyboard focus leaves the toolbar, clear a collapsed selection.
-                  // This does not suppress native pointer-based selection or Copy.
-                  if (!event.currentTarget.contains(event.relatedTarget)) rememberSelection();
-                }}
-              >
-                {onDraftPrompt && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      responseDraftFocusRef.current = null;
-                      setSelectionAskPassage(lastSelectionRef.current);
-                      setSelectionQuestion("");
-                      setSelectionAskOpen(true);
-                    }}
-                  >
-                    Ask
-                  </button>
-                )}
-                {onReplaceContent && (
-                  <>
-                    <button type="button" onClick={() => void openSelectionEdit()}>
-                      Rewrite
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void openSelectionEdit("Shorten this passage while preserving its meaning.")
-                      }
-                    >
-                      Shorten
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(lastSelectionRef.current);
-                      toast.success("Selection copied");
-                    } catch {
-                      toast.error("Couldn’t copy. Select the text and copy it manually.");
-                    }
-                  }}
-                >
-                  Copy selection
-                </button>
               </div>
             )}
           </div>
@@ -1319,7 +1236,7 @@ function ChatMessageInner({
                     <button
                       type="button"
                       onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
-                      disabled={feedbackSaving || feedbackLoadFailed}
+                      disabled={feedbackSaving}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                         feedback === "up" ? "bg-accent text-white" : ""
                       }`}
@@ -1337,7 +1254,7 @@ function ChatMessageInner({
                     <button
                       type="button"
                       onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
-                      disabled={feedbackSaving || feedbackLoadFailed}
+                      disabled={feedbackSaving}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                         feedback === "down" ? "bg-accent text-white" : ""
                       }`}
@@ -1419,38 +1336,84 @@ function ChatMessageInner({
                 </DropdownMenu>
               )}
 
-              {message.content.trim() && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    openResult("edit", event.currentTarget);
-                  }}
-                  className="kova-open-result-action inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80 [@media(pointer:coarse)]:min-h-11"
-                  aria-label={artifactKind === "code" ? "Open code result" : "Open writing result"}
-                  title={artifactKind === "code" ? "Open code result" : "Open writing result"}
-                >
-                  {artifactKind === "code" ? (
-                    <Code2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <FileEdit className="h-3.5 w-3.5" />
-                  )}
-                  <span>Edit in Canvas</span>
-                </button>
+              <button
+                type="button"
+                className="kova-message-icon-action text-muted-foreground hover:bg-accent"
+                aria-label="Share response"
+                title="Share response"
+                onClick={() => void share()}
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+              {onRetry && (
+                <DropdownMenu open={retryMenuOpen} onOpenChange={setRetryMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="kova-message-icon-action text-muted-foreground hover:bg-accent"
+                      aria-label="Try again"
+                      title="Try again"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="kova-response-retry-menu"
+                    onCloseAutoFocus={(event) => {
+                      if (!retryFocusRef.current) return;
+                      event.preventDefault();
+                      const focus = retryFocusRef.current;
+                      retryFocusRef.current = undefined;
+                      focus();
+                    }}
+                  >
+                    {onDraftPrompt && (
+                      <form
+                        className="kova-response-change-draft"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          if (!retryInstruction.trim()) return;
+                          retryFocusRef.current =
+                            onDraftPrompt(
+                              `Change the previous response: ${retryInstruction.trim()}`,
+                            ) ?? undefined;
+                          setRetryInstruction("");
+                          setRetryMenuOpen(false);
+                        }}
+                      >
+                        <input
+                          aria-label="Ask to change response"
+                          placeholder="Ask to change response"
+                          value={retryInstruction}
+                          onChange={(event) => setRetryInstruction(event.target.value)}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        />
+                        <button
+                          type="submit"
+                          aria-label="Add change to draft"
+                          disabled={!retryInstruction.trim()}
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </button>
+                      </form>
+                    )}
+                    <DropdownMenuItem onSelect={() => onRetry()}>
+                      <RefreshCw className="h-4 w-4" /> Try again
+                      {userTier === "free" && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <Brain className="h-4 w-4" />
+                          <span>Thinking</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onRetry({ webSearch: false })}>
+                      <Globe className="h-4 w-4" /> Don’t search the web
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-              {chatId && onReplaceContent && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCompareVersions(true);
-                    setVersionsOpen(true);
-                  }}
-                  className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground [@media(pointer:coarse)]:min-h-11"
-                  aria-label="Compare response versions"
-                >
-                  <History className="h-3.5 w-3.5" aria-hidden="true" /> Compare versions
-                </button>
-              )}
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -1483,116 +1446,24 @@ function ChatMessageInner({
                     event.preventDefault();
                   }}
                 >
-                  {onRetry && (
-                    <DropdownMenuItem onSelect={onRetry}>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Retry
-                    </DropdownMenuItem>
-                  )}
-                  {onDraftPrompt && (
-                    <DropdownMenuItem
-                      aria-label="Continue from here"
-                      aria-describedby={`continue-draft-${message.id}`}
-                      onSelect={() => {
-                        responseDraftFocusRef.current =
-                          onDraftPrompt(
-                            "Continue from here without repeating what you have already written.",
-                          ) ?? null;
-                      }}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>
-                        Continue from here
-                        <span
-                          id={`continue-draft-${message.id}`}
-                          className="block text-xs text-muted-foreground"
-                        >
-                          Adds to your draft. Send when ready.
-                        </span>
-                      </span>
-                    </DropdownMenuItem>
-                  )}
-                  {chatId && !temporary && (
-                    <DropdownMenuItem
-                      onSelect={async () => {
-                        try {
-                          const link = new URL(window.location.href);
-                          link.hash = `message-${message.id}`;
-                          await navigator.clipboard.writeText(link.toString());
-                          toast.success("Link copied. Access is unchanged.");
-                        } catch {
-                          toast.error("Couldn’t copy the link.");
-                        }
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy link
-                    </DropdownMenuItem>
-                  )}
-                  {feedbackLoadFailed ? (
-                    <DropdownMenuItem onSelect={() => setFeedbackReload((current) => current + 1)}>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Retry loading response feedback
-                    </DropdownMenuItem>
-                  ) : null}
-                  <DropdownMenuItem onSelect={() => void share()}>
-                    <Share2 className="mr-2 h-4 w-4" /> Share
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => void saveItem()} disabled={saving}>
-                    {saving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : saved ? (
-                      <Check className="mr-2 h-4 w-4" />
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    {message.createdAt ? (
+                      <time dateTime={new Date(message.createdAt).toISOString()}>
+                        {formatDisplayDateTime(message.createdAt, timeFormat, {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          timeZoneName: "short",
+                        })}
+                      </time>
                     ) : (
-                      <Bookmark className="mr-2 h-4 w-4" />
+                      "Time unavailable"
                     )}
-                    {saving ? (
-                      <span className="spec400-loading-label">
-                        <span className="spec400-loading-spinner" aria-hidden="true" />
-                        Saving…
-                      </span>
-                    ) : saved ? (
-                      "Saved to Library"
-                    ) : (
-                      "Save to Library"
-                    )}
-                  </DropdownMenuItem>
-                  {onSaveMemory ? (
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        memoryReviewOpeningRef.current = true;
-                        onSaveMemory(responseMoreRef.current);
-                      }}
-                    >
-                      <Brain className="mr-2 h-4 w-4" /> Save a reviewed memory
-                    </DropdownMenuItem>
-                  ) : null}
-                  <DropdownMenuItem
-                    className="min-h-11"
-                    onSelect={openStudy}
-                    disabled={!principalResolved || !message.content.trim()}
-                  >
-                    <GraduationCap className="mr-2 h-4 w-4" /> Practice this explanation
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={(event) => {
-                      event.preventDefault();
-                      void openSelectionEdit();
-                    }}
-                    disabled={!onReplaceContent}
-                  >
-                    <TextSelect className="mr-2 h-4 w-4" /> Edit selection
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setCompareVersions(false);
-                      setVersionsOpen(true);
-                    }}
-                    disabled={!chatId || !message.id}
-                  >
-                    <History className="mr-2 h-4 w-4" /> Version history
-                  </DropdownMenuItem>
+                  </div>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>

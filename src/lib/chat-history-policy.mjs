@@ -167,6 +167,10 @@ export function normalizeChatHistory(value, ownerId) {
       if (seen.has(id)) throw new Error("chat_history_invalid");
       seen.add(id);
       const item = { id, role: message.role, content: message.content };
+      if (message.createdAt !== undefined) {
+        if (!time(message.createdAt)) throw new Error("chat_history_invalid");
+        item.createdAt = message.createdAt;
+      }
       if (message.voiceModelReceipt !== undefined) {
         if (
           message.role !== "assistant" ||

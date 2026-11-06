@@ -31,14 +31,6 @@ test("response actions use compact desktop geometry and 44px coarse targets", ()
   assert.match(styles, /stroke-linecap: round/);
 });
 
-test("feedback recovery remains available in More without stretching the toolbar", () => {
-  assert.doesNotMatch(component, />\s*Retry rating\s*</);
-  assert.match(
-    component,
-    /<DropdownMenuItem[\s\S]*?setFeedbackReload[\s\S]*?Retry loading response feedback/,
-  );
-});
-
 test("assistant and Images retain bottom account access without duplicate top avatars", () => {
   for (const path of ["src/routes/index.tsx", "src/routes/images.tsx"])
     assert.doesNotMatch(readFileSync(path, "utf8"), /<UserButton\b/);

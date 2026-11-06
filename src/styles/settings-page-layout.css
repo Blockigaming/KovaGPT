@@ -223,3 +223,89 @@
   min-height: 44px;
   font-size: 14px;
 }
+
+/* Settings replaces the workspace navigation, matching a dedicated account page. */
+.kova-settings-screen {
+  display: flex;
+  width: 100%;
+  height: 100dvh;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--background);
+}
+.kova-settings-navigation-resize {
+  position: relative;
+  z-index: 3;
+  width: 8px;
+  margin-inline: -4px;
+  flex: 0 0 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.kova-settings-navigation-resize span {
+  position: absolute;
+  inset: 0 3px;
+  background: transparent;
+  transition: background 120ms;
+}
+.kova-settings-navigation-resize:hover span,
+.kova-settings-navigation-resize:focus-visible span {
+  background: var(--muted-foreground);
+}
+[data-resizing] .kova-settings-sidebar {
+  transition: none !important;
+  user-select: none;
+}
+@media (min-width: 768px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
+    background: var(--background);
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-content-header {
+    min-height: 112px;
+    padding-top: 32px;
+  }
+  .kova-settings-page .kova-settings-navigation-heading {
+    align-items: flex-start;
+  }
+}
+@media (max-width: 767px) {
+  .kova-settings-navigation-resize {
+    display: none;
+  }
+  .kova-settings-reference .kova-settings-nav-group {
+    padding-top: 24px;
+  }
+  .kova-settings-reference .kova-settings-nav-item {
+    min-height: 52px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .kova-settings-page .kova-settings-return {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 12px;
+    border-radius: 12px;
+    background: var(--surface-secondary);
+  }
+  .kova-settings-page .kova-settings-nav-title {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .kova-settings-return span {
+    display: none;
+  }
+}
+
+.kova-settings-navigation-resize:focus-visible {
+  outline: none !important;
+}
+@media (max-width: 767px) {
+  .kova-settings-reference .kova-desktop-navigation-preference {
+    display: none;
+  }
+}

@@ -81,10 +81,10 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   const menu = page.locator(".kova-profile-menu");
   await expect(menu).toBeVisible();
   const b = await menu.boundingBox();
-  // The expanded profile summary intentionally uses a wider menu than its trigger.
+  // The account popup stays within the sidebar account row.
   const viewport = page.viewportSize()!;
-  expect(b!.width).toBeGreaterThanOrEqual(Math.min(a!.width, 330, viewport.width - 24) - 2);
-  expect(b!.width).toBeLessThanOrEqual(330);
+  expect(b!.width).toBeGreaterThanOrEqual(Math.min(a!.width, viewport.width - 24) - 2);
+  expect(b!.width).toBeLessThanOrEqual(a!.width + 1);
   expect(b!.x).toBeGreaterThanOrEqual(0);
   expect(b!.x + b!.width).toBeLessThanOrEqual(viewport.width + 1);
 });

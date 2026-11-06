@@ -402,12 +402,12 @@ function KovaClerkProvider({
       value={value}
     >
       <div
-        style={{ display: authorityPending ? "none" : "contents" }}
-        inert={authorityPending || undefined}
+        style={{ display: !isLoaded || authorityPending ? "none" : "contents" }}
+        inert={!isLoaded || authorityPending || undefined}
       >
         {children}
       </div>
-      <AuthAuthorityGate pending={authorityPending} />
+      <AuthAuthorityGate pending={!isLoaded || authorityPending} />
       {authIssue ? (
         <div
           role="alert"
@@ -898,12 +898,12 @@ function SupabaseClerkProvider({
     // private child state immediately when a validated account is cleared.
     <Ctx.Provider key={session?.user.id ?? "guest"} value={value}>
       <div
-        style={{ display: authorityUnresolved ? "none" : "contents" }}
-        inert={authorityUnresolved || undefined}
+        style={{ display: !isLoaded || authorityUnresolved ? "none" : "contents" }}
+        inert={!isLoaded || authorityUnresolved || undefined}
       >
         {children}
       </div>
-      <AuthAuthorityGate pending={authorityUnresolved} />
+      <AuthAuthorityGate pending={!isLoaded || authorityUnresolved} />
       {authIssue ? (
         <div
           role="alert"

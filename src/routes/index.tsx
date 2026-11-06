@@ -1040,6 +1040,9 @@ function KovaGPT() {
     const t = setTimeout(() => {
       if (generation !== storageGenerationRef.current) return;
       safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
+      window.dispatchEvent(
+        new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
+      );
     }, 400);
     return () => clearTimeout(t);
   }, [settings, settingsReady, settingsState.persist, userKey]);
@@ -1425,7 +1428,7 @@ function KovaGPT() {
     const controller = new AbortController();
     void import("@/lib/chat-summary-snapshot.mjs")
       .then(({ scheduleMemoryWrites }) =>
-        scheduleMemoryWrites(active, userKey, controller.signal, settings.automaticMemory === true),
+        scheduleMemoryWrites(active, userKey, controller.signal, false),
       )
       .catch(() => undefined);
     return () => controller.abort();
@@ -1816,6 +1819,7 @@ function KovaGPT() {
       queuedSend?: NextPrompt,
       voiceRequest?: { signal: AbortSignal },
       quickAnswer = false,
+      requestWebSearch?: boolean,
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1897,6 +1901,7 @@ function KovaGPT() {
       const userMsg: Message = {
         id: requestId ?? newId(),
         role: "user",
+        createdAt: Date.now(),
         content: trimmed,
         attachments: atts.map((a) =>
           a.kind === "library_file"
@@ -2161,8 +2166,16 @@ function KovaGPT() {
             temporaryContext: tempChat ? tempChatContext : undefined,
             user:
               tempChat && tempChatContext === "clean"
-                ? undefined
-                : withResponsePresentation(chatRequestProfile(settings), settings),
+                ? requestWebSearch === undefined
+                  ? undefined
+                  : { webSearch: requestWebSearch }
+                : withResponsePresentation(
+                    chatRequestProfile({
+                      ...settings,
+                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
+                    }),
+                    settings,
+                  ),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
             personality:
@@ -2275,6 +2288,8 @@ function KovaGPT() {
             retryable: true,
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
+        if (requestSucceeded)
+          updateAssistantMessage((message) => ({ ...message, createdAt: Date.now() }));
         if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
 
         // Always re-summarize so the chat name in the sidebar reflects the conversation
@@ -3078,6 +3093,7 @@ function KovaGPT() {
               }
             : undefined
         }
+        userTier={tier}
         onRetry={
           isLastAssistant &&
           !isStreaming &&
@@ -3087,7 +3103,7 @@ function KovaGPT() {
             retryableFailedResponsesRef.current.has(
               JSON.stringify([storagePrincipal, active.id, m.id]),
             ))
-            ? () => {
+            ? (options) => {
                 if (
                   !nextPromptMountedRef.current ||
                   !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current)
@@ -3102,6 +3118,10 @@ function KovaGPT() {
                   active.id,
                   retryHistory,
                   m.generationStatus === "failed" ? priorUser.id : undefined,
+                  undefined,
+                  undefined,
+                  false,
+                  options?.webSearch,
                 );
               }
             : undefined

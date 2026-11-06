@@ -139,10 +139,7 @@ test("tooltip copy follows copied and saving/saved state without replacing icons
     assert.equal(copy.button.props.children.type, state.copied ? icons.Check : icons.Copy);
     assert.equal(good.button.props["aria-pressed"], state.feedback === "up");
     assert.equal(bad.button.props["aria-pressed"], state.feedback === "down");
-    assert.equal(
-      good.button.props.disabled,
-      Boolean(state.feedbackSaving || state.feedbackLoadFailed),
-    );
+    assert.equal(good.button.props.disabled, Boolean(state.feedbackSaving));
     assert.equal(bad.button.props.disabled, good.button.props.disabled);
     assert.equal(save.button.props.disabled, Boolean(state.saving));
     assert.equal(

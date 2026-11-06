@@ -120,6 +120,8 @@
 }
 .kova-message .kova-assistant-message {
   box-sizing: border-box;
+  width: fit-content;
+  margin-inline: 0 auto;
   padding: 10px clamp(12px, 3vw, 16px);
   border-radius: var(--kova-radius-message);
   background: var(--surface-secondary);
@@ -183,4 +185,41 @@ body .kova-response-menu[role="menu"] {
 }
 .kova-response-action-bar button:focus-visible {
   outline-offset: -2px;
+}
+
+body .kova-response-retry-menu[role="menu"] {
+  width: min(320px, calc(100vw - 24px));
+  padding: 8px;
+  outline: none;
+}
+.kova-response-change-draft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 6px 8px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+.kova-response-change-draft input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 8px 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+}
+.kova-response-change-draft button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border-radius: 50%;
+}
+.kova-response-change-draft button:disabled {
+  opacity: 0.4;
+}
+.kova-response-change-draft button:hover:not(:disabled) {
+  background: var(--accent);
 }

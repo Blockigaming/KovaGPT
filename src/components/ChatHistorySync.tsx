@@ -13,6 +13,14 @@ import {
   notifyChatHistoryChanged,
   type ChatHistoryView,
 } from "@/lib/chat-history-bridge";
+import { loadSettings } from "@/lib/use-nova-settings";
+import {
+  configureMemoryWrites,
+  enqueueMemoryWrite,
+  isMemoryWriteBlocked,
+} from "@/lib/memory-write-coordinator.mjs";
+import { writeMemoryForPrincipal } from "@/lib/chat-summary-snapshot.mjs";
+import { automaticMemorySource } from "@/lib/reviewed-memory-policy.mjs";
 import { loadConversations, loadArchivedConversations } from "@/lib/chat-store";
 import { requestWorkSync } from "@/lib/work-sync-client";
 import {
@@ -69,6 +77,66 @@ export function ChatHistorySyncRuntime() {
     const lifetime = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let controller: ReturnType<typeof createChatHistoryController> | null = null;
+    const summarized = new Map<string, number>();
+    const pendingSummaries = new Set<string>();
+    let memoryLifetime = new AbortController();
+    const syncConversationSummaries = () => {
+      if (lifetime.signal.aborted || !controller) return;
+      const settings = loadSettings(ownerId);
+      const enabled =
+        settings.rememberAcross &&
+        settings.automaticMemory === true &&
+        !isMemoryWriteBlocked(ownerId);
+      configureMemoryWrites({ principal: ownerId, enabled: settings.rememberAcross });
+      if (!enabled) {
+        memoryLifetime.abort();
+        return;
+      }
+      if (memoryLifetime.signal.aborted) memoryLifetime = new AbortController();
+      const signal = AbortSignal.any([lifetime.signal, memoryLifetime.signal]);
+      for (const record of Object.values(controller.getState()?.records ?? {})) {
+        const revision = record.revision;
+        if (
+          record.dirty ||
+          record.conflict ||
+          record.localHash !== record.serverHash ||
+          typeof revision !== "number"
+        )
+          continue;
+        let conversation;
+        try {
+          conversation = automaticMemorySource(record.local, ownerId).conversation;
+        } catch {
+          continue;
+        }
+        const id = conversation.id;
+        if (summarized.get(id) === revision || pendingSummaries.has(id)) continue;
+        // Timestamped new prompts are still streaming until the reply gets its
+        // completion instant. Older synced conversations can be summarized too.
+        const latestPrompt = conversation.messages
+          .slice()
+          .reverse()
+          .find((message) => message.role === "user");
+        if (!conversation.messages.at(-1)?.createdAt && latestPrompt?.createdAt) continue;
+        pendingSummaries.add(id);
+        void enqueueMemoryWrite({
+          principal: ownerId,
+          run: async () => {
+            signal.throwIfAborted();
+            const result = await writeMemoryForPrincipal(conversation, ownerId, {
+              automaticMemory: true,
+              contextSummaries: false,
+              signal,
+            });
+            if (result.memoryUpdated) summarized.set(id, revision);
+          },
+        })
+          .catch(() => undefined)
+          .finally(() => pendingSummaries.delete(id));
+      }
+    };
+    window.addEventListener("kova:settings-saved", syncConversationSummaries);
+    window.addEventListener("storage", syncConversationSummaries);
     const legacy = {
       active: loadConversations(ownerId),
       archived: loadArchivedConversations(ownerId),
@@ -183,7 +251,10 @@ export function ChatHistorySyncRuntime() {
         },
         status: (value) => {
           view.dirty = controller?.dirty ?? false;
-          if (!lifetime.signal.aborted) publish(value);
+          if (!lifetime.signal.aborted) {
+            publish(value);
+            syncConversationSummaries();
+          }
         },
       });
       controls.set(ownerId, controller);
@@ -220,6 +291,9 @@ export function ChatHistorySyncRuntime() {
           }
         });
     return () => {
+      memoryLifetime.abort();
+      window.removeEventListener("kova:settings-saved", syncConversationSummaries);
+      window.removeEventListener("storage", syncConversationSummaries);
       closeChatHistoryOwner(ownerId);
       lifetime.abort();
       controller?.stop();

@@ -1,3 +1,4 @@
+import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
@@ -1135,11 +1136,12 @@ export function SettingsDialog({
       type="button"
       variant="ghost"
       size="icon"
-      className="kova-settings-page-control"
-      aria-label="Back to previous page"
+      className="kova-settings-page-control kova-settings-return"
+      aria-label="Back to app"
       onClick={() => onOpenChange(false)}
     >
       <ArrowLeft aria-hidden="true" />
+      <span>Back to app</span>
     </Button>
   );
   const pageClose = page && (
@@ -1318,9 +1320,8 @@ export function SettingsDialog({
             >
               <div className="kova-settings-navigation-heading">
                 {pageBack}
-                <div>
+                <div className="kova-settings-nav-title">
                   <h2>Settings</h2>
-                  <p>Make Kova yours</p>
                 </div>
                 {page ? <div className="kova-settings-navigation-close">{pageClose}</div> : null}
               </div>
@@ -1362,6 +1363,11 @@ export function SettingsDialog({
                 ) : null}
               </TabsList>
             </aside>
+
+            <SettingsNavigationResize
+              width={settings.settingsNavigationWidth ?? 280}
+              onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
+            />
 
             <div
               ref={contentScrollRef}
@@ -1679,7 +1685,7 @@ export function SettingsDialog({
                     />
                     <ToggleRow
                       title="Update memory from conversations"
-                      hint="Save explicit preferences and facts you share in synced chats. You can review, edit, or delete these notes. Editing a note prevents automatic replacement."
+                      hint="Save a brief summary of each synced conversation, starting with its first completed exchange. Temporary chats are excluded. You can review, edit, or delete summaries. Editing stops automatic replacement."
                       checked={settings.automaticMemory === true}
                       onCheckedChange={(value) => {
                         if (value) {
