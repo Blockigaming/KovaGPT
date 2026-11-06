@@ -31,7 +31,7 @@ export async function handleBrowserAuthority(request: Request) {
     const rate = await consumeApplicationRateLimit({
       identity: `browser-runner:${config.id}`,
       action: "work_browser_authority",
-      limit: 1200,
+      limit: 100,
       windowSeconds: 60,
     });
     if (!rate.allowed) return reject(rate.status === "limited" ? 429 : 503);
