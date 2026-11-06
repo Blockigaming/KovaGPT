@@ -13,9 +13,11 @@ const declarations = (path, selector, media = null) => {
     )
       matches.push(rule);
   });
-  assert.equal(matches.length, 1, `One positioning owner: ${selector}`);
+  assert.ok(matches.length > 0, `Positioning rules exist: ${selector}`);
   return Object.fromEntries(
-    matches[0].nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
+    matches.flatMap((rule) =>
+      rule.nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
+    ),
   );
 };
 

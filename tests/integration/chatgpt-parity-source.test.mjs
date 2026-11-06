@@ -157,8 +157,9 @@ test("active chat shares scoped header actions and keeps secondary controls reac
   assert.match(route, /conversation=\{active\}/);
   assert.match(headerActions, /aria-label="Share chat"/);
   assert.match(headerActions, /if \(restrictedTemporary \|\| !signedIn\)/);
-  assert.match(headerActions, /aria-label="More chat actions"/);
-  assert.match(headerActions, /<DropdownMenuContent\s+align="end"/);
+  assert.match(headerActions, /aria-label="Activity"/);
+  assert.doesNotMatch(headerActions, /aria-label="More chat actions"/);
+  assert.match(headerActions, /<PopoverContent\s+align="end"/);
   assert.match(
     route,
     /onOpenContext=\{\(trigger\) =>[\s\S]*?new CustomEvent\("kova-open-message-context", \{ detail: \{ trigger \} \}\)/,
@@ -166,37 +167,34 @@ test("active chat shares scoped header actions and keeps secondary controls reac
   assert.match(chatInput, /addEventListener\("kova-open-message-context", openFromHeader\)/);
   assert.match(chatInput, /onOpenChatContext\(contextTriggerRef\.current\)/);
   assert.match(route, /const openChatWorkspace = [\s\S]{0,420}setWorkspaceOpen\(true\)/);
-  assert.match(headerActions, /Export chat/);
-  assert.match(
-    headerActions,
-    /new TextEncoder\(\)\.encode\(exportConversationMarkdown\(conversation\)\)/,
-  );
-  assert.match(headerActions, /safeDocumentFilename\(conversation\.title, "md"\)/);
+  assert.match(headerActions, /Chat instructions and context/);
+  assert.match(headerActions, /activeBrowserOnly/);
+  assert.match(headerActions, /separateInputs/);
   assert.match(
     route,
     /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,
   );
   assert.ok(
-    headerActions.indexOf('aria-label="Share chat"') < headerActions.indexOf("More chat actions"),
+    headerActions.indexOf('aria-label="Share chat"') <
+      headerActions.indexOf('aria-label="Activity"'),
   );
 });
 
 test("compact composer groups actions and preserves message editing and markdown", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Describe what you need…"\}/);
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask KovaGPT anything..."\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
   assert.match(chatInput, /role="group" aria-label="Message tools"/);
-  for (const label of ["Attach", "Context", "Options"])
-    assert.ok(chatInput.includes(`aria-label="${label}"`));
+  for (const label of ["Attach"]) assert.ok(chatInput.includes(`aria-label="${label}"`));
   assert.match(chatInput, /renderComposerActions\(false\)/);
-  assert.match(chatInput, /section !== "plugins" && \(\s*<div[^>]*aria-label="Attachment options"/);
-  assert.match(chatInput, /section === "plugins" && \(\s*<ComposerPluginList/);
-  assert.match(chatInput, /Open a project/);
+  assert.match(chatInput, /section === "files"/);
+  assert.match(chatInput, /<ComposerPluginList/);
+  assert.match(chatInput, /<span>Projects<\/span>/);
   assert.match(chatInput, /setProjectPickerOpen\(true\)/);
-  assert.match(chatInput, /chooseTool\(imageTool\)/);
-  assert.match(chatInput, /aria-label="Response options"/);
+  assert.match(chatInput, /chooseTool\(COMPOSER_TOOLS\.find/);
+  assert.match(chatInput, /OpenDesktopAppButton/);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);

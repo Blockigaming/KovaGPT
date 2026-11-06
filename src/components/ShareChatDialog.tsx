@@ -100,7 +100,7 @@ export function ShareChatDialog({
       await navigator.clipboard.writeText(created.url);
       if (current.current !== expected || controller.signal.aborted) return;
       setCopied(true);
-      toast.success("Link copied to clipboard", {
+      toast.success("Public view-only link copied", {
         className: "kova-share-success",
         icon: <Check aria-hidden="true" />,
       });
@@ -157,7 +157,9 @@ export function ShareChatDialog({
             <div className="kova-share-symbol">
               <Link2 aria-hidden="true" />
             </div>
-            <DialogTitle>Share this conversation</DialogTitle>
+            <DialogTitle>
+              {copied ? "Public view-only link copied" : "Share this conversation"}
+            </DialogTitle>
             <DialogDescription>
               Anyone with the link can read this text snapshot of the active branch. It expires
               after 30 days. Other branches, files, private tool details, and future messages are

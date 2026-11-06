@@ -160,6 +160,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "ComposerModelStatus",
     "MobileBottomSheet",
     "ResponsiveModelSelector",
+    "OpenDesktopAppButton",
     "ComposerDrawingDialog",
     "ComposerPluginList",
     "ComposerVoiceDialog",

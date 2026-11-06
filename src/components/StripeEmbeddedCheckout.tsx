@@ -1,3 +1,4 @@
+import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -119,13 +120,9 @@ export function StripeEmbeddedCheckout({ priceId, quantity, userId }: Props) {
         <p className="font-medium mb-2">{errorTitle}</p>
         <p className="text-muted-foreground">{checkoutErrorMessage ?? CHECKOUT_ERROR_MESSAGE}</p>
         {active ? (
-          <Link
-            to="/settings/$section"
-            params={{ section: "billing" }}
-            className="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-4"
-          >
-            Open billing settings
-          </Link>
+          <BillingPortalButton priceId={priceId}>
+            Review this plan change in Stripe
+          </BillingPortalButton>
         ) : rolloutPending ? (
           <Link
             to="/contact-support"

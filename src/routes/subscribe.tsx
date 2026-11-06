@@ -1,3 +1,5 @@
+import { BillingPortalButton } from "@/components/BillingPortalButton";
+import { PublicFooter } from "@/components/PublicFooter";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
@@ -39,17 +41,12 @@ function CheckoutPage() {
           </button>
         ) : (
           <>
-            <Link
-              to="/settings/$section"
-              params={{ section: "billing" }}
-              className="mb-4 inline-flex min-h-11 items-center text-sm underline underline-offset-4"
-            >
-              Manage an existing subscription
-            </Link>
+            <BillingPortalButton />
             <StripeEmbeddedCheckout key={`${user?.id}:${plan}`} priceId={plan} userId={user?.id} />
           </>
         )}
       </section>
+      <PublicFooter />
     </main>
   );
 }

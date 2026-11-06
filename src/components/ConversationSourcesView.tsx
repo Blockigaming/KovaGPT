@@ -26,10 +26,8 @@ export function ConversationActivitySummary({
   inventory: ConversationSourceInventory;
   browserTabCount?: number;
 }) {
-  const latest = [...inventory.browser]
-    .reverse()
-    .find((activity) => activity.status === "active" && browserActivityIsFresh(activity.browser));
-  if (!latest) return null;
+  const latest = inventory.browser.at(-1);
+  if (!latest || latest.status !== "active" || !browserActivityIsFresh(latest.browser)) return null;
   const tabCount = browserTabCount ?? latest.browser?.tabCount;
   return (
     <div className="kova-source-activity">
@@ -56,6 +54,8 @@ export function ConversationSourcesView({
   browserPreview,
   browserTabCount,
   showActivity = true,
+  activeBrowserOnly = false,
+  separateInputs = false,
 }: {
   inventory: ConversationSourceInventory;
   onOpenAttachment: (outputId: string) => void;
@@ -64,21 +64,29 @@ export function ConversationSourcesView({
   browserPreview?: ReactNode;
   browserTabCount?: number;
   showActivity?: boolean;
+  activeBrowserOnly?: boolean;
+  separateInputs?: boolean;
 }) {
   const providers = inventory.providers ?? [];
+  const latestBrowser = inventory.browser.at(-1);
+  const browsers = activeBrowserOnly
+    ? latestBrowser?.status === "active" && browserActivityIsFresh(latestBrowser.browser)
+      ? [latestBrowser]
+      : []
+    : inventory.browser;
   const total =
     providers.length +
     inventory.web.length +
     inventory.memory.length +
     inventory.attachments.length +
-    inventory.browser.length;
+    browsers.length;
   if (!total) return null;
   return (
     <section className="kova-conversation-sources" aria-label="Conversation sources">
       {providers.length +
         inventory.web.length +
         inventory.memory.length +
-        inventory.attachments.length >
+        (!separateInputs ? inventory.attachments.length : 0) >
         0 && <h2>Sources</h2>}
       {providers.map((entry) => {
         const Icon = {
@@ -157,6 +165,7 @@ export function ConversationSourcesView({
           ))}
         </details>
       )}
+      {separateInputs && inventory.attachments.length > 0 ? <h2>Inputs</h2> : null}
       {inventory.attachments.map((entry) => (
         <button
           key={entry.id}
@@ -179,28 +188,28 @@ export function ConversationSourcesView({
           Attached to this chat. Use in a response is not confirmed.
         </p>
       )}
-      {inventory.browser.length > 0 && (
+      {browsers.length > 0 && (
         <section className="kova-browser-section" aria-label="Cloud browser">
           {showActivity ? (
             <ConversationActivitySummary inventory={inventory} browserTabCount={browserTabCount} />
           ) : null}
           <div className="kova-browser-section-heading">
             <h2>Cloud browser</h2>
-            {inventory.browser.length === 1 && (
+            {browsers.length === 1 && (
               <span className="kova-source-state">
-                {inventory.browser[0].status === "active"
-                  ? browserActivityIsFresh(inventory.browser[0].browser)
+                {browsers[0].status === "active"
+                  ? browserActivityIsFresh(browsers[0].browser)
                     ? "Active"
                     : "Recorded"
-                  : inventory.browser[0].status === "completed"
+                  : browsers[0].status === "completed"
                     ? "Used"
-                    : inventory.browser[0].status === "failed"
+                    : browsers[0].status === "failed"
                       ? "Failed"
                       : "Canceled"}
               </span>
             )}
           </div>
-          {inventory.browser.map((activity) => (
+          {browsers.map((activity) => (
             <button
               key={activity.id}
               type="button"
@@ -209,7 +218,7 @@ export function ConversationSourcesView({
               disabled={!onOpenBrowser}
               aria-label="Open browser activity"
             >
-              {inventory.browser.length > 1 && <span className="sr-only">{activity.status}</span>}
+              {browsers.length > 1 && <span className="sr-only">{activity.status}</span>}
               {browserPreview ??
                 (activity.status === "active" &&
                 browserActivityIsFresh(activity.browser) &&

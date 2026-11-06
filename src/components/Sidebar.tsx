@@ -1060,14 +1060,11 @@ export function Sidebar({
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onSelect={() => {
-          cancelPendingSelection();
-          onOpenSettings("billing");
-        }}
-      >
-        <Sparkles aria-hidden="true" />
-        {tierStatus === "ready" && tier === "pro" ? "Manage plan" : "Upgrade plan"}
+      <DropdownMenuItem asChild>
+        <Link to="/pricing" onClick={() => cancelPendingSelection()}>
+          <Sparkles aria-hidden="true" />
+          {tierStatus === "ready" && tier === "pro" ? "View plans" : "Upgrade plan"}
+        </Link>
       </DropdownMenuItem>
       <DropdownMenuItem
         onSelect={() => {

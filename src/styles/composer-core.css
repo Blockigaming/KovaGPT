@@ -252,3 +252,70 @@
 .dark .kova-composer-plugin small[data-coming-soon] {
   color: #fcd34d;
 }
+
+.kova-drawing-dialog {
+  gap: 12px;
+}
+.kova-drawing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.kova-drawing-toolbar button {
+  min-width: 40px;
+  min-height: 40px;
+}
+.kova-drawing-toolbar button[aria-pressed="true"] {
+  background: var(--accent);
+}
+.kova-drawing-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 13px;
+}
+.kova-drawing-size input {
+  width: 100px;
+}
+.kova-drawing-canvas {
+  background: #202020;
+  width: min(100%, calc(48dvh * 1.5));
+  margin-inline: auto;
+  max-height: none;
+  aspect-ratio: 3 / 2;
+}
+.kova-drawing-colors {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.kova-drawing-colors button,
+.kova-drawing-colors input {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--ink-color);
+}
+.kova-drawing-colors button[aria-pressed="true"] {
+  border-color: var(--ring);
+  outline: 2px solid var(--background);
+  outline-offset: -4px;
+}
+.kova-drawing-colors button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .kova-drawing-toolbar button,
+  .kova-drawing-colors button,
+  .kova-drawing-colors input {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

@@ -7,14 +7,16 @@ const source = readFileSync("src/styles/settings-reference.css", "utf8");
 const parsed = postcss.parse(source);
 function rule(selector, media = null) {
   let found;
+  const values = {};
   parsed.walkRules((node) => {
     const parentMedia = node.parent.type === "atrule" ? node.parent.params : null;
-    if (node.selectors.includes(selector) && parentMedia === media) found = node;
+    if (node.selectors.includes(selector) && parentMedia === media) {
+      found = node;
+      for (const child of node.nodes) if (child.type === "decl") values[child.prop] = child.value;
+    }
   });
   assert.ok(found, `Missing canonical ${selector} in ${media ?? "desktop"}`);
-  return Object.fromEntries(
-    found.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
-  );
+  return values;
 }
 const mobile = "(max-width: 767px)";
 const dialog = '[role="dialog"].kova-settings-dialog.is-authenticated';
@@ -22,8 +24,8 @@ const close = '[role="dialog"].kova-settings-dialog > [data-kova-dialog-close]';
 
 test("canonical authenticated mobile Settings replaces bounded desktop dimensions with a safe fullscreen surface", () => {
   const desktop = rule(dialog);
-  assert.equal(desktop.width, "min(calc(100vw - 32px), 1008px)");
-  assert.equal(desktop.height, "min(86dvh, 720px)");
+  assert.equal(desktop.width, "min(calc(100vw - 40px), 1120px)");
+  assert.equal(desktop.height, "min(88dvh, 820px)");
   const css = rule(dialog, mobile);
   for (const [property, value] of Object.entries({
     inset: "0",

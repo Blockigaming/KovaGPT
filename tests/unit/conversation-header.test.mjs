@@ -158,6 +158,7 @@ function fixture(overrides = {}) {
       "Download",
       "Search",
       "Paperclip",
+      "SlidersHorizontal",
     ]),
     "@tanstack/react-router": { Link: "Link" },
     "@/lib/chat-store": { exportConversationMarkdown },
@@ -172,7 +173,10 @@ function fixture(overrides = {}) {
     "@/lib/conversation-sources": {
       conversationSources: () => ({ web: [], memory: [], attachments: [], browser: [] }),
     },
-    "./ConversationSourcesPanel": { ConversationSourcesPanel: "ConversationSourcesPanel" },
+    "./ConversationSourcesPanel": {
+      ConversationSourcesPanel: "ConversationSourcesPanel",
+      ConversationActivitySummary: "ConversationActivitySummary",
+    },
     "./MemorySourcesDialog": { MemorySourcesDialog: "MemorySourcesDialog" },
     "@/lib/dialog-return-focus": {
       restoreDialogFocus: (...args) => calls.push(["focus", ...args]),
@@ -230,93 +234,125 @@ test.after(() => {
   globalThis.window = previousWindow;
 });
 
-test("desktop header has exactly Share, Outputs and More, and the requested menu order", () => {
-  const f = fixture();
-  const root = f.render();
-  const actions = nodes(root).find((node) => node.props["aria-label"] === "Conversation actions");
-  assert.deepEqual(
+test("desktop and compact headers contain Share and Activity only", () => {
+  for (const compact of [false, true]) {
+    const f = fixture({ compact });
+    const root = f.render();
+    const actions = nodes(root).find((node) => node.props["aria-label"] === "Conversation actions");
+    assert.deepEqual(
+      nodes(actions)
+        .filter((node) => node.type === "button")
+        .map((node) => node.props["aria-label"]),
+      ["Share chat", "Activity"],
+    );
+    assert.equal(nodes(root).filter((node) => node.type === "DropdownMenuContent").length, 0);
     nodes(actions)
-      .filter((node) => node.type === "button")
-      .map((node) => node.props["aria-label"]),
-    ["Share chat", "Outputs", "More chat actions"],
-  );
-  const menu = nodes(root).find((node) => node.type === "DropdownMenuContent");
-  assert.deepEqual(
-    menu.props.children
-      .flatMap((node) => (node?.type === "Fragment" ? node.props.children : node))
-      .filter((node) => node?.type === "DropdownMenuItem" || node?.type === "DropdownMenuSub")
-      .map((node) =>
-        node.type === "DropdownMenuSub"
-          ? text(nodes(node).find((child) => child.type === "DropdownMenuSubTrigger"))
-          : text(node),
-      ),
-    [
-      "Rename",
-      "Pin",
-      "Plugins",
-      "View files in chat",
-      "Export chat",
-      "Archive",
-      "Delete",
-      "Move to project",
-    ],
-  );
-  assert.match(text(menu), /Moving chats isn’t supported/);
-  assert.match(text(menu), /Add copy to project/);
+      .find((node) => node.props["aria-label"] === "Share chat")
+      .props.onClick();
+    assert.deepEqual(f.calls, [["share"]]);
+  }
 });
 
-test("desktop and compact Export chat download every scoped message as safe Markdown", () => {
-  const conversation = {
-    ...chat,
-    title: '../Release: review? "draft"',
-    messages: [
-      { id: "user-first", role: "user", content: "Review **this** change." },
-      { id: "assistant-first", role: "assistant", content: "First answer — keep Unicode." },
-      { id: "user-last", role: "user", content: "And the next step?" },
-      { id: "assistant-last", role: "assistant", content: "```js\nconst ready = true;\n```" },
-    ],
-  };
-  for (const compact of [false, true]) {
-    const f = fixture({ compact, conversation });
-    const action = nodes(f.render()).find(
-      (node) => node.type === "DropdownMenuItem" && text(node) === "Export chat",
-    );
-    assert.ok(action, `Export chat must be reachable with compact=${compact}`);
-    assert.equal(action.props.disabled, false);
-    action.props.onSelect();
-    assert.equal(f.calls.length, 1);
-    const [kind, bytes, mime, filename] = f.calls[0];
-    assert.equal(kind, "download");
-    assert.ok(bytes instanceof Uint8Array);
-    assert.equal(new TextDecoder().decode(bytes), exportConversationMarkdown(conversation));
-    for (const message of conversation.messages)
-      assert.ok(new TextDecoder().decode(bytes).includes(message.content), message.id);
-    assert.equal(mime, "text/markdown;charset=utf-8");
-    assert.equal(filename, "..Release review draft.md");
-    assert.doesNotMatch(filename, /[\\/:*?"<>|]/);
-  }
+test("Activity uses current chat data, separates inputs, and hides inactive browser rows", () => {
+  const empty = fixture();
+  const root = empty.render();
+  const activity = nodes(root).find((node) => node.type === "PopoverContent");
+  assert.equal(activity.props["aria-label"], "Activity");
+  assert.match(text(activity), /No outputs yet/);
+  const sourcePanel = nodes(activity).find((node) => node.type === "ConversationSourcesPanel");
+  assert.equal(sourcePanel.props.conversation, chat);
+  assert.equal(sourcePanel.props.activeBrowserOnly, true);
+  assert.equal(sourcePanel.props.separateInputs, true);
+  assert.equal(
+    nodes(activity).filter((node) => node.props.className === "kova-output-row").length,
+    0,
+  );
 
-  const other = fixture({
+  const f = fixture({
     conversation: {
       ...chat,
-      id: "other-owner-chat",
-      title: "Other active conversation",
-      messages: [{ id: "other", role: "user", content: "Only this conversation" }],
+      messages: [
+        {
+          id: "input",
+          role: "user",
+          content: "Read this",
+          attachments: [{ kind: "text_file", name: "input.txt", content: "Attached input" }],
+        },
+        { id: "output", role: "assistant", content: "```js\nconst actual = true;\n```" },
+      ],
     },
   });
-  nodes(other.render())
-    .find((node) => node.type === "DropdownMenuItem" && text(node) === "Export chat")
-    .props.onSelect();
-  const otherMarkdown = new TextDecoder().decode(other.calls[0][1]);
-  assert.ok(otherMarkdown.includes("Only this conversation"));
-  assert.ok(!otherMarkdown.includes(conversation.messages[0].content));
-  const streaming = fixture({ isStreaming: true });
-  assert.equal(
-    nodes(streaming.render()).find(
-      (node) => node.type === "DropdownMenuItem" && text(node) === "Export chat",
-    ).props.disabled,
-    true,
-  );
+  const rows = nodes(f.render()).filter((node) => node.props.className === "kova-output-row");
+  assert.equal(rows.length, 1);
+  rows[0].props.onClick();
+  assert.equal(text(nodes(f.render()).find((node) => node.type === "pre")), "const actual = true;");
+});
+
+test("temporary and signed-out Share requests explain restrictions without publishing", () => {
+  for (const props of [{ conversation: { ...chat, temporary: true } }, { signedIn: false }]) {
+    const f = fixture(props);
+    nodes(f.render())
+      .find((node) => node.props["aria-label"] === "Share chat")
+      .props.onClick();
+    const open = nodes(f.render()).find((node) => node.type === "Dialog" && node.props.open);
+    assert.match(text(open), /Temporary chats cannot be shared|Sign in to share/);
+    assert.deepEqual(f.calls, []);
+  }
+});
+
+test("context handoff closes Activity and preserves its visible return-focus target", () => {
+  const opened = [];
+  const f = fixture({ onOpenContext: (target) => opened.push(target) });
+  let root = f.render();
+  const target = { id: "activity" };
+  nodes(root).find(
+    (node) => node.type === "button" && node.props["aria-label"] === "Activity",
+  ).props.ref.current = target;
+  nodes(root)
+    .find((node) => node.type === "button" && text(node) === "Chat instructions and context")
+    .props.onClick({ currentTarget: { id: "closing-row" } });
+  root = f.render();
+  assert.equal(nodes(root).find((node) => node.type === "Popover").props.open, false);
+  let prevented = false;
+  nodes(root)
+    .find((node) => node.type === "PopoverContent")
+    .props.onCloseAutoFocus({
+      preventDefault() {
+        prevented = true;
+      },
+    });
+  assert.equal(prevented, true);
+  assert.deepEqual(opened, [target]);
+});
+
+test("attachment preview returns focus to the visible Activity button", () => {
+  const f = fixture({
+    conversation: {
+      ...chat,
+      messages: [
+        {
+          id: "u",
+          role: "user",
+          content: "",
+          attachments: [{ kind: "text_file", name: "notes.txt", content: "Notes" }],
+        },
+      ],
+    },
+  });
+  let root = f.render();
+  const target = { id: "activity" };
+  nodes(root).find(
+    (node) => node.type === "button" && node.props["aria-label"] === "Activity",
+  ).props.ref.current = target;
+  nodes(root)
+    .find((node) => node.type === "ConversationSourcesPanel")
+    .props.onOpenAttachment("u:attachment:0");
+  root = f.render();
+  nodes(root)
+    .filter((node) => node.type === "DialogContent")
+    .at(-1)
+    .props.onCloseAutoFocus({ preventDefault() {} });
+  assert.deepEqual(f.calls.at(-1), ["focus", target, "https://local.invalid/"]);
 });
 
 test("per-output downloads still use only the selected attachment", async () => {
@@ -374,25 +410,6 @@ test("per-output downloads still use only the selected attachment", async () => 
     URL.revokeObjectURL = originalRevoke;
     window.setTimeout = originalTimeout;
   }
-});
-
-test("rename, pin and plugin controls invoke real handlers without touching the composer", () => {
-  const f = fixture();
-  let root = f.render();
-  const item = (label) =>
-    nodes(root).find((node) => node.type === "DropdownMenuItem" && text(node) === label);
-  item("Pin").props.onSelect();
-  item("Manage plugins").props.onSelect();
-  item("Rename").props.onSelect();
-  root = f.render();
-  nodes(root)
-    .find((node) => node.type === "input" && node.props.id?.startsWith("header-rename"))
-    .props.onChange({ target: { value: "  Renamed release  " } });
-  root = f.render();
-  nodes(root)
-    .find((node) => node.type === "form")
-    .props.onSubmit({ preventDefault() {} });
-  assert.deepEqual(f.calls, [["pin"], ["plugins"], ["rename", "Renamed release"]]);
 });
 
 test("outputs open real attachment content and report missing originals truthfully", () => {
@@ -453,23 +470,6 @@ test("outputs open real attachment content and report missing originals truthful
   assert.equal(prevented, true);
 });
 
-test("temporary chat menus disclose restrictions and never call Share", () => {
-  const f = fixture({ conversation: { ...chat, temporary: true } });
-  let root = f.render();
-  for (const label of ["Pin", "Archive", "Add copy to project"])
-    assert.equal(
-      nodes(root).find((node) => node.type === "DropdownMenuItem" && text(node) === label).props
-        .disabled,
-      true,
-    );
-  nodes(root)
-    .find((node) => node.props["aria-label"] === "Share chat")
-    .props.onClick();
-  root = f.render();
-  assert.match(text(root), /Temporary chats cannot be shared/);
-  assert.deepEqual(f.calls, []);
-});
-
 test("temporary settings are gated on both headers and callback, and top avatar is removed", () => {
   const home = readFileSync("src/routes/index.tsx", "utf8");
   const mobile = readFileSync("src/components/MobileTopBar.tsx", "utf8");
@@ -483,62 +483,12 @@ test("temporary settings are gated on both headers and callback, and top avatar 
   assert.match(home, /setAttachments\(temporaryDraft.attachments\)/);
 });
 
-test("rename and output previews return focus to the visible invoking header button", () => {
-  const f = fixture();
-  let root = f.render();
-  const target = { id: "more-chat-actions" };
-  nodes(root).find((node) => node.props["aria-label"] === "More chat actions").props.ref.current =
-    target;
-  nodes(root)
-    .find((node) => node.type === "DropdownMenuItem" && text(node) === "Rename")
-    .props.onSelect();
-  root = f.render();
-  let prevented = false;
-  nodes(root)
-    .find((node) => node.type === "DialogContent")
-    .props.onCloseAutoFocus({
-      preventDefault() {
-        prevented = true;
-      },
-    });
-  assert.equal(prevented, true);
-  assert.deepEqual(f.calls.at(-1), ["focus", target, "https://local.invalid/"]);
-
-  const output = fixture({
-    conversation: {
-      ...chat,
-      messages: [
-        {
-          id: "u",
-          role: "user",
-          content: "",
-          attachments: [{ kind: "text_file", name: "notes.txt", content: "Notes" }],
-        },
-      ],
-    },
-  });
-  root = output.render();
-  const outputTarget = { id: "outputs-button" };
-  nodes(root).find(
-    (node) => node.type === "button" && node.props["aria-label"] === "Outputs",
-  ).props.ref.current = outputTarget;
-  nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel")
-    .props.onOpenAttachment("u:attachment:0");
-  root = output.render();
-  nodes(root)
-    .filter((node) => node.type === "DialogContent")
-    .at(-1)
-    .props.onCloseAutoFocus({ preventDefault() {} });
-  assert.deepEqual(output.calls.at(-1), ["focus", outputTarget, "https://local.invalid/"]);
-});
-
-test("memory inspection closes the popover and restores the Outputs trigger", () => {
+test("memory inspection closes the popover and restores the Activity trigger", () => {
   const f = fixture();
   let root = f.render();
   const target = { id: "outputs" };
   nodes(root).find(
-    (n) => n.type === "button" && n.props["aria-label"] === "Outputs",
+    (n) => n.type === "button" && n.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   const sources = { ownerId: "owner", sources: [] };
   nodes(root)
@@ -553,12 +503,12 @@ test("memory inspection closes the popover and restores the Outputs trigger", ()
   assert.deepEqual(f.calls.at(-1), ["focus", target, "https://local.invalid/"]);
 });
 
-test("unbound browser activity opens an honest detail dialog and restores Outputs", () => {
+test("unbound browser activity opens an honest detail dialog and restores Activity", () => {
   const f = fixture();
   let root = f.render();
   const target = { id: "outputs" };
   nodes(root).find(
-    (n) => n.type === "button" && n.props["aria-label"] === "Outputs",
+    (n) => n.type === "button" && n.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
     .find((n) => n.type === "ConversationSourcesPanel")
@@ -583,47 +533,6 @@ test("unbound browser activity opens an honest detail dialog and restores Output
   );
   content.props.onCloseAutoFocus({ preventDefault() {} });
   assert.deepEqual(f.calls.at(-1), ["focus", target, "https://local.invalid/"]);
-});
-
-test("compact header exposes Share and retains the More action and activity access", () => {
-  const f = fixture({ compact: true });
-  const root = f.render();
-  const share = nodes(root).find(
-    (n) => n.type === "DropdownMenuItem" && text(n).trim() === "Share",
-  );
-  assert.ok(share);
-  share.props.onSelect();
-  assert.deepEqual(f.calls, [["share"]]);
-  assert.ok(nodes(root).some((n) => n.props["aria-label"] === "Outputs"));
-  assert.match(
-    readFileSync("src/components/conversation-header.css", "utf8"),
-    /actions-compact \.kova-conversation-share\s*\{\s*display: inline-flex/,
-  );
-});
-
-test("phone menu carries the conversation title and local search, with no invented project removal", () => {
-  const f = fixture({
-    compact: true,
-    conversation: { ...chat, messages: [{ id: "m", role: "user", content: "A quiet workspace" }] },
-  });
-  let root = f.render();
-  const menu = nodes(root).find((n) => n.type === "DropdownMenuContent");
-  assert.match(menu.props.className, /menu-phone/);
-  assert.equal(menu.props.alignOffset, -36);
-  assert.equal(menu.props.collisionPadding, 16);
-  assert.ok(text(menu).includes(chat.title));
-  assert.ok(!text(menu).includes("Remove from project"));
-  nodes(menu)
-    .find((n) => n.type === "DropdownMenuItem" && text(n) === "Find in chat")
-    .props.onSelect();
-  root = f.render();
-  const field = nodes(root).find(
-    (n) => n.type === "input" && n.props["aria-label"] === "Find in chat",
-  );
-  field.props.onChange({ target: { value: "QUIET" } });
-  root = f.render();
-  assert.ok(text(root).includes("1 matching message"));
-  assert.ok(nodes(root).some((n) => n.type === "button" && text(n).includes("A quiet workspace")));
 });
 
 test("Free recorded browser history never grants sample takeover or claims a live session", () => {
@@ -652,48 +561,6 @@ test("Free recorded browser history never grants sample takeover or claims a liv
   );
 });
 
-test("phone menu preserves 44px touch rows without excessive height", () => {
-  const css = readFileSync("src/components/conversation-header.css", "utf8");
-  assert.match(css, /\.kova-conversation-menu-phone \[role="menuitem"\]\s*\{\s*min-height: 44px;/);
-});
-
-test("file menu handoff opens Outputs only after the closing menu releases focus", () => {
-  const f = fixture();
-  let root = f.render();
-  nodes(root).find(
-    (n) => n.type === "button" && n.props["aria-label"] === "Outputs",
-  ).props.ref.current = { isConnected: true };
-  nodes(root)
-    .find((n) => n.type === "DropdownMenuItem" && text(n) === "View files in chat")
-    .props.onSelect();
-  root = f.render();
-  assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
-  const original = globalThis.requestAnimationFrame;
-  let pending;
-  globalThis.requestAnimationFrame = (callback) => {
-    pending = callback;
-    return 1;
-  };
-  try {
-    let prevented = false;
-    nodes(root)
-      .find((n) => n.type === "DropdownMenuContent")
-      .props.onCloseAutoFocus({
-        preventDefault() {
-          prevented = true;
-        },
-      });
-    assert.equal(prevented, true);
-    assert.equal(typeof pending, "function");
-    pending();
-    root = f.render();
-    assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, true);
-  } finally {
-    if (original) globalThis.requestAnimationFrame = original;
-    else delete globalThis.requestAnimationFrame;
-  }
-});
-
 test("composer action disc uses a compact desktop control and full phone target", () => {
   const css = readFileSync("src/styles/spec400-chat.css", "utf8");
   assert.match(
@@ -710,47 +577,4 @@ test("composer action disc uses a compact desktop control and full phone target"
   );
   assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
   assert.doesNotMatch(css, /border: 4px solid transparent !important/);
-});
-
-test("phone secondary actions stay in the same menu and Back restores the primary view", () => {
-  const f = fixture({ compact: true });
-  let root = f.render();
-  const previous = globalThis.requestAnimationFrame;
-  globalThis.requestAnimationFrame = (callback) => {
-    callback();
-    return 1;
-  };
-  try {
-    nodes(root)
-      .find((n) => n.type === "DropdownMenuItem" && text(n) === "More options")
-      .props.onSelect({ preventDefault() {} });
-    root = f.render();
-    let menu = nodes(root).find((n) => n.type === "DropdownMenuContent");
-    assert.ok(text(menu).includes("Back"));
-    assert.ok(text(menu).includes("Rename"));
-    assert.equal(nodes(menu).filter((n) => n.type === "DropdownMenuSub").length, 0);
-    nodes(menu)
-      .find((n) => n.type === "DropdownMenuItem" && text(n) === "Back")
-      .props.onSelect({ preventDefault() {} });
-    root = f.render();
-    menu = nodes(root).find((n) => n.type === "DropdownMenuContent");
-    assert.ok(text(menu).includes("More options"));
-    assert.ok(text(menu).includes("Archive"));
-  } finally {
-    if (previous) globalThis.requestAnimationFrame = previous;
-    else delete globalThis.requestAnimationFrame;
-  }
-});
-
-test("conversation Delete keeps readable label contrast across menu interaction states", () => {
-  const css = readFileSync("src/components/conversation-header.css", "utf8");
-  assert.match(
-    css,
-    /\.kova-conversation-menu \.kova-conversation-delete \{\s*color: var\(--foreground\)/,
-  );
-  assert.match(css, /\.kova-conversation-delete > svg \{\s*color: var\(--destructive\)/);
-  assert.match(
-    css,
-    /\.kova-conversation-delete:focus,[\s\S]*?\.kova-conversation-delete:hover,[\s\S]*?\.kova-conversation-delete\[data-highlighted\] \{\s*color: var\(--foreground\)/,
-  );
 });

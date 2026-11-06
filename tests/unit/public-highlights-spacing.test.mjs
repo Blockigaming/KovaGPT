@@ -82,7 +82,7 @@ test("both existing section rules use the shared responsive spacing for ordinary
   );
   assert.equal(
     shell.nodes.find((node) => node.prop === "--public-section-space").value,
-    "clamp(48px, 6vw, 80px)",
+    "clamp(56px, 7vw, 96px)",
   );
   assert.equal(sectionRules.length, 2);
   for (const rule of sectionRules) {
