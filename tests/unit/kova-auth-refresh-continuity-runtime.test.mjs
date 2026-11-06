@@ -406,8 +406,16 @@ test("the native verification gate fences portal interaction, cannot be dismisse
     {
       sourceSuffix: "\nexport { AuthAuthorityGate as TestAuthorityGate };",
       globals: {
-        window: { dispatchEvent(event) { calls.push(event.type); } },
-        Event: class { constructor(type) { this.type = type; } },
+        window: {
+          dispatchEvent(event) {
+            calls.push(event.type);
+          },
+        },
+        Event: class {
+          constructor(type) {
+            this.type = type;
+          }
+        },
       },
       modules: base.modules,
     },
@@ -430,7 +438,12 @@ test("the native verification gate fences portal interaction, cannot be dismisse
   pending = false;
   await f.flush();
   assert.equal(modal.open, false);
-  assert.deepEqual(calls, ["kova-auth-surface-ready", "show-modal", "close", "kova-auth-surface-ready"]);
+  assert.deepEqual(calls, [
+    "kova-auth-surface-ready",
+    "show-modal",
+    "close",
+    "kova-auth-surface-ready",
+  ]);
   pending = true;
   await f.flush();
   f.unmount();
