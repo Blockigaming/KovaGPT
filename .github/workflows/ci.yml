@@ -286,8 +286,8 @@ jobs:
     name: ${{ matrix.check_name }}
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
-    # Tablet runs three complete viewport suites. Keep all coverage and each
-    # test's timeout while allowing that larger job to finish.
+    # The tablet job runs three full browser projects on two workers.
+    # Allow it to finish on slower runners without changing per-test limits.
     timeout-minutes: ${{ matrix.id == 'tablet' && 65 || 45 }}
     env:
       KOVA_BROWSER_PREVIEW: "node"
