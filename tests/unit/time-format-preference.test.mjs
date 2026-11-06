@@ -287,7 +287,6 @@ for (const [path, scope, expectedCalls] of [
   [
     "src/components/SettingsDialog.tsx",
     {
-      usage: { resetsAt: instant },
       subSummary: { currentPeriodEnd: instant },
     },
     3,
@@ -321,11 +320,8 @@ for (const [path, scope, expectedCalls] of [
           );
       }
     if (path.endsWith("SettingsDialog.tsx")) {
-      assert.match(source, /<PlanUsageBars usage=\{usage\} \/>/);
-      assert.match(
-        readFileSync("src/components/PlanUsageBars.tsx", "utf8"),
-        /file limits reset at midnight UTC/,
-      );
+      assert.match(source, /Free chat usage resets daily/);
+      assert.match(source, /<PlanUsageBars usage=\{usage\}/);
       assert.doesNotMatch(source, /currentPeriodEnd\)\.toLocaleDateString\(\)/);
       assert.match(source, /timeFormat=\{settings.timeFormat\}/);
     }

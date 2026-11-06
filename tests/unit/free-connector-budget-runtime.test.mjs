@@ -260,9 +260,9 @@ function fixture(options = {}) {
       messageReservations.push(args);
       const result = {
         data: paid
-          ? options.messageQuota === false
-            ? "weekly"
-            : "allowed"
+          ? options.messageQuota !== false
+            ? "allowed"
+            : "five_hour"
           : options.messageQuota !== false,
         error: null,
       };

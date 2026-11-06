@@ -50,18 +50,29 @@ function writeStored(key: string | null, value: Stored) {
   }
 }
 
+function preserveActionFocus(event: React.PointerEvent<HTMLButtonElement>) {
+  if (event.button === 0) event.preventDefault();
+}
+
 export type InteractiveBlockProps = {
   block: Block;
   /** Stable per-response key; state and submissions persist under it. */
   storageKey: string | null;
   /** Sends the submission as the user's next conversation message. Absent = read-only. */
-  onSubmit?: (message: string) => void;
+  onSubmit?: (message: string) => boolean | void;
+  disabledReason?: string;
 };
 
 /** Safe native renderer for validated kova-interactive blocks. No HTML, no scripts. */
-export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlockProps) {
+export function InteractiveBlock({
+  block,
+  storageKey,
+  onSubmit,
+  disabledReason,
+}: InteractiveBlockProps) {
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const submittedRef = useRef(false);
   useEffect(() => {
     const restored = readStored(storageKey);
@@ -71,7 +82,7 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
   }, [storageKey]);
 
   const submitted = stored.submission;
-  const locked = !hydrated || !!submitted || !onSubmit;
+  const locked = !!submitted || !onSubmit;
   const persist = (next: Stored) => {
     setStored(next);
     writeStored(storageKey, next);
@@ -80,22 +91,28 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
     if (!onSubmit || locked || submittedRef.current) return;
     submittedRef.current = true;
     try {
-      onSubmit(formatSubmission(block, submission));
+      if (onSubmit(formatSubmission(block, submission)) === false) {
+        submittedRef.current = false;
+        setSubmitError(true);
+        return;
+      }
     } catch (error) {
       submittedRef.current = false;
       throw error;
     }
+    setSubmitError(false);
     persist({ submission });
   };
   const saveDraft = (draft: InteractiveSubmission) => {
     if (submitted) return;
+    setSubmitError(false);
     persist({ draft });
   };
   const headingId = useId();
 
   return (
     <section
-      className="kova-interactive my-3 min-w-0 rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-5"
+      className="kova-interactive my-3 min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 text-card-foreground [overflow-wrap:anywhere] sm:p-5"
       aria-labelledby={headingId}
       data-interactive-type={block.type}
       data-interactive-state={submitted ? "submitted" : locked ? "readonly" : "open"}
@@ -104,7 +121,7 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
         <p className="mb-1 text-xs font-medium text-muted-foreground">
           {INTELLIGENT_INTERFACE_NAME}
         </p>
-        <h3 id={headingId} className="break-words text-base font-semibold leading-snug">
+        <h3 id={headingId} className="text-base font-semibold leading-snug">
           {block.title}
         </h3>
         {block.description && (
@@ -130,13 +147,18 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
             onSubmit={submit}
           />
         ))}
+      {submitError && !submitted && (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          Your response was not sent. Check the chat status, then try again.
+        </p>
+      )}
       {submitted ? (
         <p role="status" className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Check className="h-4 w-4" aria-hidden="true" /> Sent
         </p>
       ) : !onSubmit && hydrated ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          This form is only active on the latest reply.
+          {disabledReason ?? "This form is only active on the latest reply."}
         </p>
       ) : null}
     </section>
@@ -158,6 +180,7 @@ function FormBody({
   onDraft: (values: FormValues) => void;
   onSubmit: (s: InteractiveSubmission) => void;
 }) {
+  const formId = useId();
   const [values, setValues] = useState<FormValues>(() => ({
     ...initialFormValues(block),
     ...(initial ?? {}),
@@ -176,7 +199,7 @@ function FormBody({
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) {
-      document.getElementById(`kova-field-${block.id}-${first}`)?.focus();
+      document.getElementById(`kova-field-${formId}-${first}`)?.focus();
       return;
     }
     const clean: FormValues = {};
@@ -192,7 +215,7 @@ function FormBody({
       {block.fields.map((field) => (
         <FieldControl
           key={field.id}
-          formId={block.id}
+          formId={formId}
           field={field}
           value={values[field.id]}
           error={errors[field.id]}
@@ -202,7 +225,12 @@ function FormBody({
       ))}
       <div className="flex flex-wrap gap-2 pt-1">
         {hasFields && (
-          <Button type="submit" disabled={locked} className="min-h-11 sm:min-h-9">
+          <Button
+            type="submit"
+            onPointerDown={preserveActionFocus}
+            disabled={locked}
+            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+          >
             {block.submitLabel ?? "Submit"}
           </Button>
         )}
@@ -213,7 +241,8 @@ function FormBody({
             variant={action.style === "primary" ? "default" : "outline"}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
-            className="h-auto min-h-11 max-w-full whitespace-normal break-words py-2 text-left sm:min-h-9"
+            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+            onPointerDown={preserveActionFocus}
             onClick={() => !locked && onSubmit({ action: action.id, values })}
           >
             {action.label}
@@ -544,8 +573,9 @@ function TableBody({
       {selectable && (
         <Button
           type="button"
-          className="mt-3 min-h-11 sm:min-h-9"
+          className="mt-3 h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           disabled={locked || selected.length === 0}
+          onPointerDown={preserveActionFocus}
           onClick={() => onSubmit({ selected })}
         >
           {block.submitLabel ?? "Submit"}

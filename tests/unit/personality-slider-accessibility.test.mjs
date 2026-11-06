@@ -27,12 +27,13 @@ function load(path, stubs = {}) {
 const { Slider } = load("src/components/ui/slider.tsx", {
   "@/lib/utils": { cn: (...classes) => classes.filter(Boolean).join(" ") },
 });
+let currentTier = "pro";
 const { PersonalitySliders } = load("src/components/PersonalitySliders.tsx", {
   "@/components/ui/slider": { Slider },
   "@/components/ui/button": { Button: "button" },
   "@/components/ui/switch": { Switch: "button" },
   "@tanstack/react-router": { Link: "a" },
-  "@/hooks/useTier": { useTier: () => ({ tier: "pro" }), tierRank: () => 2 },
+  "@/hooks/useTier": { useTier: () => ({ tier: currentTier }) },
   "@/lib/principal-browser-storage.mjs": {
     browserStoragePrincipal: (key) => key,
     principalScopedStorageKey: (key, owner) => `${owner}:${key}`,
@@ -85,8 +86,29 @@ test("every personality slider thumb names its trait, describes its hint, and ex
     assert.equal(attr(slider, "aria-valuetext"), "5 out of 10");
     assert.equal(attr(slider, "aria-valuemin"), "1");
     assert.equal(attr(slider, "aria-valuemax"), "10");
-    assert.equal(attr(slider, "data-disabled"), "");
-    assert.equal(attr(slider, "tabindex"), undefined, "unhydrated controls remain disabled");
+    assert.equal(attr(slider, "data-disabled"), "", "SSR waits for principal storage hydration");
+    assert.notEqual(attr(slider, "tabindex"), "0");
+  }
+});
+
+test("Free offers presets, Plus five traits, and Pro ten traits", () => {
+  try {
+    for (const [tier, count] of [
+      ["free", 0],
+      ["plus", 5],
+      ["pro", 10],
+    ]) {
+      currentTier = tier;
+      const markup = renderToStaticMarkup(
+        React.createElement(PersonalitySliders, { userKey: "test-owner", principalResolved: true }),
+      );
+      assert.equal(thumbs(markup).length, count, tier);
+      assert.match(markup, /Balanced/);
+      assert.match(markup, /Friendly/);
+      assert.match(markup, /Professional/);
+    }
+  } finally {
+    currentTier = "pro";
   }
 });
 

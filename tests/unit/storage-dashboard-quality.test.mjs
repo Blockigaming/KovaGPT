@@ -124,19 +124,18 @@ function storageServer({
   const admin = {
     rpc(name, args) {
       assert.equal(name, "effective_user_plan_tier");
-      assert.equal(args._user_id, "current-owner");
-      assert.deepEqual(Object.keys(args), ["_user_id"]);
+      assert.deepEqual(JSON.parse(JSON.stringify(args)), { _user_id: "current-owner" });
       return { abortSignal: async () => subscription };
     },
   };
   const entitlement = loadUiModule(
     "src/lib/billing-entitlement.server.ts",
-    { "@/lib/supabase-loose": { loose: (client) => client } },
+    {
+      "@/lib/supabase-loose": { loose: (client) => client },
+    },
     { AbortSignal },
   );
   const module = loadUiModule("src/utils/storage.functions.ts", {
-    "@/lib/billing-entitlement.server": entitlement,
-    "@/integrations/supabase/client.server": { supabaseAdmin: admin },
     "@tanstack/react-start": {
       createServerFn({ method }) {
         assert.equal(method, "GET");
@@ -150,6 +149,8 @@ function storageServer({
       },
     },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: auth },
+    "@/lib/billing-entitlement.server": entitlement,
+    "@/integrations/supabase/client.server": { supabaseAdmin: admin },
     "@/lib/supabase-loose": { loose: (client) => client },
     "@/lib/modes": { STORAGE_LIMITS_BYTES: { free: 500, plus: 25000, pro: 25000 } },
   });
@@ -176,6 +177,10 @@ function storageServer({
                 maybeSingle: async () => result,
                 then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
               };
+            },
+            rpc: async (name) => {
+              assert.equal(name, "current_subscription_summary");
+              return subscription;
             },
           },
         },
@@ -223,7 +228,7 @@ test("unknown billing cannot invent a free or paid storage quota", async () => {
   for (const subscription of [
     { data: "professional", error: null },
     { data: "pro", error: { message: "unavailable" } },
-    { data: ["pro"], error: null },
+    { data: [{ effectiveTier: "pro" }], error: null },
     { data: null, error: null },
   ]) {
     const result = await storageServer({ subscription }).run();

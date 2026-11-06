@@ -84,10 +84,10 @@ function appearanceFixture(settings = original) {
     (exports) => () => exports.AppearanceSettings(props),
     {
       modules: {
+        "@/components/ui/slider": { Slider: "slider" },
         "@/lib/appearance-preferences.mjs": appearance,
         "@/lib/theme": { applyThemeMode: (mode) => modes.push(mode) },
         "@/styles/appearance-settings.css": {},
-        "@/components/ui/slider": { Slider: "slider" },
         "@/components/ui/select": Object.fromEntries(
           ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
             name,
@@ -321,7 +321,7 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
-    /\.kova-settings-content-header\s*\{\s*min-height: 64px;\s*padding: 10px 16px !important;/,
+    /\.kova-settings-content-header\s*\{[\s\S]*?min-height: 80px;[\s\S]*?padding: 20px clamp\(16px, 3vw, 28px\);/,
   );
   assert.match(preview, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(preview, /width: 100%/);

@@ -64,18 +64,22 @@ test("comparison keeps each tier's mode and allowance data in the correct column
       ),
     ]),
   );
+  const windows = {
+    free: [{ id: "daily", regularLimit: 51, thinkingLimit: 11 }],
+    plus: [
+      { id: "five_hour", regularLimit: 251, thinkingLimit: 52 },
+      { id: "weekly", regularLimit: 1751, thinkingLimit: 351 },
+    ],
+    pro: [{ id: "weekly", regularLimit: 26251, thinkingLimit: 5251 }],
+  };
   const { PlanComparison } = loadUiModule("src/components/public/PlanComparison.tsx", {
     "@/lib/plan-usage-policy.mjs": {
-      chatUsageWindows: (tier) => [
-        {
-          id: "weekly",
-          regularLimit: tiers.indexOf(tier) + 10,
-          thinkingLimit: tiers.indexOf(tier) + 20,
-        },
-      ],
-      DAILY_PLAN_ALLOWANCES: Object.fromEntries(
-        tiers.map((tier, index) => [tier, { images: index + 30, uploads: index + 40 }]),
-      ),
+      chatUsageWindows: (tier) => windows[tier],
+      DAILY_PLAN_ALLOWANCES: {
+        free: { images: 8, uploads: 3 },
+        plus: { images: 40, uploads: 15 },
+        pro: { images: 600, uploads: 225 },
+      },
     },
     "@/lib/capability-registry": {
       CAPABILITY_REGISTRY: { plans, modesByTier },
@@ -84,22 +88,19 @@ test("comparison keeps each tier's mode and allowance data in the correct column
   });
   const tree = PlanComparison();
   const rows = elements(tree, (node) => node.type === "tbody")[0].props.children.flat();
-  const expected = [
-    tiers.map((tier) => `${tier}-mode`),
-    tiers.map((_, index) => `${index + 10} / week`),
-    tiers.map((_, index) => `${index + 20} / week`),
-    tiers.map((_, index) => String(index + 30)),
-    tiers.map((_, index) => String(index + 40)),
-    tiers.map((tier) => `${tier}-storage`),
-  ];
-  for (const [index, values] of expected.entries()) {
-    assert.deepEqual(
-      elements(rows[index], (node) => node.type === "td").map((cell) =>
-        text(cell).replace(/\s+/g, " ").trim(),
-      ),
-      values,
-    );
-  }
+  assert.deepEqual(
+    Array.from(rows, (row) =>
+      elements(row, (node) => node.type === "td").map((cell) => text(cell).replace(/\s+/g, " ")),
+    ),
+    [
+      ["free-mode", "plus-mode", "pro-mode"],
+      ["51 / day", "251 / 5 hours 1,751 / week", "26,251 / week"],
+      ["11 / day", "52 / 5 hours 351 / week", "5,251 / week"],
+      ["8", "40", "600"],
+      ["3", "15", "225"],
+      ["free-storage", "plus-storage", "pro-storage"],
+    ],
+  );
   assert.equal(elements(tree, (node) => node.props.role === "region")[0].props.tabIndex, 0);
   assert.equal(elements(tree, (node) => node.type === "button").length, 0);
 });

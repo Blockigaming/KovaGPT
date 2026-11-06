@@ -36,7 +36,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -123,6 +123,7 @@ export function Sidebar({
   onOpenSettings,
   onOpenHelp,
   onOpenWorkspaceSearch,
+  workspaceSearchOpen: externalWorkspaceSearchOpen = false,
   hideGuestLogin = false,
   mapsReleaseApproved = false,
   compactOnly = false,
@@ -142,6 +143,7 @@ export function Sidebar({
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
   onOpenWorkspaceSearch?: () => void;
+  workspaceSearchOpen?: boolean;
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
@@ -176,6 +178,38 @@ export function Sidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const localSearchOpen = searchOpen && !onOpenWorkspaceSearch;
+  const workspaceSearchOpen = externalWorkspaceSearchOpen || localSearchOpen;
+  const searchDialogRef = useRef<HTMLDialogElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchReturnFocusRef = useRef<HTMLElement | null>(null);
+  const searchOwnerRef = useRef(user?.id);
+  const closeChatSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }, []);
+  useLayoutEffect(() => {
+    if (searchOwnerRef.current === user?.id) return;
+    searchOwnerRef.current = user?.id;
+    closeChatSearch();
+  }, [user?.id, closeChatSearch]);
+  useLayoutEffect(() => {
+    const dialog = searchDialogRef.current;
+    if (!localSearchOpen || !dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (!dialog.open) dialog.showModal();
+    searchInputRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (dialog.open) dialog.close();
+      document.body.style.overflow = previousOverflow;
+      const target = searchReturnFocusRef.current;
+      queueMicrotask(() => {
+        if (target?.isConnected && target.offsetParent !== null && !target.closest("[inert]"))
+          target.focus({ preventScroll: true });
+      });
+    };
+  }, [localSearchOpen]);
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [projectChat, setProjectChat] = useState<Conversation | null>(null);
@@ -363,11 +397,14 @@ export function Sidebar({
   };
   const changeRailShortcuts = (shortcuts: readonly SidebarShortcutId[]) =>
     changeLayout({ shortcuts: [...shortcuts] });
-  const openChatSearch = () => {
+  const openChatSearch = (event?: { currentTarget: HTMLElement }) => {
     if (onOpenWorkspaceSearch) {
-      closeAfterMobileNavigation();
+      cancelPendingSelection();
       onOpenWorkspaceSearch();
-    } else setSearchOpen((value) => !value);
+    } else {
+      if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
+      setSearchOpen((value) => !value);
+    }
   };
   const searchButton = (rail = false) => {
     const button = (
@@ -378,7 +415,7 @@ export function Sidebar({
         }
         aria-label="Search chats"
         aria-haspopup="dialog"
-        aria-expanded={searchOpen}
+        aria-expanded={onOpenWorkspaceSearch ? workspaceSearchOpen : searchOpen}
         onClick={openChatSearch}
       >
         <SearchGlyph aria-hidden="true" />
@@ -405,7 +442,7 @@ export function Sidebar({
     setSearchQuery("");
     setSearchOpen(false);
   }, [user?.id, isLoaded, isSignedIn, cancelPendingSelection]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
     const update = () => setMobileViewport(media.matches);
     update();
@@ -463,7 +500,13 @@ export function Sidebar({
     const move = (event: TouchEvent) => {
       if (!gesture) return;
       const touch = event.touches[0];
-      if (event.touches.length !== 1 || touch.identifier !== gesture.id || !isMobileViewport()) {
+      if (
+        event.touches.length !== 1 ||
+        touch.identifier !== gesture.id ||
+        !isMobileViewport() ||
+        !window.getSelection()?.isCollapsed ||
+        document.querySelector('[aria-modal="true"], dialog[open]')
+      ) {
         reset();
         return;
       }
@@ -500,7 +543,12 @@ export function Sidebar({
     let start: { id: number; x: number; y: number; time: number } | null = null;
     const onStart = (event: TouchEvent) => {
       start = null;
-      if (!isMobileViewport() || event.touches.length !== 1 || !window.getSelection()?.isCollapsed)
+      if (
+        !isMobileViewport() ||
+        drawer.inert ||
+        event.touches.length !== 1 ||
+        !window.getSelection()?.isCollapsed
+      )
         return;
       const target = event.target;
       if (
@@ -523,6 +571,7 @@ export function Sidebar({
     const onMove = (event: TouchEvent) => {
       if (!start) return;
       if (
+        drawer.inert ||
         event.touches.length !== 1 ||
         !window.getSelection()?.isCollapsed ||
         event.timeStamp - start.time > 700
@@ -563,15 +612,23 @@ export function Sidebar({
 
   useEffect(() => {
     const openSearch = () => {
+      if (onOpenWorkspaceSearch) {
+        cancelPendingSelection();
+        onOpenWorkspaceSearch();
+        return;
+      }
+      if (searchDialogRef.current?.open) {
+        searchInputRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      if (document.querySelector('[aria-modal="true"]:not(.kova-sidebar), dialog[open]')) return;
+      searchReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setSearchOpen(true);
-      if (!open) onToggle();
-      requestAnimationFrame(() =>
-        document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus(),
-      );
     };
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
-  }, [open, onToggle]);
+  }, [onOpenWorkspaceSearch, cancelPendingSelection]);
 
   useEffect(() => {
     if (!open || !mobileViewport) return;
@@ -640,7 +697,7 @@ export function Sidebar({
     document.addEventListener("focusin", onOpeningFocusMoved, true);
     openingFocusFrame = window.requestAnimationFrame(focusOpeningControl);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+      if (event.defaultPrevented || drawerRef.current?.inert) return;
       const nested =
         event.target instanceof Element
           ? event.target.closest('[role="menu"], [role="dialog"], [role="alertdialog"], dialog')
@@ -682,6 +739,14 @@ export function Sidebar({
       requestAnimationFrame(() => {
         // A newly opened account dialog owns focus; do not pull it back underneath.
         if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
+        const active = document.activeElement;
+        if (
+          active &&
+          active !== document.body &&
+          active !== document.documentElement &&
+          !drawer?.contains(active)
+        )
+          return;
         const previous = lastFocusedRef.current;
         if (previous?.isConnected && previous.offsetParent !== null) previous.focus();
         else
@@ -797,7 +862,7 @@ export function Sidebar({
     </RailTooltip>
   );
 
-  const query = searchQuery.trim();
+  const query = localSearchOpen ? searchQuery.trim() : "";
   const savedConversations = signedIn ? conversations : [];
   const filtered = query
     ? searchConversations(savedConversations, query).map((result) => result.conversation)
@@ -1408,8 +1473,8 @@ export function Sidebar({
         className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 lg:hidden"
         aria-label="Close navigation menu"
         data-state={open ? "open" : "closed"}
-        aria-hidden={!open || !mobileViewport}
-        disabled={!open}
+        aria-hidden={!open || !mobileViewport || workspaceSearchOpen}
+        disabled={!open || workspaceSearchOpen}
         tabIndex={-1}
       />
 
@@ -1423,8 +1488,8 @@ export function Sidebar({
             data-kova-core-rail=""
             data-kova-refined-sidebar=""
             data-state={collapsed ? "open" : "closed"}
-            aria-hidden={!collapsed}
-            inert={!collapsed}
+            aria-hidden={!collapsed || workspaceSearchOpen}
+            inert={!collapsed || workspaceSearchOpen}
           >
             <div className="kova-rail-header">
               <RailTooltip label={compactOnly ? "Back to chat" : "Expand sidebar"}>
@@ -1529,9 +1594,9 @@ export function Sidebar({
         data-ui-reference="chatgpt-sidebar"
         aria-label="Primary navigation"
         data-state={open ? "open" : "closed"}
-        aria-modal={open && mobileViewport ? true : undefined}
-        aria-hidden={collapsed ? true : undefined}
-        inert={collapsed ? true : undefined}
+        aria-modal={open && mobileViewport && !workspaceSearchOpen ? true : undefined}
+        aria-hidden={collapsed || workspaceSearchOpen ? true : undefined}
+        inert={collapsed || workspaceSearchOpen ? true : undefined}
         role={open && mobileViewport ? "dialog" : "navigation"}
       >
         <div className="kova-sidebar-inner">
@@ -1572,22 +1637,6 @@ export function Sidebar({
             </div>
           </header>
 
-          {searchOpen ? (
-            <div className="kova-sidebar-search-wrap">
-              <label className="sr-only" htmlFor="sidebar-chat-search">
-                Search chats
-              </label>
-              <input
-                id="sidebar-chat-search"
-                autoFocus
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search chats"
-                className="kova-sidebar-search"
-              />
-            </div>
-          ) : null}
-
           <div className="kova-sidebar-scroll">
             <nav className="kova-sidebar-primary" aria-label="KovaGPT features">
               {layout.newChat ? (
@@ -1609,13 +1658,16 @@ export function Sidebar({
                   type="button"
                   className="kova-nav-row"
                   aria-label="Search chats"
-                  aria-haspopup={onOpenWorkspaceSearch ? "dialog" : undefined}
-                  aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
-                  onClick={() => {
+                  aria-haspopup="dialog"
+                  aria-expanded={workspaceSearchOpen}
+                  onClick={(event) => {
                     if (onOpenWorkspaceSearch) {
-                      closeAfterMobileNavigation();
+                      cancelPendingSelection();
                       onOpenWorkspaceSearch();
-                    } else setSearchOpen((value) => !value);
+                    } else {
+                      searchReturnFocusRef.current = event.currentTarget;
+                      setSearchOpen((value) => !value);
+                    }
                   }}
                 >
                   <span className="kova-sidebar-icon" aria-hidden="true">
@@ -1684,9 +1736,12 @@ export function Sidebar({
                 <button
                   className="kova-nav-row"
                   type="button"
-                  onClick={() => {
+                  onClick={(event) => {
                     if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();
-                    else setSearchOpen(true);
+                    else {
+                      searchReturnFocusRef.current = event.currentTarget;
+                      setSearchOpen(true);
+                    }
                   }}
                 >
                   View all chats
@@ -1844,6 +1899,104 @@ export function Sidebar({
           </div>
         ) : null}
       </aside>
+      {localSearchOpen ? (
+        <dialog
+          ref={searchDialogRef}
+          aria-label="Search chats"
+          aria-modal="true"
+          aria-describedby="sidebar-chat-search-description"
+          className="pointer-events-auto m-auto overflow-hidden rounded-[var(--kova-radius-panel)] border-0 bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/45"
+          style={{
+            width: "min(36rem, calc(100vw - 2rem))",
+            maxHeight:
+              "min(80dvh, calc(100dvh - max(1rem, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
+          }}
+          onCancel={(event) => {
+            event.preventDefault();
+            closeChatSearch();
+          }}
+          onClose={closeChatSearch}
+          onClick={(event) => {
+            if (event.target !== event.currentTarget) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            if (
+              event.clientX < rect.left ||
+              event.clientX > rect.right ||
+              event.clientY < rect.top ||
+              event.clientY > rect.bottom
+            )
+              closeChatSearch();
+          }}
+        >
+          <div className="flex min-h-0 max-h-[inherit] flex-col p-5">
+            <div className="flex shrink-0 items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Search chats</h2>
+              <button
+                type="button"
+                aria-label="Close chat search"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-accent"
+                onClick={closeChatSearch}
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+            <p
+              id="sidebar-chat-search-description"
+              className="shrink-0 text-sm text-muted-foreground"
+            >
+              Find a saved chat by title or message.
+            </p>
+            <label className="sr-only" htmlFor="sidebar-chat-search">
+              Search chats
+            </label>
+            <input
+              id="sidebar-chat-search"
+              ref={searchInputRef}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search chats"
+              className="kova-sidebar-search my-4 w-full shrink-0"
+            />
+            <div
+              className="min-h-0 overflow-y-auto overscroll-contain"
+              style={{ maxHeight: "min(24rem, 50dvh)" }}
+            >
+              {!isLoaded ? (
+                <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
+                  Loading chat history…
+                </p>
+              ) : !signedIn ? (
+                <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
+                  Log in to search saved chats.
+                </p>
+              ) : filtered.length === 0 ? (
+                <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
+                  No chats found.
+                </p>
+              ) : (
+                <ul aria-label="Chat search results" className="space-y-1">
+                  {filtered.map((conversation) => (
+                    <li key={conversation.id}>
+                      <button
+                        type="button"
+                        aria-label={`Open chat ${conversation.title}`}
+                        className="min-h-11 w-full break-words rounded-xl px-3 py-2 text-left text-sm hover:bg-accent"
+                        onClick={() => {
+                          closeChatSearch();
+                          cancelPendingSelection();
+                          onSelect(conversation.id);
+                        }}
+                      >
+                        {conversation.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </dialog>
+      ) : null}
     </>
   );
 }

@@ -386,12 +386,12 @@ test("root integration subscribes to rendered events and ordinary drawer dismiss
   );
   assert.match(coordinator, /controllerRef\.current\?\.afterCommit\(\)/);
   assert.match(coordinator, /document\.removeEventListener\("focusin", focusMoved\)/);
-  assert.match(sidebar, /if \(navigationOwnsFocusRef\.current\) return;\s*requestAnimationFrame/);
+  assert.match(sidebar, /requestAnimationFrame\(\(\) => \{[\s\S]*?dialog\[open\]/);
   assert.match(
     sidebar,
     /if \(previous\?\.isConnected && previous\.offsetParent !== null\) previous\.focus\(\)/,
   );
-  assert.match(sidebar, /closeAfterMobileNavigation\("\/"\);\s*onSelect\(conversation.id\)/);
+  assert.match(sidebar, /cancelPendingSelection\(\);\s*onSelect\(conversation.id\)/);
   assert.doesNotMatch(coordinator, /setTimeout|requestAnimationFrame|scrollTo/);
 });
 

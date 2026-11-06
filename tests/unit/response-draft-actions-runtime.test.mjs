@@ -121,6 +121,8 @@ function fixture(draft = "keep draft") {
     responseDraftGeneration: 1,
     storageGenerationRef: { current: 1 },
     principalReady: true,
+    isSignedIn: true,
+    historyReady: true,
     storagePrincipal: "owner-a",
     storagePrincipalRef: { current: "owner-a" },
     nextPromptMountedRef: { current: true },
@@ -142,7 +144,10 @@ function fixture(draft = "keep draft") {
     },
     appendFollowupToDraft,
     prepareResponseDraft: (...args) => context.prepare(...args),
-    send: (...args) => requests.push(args),
+    send: (...args) => {
+      requests.push(args);
+      context.inFlightRef.current = true;
+    },
     responseDraftFocusRef: { current: null },
     studyOpeningRef: { current: false },
     memoryReviewOpeningRef: { current: false },
@@ -269,6 +274,32 @@ test("supplied suggestions share draft preparation while editor improvements ret
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0][0], "Improve this artifact");
 });
+
+test("interactive execution acknowledges only a newly acquired request", () => {
+  const accepted = fixture();
+  assert.equal(accepted.context.readExecution()("A form response"), true);
+  assert.equal(accepted.requests.length, 1);
+
+  const blocked = fixture();
+  blocked.context.send = () => undefined;
+  assert.equal(blocked.context.readExecution()("A form response"), false);
+  assert.equal(blocked.requests.length, 0);
+
+  const busy = fixture();
+  const execute = busy.context.readExecution();
+  busy.context.inFlightRef.current = true;
+  assert.equal(execute("A second form response"), false);
+  assert.equal(busy.requests.length, 0);
+});
+
+for (const flag of ["isSignedIn", "principalReady", "historyReady"]) {
+  test(`${flag} must be ready before an interactive form can execute`, () => {
+    const f = fixture();
+    f.context[flag] = false;
+    assert.equal(f.context.readExecution(), undefined);
+    assert.equal(f.requests.length, 0);
+  });
+}
 
 const boundaries = {
   account: (f) => {

@@ -1,3 +1,4 @@
+import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -71,6 +72,7 @@ vm.runInNewContext(output, {
     if (id === "@/lib/document-extraction/pdf-metadata.mjs") return pdfMetadata;
     if (id === "@/components/ComposerPdfPages") return { ComposerPdfPages: empty };
     if (id === "@/lib/composer-local-attachments.mjs") return localAttachments;
+    if (id === "@/lib/composer-keyboard-inset.mjs") return keyboardInset;
     if (["react", "lucide-react"].includes(id)) return nativeRequire(id);
     if (id === "react/jsx-runtime")
       return {

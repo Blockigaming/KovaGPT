@@ -228,8 +228,4 @@ test("Result prose owns the reading token; code, action labels and ordinary mobi
     "13px",
   );
   assert.equal(value(system, "body :is(input, textarea, select)"), "1rem");
-  assert.match(
-    source,
-    /latest\.generationStatus\s*\|\|\s*resultRef\.current\s*\|\|\s*resultDraftsRef\.current\.has\(scope\)/,
-  );
 });

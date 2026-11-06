@@ -6,35 +6,34 @@ import { revealSidebar } from "./current-ui";
 async function prepare(page: import("@playwright/test").Page) {
   await fixture(page, "dark", true, true, "free");
   await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
-  const usage = planUsageFixture("free");
-  usage.windows = usage.windows.map((window) => ({
-    ...window,
-    regularUsed: 12,
-    thinkingUsed: 2,
-  }));
-  usage.images = 1;
-  usage.uploads = 1;
   await page.route("**/_serverFn/**", async (route) => {
     const name =
       functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!) ?? "";
     const result = name.startsWith("getMyPlanTier_")
       ? { ownerId: owner, tier: "free" }
       : name.startsWith("getMyPlanUsage_")
-        ? usage
-        : name.startsWith("getMyDailyUsage_")
-          ? { chats: 14, thinking: 2, images: 1, uploads: 1, resetsAt: "2026-11-02T00:00:00Z" }
-          : name.startsWith("listMemoryCenter_")
-            ? [
-                {
-                  id: "11111111-1111-4111-8111-111111111111",
-                  title: "Response preferences",
-                  content: "I prefer concise answers.",
-                  source: "conversation",
-                  category: "Conversation summary",
-                  updatedAt: "2026-11-01T00:00:00Z",
-                },
-              ]
-            : undefined;
+        ? {
+            ...planUsageFixture("free"),
+            windows: planUsageFixture("free").windows.map((window) => ({
+              ...window,
+              regularUsed: 12,
+              thinkingUsed: 2,
+            })),
+            images: 1,
+            uploads: 1,
+          }
+        : name.startsWith("listMemoryCenter_")
+          ? [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                title: "Response preferences",
+                content: "I prefer concise answers.",
+                source: "conversation",
+                category: "Conversation summary",
+                updatedAt: "2026-11-01T00:00:00Z",
+              },
+            ]
+          : undefined;
     if (result !== undefined) return route.fulfill({ json: { result, context: {} } });
     return route.fallback();
   });
@@ -70,7 +69,8 @@ test("Settings keeps a closed rail, shows percentage usage, and exposes editable
   await expect(
     page.getByRole("progressbar", { name: "Daily chat usage", exact: true }),
   ).toHaveAttribute("aria-valuenow", "24");
-  await expect(page.locator(".kova-plan-usage")).toContainText("12 / 50 regular · 2 / 10 Thinking");
+  await expect(page.getByRole("progressbar")).toHaveCount(1);
+  await expect(page.getByText(/12 \/ 50 regular · 2 \/ 10 Thinking/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Close settings", exact: true })).toBeVisible();
   await page.goto("/settings/memory");
   await waitForKovaHydration(page);
@@ -110,10 +110,14 @@ test("secondary-page chat menus include Rename, Pin, Share, project choices, and
   await expect(rename.getByRole("textbox")).toHaveValue("Composer review chat");
   await rename.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(rename).toBeHidden();
-  await expect(
-    page.getByRole("button", { name: "Options for Composer review chat", exact: true }),
-  ).toBeFocused();
-  await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
+  const options = page.getByRole("button", {
+    name: "Options for Composer review chat",
+    exact: true,
+  });
+  await expect(options).toBeFocused();
+  await expect(options).toHaveAttribute("aria-expanded", "false");
+  await options.click();
+  await expect(options).toHaveAttribute("aria-expanded", "true");
   const projectMenu = page.getByRole("menuitem", { name: "Move to project", exact: true });
   if (await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches))
     await projectMenu.click();

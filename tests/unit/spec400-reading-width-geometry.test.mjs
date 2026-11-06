@@ -7,10 +7,16 @@ import { applyReadingPreferences } from "../../src/lib/appearance-preferences.mj
 const read = (path) => readFileSync(path, "utf8");
 const workspace = postcss.parse(read("src/styles/spec400-chat.css"));
 const response = postcss.parse(read("src/components/response-action-refinement.css"));
-const rule = (sheet, selector) => {
+const rule = (sheet, selector, media = null) => {
   const matches = [];
-  sheet.walkRules(selector, (node) => matches.push(node));
-  assert.equal(matches.length, 1, `Expected one owner for ${selector}`);
+  sheet.walkRules(selector, (node) => {
+    const parents = [];
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      if (parent.type === "atrule" && parent.name === "media") parents.unshift(parent.params);
+    }
+    if ((parents.join(" / ") || null) === media) matches.push(node);
+  });
+  assert.equal(matches.length, 1, `Expected one owner for ${selector} under ${media ?? "base"}`);
   return matches[0];
 };
 const declaration = (node, property) => {
@@ -102,6 +108,20 @@ test("composer and transcript edges agree for classic and overlay scrollbars wit
     false,
   );
   assert.equal(declaration(content, "margin-inline"), "auto");
+  const shortDock = rule(chat, ".spec400-composer-dock", "(max-height: 500px)");
+  assert.equal(declaration(shortDock, "max-height"), "60%");
+  assert.equal(declaration(shortDock, "display"), "flex");
+  assert.equal(
+    shortDock.nodes.some((node) => /^overflow/.test(node.prop ?? "")),
+    false,
+  );
+  assert.equal(
+    declaration(
+      rule(chat, ".spec400-composer-dock > .spec400-chat-input", "(max-height: 500px)"),
+      "min-height",
+    ),
+    "0",
+  );
   const dockPadding = split(declaration(dock, "padding-inline"), " ").filter(Boolean);
   assert.equal(dockPadding.length, 2);
   for (const readingWidth of [680, 760, 900])

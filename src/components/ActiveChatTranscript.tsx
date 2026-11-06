@@ -170,6 +170,7 @@ export function ActiveChatTranscript({
     <div
       ref={scrollRef}
       data-chat-transcript="true"
+      tabIndex={-1}
       onScroll={updateNearBottom}
       className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain pb-5 pt-4 lg:pb-8 lg:pt-6"
       aria-label="Conversation"

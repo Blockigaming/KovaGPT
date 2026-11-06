@@ -144,7 +144,9 @@ test("command palette traps and restores focus with safe-area and reduced-motion
   assert.match(palette, /const closePalette = \(\) =>/);
   assert.match(palette, /queueMicrotask\(restoreFocus\)/);
   assert.match(palette, /document\.activeElement !== target/);
-  assert.match(palette, /searchInputRef\.current\?\.focus\(\)/);
+  assert.match(palette, /useLayoutEffect\(\(\) => \{\s*if \(!open\) return;/);
+  assert.match(palette, /searchInputRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(palette, /requestAnimationFrame\(\(\) => searchInputRef\.current\?\.focus/);
   assert.doesNotMatch(palette, /<input\s+autoFocus/);
   assert.match(palette, /event\.key === "Tab"/);
   assert.match(

@@ -48,7 +48,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { PanelLeft, X } from "lucide-react";
+import { ArrowDown, PanelLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
@@ -2269,6 +2269,11 @@ function KovaGPT() {
         });
         if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
         flushAssistant();
+        controller.signal.throwIfAborted();
+        if (!assembledReply.trim() && !waitingForConfirmation)
+          throw Object.assign(new Error("KovaGPT returned an empty response. Try again."), {
+            retryable: true,
+          });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
 
@@ -3034,7 +3039,23 @@ function KovaGPT() {
           );
         }}
         onDraftPrompt={isLastAssistant && !isStreaming ? prepareResponseDraft : undefined}
-        onFollowUp={isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined}
+        onFollowUp={
+          isLastAssistant && !isStreaming && isSignedIn && principalReady && historyReady
+            ? (prompt) => {
+                if (inFlightRef.current) return false;
+                // send acquires the request synchronously before its first await.
+                void send(prompt, []);
+                return inFlightRef.current;
+              }
+            : undefined
+        }
+        interactiveDisabledReason={
+          !isSignedIn
+            ? "Sign in to submit this form."
+            : !historyReady
+              ? "Chat history is not ready yet. Check the sync status."
+              : undefined
+        }
         onEdit={
           m.role === "user" && !isStreaming
             ? () => {
@@ -3124,6 +3145,27 @@ function KovaGPT() {
     ) : null;
 
   const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
+  const jumpToLatestButton = showJumpToLatest ? (
+    <Button
+      variant="ghost"
+      size="icon"
+      type="button"
+      onClick={() => {
+        const element = scrollRef.current;
+        if (!element) return;
+        nearBottomRef.current = true;
+        readingAnchorControllerRef.current?.followEnd();
+        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+        element.focus({ preventScroll: true });
+        setShowJumpToLatest(false);
+      }}
+      className="kova-topbar-button h-11 w-11 shrink-0 rounded-full p-2"
+      aria-label="Jump to latest message"
+      title="Jump to latest message"
+    >
+      <ArrowDown className="h-5 w-5" aria-hidden="true" />
+    </Button>
+  ) : null;
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
       <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
@@ -3167,6 +3209,7 @@ function KovaGPT() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
+          {jumpToLatestButton}
           {conversationActions()}
           {isLoaded && isSignedIn && !chatStarted && (
             <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
@@ -3223,6 +3266,7 @@ function KovaGPT() {
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         onOpenWorkspaceSearch={openCommandPalette}
+        workspaceSearchOpen={commandOpen}
         hideGuestLogin
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {
@@ -3273,7 +3317,16 @@ function KovaGPT() {
           userTier={tier}
           temporaryChat={tempChat}
           chatStarted={chatStarted}
-          conversationActions={conversationActions(true)}
+          conversationActions={
+            jumpToLatestButton ? (
+              <>
+                {jumpToLatestButton}
+                {conversationActions(true)}
+              </>
+            ) : (
+              conversationActions(true)
+            )
+          }
           onTemporaryChatChange={(enabled, trigger) => {
             temporaryTriggerRef.current = trigger;
             temporaryReturnUrlRef.current = window.location.href;
@@ -3443,7 +3496,27 @@ function KovaGPT() {
               </Suspense>
             ) : (
               <>
-                <Suspense fallback={null}>
+                <Suspense
+                  fallback={
+                    <div
+                      className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-5 py-4"
+                      role="status"
+                      aria-label="Loading conversation"
+                      aria-busy="true"
+                      data-chat-transcript-loading="true"
+                    >
+                      <span className="sr-only">Loading conversation…</span>
+                      <div
+                        aria-hidden="true"
+                        className="ml-auto max-h-12 min-h-0 w-1/2 flex-1 rounded-[var(--kova-radius-message)] bg-muted motion-safe:animate-pulse"
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="max-h-24 min-h-0 w-3/4 flex-[2] rounded-[var(--kova-radius-message)] bg-muted motion-safe:animate-pulse"
+                      />
+                    </div>
+                  }
+                >
                   <ActiveChatTranscript
                     key={transcriptScope}
                     active={active}
@@ -3464,25 +3537,6 @@ function KovaGPT() {
                   />
                 </Suspense>
                 <div className="spec400-composer-dock relative shrink-0">
-                  {showJumpToLatest && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={() => {
-                        const el = scrollRef.current;
-                        if (!el) return;
-                        nearBottomRef.current = true;
-                        readingAnchorControllerRef.current?.followEnd();
-                        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-                        setShowJumpToLatest(false);
-                      }}
-                      className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 border border-border bg-card shadow-sm"
-                      aria-label="Jump to latest message"
-                    >
-                      Jump to latest
-                    </Button>
-                  )}
                   {editingMessage?.conversationId === active.id && (
                     <div
                       className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
@@ -3758,6 +3812,8 @@ function KovaGPT() {
             onSelectArchived={(conversation) => historyAction("restore", conversation)}
             onOpenSettings={() => openSettings("general")}
             returnFocusTarget={commandReturnFocusRef.current}
+            sidebarOpen={sidebarOpen}
+            onCloseSidebar={() => setSidebarOpen(false)}
           />
         </Suspense>
       )}

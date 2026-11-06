@@ -73,6 +73,28 @@ test("read-only answers cannot submit and a rejected callback does not mark the 
   assert.equal(rejected.find("section").props["data-interactive-state"], "submitted");
 });
 
+test("a declined next message retains its draft and can be retried once chat is ready", async () => {
+  let ready = false;
+  let accepted = 0;
+  const f = fixture(() => {
+    if (!ready) return false;
+    accepted += 1;
+    return true;
+  });
+  await f.flush();
+  await f.click("Build my launch plan");
+  assert.equal(accepted, 0);
+  assert.equal(f.find("section").props["data-interactive-state"], "open");
+  assert.ok(f.text().includes("Your response was not sent"));
+  ready = true;
+  const button = f.find("button");
+  button.props.onClick();
+  button.props.onClick();
+  await f.flush();
+  assert.equal(accepted, 1);
+  assert.equal(f.find("section").props["data-interactive-state"], "submitted");
+});
+
 test("next steps retain the closed schema and cannot execute model-supplied actions", () => {
   assert.equal(interactive.INTELLIGENT_INTERFACE_NAME, "Intelligent Interface");
   assert.ok(interactive.INTERACTIVE_UI_INSTRUCTIONS.startsWith("Intelligent Interface:"));
