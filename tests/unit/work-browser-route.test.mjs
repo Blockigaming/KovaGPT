@@ -99,7 +99,7 @@ function fixture(tier = "plus") {
       browserRunnerCapabilities: async () => ({
         available: true,
         protocol: "kova-browser-v1",
-        maxSessionSeconds: 300,
+        idleTimeoutSeconds: 900,
         origins: ["https://browser-fixture.net"],
       }),
       browserRunnerCommand: async (_, command) => {

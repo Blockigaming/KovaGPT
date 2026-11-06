@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 if (process.getuid?.() !== 65532 || !existsSync("/.dockerenv") || !existsSync("/browser"))
   process.exit(1);
 const expiresAt = Number(process.env.KOVA_BROWSER_EXPIRES_AT);
-if (!Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 300000)
+if (!Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 905000)
   process.exit(1);
 const network = new Map(),
   decoder = new StringDecoder("utf8");
@@ -98,5 +98,6 @@ process.stdin.on("data", (chunk) => {
 });
 process.stdin.on("end", () => void close());
 process.on("SIGTERM", () => void close());
-setTimeout(() => void close(), Math.max(1, expiresAt - Date.now())).unref();
+// No absolute browser lifetime. The owner/agent runner enforces the
+// 15-minute sliding idle lease and terminates this child when it expires.
 send({ kind: "ready", protocol: "kova-browser-v1" });

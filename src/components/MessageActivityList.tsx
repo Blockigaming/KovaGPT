@@ -1,4 +1,4 @@
-import { CalendarDays, FileText, Globe, Loader2, Mail } from "lucide-react";
+import { CalendarDays, CheckCircle2, FileText, Globe, Loader2, Mail } from "lucide-react";
 import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import type { Activity } from "@/lib/chat-store";
 
@@ -47,11 +47,25 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
               <span>{activity.label}</span>
+              {activity.browser?.hostname && (
+                <span
+                  className="ml-2 inline-flex rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground"
+                  title="Observed browser website"
+                >
+                  {activity.browser.hostname}
+                </span>
+              )}
             </span>
             {(activity.status === "failed" || activity.status === "canceled") && (
               <span className="shrink-0 text-xs" aria-hidden="true">
                 {status}
               </span>
+            )}
+            {activity.status === "done" && (
+              <CheckCircle2
+                className="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                aria-label="Completed"
+              />
             )}
             {activity.status === "running" && (
               <Loader2

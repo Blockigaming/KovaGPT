@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 210,
+  "count": 211,
   "latest": "20261106022315_kova_conversation_summary_short_chats.sql",
   "migrations": [
     {
@@ -4415,6 +4415,20 @@
     },
     {
       "order": 210,
+      "filename": "20261105220000_kova_browser_idle_15m_no_absolute_max.sql",
+      "timestamp": "20261105220000",
+      "sha256": "0fd311fe4901c3f315c7acb44bb0c6ef6b01847b3b1b090323c29b7294c6bac9",
+      "tables": [],
+      "functions": ["admit_work_browser_owner", "authorize_work_browser"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 211,
       "filename": "20261106022315_kova_conversation_summary_short_chats.sql",
       "timestamp": "20261106022315",
       "sha256": "3fb5f6aa8ea9bf2d719fc02db88634955c571f99dd359082e72104ad14c45b9d",

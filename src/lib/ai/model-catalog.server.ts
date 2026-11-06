@@ -106,6 +106,48 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
   },
 ] as const;
 
+/**
+ * Staged hosted inference catalog. These are third-party foundation-model routing
+ * aliases; they do not imply ownership of the base weights or quality parity.
+ * Values reserve conservative provider price ceilings in USD per 1M tokens.
+ * Operator must re-check live prices/availability before activation.
+ */
+export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
+  {
+    id: "kova-argon-4.6",
+    endpoint: "responses", // Catalog compatibility; actual transport uses chat completions.
+    reasoning: true,
+    vision: false,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 4_096,
+    pricePerMillion: { input: 0.2, cachedInput: 0.2, output: 0.8 },
+    tiers: ["guest", "free", "plus", "pro"],
+  },
+  {
+    id: "kova-neon-4.6",
+    endpoint: "responses",
+    reasoning: false,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 8_192,
+    pricePerMillion: { input: 0.5, cachedInput: 0.5, output: 1.5 },
+    tiers: ["free", "plus", "pro"],
+  },
+  {
+    id: "kova-xenon-5",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 3, cachedInput: 3, output: 15 },
+    tiers: ["plus", "pro"],
+  },
+] as const;
+
 const policies: Record<
   ModelPolicy,
   { env: string; fallback: string; maxOutput: number; allowed: readonly string[] }

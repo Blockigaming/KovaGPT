@@ -5,6 +5,7 @@
 const MAX_MESSAGE_CHARS = 128 * 1024;
 const MAX_BLOCK_CHARS = 32 * 1024;
 const MAX_BLOCKS = 6;
+export const INTELLIGENT_INTERFACE_NAME = "Intelligent Interface";
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 export const FIELD_KINDS = [
   "text",
@@ -350,8 +351,9 @@ export function splitInteractiveContent(value) {
   return parts;
 }
 
-export const INTERACTIVE_UI_INSTRUCTIONS = `When you genuinely need structured input from the user (choices, preferences, a short form, a date, a range, or picking rows from options), you may emit a fenced \`\`\`kova-interactive JSON block. Prefer plain text otherwise. Exact version-1 shapes only:
-form: {"version":1,"type":"form","id":"trip-prefs","title":"Trip preferences","description":"optional","fields":[{"id":"budget","label":"Budget","kind":"slider","min":0,"max":5000,"step":100,"default":1500},{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]},{"id":"start","label":"Start date","kind":"date","min":"2026-01-01"}],"submitLabel":"Send","actions":[{"id":"skip","label":"Skip","style":"secondary"}]}
-field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select need options (max 24). slider needs min and max. Optional keys: required, help, placeholder, default, min, max, step. A form may have only actions (quick-reply buttons, max 6) and no fields.
+export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
+next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
+form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
+field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
 table: {"version":1,"type":"table","id":"plans","title":"Compare plans","columns":[{"id":"name","label":"Plan"},{"id":"price","label":"Price","align":"end"}],"rows":[{"id":"basic","cells":["Basic","$10"]}],"selection":"single","submitLabel":"Choose"} (selection: none, single or multiple; cells are strings or numbers; max 8 columns, 50 rows).
-IDs use letters, digits, hyphens or underscores. No HTML, markdown, URLs or code inside the JSON. The user's submission arrives as their next message; never claim an action was performed before it does.`;
+IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Clicks send the next user message; they do not execute external actions, grant access, or prove success.`;

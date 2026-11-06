@@ -106,7 +106,10 @@ function AuthAuthorityGate({ pending }: { pending: boolean }) {
     // Native top-layer modality also fences Radix portals outside the normal
     // app DOM. Keep this element mounted so the task subtree stays mounted.
     if (pending && !current.open) current.showModal();
-    if (!pending && current.open) current.close();
+    if (!pending) {
+      if (current.open) current.close();
+      window.dispatchEvent(new Event("kova-auth-surface-ready"));
+    }
     return () => {
       if (current.open) current.close();
     };

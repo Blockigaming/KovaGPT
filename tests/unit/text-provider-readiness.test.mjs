@@ -5,6 +5,7 @@ import ts from "typescript";
 import { z } from "zod";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
+import * as hosted from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 
 // Execute the actual startup, readiness, runtime configuration and provider
 // modules with nonsecret inputs. Every HTTP boundary is a local fixture.
@@ -79,6 +80,7 @@ function pipeline(overrides = {}) {
         maximumServerOutputForModel: () => 4096,
       },
       "@/lib/ai/provider-transport.server.mjs": transport,
+      "@/lib/ai/kova-hosted-inference.server.mjs": hosted,
     },
     fetcher,
     logs,

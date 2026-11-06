@@ -338,7 +338,7 @@ for (const boundary of ["account", "conversation", "lifetime", "reset", "navigat
 
 test("Result opener wiring carries the exact button; Conversation is a stable named focus fallback", () => {
   const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
-  assert.match(message, /openResult\("edit", event\.currentTarget\)/);
+  assert.doesNotMatch(message, /Edit in Canvas|Compare versions/);
   assert.match(message, /onOpenResult\([\s\S]{0,750}trigger,\s*\)/);
   assert.match(source, /id="conversation-pane"\s+tabIndex=\{-1\}\s+aria-label="Conversation"/);
   const content = readFileSync("src/components/WorkspaceResultContent.tsx", "utf8");

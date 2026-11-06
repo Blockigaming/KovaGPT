@@ -38,7 +38,7 @@ if (process.argv.length !== 3 || process.argv[2] !== "--execute") {
   assert.equal(
     readiness.ready,
     true,
-    "Approved runsc runtime and pinned image must be locally installed",
+    `Approved runsc runtime and pinned image must be locally installed (${readiness.code ?? "ready"})`,
   );
   await executor.reapExpired();
   const run = (jobId, code, extra = {}) =>

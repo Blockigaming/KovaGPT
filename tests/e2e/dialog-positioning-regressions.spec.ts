@@ -104,7 +104,6 @@ for (const theme of ["light", "dark"] as const) {
     const modal = page.locator(".kova-settings-dialog");
     const mobile = page.viewportSize()!.width < 1024;
     if (!mobile) {
-      const rail = page.getByRole("navigation", { name: "Collapsed navigation", exact: true });
       await page.getByRole("button", { name: "Account menu", exact: true }).click();
       await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
     } else {
@@ -132,10 +131,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
-    if (!mobile)
-      await expect(
-        page.getByRole("navigation", { name: "Collapsed navigation", exact: true }),
-      ).toBeVisible();
+    await expect(page.locator(".kova-sidebar")).toHaveCount(0);
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),
       animations: "disabled",

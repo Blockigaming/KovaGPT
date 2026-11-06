@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import {
   formatSubmission,
+  INTELLIGENT_INTERFACE_NAME,
   initialFormValues,
   validateFormValues,
   type FormValue,
@@ -72,8 +73,11 @@ export function InteractiveBlock({
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const submittedRef = useRef(false);
   useEffect(() => {
-    setStored(readStored(storageKey));
+    const restored = readStored(storageKey);
+    submittedRef.current = !!restored.submission;
+    setStored(restored);
     setHydrated(true);
   }, [storageKey]);
 
@@ -84,10 +88,17 @@ export function InteractiveBlock({
     writeStored(storageKey, next);
   };
   const submit = (submission: InteractiveSubmission) => {
-    if (!onSubmit || submitted) return;
-    if (onSubmit(formatSubmission(block, submission)) === false) {
-      setSubmitError(true);
-      return;
+    if (!onSubmit || locked || submittedRef.current) return;
+    submittedRef.current = true;
+    try {
+      if (onSubmit(formatSubmission(block, submission)) === false) {
+        submittedRef.current = false;
+        setSubmitError(true);
+        return;
+      }
+    } catch (error) {
+      submittedRef.current = false;
+      throw error;
     }
     setSubmitError(false);
     persist({ submission });
@@ -107,6 +118,9 @@ export function InteractiveBlock({
       data-interactive-state={submitted ? "submitted" : locked ? "readonly" : "open"}
     >
       <header className="mb-3">
+        <p className="mb-1 text-xs font-medium text-muted-foreground">
+          {INTELLIGENT_INTERFACE_NAME}
+        </p>
         <h3 id={headingId} className="text-base font-semibold leading-snug">
           {block.title}
         </h3>

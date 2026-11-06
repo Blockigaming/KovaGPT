@@ -23,6 +23,7 @@ import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 import { authRetryDelay } from "@/lib/auth-retry-delay.mjs";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import githubLogo from "@/assets/plugins/github.svg";
 import { validateHostedGitHubLoginRedirect } from "@/lib/hosted-github-login-redirect.mjs";
@@ -88,6 +89,7 @@ function AuthPage() {
   const isSignUp = search.mode === "sign-up";
   const useKovaAuth = browserKovaAuthEnabled();
   const providers = useAuthProviders();
+  const { isLoaded } = useUser();
   const githubAvailable =
     browserKovaAuthMode() !== "kova" && providers.resolved && providers.github;
   const minimumPasswordLength = useKovaAuth ? 12 : 6;
@@ -111,6 +113,26 @@ function AuthPage() {
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
+  const initialFocusDone = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || initialFocusDone.current) return;
+    let frame = 0;
+    const focus = () => {
+      frame = requestAnimationFrame(() => {
+        if (document.querySelector('dialog[aria-label="Checking account"][open]')) return;
+        const target = search.email ? passwordInputRef.current : emailInputRef.current;
+        if (!target || initialFocusDone.current) return;
+        target.focus({ preventScroll: true });
+        initialFocusDone.current = true;
+      });
+    };
+    focus();
+    window.addEventListener("kova-auth-surface-ready", focus);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("kova-auth-surface-ready", focus);
+    };
+  }, [isLoaded, search.email]);
   const authFeedbackRef = useRef<{
     toastId?: string | number;
     field?: "password";

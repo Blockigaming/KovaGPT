@@ -101,11 +101,8 @@ test("schedule fields expose existing defaults and honest preview/notification g
   assert.match(editor, /Frequency/);
   assert.match(editor, /Weekday/);
   assert.match(editor, /last day of a shorter month/);
-  assert.match(editor, /three-run preview is not available/);
-  assert.match(
-    editor.replace(/\s+/g, " "),
-    /separate notification preference per task is not supported/,
-  );
+  assert.match(editor, /task\?\.next_run_at && !dirty/);
+
   assert.match(editor, /Actual start:/);
 });
 test("schedule save is explicit, modal, busy-guarded, and preserves uncertain requests", () => {

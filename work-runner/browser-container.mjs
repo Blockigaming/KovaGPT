@@ -97,14 +97,30 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
       )
         fail();
     },
-    async reapExpired() {
+    async reapExpired(activeSessions = new Set()) {
+      if (
+        !(activeSessions instanceof Set) ||
+        activeSessions.size > 4 ||
+        [...activeSessions].some((id) => {
+          try {
+            workUuid(id);
+            return false;
+          } catch {
+            return true;
+          }
+        })
+      )
+        fail();
       const raw = await command(["ps", "-aq", "--filter", `label=${LABEL}`]);
       const ids = raw ? raw.split(/\s+/) : [];
       if (ids.length > 128 || ids.some((id) => !/^[a-f0-9]{12,64}$/.test(id))) fail();
       for (const id of ids) {
         const [row] = JSON.parse(await command(["inspect", id]));
-        const expiry = Number(row?.Config?.Labels?.["com.kova.browser.expires"]);
-        if (!Number.isSafeInteger(expiry) || expiry <= Date.now()) await remove(id);
+        // Docker labels are immutable: do not treat the initial lease as
+        // an absolute session age. Orphaned containers are removed on
+        // restart/probe; active leases are reaped by the manager's timer.
+        const sessionId = row?.Config?.Labels?.["com.kova.browser.session"];
+        if (!sessionId || !activeSessions.has(sessionId)) await remove(id);
       }
     },
     async create({ ownerId, sessionId, expiresAt, onNetwork }) {
@@ -113,7 +129,7 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
       if (
         !Number.isSafeInteger(expiresAt) ||
         expiresAt <= Date.now() ||
-        expiresAt > Date.now() + 300000
+        expiresAt > Date.now() + 905000
       )
         fail();
       const name = `kova-browser-${sessionId}`;
@@ -127,7 +143,7 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
           "--label",
           `com.kova.browser.owner=${ownerId}`,
           "--label",
-          `com.kova.browser.expires=${expiresAt}`,
+          `com.kova.browser.session=${sessionId}`,
           "--env",
           `KOVA_BROWSER_EXPIRES_AT=${expiresAt}`,
           "--runtime",
@@ -264,14 +280,8 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
         } finally {
           clearTimeout(startTimer);
         }
-        const expiryTimer = setTimeout(
-          () => {
-            stop();
-            void remove(name).catch(() => {});
-          },
-          Math.max(1, expiresAt - Date.now()),
-        );
-        expiryTimer.unref();
+        // The authorized browser manager owns the renewable idle timer.
+        // This child must not carry an immutable absolute expiration.
         return {
           async command(value) {
             if (closed || pending.size) fail();
@@ -292,7 +302,6 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
             });
           },
           async close() {
-            clearTimeout(expiryTimer);
             stop();
             await remove(name);
           },

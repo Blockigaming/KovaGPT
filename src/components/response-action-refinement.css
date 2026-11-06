@@ -121,6 +121,8 @@
 .kova-message .kova-assistant-message {
   box-sizing: border-box;
   width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   margin-inline: 0 auto;
   padding: 10px clamp(12px, 3vw, 16px);
   border-radius: var(--kova-radius-message);

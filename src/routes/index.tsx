@@ -1901,7 +1901,9 @@ function KovaGPT() {
       const userMsg: Message = {
         id: requestId ?? newId(),
         role: "user",
-        createdAt: Date.now(),
+        createdAt:
+          existingConversation?.messages.find((message) => message.id === requestId)?.createdAt ??
+          Date.now(),
         content: trimmed,
         attachments: atts.map((a) =>
           a.kind === "library_file"

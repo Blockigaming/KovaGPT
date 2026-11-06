@@ -84,6 +84,8 @@ test("interactive browser uses fixed runsc networkless readonly no-secret contai
     assert.ok(!create.args.includes("--mount"));
     assert.ok(!create.args.includes("--volume"));
     assert.ok(create.args.some((v) => v.startsWith("KOVA_BROWSER_EXPIRES_AT=")));
+    assert.ok(create.args.includes(`com.kova.browser.session=${sessionId}`));
+    assert.ok(!create.args.some((v) => v.startsWith("com.kova.browser.expires=")));
     assert.equal(
       (await browser.command({ sequence: 1, actor: "owner", operation: "snapshot" })).sequence,
       1,

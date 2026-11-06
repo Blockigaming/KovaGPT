@@ -317,7 +317,8 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   const route = readFileSync("src/routes/settings.$section.tsx", "utf8");
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
-  assert.match(route, /<AppShell utilitiesInHeader hideUtilities hideMobileTopBar>/);
+  assert.doesNotMatch(route, /<AppShell/);
+  assert.match(route, /<SettingsDialog/);
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
