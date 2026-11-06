@@ -67,6 +67,11 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
         documentElement: { classList: { contains: () => false } },
       },
       HTMLElement: class {},
+      CustomEvent: class {
+        constructor(type) {
+          this.type = type;
+        }
+      },
       window: {
         requestAnimationFrame: (fn) => {
           fn();
@@ -80,6 +85,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
           return 1;
         },
         location: { assign: (href) => actions.push(href) },
+        dispatchEvent: (event) => actions.push(`event:${event.type}`),
       },
       queueMicrotask: (fn) => fn(),
     },
@@ -87,7 +93,10 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
   const props = {
     open: true,
     query,
-    onQueryChange: () => {},
+    onQueryChange: (value) => {
+      actions.push(`query:${value}`);
+      props.query = value;
+    },
     conversations: [],
     archivedConversations: [],
     workspaceItems: [],
@@ -101,7 +110,11 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
   render();
   const tree = render();
   const input = elements(tree, (node) => node.type === "input")[0];
-  const inputTarget = { focus() {} };
+  const inputTarget = {
+    focus() {
+      actions.push("focus");
+    },
+  };
   input.props.ref.current = inputTarget;
   return {
     actions,
@@ -110,7 +123,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
     inputTarget,
     key(key, target = inputTarget, nativeEvent = {}) {
       let prevented = false;
-      tree.props.onKeyDown({
+      render().props.onKeyDown({
         key,
         target,
         nativeEvent,
@@ -185,3 +198,22 @@ test("the real guest palette fixture runs on all three engines without productio
   assert.match(auth, /user: null/);
   assert.doesNotMatch(auth, /^\s*import\b|\b(?:import|fetch)\s*\(/m);
 });
+
+for (const activation of ["pointer", "combobox"]) {
+  test(`Search workspace keeps the palette open and focuses a fresh query through ${activation}`, () => {
+    const f = fixture({ query: "search workspace" });
+    if (activation === "pointer") {
+      const search = elements(
+        f.tree,
+        (node) => node.props.role === "option" && text(node).trim() === "Search workspace",
+      )[0];
+      assert.ok(search);
+      search.props.onClick();
+    } else {
+      f.key("ArrowDown");
+      f.key("ArrowDown");
+      f.key("Enter");
+    }
+    assert.deepEqual(f.actions, ["query:", "focus"]);
+  });
+}

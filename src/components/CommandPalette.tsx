@@ -425,6 +425,12 @@ export function CommandPalette({
     platformEvents.publish("platform", "command.executed", { command: "focus-input" });
   };
 
+  const searchWorkspace = () => {
+    onQueryChange("");
+    searchInputRef.current?.focus({ preventScroll: true });
+    platformEvents.publish("platform", "command.executed", { command: "search" });
+  };
+
   const chooseActive = () => {
     const action = actionItems[activeIndex];
     if (action === "new-chat") {
@@ -458,10 +464,7 @@ export function CommandPalette({
       return;
     }
     if (action === "search") {
-      suppressFocusRestore();
-      window.dispatchEvent(new CustomEvent("kova-open-search"));
-      platformEvents.publish("platform", "command.executed", { command: action });
-      closePalette();
+      searchWorkspace();
       return;
     }
     if (!action) {
@@ -694,12 +697,7 @@ export function CommandPalette({
                     });
                     closePalette();
                   } else if (action.action === "search") {
-                    suppressFocusRestore();
-                    window.dispatchEvent(new CustomEvent("kova-open-search"));
-                    platformEvents.publish("platform", "command.executed", {
-                      command: action.action,
-                    });
-                    closePalette();
+                    searchWorkspace();
                   }
                 }}
                 className={className}

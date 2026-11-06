@@ -182,3 +182,89 @@ test("search takes keyboard focus before the next animation frame", async ({ pag
     await page.evaluate(() => window.dispatchEvent(new Event("kova-test-release-search-frames")));
   }
 });
+
+for (const theme of ["dark", "light"] as const) {
+  for (const initiallyOpen of [false, true]) {
+    test(`${theme}: search action keeps the chosen sidebar state: ${initiallyOpen ? "open" : "closed"}`, async ({
+      page,
+    }) => {
+      await coreFixture(page, theme);
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await waitForKovaHydration(page);
+      if (initiallyOpen) await revealSidebar(page);
+      const sidebar = page.locator(".kova-sidebar[data-kova-core-sidebar]");
+      const state = initiallyOpen ? "open" : "closed";
+      await expect(sidebar).toHaveAttribute("data-state", state);
+      await page.keyboard.press("Control+K");
+      const palette = page.getByRole("dialog", {
+        name: "Search workspace, chats, and actions",
+        exact: true,
+      });
+      const query = palette.getByRole("combobox");
+      await query.fill("Search workspace");
+      await palette.getByRole("option", { name: "Search workspace", exact: true }).click();
+      await expect(palette).toBeVisible();
+      await expect(query).toHaveValue("");
+      await expect(query).toBeFocused();
+      await expect(sidebar).toHaveAttribute("data-state", state);
+      await page.keyboard.press("Escape");
+      await expect(palette).toBeHidden();
+      await expect(sidebar).toHaveAttribute("data-state", state);
+    });
+
+    test(`${theme}: management search preserves the chosen sidebar state: ${initiallyOpen ? "open" : "closed"}`, async ({
+      page,
+    }) => {
+      await coreFixture(page, theme);
+      await page.goto("/library", { waitUntil: "domcontentloaded" });
+      await waitForKovaHydration(page);
+      if (initiallyOpen) await revealSidebar(page);
+      const sidebar = page.locator(".kova-sidebar[data-kova-core-sidebar]");
+      const state = initiallyOpen ? "open" : "closed";
+      await expect(sidebar).toHaveAttribute("data-state", state);
+      const trigger = page
+        .getByRole("button", {
+          name: initiallyOpen ? "Search chats" : /^(?:Open menu|Expand sidebar)$/,
+          exact: true,
+        })
+        .first();
+      await expect(trigger).toBeVisible();
+      await trigger.focus();
+      await page.keyboard.press("Control+K");
+      const dialog = page.getByRole("dialog", { name: "Search chats", exact: true });
+      const query = dialog.getByRole("textbox", { name: "Search chats", exact: true });
+      await expect(dialog).toBeVisible();
+      await expect(query).toBeFocused();
+      await page.keyboard.press("Control+K");
+      await expect(query).toBeFocused();
+      await query.fill("Composer review");
+      const result = dialog.getByRole("button", {
+        name: "Open chat Composer review chat",
+        exact: true,
+      });
+      await expect(result).toBeVisible();
+      await expect(sidebar).toHaveAttribute("data-state", state);
+      const rect = await dialog.boundingBox();
+      expect(rect).not.toBeNull();
+      const viewport = page.viewportSize()!;
+      expect(rect!.x).toBeGreaterThanOrEqual(-1);
+      expect(rect!.y).toBeGreaterThanOrEqual(-1);
+      expect(rect!.x + rect!.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(rect!.y + rect!.height).toBeLessThanOrEqual(viewport.height + 1);
+      if (initiallyOpen) {
+        await result.click();
+        await expect(page).toHaveURL(/\/$/);
+        await expect(page.locator("[data-chat-transcript]")).toBeVisible();
+        await expect(page.locator(".kova-sidebar[data-kova-core-sidebar]")).toHaveAttribute(
+          "data-state",
+          state,
+        );
+      } else {
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+        await expect(sidebar).toHaveAttribute("data-state", state);
+        await expect(trigger).toBeFocused();
+      }
+    });
+  }
+}
