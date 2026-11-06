@@ -75,6 +75,29 @@ export type Attachment =
       size?: number | null;
       sourceProject?: string | null;
     };
+export function storedMessageAttachments(items: PendingAttachment[]): Attachment[] {
+  return items.map((a) =>
+    a.kind === "library_file"
+      ? {
+          kind: "library_file" as const,
+          libraryItemId: a.libraryItemId || "",
+          name: a.name,
+          fileType: a.fileType ?? null,
+          size: a.size ?? null,
+          sourceProject: a.sourceProject ?? null,
+        }
+      : a.kind === "text_file"
+        ? {
+            kind: "text_file" as const,
+            name: a.name,
+            content: a.textContent ?? "",
+            fileType: a.fileType ?? null,
+            size: a.size ?? null,
+          }
+        : { kind: "image" as const, dataUrl: a.dataUrl },
+  );
+}
+
 export function pendingMessageAttachments(items: Message["attachments"]): PendingAttachment[] {
   const COMPLETE = "complete" as const;
   return (items ?? []).map((attachment) =>

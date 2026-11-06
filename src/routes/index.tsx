@@ -190,6 +190,7 @@ import {
   saveConversations,
   persistTemporaryConversation,
   pendingMessageAttachments,
+  storedMessageAttachments,
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
@@ -1905,26 +1906,7 @@ function KovaGPT() {
           existingConversation?.messages.find((message) => message.id === requestId)?.createdAt ??
           Date.now(),
         content: trimmed,
-        attachments: atts.map((a) =>
-          a.kind === "library_file"
-            ? {
-                kind: "library_file" as const,
-                libraryItemId: a.libraryItemId || "",
-                name: a.name,
-                fileType: a.fileType ?? null,
-                size: a.size ?? null,
-                sourceProject: a.sourceProject ?? null,
-              }
-            : a.kind === "text_file"
-              ? {
-                  kind: "text_file" as const,
-                  name: a.name,
-                  content: a.textContent ?? "",
-                  fileType: a.fileType ?? null,
-                  size: a.size ?? null,
-                }
-              : { kind: "image" as const, dataUrl: a.dataUrl },
-        ),
+        attachments: storedMessageAttachments(atts),
       };
       const assistantMsg: Message = {
         id: newId(),

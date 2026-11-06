@@ -396,9 +396,22 @@ function findSend(node) {
 }
 findSend(indexSource);
 assert.ok(sendSource, "actual composer callback must be found");
-const compiledSend = ts.transpileModule(`globalThis.composerSend = ${sendSource};`, {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText;
+const attachmentSource = ts.createSourceFile(
+  "chat-store.ts",
+  readFileSync("src/lib/chat-store.ts", "utf8"),
+  ts.ScriptTarget.Latest,
+  true,
+);
+const storedAttachmentsDefinition = attachmentSource.statements
+  .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "storedMessageAttachments")
+  .getText(attachmentSource)
+  .replace(/^export /u, "");
+const compiledSend = ts.transpileModule(
+  `${storedAttachmentsDefinition}\nglobalThis.composerSend = ${sendSource};`,
+  {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  },
+).outputText;
 
 const nextPromptHelpers = {};
 new Function(
