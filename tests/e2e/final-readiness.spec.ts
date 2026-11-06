@@ -45,6 +45,11 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
     await expect(page).toHaveURL(/\/$/);
     await page.keyboard.press("Escape");
     await expect(settings).toBeHidden();
+    const navigation = page.getByRole("dialog", { name: "Primary navigation" });
+    await expect(navigation).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(navigation).toBeHidden();
+    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeFocused();
   } else {
     await expect(page).toHaveURL(/\/settings(?:\/[^?#]+)?(?:[?#]|$)/);
     await page.keyboard.press("Escape");
