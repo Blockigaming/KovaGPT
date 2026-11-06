@@ -167,19 +167,23 @@ function chatFixture(storage = new Map()) {
   const find = (predicate) => elements(tree, predicate);
   const composer = () => find((node) => node.type === "ChatInput")[0];
   async function finishLoad(
-    { role = "owner", chatProject = params.projectId, project = true } = {},
+    {
+      role = "owner",
+      chatProject = params.projectId,
+      project = true,
+      archivedAt = null,
+      messages = [
+        { role: "system", content: "hidden system" },
+        { role: "user", content: "Earlier question" },
+      ],
+    } = {},
     index = b.requests.chat.length - 1,
   ) {
     b.requests.chat[index].resolve({
       id: params.chatId,
       project_id: chatProject,
       title: `Title ${params.chatId}`,
-      snapshot: {
-        messages: [
-          { role: "system", content: "hidden system" },
-          { role: "user", content: "Earlier question" },
-        ],
-      },
+      snapshot: { messages },
     });
     b.requests.project[index].resolve(
       project
@@ -187,6 +191,7 @@ function chatFixture(storage = new Map()) {
             id: params.projectId,
             name: `Name ${params.projectId}`,
             role,
+            archived_at: archivedAt,
             system_prompt: "Actual loaded project instructions",
           }
         : null,
@@ -330,6 +335,76 @@ for (const outcome of ["success", "generation failure", "save failure", "new typ
     assert.equal(f.composer().props.isStreaming, false);
   });
 }
+
+const interactiveHistory = [
+  { role: "user", content: "Help me choose" },
+  { role: "assistant", content: "Earlier options" },
+  { role: "user", content: "Show the next step" },
+  { role: "assistant", content: "Choose your next step" },
+];
+
+for (const fail of [false, true]) {
+  test(`project Intelligent Interface sends once and preserves the composer on ${fail ? "failure" : "success"}`, async () => {
+    const f = chatFixture();
+    await f.finishLoad({ messages: interactiveHistory });
+    f.type("My unfinished draft");
+    const messages = f.find((node) => node.type === "ChatMessage");
+    assert.equal(messages[1].props.onFollowUp, undefined, "older controls are read-only");
+    const submit = messages.at(-1).props.onFollowUp;
+    const followUp = "Choose your next step\nSelected: Build my launch plan";
+    assert.equal(submit(followUp), true);
+    assert.equal(submit(followUp), false, "a rapid second click cannot start a paid request");
+    f.render();
+    assert.equal(f.requests.generate.length, 1);
+    assert.equal(f.composer().props.value, "My unfinished draft");
+    assert.equal(f.storage.get(f.draftKey()), "My unfinished draft");
+    assert.ok(
+      f.find((node) => node.type === "ChatMessage").every((node) => !node.props.onFollowUp),
+    );
+    const payload = JSON.parse(f.requests.generate[0].args.body);
+    assert.equal(payload.projectId, "project-a");
+    assert.deepEqual(payload.messages, [
+      ...interactiveHistory,
+      { role: "user", content: followUp },
+    ]);
+    await f.streamResponse({ fail });
+    const save = f.requests.save.at(-1);
+    assert.deepEqual(save.args.data.messages.at(fail ? -1 : -2), {
+      role: "user",
+      content: followUp,
+    });
+    save.resolve({ ok: true });
+    await settle();
+    f.render();
+    assert.equal(f.composer().props.isStreaming, false);
+    assert.equal(f.composer().props.value, "My unfinished draft");
+    assert.equal(f.storage.get(f.draftKey()), "My unfinished draft");
+  });
+}
+
+test("project Intelligent Interface honors permissions, archive state and stale-account callbacks", async () => {
+  for (const options of [
+    { role: "owner", allowed: true },
+    { role: "editor", allowed: true },
+    { role: "viewer", allowed: false },
+    { role: "owner", archivedAt: "2026-11-06T00:00:00Z", allowed: false },
+  ]) {
+    const f = chatFixture();
+    await f.finishLoad({ ...options, messages: interactiveHistory });
+    const message = f.find((node) => node.type === "ChatMessage").at(-1);
+    assert.equal(typeof message.props.onFollowUp === "function", options.allowed);
+    if (!options.allowed)
+      assert.equal(message.props.interactiveDisabledReason, "This project is read-only.");
+    else {
+      const submit = message.props.onFollowUp;
+      f.auth.isSignedIn = false;
+      f.auth.user = null;
+      f.render();
+      assert.equal(submit("Choose the next step"), false);
+      assert.equal(f.requests.generate.length, 0);
+    }
+  }
+});
 
 for (const boundary of ["account", "project", "chat", "sign-out", "unmount"]) {
   test(`pending project-chat generation cannot save or update after ${boundary}`, async () => {
