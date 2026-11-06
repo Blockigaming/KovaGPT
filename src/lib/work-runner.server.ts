@@ -4,6 +4,7 @@ import { acquireGeneration } from "@/lib/ai/accounting.server";
 import { settleWorkAccounting } from "@/lib/work-accounting-settlement.server";
 import {
   OPENAI_TEXT_MODELS,
+  KOVA_HOSTED_TEXT_MODELS,
   estimateMaximumCostUsd,
   actualCostUsd,
 } from "@/lib/ai/model-catalog.server";
@@ -17,6 +18,8 @@ import {
   type AttemptBinding,
   type RunnerReceipt,
 } from "@/lib/work-runner-transport.mjs";
+
+const WORK_TEXT_MODELS = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS];
 
 /**
  * A reviewed deployment must configure the pinned HTTPS adapter and keys. The
@@ -119,7 +122,7 @@ export async function reserveWorkStepCost(
   outputTokens: number,
 ) {
   const config = getAiRuntimeConfig();
-  const model = OPENAI_TEXT_MODELS.find((entry) => entry.id === run.model);
+  const model = WORK_TEXT_MODELS.find((entry) => entry.id === run.model);
   if (
     !config.generationEnabled ||
     !model ||
@@ -185,7 +188,7 @@ export async function settleWorkStepCost(
     latencyMs: number;
   },
 ) {
-  const model = OPENAI_TEXT_MODELS.find((entry) => entry.id === run.model);
+  const model = WORK_TEXT_MODELS.find((entry) => entry.id === run.model);
   if (!model || run.step?.reservationId !== receipt.reservationId)
     throw new Error("work_accounting_binding_invalid");
   for (const count of [

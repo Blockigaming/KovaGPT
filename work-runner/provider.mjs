@@ -8,6 +8,12 @@ import { validateWorkCsv } from "./csv-safety.mjs";
 import { compileTerminalPlan, TERMINAL_COMMANDS } from "./terminal.mjs";
 import { compileWorkSiteBundle } from "../src/lib/work-sites-output.mjs";
 import { parseWorkQuestionOptions } from "../src/lib/work-question.mjs";
+import {
+  HOSTED_CHAT_URL,
+  MODEL_OUTPUT_LIMITS,
+  isKovaHostedModelId,
+  requestKovaHostedChat,
+} from "../src/lib/ai/kova-hosted-inference.server.mjs";
 
 /** Pinned operator endpoints only. Model output never becomes a host command or URL. */
 export function configuredProvider(
@@ -16,34 +22,64 @@ export function configuredProvider(
 ) {
   const responses = new URL(responsesUrl),
     allowed = new Set(models);
+  const hosted = models.some(isKovaHostedModelId);
   if (
     responses.protocol !== "https:" ||
     responses.username ||
     responses.password ||
     !providerKey ||
     providerKey.length < 16 ||
-    !allowed.size
+    !allowed.size ||
+    (hosted &&
+      (models.some((model) => !isKovaHostedModelId(model)) || responses.href !== HOSTED_CHAT_URL))
   )
     throw new Error("work_provider_configuration_invalid");
   const capabilities = parseWorkModelCapabilities(
     modelCapabilities ??
-      models.map((model) => ({ model, reasoningEfforts: [], maxOutputTokens: 8192 })),
+      models.map((model) => ({
+        model,
+        reasoningEfforts: model === "kova-xenon-5" ? ["max"] : [],
+        maxOutputTokens: Math.min(8192, MODEL_OUTPUT_LIMITS[model] ?? 8192),
+      })),
   );
-  if (capabilities.some((item) => !allowed.has(item.model)))
+  if (
+    capabilities.some(
+      (item) =>
+        !allowed.has(item.model) ||
+        (hosted &&
+          (item.maxOutputTokens > MODEL_OUTPUT_LIMITS[item.model] ||
+            item.reasoningEfforts.some(
+              (effort) => item.model !== "kova-xenon-5" || effort !== "max",
+            ))),
+    )
+  )
     throw new Error("work_provider_configuration_invalid");
   async function post(payload, signal) {
-    const response = await fetcher(responses, {
-      method: "POST",
-      redirect: "error",
-      credentials: "omit",
-      signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${providerKey}`,
-        "api-key": providerKey,
-      },
-      body: JSON.stringify(payload),
-    });
+    const response = hosted
+      ? await requestKovaHostedChat({
+          request: {
+            model: payload.model,
+            messages: payload.input,
+            stream: false,
+            max_completion_tokens: payload.max_output_tokens,
+            response_format: { type: "json_object" },
+          },
+          token: providerKey,
+          signal,
+          fetchImpl: fetcher,
+        })
+      : await fetcher(responses, {
+          method: "POST",
+          redirect: "error",
+          credentials: "omit",
+          signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${providerKey}`,
+            "api-key": providerKey,
+          },
+          body: JSON.stringify(payload),
+        });
     if (!response.ok) throw new Error("work_provider_request_failed");
     const reader = response.body?.getReader();
     if (!reader) throw new Error("work_provider_response_invalid");
@@ -65,7 +101,21 @@ export function configuredProvider(
     } finally {
       reader.releaseLock();
     }
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    if (!hosted) return data;
+    return {
+      output_text: data.choices?.[0]?.message?.content,
+      usage: {
+        input_tokens: data.usage?.prompt_tokens,
+        output_tokens: data.usage?.completion_tokens,
+        input_tokens_details: {
+          cached_tokens: data.usage?.prompt_tokens_details?.cached_tokens ?? 0,
+        },
+        output_tokens_details: {
+          reasoning_tokens: data.usage?.completion_tokens_details?.reasoning_tokens ?? 0,
+        },
+      },
+    };
   }
   function artifact(bytes, mimeType) {
     if (!(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 6 * 1024 * 1024)
