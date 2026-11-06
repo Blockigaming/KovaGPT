@@ -516,6 +516,7 @@ function KovaGPT() {
       ) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setSidebarOpen(false);
         setSettingsTab(tab);
         setSettingsOpen(true);
         return;
@@ -534,6 +535,7 @@ function KovaGPT() {
       navigate,
       principalReady,
       result,
+      setSidebarOpen,
       tempChat,
       userKey,
     ],

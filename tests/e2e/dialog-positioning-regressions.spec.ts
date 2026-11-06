@@ -131,7 +131,12 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
-    await expect(page.locator(".kova-sidebar")).toBeHidden();
+    if (mobile) {
+      await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
+      await expect(page.locator(".kova-sidebar")).not.toBeInViewport();
+    } else {
+      await expect(page.locator(".kova-sidebar")).toHaveCount(0);
+    }
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),
       animations: "disabled",

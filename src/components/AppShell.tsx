@@ -168,6 +168,7 @@ export function AppShell({
           navigate({ to: "/images" });
         },
         "toggle-sidebar": () => {
+          if (document.querySelector('.kova-settings-dialog[role="dialog"]')) return;
           setSidebarOpen((v) => !v);
         },
         "focus-input": () => {
@@ -186,6 +187,7 @@ export function AppShell({
       if (window.matchMedia("(max-width: 1023px)").matches) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setSidebarOpen(false);
         setSettingsTab(tab);
         setSettingsOpen(true);
         return;
@@ -196,7 +198,7 @@ export function AppShell({
         replace: pathname.startsWith("/settings/"),
       });
     },
-    [navigate, pathname],
+    [navigate, pathname, setSidebarOpen],
   );
 
   useEffect(() => {
