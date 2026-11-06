@@ -38,7 +38,7 @@ test("Prompt Studio persists variables favorites projects packs and launches cha
   assert.match(route, /Launch new chat/);
   assert.match(chat, /kova-prompt-launch/);
 });
-test("Artifact tools remain interactive while retired Work links return to chat", () => {
+test("Artifact tools remain interactive alongside account-scoped Work", () => {
   const artifact = read("src/components/ArtifactEditor.tsx"),
     work = read("src/routes/work.tsx");
   for (const label of [
@@ -49,6 +49,7 @@ test("Artifact tools remain interactive while retired Work links return to chat"
     "Continue in chat",
   ])
     assert.ok(artifact.includes(label), label);
-  assert.match(work, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.match(work, /<WorkSessionPanel ownerId=\{ownerId\}/);
+  assert.match(work, /isLoaded && isSignedIn/);
   assert.doesNotMatch(work, /<WorkExecutionPanel|<AgentWorkspace|decision: "approved"/);
 });

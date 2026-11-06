@@ -6,6 +6,7 @@ export const SIDEBAR_SHORTCUTS = Object.freeze(
     { id: "images", label: "Images", to: "/images" },
     { id: "library", label: "Library", to: "/library" },
     { id: "projects", label: "Projects", to: "/projects" },
+    { id: "work", label: "Work", to: "/work" },
     { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
     { id: "apps", label: "Plugins", to: "/apps" },
     { id: "maps", label: "Maps", to: "/maps" },
@@ -15,6 +16,7 @@ export const DEFAULT_SIDEBAR_SHORTCUTS = Object.freeze([
   "images",
   "library",
   "projects",
+  "work",
   "scheduled-tasks",
   "apps",
 ]);
@@ -44,7 +46,7 @@ export function readSidebarShortcuts(storage, userId) {
     const saved = JSON.parse(raw);
     const choices =
       Array.isArray(saved?.shortcuts) && new Set(saved.shortcuts).size === saved.shortcuts.length
-        ? saved.shortcuts.filter((id) => id !== "work" && id !== "discovery")
+        ? saved.shortcuts.filter((id) => id !== "discovery")
         : null;
     return saved?.version === 1 && validChoices(choices)
       ? [...choices]

@@ -44,11 +44,12 @@ const [
 
 const homeView = await readFile("src/components/HomeChatStarters.tsx", "utf8");
 const sidebarCatalog = await readFile("src/lib/sidebar-layout.mjs", "utf8");
-test("chat stays primary and retired Work bookmarks do not expose a workspace switch", () => {
+test("chat stays primary while authenticated Work has its own secondary destination", () => {
   assert.doesNotMatch(appShell, /WorkspaceModeSwitch/);
   assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
-  assert.match(workRoute, /throw redirect\(\{ to: "\/", replace: true \}\)/);
-  assert.doesNotMatch(sidebarCatalog, /to: "\/work"/);
+  assert.match(workRoute, /component: WorkPage/);
+  assert.match(workRoute, /isLoaded && isSignedIn/);
+  assert.match(sidebarCatalog, /to: "\/work"/);
   assert.match(sidebar, /aria-label="New chat"/);
 });
 

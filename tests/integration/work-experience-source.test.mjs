@@ -28,8 +28,9 @@ test("Work is loaded from persisted runs, events, deliverables, and approvals", 
     assert.ok(server.includes(contract), contract);
 });
 
-test("retired Work URL redirects without exposing legacy execution controls", () => {
-  assert.match(route, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+test("Work mounts account-scoped controls while legacy execution stays unavailable", () => {
+  assert.match(route, /isLoaded && isSignedIn/);
+  assert.match(route, /<WorkSessionPanel ownerId=\{ownerId\}/);
   assert.doesNotMatch(route, /<WorkExecutionPanel|<WorkBrowserPanel|<AgentWorkspace/);
   assert.match(server, /requireSupabaseAuth/);
   assert.match(server, /decision: z\.literal\("denied"\)/);
@@ -83,9 +84,10 @@ test("consequential Work transitions are validated in security-definer RPCs", ()
   assert.doesNotMatch(teamServer, /\.from\("agent_run_tasks"\)[\s\S]*?\.update\(/);
 });
 
-test("specialist execution components remain separate from the retired Work route", () => {
+test("Work delegates specialist execution to the qualified shared runner", () => {
   assert.match(executionPanel, /aria-label="Specialist progress"/);
   assert.match(executionPanel, /specialist\.result\.summary/);
   assert.match(executionProtocol, /"specialist-subruns"/);
   assert.doesNotMatch(route, /<WorkExecutionPanel|<AgentWorkspace/);
+  assert.match(route, /<WorkSessionPanel ownerId=\{ownerId\}/);
 });
