@@ -65,6 +65,7 @@ function fixture(options = {}) {
       "@/integrations/supabase/config": {
         SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.invalid" },
       },
+      "@/components/auth/ClerkSafe": { useUser: () => ({ isLoaded: true }) },
       "@/hooks/useAuthProviders": { useAuthProviders: () => ({ resolved: true, github: false }) },
       "@/assets/plugins/github.svg": { default: "/github.svg" },
       "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect: (url) => url },
@@ -96,9 +97,13 @@ function fixture(options = {}) {
       "@/lib/utils": { cn: (...args) => args.filter(Boolean).join(" ") },
     },
     globals: {
+      requestAnimationFrame: () => 0,
+      cancelAnimationFrame() {},
       window: {
         location: { replace: (destination) => redirects.push(destination) },
         requestAnimationFrame: () => {},
+        addEventListener() {},
+        removeEventListener() {},
       },
       console: { error() {} },
       setTimeout(callback) {

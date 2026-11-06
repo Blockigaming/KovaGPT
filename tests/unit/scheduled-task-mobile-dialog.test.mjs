@@ -43,7 +43,7 @@ test("scheduled editor phone geometry retains viewport caps and semantic panel c
       entry.selector === ".spec400-schedule-dialog[data-kova-dialog-surface]" &&
       entry.parent.type === "root",
   );
-  assert.ok(desktop.nodes.some((node) => node.prop === "max-width" && node.value === "560px"));
+  assert.ok(desktop.nodes.some((node) => node.prop === "max-width" && node.value === "600px"));
   assert.ok(
     desktop.nodes.some(
       (node) => node.prop === "border-radius" && node.value === "var(--kova-radius-panel)",

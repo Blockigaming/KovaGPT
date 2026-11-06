@@ -462,7 +462,10 @@ body {
 }
 
 /* One consistent and unmistakable keyboard focus treatment. */
-:where(a, button, [role="button"], [tabindex]):not(input):not(textarea):not(select):focus-visible {
+:root:not([data-kova-input-modality="pointer"])
+  :where(a, button, [role="button"], [tabindex]):not(input):not(textarea):not(
+    select
+  ):focus-visible {
   outline: 2px solid var(--ring) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
@@ -1416,8 +1419,8 @@ body {
     transform: translateY(0) scale(0.99);
   }
 
-  [role="menuitem"]:focus-visible,
-  [role="option"]:focus-visible {
+  :root:not([data-kova-input-modality="pointer"]) [role="menuitem"]:focus-visible,
+  :root:not([data-kova-input-modality="pointer"]) [role="option"]:focus-visible {
     outline: 2px solid var(--ring) !important;
     outline-offset: -2px !important;
     background: var(--accent) !important;
@@ -1980,3 +1983,10 @@ body {
 
 /* Chat selection is one full row, including its options target. Pointer focus
    must not paint a second shorter capsule over the title button. */
+
+/* Programmatic menu focus after a pointer click is not keyboard focus. */
+:root[data-kova-input-modality="pointer"]
+  :is(button, a, [role="button"], [role="menu"], [role="menuitem"], [role="tab"]):focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

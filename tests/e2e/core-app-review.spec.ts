@@ -60,7 +60,10 @@ test("sidebar search and all main destinations keep honest service states", asyn
   test.setTimeout(60_000);
   const confirmSidebarState = async () => {
     if (page.viewportSize()!.width < 1024) {
-      await dismissMobileSidebar(page);
+      const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
+      // Navigation can already dismiss the drawer before the destination mounts.
+      if (await drawer.isVisible()) await dismissMobileSidebar(page);
+      await expect(drawer).toBeHidden();
     } else {
       await expect(
         page.getByRole("navigation", { name: "Primary navigation", exact: true }),
@@ -320,7 +323,9 @@ test("project sections and account settings remain navigable and cancel safely",
     await page.keyboard.press("Escape");
   }
   const workspace = page.locator(".kova-app-content");
-  await expect(workspace).toHaveAttribute("data-sidebar", "open");
+  if (await page.locator(".kova-settings-page").count())
+    await expect(page.locator(".kova-sidebar")).toHaveCount(0);
+  else await expect(workspace).toHaveAttribute("data-sidebar", "closed");
   await page.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
   await expect(workspace).toHaveAttribute("data-sidebar", "open");

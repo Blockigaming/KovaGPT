@@ -96,6 +96,7 @@ test("guest sidebar exposes Help and concise login without subscription navigati
     isLoaded: true,
     signedIn: false,
     cancelPendingSelection: () => calls.push("cancel-selection"),
+    closeAfterMobileNavigation: () => calls.push("cancel-selection"),
     onOpenHelp: () => calls.push("help"),
     onOpenSettings: (tab) => calls.push(tab),
   };

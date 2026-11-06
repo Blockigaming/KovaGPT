@@ -61,7 +61,7 @@ export function MemoryOverview({
               ? "Memory couldn't be loaded. Reopen this tab to retry."
               : !current.items.length
                 ? automaticMemory
-                  ? "No saved notes yet. Preferences and facts you share in synced chats will appear here automatically."
+                  ? "No summaries yet. Brief summaries of your synced conversations will appear here automatically."
                   : "No saved notes yet. Turn on conversation updates, or save a reviewed memory from a chat."
                 : current.items.slice(0, 3).map((item) => (
                     <p key={`${item.source}:${item.id}`} className="whitespace-pre-wrap">

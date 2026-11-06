@@ -22,7 +22,7 @@ for (const theme of ["dark", "light"] as const) {
     if (page.viewportSize()!.width >= 768) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
+      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeHidden();
       expect(
         await surface.locator("h1").evaluate((node) => {
           const style = getComputedStyle(node.closest(".sr-only")!);
@@ -30,7 +30,7 @@ for (const theme of ["dark", "light"] as const) {
         }),
       ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
-      const backToPreviousPage = surface.getByRole("button", { name: "Back to previous page" });
+      const backToPreviousPage = surface.getByRole("button", { name: "Back to app" });
       await expect(backToPreviousPage).toBeHidden();
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
       await expect(backToPreviousPage).toBeVisible();

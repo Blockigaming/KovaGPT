@@ -205,7 +205,7 @@ test("compact composer groups actions and preserves message editing and markdown
   assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
   assert.match(
     chatMessage,
-    /<DropdownMenuItem onSelect=\{onRetry\}>[\s\S]*?Retry\s*<\/DropdownMenuItem>/,
+    /<DropdownMenuItem onSelect=\{\(\) => onRetry\(\)\}>[\s\S]*?Try again[\s\S]*?<\/DropdownMenuItem>/,
   );
   assert.match(chatMessage, /aria-label="Retry stopped response"/);
   assert.match(chatMessage, /label: retryActionLabel,[\s\S]*?onRetry\(\)/);

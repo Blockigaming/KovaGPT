@@ -714,9 +714,10 @@ button.kova-auth-sign-up:hover {
 /* A clear account entry and a full-width profile summary inside its dropdown. */
 .kova-account-main {
   border-radius: 15px;
-  background: var(--sidebar-active);
+  background: transparent;
 }
-.kova-account-main:hover {
+.kova-account-main:hover,
+.kova-account-main[data-state="open"] {
   background: var(--sidebar-hover);
 }
 .kova-profile-menu [role="menuitem"] {
@@ -748,7 +749,11 @@ button.kova-auth-sign-up:hover {
 
 /* The menu itself receives programmatic focus when it opens. */
 .kova-profile-menu[role="menu"] {
-  width: min(330px, var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 16px));
+  width: min(
+    var(--radix-dropdown-menu-trigger-width),
+    var(--radix-dropdown-menu-content-available-width, 100vw),
+    calc(100vw - 16px)
+  );
   border-radius: 18px;
   outline: none;
 }
@@ -756,4 +761,21 @@ button.kova-auth-sign-up:hover {
 .kova-rail-account:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
+}
+
+.kova-profile-menu[data-rail="true"][role="menu"] {
+  width: min(244px, var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 16px));
+}
+
+/* Pointer focus uses the gray hover surface; keyboard focus keeps a quiet edge. */
+body .kova-profile-menu[role="menu"] {
+  outline: none;
+}
+body .kova-profile-menu [role="menuitem"]:focus {
+  box-shadow: none;
+  outline: none;
+}
+body .kova-profile-menu [role="menuitem"]:focus-visible {
+  outline: 1px solid var(--muted-foreground);
+  outline-offset: -2px;
 }

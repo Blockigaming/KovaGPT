@@ -91,19 +91,7 @@ test("study stays inside response More, with no standalone workspace chip", () =
       node.openingElement.tagName.getText(parsed) === "DropdownMenuItem" &&
       node.getText(parsed).includes("Practice this explanation"),
   );
-  assert.equal(item.length, 1);
-  assert.match(item[0].getText(parsed), /onSelect=\{openStudy\}/);
-  assert.match(item[0].getText(parsed), /min-h-11/);
-  let parent = item[0].parent;
-  while (
-    parent &&
-    !(
-      ts.isJsxElement(parent) &&
-      parent.openingElement.tagName.getText(parsed) === "DropdownMenuContent"
-    )
-  )
-    parent = parent.parent;
-  assert.ok(parent, "Study action belongs to the response dropdown");
+  assert.equal(item.length, 0, "More contains only the timestamp and branch action");
   const workspace = readFileSync("src/components/ChatWorkspaceControls.tsx", "utf8");
   assert.doesNotMatch(workspace, /StudyControl|Practice this explanation/);
   for (const existing of ["HistoryStatus", "Custom Kova"]) assert.ok(workspace.includes(existing));

@@ -31,7 +31,7 @@ export function useSidebarPreference() {
     if (typeof document !== "undefined" && document.querySelector('[data-settings-open="true"]'))
       return;
     setPreference((current) => {
-      if (!current) return current;
+      if (!current || document.querySelector(".kova-settings-dialog")) return current;
       const open = typeof next === "function" ? next(current.open) : next;
       return open === current.open ? current : { ...current, open };
     });

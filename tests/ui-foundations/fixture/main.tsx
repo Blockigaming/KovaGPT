@@ -10,6 +10,7 @@ import {
 import { PublicFixture } from "./public-pages";
 import { NativeControlsFixture } from "./native-controls";
 import { BenchmarkReview } from "./benchmark-review";
+import { IntelligentInterfaceFixture } from "./intelligent-interface";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { Button } from "@/components/ui/button";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -82,6 +83,7 @@ function Fixture() {
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
   if (surface === "native-controls") return <NativeControlsFixture />;
+  if (surface === "intelligent-interface") return <IntelligentInterfaceFixture />;
   if (
     surface.startsWith("public-") &&
     (standaloneReview || new URLSearchParams(location.search).get("review") === "1")

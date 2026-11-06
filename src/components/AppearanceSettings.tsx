@@ -107,7 +107,7 @@ export function AppearanceSettings({
             <span>125%</span>
           </div>
         </div>
-        <div className="kova-preference-row kova-preference-slider">
+        <div className="kova-preference-row kova-preference-slider kova-desktop-navigation-preference">
           <div>Settings sidebar width</div>
           <output>{navigationWidthDraft ?? values.settingsNavigationWidth}px</output>
           <Slider

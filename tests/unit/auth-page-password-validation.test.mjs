@@ -57,6 +57,7 @@ function fixture() {
     "@/integrations/supabase/config": {
       SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.invalid" },
     },
+    "@/components/auth/ClerkSafe": { useUser: () => ({ isLoaded: true }) },
     "@/hooks/useAuthProviders": { useAuthProviders: () => ({ resolved: true, github: false }) },
     "@/assets/plugins/github.svg": { default: "/github.svg" },
     "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect: (url) => url },

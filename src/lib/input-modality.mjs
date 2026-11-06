@@ -29,9 +29,11 @@ export function installInputModality(document) {
   };
   set("keyboard");
   document.addEventListener("pointerdown", pointer, true);
+  document.addEventListener("pointermove", pointer, true);
   document.addEventListener("keydown", keyboard, true);
   return () => {
     document.removeEventListener("pointerdown", pointer, true);
+    document.removeEventListener("pointermove", pointer, true);
     document.removeEventListener("keydown", keyboard, true);
     if (previous === null) root.removeAttribute("data-kova-input-modality");
     else root.setAttribute("data-kova-input-modality", previous);

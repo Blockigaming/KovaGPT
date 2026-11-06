@@ -74,7 +74,9 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.ok(!SIDEBAR_ITEMS.some((item) => item.to === "/work"));
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
   assert.match(sidebar, /cancelPendingSelection\(\);\s+onNew\(\);/);
-  assert.doesNotMatch(sidebar, /closeAfterMobileNavigation/);
+  assert.match(sidebar, /if \(!open \|\| !isMobileViewport\(\)\) return/);
+  assert.match(sidebar, /navigationOwnsFocusRef\.current = requestDrawerNavigationFocus/);
+  assert.match(sidebar, /closeAfterMobileNavigation\(to\)/);
   assert.equal(sidebarRule(".kova-sidebar[data-kova-core-sidebar]").margin, "0");
 });
 
@@ -192,7 +194,7 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.match(message, /Retry loading response feedback/);
   assert.match(message, /setFeedbackReload\(\(current\) => current \+ 1\)/);
   assert.match(message, /setFeedbackSaving\(Boolean\(isSignedIn && !isUser\)\)/);
-  assert.match(message, />\s*Share\s*</);
+  assert.match(message, /aria-label="Share response"/);
   assert.match(message, /Save to Library/);
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);

@@ -168,6 +168,7 @@ export function AppShell({
           navigate({ to: "/images" });
         },
         "toggle-sidebar": () => {
+          if (document.querySelector('.kova-settings-dialog[role="dialog"]')) return;
           setSidebarOpen((v) => !v);
         },
         "focus-input": () => {
@@ -293,7 +294,7 @@ export function AppShell({
             .catch(() => toast.error("Your chat wasn't changed. Try again."));
         }}
         onShare={setShareChatId}
-        open={sidebarOpen}
+        open={sidebarOpen && !settingsOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
@@ -302,7 +303,7 @@ export function AppShell({
 
       <div
         className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-        data-sidebar={sidebarOpen ? "open" : "closed"}
+        data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
       >
         <OfflineBanner />
         {!hideMobileTopBar && (

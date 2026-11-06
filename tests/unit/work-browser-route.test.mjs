@@ -8,6 +8,7 @@ import * as cloudRules from "../../src/lib/cloud-browser-rules.mjs";
 import * as policy from "../../src/lib/work-browser-policy.mjs";
 import * as bodyReader from "../../src/lib/bounded-json.server.mjs";
 import * as authSecurity from "../../src/lib/auth-security.mjs";
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 const owner = crypto.randomUUID(),
   runId = crypto.randomUUID(),
   sessionId = crypto.randomUUID(),
@@ -99,7 +100,7 @@ function fixture(tier = "plus") {
       browserRunnerCapabilities: async () => ({
         available: true,
         protocol: "kova-browser-v1",
-        maxSessionSeconds: 300,
+        idleTimeoutSeconds: 900,
         origins: ["https://browser-fixture.net"],
       }),
       browserRunnerCommand: async (_, command) => {
@@ -120,7 +121,14 @@ function fixture(tier = "plus") {
     "@/lib/auth-security.mjs": authSecurity,
     "@/lib/bounded-json.server.mjs": bodyReader,
     "@/lib/distributed-rate-limit.server": {
-      consumeApplicationRateLimit: async () => ({ allowed: true }),
+      consumeApplicationRateLimit: (input) =>
+        consumeDistributedRateLimit({
+          ...input,
+          backendUrl: "https://backend-fixture.net",
+          serviceRoleKey: "offline-service-role",
+          hashSecret: "h".repeat(64),
+          fetchImpl: async () => Response.json([{ allowed: true, retry_after: 60 }]),
+        }),
     },
     "@/lib/work-browser.server": server,
     "@/lib/cloud-browser-preferences.server.mjs": preferences,

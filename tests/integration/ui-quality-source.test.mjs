@@ -300,7 +300,7 @@ test("canonical reference styles own shell and composer contracts without retire
   }
   assert.equal(declarations(responseStyles, ".kova-message-actions")["flex-wrap"], "wrap");
   assert.match(message, /kova-response-action-bar[^"\n]*overflow-x-auto/);
-  assert.match(message, /kova-open-result-action[^"\n]*shrink-0[^"\n]*whitespace-nowrap/);
+  assert.doesNotMatch(message, /Edit in Canvas|Compare versions/);
   assert.equal(declarations(menuStyles, ".kova-composer-menu").background, "var(--popover)");
 
   const coreStart = styles.indexOf("/* Core workspace overhaul:");
@@ -321,6 +321,7 @@ test("canonical reference styles own shell and composer contracts without retire
       '[role="dialog"]forminput.border-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"])',
       '[role="dialog"]form:is(label,div:has(>label)):has(+:is(input.border-input,textarea.border-input))',
       '[role="dialog"]formlabel>:is(input.border-input,textarea.border-input)',
+      ':root[data-kova-input-modality="pointer"]:is(button,a,[role="button"],[role="menu"],[role="menuitem"],[role="tab"]):focus',
     ],
     "only scoped dialog-field repairs may follow the shared utilities",
   );

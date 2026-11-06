@@ -425,6 +425,9 @@ const markdownComponents: Components = {
       <blockquote {...props}>{children}</blockquote>
     ),
   table: ({ children }) => <ResponseTable>{children}</ResponseTable>,
+  strong: ({ children }) => (
+    <strong className="font-semibold text-blue-600 dark:text-blue-400">{children}</strong>
+  ),
   a: MarkdownLink,
   img: MarkdownImage,
 };

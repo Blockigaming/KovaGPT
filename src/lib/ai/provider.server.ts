@@ -4,6 +4,11 @@ import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
 
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
+import {
+  isKovaHostedModelId,
+  prepareKovaHostedRequest,
+  requestKovaHostedChat,
+} from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
 import {
   AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE,
@@ -477,6 +482,13 @@ export function embeddingModel() {
 
 function normalizeProviderError(error: unknown): AiProviderError {
   if (error instanceof AiProviderError) return error;
+  if (error && typeof error === "object" && "status" in error && error.status === 429)
+    return new AiProviderError({
+      error: "KovaGPT is busy right now. Please try again shortly.",
+      code: "provider_rate_limited",
+      retryable: true,
+      status: 429,
+    });
   if (isAbortError(error)) {
     return new AiProviderError({
       error: "KovaGPT took too long to respond. Please try again.",
@@ -715,6 +727,33 @@ export async function chatCompletions(
   acceptanceScope?: GenerationAcceptanceScope,
 ): Promise<Response> {
   const stream = body.stream === true;
+  if (isKovaHostedModelId(body.model)) {
+    // Independent opt-in. Never route a Kova alias to OpenAI by accident.
+    // Existing generation kill switch and capabilities remain authoritative.
+    const unavailable = providerUnavailableEnvelope(stream ? "streaming" : "chat");
+    if (unavailable) throw new AiProviderError(unavailable);
+    // Capture and acceptance sessions fail closed until hosted parity is verified.
+    const enabled = env("KOVA_HOSTED_INFERENCE_ENABLED") === "true";
+    const captured = env("KOVA_REQUEST_CAPTURE_ENABLED");
+    const accepted = env("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+    if (!enabled || (captured && captured !== "false") || (accepted && accepted !== "false")) {
+      throw new AiProviderError({
+        error: "This Kova model is not yet available.",
+        code: "provider_unavailable",
+        retryable: false,
+        status: 503,
+      });
+    }
+    try {
+      return await requestKovaHostedChat({
+        request: body,
+        token: env("OPENROUTER_API_KEY"),
+        signal: init?.signal ?? undefined,
+      });
+    } catch (error) {
+      throw normalizeProviderError(error);
+    }
+  }
   const response = await providerFetch(
     "/responses",
     stream ? "streaming" : "chat",
@@ -734,8 +773,10 @@ export async function streamingChatCompletions(
   return chatCompletions({ ...body, stream: true }, init);
 }
 
-/** Pure: the same conversion and final model mapping used by providerFetch. */
+/** Pure: estimate the same wire body that the selected model's transport sends. */
 export function prepareChatResponsesRequest(body: JsonObject): JsonObject {
+  if (isKovaHostedModelId(body.model))
+    return JSON.parse(prepareKovaHostedRequest(body).body) as JsonObject;
   return withProviderModel(toResponsesRequest(body), body.stream === true ? "streaming" : "chat");
 }
 

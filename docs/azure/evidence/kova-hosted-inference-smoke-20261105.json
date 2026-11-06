@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "checkedDate": "2026-11-05",
+  "verificationScope": "Standalone Kova provider transport executed in authenticated Azure Cloud Shell",
+  "sourceCommit": "5740055acd450ba5b0bf5e961e25abd79e4c7649",
+  "transportSha256": "0f820eb12e34e4c95a4b648d97cb9986456f372ac95bae13eeb5c3100a2d0c74",
+  "credentialSource": "Production Azure Key Vault; value was never logged",
+  "requestMaxOutputTokens": 1024,
+  "samples": [
+    {
+      "alias": "kova-xenon-5",
+      "foundation": "moonshotai/kimi-k3",
+      "nonStreaming": {
+        "status": 200,
+        "textReceived": true,
+        "finishReason": "stop",
+        "elapsedMs": 1252,
+        "reportedCostUsd": 0.0005832
+      },
+      "streaming": {
+        "status": 200,
+        "textReceived": true,
+        "doneReceived": true,
+        "elapsedMs": 2155,
+        "reportedCostUsd": 0.0015312
+      },
+      "toolCall": {
+        "status": 200,
+        "validArguments": true,
+        "elapsedMs": 837,
+        "reportedCostUsd": 0.000423528
+      },
+      "vision": {
+        "status": 200,
+        "recognizedSyntheticRedSquare": true,
+        "elapsedMs": 1339,
+        "reportedCostUsd": 0.0008412
+      }
+    },
+    {
+      "alias": "kova-neon-4.6",
+      "foundation": "meta-llama/llama-4-maverick",
+      "nonStreaming": {
+        "status": 200,
+        "textReceived": true,
+        "finishReason": "stop",
+        "elapsedMs": 993,
+        "reportedCostUsd": 0.00000995
+      },
+      "streaming": {
+        "status": 200,
+        "textReceived": true,
+        "doneReceived": true,
+        "elapsedMs": 726,
+        "reportedCostUsd": 0.0000113
+      },
+      "toolCall": {
+        "status": 200,
+        "validArguments": true,
+        "elapsedMs": 974,
+        "reportedCostUsd": 0.0002309
+      },
+      "vision": {
+        "status": 200,
+        "recognizedSyntheticRedSquare": true,
+        "elapsedMs": 621,
+        "reportedCostUsd": 0.00006355
+      }
+    },
+    {
+      "alias": "kova-argon-4.6",
+      "foundation": "deepseek/deepseek-v4-flash-0731",
+      "nonStreaming": {
+        "status": 200,
+        "textReceived": true,
+        "finishReason": "stop",
+        "elapsedMs": 549,
+        "reportedCostUsd": 0.00002408
+      },
+      "streaming": {
+        "status": 200,
+        "textReceived": true,
+        "doneReceived": true,
+        "elapsedMs": 552,
+        "reportedCostUsd": 0.00002016
+      },
+      "toolCall": {
+        "status": 200,
+        "validArguments": true,
+        "elapsedMs": 1950,
+        "reportedCostUsd": 0.00006832
+      },
+      "visionBoundary": {
+        "rejectedBeforeUpstream": true,
+        "error": "hosted_model_vision_unavailable"
+      }
+    }
+  ],
+  "allReturnedProviderModelIdsMatchedFoundations": true,
+  "paidRequests": 11,
+  "reportedInferenceCostUsd": 0.003807388,
+  "productionGatewayAccepted": false,
+  "limitations": [
+    "Synthetic short prompts and one synthetic image; no customer content was sent.",
+    "Elapsed times are single-request observations, not throughput or latency benchmarks.",
+    "This proves provider transport compatibility, not deployment, authenticated website routing, account isolation, or the coordinated browser migration."
+  ]
+}

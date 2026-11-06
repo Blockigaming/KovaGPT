@@ -15,7 +15,7 @@ test("task editor has ordered task, timing, and review headings without changing
   assert.match(task, /Selected zone:/);
   assert.doesNotMatch(task, /Saved zone:/);
   assert.match(task, /<h3>Next confirmed run<\/h3>/);
-  assert.match(task, /three-run preview is not available/);
+  assert.match(task, /task\?\.next_run_at && !dirty/);
 });
 test("archived project has a restore header and read-only content capabilities", () => {
   assert.match(

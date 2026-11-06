@@ -396,7 +396,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   );
   assert.match(apps, /primaryEmailAddress\?\.verification\?\.status === "verified"/u);
   assert.match(apps, /supabase\.auth\.resend\(\{ type: "signup", email \}\)/u);
-  assert.match(apps, /Resend verification email/u);
+  assert.doesNotMatch(apps, /<WorkflowSkillsPanel/u);
   assert.match(auth, /u\.email_confirmed_at \? "verified" : "unverified"/u);
   assert.match(
     migration,

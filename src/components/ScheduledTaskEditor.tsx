@@ -59,7 +59,7 @@ type Draft = {
   repeat: ScheduledTask["repeat"];
 };
 type Option = { id: string; label: string; projectId?: string };
-const control = "min-h-11 w-full rounded-lg border border-border bg-background p-2 text-sm";
+const control = "min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm";
 const button = "min-h-11 rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50";
 type ScheduledTaskEditorProps = {
   task?: ScheduledTask;
@@ -628,9 +628,6 @@ function ScheduledTaskEditorBody({
             save(submitter instanceof HTMLElement ? submitter : undefined);
           }}
         >
-          <DialogDescription className="sr-only">
-            Review the prompt, schedule, and context before saving.
-          </DialogDescription>
           <div className="flex justify-between gap-3">
             <DialogTitle asChild>
               <h2 ref={headingRef} tabIndex={-1} className="font-semibold">
@@ -638,6 +635,11 @@ function ScheduledTaskEditorBody({
               </h2>
             </DialogTitle>
           </div>
+          <DialogDescription>
+            {task
+              ? "Update the prompt and schedule for this task."
+              : "Tell Kova what to do and when to do it."}
+          </DialogDescription>
           {validationAttempt > 0 && validationErrors.length > 0 && (
             <div
               ref={validationSummaryRef}
@@ -711,6 +713,7 @@ function ScheduledTaskEditorBody({
                 {...validationProps("title")}
                 className={control}
                 value={title}
+                placeholder="e.g. Morning news briefing"
                 maxLength={200}
                 onChange={(event) => setTitle(event.target.value)}
               />
@@ -722,6 +725,7 @@ function ScheduledTaskEditorBody({
                 {...validationProps("prompt")}
                 className={`${control} min-h-[120px]`}
                 value={prompt}
+                placeholder="What would you like Kova to do?"
                 maxLength={4000}
                 onChange={(event) => setPrompt(event.target.value)}
               />
@@ -871,35 +875,15 @@ function ScheduledTaskEditorBody({
                 : timezone.replaceAll("_", " ").split("/").join(" / ")}
               {" · "}Selected zone: <span className="font-mono">{timezone || "Not selected"}</span>
             </p>
-            {!task && (
-              <p className="spec400-supporting">
-                Defaults to this device’s timezone. Review it before saving; an account timezone is
-                not available in this version.
-              </p>
-            )}
-            <section className="spec400-schedule-preview" aria-label="Upcoming runs">
-              <h3>Next confirmed run</h3>
-              {task?.next_run_at && !dirty && (
+            {task?.next_run_at && !dirty && (
+              <section className="spec400-schedule-preview" aria-label="Upcoming runs">
+                <h3>Next confirmed run</h3>
                 <p>
-                  Next confirmed run:{" "}
-                  {formatDisplayDateTime(task.next_run_at, timeFormat, {
-                    timeZone: task.timezone,
-                  })}{" "}
+                  {formatDisplayDateTime(task.next_run_at, timeFormat, { timeZone: task.timezone })}{" "}
                   ({task.timezone})
                 </p>
-              )}
-              <p className="spec400-supporting">
-                The scheduler resolves run times when saving. A three-run preview is not available
-                from the current scheduling service.
-              </p>
-            </section>
-            <section aria-label="Notification preference">
-              <h3>Notifications</h3>
-              <p className="spec400-supporting">
-                Results use the existing account delivery settings. A separate notification
-                preference per task is not supported.
-              </p>
-            </section>
+              </section>
+            )}
             <details className="rounded-lg border border-border p-3">
               <summary>Saved chat or uploaded context ({refs.length}/8)</summary>
               <p className="my-2 text-xs text-muted-foreground">

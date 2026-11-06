@@ -73,6 +73,7 @@ import {
   type SidebarLayout,
 } from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
+import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 import { isClearSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
 
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
@@ -153,6 +154,7 @@ export function Sidebar({
   const drawerRef = useRef<HTMLElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const navigationOwnsFocusRef = useRef(false);
   const renameDialogRef = useRef<HTMLDialogElement | null>(null);
   const chatOptionsRefs = useRef(new globalThis.Map<string, HTMLButtonElement>());
   const renameReturnFocusRef = useRef<{ target: HTMLButtonElement | null; context: string } | null>(
@@ -630,6 +632,7 @@ export function Sidebar({
 
   useEffect(() => {
     if (!open || !mobileViewport) return;
+    navigationOwnsFocusRef.current = false;
     lastFocusedRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const content = drawerRef.current
@@ -732,6 +735,7 @@ export function Sidebar({
       document.body.style.overflow = previousOverflow;
       if (content) content.inert = previousInert;
       document.removeEventListener("keydown", onKeyDown);
+      if (navigationOwnsFocusRef.current) return;
       requestAnimationFrame(() => {
         // A newly opened account dialog owns focus; do not pull it back underneath.
         if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
@@ -774,6 +778,16 @@ export function Sidebar({
     return () => document.removeEventListener("keydown", escape);
   }, [open, mobileViewport, signedIn]);
 
+  const closeAfterMobileNavigation = (destination?: string) => {
+    cancelPendingSelection();
+    if (!open || !isMobileViewport()) return;
+    if (destination)
+      navigationOwnsFocusRef.current = requestDrawerNavigationFocus({
+        destination,
+        source: drawerRef.current,
+      });
+    swipeToggleRef.current();
+  };
   const closeRename = () => {
     const returnFocus = renameReturnFocusRef.current;
     renameReturnFocusRef.current = null;
@@ -827,7 +841,7 @@ export function Sidebar({
           event.altKey
         )
           return;
-        cancelPendingSelection();
+        closeAfterMobileNavigation(to);
       }}
     >
       {icon(Icon)}
@@ -883,7 +897,7 @@ export function Sidebar({
                 cancelPendingSelection();
                 const select = () => {
                   selectTimerRef.current = null;
-                  cancelPendingSelection();
+                  closeAfterMobileNavigation("/");
                   onSelect(conversation.id);
                 };
                 // Keep double-click rename on the current page; keyboard and touch stay immediate.
@@ -1027,7 +1041,12 @@ export function Sidebar({
         : "Plan unavailable";
 
   const renderAccountMenu = (rail = false) => (
-    <DropdownMenuContent side={rail ? "right" : "top"} align="end" className="kova-profile-menu">
+    <DropdownMenuContent
+      side={rail ? "right" : "top"}
+      align="end"
+      className="kova-profile-menu"
+      data-rail={rail}
+    >
       <DropdownMenuLabel className="kova-profile-menu-account">
         <span className="kova-profile-menu-avatar" aria-hidden="true">
           {avatarUrl ? <img src={avatarUrl} alt="" /> : accountInitial || <UserRound size={20} />}
@@ -1216,8 +1235,8 @@ export function Sidebar({
                   })
                 }
               >
-                <option value="header">Icon beside the sidebar button</option>
-                <option value="navigation">Item in navigation</option>
+                <option value="header">Header icon</option>
+                <option value="navigation">Navigation item</option>
               </select>
             </label>
             <label>
@@ -1775,7 +1794,7 @@ export function Sidebar({
                     type="button"
                     className={navRow()}
                     onClick={() => {
-                      cancelPendingSelection();
+                      closeAfterMobileNavigation();
                       onOpenHelp();
                     }}
                   >
@@ -1787,7 +1806,7 @@ export function Sidebar({
                     className={navRow()}
                     aria-label="Settings"
                     onClick={() => {
-                      cancelPendingSelection();
+                      closeAfterMobileNavigation();
                       onOpenSettings("general");
                     }}
                   >
@@ -1893,6 +1912,12 @@ export function Sidebar({
             width: "min(36rem, calc(100vw - 2rem))",
             maxHeight:
               "min(80dvh, calc(100dvh - max(1rem, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
+          }}
+          onKeyDownCapture={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeChatSearch();
           }}
           onCancel={(event) => {
             event.preventDefault();

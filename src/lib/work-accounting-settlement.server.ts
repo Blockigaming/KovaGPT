@@ -1,11 +1,17 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { actualCostUsd, OPENAI_TEXT_MODELS } from "@/lib/ai/model-catalog.server";
+import {
+  actualCostUsd,
+  OPENAI_TEXT_MODELS,
+  KOVA_HOSTED_TEXT_MODELS,
+} from "@/lib/ai/model-catalog.server";
 import { workInputHash, type WorkRun } from "@/lib/work-execution-protocol.mjs";
 import type { RunnerReceipt } from "@/lib/work-runner-transport.mjs";
 
 /** Input must be a verified, pinned runner receipt; browser assertions never call this. */
 export async function settleWorkAccounting(run: WorkRun, receipt: RunnerReceipt): Promise<void> {
-  const model = OPENAI_TEXT_MODELS.find((entry) => entry.id === run.model);
+  const model = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
+    (entry) => entry.id === run.model,
+  );
   if (
     !model ||
     receipt.ownerId !== run.ownerId ||

@@ -484,24 +484,17 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
       expect(promptActionBox.height + 0.01).toBeGreaterThanOrEqual(44);
     }
     const action = page.getByRole("button", { name: "Copy response", exact: true });
-    const artifactAction = page.getByRole("button", { name: "Open code result", exact: true });
+    await expect(page.getByRole("button", { name: "Open code result", exact: true })).toHaveCount(
+      0,
+    );
     await expect(action).toBeVisible();
-    await expect(artifactAction).toBeVisible();
     const box = await action.boundingBox();
-    const artifactBox = await artifactAction.boundingBox();
     expect(box).not.toBeNull();
-    expect(artifactBox).not.toBeNull();
     // Chromium can report an exact 44 CSS-pixel target a few millionths below 44
     // after device-scale rounding. Keep the WCAG target while tolerating only that noise.
     const subpixelTolerance = 0.01;
     expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(44);
     expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
-    expect(artifactBox!.width).toBeGreaterThan(70);
-    expect(artifactBox!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
-    expect(artifactBox!.height).toBeLessThanOrEqual(48);
-    expect(await artifactAction.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe(
-      "nowrap",
-    );
   }
   const savedRow = page.locator(".kova-chat-row");
   await revealSidebar(page);

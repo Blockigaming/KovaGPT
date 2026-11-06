@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar } from "./current-ui";
 
 test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1440x900");
@@ -50,10 +51,12 @@ test("sidebar keeps separate desktop and phone preferences across Images and rel
   const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
   await drawer.getByRole("link", { name: "Images", exact: true }).click();
   await expect(page).toHaveURL(/\/images$/);
-  await expect(drawer).toBeVisible();
-  await expect(page.locator(".spec400-images")).toHaveAttribute("inert", "");
+  await expect(drawer).toBeHidden();
+  await expect(page.locator(".spec400-images")).not.toHaveAttribute("inert", "");
   await page.reload();
   await waitForKovaHydration(page);
+  await expect(drawer).toBeHidden();
+  await revealSidebar(page);
   await expect(drawer).toBeVisible();
 
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -105,7 +108,7 @@ test("desktop Settings width is editable and Back restores the originating page"
   await navigation.getByRole("tab", { name: "Profile", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
-  await settings.getByRole("button", { name: "Back to previous page", exact: true }).click();
+  await settings.getByRole("button", { name: "Back to app", exact: true }).click();
   await expect(page).toHaveURL(previousUrl);
 });
 

@@ -19,7 +19,6 @@ export interface PermissionPolicy {
 
 export interface CreateSessionOptions extends SessionIdentity {
   engine?: BrowserEngine;
-  lifetimeMs?: number;
   idleTimeoutMs?: number;
   permissions: PermissionPolicy;
 }

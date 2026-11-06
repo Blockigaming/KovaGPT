@@ -97,7 +97,7 @@ test("enforces permissions and cleans expired sessions, artifacts, and processes
     code: "permission_denied",
   });
 
-  const expiring = await runtime.createSession({ ...sessionOptions(), lifetimeMs: 2_000 });
+  const expiring = await runtime.createSession({ ...sessionOptions(), idleTimeoutMs: 2_000 });
   const tab = await runtime.createTab(expiring.id, "owner-a", origin);
   await runtime.screenshot(expiring.id, "owner-a", tab.id);
   expect(await runtime.sessions.sweep(Date.now() + 3_000)).toBe(1);
@@ -119,4 +119,13 @@ test("blocks unsafe schemes, private networks, and non-allow-listed origins", as
       BrowserRuntimeError,
     );
   }
+});
+
+test("expires inactive browser sessions after fifteen minutes", async () => {
+  const session = await runtime.createSession(sessionOptions());
+  expect(session.idleTimeoutMs).toBe(15 * 60_000);
+  const created = Date.parse(session.lastUsedAt);
+  expect(await runtime.sessions.sweep(created + 14 * 60_000)).toBe(0);
+  expect(await runtime.sessions.sweep(created + 15 * 60_000)).toBe(1);
+  expect(() => runtime.listTabs(session.id, "owner-a")).toThrow(BrowserRuntimeError);
 });

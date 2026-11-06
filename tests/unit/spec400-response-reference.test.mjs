@@ -22,15 +22,10 @@ test("neutral code boxes use the actual theme foreground", () => {
   assert.match(css, /\.prose-chat \.kova-response-output pre \{\s*color: var\(--foreground\);/);
   assert.match(css, /\.kova-response-output pre code \{\s*color: inherit;/);
 });
-test("narrow Open result retains its full accessible name and visible Canvas label", () => {
-  const actions = readFileSync("src/components/response-action-refinement.css", "utf8");
+test("response footer omits Canvas and comparison actions", () => {
   const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
-  assert.doesNotMatch(actions, /\.kova-open-result-action > span \{\s*display: none/);
-  assert.match(message, /<span>Edit in Canvas<\/span>/);
-  assert.match(
-    message,
-    /aria-label=\{artifactKind === "code" \? "Open code result" : "Open writing result"\}/,
-  );
+  assert.doesNotMatch(message, /Edit in Canvas|Compare versions/);
+  assert.match(message, /<ResponseSpeechButton/);
 });
 
 test("image action controls retain common padding and ordinary icon tokens", () => {

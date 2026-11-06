@@ -33,3 +33,8 @@ export function sameReviewedMemoryConversation(
   right: unknown,
   ownerId: string,
 ): boolean;
+
+export function automaticMemorySource(
+  conversation: unknown,
+  ownerId: string,
+): ReturnType<typeof reviewedMemorySource>;
