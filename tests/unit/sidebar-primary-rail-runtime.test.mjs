@@ -149,6 +149,52 @@ function fixture(options = {}) {
 const primaryLabels = ["New chat", "Chat"];
 const controls = (tree) => all(tree).filter(({ type }) => type === "button" || type === "Link");
 
+function expandedFeatures(options = {}) {
+  const f = fixture({ collapsed: false, open: true, ...options });
+  const navigation = nodes.find(
+    (node) =>
+      ts.isJsxElement(node) &&
+      node.openingElement.tagName.getText(file) === "nav" &&
+      node.openingElement.attributes.properties.some(
+        (attribute) =>
+          attribute.name?.text === "aria-label" &&
+          attribute.initializer?.text === "KovaGPT features",
+      ),
+  );
+  const deps = { ...f.deps, MoreGlyph: "MoreGlyph", navRow: () => "nav-row" };
+  deps.icon = compile(`return (${variable("icon")});`, deps);
+  deps.navLink = compile(`return (${variable("navLink")});`, deps);
+  return { ...f, tree: compile(`return (${navigation.getText(file)});`, deps) };
+}
+
+test("expanded navigation renders selected Work in place and preserves saved shortcut order", () => {
+  const f = expandedFeatures({ railShortcuts: ["library", "work", "projects"], path: "/work" });
+  assert.deepEqual(
+    controls(f.tree)
+      .filter(({ type }) => type === "Link")
+      .map(({ props }) => props.to),
+    ["/library", "/work", "/projects"],
+  );
+  assert.equal(
+    controls(f.tree).find(({ props }) => props.to === "/work").props["aria-current"],
+    "page",
+  );
+  assert.equal(controls(f.tree).filter(({ props }) => props.to === "/work").length, 1);
+  assert.deepEqual(f.calls, [], "rendering Work does not rewrite saved choices");
+});
+
+test("saved layouts without Work keep a signed-in route under More without duplicating or changing choices", () => {
+  for (const path of ["/", "/work"]) {
+    const f = expandedFeatures({ railShortcuts: ["library"], path });
+    const more = all(f.tree).find(({ type }) => type === "details");
+    assert.equal(controls(more).filter(({ props }) => props.to === "/work").length, 1);
+    assert.equal(more.props.open, path === "/work" ? true : undefined);
+    assert.deepEqual(f.calls, []);
+  }
+  const guest = expandedFeatures({ signedIn: false, railShortcuts: ["library"] });
+  assert.equal(controls(guest.tree).filter(({ props }) => props.to === "/work").length, 0);
+});
+
 for (const choices of [
   [],
   DEFAULT_SIDEBAR_SHORTCUTS,

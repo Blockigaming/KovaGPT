@@ -63,5 +63,6 @@ test("remaining native project and Work dialogs are replaced with accessible UI"
   assert.match(projectChat, /AlertDialog/);
   assert.match(projectChat, /aria-label="Project chat title"/);
   assert.match(collaboration, /Delete project comment\?/);
-  assert.match(work, /throw redirect/);
+  assert.match(work, /isLoaded && isSignedIn/);
+  assert.match(work, /WorkSessionPanel ownerId=\{ownerId\}/);
 });

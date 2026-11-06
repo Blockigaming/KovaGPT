@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { fixture } from "./actual-app-fixture";
+import { fixture, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { workModelOptions } from "../../src/lib/work-model-policy.mjs";
 import { KOVA_HOSTED_TEXT_MODELS } from "../../src/lib/ai/model-catalog.server";
+import { sidebarLayoutKey } from "../../src/lib/sidebar-layout.mjs";
+import { revealSidebar } from "./current-ui";
 
 const roles = {
   DEFAULT_CHAT: "kova-argon-4.6",
@@ -14,9 +16,13 @@ const capabilities = Object.values(roles).map((model) => ({
   reasoningEfforts: [],
   maxOutputTokens: 8192,
 }));
-async function workFixture(page: Parameters<typeof fixture>[0], tier: "free" | "plus" | "pro") {
+async function workFixture(
+  page: Parameters<typeof fixture>[0],
+  tier: "free" | "plus" | "pro",
+  preserveStorageOnReload = false,
+) {
   const commands: unknown[] = [];
-  await fixture(page, "dark", true, false, tier);
+  await fixture(page, "dark", true, false, tier, { preserveStorageOnReload });
   await page.route("**/api/work/sync**", (route) =>
     route.fulfill({
       json: { savedRecords: [], recentItems: [], nextCursor: 0, currentVersion: 0, hasMore: false },
@@ -45,6 +51,39 @@ async function workFixture(page: Parameters<typeof fixture>[0], tier: "free" | "
     });
   });
   return commands;
+}
+
+for (const selected of [true, false]) {
+  test(`saved sidebar ${selected ? "keeps its Work shortcut visible" : "can open Work under More"}`, async ({
+    page,
+  }) => {
+    const commands = await workFixture(page, "free", true);
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const shortcuts = selected ? ["library", "work", "projects"] : ["library", "projects"];
+    const key = sidebarLayoutKey(owner);
+    await page.evaluate(
+      ({ key, shortcuts }) => localStorage.setItem(key!, JSON.stringify({ shortcuts })),
+      { key, shortcuts },
+    );
+    await page.reload();
+    await waitForKovaHydration(page);
+    await revealSidebar(page);
+    const navigation = page.getByRole("navigation", { name: "KovaGPT features", exact: true });
+    if (!selected) await navigation.locator("summary").click();
+    const work = navigation.getByRole("link", { name: "Work", exact: true });
+    await expect(work).toBeVisible();
+    await expect(work).toHaveCount(1);
+    await work.click();
+    await expect(page).toHaveURL((url) => url.pathname === "/work");
+    await expect(
+      page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate((key) => JSON.parse(localStorage.getItem(key!)!).shortcuts, key),
+    ).toEqual(shortcuts);
+    expect(commands).toEqual([]);
+  });
 }
 
 for (const tier of ["free", "plus", "pro"] as const) {
