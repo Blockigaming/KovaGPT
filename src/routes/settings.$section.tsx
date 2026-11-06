@@ -38,7 +38,13 @@ function SettingsPage() {
             else void navigate({ to: "/", replace: true });
           }}
           onSectionChange={(next) =>
-            void navigate({ to: "/settings/$section", params: { section: next }, replace: true })
+            // Settings resets its content pane; router restoration must not replay the previous section.
+            void navigate({
+              to: "/settings/$section",
+              params: { section: next },
+              replace: true,
+              resetScroll: false,
+            })
           }
         />
       </main>

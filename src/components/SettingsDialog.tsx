@@ -1119,9 +1119,9 @@ export function SettingsDialog({
     if (!pendingFocus) return;
     pendingMobileFocusRef.current = null;
     if (pendingFocus === "navigation" && mobileHome) {
-      settingsSearchRef.current?.focus();
+      settingsSearchRef.current?.focus({ preventScroll: true });
     } else if (pendingFocus === "content" && !mobileHome) {
-      contentHeadingRef.current?.focus();
+      contentHeadingRef.current?.focus({ preventScroll: true });
     }
   }, [mobileFocusRequest, mobileHome, tab]);
 

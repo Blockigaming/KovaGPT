@@ -297,8 +297,8 @@ test("mobile settings drill-in moves focus with the visible panel", () => {
   assert.match(settingsSource, /pendingMobileFocusRef\.current = "navigation"/);
   assert.match(settingsSource, /setMobileFocusRequest\(\(request\) => request \+ 1\)/);
   assert.match(settingsSource, /\[mobileFocusRequest, mobileHome, tab\]/);
-  assert.match(settingsSource, /settingsSearchRef\.current\?\.focus\(\)/);
-  assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\)/);
+  assert.match(settingsSource, /settingsSearchRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
 });
 
 test("usage bars bind verified plan allowances to real account counters and retain failure states", () => {
