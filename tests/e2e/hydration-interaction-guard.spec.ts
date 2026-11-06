@@ -31,7 +31,10 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
   await expect(page.getByText("Reconnect to send", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("main")).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator('dialog[aria-label="Checking account"] [aria-busy]')).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
 
   await page.evaluate(() => {
@@ -128,7 +131,9 @@ for (const { mode, system, dark } of themeCases) {
       await expect(root).not.toHaveClass(/\bdark\b/);
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
-      await expect(page.getByRole("main")).toHaveAttribute("aria-busy", "true");
+      await expect(
+        page.locator('dialog[aria-label="Checking account"] [aria-busy]'),
+      ).toHaveAttribute("aria-busy", "true");
       await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),

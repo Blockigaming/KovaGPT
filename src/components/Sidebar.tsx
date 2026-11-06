@@ -1916,6 +1916,12 @@ export function Sidebar({
             maxHeight:
               "min(80dvh, calc(100dvh - max(1rem, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
           }}
+          onKeyDownCapture={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeChatSearch();
+          }}
           onCancel={(event) => {
             event.preventDefault();
             closeChatSearch();

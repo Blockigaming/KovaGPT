@@ -24,7 +24,7 @@ export async function handleWorkBrowser(request: Request) {
   const rate = await consumeApplicationRateLimit({
     identity: `user:${caller.userId}`,
     action: "work_browser_control",
-    limit: 120,
+    limit: 100,
     windowSeconds: 60,
   });
   if (!rate.allowed)

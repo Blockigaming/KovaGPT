@@ -61,7 +61,9 @@ test("real sharing remains available without the misleading local-member flow", 
   const badResponse = responseActions.getByRole("button", { name: "Bad response" });
   await expect(goodResponse).toBeVisible();
   await expect(badResponse).toBeVisible();
-  await expect(responseActions.getByRole("button", { name: "Share" })).toHaveCount(0);
+  await expect(
+    responseActions.getByRole("button", { name: "Share response", exact: true }),
+  ).toBeVisible();
   await goodResponse.click();
   await expect(goodResponse).toHaveAttribute("aria-pressed", "true");
   await badResponse.click();
@@ -69,8 +71,9 @@ test("real sharing remains available without the misleading local-member flow", 
   await expect(badResponse).toHaveAttribute("aria-pressed", "true");
   expect(feedbackWrites).toHaveLength(2);
   await responseActions.getByRole("button", { name: "More actions" }).click();
-  await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Share" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Save to Library" })).toBeVisible();
+  await expect(page.getByRole("menuitem")).toHaveCount(1);
+  await expect(
+    page.getByRole("menuitem", { name: "Branch into new chat", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Add members/i })).toHaveCount(0);
 });
