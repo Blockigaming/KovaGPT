@@ -90,7 +90,7 @@ test("sidebar preferences isolate owners, survive reload, reject CSS injection a
     recentChats: false,
   });
   assert.equal(chosen.width, 420);
-  assert.deepEqual(chosen.shortcuts, ["library"]);
+  assert.deepEqual(chosen.shortcuts, ["library", "work"]);
   assert.equal(saveSidebarLayout(storage, "a", chosen), true);
   assert.deepEqual(readSidebarLayout(storage, "a"), chosen);
   assert.notDeepEqual(readSidebarLayout(storage, "b"), chosen);
