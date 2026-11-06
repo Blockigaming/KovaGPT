@@ -3113,7 +3113,9 @@ function KovaGPT() {
                 send(
                   priorUser.content,
                   pendingMessageAttachments(priorUser.attachments),
-                  m.requestedTool ?? null,
+                  options?.webSearch === false && m.requestedTool === "web_search"
+                    ? null
+                    : (m.requestedTool ?? null),
                   0,
                   active.id,
                   retryHistory,
