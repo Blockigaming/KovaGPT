@@ -106,7 +106,10 @@ function AuthAuthorityGate({ pending }: { pending: boolean }) {
     // Native top-layer modality also fences Radix portals outside the normal
     // app DOM. Keep this element mounted so the task subtree stays mounted.
     if (pending && !current.open) current.showModal();
-    if (!pending && current.open) current.close();
+    if (!pending) {
+      if (current.open) current.close();
+      window.dispatchEvent(new Event("kova-auth-surface-ready"));
+    }
     return () => {
       if (current.open) current.close();
     };
@@ -402,12 +405,12 @@ function KovaClerkProvider({
       value={value}
     >
       <div
-        style={{ display: authorityPending ? "none" : "contents" }}
-        inert={authorityPending || undefined}
+        style={{ display: !isLoaded || authorityPending ? "none" : "contents" }}
+        inert={!isLoaded || authorityPending || undefined}
       >
         {children}
       </div>
-      <AuthAuthorityGate pending={authorityPending} />
+      <AuthAuthorityGate pending={!isLoaded || authorityPending} />
       {authIssue ? (
         <div
           role="alert"
@@ -426,7 +429,7 @@ function KovaClerkProvider({
         </div>
       ) : null}
       <AuthDialog
-        open={dialog.open && !authorityPending}
+        open={isLoaded && dialog.open && !authorityPending}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((current) => ({ ...current, open }))}
@@ -898,12 +901,12 @@ function SupabaseClerkProvider({
     // private child state immediately when a validated account is cleared.
     <Ctx.Provider key={session?.user.id ?? "guest"} value={value}>
       <div
-        style={{ display: authorityUnresolved ? "none" : "contents" }}
-        inert={authorityUnresolved || undefined}
+        style={{ display: !isLoaded || authorityUnresolved ? "none" : "contents" }}
+        inert={!isLoaded || authorityUnresolved || undefined}
       >
         {children}
       </div>
-      <AuthAuthorityGate pending={authorityUnresolved} />
+      <AuthAuthorityGate pending={!isLoaded || authorityUnresolved} />
       {authIssue ? (
         <div
           role="alert"
@@ -926,7 +929,7 @@ function SupabaseClerkProvider({
         </div>
       ) : null}
       <AuthDialog
-        open={dialog.open && !authorityUnresolved}
+        open={isLoaded && dialog.open && !authorityUnresolved}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}

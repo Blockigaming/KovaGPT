@@ -108,7 +108,7 @@ test("desktop Settings width is editable and Back restores the originating page"
   await navigation.getByRole("tab", { name: "Profile", exact: true }).click();
   await expect(page).toHaveURL(/\/settings\/profile$/);
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
-  await settings.getByRole("button", { name: "Back to previous page", exact: true }).click();
+  await settings.getByRole("button", { name: "Back to app", exact: true }).click();
   await expect(page).toHaveURL(previousUrl);
 });
 

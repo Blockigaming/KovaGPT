@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 211,
+  "count": 212,
   "latest": "20261106182723_kova_work_browser_launch_forward.sql",
   "migrations": [
     {
@@ -4429,6 +4429,20 @@
     },
     {
       "order": 211,
+      "filename": "20261106022315_kova_conversation_summary_short_chats.sql",
+      "timestamp": "20261106022315",
+      "sha256": "3fb5f6aa8ea9bf2d719fc02db88634955c571f99dd359082e72104ad14c45b9d",
+      "tables": [],
+      "functions": ["persist_automatic_chat_memory"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 212,
       "filename": "20261106182723_kova_work_browser_launch_forward.sql",
       "timestamp": "20261106182723",
       "sha256": "6f32ce69a2f7b5a6c40d1e79aaa261fcc39c9a34f76b293e7875068687837742",

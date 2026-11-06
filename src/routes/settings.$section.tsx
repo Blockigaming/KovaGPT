@@ -1,5 +1,4 @@
 import { createFileRoute, useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
-import { AppShell } from "@/components/AppShell";
 import { SettingsDialog, SETTINGS_SECTIONS } from "@/components/SettingsDialog";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useNovaSettings } from "@/lib/use-nova-settings";
@@ -17,7 +16,7 @@ function SettingsPage() {
     ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS]
     : "personalization";
   return (
-    <AppShell utilitiesInHeader hideUtilities hideMobileTopBar>
+    <div className="kova-settings-screen">
       <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">
         {!valid ? (
           <p role="status">
@@ -43,6 +42,6 @@ function SettingsPage() {
           }
         />
       </main>
-    </AppShell>
+    </div>
   );
 }

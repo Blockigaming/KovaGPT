@@ -217,3 +217,46 @@ test("unchanged pending summaries retry without POSTing a cross-chat fallback", 
   assert.equal(result.continue, true);
   assert.deepEqual(calls, ["GET"]);
 });
+
+test("first-exchange conversation memory saves independently of the optional context-summary service", async () => {
+  const calls = [];
+  await writeMemoryForPrincipal(
+    {
+      id: chatId,
+      temporary: false,
+      messages: [
+        { role: "user", content: "What is 17 × 23?" },
+        { role: "assistant", content: "391." },
+      ],
+    },
+    id,
+    {
+      getSession: async () => ({ data: { session } }),
+      automaticMemory: true,
+      contextSummaries: false,
+      fetchImpl: async (url, init) => {
+        calls.push({ url, body: JSON.parse(init.body) });
+        return Response.json({ saved: true });
+      },
+    },
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "/api/memory");
+  assert.equal(calls[0].body.operation, "update_conversation_notes");
+  assert.equal(calls[0].body.chatId, chatId);
+});
+
+test("a temporarily unresolved account is not acknowledged as a completed memory update", async () => {
+  let posted = false;
+  const result = await writeMemoryForPrincipal({ id: chatId, messages: history.slice(0, 2) }, id, {
+    automaticMemory: true,
+    contextSummaries: false,
+    getSession: async () => ({ data: { session: null } }),
+    fetchImpl: async () => {
+      posted = true;
+      return Response.json({ saved: true });
+    },
+  });
+  assert.equal(posted, false);
+  assert.notEqual(result.memoryUpdated, true);
+});

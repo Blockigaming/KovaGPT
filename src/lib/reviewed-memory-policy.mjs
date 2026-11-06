@@ -31,7 +31,7 @@ export function parseReviewedMemoryRequest(value) {
   return value;
 }
 
-export function reviewedMemorySource(conversation, ownerId) {
+function memorySource(conversation, ownerId, minimumMessages) {
   let normalized;
   try {
     normalized = normalizeChatHistory(conversation, ownerId);
@@ -40,7 +40,7 @@ export function reviewedMemorySource(conversation, ownerId) {
   }
   if (normalized.id.length > 100) throw new Error("This chat cannot save account memory.");
   const eligible = normalized.messages.slice(normalized.memoryStartIndex ?? 0);
-  if (eligible.length < 4)
+  if (eligible.length < minimumMessages)
     throw new Error(
       "This chat needs at least four non-temporary messages before memory can be saved.",
     );
@@ -52,6 +52,26 @@ export function reviewedMemorySource(conversation, ownerId) {
       .trim()
       .slice(0, 120),
   };
+}
+
+export function reviewedMemorySource(conversation, ownerId) {
+  return memorySource(conversation, ownerId, 4);
+}
+
+/** One completed non-temporary exchange is enough for a conversation summary. */
+export function automaticMemorySource(conversation, ownerId) {
+  const source = memorySource(conversation, ownerId, 2);
+  const eligible = source.conversation.messages.slice(source.conversation.memoryStartIndex ?? 0);
+  const last = eligible.at(-1);
+  if (
+    !eligible.some((message) => message.role === "user" && message.content.trim()) ||
+    last.role !== "assistant" ||
+    !last.content.trim() ||
+    last.generationStatus ||
+    last.pendingImage
+  )
+    throw new Error("Wait for a completed response before saving conversation memory.");
+  return source;
 }
 
 /** Read eligibility only; this never starts or retries cloud synchronization. */

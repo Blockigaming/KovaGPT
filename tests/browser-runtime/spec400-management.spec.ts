@@ -199,9 +199,10 @@ test("spec400 uses labeled schedule fields and does not fabricate a run preview"
   await expect(page.getByRole("combobox", { name: "Frequency", exact: true })).toHaveText("Daily");
   await expect(page.getByLabel("Time", { exact: true })).toHaveValue("09:00");
   await expect(page.getByRole("combobox", { name: "Timezone", exact: true })).toBeVisible();
-  await expect(
-    page.getByText("A three-run preview is not available", { exact: false }),
-  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Upcoming runs", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Next confirmed run", exact: true })).toHaveCount(
+    0,
+  );
   await page.getByRole("combobox", { name: "Frequency", exact: true }).click();
   await page.getByRole("option", { name: "Weekly", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Weekday", exact: true })).toBeVisible();
@@ -242,7 +243,7 @@ test("schedule editor keeps desktop width and rounded phone viewport gutters", a
   await page.setViewportSize({ width: 1440, height: 900 });
   await mount(page);
   const desktop = await page.getByRole("dialog").boundingBox();
-  expect(Math.round(desktop!.width)).toBe(560);
+  expect(Math.round(desktop!.width)).toBe(600);
   await page.setViewportSize({ width: 320, height: 700 });
   const mobile = await page.getByRole("dialog").boundingBox();
   expect(mobile).not.toBeNull();

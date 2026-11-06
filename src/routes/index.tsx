@@ -190,6 +190,7 @@ import {
   saveConversations,
   persistTemporaryConversation,
   pendingMessageAttachments,
+  storedMessageAttachments,
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
@@ -1040,6 +1041,9 @@ function KovaGPT() {
     const t = setTimeout(() => {
       if (generation !== storageGenerationRef.current) return;
       safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
+      window.dispatchEvent(
+        new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
+      );
     }, 400);
     return () => clearTimeout(t);
   }, [settings, settingsReady, settingsState.persist, userKey]);
@@ -1425,7 +1429,7 @@ function KovaGPT() {
     const controller = new AbortController();
     void import("@/lib/chat-summary-snapshot.mjs")
       .then(({ scheduleMemoryWrites }) =>
-        scheduleMemoryWrites(active, userKey, controller.signal, settings.automaticMemory === true),
+        scheduleMemoryWrites(active, userKey, controller.signal, false),
       )
       .catch(() => undefined);
     return () => controller.abort();
@@ -1816,6 +1820,7 @@ function KovaGPT() {
       queuedSend?: NextPrompt,
       voiceRequest?: { signal: AbortSignal },
       quickAnswer = false,
+      requestWebSearch?: boolean,
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1897,27 +1902,11 @@ function KovaGPT() {
       const userMsg: Message = {
         id: requestId ?? newId(),
         role: "user",
+        createdAt:
+          existingConversation?.messages.find((message) => message.id === requestId)?.createdAt ??
+          Date.now(),
         content: trimmed,
-        attachments: atts.map((a) =>
-          a.kind === "library_file"
-            ? {
-                kind: "library_file" as const,
-                libraryItemId: a.libraryItemId || "",
-                name: a.name,
-                fileType: a.fileType ?? null,
-                size: a.size ?? null,
-                sourceProject: a.sourceProject ?? null,
-              }
-            : a.kind === "text_file"
-              ? {
-                  kind: "text_file" as const,
-                  name: a.name,
-                  content: a.textContent ?? "",
-                  fileType: a.fileType ?? null,
-                  size: a.size ?? null,
-                }
-              : { kind: "image" as const, dataUrl: a.dataUrl },
-        ),
+        attachments: storedMessageAttachments(atts),
       };
       const assistantMsg: Message = {
         id: newId(),
@@ -2161,8 +2150,16 @@ function KovaGPT() {
             temporaryContext: tempChat ? tempChatContext : undefined,
             user:
               tempChat && tempChatContext === "clean"
-                ? undefined
-                : withResponsePresentation(chatRequestProfile(settings), settings),
+                ? requestWebSearch === undefined
+                  ? undefined
+                  : { webSearch: requestWebSearch }
+                : withResponsePresentation(
+                    chatRequestProfile({
+                      ...settings,
+                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
+                    }),
+                    settings,
+                  ),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
             personality:
@@ -2275,6 +2272,8 @@ function KovaGPT() {
             retryable: true,
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
+        if (requestSucceeded)
+          updateAssistantMessage((message) => ({ ...message, createdAt: Date.now() }));
         if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
 
         // Always re-summarize so the chat name in the sidebar reflects the conversation
@@ -3078,6 +3077,7 @@ function KovaGPT() {
               }
             : undefined
         }
+        userTier={tier}
         onRetry={
           isLastAssistant &&
           !isStreaming &&
@@ -3087,7 +3087,7 @@ function KovaGPT() {
             retryableFailedResponsesRef.current.has(
               JSON.stringify([storagePrincipal, active.id, m.id]),
             ))
-            ? () => {
+            ? (options) => {
                 if (
                   !nextPromptMountedRef.current ||
                   !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current)
@@ -3097,11 +3097,17 @@ function KovaGPT() {
                 send(
                   priorUser.content,
                   pendingMessageAttachments(priorUser.attachments),
-                  m.requestedTool ?? null,
+                  options?.webSearch === false && m.requestedTool === "web_search"
+                    ? null
+                    : (m.requestedTool ?? null),
                   0,
                   active.id,
                   retryHistory,
                   m.generationStatus === "failed" ? priorUser.id : undefined,
+                  undefined,
+                  undefined,
+                  false,
+                  options?.webSearch,
                 );
               }
             : undefined
@@ -3258,7 +3264,7 @@ function KovaGPT() {
         onNew={startNewChat}
         onDelete={deleteChat}
         onRename={renameChat}
-        open={sidebarOpen}
+        open={sidebarOpen && !settingsOpen}
         onToggle={() => {
           readingAnchorControllerRef.current?.capture();
           setSidebarOpen((v) => !v);
@@ -3302,7 +3308,7 @@ function KovaGPT() {
       <main
         id="main-content"
         tabIndex={-1}
-        data-sidebar={sidebarOpen ? "open" : "closed"}
+        data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
         <MobileTopBar

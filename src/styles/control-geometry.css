@@ -124,3 +124,20 @@ input[type="radio"]:not([aria-hidden="true"]):disabled {
     min-width: 44px;
   }
 }
+
+/* Neutral keyboard focus; pointer-highlighted menu rows use only their gray fill. */
+:is([role="menu"], .kova-settings-reference, .kova-sidebar-personalization) {
+  --ring: var(--muted-foreground);
+}
+[role="menu"]:focus {
+  outline: none !important;
+}
+[role="menuitem"]:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+[role="menuitem"]:focus-visible {
+  outline: 1px solid var(--muted-foreground);
+  outline-offset: -2px;
+  box-shadow: none;
+}

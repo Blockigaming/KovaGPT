@@ -75,6 +75,22 @@ jobs:
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
           --project="${{ matrix.browser }}-390" --grep="dark workspace fits: /$"
           --output="test-results/interface-fit/smoke-${{ matrix.browser }}"
+      - name: Verify requested Settings, loading and response controls
+        if: matrix.browser == 'chromium'
+        env:
+          KOVA_BROWSER_PREVIEW: "node"
+          PLAYWRIGHT_PREBUILT: "1"
+        run: >-
+          npx --no-install playwright test
+          tests/e2e/settings-composer-followup.spec.ts
+          tests/e2e/settings-sidebar-polish.spec.ts
+          tests/e2e/hydration-interaction-guard.spec.ts
+          tests/e2e/chatgpt-shell-parity.spec.ts
+          tests/e2e/functional-reliability.spec.ts
+          tests/e2e/sidebar-touch-selection.spec.ts
+          --project=desktop-1440x900 --project=phone-390x844
+          --grep="Settings has full-height|returning-user auth|paints correctly|SSR controls|real sharing|desktop Settings width|management search preserves"
+          --workers=2 --output=test-results/interface-fit/requested-controls
       - name: Repeat narrow-screen form and table action presses
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts

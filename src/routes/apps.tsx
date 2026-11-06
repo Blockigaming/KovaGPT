@@ -71,7 +71,6 @@ import {
   type GoogleScheduleDependencies,
 } from "@/lib/google-schedule-dependencies";
 import { Button } from "@/components/ui/button";
-import { WorkflowSkillsPanel } from "@/components/WorkflowSkillsPanel";
 import { DialogFooter } from "@/components/ui/dialog";
 import {
   getGoogleStatus,
@@ -1911,29 +1910,6 @@ function AppsPage() {
                 />
               </TabsContent>
             </Tabs>
-            {isSignedIn && (
-              <details className="spec400-plugin-skills">
-                <summary>Workflow skills</summary>
-                {workflowSkillsAvailable ? (
-                  <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
-                ) : (
-                  <section aria-labelledby="skills-title">
-                    <h2 id="skills-title">Verify your email to use workflow skills</h2>
-                    <p>
-                      Verify your primary email, then refresh this page to create or use workflow
-                      skills.
-                    </p>
-                    <Button
-                      variant="outline"
-                      disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
-                      onClick={() => void resendWorkflowVerification()}
-                    >
-                      {verificationBusy ? "Sending…" : "Resend verification email"}
-                    </Button>
-                  </section>
-                )}
-              </details>
-            )}
           </>
         )}
       </main>

@@ -194,7 +194,7 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.match(message, /Retry loading response feedback/);
   assert.match(message, /setFeedbackReload\(\(current\) => current \+ 1\)/);
   assert.match(message, /setFeedbackSaving\(Boolean\(isSignedIn && !isUser\)\)/);
-  assert.match(message, />\s*Share\s*</);
+  assert.match(message, /aria-label="Share response"/);
   assert.match(message, /Save to Library/);
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);

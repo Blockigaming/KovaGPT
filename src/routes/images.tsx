@@ -905,7 +905,7 @@ function ImagesPage() {
         onSelect={() => {}}
         onNew={() => navigate({ to: "/" })}
         onDelete={() => {}}
-        open={sidebarOpen}
+        open={sidebarOpen && !settingsOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}

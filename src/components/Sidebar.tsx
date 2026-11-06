@@ -1041,7 +1041,12 @@ export function Sidebar({
         : "Plan unavailable";
 
   const renderAccountMenu = (rail = false) => (
-    <DropdownMenuContent side={rail ? "right" : "top"} align="end" className="kova-profile-menu">
+    <DropdownMenuContent
+      side={rail ? "right" : "top"}
+      align="end"
+      className="kova-profile-menu"
+      data-rail={rail}
+    >
       <DropdownMenuLabel className="kova-profile-menu-account">
         <span className="kova-profile-menu-avatar" aria-hidden="true">
           {avatarUrl ? <img src={avatarUrl} alt="" /> : accountInitial || <UserRound size={20} />}
@@ -1233,8 +1238,8 @@ export function Sidebar({
                   })
                 }
               >
-                <option value="header">Icon beside the sidebar button</option>
-                <option value="navigation">Item in navigation</option>
+                <option value="header">Header icon</option>
+                <option value="navigation">Navigation item</option>
               </select>
             </label>
             <label>
@@ -1910,6 +1915,12 @@ export function Sidebar({
             width: "min(36rem, calc(100vw - 2rem))",
             maxHeight:
               "min(80dvh, calc(100dvh - max(1rem, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
+          }}
+          onKeyDownCapture={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeChatSearch();
           }}
           onCancel={(event) => {
             event.preventDefault();

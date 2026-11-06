@@ -57,8 +57,13 @@ const scope = () => ({
   temporary: false,
   temporaryContext: "clean",
 });
-const compiled =
-  js(`globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule")};
+const attachmentSource = parse("src/lib/chat-store.ts");
+const storedAttachmentsDefinition = attachmentSource.statements
+  .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "storedMessageAttachments")
+  .getText(attachmentSource)
+  .replace(/^export /u, "");
+const compiled = js(`globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
+  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule")};
 globalThis.stop = ${arrow("stop")};
 globalThis.setInput = ${arrow("setInput")};
 globalThis.setAttachments = ${arrow("setAttachments")};

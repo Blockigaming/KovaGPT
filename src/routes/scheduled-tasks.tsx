@@ -991,7 +991,7 @@ function ScheduledTasksPage() {
                     className="w-full border border-border bg-background pl-9 pr-3 text-sm"
                   />
                 </label>
-                <TabsList aria-label="Task filters" className="rounded-full">
+                <TabsList aria-label="Task filters" className="kova-task-filters rounded-full">
                   {(["active", "paused", "all"] as TaskFilter[]).map((value) => (
                     <TabsTrigger
                       key={value}

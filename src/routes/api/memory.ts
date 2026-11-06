@@ -29,7 +29,11 @@ import {
 import { MEMORY_TIERS, conversationMemoryNotes } from "@/lib/memory-tier-policy.mjs";
 import { loose } from "@/lib/supabase-loose";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
-import { parseReviewedMemoryRequest, reviewedMemorySource } from "@/lib/reviewed-memory-policy.mjs";
+import {
+  automaticMemorySource,
+  parseReviewedMemoryRequest,
+  reviewedMemorySource,
+} from "@/lib/reviewed-memory-policy.mjs";
 
 type HistoryQuery = PromiseLike<{ data: unknown; error?: unknown }> & {
   select(columns: string): HistoryQuery;
@@ -278,6 +282,8 @@ export const Route = createFileRoute("/api/memory")({
           return saveReviewedMemory(body, authorized, memoryEpoch, request);
         }
         if (body.operation === "update_conversation_notes") {
+          if (!caller.auth.emailVerified)
+            return jsonError("Verify your email before saving memory.", 403);
           if (
             body.memoryEnabled !== true ||
             body.automaticMemory !== true ||
@@ -310,7 +316,7 @@ export const Route = createFileRoute("/api/memory")({
           if (!record.data)
             return jsonError("Wait for this chat to sync before updating memory.", 409);
           try {
-            const source = reviewedMemorySource(record.data.payload, caller.auth.userId);
+            const source = automaticMemorySource(record.data.payload, caller.auth.userId);
             if (source.conversation.id !== body.chatId)
               return jsonError("Memory source changed.", 409);
             const notes = conversationMemoryNotes(

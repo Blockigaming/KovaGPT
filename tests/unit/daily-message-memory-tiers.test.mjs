@@ -38,6 +38,12 @@ async function fixture() {
       "utf8",
     ),
   );
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/20261106022315_kova_conversation_summary_short_chats.sql",
+      "utf8",
+    ),
+  );
   await db.exec("set role service_role");
   return db;
 }
@@ -235,4 +241,50 @@ test("scoped summary installation retains owner isolation and revoked-session fe
   } finally {
     await db.close();
   }
+});
+
+test("a first completed exchange saves and newer exchanges replace only its automatic summary", async () => {
+  const db = await fixture();
+  try {
+    const save = async (count, revision = 1) =>
+      (
+        await db.query(
+          "select public.persist_automatic_chat_memory($1,1,'chat',$2,'Calculation','Discussed: What is 17 × 23?',$3,25) saved",
+          [owner, revision, count],
+        )
+      ).rows[0].saved;
+    await assert.rejects(save(1), /invalid_automatic_memory/);
+    assert.equal(await save(2), true);
+    assert.equal(await save(2), false);
+    assert.equal(
+      (await db.query("select message_count from chat_memories")).rows[0].message_count,
+      2,
+    );
+    await db.exec("update chat_history_records set revision=2");
+    assert.equal(await save(4, 2), true);
+    assert.equal((await db.query("select count(*)::integer n from chat_memories")).rows[0].n, 1);
+    await db.exec(
+      "update chat_memories set automatic=false,summary='Reviewed summary';update chat_history_records set revision=3",
+    );
+    assert.equal(await save(6, 3), false);
+    assert.equal(
+      (await db.query("select summary from chat_memories")).rows[0].summary,
+      "Reviewed summary",
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("ordinary questions receive brief summaries without requiring first-person facts", () => {
+  const summary = conversationMemoryNotes(
+    [
+      { role: "user", content: "What is 17 × 23?" },
+      { role: "assistant", content: "391." },
+    ],
+    "free",
+  );
+  assert.match(summary, /17 × 23/);
+  assert.match(summary, /Kova replied: 391/);
+  assert.ok(summary.length < 100);
 });

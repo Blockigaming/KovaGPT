@@ -31,6 +31,10 @@ const pendingAttachmentsDefinition = attachmentAst.statements
   .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "pendingMessageAttachments")
   .getText(attachmentAst)
   .replace(/^export /u, "");
+const storedAttachmentsDefinition = attachmentAst.statements
+  .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "storedMessageAttachments")
+  .getText(attachmentAst)
+  .replace(/^export /u, "");
 const source = readFileSync("src/routes/index.tsx", "utf8");
 const ast = ts.createSourceFile(
   "index.tsx",
@@ -106,6 +110,7 @@ const keptPreviewDefinition = keptPreviewAst.statements
 const compiled = ts.transpileModule(
   `${keptPreviewDefinition}
   globalThis.pendingMessageAttachments = ${pendingAttachmentsDefinition};
+  globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
   globalThis.send = ${sendSource};\nglobalThis.queue = ${initializer("queueNextPrompt").getText(ast)};\nglobalThis.dispatch = ${dispatch};\nglobalThis.reconcileScope = ${scopeEffect};\nglobalThis.stop = ${arrow("stop")};\nglobalThis.cancel = ${cancel};\nglobalThis.startLifetime = ${unmountEffect};
   globalThis.reconcileNotice = ${noticeScopeEffect};
   globalThis.readVisibleNotice = () => ${initializer("visibleRequestNotice").getText(ast)};

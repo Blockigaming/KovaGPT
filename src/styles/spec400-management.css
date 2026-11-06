@@ -241,15 +241,64 @@
   overflow-wrap: anywhere;
 }
 .spec400-schedule-dialog[data-kova-dialog-surface] {
-  width: min(560px, calc(100vw - 32px));
-  max-width: 560px;
-  padding: 24px;
+  width: min(600px, calc(100vw - 32px));
+  max-width: 600px;
+  padding: 28px;
   border-radius: var(--kova-radius-panel);
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
 }
 .spec400-schedule-editor {
   min-width: 0;
+}
+.spec400-schedule-editor > [data-slot="dialog-description"] {
+  margin-top: 6px;
+  margin-bottom: 24px;
+}
+.spec400-schedule-editor > fieldset {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 18px;
+}
+.spec400-schedule-editor > fieldset > * {
+  margin-block: 0;
+}
+.spec400-schedule-editor h2 {
+  font-size: 22px;
+  line-height: 30px;
+}
+.spec400-schedule-editor h3:not(:first-child) {
+  margin-top: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.spec400-schedule-editor label > [role="combobox"] {
+  margin-top: 8px;
+}
+.spec400-schedule-editor details {
+  border-radius: 14px;
+  background: var(--surface-secondary);
+}
+.spec400-schedule-editor details[open] > summary {
+  margin-bottom: 12px;
+}
+.spec400-schedule-editor textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.spec400-schedules .kova-task-filters {
+  height: auto;
+  min-height: 48px;
+  padding: 4px;
+  gap: 4px;
+}
+.spec400-schedules .kova-task-filters [role="tab"] {
+  height: auto;
+  min-height: 40px;
+  padding: 8px 18px;
+  gap: 8px;
+  line-height: 24px;
 }
 .spec400-schedule-editor > div:first-of-type {
   padding-right: 40px;
@@ -278,14 +327,15 @@
 }
 .spec400-schedule-footer {
   position: sticky;
-  bottom: -24px;
+  bottom: -28px;
   z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 16px 0;
+  margin-top: 24px;
+  padding: 18px 0 8px;
   border-top: 1px solid var(--border);
-  background: var(--background);
+  background: var(--popover);
 }
 .spec400-library-metadata-filters {
   display: flex;
@@ -958,5 +1008,11 @@ html[data-kova-density="compact"]
 @media (prefers-reduced-motion: reduce) {
   .kova-assistant-card {
     transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .spec400-schedule-editor .spec400-form-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

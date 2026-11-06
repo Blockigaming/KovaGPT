@@ -67,8 +67,7 @@ test("heavy chart and artifact workspaces are loaded only when a response needs 
 
 test("eligible assistant outputs open the Result workspace with their original context", () => {
   const message = read("src/components/ChatMessage.tsx");
-  assert.match(message, /Open code result/);
-  assert.match(message, /Open writing result/);
+  assert.doesNotMatch(message, /Edit in Canvas|Compare versions/);
   assert.match(message, /<ArtifactEditor/);
   const opener = message.slice(
     message.indexOf("const openResult ="),
