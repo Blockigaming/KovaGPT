@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/work/execution")({
         const rate = await consumeApplicationRateLimit({
           identity: `user:${auth.userId}`,
           action: "work_execution_read",
-          limit: 120,
+          limit: 100,
           windowSeconds: 60,
         });
         if (!rate.allowed)

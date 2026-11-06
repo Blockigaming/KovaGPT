@@ -139,3 +139,53 @@ for (const kind of ["execution", "browser"]) {
     });
   }
 }
+
+for (const [outcome, status] of [
+  ["allowed", 200],
+  ["limited", 429],
+  ["unavailable", 503],
+]) {
+  test(`Work execution readiness uses the real limiter contract: ${outcome}`, async () => {
+    const rateRequests = [];
+    let protectedReads = 0;
+    const module = loadUiModule(
+      "src/routes/api/work/execution.ts",
+      {
+        "@tanstack/react-router": { createFileRoute: () => (options) => options },
+        "@/lib/api-auth.server": { requireUser: async () => ({ userId: "owner-fixture" }) },
+        "@/lib/auth-security.mjs": {},
+        "@/lib/bounded-json.server.mjs": {},
+        "@/agents/execution.server": {},
+        "@/lib/kova-work-submission.mjs": {},
+        "@/lib/work-execution.server": {
+          workExecutionReadiness: async () => {
+            protectedReads++;
+            return { available: true };
+          },
+        },
+        "@/lib/distributed-rate-limit.server": {
+          consumeApplicationRateLimit: (input) =>
+            consumeDistributedRateLimit({
+              ...input,
+              backendUrl: "https://backend-fixture.net",
+              serviceRoleKey: "offline-service-role",
+              hashSecret: "h".repeat(64),
+              fetchImpl: async (_, init) => {
+                rateRequests.push(JSON.parse(init.body));
+                if (outcome === "unavailable") throw new Error("offline");
+                return Response.json([{ allowed: outcome === "allowed", retry_after: 60 }]);
+              },
+            }),
+        },
+      },
+      globals,
+    );
+    const response = await module.Route.server.handlers.GET({
+      request: new Request("https://app-fixture.net/api/work/execution?readiness=true"),
+    });
+    assert.equal(response.status, status);
+    assert.equal(rateRequests.length, 1);
+    assert.equal(protectedReads, outcome === "allowed" ? 1 : 0);
+    if (status === 200) assert.equal((await response.json()).readiness.available, true);
+  });
+}
