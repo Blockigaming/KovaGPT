@@ -75,7 +75,7 @@ test("portal menu keyboard activation and cleanup preserve explicit modality", (
   dispose();
   assert.equal(f.mode(), "pointer");
 });
-test("active focus rules use native focus-visible and retain visible keyboard outlines", () => {
+test("pointer-origin menu focus stays quiet while keyboard outlines remain visible", () => {
   const sheet = postcss.parse(readFileSync("src/styles.css", "utf8"));
   const pointerRules = [];
   sheet.walkRules((rule) => {
@@ -83,8 +83,8 @@ test("active focus rules use native focus-visible and retain visible keyboard ou
   });
   assert.equal(
     pointerRules.length,
-    0,
-    "Removed compatibility selectors must not override native focus-visible",
+    1,
+    "Only the explicit pointer-modality rule suppresses programmatic focus outlines",
   );
   const geometry = postcss.parse(readFileSync("src/styles/control-geometry.css", "utf8"));
   const focusRules = [];
@@ -132,4 +132,16 @@ test("chat focus highlights the full row while its title control stays transpare
   );
   assert.ok(title);
   assert.ok(title.nodes.some((node) => node.prop === "background" && node.value === "transparent"));
+});
+
+test("moving the pointer over a menu restores pointer modality after keyboard use", () => {
+  const f = fixture();
+  const dispose = installInputModality(f.document);
+  f.fire("keydown", { key: "Tab" });
+  assert.equal(f.mode(), "keyboard");
+  f.fire("pointermove");
+  assert.equal(f.mode(), "pointer");
+  f.fire("keydown", { key: "ArrowDown" });
+  assert.equal(f.mode(), "keyboard");
+  dispose();
 });

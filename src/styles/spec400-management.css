@@ -1010,3 +1010,9 @@ html[data-kova-density="compact"]
     transition: none;
   }
 }
+
+@media (max-width: 480px) {
+  .spec400-schedule-editor .spec400-form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

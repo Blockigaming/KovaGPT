@@ -4417,7 +4417,7 @@
       "order": 210,
       "filename": "20261106022315_conversation_summary_short_chats.sql",
       "timestamp": "20261106022315",
-      "sha256": "fca195bc05ca6069086a3c7496fbf316b75ce9f7c92b2d330ab7c21c6cd06044",
+      "sha256": "3fb5f6aa8ea9bf2d719fc02db88634955c571f99dd359082e72104ad14c45b9d",
       "tables": [],
       "functions": ["persist_automatic_chat_memory"],
       "destructive": true,

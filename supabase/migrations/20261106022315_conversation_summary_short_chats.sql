@@ -33,4 +33,3 @@ begin
 end $$;
 revoke all on function public.persist_automatic_chat_memory(uuid,bigint,text,bigint,text,text,integer,integer) from public,anon,authenticated;
 grant execute on function public.persist_automatic_chat_memory(uuid,bigint,text,bigint,text,text,integer,integer) to service_role;
-
