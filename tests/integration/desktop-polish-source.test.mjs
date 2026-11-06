@@ -52,7 +52,10 @@ test("desktop sidebar fully collapses and has one contained close trigger", () =
   assert.match(primaryNavigation, /data-state=\{open \? "open" : "closed"\}/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /Expand sidebar/);
-  assert.match(primaryNavigation, /inert=\{collapsed \? true : undefined\}/);
+  assert.match(
+    primaryNavigation,
+    /inert=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/,
+  );
 });
 
 test("chat and composer use one stable readable measure", () => {

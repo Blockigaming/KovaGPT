@@ -16,7 +16,7 @@ test("Library single and bulk chat removal reuse recoverable Trash", () => {
   assert.match(confirmation, /your current retention setting/);
   assert.match(library, /if \(isCurrent\(\)\) restoreDeletedItem\(\)/);
 });
-test("management Search keeps its keyboard event and the Sidebar's existing inline fallback", () => {
+test("management Search preserves the Sidebar choice and opens the appropriate search surface", () => {
   const shell = readFileSync("src/components/AppShell.tsx", "utf8");
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
   const parse = (name, text) =>
@@ -64,34 +64,39 @@ test("management Search keeps its keyboard event and the Sidebar's existing inli
       node.arguments[0]?.getText(sidebarFile).includes("const openSearch ="),
   );
   for (const open of [false, true]) {
-    const calls = [],
-      listeners = new Map();
-    const install = compile(`return (${effect.arguments[0].getText(sidebarFile)});`, {
-      open,
-      setSearchOpen: (value) => calls.push(["search-open", value]),
-      onToggle: () => calls.push(["open-sidebar"]),
-      requestAnimationFrame: (callback) => callback(),
-      document: {
-        querySelector: (selector) => {
-          assert.equal(selector, "#sidebar-chat-search");
-          return { focus: () => calls.push(["focus-search"]) };
+    for (const workspace of [false, true]) {
+      const calls = [],
+        listeners = new Map();
+      class HTMLElement {}
+      const trigger = new HTMLElement();
+      const returnFocus = { current: null };
+      const install = compile(`return (${effect.arguments[0].getText(sidebarFile)});`, {
+        open,
+        onOpenWorkspaceSearch: workspace ? () => calls.push(["workspace-search"]) : undefined,
+        cancelPendingSelection: () => calls.push(["cancel-pending-selection"]),
+        searchReturnFocusRef: returnFocus,
+        searchDialogRef: { current: null },
+        searchInputRef: { current: null },
+        setSearchOpen: (value) => calls.push(["search-open", value]),
+        onToggle: () => calls.push(["toggle-sidebar"]),
+        HTMLElement,
+        document: { activeElement: trigger, querySelector: () => null },
+        window: {
+          addEventListener: (name, callback) => listeners.set(name, callback),
+          removeEventListener: (name, callback) => {
+            if (listeners.get(name) === callback) listeners.delete(name);
+          },
         },
-      },
-      window: {
-        addEventListener: (name, callback) => listeners.set(name, callback),
-        removeEventListener: (name, callback) => {
-          if (listeners.get(name) === callback) listeners.delete(name);
-        },
-      },
-    });
-    const cleanup = install();
-    listeners.get(events[0])();
-    assert.deepEqual(calls, [
-      ["search-open", true],
-      ...(!open ? [["open-sidebar"]] : []),
-      ["focus-search"],
-    ]);
-    cleanup();
-    assert.equal(listeners.size, 0, "Unmounting removes the Search listener");
+      });
+      const cleanup = install();
+      listeners.get(events[0])();
+      assert.deepEqual(
+        calls,
+        workspace ? [["cancel-pending-selection"], ["workspace-search"]] : [["search-open", true]],
+      );
+      assert.equal(returnFocus.current, workspace ? null : trigger);
+      cleanup();
+      assert.equal(listeners.size, 0, "Unmounting removes the Search listener");
+    }
   }
 });

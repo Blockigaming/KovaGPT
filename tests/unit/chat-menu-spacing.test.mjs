@@ -4,10 +4,7 @@ import { readFileSync } from "node:fs";
 import postcss from "postcss";
 test("both chat Rename actions have aligned pencil icons", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
-  assert.match(
-    sidebar,
-    /beginRename\(conversation\)\}>\s*<Pencil className="mr-2 h-4 w-4" aria-hidden="true"/,
-  );
+  assert.match(sidebar, /beginRename\(conversation\)\}>\s*<Pencil aria-hidden="true"/);
   assert.match(sidebar, /className="kova-sidebar-chat-menu"/);
   assert.match(
     readFileSync("src/components/ConversationHeaderActions.tsx", "utf8"),

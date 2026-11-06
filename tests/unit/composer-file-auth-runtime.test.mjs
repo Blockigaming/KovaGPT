@@ -1,3 +1,4 @@
+import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import assert from "node:assert/strict";
@@ -125,6 +126,7 @@ function fixture(
       useLayout: () => initialLayout,
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
+    "@/lib/composer-keyboard-inset.mjs": keyboardInset,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
       tryUseUpload: (limit) => {

@@ -49,18 +49,29 @@ function writeStored(key: string | null, value: Stored) {
   }
 }
 
+function preserveActionFocus(event: React.PointerEvent<HTMLButtonElement>) {
+  if (event.button === 0) event.preventDefault();
+}
+
 export type InteractiveBlockProps = {
   block: Block;
   /** Stable per-response key; state and submissions persist under it. */
   storageKey: string | null;
   /** Sends the submission as the user's next conversation message. Absent = read-only. */
-  onSubmit?: (message: string) => void;
+  onSubmit?: (message: string) => boolean | void;
+  disabledReason?: string;
 };
 
 /** Safe native renderer for validated kova-interactive blocks. No HTML, no scripts. */
-export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlockProps) {
+export function InteractiveBlock({
+  block,
+  storageKey,
+  onSubmit,
+  disabledReason,
+}: InteractiveBlockProps) {
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   useEffect(() => {
     setStored(readStored(storageKey));
     setHydrated(true);
@@ -74,18 +85,23 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
   };
   const submit = (submission: InteractiveSubmission) => {
     if (!onSubmit || submitted) return;
+    if (onSubmit(formatSubmission(block, submission)) === false) {
+      setSubmitError(true);
+      return;
+    }
+    setSubmitError(false);
     persist({ submission });
-    onSubmit(formatSubmission(block, submission));
   };
   const saveDraft = (draft: InteractiveSubmission) => {
     if (submitted) return;
+    setSubmitError(false);
     persist({ draft });
   };
   const headingId = useId();
 
   return (
     <section
-      className="kova-interactive my-3 rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-5"
+      className="kova-interactive my-3 min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 text-card-foreground [overflow-wrap:anywhere] sm:p-5"
       aria-labelledby={headingId}
       data-interactive-type={block.type}
       data-interactive-state={submitted ? "submitted" : locked ? "readonly" : "open"}
@@ -117,13 +133,18 @@ export function InteractiveBlock({ block, storageKey, onSubmit }: InteractiveBlo
             onSubmit={submit}
           />
         ))}
+      {submitError && !submitted && (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          Your response was not sent. Check the chat status, then try again.
+        </p>
+      )}
       {submitted ? (
         <p role="status" className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Check className="h-4 w-4" aria-hidden="true" /> Sent
         </p>
       ) : !onSubmit && hydrated ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          This form is only active on the latest reply.
+          {disabledReason ?? "This form is only active on the latest reply."}
         </p>
       ) : null}
     </section>
@@ -145,6 +166,7 @@ function FormBody({
   onDraft: (values: FormValues) => void;
   onSubmit: (s: InteractiveSubmission) => void;
 }) {
+  const formId = useId();
   const [values, setValues] = useState<FormValues>(() => ({
     ...initialFormValues(block),
     ...(initial ?? {}),
@@ -163,12 +185,13 @@ function FormBody({
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) {
-      document.getElementById(`kova-field-${block.id}-${first}`)?.focus();
+      document.getElementById(`kova-field-${formId}-${first}`)?.focus();
       return;
     }
     const clean: FormValues = {};
     for (const f of block.fields)
-      clean[f.id] = f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
+      clean[f.id] =
+        f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
@@ -178,7 +201,7 @@ function FormBody({
       {block.fields.map((field) => (
         <FieldControl
           key={field.id}
-          formId={block.id}
+          formId={formId}
           field={field}
           value={values[field.id]}
           error={errors[field.id]}
@@ -188,7 +211,12 @@ function FormBody({
       ))}
       <div className="flex flex-wrap gap-2 pt-1">
         {hasFields && (
-          <Button type="submit" disabled={locked} className="min-h-11 sm:min-h-9">
+          <Button
+            type="submit"
+            onPointerDown={preserveActionFocus}
+            disabled={locked}
+            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+          >
             {block.submitLabel ?? "Submit"}
           </Button>
         )}
@@ -199,7 +227,8 @@ function FormBody({
             variant={action.style === "primary" ? "default" : "outline"}
             disabled={locked}
             aria-pressed={submittedAction === action.id || undefined}
-            className="min-h-11 sm:min-h-9"
+            className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
+            onPointerDown={preserveActionFocus}
             onClick={() => !locked && onSubmit({ action: action.id, values })}
           >
             {action.label}
@@ -281,7 +310,11 @@ function FieldControl({
       break;
     case "select":
       control = (
-        <Select value={String(value ?? "") || undefined} onValueChange={onChange} disabled={disabled}>
+        <Select
+          value={String(value ?? "") || undefined}
+          onValueChange={onChange}
+          disabled={disabled}
+        >
           <SelectTrigger {...common} className="min-h-11 sm:min-h-9">
             <SelectValue placeholder={field.placeholder ?? "Choose…"} />
           </SelectTrigger>
@@ -350,8 +383,16 @@ function FieldControl({
               </label>
             ))}
           </RadioGroup>
-          {field.help && <p id={helpId} className="mt-1 text-xs text-muted-foreground">{field.help}</p>}
-          {error && <p id={errorId} className="mt-1 text-xs text-destructive">{error}</p>}
+          {field.help && (
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+              {field.help}
+            </p>
+          )}
+          {error && (
+            <p id={errorId} className="mt-1 text-xs text-destructive">
+              {error}
+            </p>
+          )}
         </fieldset>
       );
     case "checkbox": {
@@ -379,8 +420,16 @@ function FieldControl({
               </label>
             ))}
           </div>
-          {field.help && <p id={helpId} className="mt-1 text-xs text-muted-foreground">{field.help}</p>}
-          {error && <p id={errorId} className="mt-1 text-xs text-destructive">{error}</p>}
+          {field.help && (
+            <p id={helpId} className="mt-1 text-xs text-muted-foreground">
+              {field.help}
+            </p>
+          )}
+          {error && (
+            <p id={errorId} className="mt-1 text-xs text-destructive">
+              {error}
+            </p>
+          )}
         </fieldset>
       );
     }
@@ -391,7 +440,11 @@ function FieldControl({
         {label}
       </Label>
       {control}
-      {field.help && <p id={helpId} className="text-xs text-muted-foreground">{field.help}</p>}
+      {field.help && (
+        <p id={helpId} className="text-xs text-muted-foreground">
+          {field.help}
+        </p>
+      )}
       {error && (
         <p id={errorId} className="text-xs text-destructive">
           {error}
@@ -433,7 +486,12 @@ function TableBody({
   const group = useId();
   return (
     <div>
-      <div className="-mx-1 overflow-x-auto px-1" role="region" aria-label={block.title} tabIndex={0}>
+      <div
+        className="-mx-1 overflow-x-auto px-1"
+        role="region"
+        aria-label={block.title}
+        tabIndex={0}
+      >
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
@@ -501,8 +559,9 @@ function TableBody({
       {selectable && (
         <Button
           type="button"
-          className="mt-3 min-h-11 sm:min-h-9"
+          className="mt-3 h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           disabled={locked || selected.length === 0}
+          onPointerDown={preserveActionFocus}
           onClick={() => onSubmit({ selected })}
         >
           {block.submitLabel ?? "Submit"}

@@ -1,3 +1,4 @@
+import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -128,6 +129,7 @@ function fixture(
       useLayout: () => initialLayout,
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
+    "@/lib/composer-keyboard-inset.mjs": keyboardInset,
     "@/lib/document-extraction/pdf-metadata.mjs": pdfMetadata,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {

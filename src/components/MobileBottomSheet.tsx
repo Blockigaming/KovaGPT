@@ -100,7 +100,7 @@ export function MobileBottomSheet({
           >
             <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
           </div>
-          <div className="flex shrink-0 items-center gap-3 px-4 pb-2">
+          <div className="flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))]">
             <DialogPrimitive.Title
               className={
                 title

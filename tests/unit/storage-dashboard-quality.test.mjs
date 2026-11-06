@@ -117,10 +117,24 @@ test("guest browser estimates include the local chat workspace without reading a
 function storageServer({
   bytes = { data: { bytes_used: 128 }, error: null },
   library = { count: 2, error: null },
-  subscription = { data: { effectiveTier: "plus" }, error: null },
+  subscription = { data: "plus", error: null },
 } = {}) {
   const queries = [];
   const auth = Symbol("auth");
+  const admin = {
+    rpc(name, args) {
+      assert.equal(name, "effective_user_plan_tier");
+      assert.deepEqual(JSON.parse(JSON.stringify(args)), { _user_id: "current-owner" });
+      return { abortSignal: async () => subscription };
+    },
+  };
+  const entitlement = loadUiModule(
+    "src/lib/billing-entitlement.server.ts",
+    {
+      "@/lib/supabase-loose": { loose: (client) => client },
+    },
+    { AbortSignal },
+  );
   const module = loadUiModule("src/utils/storage.functions.ts", {
     "@tanstack/react-start": {
       createServerFn({ method }) {
@@ -135,6 +149,8 @@ function storageServer({
       },
     },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: auth },
+    "@/lib/billing-entitlement.server": entitlement,
+    "@/integrations/supabase/client.server": { supabaseAdmin: admin },
     "@/lib/supabase-loose": { loose: (client) => client },
     "@/lib/modes": { STORAGE_LIMITS_BYTES: { free: 500, plus: 25000, pro: 25000 } },
   });
@@ -210,8 +226,8 @@ test("query errors and malformed counts never masquerade as empty cloud storage"
 
 test("unknown billing cannot invent a free or paid storage quota", async () => {
   for (const subscription of [
-    { data: { effectiveTier: "professional" }, error: null },
-    { data: { effectiveTier: "pro" }, error: { message: "unavailable" } },
+    { data: "professional", error: null },
+    { data: "pro", error: { message: "unavailable" } },
     { data: [{ effectiveTier: "pro" }], error: null },
     { data: null, error: null },
   ]) {

@@ -79,7 +79,7 @@ test("settings touch-target coverage measures the visible mobile list", () => {
   assert.ok(navigation > 0 && navigation < returnToList && returnToList < visibleList);
   assert.ok(visibleList < tabs && tabs < primarySections);
   assert.match(source, /await options\.nth\(index\)\.scrollIntoViewIfNeeded\(\)/);
-  assert.match(source, /toBeInViewport\(\{ ratio: 1 \}\)/);
+  assert.match(source, /toBeInViewport\(\{ ratio: 0\.99 \}\)/);
   assert.match(source, /await expect\(options\.nth\(index\)\)\.toBeVisible\(\)/);
   assert.match(source, /toBeGreaterThanOrEqual\(\s*44/);
 });

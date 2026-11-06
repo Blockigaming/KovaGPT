@@ -43,7 +43,7 @@ export function appearanceValues(settings) {
       : 100,
     settingsNavigationWidth: Number.isFinite(settings.settingsNavigationWidth)
       ? Math.min(440, Math.max(200, settings.settingsNavigationWidth))
-      : 281,
+      : APPEARANCE_DEFAULTS.settingsNavigationWidth,
     interfaceAccent: /^#[0-9a-f]{6}$/i.test(settings.interfaceAccent ?? "")
       ? settings.interfaceAccent
       : "",

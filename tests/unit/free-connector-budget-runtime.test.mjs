@@ -254,10 +254,18 @@ function fixture(options = {}) {
       return q;
     },
     rpc(name, args) {
-      assert.equal(name, "try_consume_daily_message");
+      const paid = (options.tier ?? "free") !== "free";
+      assert.equal(name, paid ? "try_consume_paid_message" : "try_consume_daily_message");
       assert.equal(args._user_id, owner);
       messageReservations.push(args);
-      const result = { data: options.messageQuota !== false, error: null };
+      const result = {
+        data: paid
+          ? options.messageQuota !== false
+            ? "allowed"
+            : "five_hour"
+          : options.messageQuota !== false,
+        error: null,
+      };
       const query = {
         abortSignal: () => query,
         then: (yes, no) => Promise.resolve(result).then(yes, no),
@@ -785,7 +793,12 @@ test("resolved Lite and Medium use the regular allowance; reasoning modes use Th
     const { response, text } = await f.post();
     assert.equal(response.status, 200, text);
     assert.deepEqual(JSON.parse(JSON.stringify(f.messageReservations)), [
-      { _user_id: owner, _thinking: thinking, _regular_limit: 250, _thinking_limit: 50 },
+      {
+        _user_id: owner,
+        _thinking: thinking,
+        _weekly_limit: thinking ? 350 : 1750,
+        _short_limit: thinking ? 50 : 250,
+      },
     ]);
     const blocked = fixture({ tier: "plus", mode, noTools: true, messageQuota: false });
     const denied = await blocked.post();

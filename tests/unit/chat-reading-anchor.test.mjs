@@ -330,12 +330,12 @@ test("a user scroll pending in the same frame takes priority over resize compens
 });
 
 test("a click or non-scrolling key during reflow does not replace the reading target", () => {
-  for (const type of ["pointerdown", "touchstart", "keydown", "wheel"]) {
+  for (const type of ["pointerdown", "touchstart", "keydown", "wheel", "focusin"]) {
     const f = fixture();
     f.readInside();
     const anchor = capture(f.element);
     const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
-    f.emit(type, { key: " " });
+    f.emit(type, { key: " ", target: f.element });
     f.resized(590);
     f.flush();
     assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset, type);
@@ -451,6 +451,60 @@ test("navigation capture flushes a pending manual-scroll rebase before the next 
   assert.equal(f.frames.size, 0);
   f.resized(590);
   assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
+  c.dispose();
+});
+
+test("control mutations before a focus scroll event preserve the newly visible passage", () => {
+  const f = fixture();
+  f.readInside();
+  const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  // Browser focus/scrollIntoView has moved the transcript, but scroll is still queued.
+  f.readInside(8, 2, 3);
+  const top = f.element.scrollTop;
+  const anchor = capture(f.element);
+  f.mutated();
+  assert.equal(f.element.scrollTop, top);
+  f.emit("scroll");
+  f.flush();
+  f.resized(590);
+  assert.equal(f.lineOffset(anchor), anchor.text.viewportOffset);
+  c.dispose();
+});
+
+test("control focus navigation takes priority over a same-frame layout change", () => {
+  const f = fixture();
+  f.readInside();
+  const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  f.emit("focusin", { target: {} });
+  f.readInside(8, 2, 3);
+  const top = f.element.scrollTop;
+  f.resized(340);
+  f.mutated();
+  assert.equal(f.element.scrollTop, top);
+  f.flush();
+  const next = capture(f.element);
+  f.resized(590);
+  assert.equal(f.lineOffset(next), next.text.viewportOffset);
+  c.dispose();
+});
+
+test("a control press cannot be repositioned between pointer down and release", () => {
+  const f = fixture();
+  f.readInside();
+  const c = controller(f.element, { isCurrent: () => true, isFollowingBottom: () => false });
+  f.emit("pointerdown", { target: { closest: () => ({}) } });
+  f.readInside(8, 2, 3);
+  f.emit("scroll");
+  f.flush();
+  const top = f.element.scrollTop;
+  f.resized(340);
+  f.mutated();
+  assert.equal(f.element.scrollTop, top);
+  f.emitWindow("pointerup");
+  f.flush();
+  const next = capture(f.element);
+  f.resized(590);
+  assert.equal(f.lineOffset(next), next.text.viewportOffset);
   c.dispose();
 });
 

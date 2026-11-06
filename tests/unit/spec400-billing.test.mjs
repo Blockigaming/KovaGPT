@@ -384,7 +384,7 @@ test("Billing is presentation-only and keeps existing policy and financial servi
   assert.match(settings, /parseAllowedBillingPortalUrl\(res.url\)/);
   assert.match(settings, /window.location.assign\(portalUrl\)/);
   assert.match(settings, /billingScopeRef.current.view \+= 1/);
-  assert.match(readFileSync("src/routes/pricing.tsx", "utf8"), /id=\{name.toLowerCase\(\)\}/);
+  assert.match(readFileSync("src/routes/pricing.tsx", "utf8"), /id=\{planId\}/);
 });
 
 test("verified Free accounts without a subscription have no next charge, while failed reads remain unknown", () => {

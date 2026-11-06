@@ -17,11 +17,14 @@ test("paid monthly plans keep their billing terms while pricing removes the offe
   assert.doesNotMatch(pricing, /50% off the first paid month, once per account/);
   assert.doesNotMatch(pricing, /Regular monthly pricing follows/);
   const cards = [...pricing.matchAll(/<PlanCard\b[\s\S]*?\/>/g)].map(([card]) => card);
+  assert.equal(cards.length, 3, "Individual pricing contains exactly Free, Plus, and Pro");
+  assert.match(pricing, /PRICING_TIERS = \["free", "plus", "pro"\]/);
   for (const tier of ["plus", "pro"]) {
-    const card = cards.find((value) => value.includes(`plans.${tier}.name`));
+    const card = cards.find((value) => value.includes(`planId="${tier}"`));
     assert.ok(card, `missing ${tier} card`);
     assert.doesNotMatch(card, /note=\{MONTHLY_INTRO_NOTE\}/);
     assert.match(card, /taxNotice/);
+    assert.match(card, new RegExp(`plans\\.${tier}\\.monthlyPriceUsd`));
   }
   assert.doesNotMatch(pricing, /day trial|trial eligibility/);
   assert.match(pricing, /payment, renewal price, tax/);

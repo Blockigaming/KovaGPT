@@ -15,11 +15,11 @@ export function ChatWorkspaceControls({
   temporary: boolean;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-wrap gap-2 px-4 py-2">
+    <div className="mx-auto flex w-full max-w-3xl flex-wrap gap-2 px-4">
       <Suspense fallback={null}>
         {active?.kova && (
           <Link
-            className="kova-button rounded border px-2 py-1 text-xs"
+            className="kova-button my-2 rounded border px-2 py-1 text-xs"
             to={"/kovas" as never}
             search={{ id: active.kova.id } as never}
           >
