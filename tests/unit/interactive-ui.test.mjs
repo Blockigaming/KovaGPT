@@ -38,7 +38,10 @@ test("accepts a valid form and normalizes it", () => {
 
 test("rejects unknown keys, html-ish handlers and bad kinds", () => {
   assert.equal(validateInteractiveBlock({ ...form, onClick: "alert(1)" }), null);
-  assert.equal(validateInteractiveBlock({ ...form, fields: [{ id: "x", label: "X", kind: "html" }] }), null);
+  assert.equal(
+    validateInteractiveBlock({ ...form, fields: [{ id: "x", label: "X", kind: "html" }] }),
+    null,
+  );
   assert.equal(validateInteractiveBlock({ ...form, version: 2 }), null);
   assert.equal(
     validateInteractiveBlock({ ...form, fields: [{ id: "s", label: "S", kind: "slider" }] }),
@@ -78,7 +81,10 @@ test("table selection modes and row shape", () => {
 test("splits fenced blocks and leaves invalid ones as text", () => {
   const good = "Hi\n```kova-interactive\n" + JSON.stringify(form) + "\n```\nBye";
   const parts = splitInteractiveContent(good);
-  assert.deepEqual(parts.map((p) => p.kind), ["text", "interactive", "text"]);
+  assert.deepEqual(
+    parts.map((p) => p.kind),
+    ["text", "interactive", "text"],
+  );
   const bad = "```kova-interactive\n{not json}\n```";
   assert.deepEqual(splitInteractiveContent(bad), [{ kind: "text", text: bad }]);
 });

@@ -38,6 +38,7 @@ import {
   formatPdfPageNumbers,
   type PdfExtractionMetadata,
 } from "@/lib/document-extraction/pdf-metadata.mjs";
+import { ComposerUploadAllowance } from "@/components/ComposerUploadAllowance";
 import { ComposerContextPanel } from "@/components/ComposerContextPanel";
 import { ComposerModelStatus } from "@/components/ComposerModelStatus";
 import { ComposerVoiceDialog } from "@/components/ComposerVoiceDialog";
@@ -46,6 +47,7 @@ import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
 import { useLayout } from "@/hooks/use-mobile";
+import { composerKeyboardInset } from "@/lib/composer-keyboard-inset.mjs";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
 import {
@@ -585,15 +587,27 @@ export function ChatInput({
     };
     resize();
     let width = el.getBoundingClientRect().width;
+    let resizeFrame: number | null = null;
     const observer = new ResizeObserver(() => {
       const nextWidth = el.getBoundingClientRect().width;
       if (nextWidth !== width) {
         width = nextWidth;
-        resize();
+        // Height writes during ResizeObserver delivery can trigger a loop error
+        // even when the next notification would be ignored by the width guard.
+        if (resizeFrame === null) {
+          resizeFrame = window.requestAnimationFrame(() => {
+            resizeFrame = null;
+            resize();
+            width = el.getBoundingClientRect().width;
+          });
+        }
       }
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+    };
   }, [value, isLoaded, user?.id, isMobileLayout, isCoarsePointer, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
@@ -602,15 +616,27 @@ export function ChatInput({
     const vv = window.visualViewport;
     if (!vv) return;
     const update = () => {
-      const bottomGap = window.innerHeight - (vv.height + vv.offsetTop);
-      setKbOffset(bottomGap > 40 ? bottomGap : 0);
+      setKbOffset(
+        composerKeyboardInset({
+          layoutHeight: window.innerHeight,
+          viewportHeight: vv.height,
+          viewportTop: vv.offsetTop,
+          scale: vv.scale,
+          focused: document.activeElement === ref.current,
+        }),
+      );
     };
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", update);
     update();
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", update);
+      setKbOffset(0);
     };
   }, [isMobileLayout]);
 
@@ -1828,6 +1854,10 @@ export function ChatInput({
             {isStreaming ? (
               <button
                 type="button"
+                onPointerDown={(event) => {
+                  // Keep keyboard/viewport geometry stable until this click lands.
+                  if (event.button === 0) event.preventDefault();
+                }}
                 onClick={onStop}
                 className="spec400-send-button"
                 aria-label="Stop generating"
@@ -1839,6 +1869,9 @@ export function ChatInput({
             ) : (
               <button
                 type="button"
+                onPointerDown={(event) => {
+                  if (event.button === 0) event.preventDefault();
+                }}
                 disabled={!canSubmit}
                 onClick={triggerSubmit}
                 className="spec400-send-button"
@@ -2229,6 +2262,9 @@ export function ChatInput({
                 : "Log in to access your saved files and images."}
             </DialogDescription>
           </DialogHeader>
+          <p className="spec400-attachment-limits">
+            <ComposerUploadAllowance ownerId={isLoaded ? (user?.id ?? null) : null} />
+          </p>
           {user && onRecentLibraryRetry ? (
             <button
               type="button"

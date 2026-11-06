@@ -46,7 +46,19 @@ function validateOptions(options) {
 }
 
 function validateField(f) {
-  const keys = ["id", "label", "kind", "required", "help", "placeholder", "options", "min", "max", "step", "default"];
+  const keys = [
+    "id",
+    "label",
+    "kind",
+    "required",
+    "help",
+    "placeholder",
+    "options",
+    "min",
+    "max",
+    "step",
+    "default",
+  ];
   if (!isPlain(f) || !onlyKeys(f, keys)) return null;
   if (typeof f.id !== "string" || !ID.test(f.id) || !str(f.label, 200)) return null;
   if (!FIELD_KINDS.includes(f.kind)) return null;
@@ -88,7 +100,10 @@ function validateField(f) {
         break;
       case "number":
       case "slider":
-        ok = num(d) && (field.min === undefined || d >= field.min) && (field.max === undefined || d <= field.max);
+        ok =
+          num(d) &&
+          (field.min === undefined || d >= field.min) &&
+          (field.max === undefined || d <= field.max);
         break;
       case "date":
         ok = isDate(d) && (!field.min || d >= field.min) && (!field.max || d <= field.max);
@@ -120,13 +135,28 @@ function validateActions(actions) {
     if (!isPlain(a) || !onlyKeys(a, ["id", "label", "style"])) return null;
     if (typeof a.id !== "string" || !ID.test(a.id) || !str(a.label, 80)) return null;
     if ("style" in a && !["primary", "secondary"].includes(a.style)) return null;
-    out.push({ id: a.id, label: a.label.trim(), style: a.style === "primary" ? "primary" : "secondary" });
+    out.push({
+      id: a.id,
+      label: a.label.trim(),
+      style: a.style === "primary" ? "primary" : "secondary",
+    });
   }
   return uniq(out.map((a) => a.id)) ? out : null;
 }
 
 function validateForm(v) {
-  if (!onlyKeys(v, ["version", "type", "id", "title", "description", "fields", "submitLabel", "actions"]))
+  if (
+    !onlyKeys(v, [
+      "version",
+      "type",
+      "id",
+      "title",
+      "description",
+      "fields",
+      "submitLabel",
+      "actions",
+    ])
+  )
     return null;
   if ("description" in v && !str(v.description, 1000)) return null;
   if ("submitLabel" in v && !str(v.submitLabel, 60)) return null;
@@ -155,7 +185,19 @@ function validateForm(v) {
 }
 
 function validateTable(v) {
-  if (!onlyKeys(v, ["version", "type", "id", "title", "description", "columns", "rows", "selection", "submitLabel"]))
+  if (
+    !onlyKeys(v, [
+      "version",
+      "type",
+      "id",
+      "title",
+      "description",
+      "columns",
+      "rows",
+      "selection",
+      "submitLabel",
+    ])
+  )
     return null;
   if ("description" in v && !str(v.description, 1000)) return null;
   if ("submitLabel" in v && !str(v.submitLabel, 60)) return null;
@@ -232,8 +274,10 @@ export function validateFormValues(block, values) {
     if (f.kind === "number" || f.kind === "slider") {
       const n = typeof v === "number" ? v : Number(v);
       if (!Number.isFinite(n)) errors[f.id] = `${f.label} must be a number.`;
-      else if (f.min !== undefined && n < f.min) errors[f.id] = `${f.label} must be at least ${f.min}.`;
-      else if (f.max !== undefined && n > f.max) errors[f.id] = `${f.label} must be at most ${f.max}.`;
+      else if (f.min !== undefined && n < f.min)
+        errors[f.id] = `${f.label} must be at least ${f.min}.`;
+      else if (f.max !== undefined && n > f.max)
+        errors[f.id] = `${f.label} must be at most ${f.max}.`;
     } else if (f.kind === "date") {
       if (!isDate(v)) errors[f.id] = `${f.label} must be a valid date.`;
       else if (f.min && v < f.min) errors[f.id] = `${f.label} must be on or after ${f.min}.`;

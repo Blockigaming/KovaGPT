@@ -1,0 +1,126 @@
+name: Application Interface Fit
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/interface-fit-audit.yml
+      - playwright.interface-fit.config.ts
+      - tests/interface-fit/**
+      - tests/e2e/core-app-fixture.ts
+      - tests/e2e/sidebar-touch-selection.spec.ts
+      - tests/e2e/hydration.ts
+      - tests/e2e/actual-app-fixture.ts
+      - tests/helpers/loopback-preview-headers.mjs
+      - tests/fixtures/azure-local-network-guard.mjs
+      - scripts/azure/local-preview.mjs
+      - src/**
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: interface-fit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Application fit (${{ matrix.browser }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      KOVA_INTERFACE_ENGINE: ${{ matrix.browser }}
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check candidate formatting
+        run: npm run format:check
+      - name: Check the focused UI runtime regressions
+        run: >-
+          node --test tests/unit/chat-reading-anchor.test.mjs
+          tests/unit/response-draft-actions-runtime.test.mjs tests/unit/jump-latest-placement.test.mjs
+          tests/unit/chat-history-presentation.test.mjs
+      - name: Build the actual Node application
+        run: npm run build:azure
+      - name: Install browser and native libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+      - name: Verify the actual application hydrates in this engine
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-390" --grep="dark workspace fits: /$"
+          --output="test-results/interface-fit/smoke-${{ matrix.browser }}"
+      - name: Repeat narrow-screen form and table action presses
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-320" --project="${{ matrix.browser }}-landscape"
+          --grep="interactive fields, long actions|table actions submit on the first|sync retries keep recovery controls stable|conversation loading keeps composer" --repeat-each=5
+      - name: Check repeated form submission through real clicks
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-390" --project="${{ matrix.browser }}-landscape"
+          --grep="repeated form IDs|forms wait for chat history" --repeat-each=5
+      - name: Repeat selection and modal interruption during sidebar swipes
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-320" --project="${{ matrix.browser }}-landscape"
+          --grep="selecting transcript text cancels|workspace search cancels an in-progress|search takes keyboard focus|search action keeps|management search preserves"
+          --repeat-each=5
+      - name: Check wide composer initialization without observer errors
+        run: >-
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts
+          --project="${{ matrix.browser }}-2560" --grep="dark workspace fits: /$"
+          --repeat-each=10
+      - name: Check every workspace and settings section in both themes
+        shell: bash
+        run: |
+          set -euo pipefail
+          projects=()
+          for size in 320 390 short-phone landscape 768 1024 1440 2560 short-desktop; do
+            projects+=(--project="${{ matrix.browser }}-${size}")
+          done
+          npx --no-install playwright test --config=playwright.interface-fit.config.ts "${projects[@]}"
+      - name: Record source provenance
+        if: always()
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p test-results/interface-fit
+          printf '%s\n' "$SOURCE_SHA" > test-results/interface-fit/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/interface-fit/tree.txt
+          sha256sum package-lock.json > test-results/interface-fit/lock.sha256
+      - name: Upload screenshots, failures, and exact test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: application-fit-${{ matrix.browser }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: test-results/interface-fit/
+          if-no-files-found: error
+          retention-days: 7

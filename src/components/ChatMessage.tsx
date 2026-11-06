@@ -234,6 +234,7 @@ function ChatMessageInner({
   streamingStartedAt,
   onSkipThinking,
   onFollowUp,
+  interactiveDisabledReason,
   onDraftPrompt,
   onRetry,
   onBranch,
@@ -256,7 +257,8 @@ function ChatMessageInner({
   streamingStartedAt?: number;
   onSkipThinking?: () => void;
   /** Executes an explicit editor improvement request. */
-  onFollowUp?: (prompt: string) => void;
+  onFollowUp?: (prompt: string) => boolean | void;
+  interactiveDisabledReason?: string;
   /** Preserves the composer draft; invoke the returned focus handoff after dismissing a popup. */
   onDraftPrompt?: (prompt: string) => (() => void) | undefined;
   onRetry?: () => void;
@@ -796,6 +798,7 @@ function ChatMessageInner({
                   : `kova-interactive:v1:${chatId ?? "local"}:${message.id}:${key ?? 0}:${part.index}:${part.block.id}`
               }
               onSubmit={submitInteractive}
+              disabledReason={interactiveDisabledReason}
             />
           ) : part.text.trim() ? (
             markdown(part.text, `t${i}`)

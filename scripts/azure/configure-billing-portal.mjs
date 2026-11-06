@@ -37,6 +37,7 @@ try {
     products.push({
       product: typeof price.product === "string" ? price.product : price.product.id,
       prices: [price.id],
+      adjustable_quantity: { enabled: false },
     });
   }
   const update = {

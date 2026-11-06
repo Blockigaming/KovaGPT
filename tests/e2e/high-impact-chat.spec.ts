@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
+import { closeCurrentSettings, openCurrentSettings, chooseSettingsSection } from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -127,7 +127,7 @@ test("stopping before the first token preserves an honest response with immediat
   await chooseSettingsSection(page, "Responses");
   const search = page.getByRole("switch", { name: "Live web search", exact: true });
   await search.check();
-  await page.keyboard.press("Escape");
+  await closeCurrentSettings(page);
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
   await page.evaluate(() => {
     // Hold buffered text until Stop flushes it, independent of runner speed.
@@ -187,7 +187,12 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
   await page.addInitScript(() => {
     const originalFetch = window.fetch.bind(window);
     let chatRequests = 0;
-    const requestState = { count: 0 };
+    const requestState = {
+      count: 0,
+      firstSettled: false,
+      releaseFirst: () => {},
+      completeRetry: () => {},
+    };
     Reflect.defineProperty(window, "__kovaChatRequestState", { value: requestState });
     window.fetch = async (input, init) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -196,7 +201,10 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
       requestState.count = chatRequests;
       if (chatRequests === 1) {
         // Model an abort-insensitive auth/preflight wait that settles after Retry starts.
-        await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+        await new Promise<void>((resolve) => {
+          requestState.releaseFirst = resolve;
+        });
+        requestState.firstSettled = true;
         return new Response("data: [DONE]\n\n", {
           status: 200,
           headers: { "Content-Type": "text/event-stream" },
@@ -205,14 +213,14 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
       return new Response(
         new ReadableStream({
           start(controller) {
-            window.setTimeout(() => {
+            requestState.completeRetry = () => {
               controller.enqueue(
                 new TextEncoder().encode(
                   'data: {"choices":[{"delta":{"content":"Replacement complete"}}]}\n\ndata: [DONE]\n\n',
                 ),
               );
               controller.close();
-            }, 3_500);
+            };
           },
         }),
         { status: 200, headers: { "Content-Type": "text/event-stream" } },
@@ -234,6 +242,7 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
     )
     .toBe(1);
   await page.getByRole("button", { name: "Stop generating" }).click();
+  await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Retry stopped response" }).click();
   await expect
     .poll(() =>
@@ -245,8 +254,24 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
     )
     .toBe(2);
 
-  await page.waitForTimeout(1_800);
+  await page.evaluate(async () => {
+    const state = (
+      window as unknown as {
+        __kovaChatRequestState: { releaseFirst: () => void };
+      }
+    ).__kovaChatRequestState;
+    state.releaseFirst();
+    // Flush the resolved fetch and React work before checking replacement ownership.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  });
   await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
+  await page.evaluate(() => {
+    (
+      window as unknown as { __kovaChatRequestState: { completeRetry: () => void } }
+    ).__kovaChatRequestState.completeRetry();
+  });
   await expect(page.locator(".kova-assistant-message").last()).toContainText(
     "Replacement complete",
   );
@@ -549,4 +574,25 @@ test("chat API rejects malformed text attachments at the server boundary", async
   await expect(response.json()).resolves.toEqual(
     expect.objectContaining({ error: "Invalid text file attachment." }),
   );
+});
+
+test("an empty completed stream shows a recoverable error instead of a blank answer", async ({
+  page,
+}) => {
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: "data: [DONE]\n\n",
+    }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("Show a response");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("empty response");
+  await expect(page.getByRole("button", { name: "Stop generating" })).toBeHidden();
+  await composer.fill("Try a different question");
+  await expect(page.getByRole("button", { name: "Send message" })).toBeEnabled();
 });

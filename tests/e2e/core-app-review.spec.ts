@@ -1,6 +1,7 @@
 import { expect, test, type Page, type TestInfo, type Locator } from "@playwright/test";
 import { coreFixture, reviewProject } from "./core-app-fixture";
 import {
+  closeCurrentSettings,
   openResponseOptions,
   openCurrentSettings,
   chooseSettingsSection,
@@ -73,7 +74,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await waitForKovaHydration(page);
   await openResponseOptions(page);
   await expect(page.getByRole("combobox", { name: "Format", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
+  await closeCurrentSettings(page);
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
   const search = page.getByRole("combobox", {

@@ -4,6 +4,7 @@ export function useOnline() {
   const [online, setOnline] = useState(true);
   useEffect(() => {
     let cancelled = false;
+    let generation = 0;
     let debounce: ReturnType<typeof setTimeout> | undefined;
     async function probe(): Promise<boolean> {
       try {
@@ -18,13 +19,15 @@ export function useOnline() {
       }
     }
     const offline = () => {
+      const current = ++generation;
       clearTimeout(debounce);
       debounce = setTimeout(async () => {
         const alive = await probe();
-        if (!cancelled) setOnline(alive);
+        if (!cancelled && current === generation) setOnline(alive);
       }, 1_500);
     };
     const connected = () => {
+      generation++;
       clearTimeout(debounce);
       if (!cancelled) setOnline(true);
     };

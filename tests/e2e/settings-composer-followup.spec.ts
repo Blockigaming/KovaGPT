@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: Settings has full-height navigation and one visible title`, async ({
@@ -67,7 +67,7 @@ test("a started chat hides its resource tray and keeps preferences available in 
   await expect(page.locator(".kova-composer-tray")).toBeHidden();
   const options = await openResponseOptions(page);
   await expect(options).toBeVisible();
-  await page.keyboard.press("Escape");
+  await closeCurrentSettings(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeEnabled();
 });
 

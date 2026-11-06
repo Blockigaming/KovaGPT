@@ -786,6 +786,20 @@
   transition: width var(--kova-motion-standard) var(--kova-ease);
   margin-inline: auto;
 }
+@media (max-height: 500px) {
+  /* Leave room to read and select messages when a draft has attachments or
+     several lines. Scroll the composer content; keep its floating actions free. */
+  .spec400-composer-dock {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 60%;
+  }
+  .spec400-composer-dock > .spec400-chat-input {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
 .spec400-recent-work button {
   display: flex;
   width: 100%;

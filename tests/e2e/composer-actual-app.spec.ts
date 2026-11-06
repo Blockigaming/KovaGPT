@@ -217,6 +217,17 @@ for (const theme of ["light", "dark"] as const) {
       buffer: Buffer.from("Keep this local draft."),
     });
     await expect(page.getByLabel("Remove Keep.txt", { exact: true })).toBeVisible();
+    if (page.viewportSize()!.height <= 500) {
+      // Wait for the returning-account notice so this also covers the smallest
+      // remaining transcript space, after asynchronous history initialization.
+      await expect(page.getByLabel("Chat history synchronization", { exact: true })).toBeVisible();
+      await expect
+        .poll(async () => {
+          const dock = await page.locator(".spec400-composer-dock").boundingBox();
+          return dock!.y + dock!.height;
+        })
+        .toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    }
     await page.locator(".kova-user-message").last().click({ button: "right" });
     await page.getByRole("menuitem", { name: "Edit message", exact: true }).click();
     await expect(input).toHaveValue("Draft a release checklist.");

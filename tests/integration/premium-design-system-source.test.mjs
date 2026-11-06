@@ -45,8 +45,8 @@ test("keyboard focus and overflow-sensitive rich content remain usable", () => {
 test("shell removes decorative effects and keeps navigation neutral and reachable", () => {
   assert.doesNotMatch(shell, /className="kova-bg"/);
   assert.doesNotMatch(sidebar, /bg-\[var\(--kova-blue\)\]/);
-  assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
-  assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
+  assert.match(sidebar, /aria-hidden=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
+  assert.match(sidebar, /inert=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
   assert.match(
     sidebarStyles,
     /\.kova-sidebar \.kova-chat-row:is\(:hover, :focus-within, \.is-active\) \.kova-chat-options\s*\{\s*opacity: 1/,

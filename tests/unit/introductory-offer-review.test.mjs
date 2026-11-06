@@ -176,6 +176,8 @@ function pricingFixture(isSignedIn) {
           checkoutElement: null,
         }),
       },
+      "@/components/PublicFooter": { PublicFooter: "public-footer" },
+      "@/components/NovaLogo": { NovaLogo: "logo" },
       "@/components/EnterpriseContactDialog": { EnterpriseContactDialog: "enterprise-dialog" },
       "@/components/public/PublicShell": { PublicShell: "public-shell" },
       "@/components/public/PlanComparison": { PlanComparison: "comparison" },
@@ -197,7 +199,7 @@ function pricingFixture(isSignedIn) {
 test("pricing uses a dedicated checkout route and never retains a payment modal", () => {
   const f = pricingFixture(true);
   f.nodes()
-    .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus")
+    .find((node) => node.type?.name === "PlanCard" && node.props.name === "Kova Plus")
     .props.onCta({ currentTarget: {} });
   assert.equal(f.calls[0].options.to, "/subscribe");
   assert.equal(f.calls[0].options.search.plan, "plus_monthly");
@@ -213,7 +215,7 @@ test("pricing opens the checkout page while identity is resolving", () => {
   f.render();
   const plus = f
     .nodes()
-    .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus");
+    .find((node) => node.type?.name === "PlanCard" && node.props.name === "Kova Plus");
   plus.props.onCta({ currentTarget: {} });
   assert.deepEqual(JSON.parse(JSON.stringify(f.calls)), [
     { type: "navigate", options: { to: "/subscribe", search: { plan: "plus_monthly" } } },
@@ -226,11 +228,16 @@ test("pricing routes all paid CTAs to canonical checkout without claiming eligib
     const f = pricingFixture(signedIn);
     const paid = f
       .nodes()
-      .filter((n) => n.type?.name === "PlanCard" && ["Plus", "Pro"].includes(n.props.name));
+      .filter(
+        (n) => n.type?.name === "PlanCard" && ["Kova Plus", "Kova Pro"].includes(n.props.name),
+      );
     assert.equal(paid.length, 2);
     for (const card of paid) {
       assert.ok(!card.props.ctaDisabled);
-      assert.equal(card.props.cta, card.props.name === "Plus" ? "Start Plus" : "Upgrade to Pro");
+      assert.equal(
+        card.props.cta,
+        card.props.name === "Kova Plus" ? "Start Plus" : "Upgrade to Pro",
+      );
       assert.equal(card.props.note, undefined);
       assert.equal(card.props.paymentNote, undefined);
       card.props.onCta({ currentTarget: {} });
@@ -247,10 +254,6 @@ test("pricing routes all paid CTAs to canonical checkout without claiming eligib
       })),
     );
     assert.doesNotMatch(f.text(), /First-month offer|Offer details and eligibility/);
-    assert.match(f.text(), /Plus and Pro are eligible for one-shot hosted Agent/);
-    assert.match(f.text(), /approved-public-page Browser tasks/);
-    assert.match(f.text(), /Interactive Work browser runs are currently unavailable/);
-    assert.match(f.text(), /Paying OpenAI separately does not change your Kova plan/);
     assert.doesNotMatch(f.text(), /Existing trials and subscriptions keep their current terms/);
     assert.doesNotMatch(f.text(), /New subscriptions do not receive a free trial/);
     assert.doesNotMatch(

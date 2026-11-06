@@ -9,6 +9,12 @@ export async function openResponseOptions(page: Page, recordTrigger?: (trigger: 
   return panel;
 }
 
+export async function closeCurrentSettings(page: Page) {
+  const settings = page.locator(".kova-settings-dialog");
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
+}
+
 export async function openComposerAddMenu(page: Page) {
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const menu = page

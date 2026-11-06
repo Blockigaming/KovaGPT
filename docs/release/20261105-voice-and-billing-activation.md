@@ -1,6 +1,6 @@
 # Voice and billing activation for PR #580
 
-No production settings are applied by this PR. The web app already proxies recordings and saved-reply speech to ElevenLabs using `ELEVENLABS_API_KEY` on the server. The new Responses → Voice check reads the signed-in account's safe configuration status. It never accepts, returns or stores an API key in the browser.
+The web changes remain in PR #580; the live Stripe portal configuration was corrected separately on November 6, 2026 as recorded below. The web app already proxies recordings and saved-reply speech to ElevenLabs using `ELEVENLABS_API_KEY` on the server. The new Responses → Voice check reads the signed-in account's safe configuration status. It never accepts, returns or stores an API key in the browser.
 
 ## ElevenLabs
 
@@ -8,15 +8,15 @@ Use the existing restricted ElevenLabs key stored in Azure Key Vault, with the m
 
 The existing app can be inspected and configured with `scripts/azure/configure-elevenlabs.mjs`. It defaults to a review and accepts the resource group, an accessible voice ID and an existing versioned Key Vault secret URI. It uses only an existing managed identity, preserves the current cap, refuses an incomplete model-signing policy and never changes ingress, replicas, unrelated secrets or AI activation gates. Add `--apply` only when approving the reviewed production revision change.
 
-Run `node scripts/voice/check-elevenlabs.mjs` inside the private app environment to report non-secret readiness. Then verify a real signed-in microphone recording, transcription, saved assistant reply, ElevenLabs playback and Stop. Configuration status and mocked tests are not live provider acceptance. The available browser has no signed-in Azure or ElevenLabs session, so the existing key binding has not been verified here.
+Run `node scripts/voice/check-elevenlabs.mjs` inside the private app environment to report non-secret readiness. Then verify a real signed-in microphone recording, transcription, saved assistant reply, ElevenLabs playback and Stop. Configuration status and mocked tests are not live provider acceptance. Read-only Azure inspection on November 6 confirmed that the existing `elevenlabs-api-key` secret uses a versioned Key Vault reference and that the container has an `ELEVENLABS_API_KEY` environment entry. A model-proof secret also exists. The container environment did not list `KOVA_VOICE_MODEL_PROOF_SECRET` or `KOVA_VOICE_OPENAI_MODELS_JSON`; the current output policy requires both. No key value was copied into source or the browser. Portal connectivity interrupted the remaining configuration review, so dictation and playback have not passed live provider acceptance.
 
 ## Billing
 
-Read-only Stripe inspection on November 5, 2026 confirmed:
+Stripe inspection and the authorized configuration correction on November 6, 2026 confirmed:
 
 - `plus_monthly`: live active USD 16/month, `price_1UAzhHAEZlsb6DBYWw2oUCeO`.
 - `pro_monthly`: live active USD 80/month, `price_1UEw6FAEZlsb6DBYuksCKOBR`.
-- Default portal `bpc_1UB2ZxAEZlsb6DBYU3PoJJPU` has subscription updates enabled but only permits quantity changes. It does not currently offer plan-price switching. Its business-profile terms/privacy URLs are empty.
+- Default portal `bpc_1UB2ZxAEZlsb6DBYU3PoJJPU` previously permitted only quantity changes. It now permits price changes restricted to the two existing Plus/Pro prices above, with quantity adjustment disabled. Its business-profile Terms and Privacy links now point to `/terms` and `/privacy`. A separate expanded GET verified the saved configuration. Cancellation at period end, proration, trial behavior, invoice history and payment-method/customer update settings were preserved. No customer subscription, charge, price amount or tax setting was changed.
 - The current enabled webhook points to the live Kova payment webhook and includes subscription and invoice lifecycle events. Its event list does not include asynchronous checkout success or risk/refund events. Review the handlers before changing event subscriptions; do not subscribe to events without a defined processing policy.
 
 The app now takes Upgrade directly to `/pricing`, keeps plan selection at `/subscribe`, and offers Stripe-hosted review for existing subscriptions instead of sending people to Settings. The server resolves the authenticated account's own customer and subscription, validates the fixed target Price and product, and creates a portal confirmation flow; it does not directly change a subscription or charge a card. A missing explicit portal configuration can use Stripe's active account default; a malformed explicit configuration still fails.

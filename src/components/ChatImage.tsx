@@ -72,6 +72,8 @@ export function ChatImage({
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
   const { isMobile } = useLayout();
+  const [touchMenu, setTouchMenu] = useState(false);
+  const copyOnly = isMobile || touchMenu;
   const imageRef = useRef<HTMLImageElement>(null);
   const showRef = useRef<HTMLButtonElement>(null);
   const lifetime = useRef({ marker, generation: 0, mounted: true });
@@ -187,8 +189,9 @@ export function ChatImage({
             referrerPolicy="no-referrer"
             tabIndex={0}
             aria-haspopup="menu"
-            style={isMobile ? { WebkitTouchCallout: "none" } : undefined}
+            style={{ WebkitTouchCallout: "none" }}
             className={imageClassName}
+            onPointerDown={(event) => setTouchMenu(event.pointerType !== "mouse")}
             onKeyDown={(event) => {
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
@@ -207,7 +210,7 @@ export function ChatImage({
         {children}
       </span>
       <ContextMenuContent className="w-60" aria-label="Image actions">
-        {!isMobile ? (
+        {!copyOnly ? (
           <>
             <ContextMenuItem
               onSelect={() => {
@@ -247,9 +250,9 @@ export function ChatImage({
           }
         >
           <Copy className="h-4 w-4" aria-hidden="true" />
-          {isMobile ? "Copy" : "Copy image"}
+          {copyOnly ? "Copy" : "Copy image"}
         </ContextMenuItem>
-        {!isMobile ? (
+        {!copyOnly ? (
           <ContextMenuItem
             disabled={busy}
             onSelect={() => void run((allowed) => downloadChatImage(src, allowed))}

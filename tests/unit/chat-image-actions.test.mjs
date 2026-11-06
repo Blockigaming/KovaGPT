@@ -296,6 +296,10 @@ function menuFixture(mobile = false) {
   render();
   return {
     render,
+    pointer: (pointerType) => {
+      elements(tree, (node) => node.type === "img")[0].props.onPointerDown({ pointerType });
+      render();
+    },
     storage,
     added,
     errors,
@@ -336,4 +340,18 @@ test("mobile long press offers Copy only", () => {
   );
   assert.equal(view.added.length, 0);
   assert.equal(view.storage.size, 0);
+});
+
+test("wide touch layouts offer Copy only and a subsequent mouse gesture restores desktop actions", () => {
+  const view = menuFixture();
+  view.pointer("touch");
+  assert.deepEqual(
+    view.menu().map((node) => text(node).trim()),
+    ["Copy"],
+  );
+  view.pointer("mouse");
+  assert.deepEqual(
+    view.menu().map((node) => text(node).trim()),
+    ["Open image in new tab", "Add to chat", "Copy image", "Download a copy"],
+  );
 });

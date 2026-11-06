@@ -290,6 +290,7 @@ test("Personality Auto-adapt keeps its accessible name and existing controlled c
     const control = consumerSwitch("src/components/PersonalitySliders.tsx", {
       visibleAutoAdapt,
       toggleAuto,
+      ready: true,
     });
     assert.equal(control.props["aria-label"], "Auto-adapt to me");
     assert.equal(control.props.checked, visibleAutoAdapt);

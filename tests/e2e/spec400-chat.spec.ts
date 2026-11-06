@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
-import { openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 async function expectRestingComposer(page: Page) {
@@ -89,7 +89,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(trigger).toContainText(choice);
       await expect(trigger).toBeFocused();
     }
-    await page.keyboard.press("Escape");
+    await closeCurrentSettings(page);
     await expect(input).toHaveValue("Keep the original requirement.\nAdd this detail.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

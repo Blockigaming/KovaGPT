@@ -42,9 +42,9 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
   ).toBeVisible();
   await expect(page.locator(".public-classroom img")).toHaveAttribute(
     "src",
-    "/images/classroom-original.png",
+    "/images/classroom-hero.webp",
   );
-  await expect(page.locator(".public-classroom img")).toHaveJSProperty("naturalWidth", 164);
+  await expect(page.locator(".public-classroom img")).toHaveJSProperty("naturalWidth", 1312);
   await page.screenshot({ path: `${evidence}/desktop-hero.png` });
   await page.screenshot({ path: `${evidence}/desktop-full.png`, fullPage: true });
   await page.locator(".public-plans").screenshot({ path: `${evidence}/pricing-individual.png` });
