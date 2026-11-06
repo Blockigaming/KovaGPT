@@ -63,6 +63,7 @@ export function AppShell({
       {
         library: "Library",
         projects: "Projects",
+        work: "Work",
         "scheduled-tasks": "Scheduled tasks",
         apps: "Connections",
         settings: "Settings",

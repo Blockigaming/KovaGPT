@@ -23,6 +23,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { requestWorkSync } from "@/lib/work-sync-client";
 import { WORK_TERMINAL, type WorkRun } from "@/lib/work-execution-protocol.mjs";
+import { resolveKovaModelAlias } from "@/lib/ai/kova-model-migration.mjs";
 
 type Snapshot = {
   readiness: { available: boolean; reason: string | null; modelOptions?: WorkModelOption[] };
@@ -189,7 +190,7 @@ export function WorkExecutionPanel({
     );
   return (
     <section className="mb-4 rounded-xl border bg-card p-4" aria-label="Work execution">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">Run prepared work</h2>
         <Button
           variant="outline"
@@ -203,7 +204,9 @@ export function WorkExecutionPanel({
       <p className="mt-2 text-sm text-muted-foreground" role="status">
         {available
           ? "A connected runner is available. Review each consequential action before it runs."
-          : "Execution is unavailable. You can prepare, save, and continue work in Chat."}
+          : selectedModel?.reason ||
+            snapshot?.readiness.reason ||
+            "Checking execution availability. You can prepare a plan while this loads."}
       </p>
       <label className="mt-3 block text-sm">
         Objective
@@ -247,7 +250,8 @@ export function WorkExecutionPanel({
               )}
               {modelOptions.map((option) => (
                 <SelectItem key={option.mode} value={option.mode} disabled={!option.available}>
-                  {option.label} · {option.model ?? "unconfigured"}
+                  {option.label} ·{" "}
+                  {resolveKovaModelAlias(option.model)?.name ?? option.model ?? "unconfigured"}
                   {option.reason ? ` · ${option.reason}` : ""}
                 </SelectItem>
               ))}
@@ -267,7 +271,7 @@ export function WorkExecutionPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="item-aligned">
-              <SelectItem value="default">Provider default</SelectItem>
+              <SelectItem value="default">Automatic</SelectItem>
               {selectedModel?.reasoningEfforts.map((effort) => (
                 <SelectItem key={effort} value={effort}>
                   {effort === "none" ? "No reasoning" : effort}
@@ -278,7 +282,7 @@ export function WorkExecutionPanel({
         </label>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Service: provider default. Reasoning effort affects response time and token use.
+        Reasoning effort can affect response time and token use.
         {selectedModel?.reason ? ` ${selectedModel.reason}` : ""}
         {reasoningEffort !== null && !selectedSupported
           ? " This reasoning choice is no longer available. Review the current options."

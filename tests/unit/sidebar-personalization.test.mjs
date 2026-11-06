@@ -91,7 +91,7 @@ test("malformed, unknown-version, duplicate, and oversized choices fail back to 
   assert.equal(saveSidebarShortcuts(storage, "owner", ["unapproved"]), false);
   const copy = readSidebarShortcuts(storage, "owner");
   copy.pop();
-  assert.equal(DEFAULT_SIDEBAR_SHORTCUTS.length, 5);
+  assert.equal(DEFAULT_SIDEBAR_SHORTCUTS.length, copy.length + 1);
 });
 
 test("reset and account-local clearing remove only the matching account's choices", () => {
@@ -225,12 +225,12 @@ test("navigation keeps dense desktop rows, touch targets and account outside scr
   assert.match(source, /<NovaLogo decorative/);
 });
 
-test("legacy Work choices are dropped without losing other saved destinations", () => {
+test("saved Work choices are restored without losing other saved destinations", () => {
   const storage = memoryStorage();
   storage.setItem(
     sidebarShortcutsKey("owner"),
     JSON.stringify({ version: 1, shortcuts: ["projects", "work", "library"] }),
   );
-  assert.deepEqual(readSidebarShortcuts(storage, "owner"), ["projects", "library"]);
-  assert.equal(saveSidebarShortcuts(storage, "owner", ["work"]), false);
+  assert.deepEqual(readSidebarShortcuts(storage, "owner"), ["projects", "work", "library"]);
+  assert.equal(saveSidebarShortcuts(storage, "owner", ["work"]), true);
 });

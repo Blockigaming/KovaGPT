@@ -183,7 +183,7 @@ test("all chosen tools are configurable and Maps retains its release gate", () =
     ["Maps", "Images"],
   );
   assert.equal(fixture().find("Additional shortcuts"), undefined);
-  assert.ok(!SIDEBAR_ITEMS.some((item) => item.id === "work"));
+  assert.equal(SIDEBAR_ITEMS.find((item) => item.id === "work")?.to, "/work");
 });
 
 test("guest/auth and scheduling gates are unchanged and hidden expanded rail is inert", () => {

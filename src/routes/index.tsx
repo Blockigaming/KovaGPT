@@ -3375,7 +3375,12 @@ function KovaGPT() {
 
         {Boolean(userKey || active?.messages.length) && (
           <Suspense fallback={null}>
-            <ChatWorkspaceControls ownerId={userKey} active={active} temporary={tempChat} />
+            <ChatWorkspaceControls
+              ownerId={userKey}
+              active={active}
+              temporary={tempChat}
+              objective={input}
+            />
           </Suspense>
         )}
         <div

@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("retired Work UI leaves authenticated specialist history services intact", async () => {
+test("current Work UI leaves authenticated legacy specialist history services intact", async () => {
   const [route, functions] = await Promise.all([
     read("src/routes/work.tsx"),
     read("src/lib/work.functions.ts"),
   ]);
-  assert.match(route, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.match(route, /<WorkSessionPanel ownerId=\{ownerId\}/);
+  assert.match(route, /isLoaded && isSignedIn/);
   assert.doesNotMatch(route, /<WorkExecutionPanel|<AgentWorkspace/);
   assert.match(functions, /agent_specialist_tasks/);
   assert.match(functions, /agent_dependency_edges/);
