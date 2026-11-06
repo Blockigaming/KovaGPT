@@ -268,8 +268,9 @@ function ProjectChatPage() {
     } => message.role !== "system",
   );
 
-  async function handleSend() {
-    const text = draftRef.current.key === requestKey ? draftRef.current.text.trim() : "";
+  async function handleSend(followUp?: string) {
+    const text =
+      followUp?.trim() ?? (draftRef.current.key === requestKey ? draftRef.current.text.trim() : "");
     if (
       !text ||
       !canEdit ||
@@ -292,8 +293,11 @@ function ProjectChatPage() {
       sendOperationRef.current === operation;
     const submittedDraft = draftRef.current;
     const clearedDraft = { key: requestKey, text: "", persisted: submittedDraft.persisted };
-    draftRef.current = clearedDraft;
-    setDraft(clearedDraft);
+    // A response control sends its own next message without consuming an unfinished draft.
+    if (followUp === undefined) {
+      draftRef.current = clearedDraft;
+      setDraft(clearedDraft);
+    }
     const controller = new AbortController();
     abortControllerRef.current = controller;
     const userMessage: ProjectChatMessage = { role: "user", content: text };
@@ -378,7 +382,7 @@ function ProjectChatPage() {
           if (isCurrent()) toast.error("The chat could not be saved. Your draft is preserved.");
         }
         if (isCurrent()) {
-          if (draftRef.current === clearedDraft) {
+          if (followUp === undefined && draftRef.current === clearedDraft) {
             // Keep newer typing untouched. Failed/stopped requests retain the original ordinary text.
             setInput(saved && responseCompleted ? "" : submittedDraft.text);
           }
@@ -537,6 +541,20 @@ function ProjectChatPage() {
                 streaming={
                   sending && index === visibleMessages.length - 1 && message.role === "assistant"
                 }
+                onFollowUp={
+                  canEdit &&
+                  !sending &&
+                  index === visibleMessages.length - 1 &&
+                  message.role === "assistant"
+                    ? (prompt) => {
+                        if (sendOperationRef.current || mutationOperationRef.current) return false;
+                        // Acquire the request before accepting the response control's submission.
+                        void handleSend(prompt);
+                        return Boolean(sendOperationRef.current);
+                      }
+                    : undefined
+                }
+                interactiveDisabledReason={!canEdit ? "This project is read-only." : undefined}
               />
             );
           })}
@@ -552,7 +570,7 @@ function ProjectChatPage() {
           <ChatInput
             value={input}
             onChange={setInput}
-            onSubmit={handleSend}
+            onSubmit={() => handleSend()}
             onStop={handleStop}
             isStreaming={sending}
             attachmentContext={requestKey ?? undefined}
