@@ -43,7 +43,8 @@ test("Project, Artifact, and Work surfaces expose graceful realtime degradation"
   ]);
   assert.match(project, /CollaborationStatus/);
   assert.match(artifact, /CollaborationStatus/);
-  assert.match(work, /throw redirect/);
+  assert.match(work, /WorkSyncStatus/);
+  assert.match(work, /WorkSessionPanel ownerId=\{ownerId\}/);
   assert.match(status, /role="status"/);
   assert.match(status, /Reconnecting/);
   assert.match(status, /Collaboration unavailable/);

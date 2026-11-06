@@ -787,6 +787,11 @@
   margin-inline: auto;
 }
 @media (max-height: 500px) {
+  /* Oversized scroll insets can place a focused answer control behind the
+     surrounding chrome when the transcript has only a short visible strip. */
+  .kova-assistant .kova-conversation-scroll {
+    scroll-padding-block: 0;
+  }
   /* Leave room to read and select messages when a draft has attachments or
      several lines. Scroll the composer content; keep its floating actions free. */
   .spec400-composer-dock {

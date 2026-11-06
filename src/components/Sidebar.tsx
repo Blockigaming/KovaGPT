@@ -1679,7 +1679,7 @@ export function Sidebar({
                 </button>
               ) : null}
               {railShortcuts
-                .filter((id) => !["discovery", "maps", "work"].includes(id))
+                .filter((id) => !["discovery", "maps"].includes(id))
                 .map((id) => {
                   const item = availableShortcuts.find((entry) => entry.id === id);
                   return item ? navLink(item.to, item.label, SHORTCUT_ICONS[id]) : null;
@@ -1687,7 +1687,9 @@ export function Sidebar({
               <details
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
-                open={isOn("/maps") || undefined}
+                open={
+                  isOn("/maps") || (isOn("/work") && !railShortcuts.includes("work")) || undefined
+                }
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
@@ -1695,6 +1697,9 @@ export function Sidebar({
                 </summary>
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
+                  : null}
+                {signedIn && !railShortcuts.includes("work")
+                  ? navLink("/work", "Work", SHORTCUT_ICONS.work)
                   : null}
                 {signedIn ? (
                   <button
