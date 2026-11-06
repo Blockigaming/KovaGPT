@@ -150,9 +150,10 @@ function fixture({
       stagePendingAction: noop,
     },
     "@/lib/ai/accounting.server": {
-      getGenerationTokenHeadroom: async () => {
-        throw new Error("Headroom must not be read without connected tools");
-      },
+      getGenerationTokenHeadroom: async () => ({
+        tokenLimit: 10_000,
+        limitingQuota: "daily_tokens",
+      }),
       acquireGeneration: async (input) => {
         assert.equal(input.userId, ownerId);
         calls.push("usage");
