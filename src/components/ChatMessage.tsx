@@ -1212,6 +1212,17 @@ function ChatMessageInner({
                   {message.sources.length} {message.sources.length === 1 ? "source" : "sources"}
                 </button>
               ) : null}
+              {feedbackLoadFailed && (
+                <button
+                  type="button"
+                  aria-label="Retry loading response feedback"
+                  title="Retry loading response feedback"
+                  className="kova-message-icon-action text-muted-foreground hover:bg-accent"
+                  onClick={() => setFeedbackReload((current) => current + 1)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1236,7 +1247,7 @@ function ChatMessageInner({
                     <button
                       type="button"
                       onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
-                      disabled={feedbackSaving}
+                      disabled={feedbackSaving || feedbackLoadFailed}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                         feedback === "up" ? "bg-accent text-white" : ""
                       }`}
@@ -1254,7 +1265,7 @@ function ChatMessageInner({
                     <button
                       type="button"
                       onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
-                      disabled={feedbackSaving}
+                      disabled={feedbackSaving || feedbackLoadFailed}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                         feedback === "down" ? "bg-accent text-white" : ""
                       }`}
