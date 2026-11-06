@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
   "count": 210,
-  "latest": "20261106022315_conversation_summary_short_chats.sql",
+  "latest": "20261106022315_kova_conversation_summary_short_chats.sql",
   "migrations": [
     {
       "order": 1,
@@ -4415,7 +4415,7 @@
     },
     {
       "order": 210,
-      "filename": "20261106022315_conversation_summary_short_chats.sql",
+      "filename": "20261106022315_kova_conversation_summary_short_chats.sql",
       "timestamp": "20261106022315",
       "sha256": "3fb5f6aa8ea9bf2d719fc02db88634955c571f99dd359082e72104ad14c45b9d",
       "tables": [],

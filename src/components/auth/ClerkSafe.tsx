@@ -426,7 +426,7 @@ function KovaClerkProvider({
         </div>
       ) : null}
       <AuthDialog
-        open={dialog.open && !authorityPending}
+        open={isLoaded && dialog.open && !authorityPending}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((current) => ({ ...current, open }))}
@@ -926,7 +926,7 @@ function SupabaseClerkProvider({
         </div>
       ) : null}
       <AuthDialog
-        open={dialog.open && !authorityUnresolved}
+        open={isLoaded && dialog.open && !authorityUnresolved}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}

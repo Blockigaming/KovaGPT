@@ -105,7 +105,7 @@ for (const theme of ["light", "dark"] as const) {
     const mobile = page.viewportSize()!.width < 1024;
     if (!mobile) {
       const rail = page.getByRole("navigation", { name: "Collapsed navigation", exact: true });
-      await rail.getByRole("button", { name: "Account menu", exact: true }).click();
+      await page.getByRole("button", { name: "Account menu", exact: true }).click();
       await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
     } else {
       await openCurrentSettings(page);

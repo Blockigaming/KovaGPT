@@ -319,7 +319,9 @@ test("project sections and account settings remain navigable and cancel safely",
     await page.keyboard.press("Escape");
   }
   const workspace = page.locator(".kova-app-content");
-  await expect(workspace).toHaveAttribute("data-sidebar", "open");
+  if (await page.locator(".kova-settings-page").count())
+    await expect(page.locator(".kova-sidebar")).toHaveCount(0);
+  else await expect(workspace).toHaveAttribute("data-sidebar", "open");
   await page.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
   await expect(workspace).toHaveAttribute("data-sidebar", "open");

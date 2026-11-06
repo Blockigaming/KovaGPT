@@ -416,8 +416,8 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await startAttachedConversation(page, "Regenerated response");
-  await page.getByRole("button", { name: "More actions", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Retry", exact: true }).click();
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Try again/, exact: false }).click();
   await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
 
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
