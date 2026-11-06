@@ -97,29 +97,29 @@ test("Knowledge Graph supports keyboard selection and timeline navigation", asyn
   await expect(page).toHaveURL(/\/library$/);
 });
 
-test("Study opens from response More and dismissal returns focus there", async ({ page }, info) => {
+test("response More contains only timestamp and branching and returns focus on dismissal", async ({
+  page,
+}, info) => {
   await linkedFixture(page);
   await page.goto("/");
   await waitForKovaHydration(page);
-  await expect(
-    page.getByRole("button", { name: "Practice this explanation", exact: true }),
-  ).toHaveCount(0);
   const trigger = page
     .getByRole("toolbar", { name: "Response actions", exact: true })
     .last()
     .getByRole("button", { name: "More actions", exact: true });
-  await expect(trigger).toBeVisible();
   await trigger.click();
-  await page.getByRole("menuitem", { name: "Practice this explanation", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Study from this chat", exact: true });
-  await expect(dialog.getByLabel("Learning goal", { exact: true })).toBeVisible();
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem")).toHaveCount(1);
   await expect(
-    dialog.getByLabel("Notes or an explanation to practice", { exact: true }),
-  ).not.toHaveValue("");
-  await focusInside(page);
-  await capture(page, info, "study-dialog");
+    menu.getByRole("menuitem", { name: "Branch into new chat", exact: true }),
+  ).toBeVisible();
+  await expect(
+    menu.locator("time").or(menu.getByText("Time unavailable", { exact: true })),
+  ).toBeVisible();
+  await expect(menu.getByText("Practice this explanation", { exact: true })).toHaveCount(0);
+  await capture(page, info, "minimal-response-menu");
   await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
+  await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
 
