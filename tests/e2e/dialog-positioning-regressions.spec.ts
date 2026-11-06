@@ -131,7 +131,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
-    await expect(page.locator(".kova-sidebar")).toHaveCount(0);
+    await expect(page.locator(".kova-sidebar")).toBeHidden();
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),
       animations: "disabled",

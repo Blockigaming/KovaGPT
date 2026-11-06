@@ -276,6 +276,7 @@ function loginSurface(dialog, options = {}) {
     "@/assets/plugins/github.svg": { default: "github.svg" },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "@/components/auth/ForgotPasswordDialog": { ForgotPasswordDialog: "forgot" },
+    "@/components/auth/ClerkSafe": { useUser: () => ({ isLoaded: true }) },
     "@/hooks/useAuthProviders": {
       useAuthProviders: () => ({ resolved: !owned, passkeys: !owned, google: false }),
     },
@@ -302,6 +303,8 @@ function loginSurface(dialog, options = {}) {
     {
       modules,
       globals: {
+        requestAnimationFrame: () => 0,
+        cancelAnimationFrame() {},
         window: {
           addEventListener() {},
           removeEventListener() {},
