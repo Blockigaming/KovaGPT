@@ -39,7 +39,10 @@ async function fixture() {
     ),
   );
   await db.exec(
-    readFileSync("supabase/migrations/20261106022315_kova_conversation_summary_short_chats.sql", "utf8"),
+    readFileSync(
+      "supabase/migrations/20261106022315_kova_conversation_summary_short_chats.sql",
+      "utf8",
+    ),
   );
   await db.exec("set role service_role");
   return db;
