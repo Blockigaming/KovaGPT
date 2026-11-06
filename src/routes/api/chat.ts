@@ -1653,7 +1653,7 @@ export const Route = createFileRoute("/api/chat")({
               messages: body.messages,
               tools: availableTools,
             });
-            const outputCeiling = Number(body.max_completion_tokens);
+            let outputCeiling = Number(body.max_completion_tokens);
             const paidToolHopLimit = 3;
             let maximumProviderCalls = enableTools ? paidToolHopLimit + 1 : 1;
             let estimatedCost =
@@ -1673,11 +1673,10 @@ export const Route = createFileRoute("/api/chat")({
                 { status: 503 },
               );
             }
-            let freeConnectorBudget: FreeConnectorBudget | null = null;
-            if (freeConnectorRequest) {
-              let headroom;
+            let freeHeadroom: Awaited<ReturnType<typeof getGenerationTokenHeadroom>> | null = null;
+            if (auth && callerTier === "free") {
               try {
-                headroom = await preflight.run("usage_headroom", (signal) =>
+                freeHeadroom = await preflight.run("usage_headroom", (signal) =>
                   getGenerationTokenHeadroom({ userId: auth!.userId, plan: "free", signal }),
                 );
               } catch (error) {
@@ -1691,11 +1690,11 @@ export const Route = createFileRoute("/api/chat")({
                   { status: 503, headers: { "Retry-After": "5" } },
                 );
               }
-              if (headroom.tokenLimit === 0) {
+              if (freeHeadroom.tokenLimit === 0) {
                 return Response.json(
                   {
                     error: "Your generation allowance has been reached. Try again when it resets.",
-                    code: headroom.limitingQuota,
+                    code: freeHeadroom.limitingQuota,
                     category: "quota_exceeded",
                     retryable: false,
                     requestId,
@@ -1703,6 +1702,9 @@ export const Route = createFileRoute("/api/chat")({
                   { status: 429 },
                 );
               }
+            }
+            let freeConnectorBudget: FreeConnectorBudget | null = null;
+            if (freeConnectorRequest && freeHeadroom) {
               try {
                 freeConnectorBudget = new FreeConnectorBudget({
                   planningMessages: toolPlanningMessages,
@@ -1710,7 +1712,7 @@ export const Route = createFileRoute("/api/chat")({
                   tools: availableTools,
                   outputCeiling,
                   tokenLimit: Math.min(
-                    headroom.tokenLimit,
+                    freeHeadroom.tokenLimit,
                     planAllowance(runtimeConfig.maxTokensPerUserDay, "free"),
                     planAllowance(runtimeConfig.maxTokensPerUserMonth, "free"),
                   ),
@@ -1746,6 +1748,38 @@ export const Route = createFileRoute("/api/chat")({
                   outputCeiling,
                 );
               }
+            }
+            if (freeHeadroom && !freeConnectorBudget) {
+              // The complete input is mandatory; the answer's maximum length is
+              // not. A short turn must not require enough headroom for the full
+              // mode ceiling. The atomic admission gate still rechecks usage.
+              inputEstimate = estimateProviderInput(
+                prepareChatResponsesRequest({ ...body, stream: true }),
+              );
+              outputCeiling = Math.min(
+                outputCeiling,
+                freeHeadroom.tokenLimit - inputEstimate.tokens,
+              );
+              if (outputCeiling < 1) {
+                return Response.json(
+                  {
+                    error: "Your generation allowance has been reached. Try again when it resets.",
+                    code: freeHeadroom.limitingQuota,
+                    category: "quota_exceeded",
+                    retryable: false,
+                    requestId,
+                  },
+                  { status: 429 },
+                );
+              }
+              body.max_completion_tokens = outputCeiling;
+              estimatedCost =
+                estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) +
+                (selectedHostedTool === "data_analysis"
+                  ? 0.03
+                  : selectedHostedTool === "file_analysis"
+                    ? 0.01
+                    : 0);
             }
             if (estimatedCost > runtimeConfig.maxCostUsdPerRequest) {
               return Response.json(

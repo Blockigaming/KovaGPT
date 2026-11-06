@@ -661,7 +661,7 @@ test("an unexpectedly large planning usage receipt stops before connector reads 
 });
 
 test("ordinary chat without connectors retains its single-call reservation", async () => {
-  const f = fixture({ noTools: true, headroomError: true });
+  const f = fixture({ noTools: true });
   const { response, text } = await f.post();
   assert.equal(response.status, 200, text);
   assert.equal(f.providers.length, 1);
@@ -738,6 +738,88 @@ test("the ordinary fallback still obeys the authoritative account quota and oper
   assert.equal(cost.providers.length, 0);
   assert.equal(cost.reads.length, 0);
 });
+
+for (const mode of ["instant", "default"]) {
+  for (const connectors of [false, true]) {
+    test(`Free ${mode} fits a short reply into remaining daily headroom${connectors ? " after optional connector fallback" : " without connectors"}`, async () => {
+      const f = fixture({
+        mode,
+        noTools: !connectors,
+        ...(connectors ? { connectedTools: oversizedCatalog } : {}),
+        messages: ordinaryFollowUp,
+        usedToday: 5_799,
+        finalText: "156",
+        env: {
+          KOVA_HOSTED_INFERENCE_ENABLED: "true",
+          OPENROUTER_API_KEY: "offline-fixture-hosted-key",
+          KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
+        },
+      });
+      const { response, text } = await f.post();
+      assert.equal(response.status, 200, text);
+      assert.ok(text.includes("156"));
+      assert.equal(f.providers.length, 1);
+      assert.equal(f.providers[0].model, "kova-argon-4.6");
+      assert.equal(f.reads.length, 0);
+      assert.equal(f.acquisitions.length, 1);
+      assert.ok(f.acquisitions[0].reservedTokens <= 4_201);
+      const normalized = f.normalizedProviders[0];
+      const output = normalized.max_tokens;
+      assert.ok(output > 0);
+      assert.ok(output < (mode === "instant" ? 1_200 : 4_000));
+      assert.ok(
+        estimateProviderInput(normalized).tokens + output <= f.acquisitions[0].reservedTokens,
+      );
+      const sent = JSON.stringify(f.providers[0].messages);
+      for (const message of ordinaryFollowUp) assert.ok(sent.includes(message.content));
+      assert.ok(sent.includes("FINAL_CONTEXT_FIXTURE"));
+      assert.equal(sent.includes("Connected tools were not run"), connectors);
+      assert.equal(f.settlements.length, 1);
+      assert.equal(f.settlements[0].status, "completed");
+    });
+  }
+}
+
+test("single-call Free replies honor monthly headroom, require complete input, and fail closed on usage read failure", async () => {
+  const monthly = fixture({
+    noTools: true,
+    mode: "default",
+    usedMonth: 95_799,
+    messages: ordinaryFollowUp,
+  });
+  const m = await monthly.post();
+  assert.equal(m.response.status, 200, m.text);
+  assert.ok(monthly.acquisitions[0].reservedTokens <= 4_201);
+
+  const exhausted = fixture({ noTools: true, usedToday: 9_999 });
+  const e = await exhausted.post();
+  assert.equal(e.response.status, 429, e.text);
+  assert.equal(JSON.parse(e.text).code, "daily_tokens");
+  assert.equal(exhausted.acquisitions.length, 0);
+  assert.equal(exhausted.providers.length, 0);
+
+  const unavailable = fixture({ noTools: true, headroomError: true });
+  const u = await unavailable.post();
+  assert.equal(u.response.status, 503, u.text);
+  assert.equal(unavailable.acquisitions.length, 0);
+  assert.equal(unavailable.providers.length, 0);
+});
+
+test("a shorter Free reply still requires atomic admission after its headroom read", async () => {
+  const f = fixture({
+    noTools: true,
+    mode: "default",
+    usedToday: 5_799,
+    rejection: "daily_tokens",
+  });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 429, text);
+  assert.equal(JSON.parse(text).code, "daily_tokens");
+  assert.equal(f.acquisitions.length, 1);
+  assert.ok(f.acquisitions[0].reservedTokens <= 4_201);
+  assert.equal(f.providers.length, 0);
+});
+
 for (const prompt of [
   "Hi",
   "Reply exactly: KovaGPT production chat verified.",
@@ -746,7 +828,7 @@ for (const prompt of [
   "Compute -2.5 * 4",
 ]) {
   test(`self-contained turn avoids connector planning with connected accounts: ${prompt}`, async () => {
-    const f = fixture({ prompt, googleTools: "all", linear: true, headroomError: true });
+    const f = fixture({ prompt, googleTools: "all", linear: true });
     const { response, text } = await f.post();
     assert.equal(response.status, 200, text);
     assert.equal(f.providers.length, 1);
