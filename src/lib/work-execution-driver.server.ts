@@ -1,6 +1,10 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { finalizeGeneration } from "@/lib/ai/accounting.server";
-import { estimateMaximumCostUsd, OPENAI_TEXT_MODELS } from "@/lib/ai/model-catalog.server";
+import {
+  estimateMaximumCostUsd,
+  OPENAI_TEXT_MODELS,
+  KOVA_HOSTED_TEXT_MODELS,
+} from "@/lib/ai/model-catalog.server";
 import {
   configuredWorkRunnerAdapter,
   reserveWorkStepCost,
@@ -61,7 +65,9 @@ export async function executeConfiguredWorkRun(caller: AuthedCaller, runId: stri
               current.modelSelection?.maxOutputTokens ?? 2048,
               remainingTokens - estimatedInputTokens - futureTokenFloor,
             );
-            const model = OPENAI_TEXT_MODELS.find((item) => item.id === current.model);
+            const model = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
+              (item) => item.id === current.model,
+            );
             if (!model || outputTokens < 1) throw new Error("work_budget_exceeded");
             const futureCostFloor = phaseInputs
               .slice(1)
@@ -88,7 +94,9 @@ export async function executeConfiguredWorkRun(caller: AuthedCaller, runId: stri
             return reserveWorkStepCost(current, stepId, estimatedInputTokens, outputTokens);
           },
           async releaseUnused(reservation) {
-            const model = OPENAI_TEXT_MODELS.find((item) => item.id === reservation.model);
+            const model = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
+              (item) => item.id === reservation.model,
+            );
             if (!model) throw new Error("work_accounting_model_invalid");
             await finalizeGeneration({
               eventId: reservation.id,

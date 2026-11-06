@@ -5,7 +5,7 @@ import { getAgentEntitlement, AGENT_LIMITS } from "@/agents/execution.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { activeModelConfig } from "@/lib/ai/model-router.server";
-import { OPENAI_TEXT_MODELS } from "@/lib/ai/model-catalog.server";
+import { OPENAI_TEXT_MODELS, KOVA_HOSTED_TEXT_MODELS } from "@/lib/ai/model-catalog.server";
 import {
   workModelOptions,
   selectWorkModel,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/work-execution-protocol.mjs";
 
 const database = (caller: AuthedCaller) => workExecutionDatabase(caller.supabaseAdmin);
+const WORK_TEXT_MODELS = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS];
 export async function workExecutionReadiness(caller: AuthedCaller) {
   const runner = await registeredWorkRunner();
   const tier = await getAgentEntitlement(caller);
@@ -34,7 +35,7 @@ export async function workExecutionReadiness(caller: AuthedCaller) {
   }
   const options = workModelOptions({
     capabilities: runnerReady(runner) ? (runner?.modelCapabilities ?? []) : [],
-    models: OPENAI_TEXT_MODELS,
+    models: WORK_TEXT_MODELS,
     roles: activeModelConfig(),
     plan: tier,
   });
@@ -62,7 +63,7 @@ function authorizeModelChoice(run: WorkRun) {
         maxOutputTokens: selection.maxOutputTokens,
       },
     ],
-    models: OPENAI_TEXT_MODELS,
+    models: WORK_TEXT_MODELS,
     roles: activeModelConfig(),
     plan: run.plan,
   });
@@ -232,7 +233,7 @@ export async function submitWorkExecution(caller: AuthedCaller, body: unknown) {
     input,
     workModelOptions({
       capabilities: runner!.modelCapabilities ?? [],
-      models: OPENAI_TEXT_MODELS,
+      models: WORK_TEXT_MODELS,
       roles: activeModelConfig(),
       plan: tier,
     }),
