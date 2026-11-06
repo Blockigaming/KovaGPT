@@ -1,5 +1,6 @@
 import { expect, test, type Request, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { functionNames } from "./server-function-fixture";
 
 async function openWorkflowSkills(page: Page) {
   const summary = page.locator("details.spec400-plugin-skills > summary");
@@ -159,7 +160,6 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
   };
   let captureWorkflowReload = false;
   let workflowListUrl: string | undefined;
-  const initialGetUrls = new Set<string>();
   let staleMode = false;
   let staleListCalls = 0;
   let releaseInitial: (() => Promise<void>) | undefined;
@@ -175,14 +175,17 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
       return;
     }
 
-    if (captureWorkflowReload && !workflowListUrl && initialGetUrls.has(request.url())) {
+    const functionName = functionNames.get(new URL(request.url()).pathname.split("/").at(-1)!);
+    if (
+      captureWorkflowReload &&
+      !workflowListUrl &&
+      functionName?.startsWith("listWorkflowSkills_")
+    ) {
       workflowListUrl = request.url();
       captureWorkflowReload = false;
       await route.fulfill({ json: { result: [skill], context: {} } });
       return;
     }
-
-    if (!captureWorkflowReload && !workflowListUrl) initialGetUrls.add(request.url());
 
     if (staleMode && request.url() === workflowListUrl) {
       staleListCalls += 1;
