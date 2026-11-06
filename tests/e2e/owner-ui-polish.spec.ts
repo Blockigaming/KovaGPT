@@ -99,6 +99,7 @@ test("profile menu stays inside the sidebar and customization controls fit", asy
   await setup(page);
   await page.goto("/");
   await waitForKovaHydration(page);
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
   const sidebar = page.locator("#kova-primary-navigation");
   if (!(await sidebar.isVisible()))
     await page
