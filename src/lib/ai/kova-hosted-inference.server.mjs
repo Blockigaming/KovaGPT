@@ -10,7 +10,7 @@ export const HOSTED_MODEL_MAP = Object.freeze({
   "kova-argon-4.6": "deepseek/deepseek-v4-flash-0731",
 });
 
-const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+export const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 // Server-controlled provider price caps in USD per million tokens.
 const MODEL_PRICE_CEILINGS = Object.freeze({
@@ -18,7 +18,7 @@ const MODEL_PRICE_CEILINGS = Object.freeze({
   "kova-neon-4.6": { prompt: 0.5, completion: 1.5 },
   "kova-xenon-5": { prompt: 3.0, completion: 15.0 },
 });
-const MODEL_OUTPUT_LIMITS = Object.freeze({
+export const MODEL_OUTPUT_LIMITS = Object.freeze({
   "kova-argon-4.6": 4096,
   "kova-neon-4.6": 8192,
   "kova-xenon-5": 16384,

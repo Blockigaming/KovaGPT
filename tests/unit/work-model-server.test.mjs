@@ -19,6 +19,23 @@ const capabilities = Object.values(roles).map((model) => ({
   reasoningEfforts: ["low", "high"],
   maxOutputTokens: 8192,
 }));
+const hostedRoles = {
+  DEFAULT_CHAT: "kova-argon-4.6",
+  ADVANCED_REASONING: "kova-neon-4.6",
+  PREMIUM_REASONING: "kova-xenon-5",
+};
+const hostedModels = Object.values(hostedRoles).map((id) => ({
+  id,
+  reasoning: id === "kova-xenon-5",
+  tools: true,
+  tiers: ["plus", "pro"],
+  maxOutputTokens: id === "kova-argon-4.6" ? 4096 : id === "kova-neon-4.6" ? 8192 : 16384,
+}));
+const hostedCapabilities = hostedModels.map((model) => ({
+  model: model.id,
+  reasoningEfforts: model.reasoning ? ["max"] : [],
+  maxOutputTokens: Math.min(8192, model.maxOutputTokens),
+}));
 const config = {
   generationEnabled: true,
   maxTokensPerUserDay: 100000,
@@ -49,10 +66,10 @@ function load(file, modules) {
   );
   return exports;
 }
-function fixture() {
+function fixture({ hosted = false } = {}) {
   const committed = [];
   let plan = "plus",
-    activeRoles = { ...roles },
+    activeRoles = { ...(hosted ? hostedRoles : roles) },
     generation = true;
   const db = {
     from: () => ({
@@ -85,7 +102,10 @@ function fixture() {
       getAiRuntimeConfig: () => ({ ...config, generationEnabled: generation }),
     },
     "@/lib/ai/model-router.server": { activeModelConfig: () => activeRoles },
-    "@/lib/ai/model-catalog.server": { OPENAI_TEXT_MODELS: models },
+    "@/lib/ai/model-catalog.server": {
+      OPENAI_TEXT_MODELS: hosted ? [] : models,
+      KOVA_HOSTED_TEXT_MODELS: hosted ? hostedModels : [],
+    },
     "@/lib/work-model-policy.mjs": policy,
     "@/lib/work-runner.server": {
       registeredWorkRunner: async () => ({
@@ -97,7 +117,7 @@ function fixture() {
         heartbeatAt: Date.now(),
         expiresAt: Date.now() + 45000,
         capabilities: [...protocol.WORK_RUNNER_CAPABILITIES],
-        modelCapabilities: capabilities,
+        modelCapabilities: hosted ? hostedCapabilities : capabilities,
       }),
       configuredWorkRunnerTransport: () => ({ dispatch: async () => {} }),
     },
@@ -155,6 +175,32 @@ test("actual admission refuses unavailable effort and premium mode before commit
     "sol",
   );
 });
+test("actual Work admission and reauthorization retain all three Kova models and paid-plan gates", async () => {
+  const f = fixture({ hosted: true });
+  const ready = await f.api.workExecutionReadiness(f.caller);
+  assert.equal(ready.available, true);
+  assert.equal(ready.modelOptions.find((item) => item.mode === "deep").available, false);
+  await assert.rejects(
+    f.api.submitWorkExecution(f.caller, { ...input(), mode: "deep", reasoningEffort: "max" }),
+    /choice_unavailable/,
+  );
+  f.plan("pro");
+  for (const [mode, model] of [
+    ["normal", "kova-argon-4.6"],
+    ["thinking", "kova-neon-4.6"],
+    ["deep", "kova-xenon-5"],
+  ]) {
+    const { state } = await f.api.submitWorkExecution(f.caller, {
+      ...input(),
+      mode,
+      reasoningEffort: mode === "deep" ? "max" : null,
+    });
+    assert.equal(state.model, model);
+    await f.api.createWorkExecutionRepository(f.caller).authorize(state);
+  }
+  f.plan(null);
+  assert.equal((await f.api.workExecutionReadiness(f.caller)).available, false);
+});
 test("current plan and role changes prevent further authorization of a saved choice", async () => {
   const f = fixture();
   const { state } = await f.api.submitWorkExecution(f.caller, input());
@@ -185,6 +231,7 @@ test("actual quota broker records the chosen Work mode and exact model", async (
     "@/lib/work-accounting-settlement.server": {},
     "@/lib/ai/model-catalog.server": {
       OPENAI_TEXT_MODELS: models,
+      KOVA_HOSTED_TEXT_MODELS: hostedModels,
       estimateMaximumCostUsd: () => 0.001,
     },
     "@/lib/ai/config.server": { getAiRuntimeConfig: () => config },
@@ -215,6 +262,31 @@ test("actual quota broker records the chosen Work mode and exact model", async (
     );
     assert.equal(acquired.mode, expected);
     assert.equal(acquired.model.id, "terra");
+    assert.equal(acquired.premium, mode === "deep");
+  }
+  for (const [mode, model] of [
+    ["normal", "kova-argon-4.6"],
+    ["thinking", "kova-neon-4.6"],
+    ["deep", "kova-xenon-5"],
+  ]) {
+    await api.reserveWorkStepCost(
+      {
+        id: crypto.randomUUID(),
+        ownerId: owner,
+        epoch: 1,
+        model,
+        modelSelection: { mode },
+        premium: mode === "deep",
+        plan: "pro",
+        usage: { tokens: 0, costMicros: 0 },
+        limits: { maxTokens: 10000, maxCostMicros: 100000 },
+      },
+      crypto.randomUUID(),
+      100,
+      100,
+    );
+    assert.equal(acquired.model.id, model);
+    assert.equal(acquired.reservedTokens, 200);
     assert.equal(acquired.premium, mode === "deep");
   }
 });
