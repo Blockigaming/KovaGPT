@@ -79,7 +79,8 @@ test("pointer-origin menu focus stays quiet while keyboard outlines remain visib
   const sheet = postcss.parse(readFileSync("src/styles.css", "utf8"));
   const pointerRules = [];
   sheet.walkRules((rule) => {
-    if (rule.selector.includes('data-kova-input-modality="pointer"')) pointerRules.push(rule);
+    if (rule.selector.startsWith(':root[data-kova-input-modality="pointer"]'))
+      pointerRules.push(rule);
   });
   assert.equal(
     pointerRules.length,
