@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { closeCurrentSettings, openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, dismissMobileSidebar, openResponseOptions } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: modern workspace surfaces remain usable and contained`, async ({
@@ -94,6 +94,8 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   ).toBe(true);
   await closeCurrentSettings(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeEnabled();
+  if (await page.getByRole("dialog", { name: "Primary navigation", exact: true }).isVisible())
+    await dismissMobileSidebar(page);
   await attach.click();
   await expect(attach).toHaveAttribute("aria-expanded", "true");
   const attachmentPanel = page.getByRole("dialog").filter({ visible: true });
