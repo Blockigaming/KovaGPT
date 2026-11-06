@@ -516,7 +516,6 @@ function KovaGPT() {
       ) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSidebarOpen(false);
         setSettingsTab(tab);
         setSettingsOpen(true);
         return;
@@ -535,7 +534,6 @@ function KovaGPT() {
       navigate,
       principalReady,
       result,
-      setSidebarOpen,
       tempChat,
       userKey,
     ],
@@ -3284,7 +3282,7 @@ function KovaGPT() {
         onNew={startNewChat}
         onDelete={deleteChat}
         onRename={renameChat}
-        open={sidebarOpen}
+        open={sidebarOpen && !settingsOpen}
         onToggle={() => {
           readingAnchorControllerRef.current?.capture();
           setSidebarOpen((v) => !v);
@@ -3328,7 +3326,7 @@ function KovaGPT() {
       <main
         id="main-content"
         tabIndex={-1}
-        data-sidebar={sidebarOpen ? "open" : "closed"}
+        data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
         <MobileTopBar
