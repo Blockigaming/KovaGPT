@@ -46,7 +46,7 @@ export const Route = createFileRoute("/api/internal/work-execution")({
         const rate = await consumeApplicationRateLimit({
           identity: `runner:${configuration.id}`,
           action: "work_runner_dispatch",
-          limit: 120,
+          limit: 100,
           windowSeconds: 60,
         });
         if (!rate.allowed)
