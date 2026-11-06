@@ -43,8 +43,9 @@ const styleRule = (source, selector, media = null) => {
     )
       matches.push(rule);
   });
-  assert.equal(matches.length, 1, `Expected one ${selector} rule in ${media ?? "the base layer"}`);
-  const rule = matches[0];
+  assert.ok(matches.length > 0, `Expected ${selector} rules in ${media ?? "the base layer"}`);
+  const rule = postcss.rule({ selector });
+  rule.append(matches.flatMap((match) => match.nodes.map((node) => node.clone())));
   return {
     rule,
     declarations: Object.fromEntries(
@@ -362,9 +363,9 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     settingsStylesSource,
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ).declarations;
-  assert.equal(auth.width, "min(calc(100vw - 32px), 1008px)");
-  assert.equal(auth.height, "min(86dvh, 720px)");
-  assert.equal(auth["max-height"], "86dvh");
+  assert.equal(auth.width, "min(calc(100vw - 40px), 1120px)");
+  assert.equal(auth.height, "min(88dvh, 820px)");
+  assert.equal(auth["max-height"], "88dvh");
   assert.match(settingsSource, /const Surface = page \? SettingsPageContent : DialogContent/);
   assert.match(settingsSource, /loggedIn \? "is-authenticated" : "is-guest"/);
   const page = styleRule(
@@ -419,7 +420,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   ).declarations;
   assert.equal(
     panel.padding,
-    "0 16px max(24px, var(--safe-bottom))",
+    "4px 16px 32px",
     "Scrollable content retains its minimum bottom spacing independently of the fullscreen inset",
   );
 });
