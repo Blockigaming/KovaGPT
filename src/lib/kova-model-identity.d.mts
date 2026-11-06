@@ -6,6 +6,6 @@ export function kovaModelIdentityForRole(role: string): KovaModelIdentity;
 export function buildKovaModelIdentityInstructions(input: {
   role: string;
   modelId: string;
-  provider: "openai" | "azure_openai";
+  provider: "openai" | "azure_openai" | "openrouter";
   hasAssistantHistory: boolean;
 }): string;

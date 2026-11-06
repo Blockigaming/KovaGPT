@@ -12,8 +12,8 @@ import type {
 } from "./types";
 import { BrowserArtifactStore } from "./artifacts";
 
-const DEFAULT_LIFETIME_MS = 30 * 60_000;
-const DEFAULT_IDLE_MS = 5 * 60_000;
+// Idle browsers are released after 15 minutes with no authenticated operation.
+const DEFAULT_IDLE_MS = 15 * 60_000;
 
 export class PlaywrightEngineProvider implements EngineProvider {
   get(engine: BrowserEngine) {
@@ -60,7 +60,7 @@ export class BrowserSessionManager {
           workRunId: options.workRunId,
           chatId: options.chatId,
           createdAt: new Date(now).toISOString(),
-          expiresAt: new Date(now + (options.lifetimeMs ?? DEFAULT_LIFETIME_MS)).toISOString(),
+          expiresAt: new Date(now + (options.idleTimeoutMs ?? DEFAULT_IDLE_MS)).toISOString(),
           idleTimeoutMs: options.idleTimeoutMs ?? DEFAULT_IDLE_MS,
           lastUsedAt: new Date(now).toISOString(),
           permissions: Object.freeze({
@@ -83,7 +83,7 @@ export class BrowserSessionManager {
     }
   }
 
-  get(sessionId: string, ownerId: string) {
+  get(sessionId: string, ownerId: string, touch = true) {
     const session = this.#sessions.get(sessionId);
     if (!session || session.descriptor.ownerId !== ownerId)
       throw runtimeError("session_not_found", "Browser session not found");
@@ -91,7 +91,11 @@ export class BrowserSessionManager {
       void this.close(sessionId, ownerId, "expired");
       throw runtimeError("session_expired", "Browser session has expired");
     }
-    session.descriptor.lastUsedAt = new Date().toISOString();
+    if (touch) {
+      const now = Date.now();
+      session.descriptor.lastUsedAt = new Date(now).toISOString();
+      session.descriptor.expiresAt = new Date(now + session.descriptor.idleTimeoutMs).toISOString();
+    }
     return session;
   }
 
@@ -130,9 +134,6 @@ export class BrowserSessionManager {
   }
 
   private expired(session: RuntimeSession, now = Date.now()) {
-    return (
-      now >= Date.parse(session.descriptor.expiresAt) ||
-      now - Date.parse(session.descriptor.lastUsedAt) >= session.descriptor.idleTimeoutMs
-    );
+    return now >= Date.parse(session.descriptor.expiresAt);
   }
 }

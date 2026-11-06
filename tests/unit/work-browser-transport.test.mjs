@@ -39,7 +39,7 @@ test("signed public-web capabilities permit an empty allowlist only with explici
           protocol: "kova-browser-v1",
           available: true,
           origins: [],
-          maxSessionSeconds: 300,
+          idleTimeoutSeconds: 900,
           siteRulesVersion: 1,
           publicWeb,
         },
@@ -55,6 +55,8 @@ test("signed public-web capabilities permit an empty allowlist only with explici
   const result = await browserRunnerCapabilities(configuration, undefined, fetcher(true));
   assert.equal(result.publicWeb, true);
   assert.equal(result.siteRulesVersion, 1);
+  assert.equal(result.idleTimeoutSeconds, 900);
+  assert.equal("maxSessionSeconds" in result, false);
   for (const value of [false, "true", undefined])
     await assert.rejects(browserRunnerCapabilities(configuration, undefined, fetcher(value)));
 });

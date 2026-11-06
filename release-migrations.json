@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 209,
-  "latest": "20261104223100_kova_scheduled_task_active_plan_caps.sql",
+  "count": 210,
+  "latest": "20261105220000_kova_browser_idle_15m_no_absolute_max.sql",
   "migrations": [
     {
       "order": 1,
@@ -4408,6 +4408,20 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 210,
+      "filename": "20261105220000_kova_browser_idle_15m_no_absolute_max.sql",
+      "timestamp": "20261105220000",
+      "sha256": "0fd311fe4901c3f315c7acb44bb0c6ef6b01847b3b1b090323c29b7294c6bac9",
+      "tables": [],
+      "functions": ["admit_work_browser_owner", "authorize_work_browser"],
+      "destructive": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

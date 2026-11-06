@@ -12,9 +12,9 @@ import { KOVA_WORK_FAMILIES } from "../../src/lib/kova-work-policy.mjs";
 
 test("server-routed basic, advanced and premium responses use the approved exact names", () => {
   for (const [mode, tier, expected] of [
-    ["instant", "free", "KovaGPT Model 4.6 Cosmo"],
-    ["thinking", "plus", "KovaGPT Model 4.6 Orion"],
-    ["max", "pro", "KovaGPT Model 4.6 Nova"],
+    ["instant", "free", "Kova Argon 4.6"],
+    ["thinking", "plus", "Kova Neon 4.6"],
+    ["max", "pro", "Kova Xenon 5"],
   ]) {
     const route = routeModel({ task: "chat", mode, tier, text: "Hello" });
     const prompt = buildKovaModelIdentityInstructions({
@@ -38,14 +38,14 @@ test("identity follows authorized routing and locked Free requests have no respo
     () => routeModel({ task: "chat", mode: "max", tier: "free", text: "Hello" }),
     /mode_not_entitled/,
   );
-  assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "KovaGPT Model 4.6 Cosmo");
+  assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "Kova Argon 4.6");
   const upgraded = routeModel({
     task: "chat",
     mode: "medium",
     tier: "plus",
     text: "debug this race condition and refactor the multi-file architecture",
   });
-  assert.equal(kovaModelIdentityForRole(upgraded.role).label, "KovaGPT Model 4.6 Orion");
+  assert.equal(kovaModelIdentityForRole(upgraded.role).label, "Kova Neon 4.6");
 });
 
 test("later replies suppress repeated introductions and distinguish branding from provider", () => {
@@ -58,8 +58,19 @@ test("later replies suppress repeated introductions and distinguish branding fro
   assert.match(prompt, /Do not repeat an introduction unless the user asks/);
   assert.doesNotMatch(prompt, /On the first assistant reply/);
   assert.match(prompt, /configured provider is Azure OpenAI/);
-  assert.match(prompt, /not an OpenAI model ID or proof of separately trained weights/);
+  assert.match(prompt, /not a foundation-model ID or proof of separately trained weights/);
   assert.match(prompt, /Vary the surrounding wording naturally/);
+});
+
+test("hosted Kova name discloses operator-confirmed underlying inference when asked", () => {
+  const prompt = buildKovaModelIdentityInstructions({
+    role: "DEFAULT_CHAT",
+    modelId: "kova-argon-4.6",
+    provider: "openrouter",
+    hasAssistantHistory: false,
+  });
+  assert.match(prompt, /Kova Argon 4.6/);
+  assert.match(prompt, /OpenRouter \(third-party hosted inference\)/);
 });
 
 test("unknown identities and unsafe metadata fail closed without echoing input", () => {
@@ -85,7 +96,7 @@ test("unknown identities and unsafe metadata fail closed without echoing input",
 test("catalogs share approved names without adding self-hosted routes", () => {
   assert.deepEqual(
     KOVA_MODEL_FAMILIES.map((family) => family.label),
-    ["KovaGPT Model 4.6 Cosmo", "KovaGPT Model 4.6 Orion", "KovaGPT Model 4.6 Nova"],
+    ["Kova Argon 4.6", "Kova Neon 4.6", "Kova Xenon 5"],
   );
   assert.deepEqual(KOVA_CHAT_FAMILIES, KOVA_MODEL_FAMILIES.slice(0, 2));
   assert.equal(KOVA_WORK_FAMILIES, KOVA_MODEL_FAMILIES);

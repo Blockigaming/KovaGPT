@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { build } from "esbuild";
 import ts from "typescript";
 import { createGitHubChatTools } from "../../src/lib/github-chat-read.server.mjs";
-import { planAllowance } from "../../src/lib/plan-usage-policy.mjs";
+import { chatUsageWindows, planAllowance } from "../../src/lib/plan-usage-policy.mjs";
 import { estimateProviderInput } from "../../src/lib/ai/token-estimator.server.ts";
 import { CONNECTION_FLOWS, canReadConnection } from "../../src/integrations/connection-flows.mjs";
 
@@ -792,12 +792,15 @@ test("resolved Lite and Medium use the regular allowance; reasoning modes use Th
     const f = fixture({ tier: "plus", mode, noTools: true });
     const { response, text } = await f.post();
     assert.equal(response.status, 200, text);
+    const windows = chatUsageWindows("plus");
+    const weekly = windows.find(({ id }) => id === "weekly");
+    const short = windows.find(({ id }) => id === "five_hour");
     assert.deepEqual(JSON.parse(JSON.stringify(f.messageReservations)), [
       {
         _user_id: owner,
         _thinking: thinking,
-        _weekly_limit: thinking ? 350 : 1750,
-        _short_limit: thinking ? 50 : 250,
+        _weekly_limit: thinking ? weekly.thinkingLimit : weekly.regularLimit,
+        _short_limit: thinking ? short.thinkingLimit : short.regularLimit,
       },
     ]);
     const blocked = fixture({ tier: "plus", mode, noTools: true, messageQuota: false });
@@ -828,4 +831,46 @@ test("an already consumed generation identifier never causes a second provider r
   assert.equal(error.retryable, false);
   assert.equal(f.providers.length, 0);
   assert.equal(f.reads.length, 0);
+});
+
+const hostedRouting = {
+  KOVA_HOSTED_INFERENCE_ENABLED: "true",
+  KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
+  KOVA_MODEL_ADVANCED_REASONING: "kova-neon-4.6",
+  KOVA_MODEL_PREMIUM_REASONING: "kova-xenon-5",
+};
+for (const [tier, mode, alias, foundation] of [
+  ["free", "instant", "kova-argon-4.6", "deepseek/deepseek-v4-flash-0731"],
+  ["plus", "thinking", "kova-neon-4.6", "meta-llama/llama-4-maverick"],
+  ["pro", "max", "kova-xenon-5", "moonshotai/kimi-k3"],
+]) {
+  test(`actual chat route admits ${alias} with its selected model and unchanged account admission`, async () => {
+    const f = fixture({ tier, mode, noTools: true, env: hostedRouting });
+    const { response, text } = await f.post();
+    assert.equal(response.status, 200, text);
+    assert.equal(f.providers.length, 1);
+    assert.equal(f.providers[0].model, alias);
+    assert.equal(f.normalizedProviders[0].model, foundation);
+    assert.equal(f.acquisitions.length, 1);
+    assert.equal(f.settlements.length, 1);
+    assert.equal(f.reads.length, 0);
+  });
+}
+
+test("Argon connector fallback retains the selected hosted model and complete conversation", async () => {
+  const f = fixture({
+    connectedTools: oversizedCatalog,
+    messages: ordinaryFollowUp,
+    env: hostedRouting,
+  });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, text);
+  assert.equal(f.providers.length, 1);
+  assert.equal(f.normalizedProviders[0].model, "deepseek/deepseek-v4-flash-0731");
+  const sent = JSON.stringify(f.normalizedProviders[0].messages);
+  for (const message of ordinaryFollowUp) assert.ok(sent.includes(message.content));
+  assert.ok(sent.includes("Connected tools were not run"));
+  assert.equal(f.reads.length, 0);
+  assert.equal(f.acquisitions.length, 1);
+  assert.equal(f.settlements.length, 1);
 });

@@ -146,7 +146,7 @@ export function versionGroupsForTier(tier: Tier): VersionGroup[] {
   return [
     {
       id: KOVA_MODEL_VERSION,
-      label: `KovaGPT Model ${KOVA_MODEL_VERSION}`,
+      label: "Kova models", // Mixed family versions: Xenon 5, Neon 4.6, Argon 4.6.
       modes: modesForTier(tier),
     },
   ];

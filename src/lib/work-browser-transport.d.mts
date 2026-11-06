@@ -77,7 +77,7 @@ export function browserRunnerCapabilities(
   protocol: "kova-browser-v1";
   available: true;
   origins: string[];
-  maxSessionSeconds: 300;
+  idleTimeoutSeconds: 900;
   siteRulesVersion?: 1;
   publicWeb?: true;
 }>;

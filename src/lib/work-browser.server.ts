@@ -86,7 +86,8 @@ export async function browserReadiness() {
   if (
     value?.protocol !== "kova-browser-v1" ||
     value.available !== true ||
-    value.maxSessionSeconds !== 300 ||
+    value.idleTimeoutSeconds !== 900 ||
+    Object.hasOwn(value, "maxSessionSeconds") ||
     !Array.isArray(value.origins) ||
     (value.origins.length < 1 && value.publicWeb !== true) ||
     value.origins.length > 20

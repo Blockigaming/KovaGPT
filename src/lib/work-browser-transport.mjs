@@ -181,7 +181,8 @@ export async function browserRunnerCapabilities(configuration, signal, fetcher =
     payload.expiresAt <= Date.now() ||
     value?.protocol !== "kova-browser-v1" ||
     value.available !== true ||
-    value.maxSessionSeconds !== 300 ||
+    value.idleTimeoutSeconds !== 900 ||
+    Object.hasOwn(value, "maxSessionSeconds") ||
     !Array.isArray(value.origins) ||
     (!value.origins.length && value.publicWeb !== true) ||
     value.origins.length > 20
@@ -204,7 +205,7 @@ export async function browserRunnerCapabilities(configuration, signal, fetcher =
     protocol: "kova-browser-v1",
     available: true,
     origins: [...value.origins],
-    maxSessionSeconds: 300,
+    idleTimeoutSeconds: 900,
     ...(value.siteRulesVersion === 1 ? { siteRulesVersion: 1 } : {}),
     ...(value.publicWeb === true ? { publicWeb: true } : {}),
   };

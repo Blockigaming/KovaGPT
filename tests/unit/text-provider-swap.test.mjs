@@ -4,6 +4,7 @@ import fs from "node:fs";
 import ts from "typescript";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/endpoint-reliability.mjs";
+import * as hosted from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 function loadProvider(env, fetcher, generationEnabled = true) {
   const output = ts.transpileModule(fs.readFileSync("src/lib/ai/provider.server.ts", "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -34,6 +35,11 @@ function loadProvider(env, fetcher, generationEnabled = true) {
       maximumServerOutputForModel: () => 4096,
     },
     "@/lib/ai/provider-transport.server.mjs": transport,
+    "@/lib/ai/kova-hosted-inference.server.mjs": {
+      ...hosted,
+      requestKovaHostedChat: (input) =>
+        hosted.requestKovaHostedChat({ ...input, fetchImpl: fetcher }),
+    },
   };
   new Function("exports", "require", "fetch", "console", output)(
     exports,
@@ -49,6 +55,49 @@ function loadProvider(env, fetcher, generationEnabled = true) {
     },
   );
   return { ...exports, logs, meters };
+}
+
+for (const [alias, foundation] of Object.entries(hosted.HOSTED_MODEL_MAP)) {
+  test(`hosted ${alias} uses its exact foundation and wire format for budgets and HTTP`, async () => {
+    const calls = [];
+    const api = loadProvider(
+      {
+        OPENAI_API_KEY: "fixture-retained-for-existing-capabilities",
+        OPENROUTER_API_KEY: "fixture-openrouter-server-key",
+        KOVA_HOSTED_INFERENCE_ENABLED: "true",
+      },
+      async (url, init) => {
+        calls.push({ url, init });
+        return new Response(init.body.includes('"stream":true') ? "data: [DONE]\n\n" : "{}", {
+          headers: {
+            "content-type": init.body.includes('"stream":true')
+              ? "text/event-stream"
+              : "application/json",
+          },
+        });
+      },
+    );
+    for (const stream of [false, true]) {
+      const request = {
+        model: alias,
+        stream,
+        max_completion_tokens: 256,
+        messages: [{ role: "user", content: "Fixture question" }],
+      };
+      const prepared = api.prepareChatResponsesRequest(request);
+      assert.deepEqual(prepared, JSON.parse(hosted.prepareKovaHostedRequest(request).body));
+      assert.equal(prepared.model, foundation);
+      const response = await api.chatCompletions(request);
+      await response.text();
+      const sent = calls.at(-1);
+      assert.equal(sent.url, "https://openrouter.ai/api/v1/chat/completions");
+      assert.deepEqual(JSON.parse(sent.init.body), prepared);
+      assert.equal(sent.init.headers.Authorization, "Bearer fixture-openrouter-server-key");
+      assert.doesNotMatch(sent.init.body, /"service_tier"|"input"|"max_output_tokens"/);
+    }
+    assert.equal(calls.length, 2);
+    assert.doesNotMatch(JSON.stringify(api.logs), /fixture-openrouter-server-key/);
+  });
 }
 
 const azure = {

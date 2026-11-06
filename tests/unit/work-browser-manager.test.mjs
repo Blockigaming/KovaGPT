@@ -6,8 +6,8 @@ const ownerId = crypto.randomUUID(),
   runId = crypto.randomUUID(),
   sessionId = crypto.randomUUID();
 function fixture() {
-  const expiresAt = Date.now() + 290000,
-    calls = [],
+  let expiresAt = Date.now() + 290000;
+  const calls = [],
     checks = [];
   let retired = false,
     allowed = true,
@@ -61,6 +61,7 @@ function fixture() {
     checks,
     command,
     setSequence: (n) => (sequence = n),
+    renew: () => (expiresAt = Date.now() + 900000),
     revoke: () => (allowed = false),
     retire: () => (retired = true),
     get network() {
@@ -193,4 +194,18 @@ test("saved site blocks revoke an already loaded page before its next snapshot",
   );
   assert.equal(executions, 1);
   assert.equal(closed, true);
+});
+
+test("active owner commands renew the 15-minute idle lease without any absolute age cap", async () => {
+  const f = fixture();
+  assert.equal(f.manager.capabilities.idleTimeoutSeconds, 900);
+  assert.equal(Object.hasOwn(f.manager.capabilities, "maxSessionSeconds"), false);
+  await f.command("open");
+  f.setSequence(2);
+  f.renew();
+  assert.equal((await f.command("snapshot")).sequence, 2);
+  f.setSequence(3);
+  f.renew();
+  assert.equal((await f.command("snapshot")).sequence, 3);
+  await f.manager.close();
 });

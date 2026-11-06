@@ -90,6 +90,7 @@ function fixture(options = {}) {
     searchOpen: false,
     workspaceSearchOpen: false,
     cancelPendingSelection: () => {},
+    closeAfterMobileNavigation: () => {},
     onOpenSettings: (tab) => calls.push(["settings", tab]),
     openRailPersonalization: (target) => calls.push(["customize", target]),
     requestAnimationFrame: (fn) => fn(),

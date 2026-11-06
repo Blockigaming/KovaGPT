@@ -289,6 +289,7 @@ test("Personality Auto-adapt keeps its accessible name and existing controlled c
   for (const visibleAutoAdapt of [false, true]) {
     const control = consumerSwitch("src/components/PersonalitySliders.tsx", {
       visibleAutoAdapt,
+      ready: true,
       toggleAuto,
       ready: true,
     });
