@@ -64,6 +64,7 @@ function fixture({
   const calls = [];
   const sessions = new Map();
   const idempotency = new Map();
+  let claimSequence = 0;
   const supabase = {
     rpc: async (name, args = {}) => {
       db.calls.push({ name, args });
@@ -85,9 +86,11 @@ function fixture({
       if (name === "kova_policy_claim_checkout") {
         if (db.accountState !== "active") return { error: { message: "account_deletion_pending" } };
         if (!db.claim || ["completed", "expired"].includes(db.claim.state)) {
+          const nextClaimId =
+            claimSequence++ === 0 ? claimId : "55555555-5555-4555-8555-555555555555";
           db.claim = {
-            claimId,
-            idempotencyKey: `kova-checkout:${claimId}`,
+            claimId: nextClaimId,
+            idempotencyKey: `kova-checkout:${nextClaimId}`,
             requestedAt: new Date(now).toISOString(),
             expiresAt: new Date(now + 45 * 60 * 1000).toISOString(),
             returnUrl: args.p_return_url,
@@ -115,7 +118,9 @@ function fixture({
       }
       if (name === "kova_policy_checkout_status") return { data: { ...db.claim } };
       if (name === "kova_policy_pending_checkout")
-        return { data: db.claim ? { ...db.claim } : null };
+        return {
+          data: db.claim && ["pending", "open"].includes(db.claim.state) ? { ...db.claim } : null,
+        };
       throw new Error(`unexpected fixture RPC ${name}`);
     },
   };
@@ -147,13 +152,20 @@ function fixture({
       sessions: {
         list: () => iterable([...sessions.values()]),
         retrieve: async (id) => structuredClone(sessions.get(id)),
+        expire: async (id) => {
+          calls.push({ method: "checkout.expire", id });
+          const session = sessions.get(id);
+          assert.equal(session.status, "open");
+          session.status = "expired";
+          return structuredClone(session);
+        },
         create: async (params, options) => {
           calls.push({ method: "checkout.create", params, options });
           if (createError) throw new Error("nonsecret ambiguous fixture failure");
           let session = idempotency.get(options.idempotencyKey);
           if (!session) {
             session = {
-              id: "cs_One",
+              id: sessions.size === 0 ? "cs_One" : "cs_Two",
               customer: params.customer,
               livemode: true,
               mode: "subscription",
@@ -166,6 +178,8 @@ function fixture({
               discounts: params.discounts ?? null,
               expires_at: params.expires_at,
               status: "open",
+              payment_status: "unpaid",
+              subscription: null,
               client_secret: "nonsecret_fixture_client_secret",
             };
             idempotency.set(options.idempotencyKey, session);
@@ -245,7 +259,7 @@ test("yearly, quarterly, inactive, wrong environment and zero-valued prices fail
   }
 });
 
-test("concurrent Checkouts share one durable claim and one Stripe identity across all plans", async () => {
+test("concurrent requests for the same plan share one durable claim and Stripe identity", async () => {
   const f = fixture();
   const sessions = await Promise.all([
     createMonthlyIntroCheckout(f.input),
@@ -260,11 +274,138 @@ test("concurrent Checkouts share one durable claim and one Stripe identity acros
     ).size,
     1,
   );
+  assert.equal(
+    f.calls.some((call) => call.method === "checkout.expire"),
+    false,
+  );
+});
+
+function selectPro(f) {
   f.input.plan = { lookupKey: "pro_monthly", livePriceId: "price_Pro" };
   f.stripe.prices.list = async () => ({
     data: [{ ...price, id: "price_Pro", lookup_key: "pro_monthly" }],
   });
-  await assert.rejects(createMonthlyIntroCheckout(f.input), /checkout_claim_invalid/u);
+}
+
+test("changing plans expires the verified unpaid checkout before creating its replacement", async () => {
+  const f = fixture();
+  const previous = await createMonthlyIntroCheckout(f.input);
+  const oldClaimId = f.db.claim.claimId;
+  selectPro(f);
+  const replacement = await createMonthlyIntroCheckout(f.input);
+  assert.equal(f.sessions.get(previous.id).status, "expired");
+  assert.notEqual(replacement.id, previous.id);
+  assert.notEqual(f.db.claim.claimId, oldClaimId);
+  assert.equal(replacement.line_items.data[0].price.id, "price_Pro");
+  assert.deepEqual(replacement.discounts, [{ coupon: coupon.id }]);
+  assert.equal(f.db.redeemed, false);
+  assert.deepEqual(
+    f.calls.map((call) => call.method),
+    ["checkout.create", "checkout.expire", "checkout.create"],
+  );
+});
+
+test("confirmed expired sessions settle before either same-plan or different-plan retries", async () => {
+  for (const changePlan of [false, true]) {
+    const f = fixture();
+    const previous = await createMonthlyIntroCheckout(f.input);
+    f.sessions.get(previous.id).status = "expired";
+    if (changePlan) selectPro(f);
+    const replacement = await createMonthlyIntroCheckout(f.input);
+    assert.notEqual(replacement.id, previous.id);
+    assert.equal(f.db.redeemed, false);
+    assert.equal(
+      f.calls.some((call) => call.method === "checkout.expire"),
+      false,
+    );
+  }
+});
+
+test("a pending ambiguous checkout cannot be replaced by choosing another plan", async () => {
+  const f = fixture({ createError: true });
+  await assert.rejects(createMonthlyIntroCheckout(f.input), /ambiguous fixture/u);
+  const original = structuredClone(f.db.claim);
+  selectPro(f);
+  await assert.rejects(createMonthlyIntroCheckout(f.input), /reconciliation_pending/u);
+  assert.deepEqual(f.db.claim, original);
+  assert.equal(f.calls.length, 1);
+});
+
+test("uncertain expiration cannot create a second checkout while the original remains open", async () => {
+  const f = fixture();
+  await createMonthlyIntroCheckout(f.input);
+  f.stripe.checkout.sessions.expire = async () => {
+    throw new Error("network uncertain");
+  };
+  selectPro(f);
+  await assert.rejects(createMonthlyIntroCheckout(f.input), /reconciliation_pending/u);
+  assert.equal(f.db.claim.state, "open");
+  assert.equal(f.calls.filter((call) => call.method === "checkout.create").length, 1);
+});
+
+test("expiration response loss recovers only from a verified terminal GET", async () => {
+  const f = fixture();
+  const previous = await createMonthlyIntroCheckout(f.input);
+  f.stripe.checkout.sessions.expire = async () => {
+    f.sessions.get(previous.id).status = "expired";
+    throw new Error("response lost");
+  };
+  selectPro(f);
+  assert.notEqual((await createMonthlyIntroCheckout(f.input)).id, previous.id);
+});
+
+test("completion racing a plan change settles eligibility and blocks a new subscription", async () => {
+  for (const duringExpiration of [false, true]) {
+    const f = fixture();
+    const previous = await createMonthlyIntroCheckout(f.input);
+    const record = f.sessions.get(previous.id);
+    if (duringExpiration)
+      f.stripe.checkout.sessions.expire = async () => {
+        record.status = "complete";
+        throw new Error("already complete");
+      };
+    else record.status = "complete";
+    selectPro(f);
+    await assert.rejects(createMonthlyIntroCheckout(f.input), /active_subscription_exists/u);
+    assert.equal(f.db.claim.state, "completed");
+    assert.equal(f.db.redeemed, true);
+    assert.equal(f.calls.filter((call) => call.method === "checkout.create").length, 1);
+  }
+});
+
+test("a plan change never expires a paid, linked, or identity-mismatched checkout", async () => {
+  for (const tamper of [
+    (s) => {
+      s.payment_status = "paid";
+    },
+    (s) => {
+      s.subscription = "sub_Existing";
+    },
+    (s) => {
+      s.customer = "cus_Other";
+    },
+    (s) => {
+      s.metadata.userId = "44444444-4444-4444-8444-444444444444";
+    },
+    (s) => {
+      s.line_items.data[0].price.id = "price_Other";
+    },
+    (s) => {
+      s.discounts = [{ coupon: "wrong" }];
+    },
+  ]) {
+    const f = fixture();
+    const previous = await createMonthlyIntroCheckout(f.input);
+    tamper(f.sessions.get(previous.id));
+    selectPro(f);
+    await assert.rejects(createMonthlyIntroCheckout(f.input));
+    assert.deepEqual(
+      f.calls.map((call) => call.method),
+      ["checkout.create"],
+    );
+    assert.equal(f.db.claim.state, "open");
+    assert.equal(f.db.redeemed, false);
+  }
 });
 
 test("existing trials, active subscriptions and scheduled cancellations are never modified", async () => {
