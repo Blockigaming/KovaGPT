@@ -7,7 +7,7 @@ test.describe("mobile shell UI truth", () => {
   test.beforeEach(async ({ page }) => {
     await installAuthenticatedFixture(page);
   });
-  test("the inset phone drawer fits the viewport and restores focus", async ({ page }) => {
+  test("the phone drawer fills the available height and restores focus", async ({ page }) => {
     const viewport = page.viewportSize();
     test.skip(
       !viewport || (viewport.width >= 768 && viewport.height >= 500),
@@ -22,10 +22,21 @@ test.describe("mobile shell UI truth", () => {
 
     const drawer = page.getByRole("dialog", { name: "Primary navigation" });
     await expect(drawer).toBeVisible();
-    await expect.poll(async () => (await drawer.boundingBox())?.x ?? 0).toBeCloseTo(8, 0);
+    await expect
+      .poll(async () => {
+        const box = await drawer.boundingBox();
+        return (
+          box && {
+            top: Math.round(box.y),
+            bottom: Math.round(viewport.height - box.y - box.height),
+          }
+        );
+      })
+      .toEqual({ top: 0, bottom: 0 });
+    await expect.poll(async () => (await drawer.boundingBox())?.x).toBe(0);
     const box = (await drawer.boundingBox())!;
-    expect(box.y).toBeCloseTo(8, 0);
-    expect(box.height).toBeCloseTo(viewport.height - 16, 0);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
 
     const close = page.getByRole("button", { name: "Close sidebar", exact: true });
     // Translation can briefly subtract fractional edges as 43.99998px for a

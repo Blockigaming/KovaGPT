@@ -13,7 +13,7 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
   assert.match(browser, /browser:\n(?:    if: [^\n]+\n)?    name: \$\{\{ matrix\.check_name \}\}/);
   assert.match(browser, /needs: \[verify, public-surface\]/);
   assert.match(browser, /fail-fast: false/);
-  assert.match(browser, /timeout-minutes: 45/);
+  assert.ok(browser.includes("timeout-minutes: ${{ matrix.id == 'tablet' && 65 || 45 }}"));
 
   const phones = [
     "phone-320x700",

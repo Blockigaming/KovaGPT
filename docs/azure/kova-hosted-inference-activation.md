@@ -16,12 +16,15 @@ respect license, data-handling, and customer-privacy requirements.
 
 ## Account and secrets (authorized operator action)
 
-1. Establish an eligible OpenRouter account and create a **restricted, budget-limited**
-   server-side API key. Check provider privacy, retention, region, price and terms.
+1. Establish an eligible OpenRouter account and create a server-side API key
+   with the owner's approved credit policy. On 2026-11-05 the owner approved
+   the production key with **no key-level credit cap** and a 180-day expiry.
+   Keep the gateway's existing per-request prices and per-account allowances.
+   Check provider privacy, retention, region, price and terms.
    Do not paste it into chat, GitHub, browser code or logs.
 2. Store the key in Azure Key Vault or an existing Azure Container Apps secret
    reference named for this application, never in source control.
-3. Use a separate staging revision, not `kovagpt-prod-web` traffic, and verify
+3. Use a separate revision with zero production traffic, and verify
    `OPENROUTER_API_KEY` is only available server-side.
 4. The adapter's endpoint is pinned to
    `https://openrouter.ai/api/v1/chat/completions`. Never accept URLs from
@@ -79,9 +82,17 @@ tested.
 
 ## Status on 2026-11-05
 
-Adapter code, Kova model aliases, identity and accounting hooks: PR branch only.
-Cloud account/API key, Azure secrets, staging deployment, upstream compatibility,
-typecheck/CI, customer consent and live production cutover: NOT VERIFIED.
+The production provider key is stored in the existing Azure vault and referenced
+by `kovagpt-prod-web`. The authenticated provider transport passed eleven paid
+requests: text, streaming and structured tool calls on all three fixed models,
+plus image inputs on Xenon and Neon. Argon rejected an image before contacting
+the provider, preserving its text-only boundary. Recorded evidence is in
+`docs/azure/evidence/kova-hosted-inference-smoke-20261105.json`.
+
+These checks used the exact transport at commit
+`5740055acd450ba5b0bf5e961e25abd79e4c7649`; they do not establish production
+gateway acceptance. Model-enabled deployment, authenticated website requests,
+account isolation, final CI and live production cutover remain unverified.
 
 ## Tier quality acceptance
 
