@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
-import { openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 async function expectRestingComposer(page: Page) {
@@ -33,7 +33,7 @@ async function expectRestingComposer(page: Page) {
 }
 
 for (const theme of ["dark", "light"] as const) {
-  test(`${theme}: empty composer, editable drafts, expand input, Context and Options`, async ({
+  test(`${theme}: empty composer, editable drafts, expand input and response preferences`, async ({
     page,
   }, info) => {
     await fixture(page, theme, true);
@@ -45,7 +45,7 @@ for (const theme of ["dark", "light"] as const) {
     await expect(input).toBeEnabled();
     await expect(page.locator("#chat-greeting")).toBeVisible();
     await expect(page.locator("#chat-greeting")).not.toHaveText("");
-    await expect(input).toHaveAttribute("placeholder", "Describe what you need…");
+    await expect(input).toHaveAttribute("placeholder", "Ask KovaGPT anything...");
     await expectRestingComposer(page);
     await expect(send).toBeHidden();
     await expect(send).toBeDisabled();
@@ -76,42 +76,10 @@ for (const theme of ["dark", "light"] as const) {
     await expect(dialog).toBeHidden();
     await expect(input).toHaveValue("Keep the original requirement.\nAdd this detail.");
     await expect(expand).toBeFocused();
-    const contextTrigger = page.getByRole("button", { name: "Context", exact: true });
-    const contextReturn = (await contextTrigger.isVisible())
-      ? contextTrigger
-      : page.getByRole("button", { name: "Attach", exact: true });
-    if (await contextTrigger.isVisible()) await contextTrigger.click();
-    else {
-      await contextReturn.click();
-      await page
-        .getByTestId("mobile-bottom-sheet")
-        .locator("summary")
-        .filter({ hasText: /^More tools$/ })
-        .click();
-      await page
-        .getByTestId("mobile-bottom-sheet")
-        .getByRole("button", { name: "Context", exact: true })
-        .click();
-    }
-    const context = page.getByRole("dialog", { name: "Context", exact: true });
-    await expect(context).toBeVisible();
-    for (const heading of [
-      "Project instructions",
-      "Files",
-      "Saved results",
-      "Conversation context",
-    ])
-      await expect(context.getByRole("heading", { name: heading })).toBeVisible();
-    const viewport = page.viewportSize()!;
-    const contextBox = await context.boundingBox();
-    expect(contextBox!.width).toBe(viewport.width < 768 ? viewport.width : 300);
-    await context.getByRole("button", { name: "Close Context", exact: true }).click();
-    await expect(contextReturn).toBeFocused();
-    await openResponseOptions(page);
-    const options = page.getByRole("dialog", { name: "Response options", exact: true });
+    const options = await openResponseOptions(page);
     await expect(options).toBeVisible();
     for (const [label, choice] of [
-      ["Length", "Detailed"],
+      ["Preferred response length", "Detailed"],
       ["Tone", "Formal"],
       ["Format", "Plain text"],
     ]) {
@@ -121,9 +89,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(trigger).toContainText(choice);
       await expect(trigger).toBeFocused();
     }
-    await page.keyboard.press("Escape");
-    if (page.viewportSize()!.width < 380)
-      await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();
+    await closeCurrentSettings(page);
     await expect(input).toHaveValue("Keep the original requirement.\nAdd this detail.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
@@ -149,20 +115,8 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await input.press(compactDesktop ? "Shift+Enter" : "Enter");
   await expect(input).toHaveValue("First line\n");
   await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
-  const context = page.getByRole("button", { name: "Context", exact: true });
-  if (!(await context.isVisible())) {
-    await page.getByRole("button", { name: "Attach", exact: true }).click();
-    const menu = page
-      .getByRole("dialog", { name: /^(Attach|Attach files and tools)$/ })
-      .filter({ visible: true });
-    await menu
-      .locator("summary")
-      .filter({ hasText: /^More tools$/ })
-      .click();
-    await menu.getByRole("button", { name: "Context", exact: true }).click();
-  } else {
-    await context.click();
-  }
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  await page.getByRole("button", { name: "Chat instructions and context", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Context", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(input).toHaveValue("First line\n");

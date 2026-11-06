@@ -1,3 +1,4 @@
+import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
@@ -233,6 +234,7 @@ function SettingsPageContent({ children, className }: ComponentProps<typeof Dial
       className={`kova-settings-page ${className ?? ""}`}
       aria-label="Settings"
       data-ui-reference="chatgpt.settings"
+      data-settings-open="true"
     >
       {children}
     </section>
@@ -1117,9 +1119,9 @@ export function SettingsDialog({
     if (!pendingFocus) return;
     pendingMobileFocusRef.current = null;
     if (pendingFocus === "navigation" && mobileHome) {
-      settingsSearchRef.current?.focus();
+      settingsSearchRef.current?.focus({ preventScroll: true });
     } else if (pendingFocus === "content" && !mobileHome) {
-      contentHeadingRef.current?.focus();
+      contentHeadingRef.current?.focus({ preventScroll: true });
     }
   }, [mobileFocusRequest, mobileHome, tab]);
 
@@ -1162,6 +1164,7 @@ export function SettingsDialog({
       <Surface
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
+        data-settings-open={open ? "true" : undefined}
         className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onOpenAutoFocus={() => {
           // Capture once per opening, before the dialog moves focus. Navigating
@@ -1534,6 +1537,8 @@ export function SettingsDialog({
                     </div>
                   </div>
                 </section>
+
+                <VoiceConnectionStatus />
 
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">Custom instructions and personality</h3>

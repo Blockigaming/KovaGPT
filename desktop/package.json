@@ -1,0 +1,80 @@
+{
+  "name": "kovagpt-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KovaGPT in a dedicated desktop window",
+  "author": {
+    "name": "KovaGPT",
+    "email": "support@kovagpt.com"
+  },
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.mjs",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.1"
+  },
+  "build": {
+    "appId": "com.kovagpt.desktop",
+    "productName": "KovaGPT",
+    "artifactName": "KovaGPT-${version}-${os}-${arch}.${ext}",
+    "asar": true,
+    "icon": "../public/kova-logo.png",
+    "files": [
+      "main.mjs",
+      "policy.mjs",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "extraResources": [
+      {
+        "from": "../public/kova-logo.png",
+        "to": "kova-logo.png"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "KovaGPT",
+        "schemes": [
+          "kovagpt"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Use your microphone when you start voice or dictation in KovaGPT.",
+        "NSCameraUsageDescription": "Use your camera when you choose to attach a photo in KovaGPT."
+      }
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "icon": "../public/kova-logo.png"
+    }
+  },
+  "homepage": "https://kovagpt.com"
+}

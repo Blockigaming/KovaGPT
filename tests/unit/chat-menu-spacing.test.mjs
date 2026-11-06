@@ -2,14 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import postcss from "postcss";
-test("both chat Rename actions have aligned pencil icons", () => {
+test("sidebar Rename has an aligned pencil and the header omits the removed overflow menu", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
   assert.match(sidebar, /beginRename\(conversation\)\}>\s*<Pencil aria-hidden="true"/);
   assert.match(sidebar, /className="kova-sidebar-chat-menu"/);
-  assert.match(
-    readFileSync("src/components/ConversationHeaderActions.tsx", "utf8"),
-    /openDialog\("rename"\)\}>\s*<Pencil aria-hidden="true"/,
-  );
+  const header = readFileSync("src/components/ConversationHeaderActions.tsx", "utf8");
+  assert.doesNotMatch(header, /openDialog\("rename"\)|DropdownMenuTrigger|MoreHorizontal/);
 });
 test("context menus retain bounded widths and compact SDK rows with coarse targets", () => {
   const sidebar = postcss.parse(readFileSync("src/styles/sidebar-core.css", "utf8"));

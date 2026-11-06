@@ -1,10 +1,43 @@
 import "./public/public-website.css";
+import { useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NovaLogo } from "@/components/NovaLogo";
-import { PUBLIC_WEBSITE_FOOTER } from "@/lib/public-website-catalog.mjs";
+import { PUBLIC_WEBSITE_FOOTER, PUBLIC_WEBSITE_PAGES } from "@/lib/public-website-catalog.mjs";
+import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
+import { requiresAppAccount } from "@/lib/app-access-policy.mjs";
 
 export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const [query, setQuery] = useState("");
+  const directory = useMemo(() => {
+    const entries = new Map(
+      PUBLIC_SITEMAP_ENTRIES.filter(({ path }) => path === "/" || !requiresAppAccount(path)).map(
+        ({ path }) => [
+          path,
+          {
+            to: path,
+            label:
+              path === "/"
+                ? "KovaGPT"
+                : path
+                    .split("/")
+                    .filter(Boolean)
+                    .map((part) => part.replaceAll("-", " "))
+                    .join(" / ")
+                    .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+          },
+        ],
+      ),
+    );
+    for (const page of PUBLIC_WEBSITE_PAGES)
+      entries.set(page.path, { to: page.path, label: page.title });
+    for (const group of PUBLIC_WEBSITE_FOOTER)
+      for (const link of group.links) entries.set(link.to, link);
+    return [...entries.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, []);
+  const matching = directory.filter((entry) =>
+    `${entry.label} ${entry.to}`.toLowerCase().includes(query.trim().toLowerCase()),
+  );
   return (
     <footer data-ui-reference="claude-public-footer" className="kova-public-footer">
       <div className="kova-footer-inner">
@@ -39,6 +72,29 @@ export function PublicFooter() {
             ))}
           </nav>
         </div>
+        <details className="kova-footer-directory">
+          <summary>Explore all pages</summary>
+          <label>
+            <span className="sr-only">Search the page directory</span>
+            <input
+              type="search"
+              aria-label="Search the page directory"
+              placeholder="Find a page..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <nav aria-label="All public pages">
+            <ul>
+              {matching.map((entry) => (
+                <li key={entry.to}>
+                  <Link to={entry.to as never}>{entry.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {matching.length === 0 ? <p role="status">No matching pages.</p> : null}
+        </details>
         <p className="kova-footer-copyright">
           © {new Date().getFullYear()} KovaGPT is independently developed. AI can make mistakes, and
           some features can depend on plan eligibility and external providers. Third-party names

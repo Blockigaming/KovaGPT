@@ -361,7 +361,7 @@
 .spec400-chat-input .spec400-composer-input {
   font-size: 16px !important;
   line-height: 1.55 !important;
-  padding: 2px 4px !important;
+  padding: 2px 0 !important;
   border: 0 !important;
   background: transparent !important;
 }
@@ -1135,5 +1135,20 @@
 @media (prefers-reduced-motion: reduce) {
   .kova-session-skeleton {
     animation: none;
+  }
+}
+
+/* Use the same left inset for the prompt and the attachment control. */
+.spec400-chat-input[data-composer-surface="empty"] .spec400-input-region {
+  padding-inline: 0;
+  align-items: flex-start;
+}
+.kova-open-desktop-app {
+  margin-left: auto;
+  white-space: nowrap;
+}
+@media (max-width: 1023px) {
+  .kova-open-desktop-app {
+    display: none;
   }
 }

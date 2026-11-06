@@ -6,6 +6,8 @@ import {
   connectorConnectFlow,
   type ConnectorItem,
 } from "@/lib/connectors-catalog";
+import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
+import { CONNECTION_FLOWS, canReadConnection } from "@/integrations/connection-flows.mjs";
 import { getGoogleStatus } from "@/lib/google-client";
 import { getGitHubChatReadAccess, getGitHubManagement } from "@/lib/github.functions";
 import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
@@ -33,6 +35,7 @@ export function ComposerPluginList({
   onRequireSignIn: (pluginId: string) => void;
   navigationBlocked?: boolean;
 }) {
+  const accounts = useConnectedAccounts(userId, authLoaded && Boolean(userId));
   const readGitHub = useServerFn(getGitHubManagement);
   const readGitHubAccess = useServerFn(getGitHubChatReadAccess);
   const [snapshot, setSnapshot] = useState<ComposerConnectionSnapshot | null>(null);
@@ -75,12 +78,23 @@ export function ComposerPluginList({
       connectorConnectFlow(plugin) !== null &&
       (normalizedQuery === "" || plugin.label.toLocaleLowerCase().includes(normalizedQuery)),
   );
-  const connection = (id: string) => composerPluginConnection(id, { userId, authLoaded, snapshot });
+  const connection = (id: string) => {
+    if (Object.hasOwn(CONNECTION_FLOWS, id)) {
+      const flow = CONNECTION_FLOWS[id as keyof typeof CONNECTION_FLOWS];
+      const connected =
+        !accounts.loading &&
+        !accounts.error &&
+        accounts.data?.configuredProviders.some((provider) => provider.id === flow.provider) &&
+        accounts.data.accounts.some((account) => canReadConnection(account, id));
+      return { connected: Boolean(connected), label: "Connected", action: "Review" };
+    }
+    return composerPluginConnection(id, { userId, authLoaded, snapshot });
+  };
   const connected = rankConnectedComposerPlugins(
     authLoaded && userId ? conversations : [],
     plugins.filter((plugin) => connection(plugin.id).connected).map((plugin) => plugin.id),
   );
-  const recommended = plugins.filter((plugin) => !connection(plugin.id).connected);
+
   const hasRequests = connected.some((plugin) => plugin.count > 0);
   const row = (plugin: ConnectorItem, count?: number) => {
     const status = connection(plugin.id);
@@ -134,7 +148,7 @@ export function ComposerPluginList({
     );
   };
   return (
-    <section className="kova-composer-plugins" aria-label="Supported plugins">
+    <section className="kova-composer-plugins" aria-label="Your connected plugins">
       <label className="block p-2">
         <span className="sr-only">Search plugins</span>
         <input
@@ -147,9 +161,13 @@ export function ComposerPluginList({
         />
       </label>
       <div className="kova-composer-plugin-list">
-        {plugins.length === 0 ? (
+        {connected.length === 0 ? (
           <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
-            No matching plugins.
+            {!authLoaded || snapshot?.loading || accounts.loading
+              ? "Loading your plugins…"
+              : normalizedQuery
+                ? "No matching connected plugins."
+                : "No connected plugins."}
           </p>
         ) : null}
         {connected.length > 0 && (
@@ -171,12 +189,6 @@ export function ComposerPluginList({
             )}
           </>
         )}
-        {recommended.length > 0 && (
-          <>
-            <h3>Recommended plugins</h3>
-            {recommended.map((plugin) => row(plugin))}
-          </>
-        )}
       </div>
       <Link
         to="/apps"
@@ -186,7 +198,7 @@ export function ComposerPluginList({
         aria-disabled={navigationBlocked || undefined}
         title={navigationBlocked ? blockedNavigationTitle : undefined}
       >
-        Browse all plugins
+        Connect plugins
       </Link>
     </section>
   );

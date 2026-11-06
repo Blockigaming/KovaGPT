@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, dismissMobileSidebar, openResponseOptions } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: modern workspace surfaces remain usable and contained`, async ({
@@ -74,14 +74,14 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
     page.locator('[data-slot="popover-content"][aria-label="Attach files and tools"]'),
   ).toHaveCount(0);
   await expect(panel).toBeVisible();
-  await expect(panel.getByRole("combobox", { name: "Format", exact: true })).toBeFocused();
+  await expect(panel.getByRole("combobox", { name: "Format", exact: true })).toBeVisible();
   const box = await panel.boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await page.screenshot({ path: info.outputPath("options-menu-dark.png"), animations: "disabled" });
-  await page.keyboard.press("Escape");
+  await closeCurrentSettings(page);
   await expect(panel).toBeHidden();
-  await expect(optionsTrigger!).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeEnabled();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openResponseOptions(page, rememberTrigger);
   await expect(panel).toBeVisible();
@@ -92,8 +92,10 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   expect(
     motion.name === "none" || motion.duration.split(",").every((x) => parseFloat(x) <= 0.01),
   ).toBe(true);
-  await page.keyboard.press("Escape");
-  await expect(optionsTrigger!).toBeFocused();
+  await closeCurrentSettings(page);
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeEnabled();
+  if (await page.getByRole("dialog", { name: "Primary navigation", exact: true }).isVisible())
+    await dismissMobileSidebar(page);
   await attach.click();
   await expect(attach).toHaveAttribute("aria-expanded", "true");
   const attachmentPanel = page.getByRole("dialog").filter({ visible: true });

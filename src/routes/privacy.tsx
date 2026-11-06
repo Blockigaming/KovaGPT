@@ -11,6 +11,8 @@ const SECTIONS: readonly LegalDocSection[] = [
   { id: "data", label: "Information KovaGPT processes" },
   { id: "usage", label: "How information is used" },
   { id: "providers", label: "AI, search, and image providers" },
+  { id: "voice", label: "Voice and drawings" },
+  { id: "storage", label: "Cookies and local storage" },
   { id: "connected-apps", label: "Connected apps" },
   { id: "local-history", label: "Local history, temporary chats, and sharing" },
   { id: "human-access", label: "Human access" },
@@ -46,7 +48,7 @@ function PrivacyPage() {
         <LegalDocHero
           eyebrow="KovaGPT legal"
           title="Privacy Policy"
-          meta="Last updated: August 1, 2026"
+          meta="Last updated: November 5, 2026"
           description={DESCRIPTION}
         />
         <LegalDoc sections={SECTIONS}>
@@ -111,6 +113,36 @@ function PrivacyPage() {
             </p>
           </section>
 
+          <section id="voice" data-legal-section className="legal-section">
+            <h2>Voice and drawings</h2>
+            <p>
+              When you start dictation, KovaGPT sends the recording you choose to submit to
+              ElevenLabs for transcription. Spoken assistant replies send the selected saved reply
+              text to ElevenLabs to produce audio. KovaGPT does not start microphone recording
+              merely because you open the website or Settings. Provider terms and retention rules
+              apply; KovaGPT does not promise that the provider retains no data.
+            </p>
+            <p>
+              Drawings stay in the local editor until you attach them. Attached drawings use the
+              same image, chat and Library controls as other uploaded images. Saving or sending a
+              drawing can process or retain it as described for other attachments.
+            </p>
+          </section>
+          <section id="storage" data-legal-section className="legal-section">
+            <h2>Cookies and browser storage</h2>
+            <p>
+              Account sessions, security controls, conversation drafts, local history and
+              preferences can use cookies, local storage and IndexedDB. Clearing browser storage can
+              sign you out or remove device-local drafts, but it does not delete server-side
+              account, billing or provider records. Use the account controls or contact Support for
+              those requests.
+            </p>
+            <p>
+              If optional tracking is introduced, the applicable notices and consent controls must
+              be provided before that tracking runs. Installing the desktop or web app does not
+              change the privacy choices for your account.
+            </p>
+          </section>
           <section id="connected-apps" data-legal-section className="legal-section">
             <h2>Connected Apps</h2>
             <p>
@@ -135,7 +167,9 @@ function PrivacyPage() {
             <p>
               Content is not public merely because it is saved. If you create a share link, invite
               project members, or send content through a connected app, the recipients and provider
-              can access the information you chose to share.
+              can access the information you chose to share. Public view-only links expose the
+              selected text snapshot to anyone with that link until it expires or is revoked; future
+              messages, other branches and private tool details are excluded.
             </p>
           </section>
 
@@ -200,10 +234,12 @@ function PrivacyPage() {
           <section id="children" data-legal-section className="legal-section">
             <h2>Children and Teens</h2>
             <p>
-              Use KovaGPT only if you meet the age requirements that apply in your location. A
-              parent or guardian should supervise younger users where required. Do not submit a
-              child's sensitive information through AI or connected-app features without an
-              appropriate basis and consent.
+              KovaGPT is for people aged 13 or older who meet any higher minimum age in their
+              location. People under 18 need permission from a parent or legal guardian. If you
+              believe a child below the applicable minimum has provided personal information,
+              contact support@kovagpt.com so the account can be investigated and the appropriate
+              action taken. Do not submit a child's sensitive information through AI or
+              connected-app features without an appropriate basis and consent.
             </p>
           </section>
 

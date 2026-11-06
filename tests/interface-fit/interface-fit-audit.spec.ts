@@ -52,9 +52,11 @@ async function expectContained(page: Page, route: string) {
     await expect(
       main.getByRole("article", { name: "KovaGPT response", exact: true }),
     ).toBeVisible();
-    await expect(
-      main.getByRole("button", { name: "More chat actions", exact: true }),
-    ).toBeVisible();
+    await expect(main.getByRole("button", { name: "Activity", exact: true })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Share chat", exact: true })).toBeVisible();
+    await expect(main.getByRole("button", { name: "More chat actions", exact: true })).toHaveCount(
+      0,
+    );
   }
   await page.evaluate(() => document.fonts.ready);
   const layout = await page.evaluate(() => ({

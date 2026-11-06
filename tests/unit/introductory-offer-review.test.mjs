@@ -176,6 +176,7 @@ function pricingFixture(isSignedIn) {
           checkoutElement: null,
         }),
       },
+      "@/components/PublicFooter": { PublicFooter: "public-footer" },
       "@/components/NovaLogo": { NovaLogo: "logo" },
       "@/components/EnterpriseContactDialog": { EnterpriseContactDialog: "enterprise-dialog" },
       "@/components/public/PublicShell": { PublicShell: "public-shell" },

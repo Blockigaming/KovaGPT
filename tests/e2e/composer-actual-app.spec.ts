@@ -68,17 +68,7 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this draft");
   const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
-  const attachmentActions = [
-    "Library",
-    "Files",
-    "Open a project",
-    "Search the web",
-    "Analyze data",
-    "Analyze files",
-    "Tasks and audio",
-    "Drawings",
-    "Create Image",
-  ];
+  const attachmentActions = ["Files", "Library", "Projects", "Create Image", "Drawing"];
 
   async function expectViewportBounds() {
     const box = await menu.boundingBox();
@@ -94,17 +84,9 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     await page.keyboard.press("Home");
     await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeFocused();
     await page.keyboard.press("End");
-    await expect(menu.locator("summary").filter({ hasText: /^More tools$/ })).toBeFocused();
+    await expect(menu.getByRole("button", { name: "Drawing", exact: true })).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeFocused();
-    await menu
-      .locator("summary")
-      .filter({ hasText: /^Plugins$/ })
-      .click();
-    await menu
-      .locator("summary")
-      .filter({ hasText: /^More tools$/ })
-      .click();
     await expectViewportBounds();
     await expect
       .poll(() =>
@@ -124,7 +106,7 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
           )
           .map((node) => node === element),
       ),
-    ).toEqual([true]);
+    ).toEqual([]);
     for (const name of attachmentActions) {
       const action = menu.getByRole("button", { name, exact: true });
       await action.evaluate((element) =>
@@ -209,23 +191,13 @@ for (const theme of ["light", "dark"] as const) {
       buffer: Buffer.from("Synthetic draft attachment."),
     });
     await expect(page.getByLabel("Remove Draft notes.txt", { exact: true })).toBeVisible();
-    const contextButton = page.getByRole("button", { name: "Context", exact: true });
-    const attach = page.getByRole("button", { name: "Attach", exact: true });
-    const contextInAttach = !(await contextButton.isVisible());
-    if (contextInAttach) {
-      await attach.click();
-      await page
-        .locator("summary")
-        .filter({ hasText: /^More tools$/ })
-        .filter({ visible: true })
-        .click();
-    }
-    await contextButton.click();
-    const settings = page.getByRole("dialog", { name: "Context", exact: true });
+    const preview = page.getByRole("button", { name: "Inspect Draft notes.txt", exact: true });
+    await preview.click();
+    const settings = page.getByRole("dialog", { name: "Draft notes.txt", exact: true });
     await expect(settings).toBeVisible();
-    await expect(settings.getByText("Draft notes.txt", { exact: true })).toBeVisible();
+    await expect(settings).toContainText("Synthetic draft attachment.");
     await page.keyboard.press("Escape");
-    await expect(contextInAttach ? attach : contextButton).toBeFocused();
+    await expect(preview).toBeFocused();
     await expect(input).toHaveValue(/Plan a thoughtful product launch/);
   });
 
@@ -650,30 +622,11 @@ test("requested polish: empty composer swaps voice and send and has compact atta
     .or(page.getByRole("dialog", { name: "Attach files and tools", exact: true }))
     .filter({ visible: true });
   await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
-  await expect(menu.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
-  if (mobileMenu) {
-    await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
-    await expect(menu.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
-  }
-  if (info.project.name === "desktop") {
-    await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
-    await expect(menu.getByRole("button", { name: "Camera", exact: true })).toHaveCount(0);
-  }
-  await menu
-    .locator("summary")
-    .filter({ hasText: /^Plugins$/ })
-    .click();
-  const logos = menu.locator("img.kova-composer-plugin-logo");
-  expect(await logos.count()).toBeGreaterThan(0);
-  await expect
-    .poll(() =>
-      logos.evaluateAll((images) =>
-        images.every(
-          (img) => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0,
-        ),
-      ),
-    )
-    .toBe(true);
+  await expect(menu.locator(".kova-composer-quick-menu button")).toHaveText(
+    mobileMenu
+      ? ["Camera", "Photos", "Files", "Projects", "Create Image", "Drawing"]
+      : ["Files", "Library", "Projects", "Create Image", "Drawing"],
+  );
   await page.screenshot({
     path: info.outputPath("polish-attachment-menu.png"),
     animations: "disabled",

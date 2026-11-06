@@ -292,7 +292,7 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
   const wrappers = all(f.tree).filter(({ type }) => type === "RailTooltip");
   // The account dropdown trigger owns its own focus and menu affordance.
   const navigationControls = controls(f.tree).filter(
-    ({ props }) => props["aria-label"] !== "Account menu",
+    ({ props }) => props["aria-label"] && props["aria-label"] !== "Account menu",
   );
   assert.equal(wrappers.length, navigationControls.length);
   for (const wrapper of wrappers) {

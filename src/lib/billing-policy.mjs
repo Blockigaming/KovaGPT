@@ -222,6 +222,39 @@ async function settleVerifiedSession(options, claim, session) {
   });
 }
 
+/** A new plan selection may replace only this account's proved, unpaid checkout. */
+async function reconcilePlanSelection(options, priceId, returnUrl) {
+  const pending = await rpc(
+    options.supabase,
+    "kova_policy_pending_checkout",
+    { p_user: options.userId },
+    true,
+  );
+  if (pending == null) return;
+  const claim = validateClaim(pending, { ...options, priceId: pending.priceId, returnUrl });
+  if (!claim.sessionId) {
+    // A concurrent or ambiguous POST must finish its original identity recovery.
+    if (claim.priceId !== priceId) fail("billing_policy_checkout_reconciliation_pending");
+    return;
+  }
+  let session = await retrieveVerifiedSession(options, claim, claim.sessionId);
+  if (claim.priceId !== priceId && session.status === "open") {
+    if (session.payment_status !== "unpaid" || session.subscription != null)
+      fail("billing_policy_checkout_reconciliation_pending");
+    try {
+      await options.stripe.checkout.sessions.expire(session.id);
+    } catch {
+      // An uncertain response or concurrent completion never releases the claim.
+      // Only the authoritative GET below can establish a terminal outcome.
+    }
+    session = await retrieveVerifiedSession(options, claim, session.id);
+    if (session.status !== "expired" && session.status !== "complete")
+      fail("billing_policy_checkout_reconciliation_pending");
+  }
+  await settleVerifiedSession(options, claim, session);
+  if (session.status === "complete") fail("billing_policy_active_subscription_exists");
+}
+
 export async function createMonthlyIntroCheckout(options) {
   const { stripe, supabase, userId, environment, plan, couponId, returnUrl } = options;
   const now = options.now ?? Date.now();
@@ -256,6 +289,8 @@ export async function createMonthlyIntroCheckout(options) {
   if (typeof couponId !== "string" || !/^[A-Za-z0-9_-]{1,200}$/u.test(couponId))
     fail("billing_policy_coupon_not_configured");
   validateMonthlyIntroCoupon(await stripe.coupons.retrieve(couponId), couponId, environment);
+  const bound = { stripe, supabase, userId, environment, customerId };
+  await reconcilePlanSelection(bound, price.id, returnUrl);
   const claim = validateClaim(
     await rpc(supabase, "kova_policy_claim_checkout", {
       p_user: userId,
@@ -267,7 +302,6 @@ export async function createMonthlyIntroCheckout(options) {
     { userId, environment, customerId, priceId: price.id, returnUrl },
   );
   if (claim.couponId && claim.couponId !== couponId) fail("billing_policy_checkout_claim_invalid");
-  const bound = { stripe, supabase, userId, environment, customerId };
   let session;
   if (claim.sessionId) {
     session = await retrieveVerifiedSession(bound, claim, claim.sessionId);

@@ -1,42 +1,26 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 
+// Response preferences remain in Settings after the composer tray was simplified.
 export async function openResponseOptions(page: Page, recordTrigger?: (trigger: Locator) => void) {
-  const panel = page.getByRole("dialog", { name: "Response options", exact: true });
-  if (!(await panel.isVisible())) {
-    const options = page.getByRole("button", { name: "Options", exact: true });
-    if (await options.isVisible()) {
-      recordTrigger?.(options);
-      await options.click();
-    } else {
-      const attach = page.getByRole("button", { name: "Attach", exact: true });
-      recordTrigger?.(attach);
-      await attach.click();
-      const menu = page
-        .getByRole("dialog", { name: /^(Attach|Attach files and tools)$/ })
-        .filter({ visible: true });
-      const moreTools = menu.locator("summary").filter({ hasText: /^More tools$/ });
-      if (await moreTools.isVisible()) await moreTools.click();
-      await menu.getByRole("button", { name: "Response options", exact: true }).click();
-    }
-  }
-  await expect(panel).toBeVisible();
+  const panel = await openCurrentSettings(page);
+  recordTrigger?.(page.getByRole("button", { name: "Account menu", exact: true }));
+  await chooseSettingsSection(page, "Responses");
   return panel;
 }
 
-export async function openComposerMoreTools(page: Page) {
+export async function closeCurrentSettings(page: Page) {
+  const settings = page.locator(".kova-settings-dialog");
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
+}
+
+export async function openComposerAddMenu(page: Page) {
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const menu = page
-    .getByRole("dialog", { name: "Attach", exact: true })
-    .or(page.getByRole("dialog", { name: "Attach files and tools", exact: true }))
+    .getByRole("dialog", { name: /^(Attach|Attach files and tools)$/ })
     .filter({ visible: true });
   await expect(menu).toBeVisible();
-  const group = menu.locator("details").filter({
-    has: page.locator("summary").filter({ hasText: /^More tools$/ }),
-  });
-  if (!(await group.evaluate((node) => (node as HTMLDetailsElement).open))) {
-    await group.locator("summary").click();
-  }
   return menu;
 }
 

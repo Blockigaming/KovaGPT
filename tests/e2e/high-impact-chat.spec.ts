@@ -2,7 +2,12 @@ import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openCurrentSettings, chooseSettingsSection, openComposerMoreTools } from "./current-ui";
+import {
+  closeCurrentSettings,
+  dismissMobileSidebar,
+  openCurrentSettings,
+  chooseSettingsSection,
+} from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -123,9 +128,15 @@ test("stopping before the first token preserves an honest response with immediat
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await openComposerMoreTools(page);
-  await page.getByRole("button", { name: "Search the web" }).click();
+  await openCurrentSettings(page);
+  await chooseSettingsSection(page, "Responses");
+  const search = page.getByRole("switch", { name: "Live web search", exact: true });
+  await search.check();
+  await closeCurrentSettings(page);
+  if (await page.getByRole("dialog", { name: "Primary navigation", exact: true }).isVisible())
+    await dismissMobileSidebar(page);
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
+  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   await page.evaluate(() => {
     // Hold buffered text until Stop flushes it, independent of runner speed.
     const requestFrame = window.requestAnimationFrame.bind(window);
@@ -177,7 +188,7 @@ test("stopping before the first token preserves an honest response with immediat
         (window as unknown as { __kovaRequestTools: unknown[] }).__kovaRequestTools.slice(),
       ),
     )
-    .toEqual(["web_search", "web_search"]);
+    .toEqual([null, null]);
 });
 
 test("a late stopped request cannot clear the streaming state of its retry", async ({ page }) => {

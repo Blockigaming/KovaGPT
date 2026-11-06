@@ -68,7 +68,7 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.match(settings, /billing conflict was detected/i);
   assert.match(settings, /No Stripe billing account is linked/);
   assert.doesNotMatch(settings, /plan changes in the Stripe billing portal/);
-  assert.match(pricing, /If plan switching is supported/);
+  assert.match(pricing, /Choose a plan on Pricing, then review/);
   assert.match(pricing, /Available plan changes/);
   assert.match(settings, /parseAllowedBillingPortalUrl\(res\.url\)/);
   assert.match(settings, /createPortalSession\(\{ data: \{\} \}\)/);
@@ -77,7 +77,12 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.doesNotMatch(settings, /window\.open\(/);
 
   const portal = billing.slice(billing.indexOf("export const createPortalSession"));
-  assert.match(portal, /\.validator\(\(data: Record<string, never>\) => data\)/);
+  assert.match(portal, /\.validator\(\(data: \{ priceId\?: string \}\)/);
+  assert.match(
+    portal,
+    /if \(data\.priceId !== undefined && !resolveBillingPlan\(data\.priceId\)\)/,
+  );
+  assert.match(portal, /subscriptionPortalFlow\(/);
   assert.match(
     portal,
     /return_url: billingReturnUrls\(process\.env\.KOVA_BILLING_RETURN_ORIGIN\)\.portal/,

@@ -61,6 +61,7 @@ test("Refund uses the explicit legal article while retaining policy text and des
     "Subscriptions can be canceled from your account settings. Canceling a subscription stops future renewals but does not automatically refund past payments.",
     "Refunds may be reviewed on a case-by-case basis. If you believe you were charged by mistake, had a billing issue, or could not access paid features after payment, contact support@kovagpt.com with your account email and a description of the issue.",
     "KovaGPT reserves the right to deny refund requests if the paid features were used, if the request appears abusive, or if the request does not meet our refund standards.",
+    "Nothing in this policy limits a refund or other consumer right that applies under law. Do not send a full payment-card number, password or security code when requesting billing support.",
     "Paid subscriptions are processed through a secure payment provider. KovaGPT does not directly store your full credit card number.",
     "You can cancel your KovaGPT subscription from your account settings. Canceling stops future renewals, but your current plan may remain active until the end of the billing period. If you need help canceling, contact support@kovagpt.com.",
     "← Back to KovaGPT",
