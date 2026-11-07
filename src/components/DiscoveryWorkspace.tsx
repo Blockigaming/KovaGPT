@@ -11,13 +11,12 @@ import {
 import {
   DISCOVERY_MODES,
   discoveryComparisonKey,
-  localMapHandoff,
   type DiscoveryMode,
   type DiscoveryResult,
   type DiscoveryProduct,
   type DiscoveryVariant,
 } from "@/lib/discovery/discovery-policy.mjs";
-const labels = { web: "Web", images: "Images", shopping: "Shopping", local: "Local places" };
+const labels = { web: "Web", images: "Images", shopping: "Shopping" };
 const external = {
   target: "_blank",
   rel: "noopener noreferrer",
@@ -87,7 +86,7 @@ export function DiscoveryWorkspace({ initialMode = "web" }: { initialMode?: Disc
     return (
       <section className="space-y-4">
         <p>
-          Search public web pages, image sources, products, and places using a location you enter.
+          Search public web pages, image sources, and products.
         </p>
         <SignInButton>
           <Button>Sign in to search</Button>
@@ -243,8 +242,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
       </p>
       {ready === false ? (
         <p role="status" className="rounded-xl border p-4">
-          Live discovery is not available here yet. You can prepare a query and use the external map
-          handoff below.
+          Live discovery is not available here yet.
         </p>
       ) : ready === null ? (
         <p role="status">Checking search availability…</p>
@@ -304,38 +302,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             </Link>
           </p>
         ) : null}
-        {mode === "local" ? (
-          <div className="space-y-2">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">
-                City, neighborhood, or place (entered manually)
-              </span>
-              <Input
-                className="w-full  border bg-background "
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                maxLength={160}
-                required
-              />
-            </label>
-            <Button type="button" variant="ghost" onClick={() => setLocation("")}>
-              Remove location
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              No location permission has been requested. Local results are web links, with external
-              maps and reservation handoffs.
-            </p>
-            {query.trim() && location.trim() ? (
-              <a
-                href={localMapHandoff(query, location)}
-                {...external}
-                className="inline-block underline"
-              >
-                Open this search in Google Maps (shares the entered place)
-              </a>
-            ) : null}
-          </div>
-        ) : null}
+        
         <div className="flex gap-2">
           <Button
             disabled={!ready || busy || !query.trim() || (mode === "local" && !location.trim())}
@@ -380,14 +347,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             </div>
             {result.snippet ? <p className="text-sm">{result.snippet}</p> : null}
             {result.imageUrl ? <RemoteImage key={result.imageUrl} result={result} /> : null}
-            {search?.mode === "local" ? (
-              <div className="space-y-2 text-sm">
-                <p>Hours, distance, availability, and reservation status are unverified.</p>
-                <a href={result.url} {...external} className="underline">
-                  Visit source for details or reservations
-                </a>
-              </div>
-            ) : null}
+            
             {search?.mode === "shopping" ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
