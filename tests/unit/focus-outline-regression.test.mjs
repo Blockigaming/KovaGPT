@@ -12,6 +12,7 @@ test("select triggers do not combine a Tailwind ring with the global keyboard ou
   assert.match(css, /color-mix\(in srgb, var\(--foreground\) 65%, transparent\)/);
   assert.match(css, /outline-offset: -2px !important/);
   assert.match(css, /box-shadow: none !important/);
+  assert.doesNotMatch(css, /outline: 2px solid var\(--ring\) !important;\s*outline-offset: -2px !important;\s*background: var\(--accent\) !important;/);
 });
 
 test("pointer-focused dropdown options do not acquire a second ring", () => {
