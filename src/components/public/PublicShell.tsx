@@ -9,13 +9,9 @@ import { Button } from "@/components/ui/button";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
 const navigation = [
-  { label: "About", to: "/overview" },
-  { label: "Features", to: "/features" },
-  { label: "Learn", to: "/use-cases" },
-  { label: "Business", to: "/business" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "Download", to: "/download" },
-  { label: "Review", to: "/review" },
+  { label: "Chat", to: "/" },
+  { label: "Help", to: "/help" },
+  { label: "Plans", to: "/pricing" },
 ] as const;
 
 function isCurrentPath(pathname: string, to: string) {

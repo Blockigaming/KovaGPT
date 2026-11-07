@@ -1,11 +1,10 @@
 // Small dark rounded card used to present short, factual snippets like the
-// current time or a location. Renders a rich visual widget (analog clock or
-// map) plus a Copy button so the user can pull the text into their notes.
+// current time or a location. Renders an analog clock for time and
+// provides a Copy button so the user can pull the text into their notes.
 import { Clock, MapPin, Copy, Check } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ClockWidget } from "./ClockWidget";
-import { MapWidget } from "./MapWidget";
 import type { ChipKind } from "./info-chip-utils";
 
 export function InfoChip({
@@ -69,12 +68,6 @@ export function InfoChip({
           )}
         </div>
       </div>
-
-      {kind === "location" && (
-        <div className="px-4 pb-4">
-          <MapWidget height={180} userKey={userKey} principalResolved={principalResolved} />
-        </div>
-      )}
     </div>
   );
 }
