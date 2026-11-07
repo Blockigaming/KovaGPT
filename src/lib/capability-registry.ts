@@ -1,13 +1,5 @@
-import {
-  DAILY_IMAGE_LIMIT_BY_TIER,
-  DAILY_UPLOAD_LIMIT_BY_TIER,
-  MODES,
-  STORAGE_LIMITS_BYTES,
-  modesForTier,
-  type ModeId,
-  type Tier,
-} from "@/lib/modes";
-import { CHAT_USAGE_WINDOWS, chatUsageWindows } from "@/lib/plan-usage-policy.mjs";
+import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
+import { PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
 
 export type CapabilityAvailability =
@@ -112,65 +104,54 @@ const modesByTier: Record<Tier, readonly PublishedMode[]> = {
   pro: publishedModesForTier("pro"),
 };
 
-function chatAllowanceCopy(tier: Tier) {
-  return chatUsageWindows(tier)
-    .map(
-      ({ id, regularLimit, thinkingLimit }) =>
-        `${CHAT_USAGE_WINDOWS[id]}: ${regularLimit.toLocaleString("en-US")} regular + ${thinkingLimit.toLocaleString("en-US")} Thinking messages`,
-    )
-    .join(" · ");
-}
-
-function storageAllowanceCopy(tier: Tier) {
-  const megabytes = STORAGE_LIMITS_BYTES[tier] / 1024 ** 2;
-  return megabytes >= 1024 ? `${megabytes / 1024} GB` : `${megabytes} MB`;
-}
+const plusVsFree = PLAN_USAGE_FACTOR.plus / PLAN_USAGE_FACTOR.free;
+const proVsPlus = PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.plus;
+const proVsFree = PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.free;
 
 export const PLAN_ALLOWANCE_COPY = {
   free: {
-    chat: chatAllowanceCopy("free"),
-    image: `${DAILY_IMAGE_LIMIT_BY_TIER.free} image generations per day`,
-    upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.free} file uploads per day`,
-    storage: storageAllowanceCopy("free"),
+    chat: "Very limited chat usage",
+    image: "Limited image generation",
+    upload: "Limited file uploads",
+    storage: "Cloud storage included",
   },
   plus: {
-    chat: chatAllowanceCopy("plus"),
-    image: `${DAILY_IMAGE_LIMIT_BY_TIER.plus} image generations per day`,
-    upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.plus} file uploads per day`,
-    storage: storageAllowanceCopy("plus"),
+    chat: `${plusVsFree}× the usage of Free`,
+    image: "Expanded image generation",
+    upload: "Expanded file uploads",
+    storage: "Cloud storage included",
   },
   pro: {
-    chat: chatAllowanceCopy("pro"),
-    image: `${DAILY_IMAGE_LIMIT_BY_TIER.pro} image generations per day`,
-    upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.pro} file uploads per day`,
-    storage: storageAllowanceCopy("pro"),
+    chat: "Unlimited basic chat with Argon Lite",
+    image: "Expanded image generation",
+    upload: "Expanded file uploads",
+    storage: "Cloud storage included",
   },
 } as const;
 
 function planFeatures(tier: Tier): readonly string[] {
   const allowance = PLAN_ALLOWANCE_COPY[tier];
-  // Public plan wording uses Instant; compatibility mode labels and routing stay intact.
-
-  const features = [
+  return [
     tier === "free"
       ? "Argon Lite and Medium (Thinking)"
       : tier === "plus"
         ? "Argon and Neon: Lite, Medium, and High"
         : "All three models: Lite, Medium, High, Extra High, Max, and Ultra",
+    ...(tier === "pro"
+      ? [`${proVsFree}× the usage of Free`, `${proVsPlus}× the usage of Plus`]
+      : []),
     allowance.chat,
+    tier === "pro" ? "Advanced model usage is limited" : "Usage limits apply to all chat models",
     allowance.image,
     allowance.upload,
-    `${allowance.storage} cloud storage`,
+    allowance.storage,
     "Search and image generation when their configured providers are available",
-  ];
-  features.push(
     tier === "free"
       ? "Basic memory when enabled"
       : tier === "plus"
         ? "Enhanced memory when enabled"
         : "Extended memory when enabled",
-  );
-  return features;
+  ];
 }
 
 export const CAPABILITY_REGISTRY = Object.freeze({
@@ -288,7 +269,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 0,
       lookupKey: null,
       trialPeriodDays: 0,
-      description: "Core KovaGPT chat with published daily allowances.",
+      description: "Try KovaGPT with very limited usage.",
       features: planFeatures("free"),
     },
     plus: {
@@ -298,7 +279,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "Argon and Neon with Lite, Medium and High, and Adaptive Memory. Operational usage limits still apply.",
+        "5× the usage of Free, with Argon and Neon through High. Usage limits apply to all chat models.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -308,7 +289,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
       description:
-        "All three models with Lite, Medium, High, Extra High, Max and Ultra. Operational token and premium-request limits still apply.",
+        "100× the usage of Free and 20× Plus, with unlimited basic chat on Argon Lite. Advanced model usage is limited.",
       features: planFeatures("pro"),
     },
   },

@@ -46,6 +46,10 @@ function fixture(rows, options = {}) {
                 url.searchParams.get("status"),
                 "not.in.(quota_rejected,provider_rejected,provider_failed,accounting_failed)",
               );
+              assert.equal(
+                url.searchParams.get("or"),
+                "(plan_tier.neq.pro,provider_model.neq.kova-argon-4.6,kova_mode.neq.instant,premium.eq.true)",
+              );
               assert.equal(url.searchParams.get("order"), "id.asc");
               assert.equal(request.method, "GET");
               assert.ok(request.signal, "query must retain its cancellation signal");

@@ -1,13 +1,24 @@
-import { chatUsageWindows, DAILY_PLAN_ALLOWANCES } from "@/lib/plan-usage-policy.mjs";
-import { CAPABILITY_REGISTRY, PLAN_ALLOWANCE_COPY } from "@/lib/capability-registry";
+import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
+import { PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
 
 const tiers = ["free", "plus", "pro"] as const;
 const rows = [
-  { label: "Image generations / day", allowance: "images" },
-  { label: "File uploads / day", allowance: "uploads" },
+  {
+    label: "Usage",
+    values: [
+      "Very limited",
+      `${PLAN_USAGE_FACTOR.plus / PLAN_USAGE_FACTOR.free}× Free`,
+      `${PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.free}× Free (${PLAN_USAGE_FACTOR.pro}× Plus)`,
+    ],
+  },
+  { label: "Basic chat", values: ["Limited", "Limited", "Unlimited with Argon Lite"] },
+  {
+    label: "Advanced chat",
+    values: ["Argon Medium, limited", "Argon and Neon, limited", "All advanced models, limited"],
+  },
+  { label: "Images and files", values: ["Limited", "Expanded", "Highest allowance"] },
+  { label: "Cloud storage", values: ["Included", "Included", "Included"] },
 ] as const;
-const number = new Intl.NumberFormat("en-US");
-const windowLabels = { daily: "/ day", five_hour: "/ 5 hours", weekly: "/ week" };
 
 export function PlanComparison() {
   return (
@@ -16,7 +27,7 @@ export function PlanComparison() {
         Compare the essentials
       </h2>
       <p className="mb-6 mt-3 text-sm leading-6 text-muted-foreground">
-        Model modes, message allowances, and storage for each individual plan.
+        Model access and relative usage for each individual plan.
       </p>
       <div
         className="public-table-scroll overflow-x-auto rounded-2xl border border-border"
@@ -47,41 +58,14 @@ export function PlanComparison() {
                 </td>
               ))}
             </tr>
-            {(
-              [
-                ["Regular messages", "regularLimit"],
-                ["Thinking messages", "thinkingLimit"],
-              ] as const
-            ).map(([label, limit]) => (
-              <tr key={label}>
-                <th scope="row">{label}</th>
-                {tiers.map((tier) => (
-                  <td key={tier} className="tabular-nums">
-                    {chatUsageWindows(tier).map((window) => (
-                      <span key={window.id} className="block">
-                        {number.format(window[limit])} {windowLabels[window.id]}
-                      </span>
-                    ))}
-                  </td>
-                ))}
-              </tr>
-            ))}
             {rows.map((row) => (
               <tr key={row.label}>
                 <th scope="row">{row.label}</th>
-                {tiers.map((tier) => (
-                  <td key={tier} className="tabular-nums">
-                    {number.format(DAILY_PLAN_ALLOWANCES[tier][row.allowance])}
-                  </td>
+                {tiers.map((tier, index) => (
+                  <td key={tier}>{row.values[index]}</td>
                 ))}
               </tr>
             ))}
-            <tr>
-              <th scope="row">Cloud storage</th>
-              {tiers.map((tier) => (
-                <td key={tier}>{PLAN_ALLOWANCE_COPY[tier].storage}</td>
-              ))}
-            </tr>
           </tbody>
         </table>
       </div>
