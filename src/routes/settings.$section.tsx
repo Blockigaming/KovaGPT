@@ -14,7 +14,7 @@ function SettingsPage() {
   const valid = Object.prototype.hasOwnProperty.call(SETTINGS_SECTIONS, section);
   const tab = valid
     ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS]
-    : "personalization";
+    : "general";
   return (
     <div className="kova-settings-screen">
       <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">
