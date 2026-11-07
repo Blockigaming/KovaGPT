@@ -76,6 +76,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const SETTINGS_SECTIONS = {
   profile: "personalization",
+  archived: "archived",
+  voice: "voice",
   appearance: "appearance",
   responses: "general",
   notifications: "notifications",
