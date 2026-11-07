@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 214,
-  "latest": "20261107211137_kova_self_service_team_billing.sql",
+  "count": 215,
+  "latest": "20261107215527_kova_pro_unlimited_basic_chat.sql",
   "migrations": [
     {
       "order": 1,
@@ -4554,6 +4554,20 @@
       "dataBackfill": true,
       "reversible": false,
       "rls": ["team_workspaces", "team_members"],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 215,
+      "filename": "20261107215527_kova_pro_unlimited_basic_chat.sql",
+      "timestamp": "20261107215527",
+      "sha256": "69e0da2d7d995dcb8f67c2fd38747891d2a7e32aed0849eaea9dca1705f1bd82",
+      "tables": [],
+      "functions": ["acquire_ai_generation"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
       "policies": [],
       "indexes": []
     }

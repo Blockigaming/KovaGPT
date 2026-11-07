@@ -58,7 +58,7 @@ test("Free caps are independent, atomic and retained across upgrade; callers can
     [3, 50, 10],
   );
   assert.equal(DAILY_PLAN_ALLOWANCES.plus.regularMessages, 250);
-  assert.equal(DAILY_PLAN_ALLOWANCES.pro.thinkingMessages, 750);
+  assert.equal(DAILY_PLAN_ALLOWANCES.pro.thinkingMessages, 1000);
   const db = await fixture();
   try {
     const send = async (thinking, regular = 50, limit = 10) =>

@@ -101,7 +101,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Do unused credits roll over?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Published daily allowances reset rather than rolling over.",
+                text: "Unused allowances do not roll over. Reset schedules appear in Usage.",
               },
             },
           ],
@@ -241,7 +241,9 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
               <p className="leading-6 text-muted-foreground">
-                You can wait until your limit resets or upgrade to a higher plan for more usage.
+                Free and Plus chat stops when your allowance is used. Pro includes unlimited basic
+                chat with Argon Lite; advanced model usage is limited. Wait for a reset or choose an
+                eligible plan for more usage.
               </p>
             </article>
             <article className="border-t border-border pt-5">
@@ -254,7 +256,7 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
               <p className="leading-6 text-muted-foreground">
-                Published daily allowances reset rather than rolling over.
+                Unused allowances do not roll over. Reset schedules appear in Usage.
               </p>
             </article>
           </div>

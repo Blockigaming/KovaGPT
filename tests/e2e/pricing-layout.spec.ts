@@ -28,15 +28,24 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   const freePlan = page.locator('[data-pricing-plan="free"]');
   const plusPlan = page.locator('[data-pricing-plan="plus"]');
   const proPlan = page.locator('[data-pricing-plan="pro"]');
-  await expect(freePlan.getByText("Default and Thinking modes", { exact: true })).toBeVisible();
+  await expect(freePlan.getByText("Very limited chat usage", { exact: true })).toBeVisible();
+  await expect(plusPlan.getByText("5× the usage of Free", { exact: true })).toBeVisible();
+  await expect(proPlan.getByText("100× the usage of Free", { exact: true })).toBeVisible();
+  await expect(proPlan.getByText("20× the usage of Plus", { exact: true })).toBeVisible();
   await expect(
-    plusPlan.getByText("Default, Medium, Thinking, and High modes", { exact: true }),
+    proPlan.getByText("Unlimited basic chat with Argon Lite", { exact: true }),
   ).toBeVisible();
-  await expect(
-    proPlan.getByText("Default, Medium, Thinking, High, Extra high, Max, and Ultra modes", {
-      exact: true,
-    }),
-  ).toBeVisible();
+  await expect(proPlan.getByText("Advanced model usage is limited", { exact: true })).toBeVisible();
+  for (const plan of [freePlan, plusPlan])
+    await expect(
+      plan.getByText("Usage limits apply to all chat models", { exact: true }),
+    ).toBeVisible();
+  const main = page.locator("main#main-content");
+  await expect(main).not.toContainText(
+    /50 regular|250 regular|1,750|26,250|5,250|image generations per day|file uploads per day|500 MB|25 GB/,
+  );
+  await expect(page.getByRole("table")).toContainText("100× Free (20× Plus)");
+  await expect(page.getByRole("table")).toContainText("Unlimited with Argon Lite");
   // Deliberately do not activate a paid CTA: this browser check must not create a checkout session.
   await expect(page.getByRole("dialog", { name: "Secure checkout" })).toHaveCount(0);
 
