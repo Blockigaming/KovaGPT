@@ -27,7 +27,7 @@ Published PR: [#605](https://github.com/Blockigaming/KovaGPT/pull/605), branch `
 - 279 focused unit and regression tests passed, including billing reconciliation, deletion races, scoped UI state, Team SQL permissions/capacity, and preserved model controls.
 - 61 additional billing retirement and account deletion checks passed; deleting an owner retires the separate Team Customer before Auth removal and blocks late checkout bindings.
 - TypeScript check passed; ESLint reports zero errors and one existing component export warning.
-- All 563 non-artifact integration checks passed after aligning retired-feature contracts; the two Cloudflare Worker artifact checks require the default Cloudflare build rather than the separate Azure build.
+- All 563 non-artifact integration checks passed after aligning retired-feature contracts. The default Cloudflare build and artifact-shape check also passed. Local workerd boot is blocked by a system-level `uv_interface_addresses` permission failure; GitHub’s runner must verify it.
 - Hosted-checkout unit checks cover duplicate clicks, unknown private errors, account replacement, and redirect origins. Browser checks exercise checkout as a top-level navigation and permanent sidebar deletion from Library.
 - Production Azure build passed, including the built-source audit.
 - Project appearance SQL was executed against an isolated database: valid appearance persists; invalid backgrounds, script-capable image formats, null assets and unknown keys are rejected.

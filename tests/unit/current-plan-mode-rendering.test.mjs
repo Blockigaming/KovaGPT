@@ -193,14 +193,16 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
 
-test("published Chat copy does not disguise remaining aggregate limits as unlimited", () => {
+test("published copy limits advanced models and scopes unlimited access to Pro basic chat", () => {
   const { registry } = fixture();
-  for (const tier of ["plus", "pro"]) {
-    const copy = [registry.plans[tier].description, ...registry.plans[tier].features].join(" ");
-    assert.match(copy, /Weekly: .* Thinking messages/);
-    assert.match(copy, /limits still apply/);
-    assert.doesNotMatch(copy, /unlimited/i);
-  }
+  const plus = [registry.plans.plus.description, ...registry.plans.plus.features].join(" ");
+  assert.match(plus, /5× the usage of Free/);
+  assert.match(plus, /Usage limits apply to all chat models/);
+  assert.doesNotMatch(plus, /unlimited/i);
+  const pro = [registry.plans.pro.description, ...registry.plans.pro.features].join(" ");
+  assert.match(pro, /Unlimited basic chat with Argon Lite/);
+  assert.match(pro, /Advanced model usage is limited/);
+  assert.doesNotMatch(pro, /unlimited (?:advanced|all models)/i);
 });
 
 test("pricing uses public Default wording with exact tier choices and singular Free mode", () => {
@@ -213,11 +215,11 @@ test("pricing uses public Default wording with exact tier choices and singular F
   );
   assert.match(
     registry.plans.plus.description,
-    /^Argon and Neon with Lite, Medium and High, and Adaptive Memory\./,
+    /^5× the usage of Free, with Argon and Neon through High\./,
   );
   assert.match(
     registry.plans.pro.description,
-    /^All three models with Lite, Medium, High, Extra High, Max and Ultra\./,
+    /^100× the usage of Free and 20× Plus, with unlimited basic chat on Argon Lite\./,
   );
   assert.match(registry.plans.free.features[0], /Thinking/);
   assert.match(registry.plans.plus.features[0], /High/);
@@ -246,17 +248,23 @@ test("new usage ratios preserve prices and billing identifiers", () => {
   );
   for (const tier of ["plus", "pro"]) {
     assert.equal(registry.plans[tier].lookupKey, `${tier}_monthly`);
-    assert.match(registry.plans[tier].features[1], /Weekly: .* Thinking messages/);
+    assert.ok(
+      registry.plans[tier].features.includes(
+        tier === "plus" ? "5× the usage of Free" : "100× the usage of Free",
+      ),
+    );
+    if (tier === "pro") assert.ok(registry.plans[tier].features.includes("20× the usage of Plus"));
     assert.equal(
       registry.plans[tier].features.at(-1),
       tier === "plus" ? "Enhanced memory when enabled" : "Extended memory when enabled",
     );
   }
-  assert.deepEqual(Array.from(registry.plans.free.features.slice(1, 5)), [
-    "Daily: 50 regular + 10 Thinking messages",
-    "8 image generations per day",
-    "3 file uploads per day",
-    "500 MB cloud storage",
+  assert.deepEqual(Array.from(registry.plans.free.features.slice(1, 6)), [
+    "Very limited chat usage",
+    "Usage limits apply to all chat models",
+    "Limited image generation",
+    "Limited file uploads",
+    "Cloud storage included",
   ]);
 });
 
