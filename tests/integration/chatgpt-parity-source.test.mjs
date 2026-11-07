@@ -82,7 +82,7 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
-  assert.equal((route.match(/canChangeAgent=\{!active\?\.kova\}/g) ?? []).length, 2);
+  assert.equal((route.match(/canChangeAgent=\{!active\?\.kova\}/g) ?? []).length, 1);
   assert.doesNotMatch(route, /<ResponsiveModelSelector/);
   assert.doesNotMatch(mobileTopBar, /<ResponsiveModelSelector/);
   assert.match(
@@ -199,7 +199,7 @@ test("compact composer groups actions and preserves message editing and markdown
   assert.match(chatInput, /OpenDesktopAppButton/);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
-  assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
+  assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 1);
   assert.match(chatInput, /disabled=\{!canSubmit\}\s+onClick=\{triggerSubmit\}/);
   assert.match(chatInput, /aria-label="Send message"/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
