@@ -185,7 +185,9 @@ for (const theme of ["light", "dark"] as const) {
         coarsePointer: matchMedia("(pointer: coarse)").matches,
       };
     });
-    expect(alignment.rightGap).toBe(0);
+    // The screenshot-style General card has intentional horizontal padding.
+    expect(alignment.rightGap).toBeGreaterThanOrEqual(0);
+    expect(alignment.rightGap).toBeLessThanOrEqual(28);
     expect(alignment.contained).toBe(true);
     const minimumSwitchTarget = alignment.coarsePointer ? 44 : 32;
     expect(alignment.width).toBeGreaterThanOrEqual(minimumSwitchTarget);
