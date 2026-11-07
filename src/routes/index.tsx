@@ -1,3 +1,4 @@
+import { consumerModel, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -1219,6 +1220,19 @@ function KovaGPT() {
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
   );
+  const [modelChoice, setModelChoice] = useState<{
+    principal: string;
+    conversationId: string | null;
+    id: ConsumerModelId;
+  } | null>(null);
+  const hostedModel: ConsumerModelId =
+    modelChoice?.principal === storagePrincipal && modelChoice.conversationId === activeId
+      ? modelChoice.id
+      : (active?.hostedModel ?? "kova-argon-4.6");
+  const chooseHostedModel = (id: ConsumerModelId) => {
+    if (!principalReady || active?.kova || !consumerModel(id)?.tiers.includes(tier)) return;
+    setModelChoice({ principal: storagePrincipal, conversationId: activeId, id });
+  };
   const latestCompletedAssistant = active?.messages
     .filter(
       (message) =>
@@ -1520,6 +1534,7 @@ function KovaGPT() {
         title: "New chat",
         messages: [],
         mode,
+        hostedModel,
         createdAt: timestamp,
         updatedAt: timestamp,
         ...(pendingWorkflowSkill ? { skill: pendingWorkflowSkill } : {}),
@@ -1896,6 +1911,9 @@ function KovaGPT() {
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
+      const requestHostedModel = existingConversation?.kova
+        ? undefined
+        : (queuedSend?.hostedModel ?? hostedModel);
       const isNewConversation = !retryConversationId && !existingConversation;
       const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 
@@ -1925,6 +1943,7 @@ function KovaGPT() {
         attachments: atts,
         tool: retryTool ?? null,
         mode: requestMode,
+        hostedModel: requestHostedModel,
         status: "held",
       };
       let clearedComposerRevision: number | null = null;
@@ -1949,6 +1968,7 @@ function KovaGPT() {
             title: "New chat",
             messages: [userMsg, assistantMsg],
             mode: requestMode,
+            hostedModel: requestHostedModel,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             temporary: tempChat,
@@ -1962,6 +1982,7 @@ function KovaGPT() {
           c.id === nextConvId
             ? {
                 ...c,
+                hostedModel: requestHostedModel,
                 messages: [...priorMessages, userMsg, assistantMsg],
                 memoryStartIndex:
                   typeof c.memoryStartIndex === "number"
@@ -2144,6 +2165,7 @@ function KovaGPT() {
                 }
               : undefined,
             mode: requestMode,
+            hostedModel: requestHostedModel,
             clientTool: activeTool,
             chatId: nextConvId,
             temporary: tempChat,
@@ -2492,6 +2514,7 @@ function KovaGPT() {
       activeId,
       conversations,
       mode,
+      hostedModel,
       tier,
       autoTitle,
       settings,
@@ -2598,6 +2621,7 @@ function KovaGPT() {
       attachments,
       tool: tool ?? null,
       mode,
+      hostedModel: active?.kova ? undefined : hostedModel,
     });
     updateNextPrompt(next);
     scheduleNextPromptFocus(trigger, "queued", next);
@@ -3477,6 +3501,8 @@ function KovaGPT() {
                       activeId,
                       editingMessage?.messageId ?? null,
                     ])}
+                    hostedModel={active?.kova ? undefined : hostedModel}
+                    onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
                     mode={mode}
                     onModeChange={active?.kova ? undefined : setMode}
                     userTier={tier}
@@ -3614,6 +3640,8 @@ function KovaGPT() {
                       activeId,
                       editingMessage?.messageId ?? null,
                     ])}
+                    hostedModel={active?.kova ? undefined : hostedModel}
+                    onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
                     mode={mode}
                     onModeChange={active?.kova ? undefined : setMode}
                     userTier={tier}

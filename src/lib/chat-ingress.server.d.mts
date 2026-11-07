@@ -44,6 +44,7 @@ export type ChatAttachment =
     };
 
 export type NormalizedChatPayload = {
+  hostedModel?: import("./consumer-model-selection.mjs").ConsumerModelId;
   kovaModel?: {
     family: "cosmo" | "orion";
     effort: "light" | "medium" | "high" | "extra-high" | "max" | "ultra";

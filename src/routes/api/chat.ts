@@ -74,7 +74,8 @@ import {
 } from "@/lib/ai/free-connector-budget.server";
 import { planAllowance } from "@/lib/plan-usage-policy.mjs";
 
-import { routeAiModel } from "@/lib/ai/model-router.server";
+import { routeAiModel, modelForRole } from "@/lib/ai/model-router.server";
+import { consumerModel } from "@/lib/consumer-model-selection.mjs";
 import { modeUpgradeRequired } from "@/lib/ai/model-router.mjs";
 import { buildKovaModelIdentityInstructions } from "@/lib/kova-model-identity.mjs";
 
@@ -765,6 +766,44 @@ export const Route = createFileRoute("/api/chat")({
                 : await preflight.run("plan_entitlement", () => getCallerTier(auth));
             }
 
+            const selectedHostedModel = consumerModel(ingress.hostedModel);
+            if (selectedHostedModel) {
+              if (!selectedHostedModel.tiers.includes(callerTier))
+                return Response.json(
+                  {
+                    error:
+                      "This Kova model requires a higher plan. Choose an available model or compare plans.",
+                    code: "kova_model_not_entitled",
+                    upgradeUrl: "/pricing",
+                    retryable: false,
+                  },
+                  { status: 403, headers: { "Cache-Control": "no-store" } },
+                );
+              if (modelForRole(selectedHostedModel.role) !== selectedHostedModel.id)
+                return Response.json(
+                  {
+                    error:
+                      "The selected Kova model is temporarily unavailable. Your model has not been changed.",
+                    code: "kova_model_runtime_unverified",
+                    retryable: true,
+                  },
+                  { status: 503, headers: { "Cache-Control": "no-store" } },
+                );
+              if (
+                !selectedHostedModel.vision &&
+                currentAttachments.some((attachment) => attachment.kind === "image")
+              )
+                return Response.json(
+                  {
+                    error:
+                      "Argon 4.6 does not support image attachments. Choose an available model with image support or remove the image.",
+                    code: "kova_model_vision_unavailable",
+                    retryable: false,
+                  },
+                  { status: 400, headers: { "Cache-Control": "no-store" } },
+                );
+            }
+
             if (ingress.kovaModel) {
               const routeId = parseKovaChatSelection(ingress.kovaModel).routeId;
               const entitled = kovaChatOptionsForTier(auth ? callerTier : "guest").some(
@@ -1100,14 +1139,14 @@ export const Route = createFileRoute("/api/chat")({
               }),
             );
 
-            // Centralized server-side model routing. The client can pick a mode
-            // but never a model: the router resolves a logical role
-            // (DEFAULT_CHAT / ADVANCED_REASONING / PREMIUM_REASONING) to a
-            // concrete model id, always choosing the cheapest capable option.
+            // Centralized server-side routing validates a named consumer alias
+            // against its exact trusted role and plan. Legacy callers without
+            // a named choice retain their existing automatic routing.
             const routeDecision = routeAiModel(
               {
                 task: "chat",
                 mode: m.id,
+                hostedModel: ingress.hostedModel,
                 tier: callerTier,
                 deepMode: m.id === "max" || m.id === "ultra",
                 hasImages,

@@ -1,3 +1,5 @@
+import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
+import type { ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import {
   ArrowUp,
   Brain,
@@ -173,6 +175,8 @@ export function ChatInput({
   onAttachmentsChange,
   mode,
   onModeChange,
+  hostedModel,
+  onHostedModelChange,
   userTier = "free",
   canChangeAgent = true,
   showModelStatus = false,
@@ -222,6 +226,8 @@ export function ChatInput({
   onAttachmentsChange: (a: PendingAttachment[]) => void;
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
+  hostedModel?: ConsumerModelId;
+  onHostedModelChange?: (model: ConsumerModelId) => void;
   userTier?: Tier;
   /** Guests use the basic agent and cannot change versions or reasoning levels. */
   canChangeAgent?: boolean;
@@ -1805,6 +1811,14 @@ export function ChatInput({
             )}
           </div>
           <div className="spec400-composer-trailing">
+            {canChangeAgent && hostedModel && onHostedModelChange ? (
+              <ConsumerModelSelector
+                value={hostedModel}
+                onChange={onHostedModelChange}
+                tier={userTier}
+                disabled={disabled}
+              />
+            ) : null}
             {canChangeAgent && mode && onModeChange ? (
               <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
             ) : (

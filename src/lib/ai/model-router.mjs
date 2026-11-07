@@ -1,8 +1,8 @@
 // Centralized, server-only AI model router.
 //
 // Every model choice in KovaGPT flows through routeModel(). The frontend can
-// request a mode (instant/thinking/deep) but can never name a model, and the
-// router always picks the cheapest model capable of the task.
+// request an effort and a closed consumer alias. Only trusted role bindings
+// reach the provider; a named choice never changes foundation automatically.
 //
 // Pure and dependency-free so it can be unit tested with node:test.
 
@@ -14,6 +14,7 @@ import {
   costPerMTok,
   getModelConfig,
 } from "./model-config.mjs";
+import { consumerModel } from "../consumer-model-selection.mjs";
 
 /** @typedef {import("./model-config.mjs").ModelRole} ModelRole */
 
@@ -139,6 +140,7 @@ export function scoreComplexity(text, signals = {}) {
  * @property {"chat"|"utility"|"image_generation"|"image_analysis"|"embedding"} task
  * @property {string} [utilityTask]
  * @property {string} [mode]
+ * @property {string} [hostedModel]
  * @property {"free"|"plus"|"pro"|"business"} [tier]
  * @property {boolean} [deepMode]
  * @property {boolean} [hasImages]
@@ -210,6 +212,19 @@ export function routeModel(input) {
     historyTurns: input.historyTurns,
     needsTools: input.needsTools,
   });
+
+  // A named consumer choice is exact. Complexity, effort, attachments and
+  // operator role drift must never substitute another foundation.
+  if (input.hostedModel !== undefined) {
+    const selected = consumerModel(input.hostedModel);
+    if (!selected) throw new Error("invalid_hosted_model");
+    if (!selected.tiers.includes(tier === "business" ? "pro" : tier))
+      throw new Error("kova_model_not_entitled");
+    if (config[selected.role] !== selected.id) throw new Error("kova_model_runtime_unverified");
+    if ((input.hasImages || input.task === "image_analysis") && !selected.vision)
+      throw new Error("kova_model_vision_unavailable");
+    return decide(selected.role, modeCap, [...reasons, "explicit_consumer_model"], score);
+  }
 
   const explicitDeep = Boolean(input.deepMode) || PREMIUM_MODES.has(mode);
   // Premium requests are never silently served by another model.

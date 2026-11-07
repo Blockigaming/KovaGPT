@@ -1,4 +1,5 @@
 import type { PendingAttachment } from "@/components/ChatInput";
+import type { ConsumerModelId } from "./consumer-model-selection.mjs";
 import { normalizeResponseFollowups } from "./response-followups.mjs";
 import {
   normalizeTaskCreatedReceipt,
@@ -211,6 +212,7 @@ export function chatRequestMessages(previous: Message[], latest: Message) {
 }
 
 export type Conversation = {
+  hostedModel?: ConsumerModelId;
   /** A selected Kova never carries link capabilities or another user's credentials. */
   kova?: { id: string; versionId?: string };
   /** An owner installation and immutable version reference; package text stays server-side. */
