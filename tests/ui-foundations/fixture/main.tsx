@@ -71,7 +71,6 @@ const cancelLabel = "Cancel and keep my current project settings";
 const confirmLabel = "Confirm changes to the selected project only";
 
 function Fixture() {
-  const standaloneReview = document.documentElement.dataset.kovaReview === "1";
   const surface = new URLSearchParams(location.search).get("surface") ?? "dialog";
   const [result, setResult] = useState("No action taken");
   const [mobileOpen, setMobileOpen] = useState(false);
