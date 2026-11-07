@@ -1361,6 +1361,28 @@ async function voiceReply(f) {
   return { ...turn, speech, sink: f.playbackSinks[0] };
 }
 
+test("empty-composer Voice begins exactly once after the authorized ElevenLabs capability check", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true });
+  assert.equal(f.requests[0].url, "/api/voice");
+  assert.equal(f.microphoneRequests.length, 0, "No microphone access before server authorization");
+  await f.ready();
+  assert.equal(f.microphoneRequests.length, 1, "Approved Voice click starts recording");
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1, "Rerenders must not restart the microphone");
+  const acquired = await f.acquire();
+  await f.click("Finish turn");
+  assert.ok(acquired.tracks.every((track) => track.stopped > 0));
+  f.unmount();
+});
+
+test("automatic Voice never requests a microphone for unavailable conversation configuration", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true });
+  await f.ready({ ...configured, conversation: false });
+  assert.equal(f.microphoneRequests.length, 0);
+  assert.equal(f.requests.length, 1, "Only the safe configuration GET is allowed");
+  f.unmount();
+});
+
 test("Voice requires explicit Start and uses STT before the existing chat callback; Dictate never submits chat", async () => {
   const f = fixture({ mode: "voice" });
   await f.ready();
