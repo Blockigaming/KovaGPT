@@ -28,7 +28,8 @@ test("Kova keeps its core application and customer account flows", () => {
     "src/routes/privacy.tsx",
     "src/routes/terms.tsx",
     "src/routes/help.tsx",
-  ]) assert.ok(exists(path), path);
+  ])
+    assert.ok(exists(path), path);
 });
 test("Kova no longer registers Maps, marketing, or developer service routes", () => {
   for (const path of [
@@ -47,7 +48,8 @@ test("Kova no longer registers Maps, marketing, or developer service routes", ()
     "src/components/DeveloperConsole.tsx",
     "src/lib/pricing/developer-billing.server.ts",
     "sdk/javascript/index.mjs",
-  ]) assert.equal(exists(path), false, path);
+  ])
+    assert.equal(exists(path), false, path);
   const sidebar = readFileSync(join(root, "src/lib/sidebar-layout.mjs"), "utf8");
   assert.doesNotMatch(sidebar, /id: "maps"|to: "\/maps"/);
 });

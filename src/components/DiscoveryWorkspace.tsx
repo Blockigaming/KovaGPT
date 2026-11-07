@@ -85,9 +85,7 @@ export function DiscoveryWorkspace({ initialMode = "web" }: { initialMode?: Disc
   if (!user)
     return (
       <section className="space-y-4">
-        <p>
-          Search public web pages, image sources, and products.
-        </p>
+        <p>Search public web pages, image sources, and products.</p>
         <SignInButton>
           <Button>Sign in to search</Button>
         </SignInButton>
@@ -283,9 +281,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             maxLength={300}
             required
             placeholder={
-              mode === "shopping"
-                  ? "Exact product, size, color, or model"
-                  : "Search the public web"
+              mode === "shopping" ? "Exact product, size, color, or model" : "Search the public web"
             }
           />
         </label>
@@ -298,11 +294,9 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             </Link>
           </p>
         ) : null}
-        
+
         <div className="flex gap-2">
-          <Button
-            disabled={!ready || busy || !query.trim()}
-          >
+          <Button disabled={!ready || busy || !query.trim()}>
             {busy ? "Searching…" : "Search"}
           </Button>
           {busy ? (
@@ -343,7 +337,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             </div>
             {result.snippet ? <p className="text-sm">{result.snippet}</p> : null}
             {result.imageUrl ? <RemoteImage key={result.imageUrl} result={result} /> : null}
-            
+
             {search?.mode === "shopping" ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">

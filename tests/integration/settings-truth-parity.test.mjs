@@ -128,7 +128,6 @@ test("settings does not expose local switches for unenforced email, family, or l
   assert.match(settings, /const controlId = useId\(\)/);
   assert.match(settings, /<label htmlFor=\{controlId\}/);
   assert.match(settings, /aria-describedby=\{hintId\}/);
-
 });
 
 test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {

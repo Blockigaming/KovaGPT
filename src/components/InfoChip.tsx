@@ -67,7 +67,6 @@ export function InfoChip({
           )}
         </div>
       </div>
-
     </div>
   );
 }

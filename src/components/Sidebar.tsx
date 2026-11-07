@@ -1681,9 +1681,7 @@ export function Sidebar({
               <details
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
-                open={
-                  isOn("/work") && !railShortcuts.includes("work") ? true : undefined
-                }
+                open={isOn("/work") && !railShortcuts.includes("work") ? true : undefined}
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}

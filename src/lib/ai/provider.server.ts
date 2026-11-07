@@ -638,30 +638,30 @@ async function providerFetch(
       encodedBody = form;
     }
     const response = await fetchWithDeadline(
-          fetch,
-          `${target.baseUrl}${path}`,
-          {
-            ...init,
-            method: "POST",
-            redirect: "error",
-            headers: requestHeaders,
-            body: encodedBody,
-          },
-          deadline,
-          (outcome) => {
-            const level =
-              outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
-            logProviderEvent(level, "provider.request.finish", {
-              provider: target.provider,
-              capability,
-              path,
-              deployment,
-              status: outcome.status,
-              durationMs: Date.now() - startedAt,
-              code: providerOutcomeCode(outcome),
-            });
-          },
-        );
+      fetch,
+      `${target.baseUrl}${path}`,
+      {
+        ...init,
+        method: "POST",
+        redirect: "error",
+        headers: requestHeaders,
+        body: encodedBody,
+      },
+      deadline,
+      (outcome) => {
+        const level =
+          outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
+        logProviderEvent(level, "provider.request.finish", {
+          provider: target.provider,
+          capability,
+          path,
+          deployment,
+          status: outcome.status,
+          durationMs: Date.now() - startedAt,
+          code: providerOutcomeCode(outcome),
+        });
+      },
+    );
 
     logProviderEvent("info", "provider.response.headers", {
       provider: target.provider,

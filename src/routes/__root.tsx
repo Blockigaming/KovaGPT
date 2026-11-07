@@ -115,7 +115,9 @@ function getActiveSeoState(matches: readonly SeoMatch[]) {
     match.globalNotFound ? [match.status, "notFound"] : [match.status],
   );
   // Only the actual chat home remains indexable; removed public and developer routes are 404s.
-  const indexable = pathname === "/" && !statuses.some((status) => status === "notFound" || /^[45][0-9][0-9]$/.test(status));
+  const indexable =
+    pathname === "/" &&
+    !statuses.some((status) => status === "notFound" || /^[45][0-9][0-9]$/.test(status));
   return {
     indexable,
     robots: indexable ? "index, follow" : "noindex, nofollow",
