@@ -136,10 +136,11 @@ test("approved hosted Kova model streams get provider-bound receipts only after 
     { provider: "openrouter", modelId: "kova-xenon-5" },
   );
   assert.equal(
-    await relayEligibleVoiceChat(
-      stream([delta("Hosted Kova reply."), "data: [DONE]\\n\\n"]),
-      { policy, identity: hostedIdentity, emit() {} },
-    ),
+    await relayEligibleVoiceChat(stream([delta("Hosted Kova reply."), "data: [DONE]\\n\\n"]), {
+      policy,
+      identity: hostedIdentity,
+      emit() {},
+    }),
     null,
     "An OpenAI-only policy cannot authorize hosted-model speech",
   );
