@@ -2,6 +2,24 @@
 
 This local implementation is unconfigured by default. No live provider request, secret configuration or deployment was performed to validate it. Offline fixtures test the API mapping and safety boundaries; device/microphone and authenticated live acceptance remain required.
 
+## Hands-free Voice conversation (sequential streaming pipeline)
+
+The **Voice** button on an empty composer starts a signed-in voice conversation after the
+existing `GET /api/voice` capability check. With browser Web Audio available, local
+microphone-energy analysis detects sustained speech and a pause, then automatically
+finishes that turn. No microphone samples are sent to a provider until the recording
+has ended and passed the existing canonical WAV validation. The normal chat model
+produces and saves an answer, which is spoken through the approved ElevenLabs voice;
+only verified natural playback completion restarts listening.
+
+The separate **Type with voice** microphone remains dictation-only and never submits a
+chat turn automatically. Voice retains **Finish turn** when automatic audio analysis
+is unavailable, and **Stop/Close** aborts recording and playback. Each recorded turn is
+limited to 59 seconds; silence alone is not submitted after the listening deadline.
+The experience is hands-free turn-taking, **not** simultaneous full-duplex or a
+provider-hosted realtime audio stream. Do not claim continuous provider streaming or
+fully verified microphone behavior until browser and production acceptance pass.
+
 ## Runtime configuration
 
 Set these only through the deployment's private server-side secret/configuration interface. The owner enters the existing API key directly in that trusted interface; never paste it into chat, source, a client/VITE variable, or a committed environment file.
