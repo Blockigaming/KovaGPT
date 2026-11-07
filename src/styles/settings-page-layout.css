@@ -507,3 +507,42 @@
     gap: 12px;
   }
 }
+
+/* The account navigation and its close actions must remain wholly inside the
+   visual viewport at 320px and when interface scale reaches 125%. Older
+   flex layouts could place the 44px close button 2-4px past the edge. */
+@media (max-width: 767px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar.mobile-home,
+  .kova-settings-route section.kova-settings-page .kova-settings-content.mobile-content,
+  .kova-settings-route section.kova-settings-page .kova-settings-navigation-heading {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-navigation-heading {
+    width: 100%;
+    padding-inline-end: 16px;
+  }
+
+  .kova-settings-route .kova-settings-navigation-close {
+    flex: 0 0 44px;
+    margin-inline-end: 8px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 900px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-content-header {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .kova-settings-route
+    section.kova-settings-page
+    .kova-settings-content-header
+    .kova-settings-page-actions {
+    flex-shrink: 0;
+    margin-inline-end: 10px;
+  }
+}
