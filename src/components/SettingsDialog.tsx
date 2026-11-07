@@ -44,6 +44,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Trash2,
+  Archive,
+  Mic,
   Palette,
   User2,
   ShieldCheck,
@@ -1032,9 +1034,9 @@ export function SettingsDialog({
         { v: "personalization", label: "Profile", icon: User2 },
         { v: "security", label: "Security and login", icon: ShieldCheck },
         { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
-        { v: "archived", label: "Archived chats", icon: Database, keywords: ["history", "trash"] },
+        { v: "archived", label: "Archived chats", icon: Archive, keywords: ["history", "trash"] },
         { v: "parental", label: "Parental controls", icon: Baby },
-        { v: "voice", label: "Voice", icon: Bell, keywords: ["microphone", "audio"] },
+        { v: "voice", label: "Voice", icon: Mic, keywords: ["microphone", "audio"] },
         { v: "storage", label: "Storage", icon: HardDrive },
         { v: "data", label: "Data controls", icon: Database, keywords: ["privacy", "export"] },
         { v: "memory", label: "Personalization", icon: Brain, keywords: ["memory"] },
