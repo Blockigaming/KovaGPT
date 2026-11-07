@@ -160,16 +160,28 @@ test("Share copies a real link and reports clipboard errors without false succes
   page,
 }) => {
   await fixture(page, "dark", true, true);
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async () => {
+          throw new Error("Clipboard blocked");
+        },
+      },
+    }),
+  );
   const token = "a".repeat(64);
-  await page.route("**/api/chat-share", (route) =>
-    route.fulfill({
+  let creates = 0;
+  await page.route("**/api/chat-share", (route) => {
+    if (route.request().method() === "POST") creates++;
+    return route.fulfill({
       json: {
         id: "33333333-3333-4333-8333-333333333333",
         path: `/share/${token}`,
         expiresAt: "2026-12-01T00:00:00Z",
       },
-    }),
-  );
+    });
+  });
   await page.goto("/");
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Share chat", exact: true }).first().click();
@@ -179,15 +191,28 @@ test("Share copies a real link and reports clipboard errors without false succes
   await expect(dialog.getByRole("textbox", { name: "Share link" })).toHaveValue(
     new URL(`/share/${token}`, page.url()).href,
   );
-  await expect(page.getByText("Link copied to clipboard", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("alert")).toHaveText("Clipboard blocked");
+  await expect(
+    page.getByRole("dialog", { name: "Public view-only link copied", exact: true }),
+  ).toHaveCount(0);
   await page.evaluate(() =>
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { writeText: async () => {} },
+      value: {
+        writeText: async (value: string) => {
+          (window as Window & { copiedShareLink?: string }).copiedShareLink = value;
+        },
+      },
     }),
   );
   await dialog.getByRole("button", { name: "Create & copy link" }).click();
-  await expect(page.getByText("Link copied to clipboard", { exact: true })).toBeVisible();
+  const success = page.getByRole("dialog", { name: "Public view-only link copied", exact: true });
+  await expect(success).toBeVisible();
+  await expect(success.getByRole("button", { name: "Copy link again", exact: true })).toBeEnabled();
+  expect(
+    await page.evaluate(() => (window as Window & { copiedShareLink?: string }).copiedShareLink),
+  ).toBe(new URL(`/share/${token}`, page.url()).href);
+  expect(creates).toBe(1);
 });
 
 for (const [tier, count] of [

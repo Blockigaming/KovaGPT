@@ -76,6 +76,12 @@ for (const role of ["user", "assistant"] as const) {
     const message = page.locator(`[data-message-id="image-${role}"]`);
     const image = message.locator("[data-chat-image] > img");
     await expect(image).toBeVisible();
+    // Native touch coordinates must target the decoded image, whose intrinsic
+    // dimensions can differ from the loading placeholder.
+    await image.evaluate((node) => (node as HTMLImageElement).decode());
+    await expect
+      .poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth))
+      .toBe(120);
     const original = await image.getAttribute("src");
     const expectedBytes = Buffer.from(original!.split(",", 2)[1], "base64");
     const menu = page.getByRole("menu", { name: "Image actions", exact: true });
