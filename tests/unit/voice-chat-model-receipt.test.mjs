@@ -123,7 +123,7 @@ test("approved hosted Kova model streams get provider-bound receipts only after 
   );
   const hostedIdentity = { ...identity, provider: "openrouter", modelId: "kova-xenon-5" };
   const receipt = await relayEligibleVoiceChat(
-    stream([delta("Hosted Kova reply."), "data: [DONE]\\n\\n"]),
+    stream([delta("Hosted Kova reply."), "data: [DONE]\n\n"]),
     { policy: hostedPolicy, identity: hostedIdentity, emit() {} },
   );
   assert.deepEqual(
@@ -136,7 +136,7 @@ test("approved hosted Kova model streams get provider-bound receipts only after 
     { provider: "openrouter", modelId: "kova-xenon-5" },
   );
   assert.equal(
-    await relayEligibleVoiceChat(stream([delta("Hosted Kova reply."), "data: [DONE]\\n\\n"]), {
+    await relayEligibleVoiceChat(stream([delta("Hosted Kova reply."), "data: [DONE]\n\n"]), {
       policy,
       identity: hostedIdentity,
       emit() {},
