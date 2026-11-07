@@ -66,13 +66,13 @@ test("account gate covers application tools while public help and shared links r
   ])
     assert.equal(requiresAppAccount(path), false, path);
 });
-test("all daily allowances and token quotas follow Free 1/5 and Pro 15x of Plus", () => {
+test("all daily allowances and token quotas follow Free 1/5 and Pro 20x of Plus", () => {
   for (const kind of ["chats", "images", "uploads"]) {
     assert.equal(DAILY_PLAN_ALLOWANCES.free[kind] * 5, DAILY_PLAN_ALLOWANCES.plus[kind]);
-    assert.equal(DAILY_PLAN_ALLOWANCES.pro[kind], DAILY_PLAN_ALLOWANCES.plus[kind] * 15);
+    assert.equal(DAILY_PLAN_ALLOWANCES.pro[kind], DAILY_PLAN_ALLOWANCES.plus[kind] * 20);
   }
   assert.equal(planAllowance(50000, "free"), 10000);
-  assert.equal(planAllowance(50000, "pro"), 750000);
+  assert.equal(planAllowance(50000, "pro"), 1000000);
   assert.equal(planAllowance(50000, "guest"), 0);
   assert.throws(() => planAllowance(50000, "fake"));
 });
@@ -166,7 +166,7 @@ test("guided diagnostics vary by actual setup without generating duplicate artic
   });
   assert.notDeepEqual(offline, online);
   assert.match(offline.join(" "), /Reconnect/);
-  assert.match(online.join(" "), /3,750 regular messages and 750 Thinking/);
+  assert.match(online.join(" "), /100× Free usage.*unlimited basic chat with Argon Lite/);
   assert.equal(diagnosticCoverage(100), 115200);
   assert.throws(() =>
     contextualHelp(faq, { environment: "fake", connection: "online", plan: "pro" }),

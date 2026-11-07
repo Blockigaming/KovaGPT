@@ -1,6 +1,10 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import type { BillingTier } from "@/lib/billing-plans";
-import { chatUsageWindows, CHAT_USAGE_WINDOWS } from "@/lib/plan-usage-policy.mjs";
+import {
+  chatUsageWindows,
+  CHAT_USAGE_WINDOWS,
+  isUnlimitedBasicChat,
+} from "@/lib/plan-usage-policy.mjs";
 import { loose } from "@/lib/supabase-loose";
 
 /** One atomic reservation: concurrent sends cannot spend the same last slot. */
@@ -9,8 +13,10 @@ export async function enforceDailyMessageQuota(
   tier: BillingTier,
   thinking: boolean,
   signal?: AbortSignal,
+  selection?: { modelId: string; mode: string },
 ): Promise<Response | null> {
   signal?.throwIfAborted();
+  if (selection && isUnlimitedBasicChat(tier, selection.modelId, selection.mode)) return null;
   const windows = chatUsageWindows(tier);
   const [daily] = windows;
   const weekly = windows.find(({ id }) => id === "weekly");

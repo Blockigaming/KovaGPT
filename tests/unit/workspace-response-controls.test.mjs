@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
-import { chatUsageWindows, CHAT_USAGE_WINDOWS } from "../../src/lib/plan-usage-policy.mjs";
+import {
+  chatUsageWindows,
+  CHAT_USAGE_WINDOWS,
+  isUnlimitedBasicChat,
+} from "../../src/lib/plan-usage-policy.mjs";
 import {
   appearanceValues,
   applyReadingPreferences,
@@ -127,9 +131,10 @@ test("daily message quota rejects with the popup category while unavailable acco
   const enforce = new Function(
     "chatUsageWindows",
     "CHAT_USAGE_WINDOWS",
+    "isUnlimitedBasicChat",
     "loose",
     `${code}; return enforceDailyMessageQuota;`,
-  )(chatUsageWindows, CHAT_USAGE_WINDOWS, (value) => value);
+  )(chatUsageWindows, CHAT_USAGE_WINDOWS, isUnlimitedBasicChat, (value) => value);
   const caller = (result) => ({
     userId: "owner",
     supabaseAdmin: { rpc: () => Promise.resolve(result) },
@@ -144,4 +149,29 @@ test("daily message quota rejects with the popup category while unavailable acco
   );
   assert.equal(unavailable.status, 503);
   assert.equal((await unavailable.json()).category, undefined);
+  const noRpc = {
+    userId: "owner",
+    supabaseAdmin: {
+      rpc: () => {
+        throw Error("included basic chat must not spend an advanced message slot");
+      },
+    },
+  };
+  assert.equal(
+    await enforce(noRpc, "pro", false, undefined, { modelId: "kova-argon-4.6", mode: "instant" }),
+    null,
+  );
+  for (const [tier, modelId, mode] of [
+    ["free", "kova-argon-4.6", "instant"],
+    ["plus", "kova-argon-4.6", "instant"],
+    ["pro", "kova-argon-4.6", "thinking"],
+    ["pro", "kova-neon-4.6", "instant"],
+    ["pro", "kova-xenon-5", "instant"],
+  ]) {
+    const exhausted = caller({ data: tier === "free" ? false : "weekly", error: null });
+    assert.equal(
+      (await enforce(exhausted, tier, mode !== "instant", undefined, { modelId, mode })).status,
+      429,
+    );
+  }
 });

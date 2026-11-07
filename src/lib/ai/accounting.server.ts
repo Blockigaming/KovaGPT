@@ -92,6 +92,10 @@ export async function getGenerationTokenHeadroom(input: {
       .eq("user_id", input.userId)
       .gte("created_at", monthStart)
       .not("status", "in", "(quota_rejected,provider_rejected,provider_failed,accounting_failed)")
+      // Included Pro basic chat never spends a capped advanced allowance.
+      .or(
+        "plan_tier.neq.pro,provider_model.neq.kova-argon-4.6,kova_mode.neq.instant,premium.eq.true",
+      )
       .order("id")
       .range(offset, offset + pageSize - 1);
     if (input.signal) query = query.abortSignal(input.signal);

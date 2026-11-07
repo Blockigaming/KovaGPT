@@ -71,7 +71,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How much usage does each plan include?",
-    "Free has one fifth of Plus usage. Plus costs $16 per month and is the baseline. Pro costs $80 per month and has fifteen times Plus usage. Daily message, image, and upload progress appears in Settings → Usage; token and technical limits also apply.",
+    "Free has very limited usage. Plus costs $16 per month and offers 5× Free usage, with limits on every chat model. Pro costs $80 per month and offers 20× Plus usage, or 100× Free, plus unlimited basic chat with Argon Lite. Advanced model usage is limited.",
   ],
   [
     "Scheduled tasks",
@@ -651,7 +651,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do usage limits work?",
-    "Free has one fifth of the Plus allowance; Pro has fifteen times the Plus allowance. Settings → Usage shows daily message, image, and upload progress. Token, security, concurrency, and storage limits also apply.",
+    "Free usage is very limited. Plus has 5× Free usage and limits on all chat models. Pro has 20× Plus usage, or 100× Free, and unlimited basic Argon Lite chat. Advanced model limits and service security controls still apply.",
   ],
   [
     "Privacy & security",

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 212,
+  "migrationCount": 213,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -356,6 +356,7 @@
     "account_email_update_preferences",
     "account_export_direct_row_bytes",
     "account_library_current_text",
+    "acquire_ai_generation",
     "acquire_ai_generation",
     "acquire_ai_generation",
     "acquire_project_file_upload_quota",
@@ -2236,6 +2237,7 @@
     "execute on function public.account_email_get_preferences(uuid),public.account_email_update_preferences(uuid,jsonb),\n  public.account_email_claim_dispatch(uuid[],timestamptz),public.account_email_prepare_dispatch(uuid,uuid),\n  public.account_email_finish_dispatch(uuid,uuid,text),public.account_email_purge_expired(integer),\n  public.account_email_record_lifecycle(uuid,text,text,timestamptz,jsonb),\n  public.account_email_prepare_account_deletion(uuid,uuid) to service_role",
     "execute on function public.acquire_ai_generation(\n  text,\n  text,\n  uuid,\n  text,\n  uuid,\n  text,\n  text,\n  boolean,\n  text,\n  bigint,\n  bigint,\n  numeric,\n  boolean,\n  bigint,\n  bigint,\n  integer,\n  integer,\n  integer,\n  integer,\n  integer,\n  timestamptz,\n  timestamptz\n) to service_role",
     "execute on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) to service_role",
+    "execute on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) to service_role",
     "execute on function public.admit_developer_billing(uuid,text,text,text,text,text,uuid,jsonb,jsonb),\n  public.dispatch_developer_billing(uuid,uuid),public.finish_developer_billing(uuid,uuid,text,jsonb),\n  public.recover_developer_billing(integer) to service_role",
     "execute on function public.admit_discovery_request(uuid,integer,integer) to service_role",
     "execute on function public.admit_maps_provider_request(text) to service_role",
@@ -2912,6 +2914,7 @@
     "all on function public.account_email_record_lifecycle(uuid,text,text,timestamptz,jsonb) from public,anon,authenticated",
     "all on function public.account_email_update_preferences(uuid,jsonb) from public,anon,authenticated",
     "all on function public.acquire_ai_generation(\n  text,\n  text,\n  uuid,\n  text,\n  uuid,\n  text,\n  text,\n  boolean,\n  text,\n  bigint,\n  bigint,\n  numeric,\n  boolean,\n  bigint,\n  bigint,\n  integer,\n  integer,\n  integer,\n  integer,\n  integer,\n  timestamptz,\n  timestamptz\n) from public, anon, authenticated",
+    "all on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) from public,anon,authenticated",
     "all on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) from public,anon,authenticated",
     "all on function public.admit_developer_billing(uuid,text,text,text,text,text,uuid,jsonb,jsonb),\n  public.dispatch_developer_billing(uuid,uuid),public.finish_developer_billing(uuid,uuid,text,jsonb),\n  public.recover_developer_billing(integer) from public,anon,authenticated",
     "all on function public.admit_discovery_request(uuid,integer,integer) from public,anon,authenticated",
@@ -3817,5 +3820,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "97b05d334c3d6ac96491241fa074780f899ec5b8ae9f47fa8edc576c5021e3c0"
+  "sha256": "bee28c4c3bbfb499c5b82d43ac6406f2cd184dc20ae1755c67f77e063781a2cc"
 }

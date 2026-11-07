@@ -27,3 +27,5 @@ export function chatUsageWindows(
   regularLimit: number;
   thinkingLimit: number;
 }[];
+
+export function isUnlimitedBasicChat(tier: string, modelId: string, mode: string): boolean;
