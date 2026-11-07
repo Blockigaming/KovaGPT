@@ -375,7 +375,9 @@ function fixture(initial = {}, options = {}) {
     FormData,
     Error,
     Date: class extends Date {
-      static now() { return fakeNow; }
+      static now() {
+        return fakeNow;
+      }
     },
     AudioContext: options.audioAnalysis ? FakeAudioContext : undefined,
     crypto: webcrypto,
