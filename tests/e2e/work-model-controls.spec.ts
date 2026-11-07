@@ -20,9 +20,10 @@ async function workFixture(
   page: Parameters<typeof fixture>[0],
   tier: "free" | "plus" | "pro",
   preserveStorageOnReload = false,
+  saved = false,
 ) {
   const commands: unknown[] = [];
-  await fixture(page, "dark", true, false, tier, { preserveStorageOnReload });
+  await fixture(page, "dark", true, saved, tier, { preserveStorageOnReload });
   await page.route("**/api/work/sync**", (route) =>
     route.fulfill({
       json: { savedRecords: [], recentItems: [], nextCursor: 0, currentVersion: 0, hasMore: false },
@@ -115,9 +116,10 @@ for (const tier of ["free", "plus", "pro"] as const) {
 test("chat opens a Work review without sending or clearing its composer draft", async ({
   page,
 }) => {
-  const commands = await workFixture(page, "plus");
+  const commands = await workFixture(page, "plus", false, true);
   await page.goto("/");
   await waitForKovaHydration(page);
+  await expect(page.locator("[data-chat-transcript]")).toBeVisible();
   const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await composer.fill("Review this synthetic launch request");
   await page.getByRole("button", { name: "Prepare or manage Work", exact: true }).click();
