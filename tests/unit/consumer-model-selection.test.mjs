@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CONSUMER_MODELS, consumerModel } from "../../src/lib/consumer-model-selection.mjs";
+import {
+  CONSUMER_MODELS,
+  consumerModel,
+  resolveConsumerModelChoice,
+  latestCompletedModelReply,
+  latestSavedModelReply,
+  createConsumerModelChoice,
+} from "../../src/lib/consumer-model-selection.mjs";
 import { normalizeChatPayload } from "../../src/lib/chat-ingress.server.mjs";
 import { normalizeChatHistory } from "../../src/lib/chat-history-policy.mjs";
 import { routeModel } from "../../src/lib/ai/model-router.mjs";
@@ -152,4 +159,55 @@ test("actual API named-choice guard rejects locked, unconfigured and unsupported
   const unsupported = check(selected, "free", () => selected.id, [{ kind: "image" }]);
   assert.equal(unsupported.status, 400);
   assert.equal((await unsupported.json()).code, "kova_model_vision_unavailable");
+});
+
+test("transient choice stays scoped and model changes require the current entitlement", () => {
+  const choice = createConsumerModelChoice("kova-xenon-5", "pro", true, "owner-a", "chat-a");
+  assert.equal(resolveConsumerModelChoice(choice, "owner-a", "chat-a"), "kova-xenon-5");
+  assert.equal(resolveConsumerModelChoice(choice, "owner-b", "chat-a"), "kova-argon-4.6");
+  assert.equal(
+    resolveConsumerModelChoice(choice, "owner-a", "chat-b", "kova-neon-4.6"),
+    "kova-neon-4.6",
+  );
+  assert.equal(createConsumerModelChoice("kova-xenon-5", "plus", true, "owner-a", "chat-a"), null);
+  assert.equal(
+    createConsumerModelChoice("kova-neon-4.6", "plus", false, "owner-a", "chat-a"),
+    null,
+  );
+});
+
+test("model-bound reply lookup preserves the last completed assistant through pending turns", () => {
+  const completed = { id: "complete", role: "assistant", content: "Verified answer" };
+  const messages = [
+    completed,
+    { role: "user" },
+    { role: "assistant", generationStatus: "streaming" },
+    { role: "assistant", pendingImage: true },
+  ];
+  assert.equal(latestCompletedModelReply(messages), completed);
+  assert.equal(latestCompletedModelReply(undefined), undefined);
+  assert.deepEqual(messages[0], completed);
+});
+
+test("saved model playback requires a completed receipt, saved chat and nonempty text", () => {
+  const reply = {
+    role: "assistant",
+    id: "reply",
+    content: "Answer",
+    voiceModelReceipt: { model: "argon" },
+  };
+  const chat = { id: "chat", messages: [reply] };
+  assert.deepEqual(latestSavedModelReply(chat), {
+    chatId: "chat",
+    messageId: "reply",
+    content: "Answer",
+  });
+  for (const candidate of [
+    null,
+    { ...chat, temporary: true },
+    { ...chat, messages: [{ ...reply, voiceModelReceipt: undefined }] },
+    { ...chat, messages: [{ ...reply, content: " " }] },
+    { ...chat, messages: [{ ...reply, generationStatus: "streaming" }] },
+  ])
+    assert.equal(latestSavedModelReply(candidate), undefined);
 });

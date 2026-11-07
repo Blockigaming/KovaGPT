@@ -1,4 +1,9 @@
-import { consumerModel, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
+import {
+  resolveConsumerModelChoice,
+  latestSavedModelReply,
+  createConsumerModelChoice,
+  type ConsumerModelId,
+} from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -1225,32 +1230,23 @@ function KovaGPT() {
     conversationId: string | null;
     id: ConsumerModelId;
   } | null>(null);
-  const hostedModel: ConsumerModelId =
-    modelChoice?.principal === storagePrincipal && modelChoice.conversationId === activeId
-      ? modelChoice.id
-      : (active?.hostedModel ?? "kova-argon-4.6");
+  const hostedModel = resolveConsumerModelChoice(
+    modelChoice,
+    storagePrincipal,
+    activeId,
+    active?.hostedModel,
+  );
   const chooseHostedModel = (id: ConsumerModelId) => {
-    if (!principalReady || active?.kova || !consumerModel(id)?.tiers.includes(tier)) return;
-    setModelChoice({ principal: storagePrincipal, conversationId: activeId, id });
+    const choice = createConsumerModelChoice(
+      id,
+      tier,
+      principalReady && !active?.kova,
+      storagePrincipal,
+      activeId,
+    );
+    if (choice) setModelChoice(choice);
   };
-  const latestCompletedAssistant = active?.messages
-    .filter(
-      (message) =>
-        message.role === "assistant" && !message.generationStatus && !message.pendingImage,
-    )
-    .at(-1);
-  const latestAssistantReply =
-    active &&
-    !active.temporary &&
-    latestCompletedAssistant?.voiceModelReceipt &&
-    latestCompletedAssistant.id &&
-    latestCompletedAssistant.content.trim()
-      ? {
-          chatId: active.id,
-          messageId: latestCompletedAssistant.id,
-          content: latestCompletedAssistant.content,
-        }
-      : undefined;
+  const latestAssistantReply = latestSavedModelReply(active);
   // Only a newly completed request can shift layout. Historical replies and
   // in-progress local drafts keep their current workspace and focus.
   const pendingCanvasRef = useRef<{ scope: string; messageId: string } | null>(null);

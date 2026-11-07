@@ -37,7 +37,7 @@ function fixture(overrides = {}) {
   f.render();
   return { ...f, config, changes };
 }
-for (const tier of ["free", "plus", "pro"]) {
+for (const tier of ["plus", "pro"]) {
   test(`${tier} picker shows three products but authorizes only its entitled choices`, () => {
     const f = fixture({ tier });
     assert.match(f.text(), /Argon 4\.6/);
@@ -53,7 +53,7 @@ for (const tier of ["free", "plus", "pro"]) {
   });
 }
 test("sign-out and a plan downgrade never auto-send or silently replace the selected product", () => {
-  const f = fixture({ tier: "free", value: "kova-xenon-5" });
+  const f = fixture({ tier: "plus", value: "kova-xenon-5" });
   assert.equal(
     f.find("button", (n) => n.props["data-testid"] === "consumer-model-trigger").props[
       "aria-label"
@@ -70,3 +70,15 @@ test("sign-out and a plan downgrade never auto-send or silently replace the sele
   }
   assert.deepEqual(f.changes, []);
 });
+
+for (const model of selection.CONSUMER_MODELS) {
+  test(`Free exposes no model control for saved ${model.id} selection`, () => {
+    const f = fixture({ tier: "free", value: model.id });
+    assert.equal(f.text(), "");
+    assert.equal(
+      f.nodes().filter((node) => node.type === "button" || node.type === "popover").length,
+      0,
+    );
+    assert.deepEqual(f.changes, []);
+  });
+}

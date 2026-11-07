@@ -34,6 +34,9 @@ export function ConsumerModelSelector({
     setOpen(false);
     window.requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true }));
   };
+  // Free always uses Argon through its Thinking toggle; it has no model menu.
+  if (tier === "free") return null;
+
   const options = (
     <div className="flex min-w-0 flex-col gap-1">
       {CONSUMER_MODELS.map((model) => {

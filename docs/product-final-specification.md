@@ -51,6 +51,8 @@ Reasoning effort, context limits and supported inputs must reflect each model's 
 
 ### Consumer model efforts (owner update, November 7, 2026)
 
+Free has no model picker or effort slider: its only model control is Thinking, off for Argon Lite and blue/on for Argon Medium. Plus and Pro have a model picker and response-effort slider, with no separate Thinking toggle.
+
 There are exactly 18 model/effort configurations: each of the three foundations has Lite, Medium, High, Extra High, Max and Ultra. Free uses Argon Lite normally and Argon Medium with Thinking enabled. Plus unlocks Argon and Neon through High. Pro ($80/month) unlocks all three models and all six slider positions. Existing `thinking` ledger IDs represent Medium; obsolete `medium` saved requests normalize to that same position, not a seventh mode.
 
 Higher efforts increase allowed generation budgets and bounded same-model verification work. Actual usage determines cost; a higher setting does not guarantee that every simple question takes longer or costs more. Argon and Xenon use supported native none/low/high/max reasoning controls. Neon has no native reasoning switch, so additional same-foundation review passes provide its extra compute. Only Ultra runs four independent subagents in parallel, with the selected foundation coordinating the final answer. Max remains sequential self-review. All internal calls are reserved before execution, included in usage accounting, cancelled with the request, and inherit its account/context scope. Reviewers cannot call external tools or execute actions.

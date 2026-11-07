@@ -30,3 +30,37 @@ export function consumerModel(value) {
     ? (CONSUMER_MODELS.find((model) => model.id === value) ?? null)
     : null;
 }
+
+/** Keep transient selections scoped to their owning account and conversation. */
+export function resolveConsumerModelChoice(choice, principal, conversationId, savedModel) {
+  return choice?.principal === principal && choice.conversationId === conversationId
+    ? choice.id
+    : (savedModel ?? "kova-argon-4.6");
+}
+export function createConsumerModelChoice(id, tier, available, principal, conversationId) {
+  return available && consumerModel(id)?.tiers.includes(tier)
+    ? { principal, conversationId, id }
+    : null;
+}
+
+/** Shared model-bound UI lookup; unfinished replies are never playback candidates. */
+export function latestCompletedModelReply(messages) {
+  return messages
+    ?.filter(
+      (message) =>
+        message.role === "assistant" && !message.generationStatus && !message.pendingImage,
+    )
+    .at(-1);
+}
+
+/** Playback is available only for completed, receipted replies in saved chats. */
+export function latestSavedModelReply(chat) {
+  const message = latestCompletedModelReply(chat?.messages);
+  return chat &&
+    !chat.temporary &&
+    message?.voiceModelReceipt &&
+    message.id &&
+    message.content.trim()
+    ? { chatId: chat.id, messageId: message.id, content: message.content }
+    : undefined;
+}
