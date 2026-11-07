@@ -358,7 +358,7 @@ function fixture(options = {}) {
   };
   const context = {
     fixture: fixtures,
-    provider: async (body, init) => {
+    provider: async (body, init, scope, execution) => {
       providers.push(structuredClone(body));
       normalizedProviders.push(context.prepareConnectorRequest(body));
       assert.equal(acquisitions.length, 1, "Provider work must follow authoritative admission");
@@ -381,6 +381,11 @@ function fixture(options = {}) {
           ],
           usage: options.planningUsage ?? receipt(100, 120),
         });
+      if (options.internalUsage && body.stream) {
+        assert.equal(execution.mode, options.mode);
+        execution.onUsage(options.internalUsage);
+        if (options.failAfterInternalUsage) throw new Error("bounded-provider-failure");
+      }
       if (options.finalStatus)
         return Response.json(
           { error: { message: "Offline rejection", type: "rate_limit_error" } },
@@ -864,10 +869,10 @@ test("a missing planning usage receipt retains its bounded fallback instead of r
   );
 });
 
-test("resolved Lite and Medium use the regular allowance; reasoning modes use Thinking", async () => {
+test("resolved Lite uses regular allowance; Medium and higher modes use Thinking", async () => {
   for (const [mode, thinking] of [
     ["instant", false],
-    ["medium", false],
+    ["medium", true],
     ["thinking", true],
     ["high", true],
   ]) {
@@ -899,7 +904,7 @@ test("paid connector planning retains its existing hop and reservation policy", 
   assert.equal(response.status, 200, text);
   assert.equal(f.providers.length, 4);
   assert.equal(f.reads.length, 1); // Subsequent identical calls use the existing cache.
-  assert.equal(f.providers[0].max_completion_tokens, undefined);
+  assert.equal(f.providers[0].max_completion_tokens, f.providers.at(-1).max_completion_tokens);
   assert.equal(f.providers.at(-1).stream, true);
   assert.equal(f.settlements.length, 1);
 });
@@ -956,3 +961,30 @@ test("Argon connector fallback retains the selected hosted model and complete co
   assert.equal(f.acquisitions.length, 1);
   assert.equal(f.settlements.length, 1);
 });
+
+for (const outcome of ["success", "network_failure", "http_rejection"]) {
+  test(`Ultra actual handler retains review usage on ${outcome}`, async () => {
+    const f = fixture({
+      tier: "pro",
+      mode: "ultra",
+      noTools: true,
+      env: hostedRouting,
+      internalUsage: { input: 600, output: 200, cachedInput: 10, reasoning: 50 },
+      failAfterInternalUsage: outcome === "network_failure",
+      ...(outcome === "http_rejection" ? { finalStatus: 429 } : {}),
+    });
+    const { response, text } = await f.post();
+    assert.equal(f.acquisitions.length, 1, text);
+    assert.equal(f.settlements.length, 1, text);
+    const settlement = f.settlements[0];
+    assert(settlement.inputTokens >= 600);
+    assert(settlement.outputTokens >= 200);
+    assert(settlement.reasoningTokens >= 50);
+    assert.equal(settlement.status, outcome === "success" ? "completed" : "aborted");
+    if (outcome === "success") {
+      assert.equal(response.status, 200, text);
+      assert.equal(settlement.inputTokens, 900);
+      assert.equal(settlement.outputTokens, 400);
+    }
+  });
+}

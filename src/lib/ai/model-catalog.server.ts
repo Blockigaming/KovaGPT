@@ -120,7 +120,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     vision: false,
     tools: true,
     structuredOutput: true,
-    maxOutputTokens: 4_096,
+    maxOutputTokens: 8_192,
     pricePerMillion: { input: 0.2, cachedInput: 0.2, output: 0.8 },
     tiers: ["guest", "free", "plus", "pro"],
   },

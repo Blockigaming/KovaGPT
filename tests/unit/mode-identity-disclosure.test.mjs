@@ -50,7 +50,7 @@ test("current topology is product design, not proof of deployed weights or compl
 test("every current mode inherits the shared identity with natural, non-repeating introductions", () => {
   const modes = source.split("export const MODES: Mode[] = [")[1];
   const inherited = [...modes.matchAll(/systemPrompt:\s*(?:BASE_SYSTEM|`\$\{BASE_SYSTEM\})/g)];
-  assert.equal(inherited.length, 7);
+  assert.equal(inherited.length, 6);
   assert.match(base, /unless the user explicitly asks/);
   assert.match(base, /exact product name from the server-resolved model identity/);
   assert.match(base, /skip it for direct tasks/);

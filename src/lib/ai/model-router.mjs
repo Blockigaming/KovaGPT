@@ -14,6 +14,7 @@ import {
   costPerMTok,
   getModelConfig,
 } from "./model-config.mjs";
+import { isModeAllowedForTier } from "../mode-entitlements.mjs";
 import { consumerModel } from "../consumer-model-selection.mjs";
 
 /** @typedef {import("./model-config.mjs").ModelRole} ModelRole */
@@ -45,16 +46,19 @@ const PREMIUM_MODES = new Set(["max", "ultra"]);
 export function freeModeUpgradeRequired(tier, mode, deepMode = false) {
   return (
     tier === "free" &&
-    (deepMode || !["instant", "thinking", "auto", "default", "fast"].includes(mode))
+    (deepMode || !["instant", "medium", "thinking", "auto", "default", "fast"].includes(mode))
   );
 }
 
 /** Reject locked consumer modes before any model or provider is selected. */
 export function modeUpgradeRequired(tier, mode, deepMode = false) {
-  return (
-    freeModeUpgradeRequired(tier, mode, deepMode) ||
-    ((deepMode || PREMIUM_MODES.has(mode)) && !["pro", "business"].includes(tier))
-  );
+  const plan = tier === "business" ? "pro" : tier;
+  const canonical = ["auto", "default", "fast"].includes(mode)
+    ? "instant"
+    : mode === "medium"
+      ? "thinking"
+      : mode;
+  return !isModeAllowedForTier(plan, canonical) || (deepMode && plan !== "pro");
 }
 
 // Signals that extra reasoning will noticeably improve the answer. Length is

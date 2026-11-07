@@ -24,7 +24,7 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   expect(chatRequests).toBe(0);
 });
 
-test("Plus model selector exposes Default Medium Thinking and High", async ({ page }) => {
+test("Plus model selector exposes Lite Medium and High", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -39,19 +39,18 @@ test("Plus model selector exposes Default Medium Thinking and High", async ({ pa
 
   const optionRoot = useSheet
     ? page.locator('[data-testid="mobile-bottom-sheet"]')
-    : page.getByRole("dialog", { name: "Choose model" });
+    : page.getByRole("dialog", { name: "Choose response effort" });
   await expect(optionRoot).toBeVisible({ timeout: 3000 });
   await expect(optionRoot.getByTestId("model-option-instant")).toBeVisible();
-  await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Default");
-  await expect(optionRoot.getByTestId("model-option-medium")).toBeVisible();
+  await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Lite");
   await expect(optionRoot.getByTestId("model-option-high")).toContainText("High");
   await expect(optionRoot.getByTestId("model-option-thinking")).toBeVisible();
   await expect(optionRoot.getByTestId("model-option-extra_high")).toHaveCount(0);
 
   await optionRoot.getByTestId("model-option-thinking").click();
   await expect(optionRoot).toHaveCount(0);
-  await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Thinking");
-  await expect(trigger).toContainText("Thinking");
+  await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: Medium");
+  await expect(trigger).toContainText("Medium");
   await trigger.click();
   await expect(optionRoot.getByTestId("model-option-thinking")).toHaveAttribute(
     "aria-pressed",
@@ -65,7 +64,7 @@ test("Plus model selector exposes Default Medium Thinking and High", async ({ pa
   }
 });
 
-test("Pro picker keeps all seven modes and the High label", async ({ page }) => {
+test("Pro picker keeps all six modes and the High label", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "pro" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -73,13 +72,13 @@ test("Pro picker keeps all seven modes and the High label", async ({ page }) => 
   await expect(trigger).toBeVisible();
   await trigger.click();
   const options = page.locator('[data-testid^="model-option-"]:visible');
-  await expect(options).toHaveCount(7);
-  for (const id of ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"]) {
+  await expect(options).toHaveCount(6);
+  for (const id of ["instant", "thinking", "high", "extra_high", "max", "ultra"]) {
     await expect(page.getByTestId(`model-option-${id}`)).toBeVisible();
   }
   await expect(page.getByTestId("model-option-high")).toHaveText("High");
   await page.getByTestId("model-option-high").click();
-  await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT High");
+  await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: High");
   await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
 });
 
@@ -106,7 +105,7 @@ test.describe("short desktop model picker", () => {
     await waitForKovaHydration(page);
     const trigger = page.getByTestId("model-selector-trigger").filter({ visible: true });
     await trigger.click();
-    const picker = page.getByRole("dialog", { name: "Choose model", exact: true });
+    const picker = page.getByRole("dialog", { name: "Choose response effort", exact: true });
     await expect(picker).toBeVisible();
     expect(
       await picker.evaluate((element) =>
@@ -163,10 +162,10 @@ test.describe("short desktop model picker", () => {
     await expect(picker).toBeVisible();
     await expect(picker.getByTestId("model-option-instant")).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(picker.getByTestId("model-option-medium")).toBeFocused();
+    await expect(picker.getByTestId("model-option-thinking")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(picker).toHaveCount(0);
     await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Medium");
+    await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: Medium");
   });
 });

@@ -46,6 +46,11 @@ export function ResponsiveModelSelector({
   const current =
     groups.flatMap((group) => group.modes).find((item) => item.id === mode) ?? MODES[0];
   const topbar = placement === "topbar";
+  const availableModes = groups.flatMap((group) => group.modes);
+  const effortIndex = Math.max(
+    0,
+    availableModes.findIndex((item) => item.id === mode),
+  );
 
   // Reset stale or disallowed choices after authentication or plan changes.
   useEffect(() => {
@@ -134,14 +139,41 @@ export function ResponsiveModelSelector({
     );
   };
 
-  const options = groups.map((group) => (
-    <div key={group.id} className="pb-2">
-      <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
-        {group.label.replace(/^KovaGPT(?=\s|$)/u, "KovaGPT")}
+  const options = (
+    <>
+      <div className="px-3 py-3">
+        <label htmlFor={menuId + "-effort"} className="block text-sm font-medium">
+          Response effort: {modeDisplayLabel(current)}
+        </label>
+        <input
+          id={menuId + "-effort"}
+          type="range"
+          min={0}
+          max={availableModes.length - 1}
+          step={1}
+          value={effortIndex}
+          aria-label="Response effort"
+          aria-valuetext={modeDisplayLabel(current)}
+          className="mt-3 min-h-11 w-full accent-foreground"
+          onChange={(event) => {
+            const next = availableModes[Number(event.target.value)];
+            if (next && isModeAllowedForTier(userTier, next.id)) onChange(next.id);
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Higher modes allow more compute and cost. Ultra uses subagents of the selected model.
+        </p>
       </div>
-      {group.modes.map(renderOption)}
-    </div>
-  ));
+      {groups.map((group) => (
+        <div key={group.id} className="pb-2">
+          <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+            Response effort
+          </div>
+          {group.modes.map(renderOption)}
+        </div>
+      ))}
+    </>
+  );
 
   // Guests see the brand in the header and Default inside the composer.
   if (locked)
@@ -165,8 +197,8 @@ export function ResponsiveModelSelector({
         aria-pressed={mode === "thinking"}
         title={
           mode === "thinking"
-            ? "Thinking is on. Click for Default."
-            : "Use Thinking for a more considered answer."
+            ? "Argon Medium is on. Click for Argon Lite."
+            : "Thinking uses Argon Medium. Normal chat uses Argon Lite."
         }
         className="kova-thinking-toggle"
         onClick={() => onChange(mode === "thinking" ? "instant" : "thinking")}
@@ -192,7 +224,7 @@ export function ResponsiveModelSelector({
                 : undefined
             }
             aria-haspopup="dialog"
-            aria-label={"Choose model: KovaGPT " + modeDisplayLabel(current)}
+            aria-label={"Choose response effort: " + modeDisplayLabel(current)}
             aria-expanded={open}
             aria-controls={!useSheet && open ? menuId : undefined}
             data-testid="model-selector-trigger"
@@ -227,8 +259,8 @@ export function ResponsiveModelSelector({
               if (next) setOpen(true);
               else closeAndRestoreFocus();
             }}
-            title="Models"
-            ariaLabel="Choose model"
+            title="Response effort"
+            ariaLabel="Choose response effort"
           >
             <div className="flex flex-col gap-1">{options}</div>
           </MobileBottomSheet>
@@ -237,7 +269,7 @@ export function ResponsiveModelSelector({
             ref={contentRef}
             id={menuId}
             role="dialog"
-            aria-label="Choose model"
+            aria-label="Choose response effort"
             data-slot="model-selector-content"
             side={topbar ? "bottom" : "top"}
             align="start"
@@ -263,7 +295,7 @@ export function ResponsiveModelSelector({
             }}
           >
             <div className="shrink-0 px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
-              Models
+              Response effort
             </div>
             <div
               data-testid="model-options-scroll"

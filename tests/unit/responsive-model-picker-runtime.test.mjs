@@ -4,11 +4,10 @@ import { isModeAllowedForTier } from "../../src/lib/mode-entitlements.mjs";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 
 const modes = [
-  { id: "instant", label: "Default" },
-  { id: "medium", label: "Medium" },
-  { id: "thinking", label: "Thinking" },
+  { id: "instant", label: "Lite" },
+  { id: "thinking", label: "Medium" },
   { id: "high", label: "High" },
-  { id: "extra_high", label: "Extra high" },
+  { id: "extra_high", label: "Extra High" },
   { id: "max", label: "Max" },
   { id: "ultra", label: "Ultra" },
 ];
@@ -104,7 +103,7 @@ for (const [placement, side] of [
     await f.flush();
     const content = f.find("popover-content");
     assert.equal(content.props.role, "dialog");
-    assert.equal(content.props["aria-label"], "Choose model");
+    assert.equal(content.props["aria-label"], "Choose response effort");
     assert.equal(content.props.side, side);
     assert.equal(content.props.align, "start");
     assert.equal(content.props.collisionPadding, 12);
@@ -152,12 +151,12 @@ test("choosing a paid option preserves its route ID, closes the picker and resto
   f.focusTrigger();
   f.open();
   await f.flush();
-  f.find("button", (node) => node.props["data-testid"] === "model-option-medium").props.onClick();
+  f.find("button", (node) => node.props["data-testid"] === "model-option-thinking").props.onClick();
   await f.flush();
   f.runFrames();
-  assert.deepEqual(f.changes, ["medium"]);
+  assert.deepEqual(f.changes, ["thinking"]);
   assert.equal(f.find("popover").props.open, false);
-  assert.equal(f.trigger().props["aria-label"], "Choose model: KovaGPT Medium");
+  assert.equal(f.trigger().props["aria-label"], "Choose response effort: Medium");
   assert.deepEqual(
     f.focused.map((options) => options.preventScroll),
     [true],

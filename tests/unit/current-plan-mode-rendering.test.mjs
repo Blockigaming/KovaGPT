@@ -81,15 +81,15 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
 }
 
 for (const desktop of [true, false]) {
-  test(`Default display agrees between Pricing, collapsed trigger and options (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Effort display agrees between Pricing, collapsed trigger and options (${desktop ? "desktop" : "touch"})`, () => {
     const closed = fixture({ desktop });
     const open = fixture({ desktop, menuOpen: true });
     const expected = {
-      free: ["Default", "Thinking"],
-      plus: ["Default", "Medium", "Thinking", "High"],
-      pro: ["Default", "Medium", "Thinking", "High", "Extra high", "Max", "Ultra"],
+      free: ["Lite", "Medium"],
+      plus: ["Lite", "Medium", "High"],
+      pro: ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"],
     };
-    assert.equal(closed.registry.plans.free.features[0], "Default and Thinking modes");
+    assert.equal(closed.registry.plans.free.features[0], "Argon Lite and Medium (Thinking)");
     for (const tier of ["free", "plus", "pro"]) {
       for (const placement of ["topbar", "composer"]) {
         for (const compact of [true, false]) {
@@ -98,9 +98,9 @@ for (const desktop of [true, false]) {
             html,
             tier === "free"
               ? /aria-label="Thinking" aria-pressed="false"/
-              : /aria-label="Choose model: KovaGPT Default"/,
+              : /aria-label="Choose response effort: Lite"/,
           );
-          assert.doesNotMatch(html, /\bLite\b|data-testid="model-option-/);
+          assert.doesNotMatch(html, /data-testid="model-option-/);
         }
       }
       const openHtml = open.render(tier, "instant", "composer");
@@ -109,7 +109,7 @@ for (const desktop of [true, false]) {
         assert.doesNotMatch(openHtml, /model-option-/);
         continue;
       }
-      assert.ok(openHtml.includes("Kova models"));
+      assert.ok(openHtml.includes("Response effort"));
       const options = Array.from(
         openHtml.matchAll(
           /<button\b[^>]*data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g,
@@ -137,24 +137,24 @@ for (const desktop of [true, false]) {
     const f = fixture({ desktop });
     for (const placement of ["topbar", "composer"]) {
       const html = f.render("plus", "high", placement);
-      assert.match(html, /aria-label="Choose model: KovaGPT High"/);
+      assert.match(html, /aria-label="Choose response effort: High"/);
       assert.doesNotMatch(html, /KovaGPT Thinking/);
     }
     assert.equal(f.modes.getMode("high").id, "high");
     assert.equal(f.modes.getMode("high").label, "High");
-    assert.equal(f.modes.modesForTier("plus")[3].id, "high");
+    assert.equal(f.modes.modesForTier("plus")[2].id, "high");
     assert.equal(
-      f.modes.modesForTier("plus")[3].systemPrompt,
+      f.modes.modesForTier("plus")[2].systemPrompt,
       f.modes.getMode("high").systemPrompt,
     );
   });
-  test(`Pro keeps High and all seven authorized modes (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Pro keeps High and all six authorized modes (${desktop ? "desktop" : "touch"})`, () => {
     const f = fixture({ desktop });
     assert.deepEqual(
       Array.from(f.modes.modesForTier("pro"), (mode) => mode.id),
-      ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
+      ["instant", "thinking", "high", "extra_high", "max", "ultra"],
     );
-    assert.match(f.render("pro", "high"), /aria-label="Choose model: KovaGPT High"/);
+    assert.match(f.render("pro", "high"), /aria-label="Choose response effort: High"/);
   });
 }
 
@@ -173,7 +173,7 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   const { registry } = fixture();
   assert.deepEqual(
     Array.from(registry.modes, (mode) => mode.id),
-    ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
+    ["instant", "thinking", "high", "extra_high", "max", "ultra"],
   );
   for (const mode of registry.modes) {
     const tiers = ["free", "plus", "pro"].filter((tier) =>
@@ -184,11 +184,11 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   }
   assert.deepEqual(
     Array.from(registry.modesByTier.free, (mode) => mode.label),
-    ["Lite", "Thinking"],
+    ["Lite", "Medium"],
   );
   assert.deepEqual(
     Array.from(registry.modesByTier.plus, (mode) => mode.label),
-    ["Lite", "Medium", "Thinking", "High"],
+    ["Lite", "Medium", "High"],
   );
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
@@ -205,19 +205,19 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
 
 test("pricing uses public Default wording with exact tier choices and singular Free mode", () => {
   const { registry, modes } = fixture();
-  assert.equal(registry.plans.free.features[0], "Default and Thinking modes");
-  assert.equal(registry.plans.plus.features[0], "Default, Medium, Thinking, and High modes");
+  assert.equal(registry.plans.free.features[0], "Argon Lite and Medium (Thinking)");
+  assert.equal(registry.plans.plus.features[0], "Argon and Neon: Lite, Medium, and High");
   assert.equal(
     registry.plans.pro.features[0],
-    "Default, Medium, Thinking, High, Extra high, Max, and Ultra modes",
+    "All three models: Lite, Medium, High, Extra High, Max, and Ultra",
   );
   assert.match(
     registry.plans.plus.description,
-    /^Default, Medium, Thinking, High, and Adaptive Memory\./,
+    /^Argon and Neon with Lite, Medium and High, and Adaptive Memory\./,
   );
   assert.match(
     registry.plans.pro.description,
-    /^Default, Medium, Thinking, High, Extra high, Max, and Ultra\./,
+    /^All three models with Lite, Medium, High, Extra High, Max and Ultra\./,
   );
   assert.match(registry.plans.free.features[0], /Thinking/);
   assert.match(registry.plans.plus.features[0], /High/);
@@ -229,7 +229,7 @@ test("pricing uses public Default wording with exact tier choices and singular F
     const publicCopy = [registry.plans[tier].description, ...registry.plans[tier].features].join(
       " ",
     );
-    assert.doesNotMatch(publicCopy, /\bLite\b|All six Chat modes/);
+    assert.match(publicCopy, /Lite/);
     for (const mode of modes.modesForTier(tier)) {
       assert.equal(mode.systemPrompt, modes.getMode(mode.id).systemPrompt);
     }
@@ -260,18 +260,18 @@ test("new usage ratios preserve prices and billing identifiers", () => {
   ]);
 });
 
-test("display mapping preserves compatibility catalog, provider prompts and 2/4/7 entitlement identities", () => {
+test("display mapping preserves compatibility catalog, provider prompts and 2/3/6 entitlement identities", () => {
   const f = fixture();
   const before = JSON.stringify(f.modes.MODES);
   for (const tier of ["free", "plus", "pro"]) {
     const allowed = f.modes.modesForTier(tier);
-    assert.equal(allowed.length, { free: 2, plus: 4, pro: 7 }[tier]);
+    assert.equal(allowed.length, { free: 2, plus: 3, pro: 6 }[tier]);
     assert.deepEqual(
       Array.from(allowed, (mode) => mode.id),
       entitlements.MODE_IDS_BY_TIER[tier],
     );
     for (const mode of allowed) {
-      assert.equal(f.displayLabel(mode), mode.id === "instant" ? "Default" : mode.label);
+      assert.equal(f.displayLabel(mode), mode.label);
       assert.equal(mode.systemPrompt, f.modes.getMode(mode.id).systemPrompt);
     }
   }
@@ -282,10 +282,10 @@ test("display mapping preserves compatibility catalog, provider prompts and 2/4/
   assert.equal(f.registry.modesByTier.free[0].label, "Lite");
   assert.match(
     readFileSync("public/llms.txt", "utf8"),
-    /Free users can select Default or Thinking/,
+    /Free users use Argon Lite normally and Argon Medium/,
   );
   assert.match(
     readFileSync("src/routes/getting-started.tsx", "utf8"),
-    /Free includes Default and Thinking\./,
+    /Free uses Argon Lite, or Argon Medium/,
   );
 });

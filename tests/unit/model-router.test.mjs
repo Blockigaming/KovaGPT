@@ -75,7 +75,7 @@ test("default request budget can admit the full Ultra output reservation", () =>
 });
 
 test("mode output ceilings remain monotonic through Max and Ultra", () => {
-  const modes = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
+  const modes = ["instant", "thinking", "high", "extra_high", "max", "ultra"];
   for (let index = 1; index < modes.length; index += 1) {
     assert.ok(
       MODE_MAX_OUTPUT_TOKENS[modes[index]] > MODE_MAX_OUTPUT_TOKENS[modes[index - 1]],
@@ -85,7 +85,7 @@ test("mode output ceilings remain monotonic through Max and Ultra", () => {
 });
 
 test("Free paid modes fail closed instead of selecting or downgrading a model", () => {
-  for (const mode of ["medium", "high", "extra_high", "max", "ultra", "kova_5_5"]) {
+  for (const mode of ["high", "extra_high", "max", "ultra", "kova_5_5"]) {
     assert.equal(freeModeUpgradeRequired("free", mode), true);
     assert.throws(
       () => routeModel({ task: "chat", mode, tier: "free", hasImages: true }),
