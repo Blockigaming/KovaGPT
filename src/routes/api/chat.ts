@@ -2562,7 +2562,9 @@ export const Route = createFileRoute("/api/chat")({
               chatId &&
               voiceMessageId &&
               eligibleVoiceModel(voicePolicy, {
-                provider: isKovaHostedModelId(model) ? "openrouter" : getAiProviderConfig().provider,
+                provider: isKovaHostedModelId(model)
+                  ? "openrouter"
+                  : getAiProviderConfig().provider,
                 modelId: model,
               })
                 ? {

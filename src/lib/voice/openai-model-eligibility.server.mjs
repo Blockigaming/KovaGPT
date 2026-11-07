@@ -44,11 +44,8 @@ export function voiceModelPolicy(env) {
 }
 
 export function eligibleVoiceModel(policy, { provider, modelId } = {}) {
-  if (
-    policy?.valid !== true ||
-    typeof modelId !== "string" ||
-    !MODEL_ID.test(modelId)
-  ) return false;
+  if (policy?.valid !== true || typeof modelId !== "string" || !MODEL_ID.test(modelId))
+    return false;
   if (provider === "openai" || provider === "azure_openai")
     return policy.models instanceof Set && policy.models.has(modelId);
   return (
