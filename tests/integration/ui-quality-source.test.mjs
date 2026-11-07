@@ -321,9 +321,10 @@ test("canonical reference styles own shell and composer contracts without retire
       '[role="dialog"]forminput.border-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"])',
       '[role="dialog"]form:is(label,div:has(>label)):has(+:is(input.border-input,textarea.border-input))',
       '[role="dialog"]formlabel>:is(input.border-input,textarea.border-input)',
-      ':root[data-kova-input-modality="pointer"]:is(button,a,[role="button"],[role="menu"],[role="menuitem"],[role="tab"]):focus',
+      ':root[data-kova-input-modality="pointer"]:is(button,a,[role="button"],[role="menu"],[role="menuitem"],[role="tab"],[data-slot="select-trigger"],[data-slot="select-item"],[data-slot="menu-item"],[role="option"],[role="combobox"]):focus',
+      ':root:not([data-kova-input-modality="pointer"]):is(button,a,input,textarea,select,[tabindex],[role="option"],[role="menuitem"],[role="combobox"]):focus-visible',
     ],
-    "only scoped dialog-field repairs may follow the shared utilities",
+    "only scoped dialog-field and accessible focus repairs may follow shared utilities",
   );
 });
 
