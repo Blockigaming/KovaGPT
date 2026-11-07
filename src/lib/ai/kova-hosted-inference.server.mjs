@@ -19,7 +19,7 @@ const MODEL_PRICE_CEILINGS = Object.freeze({
   "kova-xenon-5": { prompt: 3.0, completion: 15.0 },
 });
 export const MODEL_OUTPUT_LIMITS = Object.freeze({
-  "kova-argon-4.6": 4096,
+  "kova-argon-4.6": 8192,
   "kova-neon-4.6": 8192,
   "kova-xenon-5": 16384,
 });
@@ -45,7 +45,9 @@ export function isKovaHostedModelId(value) {
   return typeof value === "string" && Object.hasOwn(HOSTED_MODEL_MAP, value);
 }
 
-export function prepareKovaHostedRequest(value) {
+export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {}) {
+  if (selectedEffort !== undefined && !["none", "low", "high", "max"].includes(selectedEffort))
+    throw new Error("invalid_hosted_effort");
   if (
     !value ||
     typeof value !== "object" ||
@@ -103,9 +105,12 @@ export function prepareKovaHostedRequest(value) {
   )
     throw new Error("conflicting_hosted_token_limit");
   // Reasoning effort is an operator policy, never copied from untrusted callers.
-  // The model's full depth is only available to the premium Xenon tier.
+  // The server-authorized product effort controls supported native reasoning.
   // Llama 4 Maverick does not expose a native reasoning-effort parameter.
-  const effort = value.model === "kova-xenon-5" ? "max" : null;
+  const effort =
+    value.model === "kova-neon-4.6"
+      ? null
+      : (selectedEffort ?? (value.model === "kova-xenon-5" ? "max" : null));
   const { model, max_completion_tokens, reasoning: _discard, ...rest } = value;
   const body = JSON.stringify({
     ...rest,
@@ -124,10 +129,16 @@ export function prepareKovaHostedRequest(value) {
   return { endpoint: HOSTED_CHAT_URL, body, alias: model };
 }
 
-export async function requestKovaHostedChat({ request, token, signal, fetchImpl = fetch } = {}) {
+export async function requestKovaHostedChat({
+  request,
+  token,
+  signal,
+  fetchImpl = fetch,
+  effort,
+} = {}) {
   if (typeof token !== "string" || token.trim().length < 16)
     throw new Error("hosted_api_key_unavailable");
-  const prepared = prepareKovaHostedRequest(request);
+  const prepared = prepareKovaHostedRequest(request, { effort });
   const timeoutSignal = AbortSignal.timeout(45_000);
   const boundedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   const response = await fetchImpl(prepared.endpoint, {

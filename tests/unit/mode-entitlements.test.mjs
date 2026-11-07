@@ -11,8 +11,8 @@ import { readFileSync } from "node:fs";
 const ALL_MODES = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
 const EXPECTED = {
   free: ["instant", "thinking"],
-  plus: ["instant", "medium", "thinking", "high"],
-  pro: ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
+  plus: ["instant", "thinking", "high"],
+  pro: ["instant", "thinking", "high", "extra_high", "max", "ultra"],
 };
 
 for (const [tier, expected] of Object.entries(EXPECTED)) {

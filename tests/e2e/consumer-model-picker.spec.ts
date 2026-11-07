@@ -128,3 +128,57 @@ test("keyboard model selection keeps the composer draft and makes no model reque
   await expect(composer).toHaveValue("Keep this draft while choosing Xenon.");
   expect(sends).toBe(0);
 });
+
+test("Pro slider sends all 18 exact foundation and effort configurations", async ({ page }) => {
+  test.setTimeout(120_000);
+  await fixture(page, "dark", true, false, "pro");
+  const requests: Record<string, unknown>[] = [];
+  await page.route("**/api/chat", async (route) => {
+    requests.push(route.request().postDataJSON());
+    await route.fulfill({
+      contentType: "text/event-stream",
+      body: `data: ${JSON.stringify({ choices: [{ delta: { content: `Configuration ${requests.length} verified.` } }] })}\n\ndata: [DONE]\n\n`,
+    });
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const efforts = ["instant", "thinking", "high", "extra_high", "max", "ultra"];
+  const labels = ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"];
+  for (const model of products) {
+    await page.getByTestId("consumer-model-trigger").click();
+    await page.getByTestId(`consumer-model-${model}`).click();
+    for (const [index, mode] of efforts.entries()) {
+      await page.getByTestId("model-selector-trigger").click();
+      const slider = page.getByRole("slider", { name: "Response effort", exact: true });
+      await expect(slider).toHaveAttribute("max", "5");
+      await slider.press("Home");
+      for (let step = 0; step < index; step++) await slider.press("ArrowRight");
+      await expect(slider).toHaveAttribute("aria-valuetext", labels[index]);
+      await slider.press("Escape");
+      const number = requests.length + 1;
+      await page
+        .getByRole("textbox", { name: "Message KovaGPT", exact: true })
+        .fill(`Verify configuration ${number}.`);
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await expect(
+        page.getByText(`Configuration ${number} verified.`, { exact: true }),
+      ).toBeVisible();
+      expect(requests.at(-1)?.hostedModel).toBe(model);
+      expect(requests.at(-1)?.mode).toBe(mode);
+    }
+  }
+  expect(requests).toHaveLength(18);
+});
+
+test("Plus slider stops at High and never offers Pro effort positions", async ({ page }) => {
+  await fixture(page, "dark", true, false, "plus");
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page.getByTestId("model-selector-trigger").click();
+  const slider = page.getByRole("slider", { name: "Response effort", exact: true });
+  await expect(slider).toHaveAttribute("max", "2");
+  await slider.press("End");
+  await expect(slider).toHaveAttribute("aria-valuetext", "High");
+  for (const mode of ["extra_high", "max", "ultra"])
+    await expect(page.getByTestId(`model-option-${mode}`)).toHaveCount(0);
+});

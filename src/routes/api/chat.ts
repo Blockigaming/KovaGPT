@@ -66,6 +66,7 @@ import {
   KOVA_HOSTED_TEXT_MODELS,
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
+import { hostedEffortBudget } from "@/lib/consumer-effort-policy.mjs";
 import { isKovaHostedModelId } from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import {
@@ -273,8 +274,10 @@ function reportedUsageFromSse(buffer: string): ReportedUsage | null {
       const parsed = JSON.parse(data) as Record<string, unknown>;
       const usage = parsed.usage as Record<string, unknown> | undefined;
       if (!usage) continue;
-      const inputDetails = usage.input_tokens_details as Record<string, unknown> | undefined;
-      const outputDetails = usage.output_tokens_details as Record<string, unknown> | undefined;
+      const inputDetails = (usage.prompt_tokens_details ?? usage.input_tokens_details) as
+        Record<string, unknown> | undefined;
+      const outputDetails = (usage.completion_tokens_details ?? usage.output_tokens_details) as
+        Record<string, unknown> | undefined;
       result = {
         input: Number(usage.prompt_tokens ?? 0),
         cachedInput: Number(inputDetails?.cached_tokens ?? 0),
@@ -1841,6 +1844,28 @@ export const Route = createFileRoute("/api/chat")({
                     ? 0.01
                     : 0);
             }
+            const hostedExecutionBudget = isKovaHostedModelId(model)
+              ? hostedEffortBudget(
+                  model,
+                  m.id,
+                  inputEstimate.tokens,
+                  outputCeiling,
+                  maximumProviderCalls,
+                )
+              : null;
+            if (hostedExecutionBudget) {
+              estimatedCost =
+                estimateMaximumCostUsd(
+                  catalogModel,
+                  hostedExecutionBudget.inputTokens,
+                  hostedExecutionBudget.outputTokens,
+                ) +
+                (selectedHostedTool === "data_analysis"
+                  ? 0.03
+                  : selectedHostedTool === "file_analysis"
+                    ? 0.01
+                    : 0);
+            }
             if (estimatedCost > runtimeConfig.maxCostUsdPerRequest) {
               return Response.json(
                 {
@@ -1876,6 +1901,7 @@ export const Route = createFileRoute("/api/chat")({
                   estimatedInputTokens: inputEstimate.tokens,
                   reservedTokens:
                     freeConnectorBudget?.reservedTokens ??
+                    hostedExecutionBudget?.reservedTokens ??
                     (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
                   estimatedCostUsd: estimatedCost,
                   contextTrimmed: messages.length > HISTORY_TURNS,
@@ -1927,6 +1953,15 @@ export const Route = createFileRoute("/api/chat")({
               finalToolMessages.push(message);
             };
             let providerCalls = 0;
+            const hostedInternalUsage = { input: 0, output: 0, cachedInput: 0, reasoning: 0 };
+            const hostedExecution = {
+              mode: m.id,
+              beforeSend: () => assertSelectedContextsCurrent(request.signal),
+              onUsage: (usage: typeof hostedInternalUsage) => {
+                for (const key of ["input", "output", "cachedInput", "reasoning"] as const)
+                  hostedInternalUsage[key] += usage[key];
+              },
+            };
             const activityEvents: Array<{
               tool: string;
               label: string;
@@ -1999,9 +2034,8 @@ export const Route = createFileRoute("/api/chat")({
                       tools: availableTools,
                       tool_choice: "auto",
                       stream: false,
-                      ...(freeConnectorBudget
-                        ? { max_completion_tokens: freeConnectorBudget.planningOutputTokens }
-                        : {}),
+                      max_completion_tokens:
+                        freeConnectorBudget?.planningOutputTokens ?? outputCeiling,
                     },
                     { signal: hopCtl.signal },
                     {
@@ -2009,6 +2043,7 @@ export const Route = createFileRoute("/api/chat")({
                       operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
                       chatId: chatId ?? "",
                     },
+                    { mode: m.id },
                   );
                 } catch {
                   clearTimeout(hopTimer);
@@ -2386,6 +2421,34 @@ export const Route = createFileRoute("/api/chat")({
             let upstream: Response;
             try {
               await assertSelectedContextsCurrent(request.signal);
+              if (
+                hostedExecutionBudget &&
+                hostedExecutionBudget.providerCalls > maximumProviderCalls
+              ) {
+                const finalInputTokens = estimateProviderInput({
+                  messages: finalBody.messages,
+                }).tokens;
+                const remainingGraph = hostedEffortBudget(
+                  model,
+                  m.id,
+                  finalInputTokens,
+                  outputCeiling,
+                );
+                const consumedPlanningCeiling =
+                  providerCalls * (inputEstimate.tokens + outputCeiling);
+                if (
+                  remainingGraph.reservedTokens + consumedPlanningCeiling >
+                  hostedExecutionBudget.reservedTokens
+                )
+                  throw new ChatPreflightError({
+                    stage: "generation_budget",
+                    code: "request_budget",
+                    status: 413,
+                    retryable: false,
+                    publicMessage:
+                      "Connected results exceed this effort's reserved generation budget. Narrow the request and try again.",
+                  });
+              }
               freeConnectorBudget?.startFinal(finalBody.messages);
               providerCalls += 1;
               const hostedTool = selectedHostedTool;
@@ -2415,6 +2478,7 @@ export const Route = createFileRoute("/api/chat")({
                     operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
                     chatId: chatId ?? "",
                   },
+                  hostedExecution,
                 );
             } catch (error) {
               const contextFailure = error instanceof ChatPreflightError;
@@ -2426,9 +2490,14 @@ export const Route = createFileRoute("/api/chat")({
                     ? "aborted"
                     : freeConnectorBudget
                       ? "aborted"
-                      : "provider_failed",
+                      : hostedInternalUsage.input > 0
+                        ? "aborted"
+                        : "provider_failed",
                 model: catalogModel,
-                inputTokens: inputEstimate.tokens * providerCalls,
+                inputTokens: inputEstimate.tokens * providerCalls + hostedInternalUsage.input,
+                outputTokens: hostedInternalUsage.output,
+                reasoningTokens: hostedInternalUsage.reasoning,
+                cachedInputTokens: hostedInternalUsage.cachedInput,
                 ...freeConnectorBudget?.usage(),
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
@@ -2467,9 +2536,15 @@ export const Route = createFileRoute("/api/chat")({
               const status = providerError.status;
               await finalizeGeneration({
                 eventId: usageEventId,
-                status: freeConnectorBudget ? "aborted" : "provider_rejected",
+                status:
+                  freeConnectorBudget || hostedInternalUsage.input > 0
+                    ? "aborted"
+                    : "provider_rejected",
                 model: catalogModel,
-                inputTokens: 0,
+                inputTokens: hostedInternalUsage.input,
+                outputTokens: hostedInternalUsage.output,
+                cachedInputTokens: hostedInternalUsage.cachedInput,
+                reasoningTokens: hostedInternalUsage.reasoning,
                 ...freeConnectorBudget?.usage(),
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
@@ -2572,9 +2647,14 @@ export const Route = createFileRoute("/api/chat")({
                   ? "client_disconnected"
                   : freeConnectorBudget
                     ? "aborted"
-                    : "provider_failed",
+                    : hostedInternalUsage.input > 0
+                      ? "aborted"
+                      : "provider_failed",
                 model: catalogModel,
-                inputTokens: inputEstimate.tokens * providerCalls,
+                inputTokens: inputEstimate.tokens * providerCalls + hostedInternalUsage.input,
+                outputTokens: hostedInternalUsage.output,
+                reasoningTokens: hostedInternalUsage.reasoning,
+                cachedInputTokens: hostedInternalUsage.cachedInput,
                 ...freeConnectorBudget?.usage(),
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
@@ -2667,14 +2747,19 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 await finalizeGeneration({
                   eventId: usageEventId,
-                  status: freeConnectorBudget && status === "provider_failed" ? "aborted" : status,
+                  status:
+                    (freeConnectorBudget || hostedInternalUsage.input > 0) &&
+                    status === "provider_failed"
+                      ? "aborted"
+                      : status,
                   model: catalogModel,
                   inputTokens:
                     (reported?.input ?? inputEstimate.tokens) +
-                    inputEstimate.tokens * Math.max(0, providerCalls - 1),
-                  cachedInputTokens: reported?.cachedInput ?? 0,
-                  outputTokens: reported?.output ?? outputFallback,
-                  reasoningTokens: reported?.reasoning ?? 0,
+                    inputEstimate.tokens * Math.max(0, providerCalls - 1) +
+                    hostedInternalUsage.input,
+                  cachedInputTokens: (reported?.cachedInput ?? 0) + hostedInternalUsage.cachedInput,
+                  outputTokens: (reported?.output ?? outputFallback) + hostedInternalUsage.output,
+                  reasoningTokens: (reported?.reasoning ?? 0) + hostedInternalUsage.reasoning,
                   ...freeConnectorBudget?.usage(),
                   latencyMs: Date.now() - startedAt,
                   toolCalls: activityEvents.length,

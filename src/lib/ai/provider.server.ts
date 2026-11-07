@@ -22,6 +22,8 @@ import {
   type DeadlineOutcome,
 } from "@/lib/ai/provider-transport.server.mjs";
 
+import type { HostedInternalUsage } from "@/lib/ai/hosted-effort.server.mjs";
+
 export type JsonObject = Record<string, unknown>;
 export type GenerationAcceptanceScope = { ownerId: string; operationId: string; chatId: string };
 
@@ -725,6 +727,11 @@ export async function chatCompletions(
   body: JsonObject,
   init?: RequestInit,
   acceptanceScope?: GenerationAcceptanceScope,
+  execution?: {
+    mode: string;
+    onUsage?: (usage: HostedInternalUsage) => void;
+    beforeSend?: () => Promise<void>;
+  },
 ): Promise<Response> {
   const stream = body.stream === true;
   if (isKovaHostedModelId(body.model)) {
@@ -745,8 +752,18 @@ export async function chatCompletions(
       });
     }
     try {
-      return await requestKovaHostedChat({
+      if (!execution)
+        return await requestKovaHostedChat({
+          request: body,
+          token: env("OPENROUTER_API_KEY"),
+          signal: init?.signal ?? undefined,
+        });
+      const { requestHostedEffort } = await import("@/lib/ai/hosted-effort.server.mjs");
+      return await requestHostedEffort({
         request: body,
+        mode: execution?.mode ?? "instant",
+        onUsage: execution?.onUsage,
+        beforeSend: execution?.beforeSend,
         token: env("OPENROUTER_API_KEY"),
         signal: init?.signal ?? undefined,
       });

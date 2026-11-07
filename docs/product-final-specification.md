@@ -49,6 +49,12 @@ The hosting provider may change to improve latency or availability only when the
 
 Reasoning effort, context limits and supported inputs must reflect each model's actual capabilities; Kova cannot invent native reasoning features simply by labeling a model "high thinking."
 
+### Consumer model efforts (owner update, November 7, 2026)
+
+There are exactly 18 model/effort configurations: each of the three foundations has Lite, Medium, High, Extra High, Max and Ultra. Free uses Argon Lite normally and Argon Medium with Thinking enabled. Plus unlocks Argon and Neon through High. Pro ($80/month) unlocks all three models and all six slider positions. Existing `thinking` ledger IDs represent Medium; obsolete `medium` saved requests normalize to that same position, not a seventh mode.
+
+Higher efforts increase allowed generation budgets and bounded same-model verification work. Actual usage determines cost; a higher setting does not guarantee that every simple question takes longer or costs more. Argon and Xenon use supported native none/low/high/max reasoning controls. Neon has no native reasoning switch, so additional same-foundation review passes provide its extra compute. Only Ultra runs four independent subagents in parallel, with the selected foundation coordinating the final answer. Max remains sequential self-review. All internal calls are reserved before execution, included in usage accounting, cancelled with the request, and inherit its account/context scope. Reviewers cannot call external tools or execute actions.
+
 ## 2. One unified Kova intelligence platform
 
 KovaGPT

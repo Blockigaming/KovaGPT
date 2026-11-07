@@ -4,7 +4,7 @@ import { configuredProvider } from "../../work-runner/provider.mjs";
 import { HOSTED_CHAT_URL } from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 
 const foundations = [
-  ["kova-argon-4.6", "deepseek/deepseek-v4-flash-0731", 4096],
+  ["kova-argon-4.6", "deepseek/deepseek-v4-flash-0731", 8192],
   ["kova-neon-4.6", "meta-llama/llama-4-maverick", 8192],
   ["kova-xenon-5", "moonshotai/kimi-k3", 8192],
 ];
@@ -81,7 +81,7 @@ test("hosted Work refuses provider substitution, mixed credential destinations, 
     {
       responsesUrl: HOSTED_CHAT_URL,
       models: ["kova-argon-4.6"],
-      modelCapabilities: [{ model: "kova-argon-4.6", reasoningEfforts: [], maxOutputTokens: 8192 }],
+      modelCapabilities: [{ model: "kova-argon-4.6", reasoningEfforts: [], maxOutputTokens: 8193 }],
     },
     {
       responsesUrl: HOSTED_CHAT_URL,
@@ -93,7 +93,7 @@ test("hosted Work refuses provider substitution, mixed credential destinations, 
   ])
     assert.throws(
       () => configuredProvider({ ...config, providerKey: "offline-hosted-key-for-work" }),
-      /work_provider_configuration_invalid/,
+      /work_(?:provider_configuration|model_capabilities)_invalid/,
     );
   let calls = 0;
   const provider = configuredProvider(
@@ -108,7 +108,7 @@ test("hosted Work refuses provider substitution, mixed credential destinations, 
     },
   );
   for (const request of [
-    { ...input("kova-argon-4.6"), maxOutputTokens: 4097 },
+    { ...input("kova-argon-4.6"), maxOutputTokens: 8193 },
     { ...input("kova-argon-4.6"), reasoningEffort: "max" },
     input("kova-xenon-5"),
   ])

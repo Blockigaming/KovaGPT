@@ -2,7 +2,7 @@
 
 > KovaGPT is an AI workspace for conversational drafting, coding help, web-assisted answers, research, and image generation.
 
-Signed-in Free users can select Default or Thinking. Thinking explicitly selects the next reasoning level. Plus includes Default, Medium, Thinking, and High. Pro additionally includes Extra High, Max, and Ultra. Model availability and usage limits are enforced by the server. Product labels do not imply separately trained model weights. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
+Signed-in Free users use Argon Lite normally and Argon Medium with Thinking enabled. Plus includes Argon and Neon in Lite, Medium and High. Pro includes all three models in Lite, Medium, High, Extra High, Max and Ultra. Ultra uses four parallel subagents of the selected foundation. Model availability and usage limits are enforced by the server. Product labels do not imply separately trained model weights. Older Kova model names may still appear in existing conversations. Voice input is not currently part of the supported web product. Search, research, connected apps, and image generation depend on configured providers and account access. Scheduled background work and image editing are not currently available.
 
 ## Pages
 
