@@ -22,6 +22,7 @@ import {
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
+import { createVoiceSilenceGate } from "@/lib/voice/speech-pause.mjs";
 import {
   createBrowserSpeechSink,
   createSpeechPlayback,
@@ -252,6 +253,8 @@ export function ComposerVoiceDialog({
   const configRequest = useRef<AbortController | null>(null);
   const recordingDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recordingClock = useRef<ReturnType<typeof setInterval> | null>(null);
+  const silenceMonitor = useRef<{ context: AudioContext; source: MediaStreamAudioSourceNode; interval: ReturnType<typeof setInterval>; gate: ReturnType<typeof createVoiceSilenceGate> } | null>(null);
+  const [handsFreeListening, setHandsFreeListening] = useState(false);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
   const objectUrl = useRef("");
@@ -277,6 +280,13 @@ export function ComposerVoiceDialog({
     if (recordingClock.current !== null) clearInterval(recordingClock.current);
     recordingDeadline.current = null;
     recordingClock.current = null;
+    const monitor = silenceMonitor.current;
+    silenceMonitor.current = null;
+    if (monitor) {
+      clearInterval(monitor.interval);
+      monitor.source.disconnect();
+      void monitor.context.close().catch(() => undefined);
+    }
   }, []);
 
   const releasePlayback = useCallback(() => {
@@ -360,6 +370,7 @@ export function ComposerVoiceDialog({
     setCanRetryRecording(false);
     setElapsed(0);
     setAudioUrl("");
+    setHandsFreeListening(false);
     updatePhase("idle");
     let timeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -755,6 +766,7 @@ export function ComposerVoiceDialog({
     if (phaseRef.current !== "recording" || recorder.current?.state !== "recording") return;
     updatePhase("stopping");
     clearRecordingTimers();
+    setHandsFreeListening(false);
     recorder.current.stop();
     stopTracks(stream.current);
     stream.current = null;
@@ -841,7 +853,47 @@ export function ComposerVoiceDialog({
       recordingClock.current = setInterval(() => {
         if (isCurrent(scope)) setElapsed(Math.min(59, Math.floor((Date.now() - started) / 1000)));
       }, 250);
-      recordingDeadline.current = setTimeout(stopRecording, MAX_RECORDING_MS);
+
+      // Only Voice conversation uses local audio energy to detect when a
+      // person finishes a turn. No raw samples or analysis leave the device.
+      // If Web Audio is unavailable, manual Finish turn remains functional.
+      if (mode === "voice" && typeof AudioContext !== "undefined") {
+        try {
+          const context = new AudioContext();
+          const source = context.createMediaStreamSource(acquired);
+          const analyser = context.createAnalyser();
+          analyser.fftSize = 1024;
+          source.connect(analyser);
+          const samples = new Float32Array(analyser.fftSize);
+          const gate = createVoiceSilenceGate();
+          const interval = setInterval(() => {
+            if (!isCurrent(scope) || phaseRef.current !== "recording") return;
+            analyser.getFloatTimeDomainData(samples);
+            let total = 0;
+            for (const sample of samples) total += sample * sample;
+            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+          }, 100);
+          silenceMonitor.current = { context, source, interval, gate };
+          setHandsFreeListening(true);
+          if (context.state === "suspended")
+            void context.resume().catch(() => {
+              // Unsupported or suspended analysis must not interfere with the
+              // user's manual Finish turn control.
+              setHandsFreeListening(false);
+            });
+        } catch {
+          // Recording is still usable in manual mode without Web Audio.
+          setHandsFreeListening(false);
+        }
+      }
+      recordingDeadline.current = setTimeout(() => {
+        if (mode === "voice" && silenceMonitor.current && !silenceMonitor.current.gate.hasSpeech()) {
+          cancelOperation();
+          setError("No speech detected before the listening limit. Press Start to try again.");
+          return;
+        }
+        stopRecording();
+      }, MAX_RECORDING_MS);
     } catch (cause) {
       stopTracks(acquired);
       if (!isCurrent(scope)) return;
@@ -1092,6 +1144,7 @@ export function ComposerVoiceDialog({
       phase={phase}
       mode={mode}
       status={status}
+      handsFreeListening={mode === "voice" && handsFreeListening}
       availability={
         !userId
           ? "guest"
