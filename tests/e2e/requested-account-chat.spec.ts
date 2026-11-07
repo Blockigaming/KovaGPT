@@ -28,10 +28,24 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   await fixture(page, "dark", true);
   await page.goto("/");
   const settings = await openCurrentSettings(page);
-  const sidebar = page.locator("[data-sidebar]").first();
-  const before = await sidebar.getAttribute("data-sidebar");
+  const sidebarPreferences = () =>
+    page.evaluate(() => [
+      localStorage.getItem("kova-sidebar-open"),
+      localStorage.getItem("kova-mobile-sidebar-open"),
+    ]);
+  const before = await sidebarPreferences();
+  // Desktop Settings replaces the shell; mobile Settings makes it inaccessible.
+  await expect
+    .poll(() =>
+      page
+        .locator("#kova-primary-navigation")
+        .evaluateAll((nodes) =>
+          nodes.every((node) => node.closest('[aria-hidden="true"], [inert]') !== null),
+        ),
+    )
+    .toBe(true);
   await page.keyboard.press("Control+Backslash");
-  await expect(sidebar).toHaveAttribute("data-sidebar", before!);
+  expect(await sidebarPreferences()).toEqual(before);
   await expect(settings).toHaveAttribute("data-settings-open", "true");
   for (const section of [
     "Profile",
@@ -146,22 +160,22 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   await page.screenshot({ path: info.outputPath("chat-share.png"), animations: "disabled" });
 });
 
-test("requested: public articles and legal pages have a searchable real page directory", async ({
-  page,
-}, info) => {
-  await fixture(page, "dark", false);
-  for (const path of [
-    "/company",
-    "/overview",
-    "/about",
-    "/features/chat",
-    "/help/billing",
-    "/terms",
-    "/privacy",
-    "/refund",
-    "/pricing",
-  ]) {
-    await page.goto(path);
+for (const path of [
+  "/company",
+  "/overview",
+  "/about",
+  "/features/chat",
+  "/help/billing",
+  "/terms",
+  "/privacy",
+  "/refund",
+  "/pricing",
+]) {
+  test(`requested: public articles and legal pages have a searchable real page directory: ${path}`, async ({
+    page,
+  }, info) => {
+    await fixture(page, "dark", false);
+    await page.goto(path, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     expect(
@@ -182,8 +196,8 @@ test("requested: public articles and legal pages have a searchable real page dir
         path: info.outputPath("public-company.png"),
         animations: "disabled",
       });
-  }
-});
+  });
+}
 
 test("requested: every published catalog route renders its actual content and shared footer", async ({
   request,
