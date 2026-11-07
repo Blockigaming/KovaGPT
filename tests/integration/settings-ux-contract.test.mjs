@@ -259,20 +259,29 @@ test("settings navigation is centralized and routes every rendered category", ()
   });
   const pageTabs = categories("pageGroups");
   assert.deepEqual(
-    pageTabs.map((tab) => sectionForTab(tab.value)),
+    pageTabs.map((tab) => [sectionForTab(tab.value), tab.label]),
     [
-      "profile",
-      "appearance",
-      "responses",
-      "memory",
-      "security",
-      "storage",
-      "notifications",
-      "connections",
-      "cloud-browser",
-      "privacy",
-      "usage",
-      "billing",
+      ["responses", "General"],
+      ["appearance", "Appearance"],
+      ["notifications", "Notifications"],
+      ["profile", "Profile"],
+      ["security", "Security and login"],
+      ["email", "Account"],
+      ["privacy", "Data controls"],
+      ["parental", "Parental controls"],
+      ["storage", "Storage"],
+      ["memory", "Personalization"],
+      ["shortcuts", "Keyboard"],
+      ["usage", "Usage"],
+      ["connections", "Connections"],
+      ["cloud-browser", "Cloud Browser"],
+      ["family", "Family Center"],
+      ["location", "Location"],
+      ["billing", "Subscriptions"],
+      ["report", "Report an issue"],
+      ["help", "Help center"],
+      ["about", "About"],
+      ["logout", "Log out"],
     ],
   );
   for (const tab of pageTabs) {
@@ -290,6 +299,17 @@ test("settings navigation is centralized and routes every rendered category", ()
   assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
   assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);
   assert.match(settingsSource, /onValueChange=\{selectTab\}/);
+});
+
+test("full-page Settings keeps reference-style navigation theme-aware and functional", () => {
+  assert.match(settingsSource, /title: "Personal"/);
+  assert.match(settingsSource, /label: "General", icon: Cog/);
+  assert.match(settingsSource, /aria-label="Send shortcut"/);
+  assert.match(settingsSource, /setSharedSendOnEnter\(user\?\.id \?\? null, enabled\)/);
+  assert.match(settingsPageStylesSource, /\.kova-settings-general-options/);
+  assert.match(settingsPageStylesSource, /background: var\(--background\)/);
+  assert.match(settingsPageStylesSource, /background: var\(--surface-selected\)/);
+  assert.doesNotMatch(settingsPageStylesSource, /background:\s*#(?:000|fff|000000|ffffff)\b/i);
 });
 
 test("mobile settings drill-in moves focus with the visible panel", () => {
