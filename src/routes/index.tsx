@@ -3474,16 +3474,7 @@ function KovaGPT() {
                     voiceMode={composerVoiceMode}
                     onVoiceModeChange={changeComposerVoiceMode}
                     onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
-                    latestAssistantText={
-                      active?.messages
-                        .filter(
-                          (message) =>
-                            message.role === "assistant" &&
-                            !message.generationStatus &&
-                            !message.pendingImage,
-                        )
-                        .at(-1)?.content
-                    }
+                    latestAssistantText={latestCompletedAssistant?.content}
                     latestAssistantReply={latestAssistantReply}
                     disabled={!principalReady}
                     sendDisabled={!historyReady}
@@ -3613,16 +3604,7 @@ function KovaGPT() {
                     voiceMode={composerVoiceMode}
                     onVoiceModeChange={changeComposerVoiceMode}
                     onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
-                    latestAssistantText={
-                      active?.messages
-                        .filter(
-                          (message) =>
-                            message.role === "assistant" &&
-                            !message.generationStatus &&
-                            !message.pendingImage,
-                        )
-                        .at(-1)?.content
-                    }
+                    latestAssistantText={latestCompletedAssistant?.content}
                     latestAssistantReply={latestAssistantReply}
                     disabled={!principalReady}
                     sendDisabled={!historyReady}
