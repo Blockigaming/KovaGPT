@@ -76,7 +76,6 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const SETTINGS_SECTIONS = {
   profile: "personalization",
-  archived: "data",
   voice: "voice",
   appearance: "appearance",
   responses: "general",
@@ -84,6 +83,7 @@ export const SETTINGS_SECTIONS = {
   connections: "linked",
   "cloud-browser": "cloud-browser",
   privacy: "data",
+  archived: "data",
   usage: "usage",
   billing: "billing",
   memory: "memory",

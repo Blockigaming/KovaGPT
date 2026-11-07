@@ -58,16 +58,28 @@ test("requested: every Settings section has room and Settings owns sidebar inter
     "Connections",
     "Cloud Browser",
     "Data controls",
-    "Archived chats",
     "Voice",
     "Usage",
     "Subscriptions",
   ]) {
     await chooseSettingsSection(page, section);
-    expect(
-      await settings.evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
-      section,
-    ).toBe(true);
+    const geometry = await settings.evaluate((node) => ({
+      width: node.clientWidth,
+      scroll: node.scrollWidth,
+      overflow: Array.from(node.querySelectorAll("*"))
+        .filter(
+          (item) => item.getBoundingClientRect().right > node.getBoundingClientRect().right + 1,
+        )
+        .map((item) => ({
+          tag: item.tagName,
+          className: item.className,
+          text: item.textContent?.slice(0, 70),
+        }))
+        .slice(-12),
+    }));
+    expect(geometry.scroll, `${section}: ${JSON.stringify(geometry)}`).toBeLessThanOrEqual(
+      geometry.width + 1,
+    );
     const panel = settings.getByRole("tabpanel").first();
     expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth + 1), section).toBe(
       true,

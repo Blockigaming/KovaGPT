@@ -1,6 +1,6 @@
 # KovaGPT interface cleanup — review
 
-Local branch: `fix/owner-interface-cleanup-20261107`. Based on main through PR #603, including the Free-only Thinking toggle and paid model controls. No production deployment or live Stripe purchase was performed.
+Published PR: [#605](https://github.com/Blockigaming/KovaGPT/pull/605), branch `fix/owner-interface-cleanup-20261107`. Based on main through PR #603, including the Free-only Thinking toggle and paid model controls. No production deployment or live Stripe purchase was performed.
 
 | Request | Implemented behavior                                                                                                                                                                                                                                                                    |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,8 +34,8 @@ Local branch: `fix/owner-interface-cleanup-20261107`. Based on main through PR #
 
 ## Production limits
 
-The two additive migrations have not been applied to production. Team needs the four live recurring Stripe prices matching `team-billing-policy.mjs`, configured webhook delivery, reviewed tax configuration, and a real payment/invitation acceptance run. Both seat types currently use the existing Pro model-access entitlement; a separate Premium usage multiplier is not implemented or advertised.
+The two additive migrations were applied to production on November 7. The four live recurring Stripe prices match `team-billing-policy.mjs`; the existing enabled webhook retains lifecycle events and now includes dispute, refund and early-fraud events. RLS and server-only Team permissions were verified. Stripe has no tax registrations configured; automatic tax remains disabled. A real payment/invitation acceptance run remains outstanding. Both seat types currently use the existing Pro model-access entitlement; a separate Premium usage multiplier is not implemented or advertised.
 
 Team customers are included in final account retirement, with database locking against late checkout bindings. Live diagnosis of the reported sync failure remains necessary; local retry/reconciliation tests cannot prove the production database and authentication configuration.
 
-The GitHub push was rejected by automatic approval review. This branch has not been published, merged or deployed.
+After owner authorization, the exact tested Git tree was published through the connected GitHub account in PR #605. CI exposed a Data controls alias bug and browser tests expecting retired Archive/Images behavior; these are corrected before merge. No production application deployment is claimed here.
