@@ -14,7 +14,7 @@ for (const theme of ["dark", "light"] as const) {
     await expect(page.locator(".kova-topbar")).toHaveCount(0);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
-    await expect(surface.getByRole("heading", { name: "Memory", exact: true })).toBeVisible();
+    await expect(surface.getByRole("heading", { name: "Personalization", exact: true })).toBeVisible();
     await expect(surface.locator(".kova-settings-page-header")).toHaveCount(0);
     const top = (await surface.boundingBox())!.y;
     const header = surface.locator(".kova-settings-content-header");
