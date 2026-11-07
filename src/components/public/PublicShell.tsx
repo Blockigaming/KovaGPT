@@ -1,3 +1,5 @@
+import "./public-foundation.css";
+import "./spec400-public.css";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { NovaLogo } from "@/components/NovaLogo";

@@ -105,7 +105,6 @@ export function DiscoveryWorkspace({ initialMode = "web" }: { initialMode?: Disc
 function DiscoverySession({ userId, initialMode }: { userId: string; initialMode: DiscoveryMode }) {
   const [mode, setMode] = useState(initialMode),
     [query, setQuery] = useState(""),
-    [location, setLocation] = useState(""),
     [ready, setReady] = useState<boolean | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -207,7 +206,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
       operation: "search",
       mode,
       query,
-      location: mode === "local" ? location : "",
+      location: "",
     });
     if (data?.operation === "search") {
       setResults(data.results);
@@ -265,7 +264,6 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
               disabled={busy}
               onClick={() => {
                 setMode(value);
-                if (value !== "local") setLocation("");
               }}
             >
               {labels[value]}
@@ -285,9 +283,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             maxLength={300}
             required
             placeholder={
-              mode === "local"
-                ? "Quiet cafes or restaurants"
-                : mode === "shopping"
+              mode === "shopping"
                   ? "Exact product, size, color, or model"
                   : "Search the public web"
             }
@@ -305,7 +301,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
         
         <div className="flex gap-2">
           <Button
-            disabled={!ready || busy || !query.trim() || (mode === "local" && !location.trim())}
+            disabled={!ready || busy || !query.trim()}
           >
             {busy ? "Searching…" : "Search"}
           </Button>

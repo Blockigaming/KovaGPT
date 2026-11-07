@@ -1,4 +1,3 @@
-import "./public-website.css";
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
