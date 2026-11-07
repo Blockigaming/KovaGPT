@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
-import { elements, text } from "../helpers/ui-state-harness.mjs";
+import { z } from "zod";
+import { elements, text, loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 function parse(path) {
   const source = ts.createSourceFile(
@@ -95,12 +96,20 @@ test("project Settings danger and route confirmation disclose saved Results and 
     React: {
       createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
     },
+    projectAppearance: loadUiModule("src/lib/project-appearance.ts", { zod: { z } })
+      .projectAppearance,
     useState: (value) => [value, () => {}],
     ...Object.fromEntries(
-      ["Input", "Textarea", "Button", "Loader2", "Save", "Trash2", "ConfirmDialog"].map((name) => [
-        name,
-        name,
-      ]),
+      [
+        "Input",
+        "Textarea",
+        "Button",
+        "Loader2",
+        "Save",
+        "Trash2",
+        "ConfirmDialog",
+        "ProjectAppearanceEditor",
+      ].map((name) => [name, name]),
     ),
   });
   const tree = render({ project: { name: "Research" }, onSave() {}, onDelete });
