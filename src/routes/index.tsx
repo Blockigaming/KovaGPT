@@ -428,7 +428,6 @@ function KovaGPT() {
     attachments: PendingAttachment[];
   } | null>(null);
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (!principalReady || attachmentDraftPrincipalRef.current !== storagePrincipal) {
       attachmentDraftsRef.current.clear();
       attachmentDraftPrincipalRef.current = storagePrincipal;
@@ -468,7 +467,6 @@ function KovaGPT() {
     setAttachments(files);
   }, [activeId, principalReady, tempChat, userKey, storagePrincipal, setInput, setAttachments]);
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (tempChat || !principalReady) return;
     const key = draftStorageKey(userKey, activeId);
     if (lastLoadedDraftRef.current !== key) return;
@@ -553,7 +551,6 @@ function KovaGPT() {
   // Family Sharing: if the URL carries ?family_invite=TOKEN, redeem it once
   // the user is signed in and drop the param.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     const token = url.searchParams.get("family_invite");
     if (!token) return;
@@ -1037,7 +1034,7 @@ function KovaGPT() {
   // Persist local edits only. Hydration and cross-tab snapshots must not
   // schedule a write that can overwrite a newer preference from another tab.
   useEffect(() => {
-    if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
+    if (!settingsReady || !settingsState.persist) return;
     const generation = storageGenerationRef.current;
     const t = setTimeout(() => {
       if (generation !== storageGenerationRef.current) return;
@@ -1584,7 +1581,7 @@ function KovaGPT() {
     newChat();
     // A destination URL can update while this chat shell is still rendering.
     // A new-chat action must cancel that pending navigation as well as reset chat.
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+    if (window.location.pathname !== "/") {
       void navigate({ to: "/" });
     }
   }, [newChat, navigate]);
@@ -2545,7 +2542,7 @@ function KovaGPT() {
       expectedNext: NextPrompt | null,
     ) => {
       nextPromptFocusCleanupRef.current?.();
-      if (!trigger || typeof document === "undefined") return;
+      if (!trigger) return;
       const composer = trigger.closest<HTMLElement>(".spec400-chat-input");
       if (!composer) return;
       const scope = nextPromptScopeRef.current;
