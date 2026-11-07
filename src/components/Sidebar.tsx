@@ -20,7 +20,6 @@ import {
   MessageSquare,
   ChevronDown,
   LogOut,
-  BriefcaseBusiness,
   Map,
   CircleHelp,
   Copy as CopyIcon,
@@ -82,7 +81,6 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   projects: ProjectsGlyph,
   "scheduled-tasks": TasksGlyph,
   apps: PluginsGlyph,
-  work: BriefcaseBusiness,
   maps: Map,
   memory: Brain,
   settings: SettingsGlyph,
@@ -1687,9 +1685,7 @@ export function Sidebar({
               <details
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
-                open={
-                  isOn("/maps") || (isOn("/work") && !railShortcuts.includes("work")) || undefined
-                }
+                open={isOn("/maps") || undefined}
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
@@ -1697,9 +1693,6 @@ export function Sidebar({
                 </summary>
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
-                  : null}
-                {signedIn && !railShortcuts.includes("work")
-                  ? navLink("/work", "Work", SHORTCUT_ICONS.work)
                   : null}
                 {signedIn ? (
                   <button
