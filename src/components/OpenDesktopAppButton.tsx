@@ -69,8 +69,8 @@ export function OpenDesktopAppButton() {
             {error}
           </p>
         ) : null}
-        <Link to="/download" className="text-sm underline">
-          See installation options
+        <Link to="/help" className="text-sm underline">
+          Installation help
         </Link>
       </DialogContent>
     </Dialog>

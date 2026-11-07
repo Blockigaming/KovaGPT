@@ -2115,7 +2115,7 @@ export function SettingsDialog({
 
                   <nav className="kova-billing-help-links" aria-label="Billing help and policies">
                     <Link
-                      to="/getting-started"
+                      to="/help"
                       onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
