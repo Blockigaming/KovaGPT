@@ -24,7 +24,7 @@ param adminPublicKey string
 param adminUsername string = 'kovaworkadmin'
 
 @description('Keep current size until native acceptance and concurrent browser memory checks pass on the cheaper candidate. Resizing restarts the host.')
-@allowed(['Standard_D2as_v4', 'Standard_B2als_v2'])
+@allowed(['Standard_D2as_v4', 'Standard_B2as_v2', 'Standard_B2als_v2'])
 param vmSize string = 'Standard_D2as_v4'
 
 @secure()

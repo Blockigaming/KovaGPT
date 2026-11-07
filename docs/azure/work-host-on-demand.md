@@ -8,6 +8,18 @@ did not resize, start, or stop the VM, install host source, change app/cron
 settings, deploy an image, or change production traffic. Automatic idle power
 saving has not been activated by this permission update. The 4 GiB
 `Standard_B2als_v2` is a test candidate, not a qualified production minimum.
+Its 4 GiB cannot safely cover four 768 MiB browsers, two 256 MiB Python jobs,
+and the host. Prefer evaluating the burstable 8 GiB `Standard_B2as_v2` first.
+The November 7 eastus retail API returned Linux consumption rates of $0.0752/hour
+for that size and $0.096/hour for the original size, excluding disks and IPs.
+
+The registry was downgraded from Standard to Basic after confirming 1.344 GiB
+stored, zero webhooks, and zero custom scope maps/tokens. The existing production
+image digest remained readable. No images were deleted. A concurrent plans
+release now serves 100% from `kovagpt-prod-web--plans606-ca6eab2` with 0.25 CPU
+and 0.5 GiB. The separate `cost512-220946` test revision was deactivated and its
+label removed to avoid retaining a second billed replica. These are resource
+read-backs, not complete customer acceptance or a promised future bill.
 
 On November 7, Azure Cost Analysis showed $20.71 month-to-date and a $39.73
 forecast. VM compute was $10.97; Container Apps $6.62; registry $1.62. The Work
@@ -79,7 +91,7 @@ and executed no VM power operations.
    idle expiry, asleep account-deletion retry, and admitted-while-stopping recovery.
    Confirm app readiness/history reads do not repeatedly start the VM. Observe
    actual deallocated state and then a second successful cold start.
-8. Only then test the cheaper 4 GiB candidate in an idle maintenance window.
+8. Only then test the cheaper burstable candidate in an idle maintenance window.
    Verify eastus SKU availability, Trusted Launch, x64 compatibility, vCPU credit
    behavior, native isolation, worst-case browser/Python memory, concurrent
    sessions, provider latency, queues, and OOM/restart counters. Revert to the

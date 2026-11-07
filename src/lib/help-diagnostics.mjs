@@ -1,4 +1,4 @@
-import { DAILY_PLAN_ALLOWANCES } from "./plan-usage-policy.mjs";
+import { PLAN_USAGE_FACTOR } from "./plan-usage-policy.mjs";
 /** Contextual paths, not a claim that every path is a separate root-cause article. */
 export const HELP_ENVIRONMENTS = Object.freeze([
   {
@@ -143,7 +143,12 @@ export function contextualHelp(faq, { environment, connection, plan, stage = "fi
     throw new Error("Choose a valid help setup.");
   const situation = HELP_STAGES.find((item) => item.id === stage);
   if (!situation) throw new Error("Choose a valid help stage.");
-  const limits = DAILY_PLAN_ALLOWANCES[plan];
+  const usageSummary =
+    plan === "free"
+      ? "Kova Free has very limited usage. All chat models have usage limits."
+      : plan === "plus"
+        ? `Kova Plus has ${PLAN_USAGE_FACTOR.plus / PLAN_USAGE_FACTOR.free}× Free usage. All chat models have usage limits.`
+        : `Kova Pro has ${PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.free}× Free usage (${PLAN_USAGE_FACTOR.pro}× Plus), unlimited basic chat with Argon Lite, and limited advanced model usage.`;
   const needsBrowser = /Troubleshooting|Account|Chat|Search|Files|Apps|Settings|Privacy/.test(
     faq.category,
   );
@@ -153,7 +158,7 @@ export function contextualHelp(faq, { environment, connection, plan, stage = "fi
     network.step,
     situation.step,
     /Billing|Chat|Files/.test(faq.category)
-      ? `Kova ${plan === "free" ? "Free" : plan === "plus" ? "Plus" : "Pro"} includes ${limits.regularMessages.toLocaleString()} regular messages and ${limits.thinkingMessages.toLocaleString()} Thinking messages, ${limits.images} images, and ${limits.uploads} uploads per UTC day. Check Settings → Usage for your actual percentage used. Token and technical limits also apply.`
+      ? `${usageSummary} Check Settings → Usage for your actual percentage used. Security and per-request limits still apply.`
       : "Confirm that you are signed in to the account that owns the affected item.",
     "If this still fails, send Support the exact error, page, time, browser, and steps that reproduce it. Never include passwords, verification codes, API keys, or card details.",
   ];

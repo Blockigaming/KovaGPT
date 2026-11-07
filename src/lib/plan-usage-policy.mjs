@@ -1,5 +1,5 @@
 /** Plus is the baseline. These factors apply to request and token allowances. */
-export const PLAN_USAGE_FACTOR = Object.freeze({ guest: 0, free: 0.2, plus: 1, pro: 15 });
+export const PLAN_USAGE_FACTOR = Object.freeze({ guest: 0, free: 0.2, plus: 1, pro: 20 });
 export function planAllowance(plusAllowance, plan) {
   if (
     !Number.isSafeInteger(plusAllowance) ||
@@ -50,4 +50,9 @@ export function chatUsageWindows(tier, now = new Date()) {
   return tier === "plus"
     ? [window("five_hour", fiveHourStart, FIVE_HOURS_MS, 1), weekly]
     : [weekly];
+}
+
+/** Only the server-resolved Pro default model is outside the advanced allowance. */
+export function isUnlimitedBasicChat(tier, modelId, mode) {
+  return tier === "pro" && modelId === "kova-argon-4.6" && mode === "instant";
 }

@@ -56,34 +56,12 @@ test("comparison keeps each tier's mode and allowance data in the correct column
   const tiers = ["free", "plus", "pro"];
   const plans = Object.fromEntries(tiers.map((tier) => [tier, { name: tier }]));
   const modesByTier = Object.fromEntries(tiers.map((tier) => [tier, [{ label: `${tier}-mode` }]]));
-  const allowances = Object.fromEntries(
-    tiers.map((tier) => [
-      tier,
-      Object.fromEntries(
-        ["chat", "image", "upload", "storage"].map((key) => [key, `${tier}-${key}`]),
-      ),
-    ]),
-  );
-  const windows = {
-    free: [{ id: "daily", regularLimit: 51, thinkingLimit: 11 }],
-    plus: [
-      { id: "five_hour", regularLimit: 251, thinkingLimit: 52 },
-      { id: "weekly", regularLimit: 1751, thinkingLimit: 351 },
-    ],
-    pro: [{ id: "weekly", regularLimit: 26251, thinkingLimit: 5251 }],
-  };
   const { PlanComparison } = loadUiModule("src/components/public/PlanComparison.tsx", {
     "@/lib/plan-usage-policy.mjs": {
-      chatUsageWindows: (tier) => windows[tier],
-      DAILY_PLAN_ALLOWANCES: {
-        free: { images: 8, uploads: 3 },
-        plus: { images: 40, uploads: 15 },
-        pro: { images: 600, uploads: 225 },
-      },
+      PLAN_USAGE_FACTOR: { free: 0.2, plus: 1, pro: 20 },
     },
     "@/lib/capability-registry": {
       CAPABILITY_REGISTRY: { plans, modesByTier },
-      PLAN_ALLOWANCE_COPY: allowances,
     },
   });
   const tree = PlanComparison();
@@ -94,11 +72,11 @@ test("comparison keeps each tier's mode and allowance data in the correct column
     ),
     [
       ["free-mode", "plus-mode", "pro-mode"],
-      ["51 / day", "251 / 5 hours 1,751 / week", "26,251 / week"],
-      ["11 / day", "52 / 5 hours 351 / week", "5,251 / week"],
-      ["8", "40", "600"],
-      ["3", "15", "225"],
-      ["free-storage", "plus-storage", "pro-storage"],
+      ["Very limited", "5× Free", "100× Free (20× Plus)"],
+      ["Limited", "Limited", "Unlimited with Argon Lite"],
+      ["Argon Medium, limited", "Argon and Neon, limited", "All advanced models, limited"],
+      ["Limited", "Expanded", "Highest allowance"],
+      ["Included", "Included", "Included"],
     ],
   );
   assert.equal(elements(tree, (node) => node.props.role === "region")[0].props.tabIndex, 0);

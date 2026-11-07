@@ -643,7 +643,7 @@ const helpRows = [
     "Compare plan allowances",
     "Free is $0; Plus is $16/month; Pro is $80/month.",
     "Choose around the work",
-    "Free provides published basic chat and Thinking allowances. Plus provides the baseline paid allowance. Pro provides fifteen times the Plus message allowance under the current usage policy; technical, provider, and execution limits still apply.",
+    "Free offers very limited chat usage. Plus has 5× Free usage and limits on all chat models. Pro has 20× Plus usage, or 100× Free, with unlimited basic Argon Lite chat. Advanced model usage is limited.",
     [
       "Free: 2 active Scheduled Tasks",
       "Plus: 5 active Scheduled Tasks",

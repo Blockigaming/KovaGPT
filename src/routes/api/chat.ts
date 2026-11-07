@@ -1013,18 +1013,6 @@ export const Route = createFileRoute("/api/chat")({
             // Guests always receive the basic instant agent, even if a custom
             // client attempts to submit a higher mode directly to the API.
             const m = !auth ? getMode("instant") : allowed ? requested : getMode("auto");
-            if (auth && !isOwner && !capture) {
-              await assertSelectedContextsCurrent(request.signal);
-              const quota = await preflight.run("chat_quota", (signal) =>
-                enforceDailyMessageQuota(
-                  auth,
-                  callerTier,
-                  m.id !== "instant" && m.id !== "medium",
-                  signal,
-                ),
-              );
-              if (quota) return quota;
-            }
             const MAX_ATTACHMENTS_PER_REQUEST = 2;
             // Quotas apply to files submitted in this turn, not attachments in
             // older conversation history. This also keeps edit/regenerate from
@@ -1183,6 +1171,19 @@ export const Route = createFileRoute("/api/chat")({
                 },
                 { status: 403, headers: { "Cache-Control": "no-store" } },
               );
+            }
+            if (auth && !isOwner && !capture) {
+              await assertSelectedContextsCurrent(request.signal);
+              const quota = await preflight.run("chat_quota", (signal) =>
+                enforceDailyMessageQuota(
+                  auth,
+                  callerTier,
+                  m.id !== "instant" && m.id !== "medium",
+                  signal,
+                  { modelId: model, mode: m.id },
+                ),
+              );
+              if (quota) return quota;
             }
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
