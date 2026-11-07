@@ -120,8 +120,16 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
       await expect(chatNavigation.getByRole("link", { name, exact: true })).toBeVisible();
     }
     await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
-    await expect(chatNavigation.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
-    await chatNavigation.getByRole("link", { name: "Library", exact: true }).click();
+    const work = chatNavigation.getByRole("link", { name: "Work", exact: true });
+    await expect(work).toBeVisible();
+    await expect(work).toHaveCount(1);
+    await work.click();
+    await expect(page).toHaveURL(/\/work$/);
+    await expect(
+      page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),
+    ).toBeVisible();
+    const workNavigation = await revealSidebar(page);
+    await workNavigation.getByRole("link", { name: "Library", exact: true }).click();
     await expect(page).toHaveURL(/\/library$/);
     const libraryNavigation = await revealSidebar(page);
     await libraryNavigation.getByRole("button", { name: "New chat", exact: true }).click();
