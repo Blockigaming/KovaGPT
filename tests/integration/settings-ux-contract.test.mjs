@@ -305,7 +305,7 @@ test("settings navigation is centralized and routes every rendered category", ()
 
 test("full-page Settings keeps reference-style navigation theme-aware and functional", () => {
   assert.match(settingsSource, /title: "Personal"/);
-  assert.match(settingsSource, /label: "General", icon: Cog/);
+  assert.match(settingsSource, /label: "General",\s*icon: Cog/);
   assert.match(settingsSource, /aria-label="Send shortcut"/);
   assert.match(settingsSource, /setSharedSendOnEnter\(user\?\.id \?\? null, enabled\)/);
   assert.match(settingsPageStylesSource, /\.kova-settings-general-options/);
