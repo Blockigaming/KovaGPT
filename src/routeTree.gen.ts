@@ -10,39 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SlugRouteImport } from './routes/$slug'
-import { Route as AcademyRouteImport } from './routes/academy'
-import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
-import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
-import { Route as AiSafetyRouteImport } from './routes/ai-safety'
-import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AppsRouteImport } from './routes/apps'
-import { Route as AssistantsRouteImport } from './routes/assistants'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BrainRouteImport } from './routes/brain'
-import { Route as ChangelogRouteImport } from './routes/changelog'
-import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
-import { Route as CodeHelperRouteImport } from './routes/code-helper'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
-import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FilesRouteImport } from './routes/files'
-import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HelpRouteImport } from './routes/help'
-import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
 import { Route as KovasRouteImport } from './routes/kovas'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as MapsRouteImport } from './routes/maps'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MemoryRouteImport } from './routes/memory'
-import { Route as ModesRouteImport } from './routes/modes'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OmegaRouteImport } from './routes/omega'
 import { Route as OrganizationRouteImport } from './routes/organization'
@@ -51,16 +36,12 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PromptStudioRouteImport } from './routes/prompt-studio'
 import { Route as RefundRouteImport } from './routes/refund'
-import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as ShareInboxRouteImport } from './routes/share-inbox'
 import { Route as SignupRouteImport } from './routes/signup'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SitesRouteImport } from './routes/sites'
-import { Route as StatusRouteImport } from './routes/status'
 import { Route as StudyRouteImport } from './routes/study'
-import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as SubscribeRouteImport } from './routes/subscribe'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -68,8 +49,6 @@ import { Route as TrustedContactsRouteImport } from './routes/trusted-contacts'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as WriteRouteImport } from './routes/write'
-import { Route as LocaleHomeRouteImport } from './routes/$locale.home'
-import { Route as SectionArticleSlugRouteImport } from './routes/$section.$articleSlug'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } from './routes/[.well-known]/oauth-authorization-server'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -99,33 +78,17 @@ import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as ApiVoiceRouteImport } from './routes/api/voice'
 import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
-import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants.$assistantSlug'
-import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
-import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
-import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as DevelopersIndexRouteImport } from './routes/developers.index'
-import { Route as DevelopersDocSlugRouteImport } from './routes/developers.$docSlug'
-import { Route as DevelopersAuthorizeRouteImport } from './routes/developers.authorize'
-import { Route as DevelopersConnectionsRouteImport } from './routes/developers.connections'
-import { Route as DevelopersConsoleRouteImport } from './routes/developers.console'
-import { Route as DevelopersPricingRouteImport } from './routes/developers.pricing'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as SettingsSectionRouteImport } from './routes/settings.$section'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
-import { Route as TranslateIndexRouteImport } from './routes/translate.index'
-import { Route as TranslatePairSlugRouteImport } from './routes/translate.$pairSlug'
-import { Route as WritingIndexRouteImport } from './routes/writing.index'
-import { Route as WritingToolSlugRouteImport } from './routes/writing.$toolSlug'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
-import { Route as SectionCategoryArticleSlugRouteImport } from './routes/$section.$category.$articleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiAccountEmailPreferencesRouteImport } from './routes/api/account/email-preferences'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
-import { Route as ApiAdminDeveloperBillingRouteImport } from './routes/api/admin/developer-billing'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
 import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
@@ -143,10 +106,6 @@ import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
 import { Route as ApiChatShareTokenRouteImport } from './routes/api/chat-share.$token'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
-import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/console'
-import { Route as ApiDeveloperFilesRouteImport } from './routes/api/developer/files'
-import { Route as ApiDeveloperFundingRouteImport } from './routes/api/developer/funding'
-import { Route as ApiDeveloperMcpRouteImport } from './routes/api/developer/mcp'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
 import { Route as ApiFinancesManageRouteImport } from './routes/api/finances/manage'
@@ -168,8 +127,6 @@ import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integr
 import { Route as ApiInternalAccountDeletionsRouteImport } from './routes/api/internal/account-deletions'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
-import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/internal/developer-billing'
-import { Route as ApiInternalDeveloperFundingRouteImport } from './routes/api/internal/developer-funding'
 import { Route as ApiInternalEmailDispatchRouteImport } from './routes/api/internal/email-dispatch'
 import { Route as ApiInternalGoogleOauthCleanupRouteImport } from './routes/api/internal/google-oauth-cleanup'
 import { Route as ApiInternalReceiptMaintenanceRouteImport } from './routes/api/internal/receipt-maintenance'
@@ -185,26 +142,18 @@ import { Route as ApiLibraryBulkMoveRouteImport } from './routes/api/library/bul
 import { Route as ApiLibraryFilesRouteImport } from './routes/api/library/files'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiLibraryItemsRouteImport } from './routes/api/library/items'
-import { Route as ApiMapsSearchRouteImport } from './routes/api/maps/search'
 import { Route as ApiOpenaiWebhookRouteImport } from './routes/api/openai/webhook'
 import { Route as ApiOrganizationsScimRouteImport } from './routes/api/organizations/scim'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
 import { Route as ApiSecurityLockdownRouteImport } from './routes/api/security/lockdown'
 import { Route as ApiTasksEventSourcesRouteImport } from './routes/api/tasks/event-sources'
-import { Route as ApiV1EmbeddingsRouteImport } from './routes/api/v1/embeddings'
-import { Route as ApiV1FilesRouteImport } from './routes/api/v1/files'
-import { Route as ApiV1ImagesRouteImport } from './routes/api/v1/images'
-import { Route as ApiV1ModelsRouteImport } from './routes/api/v1/models'
-import { Route as ApiV1QuotesRouteImport } from './routes/api/v1/quotes'
-import { Route as ApiV1ResponsesRouteImport } from './routes/api/v1/responses'
 import { Route as ApiWorkBrowserRouteImport } from './routes/api/work/browser'
 import { Route as ApiWorkExecutionRouteImport } from './routes/api/work/execution'
 import { Route as ApiWorkOutputRouteImport } from './routes/api/work/output'
 import { Route as ApiWorkSyncRouteImport } from './routes/api/work/sync'
 import { Route as ApiWorkspaceSearchRouteImport } from './routes/api/workspace/search'
 import { Route as OauthMcpActionRouteImport } from './routes/oauth/mcp/$action'
-import { Route as SectionCategorySubcategoryArticleSlugRouteImport } from './routes/$section.$category.$subcategory.$articleSlug'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiAuthGoogleExchangeRouteImport } from './routes/api/auth/google/exchange'
 import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
@@ -219,7 +168,6 @@ import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/re
 import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
 import { Route as ApiAuthSessionsRevokeOthersRouteImport } from './routes/api/auth/sessions/revoke-others'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify/resend'
-import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -238,44 +186,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SlugRoute = SlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AcademyRoute = AcademyRouteImport.update({
-  id: '/academy',
-  path: '/academy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AiHumanizerRoute = AiHumanizerRouteImport.update({
-  id: '/ai-humanizer',
-  path: '/ai-humanizer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AiImageGeneratorRoute = AiImageGeneratorRouteImport.update({
-  id: '/ai-image-generator',
-  path: '/ai-image-generator',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AiSafetyRoute = AiSafetyRouteImport.update({
-  id: '/ai-safety',
-  path: '/ai-safety',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AiWriterRoute = AiWriterRouteImport.update({
-  id: '/ai-writer',
-  path: '/ai-writer',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppsRoute = AppsRouteImport.update({
   id: '/apps',
   path: '/apps',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssistantsRoute = AssistantsRouteImport.update({
-  id: '/assistants',
-  path: '/assistants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditLogRoute = AuditLogRouteImport.update({
@@ -291,21 +204,6 @@ const AuthRoute = AuthRouteImport.update({
 const BrainRoute = BrainRouteImport.update({
   id: '/brain',
   path: '/brain',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChangelogRoute = ChangelogRouteImport.update({
-  id: '/changelog',
-  path: '/changelog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChatgptAlternativeRoute = ChatgptAlternativeRouteImport.update({
-  id: '/chatgpt-alternative',
-  path: '/chatgpt-alternative',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CodeHelperRoute = CodeHelperRouteImport.update({
-  id: '/code-helper',
-  path: '/code-helper',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectRoute = ConnectRouteImport.update({
@@ -328,19 +226,9 @@ const DiscoveryRoute = DiscoveryRouteImport.update({
   path: '/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DownloadRoute = DownloadRouteImport.update({
-  id: '/download',
-  path: '/download',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GettingStartedRoute = GettingStartedRouteImport.update({
-  id: '/getting-started',
-  path: '/getting-started',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GoalsRoute = GoalsRouteImport.update({
@@ -351,11 +239,6 @@ const GoalsRoute = GoalsRouteImport.update({
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HumanizeAiTextRoute = HumanizeAiTextRouteImport.update({
-  id: '/humanize-ai-text',
-  path: '/humanize-ai-text',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImagesRoute = ImagesRouteImport.update({
@@ -383,11 +266,6 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MapsRoute = MapsRouteImport.update({
-  id: '/maps',
-  path: '/maps',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
@@ -396,11 +274,6 @@ const McpRoute = McpRouteImport.update({
 const MemoryRoute = MemoryRouteImport.update({
   id: '/memory',
   path: '/memory',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ModesRoute = ModesRouteImport.update({
-  id: '/modes',
-  path: '/modes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -443,11 +316,6 @@ const RefundRoute = RefundRouteImport.update({
   path: '/refund',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResearchAssistantRoute = ResearchAssistantRouteImport.update({
-  id: '/research-assistant',
-  path: '/research-assistant',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -468,29 +336,14 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SitesRoute = SitesRouteImport.update({
   id: '/sites',
   path: '/sites',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StatusRoute = StatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const StudyRoute = StudyRouteImport.update({
   id: '/study',
   path: '/study',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StudyAssistantRoute = StudyAssistantRouteImport.update({
-  id: '/study-assistant',
-  path: '/study-assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubscribeRoute = SubscribeRouteImport.update({
@@ -526,16 +379,6 @@ const WorkRoute = WorkRouteImport.update({
 const WriteRoute = WriteRouteImport.update({
   id: '/write',
   path: '/write',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LocaleHomeRoute = LocaleHomeRouteImport.update({
-  id: '/$locale/home',
-  path: '/$locale/home',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SectionArticleSlugRoute = SectionArticleSlugRouteImport.update({
-  id: '/$section/$articleSlug',
-  path: '/$section/$articleSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93ListToolsRoute =
@@ -686,61 +529,9 @@ const ApiWriteRoute = ApiWriteRouteImport.update({
   path: '/api/write',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AssistantsAssistantSlugRoute = AssistantsAssistantSlugRouteImport.update({
-  id: '/$assistantSlug',
-  path: '/$assistantSlug',
-  getParentRoute: () => AssistantsRoute,
-} as any)
-const BlogAiMarketResearchGuideRoute =
-  BlogAiMarketResearchGuideRouteImport.update({
-    id: '/blog/ai-market-research-guide',
-    path: '/blog/ai-market-research-guide',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const BlogBestAiAssistantsRoute = BlogBestAiAssistantsRouteImport.update({
-  id: '/blog/best-ai-assistants',
-  path: '/blog/best-ai-assistants',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BlogBestAiMarketResearchToolsRoute =
-  BlogBestAiMarketResearchToolsRouteImport.update({
-    id: '/blog/best-ai-market-research-tools',
-    path: '/blog/best-ai-market-research-tools',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersIndexRoute = DevelopersIndexRouteImport.update({
-  id: '/developers/',
-  path: '/developers/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersDocSlugRoute = DevelopersDocSlugRouteImport.update({
-  id: '/developers/$docSlug',
-  path: '/developers/$docSlug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersAuthorizeRoute = DevelopersAuthorizeRouteImport.update({
-  id: '/developers/authorize',
-  path: '/developers/authorize',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersConnectionsRoute = DevelopersConnectionsRouteImport.update({
-  id: '/developers/connections',
-  path: '/developers/connections',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersConsoleRoute = DevelopersConsoleRouteImport.update({
-  id: '/developers/console',
-  path: '/developers/console',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersPricingRoute = DevelopersPricingRouteImport.update({
-  id: '/developers/pricing',
-  path: '/developers/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -768,37 +559,11 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TranslateIndexRoute = TranslateIndexRouteImport.update({
-  id: '/translate/',
-  path: '/translate/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TranslatePairSlugRoute = TranslatePairSlugRouteImport.update({
-  id: '/translate/$pairSlug',
-  path: '/translate/$pairSlug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WritingIndexRoute = WritingIndexRouteImport.update({
-  id: '/writing/',
-  path: '/writing/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WritingToolSlugRoute = WritingToolSlugRouteImport.update({
-  id: '/writing/$toolSlug',
-  path: '/writing/$toolSlug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   id: '/~oauth/callback',
   path: '/~oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SectionCategoryArticleSlugRoute =
-  SectionCategoryArticleSlugRouteImport.update({
-    id: '/$section/$category/$articleSlug',
-    path: '/$section/$category/$articleSlug',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -821,12 +586,6 @@ const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
   path: '/api/admin/ai-usage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAdminDeveloperBillingRoute =
-  ApiAdminDeveloperBillingRouteImport.update({
-    id: '/api/admin/developer-billing',
-    path: '/api/admin/developer-billing',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
   id: '/api/admin/diagnostics',
   path: '/api/admin/diagnostics',
@@ -911,26 +670,6 @@ const ApiChatHistoryRoute = ApiChatHistoryRouteImport.update({
   id: '/history',
   path: '/history',
   getParentRoute: () => ApiChatRoute,
-} as any)
-const ApiDeveloperConsoleRoute = ApiDeveloperConsoleRouteImport.update({
-  id: '/api/developer/console',
-  path: '/api/developer/console',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDeveloperFilesRoute = ApiDeveloperFilesRouteImport.update({
-  id: '/api/developer/files',
-  path: '/api/developer/files',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDeveloperFundingRoute = ApiDeveloperFundingRouteImport.update({
-  id: '/api/developer/funding',
-  path: '/api/developer/funding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDeveloperMcpRoute = ApiDeveloperMcpRouteImport.update({
-  id: '/api/developer/mcp',
-  path: '/api/developer/mcp',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFinancesExchangeRoute = ApiFinancesExchangeRouteImport.update({
   id: '/api/finances/exchange',
@@ -1040,18 +779,6 @@ const ApiInternalChatSummariesRoute =
     path: '/api/internal/chat-summaries',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiInternalDeveloperBillingRoute =
-  ApiInternalDeveloperBillingRouteImport.update({
-    id: '/api/internal/developer-billing',
-    path: '/api/internal/developer-billing',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiInternalDeveloperFundingRoute =
-  ApiInternalDeveloperFundingRouteImport.update({
-    id: '/api/internal/developer-funding',
-    path: '/api/internal/developer-funding',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiInternalEmailDispatchRoute =
   ApiInternalEmailDispatchRouteImport.update({
     id: '/api/internal/email-dispatch',
@@ -1135,11 +862,6 @@ const ApiLibraryItemsRoute = ApiLibraryItemsRouteImport.update({
   path: '/api/library/items',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMapsSearchRoute = ApiMapsSearchRouteImport.update({
-  id: '/api/maps/search',
-  path: '/api/maps/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiOpenaiWebhookRoute = ApiOpenaiWebhookRouteImport.update({
   id: '/api/openai/webhook',
   path: '/api/openai/webhook',
@@ -1168,36 +890,6 @@ const ApiSecurityLockdownRoute = ApiSecurityLockdownRouteImport.update({
 const ApiTasksEventSourcesRoute = ApiTasksEventSourcesRouteImport.update({
   id: '/api/tasks/event-sources',
   path: '/api/tasks/event-sources',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1EmbeddingsRoute = ApiV1EmbeddingsRouteImport.update({
-  id: '/api/v1/embeddings',
-  path: '/api/v1/embeddings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1FilesRoute = ApiV1FilesRouteImport.update({
-  id: '/api/v1/files',
-  path: '/api/v1/files',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1ImagesRoute = ApiV1ImagesRouteImport.update({
-  id: '/api/v1/images',
-  path: '/api/v1/images',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1ModelsRoute = ApiV1ModelsRouteImport.update({
-  id: '/api/v1/models',
-  path: '/api/v1/models',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1QuotesRoute = ApiV1QuotesRouteImport.update({
-  id: '/api/v1/quotes',
-  path: '/api/v1/quotes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiV1ResponsesRoute = ApiV1ResponsesRouteImport.update({
-  id: '/api/v1/responses',
-  path: '/api/v1/responses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWorkBrowserRoute = ApiWorkBrowserRouteImport.update({
@@ -1230,12 +922,6 @@ const OauthMcpActionRoute = OauthMcpActionRouteImport.update({
   path: '/oauth/mcp/$action',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SectionCategorySubcategoryArticleSlugRoute =
-  SectionCategorySubcategoryArticleSlugRouteImport.update({
-    id: '/$section/$category/$subcategory/$articleSlug',
-    path: '/$section/$category/$subcategory/$articleSlug',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
   id: '/api/auth/google/callback',
   path: '/api/auth/google/callback',
@@ -1307,12 +993,6 @@ const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   path: '/resend',
   getParentRoute: () => ApiAuthVerifyRoute,
 } as any)
-const ApiDeveloperPaymentsWebhookRoute =
-  ApiDeveloperPaymentsWebhookRouteImport.update({
-    id: '/api/developer/payments/webhook',
-    path: '/api/developer/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiIntegrationsOauthDisconnectRoute =
   ApiIntegrationsOauthDisconnectRouteImport.update({
     id: '/api/integrations/oauth/disconnect',
@@ -1387,39 +1067,24 @@ const ApiScimV2OrganizationIdSplatRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$slug': typeof SlugRoute
-  '/academy': typeof AcademyRoute
-  '/ai-humanizer': typeof AiHumanizerRoute
-  '/ai-image-generator': typeof AiImageGeneratorRoute
-  '/ai-safety': typeof AiSafetyRoute
-  '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
-  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/brain': typeof BrainRoute
-  '/changelog': typeof ChangelogRoute
-  '/chatgpt-alternative': typeof ChatgptAlternativeRoute
-  '/code-helper': typeof CodeHelperRoute
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/discovery': typeof DiscoveryRoute
-  '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
-  '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
-  '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
-  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
-  '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
   '/organization': typeof OrganizationRoute
@@ -1428,16 +1093,12 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
-  '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
   '/signup': typeof SignupRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sites': typeof SitesRoute
-  '/status': typeof StatusRoute
   '/study': typeof StudyRoute
-  '/study-assistant': typeof StudyAssistantRoute
   '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
@@ -1445,8 +1106,6 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
-  '/$locale/home': typeof LocaleHomeRoute
-  '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1476,33 +1135,17 @@ export interface FileRoutesByFullPath {
   '/api/voice': typeof ApiVoiceRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
-  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
-  '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
-  '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
-  '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
-  '/developers/$docSlug': typeof DevelopersDocSlugRoute
-  '/developers/authorize': typeof DevelopersAuthorizeRoute
-  '/developers/connections': typeof DevelopersConnectionsRoute
-  '/developers/console': typeof DevelopersConsoleRoute
-  '/developers/pricing': typeof DevelopersPricingRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
   '/share/$token': typeof ShareTokenRoute
-  '/translate/$pairSlug': typeof TranslatePairSlugRoute
-  '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
-  '/developers/': typeof DevelopersIndexRoute
-  '/translate/': typeof TranslateIndexRoute
-  '/writing/': typeof WritingIndexRoute
-  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
-  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/admin/kovas': typeof ApiAdminKovasRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -1520,10 +1163,6 @@ export interface FileRoutesByFullPath {
   '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
-  '/api/developer/console': typeof ApiDeveloperConsoleRoute
-  '/api/developer/files': typeof ApiDeveloperFilesRoute
-  '/api/developer/funding': typeof ApiDeveloperFundingRoute
-  '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -1545,8 +1184,6 @@ export interface FileRoutesByFullPath {
   '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
-  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
-  '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
   '/api/internal/email-dispatch': typeof ApiInternalEmailDispatchRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
@@ -1562,26 +1199,18 @@ export interface FileRoutesByFullPath {
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
-  '/api/maps/search': typeof ApiMapsSearchRoute
   '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
-  '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
-  '/api/v1/files': typeof ApiV1FilesRoute
-  '/api/v1/images': typeof ApiV1ImagesRoute
-  '/api/v1/models': typeof ApiV1ModelsRoute
-  '/api/v1/quotes': typeof ApiV1QuotesRoute
-  '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
-  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
@@ -1595,7 +1224,6 @@ export interface FileRoutesByFullPath {
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
-  '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1612,39 +1240,24 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$slug': typeof SlugRoute
-  '/academy': typeof AcademyRoute
-  '/ai-humanizer': typeof AiHumanizerRoute
-  '/ai-image-generator': typeof AiImageGeneratorRoute
-  '/ai-safety': typeof AiSafetyRoute
-  '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
-  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/brain': typeof BrainRoute
-  '/changelog': typeof ChangelogRoute
-  '/chatgpt-alternative': typeof ChatgptAlternativeRoute
-  '/code-helper': typeof CodeHelperRoute
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/discovery': typeof DiscoveryRoute
-  '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
-  '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
-  '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
-  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
-  '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
   '/organization': typeof OrganizationRoute
@@ -1653,16 +1266,12 @@ export interface FileRoutesByTo {
   '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
-  '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
   '/signup': typeof SignupRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sites': typeof SitesRoute
-  '/status': typeof StatusRoute
   '/study': typeof StudyRoute
-  '/study-assistant': typeof StudyAssistantRoute
   '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
@@ -1670,8 +1279,6 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
-  '/$locale/home': typeof LocaleHomeRoute
-  '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1701,33 +1308,17 @@ export interface FileRoutesByTo {
   '/api/voice': typeof ApiVoiceRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
-  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
-  '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
-  '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
-  '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
-  '/developers/$docSlug': typeof DevelopersDocSlugRoute
-  '/developers/authorize': typeof DevelopersAuthorizeRoute
-  '/developers/connections': typeof DevelopersConnectionsRoute
-  '/developers/console': typeof DevelopersConsoleRoute
-  '/developers/pricing': typeof DevelopersPricingRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
   '/share/$token': typeof ShareTokenRoute
-  '/translate/$pairSlug': typeof TranslatePairSlugRoute
-  '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
-  '/developers': typeof DevelopersIndexRoute
-  '/translate': typeof TranslateIndexRoute
-  '/writing': typeof WritingIndexRoute
-  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
-  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/admin/kovas': typeof ApiAdminKovasRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -1745,10 +1336,6 @@ export interface FileRoutesByTo {
   '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
-  '/api/developer/console': typeof ApiDeveloperConsoleRoute
-  '/api/developer/files': typeof ApiDeveloperFilesRoute
-  '/api/developer/funding': typeof ApiDeveloperFundingRoute
-  '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -1770,8 +1357,6 @@ export interface FileRoutesByTo {
   '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
-  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
-  '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
   '/api/internal/email-dispatch': typeof ApiInternalEmailDispatchRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
@@ -1787,26 +1372,18 @@ export interface FileRoutesByTo {
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
-  '/api/maps/search': typeof ApiMapsSearchRoute
   '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
-  '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
-  '/api/v1/files': typeof ApiV1FilesRoute
-  '/api/v1/images': typeof ApiV1ImagesRoute
-  '/api/v1/models': typeof ApiV1ModelsRoute
-  '/api/v1/quotes': typeof ApiV1QuotesRoute
-  '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
-  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
@@ -1820,7 +1397,6 @@ export interface FileRoutesByTo {
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
-  '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1838,39 +1414,24 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$slug': typeof SlugRoute
-  '/academy': typeof AcademyRoute
-  '/ai-humanizer': typeof AiHumanizerRoute
-  '/ai-image-generator': typeof AiImageGeneratorRoute
-  '/ai-safety': typeof AiSafetyRoute
-  '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
-  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/brain': typeof BrainRoute
-  '/changelog': typeof ChangelogRoute
-  '/chatgpt-alternative': typeof ChatgptAlternativeRoute
-  '/code-helper': typeof CodeHelperRoute
   '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/discovery': typeof DiscoveryRoute
-  '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
-  '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
-  '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
-  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
-  '/modes': typeof ModesRoute
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
   '/organization': typeof OrganizationRoute
@@ -1879,16 +1440,12 @@ export interface FileRoutesById {
   '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
-  '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
   '/signup': typeof SignupRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sites': typeof SitesRoute
-  '/status': typeof StatusRoute
   '/study': typeof StudyRoute
-  '/study-assistant': typeof StudyAssistantRoute
   '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
@@ -1896,8 +1453,6 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
-  '/$locale/home': typeof LocaleHomeRoute
-  '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-authorization-server': typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1927,33 +1482,17 @@ export interface FileRoutesById {
   '/api/voice': typeof ApiVoiceRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
-  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
-  '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
-  '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
-  '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
-  '/developers/$docSlug': typeof DevelopersDocSlugRoute
-  '/developers/authorize': typeof DevelopersAuthorizeRoute
-  '/developers/connections': typeof DevelopersConnectionsRoute
-  '/developers/console': typeof DevelopersConsoleRoute
-  '/developers/pricing': typeof DevelopersPricingRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
   '/share/$token': typeof ShareTokenRoute
-  '/translate/$pairSlug': typeof TranslatePairSlugRoute
-  '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
-  '/developers/': typeof DevelopersIndexRoute
-  '/translate/': typeof TranslateIndexRoute
-  '/writing/': typeof WritingIndexRoute
-  '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
-  '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/admin/kovas': typeof ApiAdminKovasRoute
   '/api/admin/pricing': typeof ApiAdminPricingRoute
@@ -1971,10 +1510,6 @@ export interface FileRoutesById {
   '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
-  '/api/developer/console': typeof ApiDeveloperConsoleRoute
-  '/api/developer/files': typeof ApiDeveloperFilesRoute
-  '/api/developer/funding': typeof ApiDeveloperFundingRoute
-  '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/manage': typeof ApiFinancesManageRoute
@@ -1996,8 +1531,6 @@ export interface FileRoutesById {
   '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
-  '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
-  '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
   '/api/internal/email-dispatch': typeof ApiInternalEmailDispatchRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
@@ -2013,26 +1546,18 @@ export interface FileRoutesById {
   '/api/library/files': typeof ApiLibraryFilesRoute
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
-  '/api/maps/search': typeof ApiMapsSearchRoute
   '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
   '/api/security/lockdown': typeof ApiSecurityLockdownRoute
   '/api/tasks/event-sources': typeof ApiTasksEventSourcesRoute
-  '/api/v1/embeddings': typeof ApiV1EmbeddingsRoute
-  '/api/v1/files': typeof ApiV1FilesRoute
-  '/api/v1/images': typeof ApiV1ImagesRoute
-  '/api/v1/models': typeof ApiV1ModelsRoute
-  '/api/v1/quotes': typeof ApiV1QuotesRoute
-  '/api/v1/responses': typeof ApiV1ResponsesRoute
   '/api/work/browser': typeof ApiWorkBrowserRoute
   '/api/work/execution': typeof ApiWorkExecutionRoute
   '/api/work/output': typeof ApiWorkOutputRoute
   '/api/work/sync': typeof ApiWorkSyncRoute
   '/api/workspace/search': typeof ApiWorkspaceSearchRoute
   '/oauth/mcp/$action': typeof OauthMcpActionRoute
-  '/$section/$category/$subcategory/$articleSlug': typeof SectionCategorySubcategoryArticleSlugRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/exchange': typeof ApiAuthGoogleExchangeRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
@@ -2046,7 +1571,6 @@ export interface FileRoutesById {
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
-  '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -2065,39 +1589,24 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/$slug'
-    | '/academy'
-    | '/ai-humanizer'
-    | '/ai-image-generator'
-    | '/ai-safety'
-    | '/ai-writer'
     | '/apps'
-    | '/assistants'
     | '/audit-log'
     | '/auth'
     | '/brain'
-    | '/changelog'
-    | '/chatgpt-alternative'
-    | '/code-helper'
     | '/connect'
     | '/contact-support'
     | '/context-packs'
     | '/discovery'
-    | '/download'
     | '/files'
-    | '/getting-started'
     | '/goals'
     | '/help'
-    | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
     | '/login'
-    | '/maps'
     | '/mcp'
     | '/memory'
-    | '/modes'
     | '/notifications'
     | '/omega'
     | '/organization'
@@ -2106,16 +1615,12 @@ export interface FileRouteTypes {
     | '/projects'
     | '/prompt-studio'
     | '/refund'
-    | '/research-assistant'
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
     | '/signup'
-    | '/sitemap.xml'
     | '/sites'
-    | '/status'
     | '/study'
-    | '/study-assistant'
     | '/subscribe'
     | '/summary'
     | '/terms'
@@ -2123,8 +1628,6 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/work'
     | '/write'
-    | '/$locale/home'
-    | '/$section/$articleSlug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
@@ -2154,33 +1657,17 @@ export interface FileRouteTypes {
     | '/api/voice'
     | '/api/weather'
     | '/api/write'
-    | '/assistants/$assistantSlug'
-    | '/blog/ai-market-research-guide'
-    | '/blog/best-ai-assistants'
-    | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
-    | '/developers/$docSlug'
-    | '/developers/authorize'
-    | '/developers/connections'
-    | '/developers/console'
-    | '/developers/pricing'
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
     | '/settings/$section'
     | '/share/$token'
-    | '/translate/$pairSlug'
-    | '/writing/$toolSlug'
     | '/~oauth/callback'
-    | '/developers/'
-    | '/translate/'
-    | '/writing/'
-    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
-    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
     | '/api/admin/kovas'
     | '/api/admin/pricing'
@@ -2198,10 +1685,6 @@ export interface FileRouteTypes {
     | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
-    | '/api/developer/console'
-    | '/api/developer/files'
-    | '/api/developer/funding'
-    | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2223,8 +1706,6 @@ export interface FileRouteTypes {
     | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
-    | '/api/internal/developer-billing'
-    | '/api/internal/developer-funding'
     | '/api/internal/email-dispatch'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
@@ -2240,26 +1721,18 @@ export interface FileRouteTypes {
     | '/api/library/files'
     | '/api/library/folders'
     | '/api/library/items'
-    | '/api/maps/search'
     | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
-    | '/api/v1/embeddings'
-    | '/api/v1/files'
-    | '/api/v1/images'
-    | '/api/v1/models'
-    | '/api/v1/quotes'
-    | '/api/v1/responses'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
-    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/auth/google/callback'
     | '/api/auth/google/exchange'
     | '/api/auth/google/start'
@@ -2273,7 +1746,6 @@ export interface FileRouteTypes {
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
-    | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -2290,39 +1762,24 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/$slug'
-    | '/academy'
-    | '/ai-humanizer'
-    | '/ai-image-generator'
-    | '/ai-safety'
-    | '/ai-writer'
     | '/apps'
-    | '/assistants'
     | '/audit-log'
     | '/auth'
     | '/brain'
-    | '/changelog'
-    | '/chatgpt-alternative'
-    | '/code-helper'
     | '/connect'
     | '/contact-support'
     | '/context-packs'
     | '/discovery'
-    | '/download'
     | '/files'
-    | '/getting-started'
     | '/goals'
     | '/help'
-    | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
     | '/login'
-    | '/maps'
     | '/mcp'
     | '/memory'
-    | '/modes'
     | '/notifications'
     | '/omega'
     | '/organization'
@@ -2331,16 +1788,12 @@ export interface FileRouteTypes {
     | '/projects'
     | '/prompt-studio'
     | '/refund'
-    | '/research-assistant'
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
     | '/signup'
-    | '/sitemap.xml'
     | '/sites'
-    | '/status'
     | '/study'
-    | '/study-assistant'
     | '/subscribe'
     | '/summary'
     | '/terms'
@@ -2348,8 +1801,6 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/work'
     | '/write'
-    | '/$locale/home'
-    | '/$section/$articleSlug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
@@ -2379,33 +1830,17 @@ export interface FileRouteTypes {
     | '/api/voice'
     | '/api/weather'
     | '/api/write'
-    | '/assistants/$assistantSlug'
-    | '/blog/ai-market-research-guide'
-    | '/blog/best-ai-assistants'
-    | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
-    | '/developers/$docSlug'
-    | '/developers/authorize'
-    | '/developers/connections'
-    | '/developers/console'
-    | '/developers/pricing'
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
     | '/settings/$section'
     | '/share/$token'
-    | '/translate/$pairSlug'
-    | '/writing/$toolSlug'
     | '/~oauth/callback'
-    | '/developers'
-    | '/translate'
-    | '/writing'
-    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
-    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
     | '/api/admin/kovas'
     | '/api/admin/pricing'
@@ -2423,10 +1858,6 @@ export interface FileRouteTypes {
     | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
-    | '/api/developer/console'
-    | '/api/developer/files'
-    | '/api/developer/funding'
-    | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2448,8 +1879,6 @@ export interface FileRouteTypes {
     | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
-    | '/api/internal/developer-billing'
-    | '/api/internal/developer-funding'
     | '/api/internal/email-dispatch'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
@@ -2465,26 +1894,18 @@ export interface FileRouteTypes {
     | '/api/library/files'
     | '/api/library/folders'
     | '/api/library/items'
-    | '/api/maps/search'
     | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
-    | '/api/v1/embeddings'
-    | '/api/v1/files'
-    | '/api/v1/images'
-    | '/api/v1/models'
-    | '/api/v1/quotes'
-    | '/api/v1/responses'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
-    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/auth/google/callback'
     | '/api/auth/google/exchange'
     | '/api/auth/google/start'
@@ -2498,7 +1919,6 @@ export interface FileRouteTypes {
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
-    | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -2515,39 +1935,24 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/$slug'
-    | '/academy'
-    | '/ai-humanizer'
-    | '/ai-image-generator'
-    | '/ai-safety'
-    | '/ai-writer'
     | '/apps'
-    | '/assistants'
     | '/audit-log'
     | '/auth'
     | '/brain'
-    | '/changelog'
-    | '/chatgpt-alternative'
-    | '/code-helper'
     | '/connect'
     | '/contact-support'
     | '/context-packs'
     | '/discovery'
-    | '/download'
     | '/files'
-    | '/getting-started'
     | '/goals'
     | '/help'
-    | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
     | '/login'
-    | '/maps'
     | '/mcp'
     | '/memory'
-    | '/modes'
     | '/notifications'
     | '/omega'
     | '/organization'
@@ -2556,16 +1961,12 @@ export interface FileRouteTypes {
     | '/projects'
     | '/prompt-studio'
     | '/refund'
-    | '/research-assistant'
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
     | '/signup'
-    | '/sitemap.xml'
     | '/sites'
-    | '/status'
     | '/study'
-    | '/study-assistant'
     | '/subscribe'
     | '/summary'
     | '/terms'
@@ -2573,8 +1974,6 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/work'
     | '/write'
-    | '/$locale/home'
-    | '/$section/$articleSlug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
@@ -2604,33 +2003,17 @@ export interface FileRouteTypes {
     | '/api/voice'
     | '/api/weather'
     | '/api/write'
-    | '/assistants/$assistantSlug'
-    | '/blog/ai-market-research-guide'
-    | '/blog/best-ai-assistants'
-    | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
-    | '/developers/$docSlug'
-    | '/developers/authorize'
-    | '/developers/connections'
-    | '/developers/console'
-    | '/developers/pricing'
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
     | '/settings/$section'
     | '/share/$token'
-    | '/translate/$pairSlug'
-    | '/writing/$toolSlug'
     | '/~oauth/callback'
-    | '/developers/'
-    | '/translate/'
-    | '/writing/'
-    | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
     | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
-    | '/api/admin/developer-billing'
     | '/api/admin/diagnostics'
     | '/api/admin/kovas'
     | '/api/admin/pricing'
@@ -2648,10 +2031,6 @@ export interface FileRouteTypes {
     | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
-    | '/api/developer/console'
-    | '/api/developer/files'
-    | '/api/developer/funding'
-    | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/manage'
@@ -2673,8 +2052,6 @@ export interface FileRouteTypes {
     | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
-    | '/api/internal/developer-billing'
-    | '/api/internal/developer-funding'
     | '/api/internal/email-dispatch'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
@@ -2690,26 +2067,18 @@ export interface FileRouteTypes {
     | '/api/library/files'
     | '/api/library/folders'
     | '/api/library/items'
-    | '/api/maps/search'
     | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
     | '/api/security/lockdown'
     | '/api/tasks/event-sources'
-    | '/api/v1/embeddings'
-    | '/api/v1/files'
-    | '/api/v1/images'
-    | '/api/v1/models'
-    | '/api/v1/quotes'
-    | '/api/v1/responses'
     | '/api/work/browser'
     | '/api/work/execution'
     | '/api/work/output'
     | '/api/work/sync'
     | '/api/workspace/search'
     | '/oauth/mcp/$action'
-    | '/$section/$category/$subcategory/$articleSlug'
     | '/api/auth/google/callback'
     | '/api/auth/google/exchange'
     | '/api/auth/google/start'
@@ -2723,7 +2092,6 @@ export interface FileRouteTypes {
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
-    | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -2741,39 +2109,24 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SlugRoute: typeof SlugRoute
-  AcademyRoute: typeof AcademyRoute
-  AiHumanizerRoute: typeof AiHumanizerRoute
-  AiImageGeneratorRoute: typeof AiImageGeneratorRoute
-  AiSafetyRoute: typeof AiSafetyRoute
-  AiWriterRoute: typeof AiWriterRoute
   AppsRoute: typeof AppsRoute
-  AssistantsRoute: typeof AssistantsRouteWithChildren
   AuditLogRoute: typeof AuditLogRoute
   AuthRoute: typeof AuthRoute
   BrainRoute: typeof BrainRoute
-  ChangelogRoute: typeof ChangelogRoute
-  ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
-  CodeHelperRoute: typeof CodeHelperRoute
   ConnectRoute: typeof ConnectRoute
   ContactSupportRoute: typeof ContactSupportRoute
   ContextPacksRoute: typeof ContextPacksRoute
   DiscoveryRoute: typeof DiscoveryRoute
-  DownloadRoute: typeof DownloadRoute
   FilesRoute: typeof FilesRoute
-  GettingStartedRoute: typeof GettingStartedRoute
   GoalsRoute: typeof GoalsRoute
   HelpRoute: typeof HelpRoute
-  HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
   KovasRoute: typeof KovasRoute
   LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
-  MapsRoute: typeof MapsRoute
   McpRoute: typeof McpRoute
   MemoryRoute: typeof MemoryRoute
-  ModesRoute: typeof ModesRoute
   NotificationsRoute: typeof NotificationsRoute
   OmegaRoute: typeof OmegaRoute
   OrganizationRoute: typeof OrganizationRoute
@@ -2782,16 +2135,12 @@ export interface RootRouteChildren {
   ProjectsRoute: typeof ProjectsRouteWithChildren
   PromptStudioRoute: typeof PromptStudioRoute
   RefundRoute: typeof RefundRoute
-  ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScheduledTasksRoute: typeof ScheduledTasksRoute
   ShareInboxRoute: typeof ShareInboxRoute
   SignupRoute: typeof SignupRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SitesRoute: typeof SitesRoute
-  StatusRoute: typeof StatusRoute
   StudyRoute: typeof StudyRoute
-  StudyAssistantRoute: typeof StudyAssistantRoute
   SubscribeRoute: typeof SubscribeRoute
   SummaryRoute: typeof SummaryRoute
   TermsRoute: typeof TermsRoute
@@ -2799,8 +2148,6 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   WorkRoute: typeof WorkRoute
   WriteRoute: typeof WriteRoute
-  LocaleHomeRoute: typeof LocaleHomeRoute
-  SectionArticleSlugRoute: typeof SectionArticleSlugRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthAuthorizationServerRoute: typeof Char91DotwellKnownChar93OauthAuthorizationServerRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2830,29 +2177,14 @@ export interface RootRouteChildren {
   ApiVoiceRoute: typeof ApiVoiceRoute
   ApiWeatherRoute: typeof ApiWeatherRoute
   ApiWriteRoute: typeof ApiWriteRoute
-  BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
-  BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
-  BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
-  DevelopersDocSlugRoute: typeof DevelopersDocSlugRoute
-  DevelopersAuthorizeRoute: typeof DevelopersAuthorizeRoute
-  DevelopersConnectionsRoute: typeof DevelopersConnectionsRoute
-  DevelopersConsoleRoute: typeof DevelopersConsoleRoute
-  DevelopersPricingRoute: typeof DevelopersPricingRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
   SettingsSectionRoute: typeof SettingsSectionRoute
   ShareTokenRoute: typeof ShareTokenRoute
-  TranslatePairSlugRoute: typeof TranslatePairSlugRoute
-  WritingToolSlugRoute: typeof WritingToolSlugRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
-  DevelopersIndexRoute: typeof DevelopersIndexRoute
-  TranslateIndexRoute: typeof TranslateIndexRoute
-  WritingIndexRoute: typeof WritingIndexRoute
-  SectionCategoryArticleSlugRoute: typeof SectionCategoryArticleSlugRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
-  ApiAdminDeveloperBillingRoute: typeof ApiAdminDeveloperBillingRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
   ApiAdminKovasRoute: typeof ApiAdminKovasRoute
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
@@ -2867,10 +2199,6 @@ export interface RootRouteChildren {
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
   ApiAuthTokenRoute: typeof ApiAuthTokenRoute
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
-  ApiDeveloperConsoleRoute: typeof ApiDeveloperConsoleRoute
-  ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
-  ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
-  ApiDeveloperMcpRoute: typeof ApiDeveloperMcpRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
   ApiFinancesManageRoute: typeof ApiFinancesManageRoute
@@ -2892,8 +2220,6 @@ export interface RootRouteChildren {
   ApiInternalAccountDeletionsRoute: typeof ApiInternalAccountDeletionsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
-  ApiInternalDeveloperBillingRoute: typeof ApiInternalDeveloperBillingRoute
-  ApiInternalDeveloperFundingRoute: typeof ApiInternalDeveloperFundingRoute
   ApiInternalEmailDispatchRoute: typeof ApiInternalEmailDispatchRoute
   ApiInternalGoogleOauthCleanupRoute: typeof ApiInternalGoogleOauthCleanupRoute
   ApiInternalReceiptMaintenanceRoute: typeof ApiInternalReceiptMaintenanceRoute
@@ -2908,24 +2234,16 @@ export interface RootRouteChildren {
   ApiLibraryFilesRoute: typeof ApiLibraryFilesRoute
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiLibraryItemsRoute: typeof ApiLibraryItemsRoute
-  ApiMapsSearchRoute: typeof ApiMapsSearchRoute
   ApiOpenaiWebhookRoute: typeof ApiOpenaiWebhookRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
-  ApiV1EmbeddingsRoute: typeof ApiV1EmbeddingsRoute
-  ApiV1FilesRoute: typeof ApiV1FilesRoute
-  ApiV1ImagesRoute: typeof ApiV1ImagesRoute
-  ApiV1ModelsRoute: typeof ApiV1ModelsRoute
-  ApiV1QuotesRoute: typeof ApiV1QuotesRoute
-  ApiV1ResponsesRoute: typeof ApiV1ResponsesRoute
   ApiWorkBrowserRoute: typeof ApiWorkBrowserRoute
   ApiWorkExecutionRoute: typeof ApiWorkExecutionRoute
   ApiWorkOutputRoute: typeof ApiWorkOutputRoute
   ApiWorkSyncRoute: typeof ApiWorkSyncRoute
   ApiWorkspaceSearchRoute: typeof ApiWorkspaceSearchRoute
   OauthMcpActionRoute: typeof OauthMcpActionRoute
-  SectionCategorySubcategoryArticleSlugRoute: typeof SectionCategorySubcategoryArticleSlugRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiAuthGoogleExchangeRoute: typeof ApiAuthGoogleExchangeRoute
   ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
@@ -2938,7 +2256,6 @@ export interface RootRouteChildren {
   ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
   ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
   ApiAuthSessionsRevokeOthersRoute: typeof ApiAuthSessionsRevokeOthersRoute
-  ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -2962,60 +2279,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$slug': {
-      id: '/$slug'
-      path: '/$slug'
-      fullPath: '/$slug'
-      preLoaderRoute: typeof SlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/academy': {
-      id: '/academy'
-      path: '/academy'
-      fullPath: '/academy'
-      preLoaderRoute: typeof AcademyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai-humanizer': {
-      id: '/ai-humanizer'
-      path: '/ai-humanizer'
-      fullPath: '/ai-humanizer'
-      preLoaderRoute: typeof AiHumanizerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai-image-generator': {
-      id: '/ai-image-generator'
-      path: '/ai-image-generator'
-      fullPath: '/ai-image-generator'
-      preLoaderRoute: typeof AiImageGeneratorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai-safety': {
-      id: '/ai-safety'
-      path: '/ai-safety'
-      fullPath: '/ai-safety'
-      preLoaderRoute: typeof AiSafetyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai-writer': {
-      id: '/ai-writer'
-      path: '/ai-writer'
-      fullPath: '/ai-writer'
-      preLoaderRoute: typeof AiWriterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/apps': {
       id: '/apps'
       path: '/apps'
       fullPath: '/apps'
       preLoaderRoute: typeof AppsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assistants': {
-      id: '/assistants'
-      path: '/assistants'
-      fullPath: '/assistants'
-      preLoaderRoute: typeof AssistantsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit-log': {
@@ -3037,27 +2305,6 @@ declare module '@tanstack/react-router' {
       path: '/brain'
       fullPath: '/brain'
       preLoaderRoute: typeof BrainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/changelog': {
-      id: '/changelog'
-      path: '/changelog'
-      fullPath: '/changelog'
-      preLoaderRoute: typeof ChangelogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/chatgpt-alternative': {
-      id: '/chatgpt-alternative'
-      path: '/chatgpt-alternative'
-      fullPath: '/chatgpt-alternative'
-      preLoaderRoute: typeof ChatgptAlternativeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/code-helper': {
-      id: '/code-helper'
-      path: '/code-helper'
-      fullPath: '/code-helper'
-      preLoaderRoute: typeof CodeHelperRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connect': {
@@ -3088,25 +2335,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/download': {
-      id: '/download'
-      path: '/download'
-      fullPath: '/download'
-      preLoaderRoute: typeof DownloadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/files': {
       id: '/files'
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof FilesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/getting-started': {
-      id: '/getting-started'
-      path: '/getting-started'
-      fullPath: '/getting-started'
-      preLoaderRoute: typeof GettingStartedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/goals': {
@@ -3121,13 +2354,6 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/humanize-ai-text': {
-      id: '/humanize-ai-text'
-      path: '/humanize-ai-text'
-      fullPath: '/humanize-ai-text'
-      preLoaderRoute: typeof HumanizeAiTextRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/images': {
@@ -3165,13 +2391,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/maps': {
-      id: '/maps'
-      path: '/maps'
-      fullPath: '/maps'
-      preLoaderRoute: typeof MapsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/mcp': {
       id: '/mcp'
       path: '/mcp'
@@ -3184,13 +2403,6 @@ declare module '@tanstack/react-router' {
       path: '/memory'
       fullPath: '/memory'
       preLoaderRoute: typeof MemoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/modes': {
-      id: '/modes'
-      path: '/modes'
-      fullPath: '/modes'
-      preLoaderRoute: typeof ModesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -3249,13 +2461,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RefundRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/research-assistant': {
-      id: '/research-assistant'
-      path: '/research-assistant'
-      fullPath: '/research-assistant'
-      preLoaderRoute: typeof ResearchAssistantRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -3284,13 +2489,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sites': {
       id: '/sites'
       path: '/sites'
@@ -3298,25 +2496,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/status': {
-      id: '/status'
-      path: '/status'
-      fullPath: '/status'
-      preLoaderRoute: typeof StatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/study': {
       id: '/study'
       path: '/study'
       fullPath: '/study'
       preLoaderRoute: typeof StudyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/study-assistant': {
-      id: '/study-assistant'
-      path: '/study-assistant'
-      fullPath: '/study-assistant'
-      preLoaderRoute: typeof StudyAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/subscribe': {
@@ -3366,20 +2550,6 @@ declare module '@tanstack/react-router' {
       path: '/write'
       fullPath: '/write'
       preLoaderRoute: typeof WriteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$locale/home': {
-      id: '/$locale/home'
-      path: '/$locale/home'
-      fullPath: '/$locale/home'
-      preLoaderRoute: typeof LocaleHomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$section/$articleSlug': {
-      id: '/$section/$articleSlug'
-      path: '/$section/$articleSlug'
-      fullPath: '/$section/$articleSlug'
-      preLoaderRoute: typeof SectionArticleSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -3585,81 +2755,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWriteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assistants/$assistantSlug': {
-      id: '/assistants/$assistantSlug'
-      path: '/$assistantSlug'
-      fullPath: '/assistants/$assistantSlug'
-      preLoaderRoute: typeof AssistantsAssistantSlugRouteImport
-      parentRoute: typeof AssistantsRoute
-    }
-    '/blog/ai-market-research-guide': {
-      id: '/blog/ai-market-research-guide'
-      path: '/blog/ai-market-research-guide'
-      fullPath: '/blog/ai-market-research-guide'
-      preLoaderRoute: typeof BlogAiMarketResearchGuideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/blog/best-ai-assistants': {
-      id: '/blog/best-ai-assistants'
-      path: '/blog/best-ai-assistants'
-      fullPath: '/blog/best-ai-assistants'
-      preLoaderRoute: typeof BlogBestAiAssistantsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/blog/best-ai-market-research-tools': {
-      id: '/blog/best-ai-market-research-tools'
-      path: '/blog/best-ai-market-research-tools'
-      fullPath: '/blog/best-ai-market-research-tools'
-      preLoaderRoute: typeof BlogBestAiMarketResearchToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/checkout/return': {
       id: '/checkout/return'
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers/': {
-      id: '/developers/'
-      path: '/developers'
-      fullPath: '/developers/'
-      preLoaderRoute: typeof DevelopersIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers/$docSlug': {
-      id: '/developers/$docSlug'
-      path: '/developers/$docSlug'
-      fullPath: '/developers/$docSlug'
-      preLoaderRoute: typeof DevelopersDocSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers/authorize': {
-      id: '/developers/authorize'
-      path: '/developers/authorize'
-      fullPath: '/developers/authorize'
-      preLoaderRoute: typeof DevelopersAuthorizeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers/connections': {
-      id: '/developers/connections'
-      path: '/developers/connections'
-      fullPath: '/developers/connections'
-      preLoaderRoute: typeof DevelopersConnectionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers/console': {
-      id: '/developers/console'
-      path: '/developers/console'
-      fullPath: '/developers/console'
-      preLoaderRoute: typeof DevelopersConsoleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers/pricing': {
-      id: '/developers/pricing'
-      path: '/developers/pricing'
-      fullPath: '/developers/pricing'
-      preLoaderRoute: typeof DevelopersPricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -3697,46 +2797,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/translate/': {
-      id: '/translate/'
-      path: '/translate'
-      fullPath: '/translate/'
-      preLoaderRoute: typeof TranslateIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/translate/$pairSlug': {
-      id: '/translate/$pairSlug'
-      path: '/translate/$pairSlug'
-      fullPath: '/translate/$pairSlug'
-      preLoaderRoute: typeof TranslatePairSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/writing/': {
-      id: '/writing/'
-      path: '/writing'
-      fullPath: '/writing/'
-      preLoaderRoute: typeof WritingIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/writing/$toolSlug': {
-      id: '/writing/$toolSlug'
-      path: '/writing/$toolSlug'
-      fullPath: '/writing/$toolSlug'
-      preLoaderRoute: typeof WritingToolSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/~oauth/callback': {
       id: '/~oauth/callback'
       path: '/~oauth/callback'
       fullPath: '/~oauth/callback'
       preLoaderRoute: typeof Char126oauthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$section/$category/$articleSlug': {
-      id: '/$section/$category/$articleSlug'
-      path: '/$section/$category/$articleSlug'
-      fullPath: '/$section/$category/$articleSlug'
-      preLoaderRoute: typeof SectionCategoryArticleSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/invoke-tool/$tool': {
@@ -3765,13 +2830,6 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/ai-usage'
       fullPath: '/api/admin/ai-usage'
       preLoaderRoute: typeof ApiAdminAiUsageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/admin/developer-billing': {
-      id: '/api/admin/developer-billing'
-      path: '/api/admin/developer-billing'
-      fullPath: '/api/admin/developer-billing'
-      preLoaderRoute: typeof ApiAdminDeveloperBillingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/diagnostics': {
@@ -3892,34 +2950,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat/history'
       preLoaderRoute: typeof ApiChatHistoryRouteImport
       parentRoute: typeof ApiChatRoute
-    }
-    '/api/developer/console': {
-      id: '/api/developer/console'
-      path: '/api/developer/console'
-      fullPath: '/api/developer/console'
-      preLoaderRoute: typeof ApiDeveloperConsoleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/developer/files': {
-      id: '/api/developer/files'
-      path: '/api/developer/files'
-      fullPath: '/api/developer/files'
-      preLoaderRoute: typeof ApiDeveloperFilesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/developer/funding': {
-      id: '/api/developer/funding'
-      path: '/api/developer/funding'
-      fullPath: '/api/developer/funding'
-      preLoaderRoute: typeof ApiDeveloperFundingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/developer/mcp': {
-      id: '/api/developer/mcp'
-      path: '/api/developer/mcp'
-      fullPath: '/api/developer/mcp'
-      preLoaderRoute: typeof ApiDeveloperMcpRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/finances/exchange': {
       id: '/api/finances/exchange'
@@ -4068,20 +3098,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalChatSummariesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/internal/developer-billing': {
-      id: '/api/internal/developer-billing'
-      path: '/api/internal/developer-billing'
-      fullPath: '/api/internal/developer-billing'
-      preLoaderRoute: typeof ApiInternalDeveloperBillingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/internal/developer-funding': {
-      id: '/api/internal/developer-funding'
-      path: '/api/internal/developer-funding'
-      fullPath: '/api/internal/developer-funding'
-      preLoaderRoute: typeof ApiInternalDeveloperFundingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/internal/email-dispatch': {
       id: '/api/internal/email-dispatch'
       path: '/api/internal/email-dispatch'
@@ -4187,13 +3203,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLibraryItemsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/maps/search': {
-      id: '/api/maps/search'
-      path: '/api/maps/search'
-      fullPath: '/api/maps/search'
-      preLoaderRoute: typeof ApiMapsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/openai/webhook': {
       id: '/api/openai/webhook'
       path: '/api/openai/webhook'
@@ -4236,48 +3245,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTasksEventSourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/embeddings': {
-      id: '/api/v1/embeddings'
-      path: '/api/v1/embeddings'
-      fullPath: '/api/v1/embeddings'
-      preLoaderRoute: typeof ApiV1EmbeddingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/files': {
-      id: '/api/v1/files'
-      path: '/api/v1/files'
-      fullPath: '/api/v1/files'
-      preLoaderRoute: typeof ApiV1FilesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/images': {
-      id: '/api/v1/images'
-      path: '/api/v1/images'
-      fullPath: '/api/v1/images'
-      preLoaderRoute: typeof ApiV1ImagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/models': {
-      id: '/api/v1/models'
-      path: '/api/v1/models'
-      fullPath: '/api/v1/models'
-      preLoaderRoute: typeof ApiV1ModelsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/quotes': {
-      id: '/api/v1/quotes'
-      path: '/api/v1/quotes'
-      fullPath: '/api/v1/quotes'
-      preLoaderRoute: typeof ApiV1QuotesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/v1/responses': {
-      id: '/api/v1/responses'
-      path: '/api/v1/responses'
-      fullPath: '/api/v1/responses'
-      preLoaderRoute: typeof ApiV1ResponsesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/work/browser': {
       id: '/api/work/browser'
       path: '/api/work/browser'
@@ -4318,13 +3285,6 @@ declare module '@tanstack/react-router' {
       path: '/oauth/mcp/$action'
       fullPath: '/oauth/mcp/$action'
       preLoaderRoute: typeof OauthMcpActionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$section/$category/$subcategory/$articleSlug': {
-      id: '/$section/$category/$subcategory/$articleSlug'
-      path: '/$section/$category/$subcategory/$articleSlug'
-      fullPath: '/$section/$category/$subcategory/$articleSlug'
-      preLoaderRoute: typeof SectionCategorySubcategoryArticleSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/google/callback': {
@@ -4425,13 +3385,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
       parentRoute: typeof ApiAuthVerifyRoute
     }
-    '/api/developer/payments/webhook': {
-      id: '/api/developer/payments/webhook'
-      path: '/api/developer/payments/webhook'
-      fullPath: '/api/developer/payments/webhook'
-      preLoaderRoute: typeof ApiDeveloperPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/integrations/oauth/disconnect': {
       id: '/api/integrations/oauth/disconnect'
       path: '/api/integrations/oauth/disconnect'
@@ -4518,18 +3471,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface AssistantsRouteChildren {
-  AssistantsAssistantSlugRoute: typeof AssistantsAssistantSlugRoute
-}
-
-const AssistantsRouteChildren: AssistantsRouteChildren = {
-  AssistantsAssistantSlugRoute: AssistantsAssistantSlugRoute,
-}
-
-const AssistantsRouteWithChildren = AssistantsRoute._addFileChildren(
-  AssistantsRouteChildren,
-)
 
 interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdChatChatIdRoute: typeof ProjectsProjectIdChatChatIdRoute
@@ -4641,39 +3582,24 @@ const ApiAuthVerifyRouteWithChildren = ApiAuthVerifyRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SlugRoute: SlugRoute,
-  AcademyRoute: AcademyRoute,
-  AiHumanizerRoute: AiHumanizerRoute,
-  AiImageGeneratorRoute: AiImageGeneratorRoute,
-  AiSafetyRoute: AiSafetyRoute,
-  AiWriterRoute: AiWriterRoute,
   AppsRoute: AppsRoute,
-  AssistantsRoute: AssistantsRouteWithChildren,
   AuditLogRoute: AuditLogRoute,
   AuthRoute: AuthRoute,
   BrainRoute: BrainRoute,
-  ChangelogRoute: ChangelogRoute,
-  ChatgptAlternativeRoute: ChatgptAlternativeRoute,
-  CodeHelperRoute: CodeHelperRoute,
   ConnectRoute: ConnectRoute,
   ContactSupportRoute: ContactSupportRoute,
   ContextPacksRoute: ContextPacksRoute,
   DiscoveryRoute: DiscoveryRoute,
-  DownloadRoute: DownloadRoute,
   FilesRoute: FilesRoute,
-  GettingStartedRoute: GettingStartedRoute,
   GoalsRoute: GoalsRoute,
   HelpRoute: HelpRoute,
-  HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
   KovasRoute: KovasRoute,
   LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
-  MapsRoute: MapsRoute,
   McpRoute: McpRoute,
   MemoryRoute: MemoryRoute,
-  ModesRoute: ModesRoute,
   NotificationsRoute: NotificationsRoute,
   OmegaRoute: OmegaRoute,
   OrganizationRoute: OrganizationRoute,
@@ -4682,16 +3608,12 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsRoute: ProjectsRouteWithChildren,
   PromptStudioRoute: PromptStudioRoute,
   RefundRoute: RefundRoute,
-  ResearchAssistantRoute: ResearchAssistantRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ScheduledTasksRoute: ScheduledTasksRoute,
   ShareInboxRoute: ShareInboxRoute,
   SignupRoute: SignupRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SitesRoute: SitesRoute,
-  StatusRoute: StatusRoute,
   StudyRoute: StudyRoute,
-  StudyAssistantRoute: StudyAssistantRoute,
   SubscribeRoute: SubscribeRoute,
   SummaryRoute: SummaryRoute,
   TermsRoute: TermsRoute,
@@ -4699,8 +3621,6 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   WorkRoute: WorkRoute,
   WriteRoute: WriteRoute,
-  LocaleHomeRoute: LocaleHomeRoute,
-  SectionArticleSlugRoute: SectionArticleSlugRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthAuthorizationServerRoute:
     Char91DotwellKnownChar93OauthAuthorizationServerRoute,
@@ -4732,29 +3652,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiVoiceRoute: ApiVoiceRoute,
   ApiWeatherRoute: ApiWeatherRoute,
   ApiWriteRoute: ApiWriteRoute,
-  BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
-  BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
-  BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
-  DevelopersDocSlugRoute: DevelopersDocSlugRoute,
-  DevelopersAuthorizeRoute: DevelopersAuthorizeRoute,
-  DevelopersConnectionsRoute: DevelopersConnectionsRoute,
-  DevelopersConsoleRoute: DevelopersConsoleRoute,
-  DevelopersPricingRoute: DevelopersPricingRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
   SettingsSectionRoute: SettingsSectionRoute,
   ShareTokenRoute: ShareTokenRoute,
-  TranslatePairSlugRoute: TranslatePairSlugRoute,
-  WritingToolSlugRoute: WritingToolSlugRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
-  DevelopersIndexRoute: DevelopersIndexRoute,
-  TranslateIndexRoute: TranslateIndexRoute,
-  WritingIndexRoute: WritingIndexRoute,
-  SectionCategoryArticleSlugRoute: SectionCategoryArticleSlugRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
-  ApiAdminDeveloperBillingRoute: ApiAdminDeveloperBillingRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
   ApiAdminKovasRoute: ApiAdminKovasRoute,
   ApiAdminPricingRoute: ApiAdminPricingRoute,
@@ -4769,10 +3674,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSignupRoute: ApiAuthSignupRoute,
   ApiAuthTokenRoute: ApiAuthTokenRoute,
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
-  ApiDeveloperConsoleRoute: ApiDeveloperConsoleRoute,
-  ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
-  ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,
-  ApiDeveloperMcpRoute: ApiDeveloperMcpRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
   ApiFinancesManageRoute: ApiFinancesManageRoute,
@@ -4794,8 +3695,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalAccountDeletionsRoute: ApiInternalAccountDeletionsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
-  ApiInternalDeveloperBillingRoute: ApiInternalDeveloperBillingRoute,
-  ApiInternalDeveloperFundingRoute: ApiInternalDeveloperFundingRoute,
   ApiInternalEmailDispatchRoute: ApiInternalEmailDispatchRoute,
   ApiInternalGoogleOauthCleanupRoute: ApiInternalGoogleOauthCleanupRoute,
   ApiInternalReceiptMaintenanceRoute: ApiInternalReceiptMaintenanceRoute,
@@ -4811,25 +3710,16 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLibraryFilesRoute: ApiLibraryFilesRoute,
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiLibraryItemsRoute: ApiLibraryItemsRoute,
-  ApiMapsSearchRoute: ApiMapsSearchRoute,
   ApiOpenaiWebhookRoute: ApiOpenaiWebhookRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,
-  ApiV1EmbeddingsRoute: ApiV1EmbeddingsRoute,
-  ApiV1FilesRoute: ApiV1FilesRoute,
-  ApiV1ImagesRoute: ApiV1ImagesRoute,
-  ApiV1ModelsRoute: ApiV1ModelsRoute,
-  ApiV1QuotesRoute: ApiV1QuotesRoute,
-  ApiV1ResponsesRoute: ApiV1ResponsesRoute,
   ApiWorkBrowserRoute: ApiWorkBrowserRoute,
   ApiWorkExecutionRoute: ApiWorkExecutionRoute,
   ApiWorkOutputRoute: ApiWorkOutputRoute,
   ApiWorkSyncRoute: ApiWorkSyncRoute,
   ApiWorkspaceSearchRoute: ApiWorkspaceSearchRoute,
   OauthMcpActionRoute: OauthMcpActionRoute,
-  SectionCategorySubcategoryArticleSlugRoute:
-    SectionCategorySubcategoryArticleSlugRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiAuthGoogleExchangeRoute: ApiAuthGoogleExchangeRoute,
   ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
@@ -4842,7 +3732,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
   ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
   ApiAuthSessionsRevokeOthersRoute: ApiAuthSessionsRevokeOthersRoute,
-  ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

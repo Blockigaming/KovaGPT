@@ -12,12 +12,6 @@ const ChatHistoryRuntime = lazy(() =>
   import("./ChatHistorySync").then((m) => ({ default: m.ChatHistorySyncRuntime })),
 );
 
-const DeveloperConsole = import.meta.env.DEV
-  ? lazy(() =>
-      import("./DeveloperConsole").then((module) => ({ default: module.DeveloperConsole })),
-    )
-  : null;
-
 export function PlatformRuntime() {
   const location = useLocation();
   useEffect(() => {
@@ -56,11 +50,6 @@ export function PlatformRuntime() {
         <ChatHistoryRuntime />
         <PwaRuntime />
       </Suspense>
-      {DeveloperConsole ? (
-        <Suspense fallback={null}>
-          <DeveloperConsole />
-        </Suspense>
-      ) : null}
     </>
   );
 }

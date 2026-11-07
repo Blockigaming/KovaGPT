@@ -1,4 +1,4 @@
-export type DiscoveryMode = "web" | "images" | "shopping" | "local";
+export type DiscoveryMode = "web" | "images" | "shopping";
 export type DiscoveryResult = {
   url: string;
   title: string;
@@ -51,7 +51,6 @@ export function normalizeDiscoveryProduct(
   requestedUrl: string,
   observedAt: string,
 ): DiscoveryProduct;
-export function localMapHandoff(query: string, location: string): string;
 export function discoveryComparisonKey(
   product: DiscoveryProduct,
   variant: DiscoveryVariant,

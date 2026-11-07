@@ -9,7 +9,6 @@ export const SIDEBAR_SHORTCUTS = Object.freeze(
     { id: "work", label: "Work", to: "/work" },
     { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
     { id: "apps", label: "Plugins", to: "/apps" },
-    { id: "maps", label: "Maps", to: "/maps" },
   ].map((shortcut) => Object.freeze(shortcut)),
 );
 export const DEFAULT_SIDEBAR_SHORTCUTS = Object.freeze([

@@ -17,7 +17,6 @@ const PRIVATE_ROOTS = new Set([
   "audit-log",
   "share-inbox",
   "memory",
-  "maps",
   "voice",
   "notifications",
   "trusted-contacts",

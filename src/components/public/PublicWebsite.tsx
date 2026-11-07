@@ -101,7 +101,7 @@ export function PublicWebsiteHome({
             <AuthDialog open={open} mode={mode} onOpenChange={setOpen} inline />
             <p className="public-desktop-availability">
               Use KovaGPT in your browser.{" "}
-              <Link to={"/downloads" as never}>Desktop availability</Link>
+              <Link to="/help">Desktop availability</Link>
             </p>
           </div>
           <figure className="public-classroom">

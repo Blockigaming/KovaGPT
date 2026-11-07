@@ -2,37 +2,35 @@ import "./public/public-website.css";
 import { useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NovaLogo } from "@/components/NovaLogo";
-import { PUBLIC_WEBSITE_FOOTER, PUBLIC_WEBSITE_PAGES } from "@/lib/public-website-catalog.mjs";
-import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
-import { requiresAppAccount } from "@/lib/app-access-policy.mjs";
 
+
+
+
+const PUBLIC_WEBSITE_FOOTER = [
+  { label: "KovaGPT", links: [
+    { label: "Chat", to: "/" },
+    { label: "Plans", to: "/pricing" },
+    { label: "Help", to: "/help" },
+  ] },
+  { label: "Account", links: [
+    { label: "Log in", to: "/login" },
+    { label: "Sign up", to: "/signup" },
+    { label: "Contact support", to: "/contact-support" },
+  ] },
+  { label: "Legal", links: [
+    { label: "Privacy", to: "/privacy" },
+    { label: "Terms", to: "/terms" },
+    { label: "Refunds", to: "/refund" },
+  ] },
+] as const;
 export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [query, setQuery] = useState("");
   const directory = useMemo(() => {
-    const entries = new Map(
-      PUBLIC_SITEMAP_ENTRIES.filter(({ path }) => path === "/" || !requiresAppAccount(path)).map(
-        ({ path }) => [
-          path,
-          {
-            to: path,
-            label:
-              path === "/"
-                ? "KovaGPT"
-                : path
-                    .split("/")
-                    .filter(Boolean)
-                    .map((part) => part.replaceAll("-", " "))
-                    .join(" / ")
-                    .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-          },
-        ],
-      ),
-    );
-    for (const page of PUBLIC_WEBSITE_PAGES)
-      entries.set(page.path, { to: page.path, label: page.title });
-    for (const group of PUBLIC_WEBSITE_FOOTER)
+    const entries = new Map<string, { to: string; label: string }>();
+    for (const group of PUBLIC_WEBSITE_FOOTER) {
       for (const link of group.links) entries.set(link.to, link);
+    }
     return [...entries.values()].sort((a, b) => a.label.localeCompare(b.label));
   }, []);
   const matching = directory.filter((entry) =>

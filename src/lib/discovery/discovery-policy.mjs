@@ -1,4 +1,4 @@
-export const DISCOVERY_MODES = Object.freeze(["web", "images", "shopping", "local"]);
+export const DISCOVERY_MODES = Object.freeze(["web", "images", "shopping"]);
 const record = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) =>
   typeof v === "string"
@@ -80,7 +80,7 @@ export function discoveryInput(value) {
     throw new Error("discovery_input_invalid");
   const query = text(value.query, 300),
     location = text(value.location, 160);
-  if (!query || (value.mode === "local" && !location) || (value.mode !== "local" && location))
+  if (!query || location)
     throw new Error("discovery_input_invalid");
   return { operation: "search", mode: value.mode, query, location };
 }
@@ -174,9 +174,6 @@ export function normalizeDiscoveryProduct(payload, requestedUrl, observedAt) {
       };
     }),
   };
-}
-export function localMapHandoff(query, location) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${text(query, 300)} ${text(location, 160)}`.trim())}`;
 }
 
 /** Merchant IDs/SKUs survive provider order changes; unidentified entries retain explicit ordinals. */

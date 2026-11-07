@@ -34,7 +34,6 @@ import {
   CHAT_HISTORY_CHANGED_EVENT,
 } from "@/lib/chat-history-bridge";
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
-import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
@@ -3274,7 +3273,6 @@ function KovaGPT() {
         onOpenWorkspaceSearch={openCommandPalette}
         workspaceSearchOpen={commandOpen}
         hideGuestLogin
-        mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {
           if (!isSignedIn) {
             toast.message("Sign in to share chats");
