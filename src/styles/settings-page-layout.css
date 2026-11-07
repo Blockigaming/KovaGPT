@@ -525,9 +525,15 @@
     padding-inline-end: 16px;
   }
 
-  .kova-settings-route .kova-settings-navigation-close {
-    flex: 0 0 44px;
-    margin-inline-end: 8px;
+  .kova-settings-route section.kova-settings-page .kova-settings-navigation-close {
+    position: fixed;
+    top: max(16px, var(--safe-top, 0px));
+    right: max(16px, var(--safe-right, 0px));
+    z-index: 8;
+    display: flex;
+    width: 44px;
+    height: 44px;
+    margin: 0;
   }
 }
 
@@ -543,6 +549,6 @@
     .kova-settings-content-header
     .kova-settings-page-actions {
     flex-shrink: 0;
-    margin-inline-end: 10px;
+    margin-inline-end: 32px;
   }
 }
