@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 212,
-  "latest": "20261106182723_kova_work_browser_launch_forward.sql",
+  "count": 214,
+  "latest": "20261107211137_kova_self_service_team_billing.sql",
   "migrations": [
     {
       "order": 1,
@@ -4521,6 +4521,41 @@
         "work_execution_dispatch_idx",
         "work_browser_one_live_run"
       ]
+    },
+    {
+      "order": 213,
+      "filename": "20261107210708_kova_project_appearance.sql",
+      "timestamp": "20261107210708",
+      "sha256": "66c80d5a7d5cc4c5d256dfd63be9817451abdc6d54662efccdd3996debf50273",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 214,
+      "filename": "20261107211137_kova_self_service_team_billing.sql",
+      "timestamp": "20261107211137",
+      "sha256": "9da79e7dc8bd46a191c33e92d8df65de16fb13f95d4b01a87580f46b4c72dc42",
+      "tables": ["team_workspaces", "team_members"],
+      "functions": [
+        "team_verified_email",
+        "mutate_team_member",
+        "reconcile_team_subscription",
+        "effective_user_plan_tier",
+        "guard_team_billing_finalization",
+        "lock_team_finalization_owner"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["team_workspaces", "team_members"],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

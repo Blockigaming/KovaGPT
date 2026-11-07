@@ -63,6 +63,7 @@ import { Route as StudyRouteImport } from './routes/study'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as SubscribeRouteImport } from './routes/subscribe'
 import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TrustedContactsRouteImport } from './routes/trusted-contacts'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
@@ -501,6 +502,11 @@ const SubscribeRoute = SubscribeRouteImport.update({
 const SummaryRoute = SummaryRouteImport.update({
   id: '/summary',
   path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -1440,6 +1446,7 @@ export interface FileRoutesByFullPath {
   '/study-assistant': typeof StudyAssistantRoute
   '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
+  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -1665,6 +1672,7 @@ export interface FileRoutesByTo {
   '/study-assistant': typeof StudyAssistantRoute
   '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
+  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -1891,6 +1899,7 @@ export interface FileRoutesById {
   '/study-assistant': typeof StudyAssistantRoute
   '/subscribe': typeof SubscribeRoute
   '/summary': typeof SummaryRoute
+  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/trusted-contacts': typeof TrustedContactsRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -2118,6 +2127,7 @@ export interface FileRouteTypes {
     | '/study-assistant'
     | '/subscribe'
     | '/summary'
+    | '/team'
     | '/terms'
     | '/trusted-contacts'
     | '/unsubscribe'
@@ -2343,6 +2353,7 @@ export interface FileRouteTypes {
     | '/study-assistant'
     | '/subscribe'
     | '/summary'
+    | '/team'
     | '/terms'
     | '/trusted-contacts'
     | '/unsubscribe'
@@ -2568,6 +2579,7 @@ export interface FileRouteTypes {
     | '/study-assistant'
     | '/subscribe'
     | '/summary'
+    | '/team'
     | '/terms'
     | '/trusted-contacts'
     | '/unsubscribe'
@@ -2794,6 +2806,7 @@ export interface RootRouteChildren {
   StudyAssistantRoute: typeof StudyAssistantRoute
   SubscribeRoute: typeof SubscribeRoute
   SummaryRoute: typeof SummaryRoute
+  TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
   TrustedContactsRoute: typeof TrustedContactsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
@@ -3331,6 +3344,13 @@ declare module '@tanstack/react-router' {
       path: '/summary'
       fullPath: '/summary'
       preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -4694,6 +4714,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudyAssistantRoute: StudyAssistantRoute,
   SubscribeRoute: SubscribeRoute,
   SummaryRoute: SummaryRoute,
+  TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
   TrustedContactsRoute: TrustedContactsRoute,
   UnsubscribeRoute: UnsubscribeRoute,

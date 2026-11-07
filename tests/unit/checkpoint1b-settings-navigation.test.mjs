@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 const source = readFileSync("src/components/SettingsDialog.tsx", "utf8");
-test("both settings entry modes expose all twenty-three requested primary destinations", () => {
+test("both settings entry modes expose all twenty-two requested primary destinations", () => {
   assert.match(source, /const groups = pageGroups;/);
   const primary = source.slice(
     source.indexOf("const pageGroups:"),
@@ -16,7 +16,6 @@ test("both settings entry modes expose all twenty-three requested primary destin
     "Profile",
     "Security and login",
     "Account",
-    "Archived chats",
     "Parental controls",
     "Voice",
     "Storage",

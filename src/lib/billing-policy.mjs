@@ -179,7 +179,7 @@ function verifySession(session, claim, { userId, environment, customerId }) {
     session.metadata?.userId !== userId ||
     session.metadata?.kovaPolicyClaim !== claim.claimId ||
     session.metadata?.kovaPolicyVersion !== MONTHLY_INTRO_POLICY_VERSION ||
-    session.return_url !== claim.returnUrl ||
+    (session.ui_mode === "hosted" ? session.success_url : session.return_url) !== claim.returnUrl ||
     !lines ||
     lines.has_more !== false ||
     !Array.isArray(lines.data) ||
@@ -238,7 +238,7 @@ async function reconcilePlanSelection(options, priceId, returnUrl) {
     return;
   }
   let session = await retrieveVerifiedSession(options, claim, claim.sessionId);
-  if (claim.priceId !== priceId && session.status === "open") {
+  if ((claim.priceId !== priceId || session.ui_mode !== "hosted") && session.status === "open") {
     if (session.payment_status !== "unpaid" || session.subscription != null)
       fail("billing_policy_checkout_reconciliation_pending");
     try {
@@ -352,8 +352,9 @@ export async function createMonthlyIntroCheckout(options) {
   if (
     session.status !== "open" ||
     session.expires_at <= now / 1000 ||
-    typeof session.client_secret !== "string" ||
-    !session.client_secret
+    session.ui_mode !== "hosted" ||
+    typeof session.url !== "string" ||
+    !session.url
   )
     fail("billing_policy_checkout_not_open");
   return session;

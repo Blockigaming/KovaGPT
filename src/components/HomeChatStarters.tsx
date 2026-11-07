@@ -14,7 +14,7 @@ export function ContinueWorking({
       <ul>
         {[...conversations]
           .sort((a, b) => b.updatedAt - a.updatedAt)
-          .slice(0, 3)
+          .slice(0, 2)
           .map((conversation) => (
             <li key={conversation.id}>
               <button type="button" onClick={() => onSelect(conversation.id)}>

@@ -1,3 +1,5 @@
+import { ProjectAppearanceEditor, ProjectIcon } from "@/components/ProjectAppearanceEditor";
+import { projectAppearance, type ProjectAppearance } from "@/lib/project-appearance";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import "@/styles/file-directories.css";
 import "@/styles/spec400-management.css";
@@ -146,6 +148,7 @@ function ProjectsPage() {
   const [createNameTouched, setCreateNameTouched] = useState(false);
   const createNameError = createNameTouched && !name.trim() ? "Enter a project name." : null;
   const [description, setDescription] = useState("");
+  const [appearance, setAppearance] = useState<ProjectAppearance>({});
   const [busy, setBusy] = useState(false);
   const createBusyRef = useRef(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -683,6 +686,7 @@ function ProjectsPage() {
     setName("");
     setCreateNameTouched(false);
     setDescription("");
+    setAppearance({});
     setBusy(false);
     setAiBusy(false);
     setDeletingProject(null);
@@ -731,13 +735,18 @@ function ProjectsPage() {
     createBusyRef.current = true;
     const attemptedName = name.trim();
     const attemptedDescription = description.trim() || null;
+    const attemptedAppearance = projectAppearance(appearance);
     createFailureFocusRef.current = { session, trigger: document.activeElement };
     setCreateError(null);
     setBusy(true);
     let id: string;
     try {
       const result = await fnCreate({
-        data: { name: attemptedName, description: attemptedDescription },
+        data: {
+          name: attemptedName,
+          description: attemptedDescription,
+          appearance: attemptedAppearance,
+        },
       });
       if (!isCreateCurrent(session, operation)) return;
       if (!result?.id) throw new Error("No saved project was returned.");
@@ -767,6 +776,7 @@ function ProjectsPage() {
     setName("");
     setCreateNameTouched(false);
     setDescription("");
+    setAppearance({});
     // Only a confirmed ID can update the list or report successful creation.
     setProjects((prev) => [
       {
@@ -774,6 +784,7 @@ function ProjectsPage() {
         name: attemptedName,
         description: attemptedDescription,
         color: "blue",
+        appearance: attemptedAppearance,
         owner_id: "",
         role: "owner" as const,
         member_count: 1,
@@ -1230,7 +1241,23 @@ function ProjectsPage() {
                     ? "relative kova-row kova-directory-row kova-project-file kova-project-file-row group"
                     : "relative kova-card kova-project-file group"
                 }`}
+                style={
+                  view === "grid" && p.appearance?.background
+                    ? { borderColor: p.appearance.background }
+                    : undefined
+                }
               >
+                {view === "grid" && (p.appearance?.cover || p.appearance?.background) && (
+                  <div
+                    className="h-20 w-full rounded-t-2xl bg-cover bg-center"
+                    style={{
+                      backgroundColor: p.appearance.background,
+                      backgroundImage: p.appearance.cover
+                        ? `url("${p.appearance.cover}")`
+                        : undefined,
+                    }}
+                  />
+                )}
                 <Link
                   to="/projects/$projectId"
                   params={{ projectId: p.id }}
@@ -1256,7 +1283,7 @@ function ProjectsPage() {
                   }}
                 >
                   <span className="kova-project-folder-icon" aria-hidden="true">
-                    <Folder />
+                    <ProjectIcon appearance={p.appearance} />
                   </span>
                   <div className="kova-project-file-summary">
                     <div className="kova-project-file-name">
@@ -1691,7 +1718,7 @@ function ProjectsPage() {
                   // inserting a validation message between pointer down and up.
                   if (
                     (event?.relatedTarget as HTMLElement | null)?.closest?.(
-                      "[data-project-create-dismiss]",
+                      "[data-project-create-dismiss], [data-project-appearance]",
                     )
                   )
                     return;
@@ -1731,6 +1758,7 @@ function ProjectsPage() {
                 maxLength={1000}
               />
             </div>
+            <ProjectAppearanceEditor value={appearance} onChange={setAppearance} disabled={busy} />
             {createError && (
               <div
                 ref={createErrorRef}

@@ -671,3 +671,17 @@ A developer can open the KovaGPT Developer Platform, create a funded project and
 Kova's Azure gateway remains responsive. Hosted model inference avoids expensive idle GPU ownership. Browser and execution resources launch on demand. Infrastructure adjusts to real traffic without silently changing model quality. Security, account isolation, permissions and honest execution reporting are enforced throughout.
 
 The definition of success is simple: everything KovaGPT says it can do is real, functional, secure, measurable and available to the appropriate authorized customer—both in Kova chat and through the KovaGPT Developer API.&#x20;
+
+## Interface and billing update — November 7, 2026
+
+This owner update supersedes the earlier chat archive, Trash, sidebar Images, and sales-only Team descriptions.
+
+- Projects use equally rounded filters and view controls, fill the available directory width, and support persisted emoji icons, raster logos, background colors, and raster background images.
+- New Scheduled Tasks use the prompt and schedule form. The saved-context and connected-source/approval sections are removed from this editor. Existing tasks retain their stored authorization and execution configuration.
+- Chat archiving and Chat Trash are removed from the product. Existing archived chats return to the ordinary chat list. Confirmed deletion is permanent, including Project chats; caller permissions still apply. Deletion queues content-free sync tombstones, removes legacy device duplicates, and cannot silently restore content during a concurrent cloud edit.
+- Library omits Shared chats, Folders, Chat Trash, and Details. Old folder filters are reset so they cannot conceal saved items. Search, favorites, filters, and view controls have consistent touch geometry.
+- Subscription checkout and management use Stripe's full-page hosted experiences.
+- Team offers direct checkout for 2–150 seats, including the owner, with Standard at $25 monthly or $240 annually and Premium at $125 monthly or $1,200 annually. Users can buy both seat types, reserve paid seats through account invitations, accept invitations, remove members, and review changes to existing seat quantities in Stripe. Team and personal subscriptions remain separate. Both seat types currently resolve to the existing Pro model-access entitlement; an unimplemented usage multiplier must not be advertised.
+- Team activation requires the additive database migration, the four verified Stripe recurring prices with the lookup keys in `team-billing-policy.mjs`, and subscription/risk webhook delivery. Existing tax registrations and Stripe tax configuration must be reviewed before asserting that checkout calculates applicable tax. No source or fixture test establishes live billing acceptance.
+- The Images sidebar shortcut is removed; ordinary chat retains its image tools. Continue working displays at most two actual recommendations, with rounded cards and increased spacing.
+- Settings and management pages must fit narrow mobile viewports. Sync respects rate-limit backoff, reconnects on return to the page, and distinguishes session verification and revision reconciliation from offline transport errors.

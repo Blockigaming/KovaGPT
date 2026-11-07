@@ -996,20 +996,6 @@ export function Sidebar({
               }}
             />
           ) : null}
-          {onArchive ? (
-            <DropdownMenuItem
-              onClick={() => {
-                archiveReturnFocusRef.current = {
-                  id: conversation.id,
-                  context: chatActionContextRef.current,
-                };
-                onArchive(conversation.id);
-              }}
-            >
-              <Archive />
-              Archive
-            </DropdownMenuItem>
-          ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-destructive" onClick={() => onDelete(conversation.id)}>
             <Trash2 />

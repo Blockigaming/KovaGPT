@@ -215,10 +215,10 @@ test("Library defaults to List and filters one existing collection", () => {
   assert.match(library, /Date saved, newest first/);
   assert.match(library, /not select the entire Library/);
   assert.match(library, /References unavailable/);
-  assert.match(library, /File Trash and moving files to projects are not supported here/);
+  assert.doesNotMatch(library, /<ChatTrashPanel|<LibraryFolderOrganizer/);
   assert.match(library, /Rename saved title/);
-  assert.match(library, /<Trash2 aria-hidden="true" \/> Chat Trash/);
-  assert.match(library, /files and other saved items use the permanent-delete confirmation/);
+  assert.doesNotMatch(library, /Chat Trash/);
+  assert.match(library, /permanentlyDeleteChat/);
 });
 test("Library upload uses existing extraction, ownership, cancellation and quota contracts", () => {
   assert.match(upload, /LIBRARY_ORIGINAL_MAX_BYTES/);

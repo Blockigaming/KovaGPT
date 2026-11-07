@@ -2,7 +2,6 @@ import { principalScopedStorageKey } from "./principal-browser-storage.mjs";
 import { readSidebarShortcuts } from "./sidebar-shortcuts.mjs";
 
 export const SIDEBAR_ITEMS = Object.freeze([
-  { id: "images", label: "Images", to: "/images" },
   { id: "library", label: "Library", to: "/library" },
   { id: "projects", label: "Projects", to: "/projects" },
   { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
@@ -13,7 +12,7 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "notifications", label: "Notifications", to: "/notifications" },
 ]);
 export const DEFAULT_SIDEBAR_LAYOUT = Object.freeze({
-  shortcuts: ["images", "library", "projects", "scheduled-tasks", "apps"],
+  shortcuts: ["library", "projects", "scheduled-tasks", "apps"],
   width: 280,
   color: "default",
   searchPosition: "header",

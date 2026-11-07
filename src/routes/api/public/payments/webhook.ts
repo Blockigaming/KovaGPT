@@ -1,3 +1,4 @@
+import { projectTeamStripeEvent } from "@/lib/team-billing.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { loose } from "@/lib/supabase-loose";
 import {
@@ -69,6 +70,7 @@ export async function handleWebhook(
   correlationId: string = crypto.randomUUID(),
 ) {
   const event = await verifyWebhook(req, env);
+  if (await projectTeamStripeEvent(event)) return { duplicate: false, orphaned: false };
   if (monthlyIntroBillingEnabled()) {
     const stripe = createStripeClient(env);
     const object = event.data.object as { id?: string; metadata?: Record<string, string> };
