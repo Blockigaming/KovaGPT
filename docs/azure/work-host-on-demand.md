@@ -12,6 +12,13 @@ Its 4 GiB cannot safely cover four 768 MiB browsers, two 256 MiB Python jobs,
 and the host. Prefer evaluating the burstable 8 GiB `Standard_B2as_v2` first.
 The November 7 eastus retail API returned Linux consumption rates of $0.0752/hour
 for that size and $0.096/hour for the original size, excluding disks and IPs.
+Azure rejected the two-core Basv2 quota request
+`8fc7f54b-e1e7-4dad-ae8e-590e88252f81` with
+`QuotaNotAvailableForResource`; the original VM was confirmed running afterward.
+Its deallocate/start cycle passed enabled/active Docker, Caddy and runner checks,
+fresh `/run` secret initialization and a signed backend readiness probe. The older
+8 GiB `Standard_B2ms` has an existing 10-core family quota and a verified retail
+rate of $0.0832/hour; its resize and native acceptance are being evaluated.
 
 The registry was downgraded from Standard to Basic after confirming 1.344 GiB
 stored, zero webhooks, and zero custom scope maps/tokens. The existing production
