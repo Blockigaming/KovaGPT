@@ -122,6 +122,7 @@ export interface ComposerVoiceDialogProps {
   onTranscript: (text: string) => void;
   mode?: "dictate" | "voice";
   inlineDictation?: boolean;
+  autoStartVoice?: boolean;
   onVoiceSubmit?: (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
@@ -179,6 +180,7 @@ export function ComposerVoiceDialog({
   onTranscript,
   mode = "dictate",
   inlineDictation = false,
+  autoStartVoice = false,
   onVoiceSubmit,
   latestAssistantText = "",
   latestAssistantReply,
@@ -203,6 +205,7 @@ export function ComposerVoiceDialog({
   const [preferenceNotice, setPreferenceNotice] = useState("");
   const [lastVoiceReply, setLastVoiceReply] = useState("");
   const dictationStartScope = useRef<string | null>(null);
+  const voiceStartScope = useRef<string | null>(null);
   const inlineWasOpen = useRef(false);
 
   useLayoutEffect(() => {
@@ -1061,6 +1064,22 @@ export function ComposerVoiceDialog({
     dictationStartScope.current = scope;
     void resumeRecording.current?.();
   }, [open, inlineDictation, mode, ready, capabilities?.stt, userId, contextKey]);
+
+  // The empty-composer Voice button is an explicit user request. After the
+  // authenticated server capability check succeeds, begin one voice turn
+  // without making the user press a second Start button. No microphone access
+  // occurs for unconfigured, unverified, disabled, or stale account scopes.
+  useLayoutEffect(() => {
+    if (!open) {
+      voiceStartScope.current = null;
+      return;
+    }
+    if (!autoStartVoice || mode !== "voice" || !ready || !onVoiceSubmit) return;
+    const scope = JSON.stringify([userId, contextKey]);
+    if (voiceStartScope.current === scope) return;
+    voiceStartScope.current = scope;
+    void resumeRecording.current?.();
+  }, [open, autoStartVoice, mode, ready, onVoiceSubmit, userId, contextKey]);
 
   const VoiceView =
     inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
