@@ -1,5 +1,7 @@
 {
-  "applied": false,
+  "applied": true,
+  "verifiedDate": "2026-11-07",
+  "powerOperationsExecutedDuringGrant": false,
   "scope": "/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourceGroups/rg-kovagpt-prod/providers/Microsoft.Compute/virtualMachines/kovagpt-work-540-vm",
   "assignableScope": "/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourceGroups/rg-kovagpt-prod",
   "grants": [
@@ -7,6 +9,7 @@
       "principalName": "id-kovagpt-prod",
       "principalId": "bf04dfd7-4478-4f06-8bf1-1a981d72b07c",
       "roleName": "Kova Work 540 Wake",
+      "assignmentId": "c08c0a64-cbf8-5c07-9b63-d699cdc63d9f",
       "actions": [
         "Microsoft.Compute/virtualMachines/read",
         "Microsoft.Compute/virtualMachines/instanceView/read",
@@ -17,6 +20,7 @@
       "principalName": "kovagpt-work-540-vm",
       "principalId": "30ff9a31-4120-4002-b51e-44f41784c681",
       "roleName": "Kova Work 540 Self-Deallocate",
+      "assignmentId": "de9ece5c-4f65-512b-81b0-47e326e5f750",
       "actions": ["Microsoft.Compute/virtualMachines/deallocate/action"]
     }
   ]

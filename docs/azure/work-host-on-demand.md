@@ -2,9 +2,11 @@
 
 ## Status
 
-Source implementation only. No power permissions, VM resize, host installation,
-app settings, cron settings, live image, or production traffic changed by this
-branch. Existing main-site gateway scaling stays as configured. The 4 GiB
+Power permissions approved and applied on November 7, 2026, with exact role
+actions and VM-only assignment scopes read back successfully. The grant operation
+did not resize, start, or stop the VM, install host source, change app/cron
+settings, deploy an image, or change production traffic. Automatic idle power
+saving has not been activated by this permission update. The 4 GiB
 `Standard_B2als_v2` is a test candidate, not a qualified production minimum.
 
 On November 7, Azure Cost Analysis showed $20.71 month-to-date and a $39.73
@@ -41,7 +43,10 @@ the single VM assignment scope, and exact actions. Principal IDs were read from
 the authenticated Azure portal. Roles are defined with the production resource
 group as their assignable scope but must be **assigned only on the named VM**.
 No write/resize, delete, secrets, networking, or role-management actions are
-included. No role has been created or assigned by this branch.
+included. Both custom roles and assignments were created after the owner's
+specific approval and verified on November 7. The assignment IDs are recorded
+in that JSON. The grant verifier confirmed the size remained `Standard_D2as_v4`
+and executed no VM power operations.
 
 ## Deployment and acceptance order
 
