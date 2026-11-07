@@ -1028,17 +1028,32 @@ export function SettingsDialog({
     {
       title: "Personal",
       tabs: [
-        { v: "general", label: "General", icon: Cog, keywords: ["responses", "send", "shortcut"] },
+        {
+          v: "general",
+          label: "General",
+          icon: Cog,
+          keywords: ["responses", "send", "shortcut"],
+        },
         { v: "appearance", label: "Appearance", icon: Palette },
         { v: "notifications", label: "Notifications", icon: Bell },
         { v: "personalization", label: "Profile", icon: User2 },
         { v: "security", label: "Security and login", icon: ShieldCheck },
         { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
-        { v: "archived", label: "Archived chats", icon: Archive, keywords: ["history", "trash"] },
+        {
+          v: "archived",
+          label: "Archived chats",
+          icon: Archive,
+          keywords: ["history", "trash"],
+        },
         { v: "parental", label: "Parental controls", icon: Baby },
         { v: "voice", label: "Voice", icon: Mic, keywords: ["microphone", "audio"] },
         { v: "storage", label: "Storage", icon: HardDrive },
-        { v: "data", label: "Data controls", icon: Database, keywords: ["privacy", "export"] },
+        {
+          v: "data",
+          label: "Data controls",
+          icon: Database,
+          keywords: ["privacy", "export"],
+        },
         { v: "memory", label: "Personalization", icon: Brain, keywords: ["memory"] },
         { v: "shortcuts", label: "Keyboard", icon: Keyboard, keywords: ["keyboard shortcuts"] },
         { v: "usage", label: "Usage", icon: BarChart3 },
@@ -1505,7 +1520,11 @@ export function SettingsDialog({
                           onChange({ ...settings, sendOnEnter: enabled });
                         }}
                       >
-                        <SelectTrigger id="settings-send-shortcut" aria-label="Send shortcut" className="kova-settings-reference-select">
+                        <SelectTrigger
+                          id="settings-send-shortcut"
+                          aria-label="Send shortcut"
+                          className="kova-settings-reference-select"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1519,7 +1538,9 @@ export function SettingsDialog({
                         <label htmlFor="settings-response-length" className="text-sm font-medium">
                           Response length
                         </label>
-                        <p className="text-xs text-muted-foreground">Choose the default length for new responses.</p>
+                        <p className="text-xs text-muted-foreground">
+                          Choose the default length for new responses.
+                        </p>
                       </div>
                       <Select
                         value={settings.responseLength}
