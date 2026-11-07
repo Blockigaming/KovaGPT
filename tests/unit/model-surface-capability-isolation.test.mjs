@@ -167,4 +167,3 @@ test("image and embedding model selection does not borrow missing text credentia
   );
   assert.throws(() => registry.selectModelForMode("instant"), /temporarily unavailable/);
 });
-

@@ -144,4 +144,3 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   expect(JSON.stringify(shares[0])).not.toContain("Actual input");
   await page.screenshot({ path: info.outputPath("chat-share.png"), animations: "disabled" });
 });
-
