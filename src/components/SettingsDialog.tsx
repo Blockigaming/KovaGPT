@@ -2115,7 +2115,7 @@ export function SettingsDialog({
 
                   <nav className="kova-billing-help-links" aria-label="Billing help and policies">
                     <Link
-                      to="/getting-started"
+                      to="/help"
                       onClick={closeForNavigation}
                       className="underline hover:text-foreground"
                     >
@@ -2216,7 +2216,7 @@ export function SettingsDialog({
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Location-based personalization is not connected to chat or Maps yet.
+                    Location-based personalization is not connected to chat.
                   </p>
                 </div>
                 <LocationControlsUnavailable />

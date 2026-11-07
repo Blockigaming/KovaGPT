@@ -7,9 +7,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { PublicFixture } from "./public-pages";
 import { NativeControlsFixture } from "./native-controls";
-import { BenchmarkReview } from "./benchmark-review";
 import { IntelligentInterfaceFixture } from "./intelligent-interface";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { Button } from "@/components/ui/button";
@@ -73,10 +71,7 @@ const cancelLabel = "Cancel and keep my current project settings";
 const confirmLabel = "Confirm changes to the selected project only";
 
 function Fixture() {
-  const standaloneReview = document.documentElement.dataset.kovaReview === "1";
-  const surface =
-    new URLSearchParams(location.search).get("surface") ??
-    (standaloneReview ? "public-overview" : "dialog");
+  const surface = new URLSearchParams(location.search).get("surface") ?? "dialog";
   const [result, setResult] = useState("No action taken");
   const [mobileOpen, setMobileOpen] = useState(false);
   const trigger = <Button data-testid="trigger">Open example</Button>;
@@ -84,12 +79,6 @@ function Fixture() {
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
   if (surface === "native-controls") return <NativeControlsFixture />;
   if (surface === "intelligent-interface") return <IntelligentInterfaceFixture />;
-  if (
-    surface.startsWith("public-") &&
-    (standaloneReview || new URLSearchParams(location.search).get("review") === "1")
-  )
-    return <BenchmarkReview initialSurface={surface} />;
-  if (surface.startsWith("public-")) return <PublicFixture surface={surface} />;
   if (surface === "enterprise")
     return (
       <main className="fixture-page">

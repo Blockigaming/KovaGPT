@@ -8,7 +8,6 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "work", label: "Work", to: "/work" },
   { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
   { id: "apps", label: "Plugins", to: "/apps" },
-  { id: "maps", label: "Maps", to: "/maps" },
   { id: "memory", label: "Memory", to: "/memory" },
   { id: "settings", label: "Settings", to: "/settings/appearance" },
   { id: "notifications", label: "Notifications", to: "/notifications" },

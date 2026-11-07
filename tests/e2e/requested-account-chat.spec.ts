@@ -2,7 +2,6 @@ import { test, expect } from "@playwright/test";
 import { fixture, owner, chatA } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { chooseSettingsSection, openCurrentSettings, revealSidebar } from "./current-ui";
-import { PUBLIC_WEBSITE_PAGES } from "../../src/lib/public-website-catalog.mjs";
 
 test("requested: returning accounts never render the signed-out homepage", async ({ page }) => {
   await fixture(page, "dark", true);
@@ -144,62 +143,4 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   expect(shares).toHaveLength(1);
   expect(JSON.stringify(shares[0])).not.toContain("Actual input");
   await page.screenshot({ path: info.outputPath("chat-share.png"), animations: "disabled" });
-});
-
-test("requested: public articles and legal pages have a searchable real page directory", async ({
-  page,
-}, info) => {
-  await fixture(page, "dark", false);
-  for (const path of [
-    "/company",
-    "/overview",
-    "/about",
-    "/features/chat",
-    "/help/billing",
-    "/terms",
-    "/privacy",
-    "/refund",
-    "/pricing",
-  ]) {
-    await page.goto(path);
-    await waitForKovaHydration(page);
-    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
-      path,
-    ).toBe(true);
-    const directory = page.locator(".kova-footer-directory");
-    await expect(directory).toHaveCount(1);
-    await directory.locator("summary").click();
-    await directory.getByRole("searchbox", { name: "Search the page directory" }).fill("privacy");
-    const links = directory
-      .getByRole("navigation", { name: "All public pages", exact: true })
-      .getByRole("link");
-    expect(await links.count()).toBeGreaterThan(0);
-    await expect(links.first()).toBeVisible();
-    if (path === "/company")
-      await page.screenshot({
-        path: info.outputPath("public-company.png"),
-        animations: "disabled",
-      });
-  }
-});
-
-test("requested: every published catalog route renders its actual content and shared footer", async ({
-  request,
-  page,
-}) => {
-  test.skip(page.viewportSize()!.width < 1024, "HTTP content is viewport-independent");
-  test.setTimeout(90000);
-  for (let index = 0; index < PUBLIC_WEBSITE_PAGES.length; index += 5) {
-    await Promise.all(
-      PUBLIC_WEBSITE_PAGES.slice(index, index + 5).map(async (item) => {
-        const response = await request.get(item.path);
-        expect(response.status(), item.path).toBe(200);
-        const html = await response.text();
-        expect(html, item.path).toContain('class="kova-footer-directory"');
-        expect(html, item.path).toContain('id="main-content"');
-      }),
-    );
-  }
 });

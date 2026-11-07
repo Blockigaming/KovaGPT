@@ -1,4 +1,4 @@
-export const DISCOVERY_MODES = Object.freeze(["web", "images", "shopping", "local"]);
+export const DISCOVERY_MODES = Object.freeze(["web", "images", "shopping"]);
 const record = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) =>
   typeof v === "string"
@@ -175,10 +175,6 @@ export function normalizeDiscoveryProduct(payload, requestedUrl, observedAt) {
     }),
   };
 }
-export function localMapHandoff(query, location) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${text(query, 300)} ${text(location, 160)}`.trim())}`;
-}
-
 /** Merchant IDs/SKUs survive provider order changes; unidentified entries retain explicit ordinals. */
 export function discoveryComparisonKey(product, variant) {
   const values = Object.entries(variant.values).sort(([a], [b]) => a.localeCompare(b));

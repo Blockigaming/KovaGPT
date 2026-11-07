@@ -55,7 +55,6 @@ import { getUsage } from "@/lib/limits";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
-import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/images")({
@@ -909,7 +908,6 @@ function ImagesPage() {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
-        mapsReleaseApproved={MAPS_RELEASE_APPROVED}
       />
 
       <main

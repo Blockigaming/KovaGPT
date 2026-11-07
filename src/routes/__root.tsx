@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
-import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect } from "react";
 import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
@@ -115,9 +114,13 @@ function getActiveSeoState(matches: readonly SeoMatch[]) {
   const statuses = matches.flatMap((match) =>
     match.globalNotFound ? [match.status, "notFound"] : [match.status],
   );
+  // Only the actual chat home remains indexable; removed public and developer routes are 404s.
+  const indexable =
+    pathname === "/" &&
+    !statuses.some((status) => status === "notFound" || /^[45][0-9][0-9]$/.test(status));
   return {
-    indexable: isPublicIndexableRoute(pathname, statuses),
-    robots: robotsDirectiveForRoute(pathname, statuses),
+    indexable,
+    robots: indexable ? "index, follow" : "noindex, nofollow",
   };
 }
 

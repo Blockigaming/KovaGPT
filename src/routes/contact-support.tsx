@@ -98,7 +98,7 @@ function ContactSupportPage() {
         </p>
 
         <p className="mt-12">
-          New to KovaGPT? <Link to="/getting-started">Read the Getting Started guide →</Link>
+          New to KovaGPT? <Link to="/help">Read the Help center →</Link>
         </p>
 
         <p className="mt-4">

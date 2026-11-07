@@ -1,6 +1,5 @@
 import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
-import { meterProviderRequest } from "@/lib/pricing/developer-billing.server";
 
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
@@ -638,38 +637,31 @@ async function providerFetch(
       requestHeaders.delete("content-type");
       encodedBody = form;
     }
-    const response = await meterProviderRequest({
-      provider: target.provider,
-      capability,
-      body: requestBody,
-      signal: deadline.signal,
-      send: () =>
-        fetchWithDeadline(
-          fetch,
-          `${target.baseUrl}${path}`,
-          {
-            ...init,
-            method: "POST",
-            redirect: "error",
-            headers: requestHeaders,
-            body: encodedBody,
-          },
-          deadline,
-          (outcome) => {
-            const level =
-              outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
-            logProviderEvent(level, "provider.request.finish", {
-              provider: target.provider,
-              capability,
-              path,
-              deployment,
-              status: outcome.status,
-              durationMs: Date.now() - startedAt,
-              code: providerOutcomeCode(outcome),
-            });
-          },
-        ),
-    });
+    const response = await fetchWithDeadline(
+      fetch,
+      `${target.baseUrl}${path}`,
+      {
+        ...init,
+        method: "POST",
+        redirect: "error",
+        headers: requestHeaders,
+        body: encodedBody,
+      },
+      deadline,
+      (outcome) => {
+        const level =
+          outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
+        logProviderEvent(level, "provider.request.finish", {
+          provider: target.provider,
+          capability,
+          path,
+          deployment,
+          status: outcome.status,
+          durationMs: Date.now() - startedAt,
+          code: providerOutcomeCode(outcome),
+        });
+      },
+    );
 
     logProviderEvent("info", "provider.response.headers", {
       provider: target.provider,
@@ -714,11 +706,6 @@ export function providerErrorResponse(error: unknown, fallbackStatus = 502): Res
     },
     { status: envelope.status || fallbackStatus, headers: NO_STORE_HEADERS },
   );
-}
-
-/** Versioned developer ingress uses the native, metered Responses contract. */
-export async function developerResponses(body: JsonObject, init?: RequestInit): Promise<Response> {
-  return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
 }
 
 export async function chatCompletions(

@@ -66,7 +66,6 @@ function fixture(options = {}) {
     sidebarStyle: {},
     signedIn: true,
     canSchedule: true,
-    mapsReleaseApproved: false,
     railShortcuts: [],
     collapsed: true,
     compactOnly: false,
@@ -208,7 +207,7 @@ for (const choices of [
     );
     const expected = choices
       .map((id) => SIDEBAR_ITEMS.find((item) => item.id === id))
-      .filter((item) => item && item.id !== "maps");
+      .filter(Boolean);
     assert.deepEqual(
       controls(f.find("Additional shortcuts")).map(({ props }) => props.to),
       expected.map((item) => item.to),
@@ -217,16 +216,11 @@ for (const choices of [
   });
 }
 
-test("all chosen tools are configurable and Maps retains its release gate", () => {
-  const f = fixture({ railShortcuts: ["maps", "projects", "library", "scheduled-tasks", "apps"] });
+test("all chosen core tools are configurable without Maps", () => {
+  const f = fixture({ railShortcuts: ["projects", "library", "scheduled-tasks", "apps"] });
   assert.deepEqual(
     controls(f.find("Additional shortcuts")).map(({ props }) => props["aria-label"]),
     ["Projects", "Library", "Scheduled tasks", "Plugins"],
-  );
-  const approved = fixture({ mapsReleaseApproved: true, railShortcuts: ["maps", "images"] });
-  assert.deepEqual(
-    controls(approved.find("Additional shortcuts")).map(({ props }) => props["aria-label"]),
-    ["Maps", "Images"],
   );
   assert.equal(fixture().find("Additional shortcuts"), undefined);
   assert.equal(SIDEBAR_ITEMS.find((item) => item.id === "work")?.to, "/work");
@@ -332,8 +326,7 @@ test("optional switches preserve legacy stored primary IDs without migration or 
 
 test("every collapsed action is wrapped in the shared pointer-and-keyboard Tooltip primitive", () => {
   const f = fixture({
-    railShortcuts: ["images", "discovery", "maps"],
-    mapsReleaseApproved: true,
+    railShortcuts: ["images", "work"],
   });
   const wrappers = all(f.tree).filter(({ type }) => type === "RailTooltip");
   // The account dropdown trigger owns its own focus and menu affordance.
