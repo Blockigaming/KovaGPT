@@ -48,6 +48,14 @@ export function freeModeUpgradeRequired(tier, mode, deepMode = false) {
   );
 }
 
+/** Reject locked consumer modes before any model or provider is selected. */
+export function modeUpgradeRequired(tier, mode, deepMode = false) {
+  return (
+    freeModeUpgradeRequired(tier, mode, deepMode) ||
+    ((deepMode || PREMIUM_MODES.has(mode)) && !["pro", "business"].includes(tier))
+  );
+}
+
 // Signals that extra reasoning will noticeably improve the answer. Length is
 // deliberately NOT one of them.
 const COMPLEXITY_PATTERNS = [
@@ -191,7 +199,7 @@ export function routeModel(input) {
 
   // Defense in depth: callers must reject locked Free modes before quota or
   // provider work. Never silently grant a paid mode or downgrade its request.
-  if (freeModeUpgradeRequired(tier, mode, Boolean(input.deepMode))) {
+  if (modeUpgradeRequired(tier, mode, Boolean(input.deepMode))) {
     throw new Error("mode_not_entitled");
   }
 
@@ -204,36 +212,25 @@ export function routeModel(input) {
   });
 
   const explicitDeep = Boolean(input.deepMode) || PREMIUM_MODES.has(mode);
-  const premiumAllowed = tier === "pro" || tier === "business";
-
-  // PREMIUM_REASONING requires explicit user intent AND a paid premium tier.
-  // It is never selected automatically, and never for free users.
+  // Premium requests are never silently served by another model.
   if (explicitDeep) {
-    if (premiumAllowed) {
-      return decide("PREMIUM_REASONING", modeCap, [...reasons, "explicit_deep_mode"], score);
-    }
-    // Fail safe by downgrading rather than refusing the request.
-    const role = tier === "plus" ? "ADVANCED_REASONING" : "DEFAULT_CHAT";
-    return decide(
-      role,
-      role === "DEFAULT_CHAT" ? Math.min(modeCap, MODE_MAX_OUTPUT_TOKENS.medium) : modeCap,
-      [...reasons, "premium_not_entitled"],
-      score,
-      "PREMIUM_REASONING",
-    );
+    return decide("PREMIUM_REASONING", modeCap, [...reasons, "explicit_deep_mode"], score);
   }
 
   // ADVANCED_REASONING: explicit thinking modes, or genuinely complex work.
   const complexEnough = score >= ROUTING_THRESHOLDS.advancedComplexityScore;
   if (ADVANCED_MODES.has(mode) || complexEnough) {
-    if (tier === "free" && !ADVANCED_MODES.has(mode)) {
-      // Free users stay on the default model for auto-upgrades.
+    if (!["plus", "pro", "business"].includes(tier)) {
+      // Free Thinking uses Argon reasoning; it never grants access to Neon.
       return decide(
         "DEFAULT_CHAT",
         modeCap,
-        [...reasons, "auto_upgrade_blocked_free"],
+        [
+          ...reasons,
+          ADVANCED_MODES.has(mode) ? "thinking_on_default_model" : "auto_upgrade_blocked_free",
+        ],
         score,
-        "ADVANCED_REASONING",
+        ADVANCED_MODES.has(mode) ? undefined : "ADVANCED_REASONING",
       );
     }
     return decide(

@@ -75,7 +75,7 @@ import {
 import { planAllowance } from "@/lib/plan-usage-policy.mjs";
 
 import { routeAiModel } from "@/lib/ai/model-router.server";
-import { freeModeUpgradeRequired } from "@/lib/ai/model-router.mjs";
+import { modeUpgradeRequired } from "@/lib/ai/model-router.mjs";
 import { buildKovaModelIdentityInstructions } from "@/lib/kova-model-identity.mjs";
 
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
@@ -804,12 +804,15 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
-            // Reject an explicitly locked Free mode before any provider work or
+            // Reject an explicitly locked Free mode or premium request before provider work or
             // quota reservation, including requests that also ask for images or Study.
-            if (auth && freeModeUpgradeRequired(callerTier, getMode(mode).id)) {
+            if (auth && modeUpgradeRequired(callerTier, getMode(mode).id)) {
               return Response.json(
                 {
-                  error: "This mode requires a paid plan. Upgrade to use this mode.",
+                  error:
+                    callerTier === "plus"
+                      ? "This mode requires Pro. Upgrade to use this mode."
+                      : "This mode requires a paid plan. Upgrade to use this mode.",
                   code: "mode_not_entitled",
                   upgradeUrl: "/pricing",
                   retryable: false,
@@ -1121,6 +1124,24 @@ export const Route = createFileRoute("/api/chat")({
               { requestId },
             );
             const model = routeDecision.modelId;
+            // Check the resolved hosted alias too: a role misconfiguration must
+            // not grant a foundation outside the consumer's plan.
+            if (
+              isKovaHostedModelId(model) &&
+              !KOVA_HOSTED_TEXT_MODELS.some(
+                (entry) => entry.id === model && entry.tiers.includes(callerTier),
+              )
+            ) {
+              return Response.json(
+                {
+                  error: "This Kova model is unavailable for your plan.",
+                  code: "kova_model_not_entitled",
+                  upgradeUrl: "/pricing",
+                  retryable: false,
+                },
+                { status: 403, headers: { "Cache-Control": "no-store" } },
+              );
+            }
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
               modelId: model,

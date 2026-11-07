@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { freeModeUpgradeRequired } from "../../src/lib/ai/model-router.mjs";
+import { modeUpgradeRequired } from "../../src/lib/ai/model-router.mjs";
 
 const source = readFileSync(new URL("../../src/routes/api/chat.ts", import.meta.url), "utf8");
-const start = source.indexOf("            if (auth && freeModeUpgradeRequired(");
+const start = source.indexOf("            if (auth && modeUpgradeRequired(");
 const end = source.indexOf("            // A custom Kova supplies", start);
 assert.ok(start > 0 && end > start);
 // Execute the route's exact early-response block in isolation. Mode parsing,
@@ -14,14 +14,14 @@ const runGate = new Function(
   "callerTier",
   "mode",
   "getMode",
-  "freeModeUpgradeRequired",
+  "modeUpgradeRequired",
   source.slice(start, end),
 );
 const getMode = (mode) => ({ id: mode ?? "instant" });
 
 test("Free locked modes return a stable upgrade response before downstream work", async () => {
   for (const mode of ["medium", "high", "extra_high", "max", "ultra"]) {
-    const response = runGate({}, "free", mode, getMode, freeModeUpgradeRequired);
+    const response = runGate({}, "free", mode, getMode, modeUpgradeRequired);
     assert.equal(response.status, 403);
     assert.equal(response.headers.get("Cache-Control"), "no-store");
     assert.deepEqual(await response.json(), {
@@ -35,12 +35,12 @@ test("Free locked modes return a stable upgrade response before downstream work"
 
 test("Free Default and Thinking, guests and paid tiers retain their downstream behavior", () => {
   for (const mode of [undefined, "instant", "thinking"]) {
-    assert.equal(runGate({}, "free", mode, getMode, freeModeUpgradeRequired), undefined);
+    assert.equal(runGate({}, "free", mode, getMode, modeUpgradeRequired), undefined);
   }
   for (const tier of ["plus", "pro"]) {
-    assert.equal(runGate({}, tier, "thinking", getMode, freeModeUpgradeRequired), undefined);
+    assert.equal(runGate({}, tier, "thinking", getMode, modeUpgradeRequired), undefined);
   }
-  assert.equal(runGate(null, "free", "thinking", getMode, freeModeUpgradeRequired), undefined);
+  assert.equal(runGate(null, "free", "thinking", getMode, modeUpgradeRequired), undefined);
 });
 
 test("legacy gate remains after the Models-v2 fail-closed gate and before all costly work", () => {
@@ -73,4 +73,16 @@ test("guest attachments are denied before custom context, provider or quota work
   }
   assert.equal(gate(null, []), undefined);
   assert.equal(gate({}, [{ type: "file" }]), undefined);
+});
+
+test("Plus premium modes reject before provider work instead of silently downgrading", async () => {
+  for (const mode of ["max", "ultra"]) {
+    const response = runGate({}, "plus", mode, getMode, modeUpgradeRequired);
+    assert.equal(response.status, 403);
+    assert.equal(
+      (await response.json()).error,
+      "This mode requires Pro. Upgrade to use this mode.",
+    );
+    assert.equal(runGate({}, "pro", mode, getMode, modeUpgradeRequired), undefined);
+  }
 });

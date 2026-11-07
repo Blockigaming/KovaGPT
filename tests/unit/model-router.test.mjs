@@ -12,6 +12,7 @@ import {
 import {
   estimateCostUsd,
   freeModeUpgradeRequired,
+  modeUpgradeRequired,
   routeModel,
   scoreComplexity,
 } from "../../src/lib/ai/model-router.mjs";
@@ -116,7 +117,7 @@ test("Free mode guard preserves paid routing and utility tasks", () => {
   for (const tier of ["plus", "pro", "business"]) {
     assert.equal(freeModeUpgradeRequired(tier, "thinking", true), false);
   }
-  assert.equal(routeModel({ task: "chat", tier: "plus", mode: "max" }).modelId, TERRA);
+  assert.throws(() => routeModel({ task: "chat", tier: "plus", mode: "max" }), /mode_not_entitled/);
   assert.equal(routeModel({ task: "chat", tier: "pro", mode: "ultra" }).modelId, SOL);
   assert.equal(
     routeModel({ task: "utility", tier: "free", mode: "thinking" }).modelId,
@@ -215,15 +216,52 @@ test("the frontend cannot override the selected model", async () => {
   assert.ok(complexity.score >= 2);
 });
 
-test("Free Thinking explicitly routes one level above Default while premium stays locked", () => {
+test("Free Thinking stays on its authorized default model while premium stays locked", () => {
   assert.equal(freeModeUpgradeRequired("free", "thinking"), false);
-  assert.equal(
-    routeModel({ task: "chat", mode: "thinking", tier: "free" }).role,
-    "ADVANCED_REASONING",
-  );
+  assert.equal(routeModel({ task: "chat", mode: "thinking", tier: "free" }).role, "DEFAULT_CHAT");
   assert.equal(routeModel({ task: "chat", mode: "instant", tier: "free" }).role, "DEFAULT_CHAT");
+  assert.equal(
+    routeModel({ task: "chat", mode: "thinking", tier: "free" }).downgradedFrom,
+    undefined,
+  );
   assert.throws(
     () => routeModel({ task: "chat", mode: "thinking", tier: "free", deepMode: true }),
+    /mode_not_entitled/,
+  );
+});
+
+test("hosted consumer requests obey the final model matrix under complex prompts", () => {
+  const env = {
+    KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
+    KOVA_MODEL_ADVANCED_REASONING: "kova-neon-4.6",
+    KOVA_MODEL_PREMIUM_REASONING: "kova-xenon-5",
+  };
+  for (const [tier, modes, models] of [
+    ["free", ["instant", "thinking"], ["kova-argon-4.6"]],
+    ["plus", ["instant", "medium", "thinking", "high"], ["kova-argon-4.6", "kova-neon-4.6"]],
+    [
+      "pro",
+      ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
+      ["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"],
+    ],
+  ]) {
+    for (const mode of modes)
+      for (const text of [
+        "hello",
+        "debug race conditions and refactor a multi-file architecture",
+      ]) {
+        assert.ok(
+          models.includes(routeModel({ task: "chat", tier, mode, text, env }).modelId),
+          `${tier}:${mode}`,
+        );
+      }
+  }
+  for (const mode of ["max", "ultra"]) {
+    assert.equal(modeUpgradeRequired("plus", mode), true);
+    assert.throws(() => routeModel({ task: "chat", tier: "plus", mode, env }), /mode_not_entitled/);
+  }
+  assert.throws(
+    () => routeModel({ task: "chat", tier: "plus", mode: "thinking", deepMode: true, env }),
     /mode_not_entitled/,
   );
 });
