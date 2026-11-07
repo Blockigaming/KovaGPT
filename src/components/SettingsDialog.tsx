@@ -1484,7 +1484,6 @@ export function SettingsDialog({
                 aria-labelledby={currentSectionHeadingId}
                 className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
               >
-                <h3 className="text-sm font-semibold">Voice</h3>
                 <VoiceConnectionStatus />
               </TabsContent>
               {/* GENERAL */}
