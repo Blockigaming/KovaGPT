@@ -225,12 +225,13 @@ test("navigation keeps dense desktop rows, touch targets and account outside scr
   assert.match(source, /<NovaLogo decorative/);
 });
 
-test("saved Work choices are restored without losing other saved destinations", () => {
+test("legacy saved Work choices are removed while preserving other destinations", () => {
   const storage = memoryStorage();
   storage.setItem(
     sidebarShortcutsKey("owner"),
     JSON.stringify({ version: 1, shortcuts: ["projects", "work", "library"] }),
   );
-  assert.deepEqual(readSidebarShortcuts(storage, "owner"), ["projects", "work", "library"]);
-  assert.equal(saveSidebarShortcuts(storage, "owner", ["work"]), true);
+  assert.deepEqual(readSidebarShortcuts(storage, "owner"), ["projects", "library"]);
+  assert.equal(saveSidebarShortcuts(storage, "owner", ["work"]), false);
+  assert.equal(SIDEBAR_SHORTCUTS.some(({ id }) => id === "work"), false);
 });
