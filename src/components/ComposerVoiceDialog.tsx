@@ -863,8 +863,9 @@ export function ComposerVoiceDialog({
       // person finishes a turn. No raw samples or analysis leave the device.
       // If Web Audio is unavailable, manual Finish turn remains functional.
       if (mode === "voice" && typeof AudioContext !== "undefined") {
+        let context: AudioContext | null = null;
         try {
-          const context = new AudioContext();
+          context = new AudioContext();
           const source = context.createMediaStreamSource(acquired);
           const analyser = context.createAnalyser();
           analyser.fftSize = 1024;
@@ -888,6 +889,7 @@ export function ComposerVoiceDialog({
             });
         } catch {
           // Recording is still usable in manual mode without Web Audio.
+          void context?.close().catch(() => undefined);
           setHandsFreeListening(false);
         }
       }
