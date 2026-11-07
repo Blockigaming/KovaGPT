@@ -61,17 +61,22 @@ test("chat Work review receives only the current draft and stays out of temporar
     "@/components/ChatHistorySync": { ChatHistorySyncStatus: "HistoryStatus" },
     "@/components/ChatWorkControl": { ChatWorkControl: "ChatWorkControl" },
   });
-  const render = (ownerId, temporary = false) =>
+  const render = (ownerId, temporary = false, messages = null) =>
     module.ChatWorkspaceControls({
       ownerId,
       temporary,
-      active: null,
+      active: messages === null ? null : { messages },
       objective: "Review this synthetic launch request",
     });
-  for (const tree of [render(null), render("owner", true)])
+  for (const tree of [
+    render(null, false, [{ role: "user", content: "Hello" }]),
+    render("owner", true, [{ role: "user", content: "Hello" }]),
+    render("owner"),
+    render("owner", false, []),
+  ])
     assert.equal(elements(tree, (node) => Object.hasOwn(node.props, "objective")).length, 0);
   for (const owner of ["owner-a", "owner-b"]) {
-    const tree = render(owner);
+    const tree = render(owner, false, [{ role: "user", content: "Hello" }]);
     const control = elements(tree, (node) => Object.hasOwn(node.props, "objective"))[0];
     assert.equal((await control.type.load()).default, "ChatWorkControl");
     assert.equal(control.key, `work:${owner}`);

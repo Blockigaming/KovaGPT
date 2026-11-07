@@ -463,7 +463,7 @@ test("archived chats can be removed from Settings data controls", async ({ page 
     await page.getByRole("button", { name: "Open menu" }).click();
   }
   await openCurrentSettings(page);
-  await chooseSettingsSection(page, "Data control");
+  await chooseSettingsSection(page, "Archived chats");
 
   const archived = page.getByRole("region", { name: "Archived chats" });
   await expect(archived).toBeVisible();
@@ -478,7 +478,7 @@ test("archived chats can be removed from Settings data controls", async ({ page 
   await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await openCurrentSettings(page);
-    await chooseSettingsSection(page, "Data control");
+    await chooseSettingsSection(page, "Archived chats");
   }
   await expect(page.getByRole("region", { name: "Archived chats" })).toContainText(
     "No archived chats",

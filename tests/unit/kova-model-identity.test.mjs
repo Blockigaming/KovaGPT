@@ -105,7 +105,10 @@ test("catalogs share approved names without adding self-hosted routes", () => {
 test("chat and isolated tool planning receive the same server-resolved identity", () => {
   const source = readFileSync("src/routes/api/chat.ts", "utf8");
   assert.match(source, /role: routeDecision\.role/);
-  assert.match(source, /provider: getAiProviderConfig\(\)\.provider/);
+  assert.match(
+    source,
+    /provider: isKovaHostedModelId\(model\) \? "openrouter" : getAiProviderConfig\(\)\.provider/,
+  );
   assert.match(source, /hasAssistantHistory: transformed\.some/);
   assert.equal(
     (

@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 
-function fixture({ apply = false, cap = "7", identity = true, malformed = false } = {}) {
+function fixture({
+  apply = false,
+  cap = "7",
+  identity = true,
+  malformed = false,
+  hostedOnly = false,
+  noModelPolicy = false,
+} = {}) {
   const calls = [],
     output = [];
   const process = {
@@ -29,7 +36,12 @@ function fixture({ apply = false, cap = "7", identity = true, malformed = false 
             env: [
               { name: "KOVA_VOICE_DAILY_REQUEST_LIMIT", value: cap },
               { name: "KOVA_VOICE_MODEL_PROOF_SECRET", secretRef: "existing-signing-secret" },
-              { name: "KOVA_VOICE_OPENAI_MODELS_JSON", value: '["existing-model"]' },
+              ...(!hostedOnly && !noModelPolicy
+                ? [{ name: "KOVA_VOICE_OPENAI_MODELS_JSON", value: '["existing-model"]' }]
+                : []),
+              ...(hostedOnly
+                ? [{ name: "KOVA_VOICE_HOSTED_MODELS_JSON", value: '["kova-xenon-5"]' }]
+                : []),
               { name: "UNRELATED_SECRET", value: "private-canary" },
             ],
           },
@@ -76,8 +88,19 @@ test("explicit apply changes only the targeted voice references and preserves th
   );
   assert.doesNotMatch(f.output, /private-canary/);
 });
+test("existing hosted-only voice policy qualifies without exposing Kova model secrets", () => {
+  const f = fixture({ hostedOnly: true, apply: true });
+  assert.equal(f.exitCode, 0);
+  assert.equal(f.calls.length, 3);
+  assert.doesNotMatch(f.output, /kova-xenon-5|existing-signing-secret/);
+});
 test("missing rollout prerequisites and malformed Azure output cannot change resources or leak values", () => {
-  for (const options of [{ cap: "" }, { identity: false }, { malformed: true }]) {
+  for (const options of [
+    { cap: "" },
+    { identity: false },
+    { malformed: true },
+    { noModelPolicy: true },
+  ]) {
     const f = fixture({ ...options, apply: true });
     assert.equal(f.exitCode, 1);
     assert.equal(f.calls.length, 1);

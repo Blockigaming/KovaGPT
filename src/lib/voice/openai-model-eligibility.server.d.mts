@@ -1,6 +1,7 @@
 export type VoiceModelPolicy = {
   valid: boolean;
   models: Set<string>;
+  hostedModels: Set<string>;
   secret?: string;
 };
 
@@ -12,7 +13,7 @@ export type VoiceModelIdentity = {
 };
 
 export type OpenAiVoiceModel = {
-  provider: "openai";
+  provider: "openai" | "azure_openai" | "openrouter";
   modelId: string;
 };
 

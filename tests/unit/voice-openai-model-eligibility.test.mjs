@@ -53,6 +53,60 @@ test("only an explicit, valid, nonempty exact OpenAI model list enables voice", 
   }
 });
 
+test("hosted Kova models require a second exact server allowlist and signed receipt", () => {
+  const hostedModels = ["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"];
+  const policy = voiceModelPolicy(
+    env({ KOVA_VOICE_HOSTED_MODELS_JSON: JSON.stringify(hostedModels) }),
+  );
+  assert.equal(policy.valid, true);
+  for (const modelId of hostedModels) {
+    const selectedHosted = { provider: "openrouter", modelId };
+    assert.equal(eligibleVoiceModel(policy, selectedHosted), true);
+    const receipt = issueVoiceModelReceipt(policy, { ...identity, ...selectedHosted });
+    assert.equal(typeof receipt, "string");
+    assert.deepEqual(verifyVoiceModelReceipt(policy, receipt, identity), selectedHosted);
+    assert.equal(
+      verifyVoiceModelReceipt(
+        voiceModelPolicy(env({ KOVA_VOICE_HOSTED_MODELS_JSON: undefined })),
+        receipt,
+        identity,
+      ),
+      null,
+      "Revoking the hosted allowlist invalidates existing receipts",
+    );
+  }
+  for (const provider of ["openai", "azure_openai", "client", "unknown"]) {
+    assert.equal(
+      eligibleVoiceModel(policy, { provider, modelId: "kova-argon-4.6" }),
+      false,
+      "Hosted model may not be spoofed as a different provider",
+    );
+  }
+  for (const raw of ['["other-model"]', '["kova-argon-4.6", "kova-argon-4.6"]', "[]", "bad"]) {
+    const malformed = voiceModelPolicy(env({ KOVA_VOICE_HOSTED_MODELS_JSON: raw }));
+    assert.equal(malformed.valid, false, raw);
+    assert.equal(
+      eligibleVoiceModel(malformed, { provider: "openai", modelId: selected.modelId }),
+      false,
+      "Invalid hosted config must fail the entire speech policy closed",
+    );
+  }
+  const hostedOnly = voiceModelPolicy(
+    env({
+      KOVA_VOICE_OPENAI_MODELS_JSON: undefined,
+      KOVA_VOICE_HOSTED_MODELS_JSON: JSON.stringify(["kova-xenon-5"]),
+    }),
+  );
+  assert.equal(hostedOnly.valid, true);
+  assert.equal(
+    eligibleVoiceModel(hostedOnly, { provider: "openrouter", modelId: "kova-xenon-5" }),
+    true,
+  );
+  const azure = { provider: "azure_openai", modelId: selected.modelId };
+  const azureReceipt = issueVoiceModelReceipt(policy, { ...identity, ...azure });
+  assert.deepEqual(verifyVoiceModelReceipt(policy, azureReceipt, identity), azure);
+});
+
 test("signed proof authenticates exact owner, chat, message, content and model", () => {
   const policy = voiceModelPolicy(env());
   const receipt = issueVoiceModelReceipt(policy, { ...identity, ...selected });

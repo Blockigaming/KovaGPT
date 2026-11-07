@@ -50,14 +50,16 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   for (const section of [
     "Profile",
     "Appearance",
-    "Responses",
-    "Memory",
-    "Security",
+    "General",
+    "Personalization",
+    "Security and login",
     "Storage",
     "Notifications",
     "Connections",
     "Cloud Browser",
-    "Privacy",
+    "Data controls",
+    "Archived chats",
+    "Voice",
     "Usage",
     "Subscriptions",
   ]) {
@@ -70,7 +72,7 @@ test("requested: every Settings section has room and Settings owns sidebar inter
     expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth + 1), section).toBe(
       true,
     );
-    if (section === "Responses") {
+    if (section === "Voice") {
       await page.route("**/api/voice", (route) =>
         route.fulfill({ json: { stt: true, conversation: false } }),
       );

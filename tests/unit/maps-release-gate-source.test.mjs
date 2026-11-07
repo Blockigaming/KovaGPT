@@ -48,15 +48,15 @@ test("Sidebar exposes and applies the Maps release decision", () => {
   const filter = new Function("SIDEBAR_ITEMS", "mapsReleaseApproved", `return ${expression}`);
   const shortcuts = [
     { id: "maps", to: "/maps" },
-    { id: "work", to: "/work" },
+    { id: "projects", to: "/projects" },
   ];
   assert.deepEqual(
     filter(shortcuts, false).map((item) => item.id),
-    ["work"],
+    ["projects"],
   );
   assert.deepEqual(
     filter(shortcuts, true).map((item) => item.id),
-    ["maps", "work"],
+    ["maps", "projects"],
   );
   assert.match(
     sidebar,

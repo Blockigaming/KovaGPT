@@ -53,6 +53,7 @@ for (const theme of ["dark", "light"] as const) {
     await expect(voice).toHaveAccessibleName("Voice");
     await expect(voice).toBeEnabled();
     await expect(page.getByText("Continue working", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Prepare or manage Work" })).toHaveCount(0);
     for (const action of ["Write something", "Summarize a file", "Compare options"]) {
       await expect(
         page.getByRole("button", { name: `Start with ${action}`, exact: true }),
@@ -101,6 +102,26 @@ for (const theme of ["dark", "light"] as const) {
     });
   });
 }
+
+test("signed-in homepage initially scrolls to the latest content", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 400 });
+  await fixture(page, "dark", true, true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page.getByRole("button", { name: "New chat", exact: true }).first().click();
+  await expect(page.locator("#chat-greeting")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Prepare or manage Work" })).toHaveCount(0);
+  const home = page.locator(".kova-empty-chat");
+  await expect(home.locator("#continue-working-heading")).toBeVisible();
+  await expect
+    .poll(() => home.evaluate((node) => node.scrollHeight - node.clientHeight))
+    .toBeGreaterThan(8);
+  await expect
+    .poll(() =>
+      home.evaluate((node) => Math.abs(node.scrollTop - (node.scrollHeight - node.clientHeight))),
+    )
+    .toBeLessThanOrEqual(2);
+});
 
 test("conversation composer keeps drafts and mobile Enter inserts a newline", async ({
   page,

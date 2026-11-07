@@ -33,6 +33,7 @@ export interface ComposerVoiceDialogViewProps {
   status: string;
   availability: ComposerVoiceAvailability;
   hasTranscript: boolean;
+  handsFreeListening?: boolean;
   microphoneAvailable?: boolean;
   replyAvailable?: boolean;
   error?: string;
@@ -58,6 +59,7 @@ export function ComposerVoiceDialogView({
   status,
   availability,
   hasTranscript,
+  handsFreeListening = false,
   microphoneAvailable = true,
   replyAvailable = true,
   error,
@@ -142,14 +144,16 @@ export function ComposerVoiceDialogView({
                 : phase === "idle" && !hasTranscript && !audioPlayer
                   ? microphoneAvailable
                     ? mode === "voice"
-                      ? "Start a voice conversation. Finish each turn to send it, then hear the saved reply. Stop ends microphone access and playback."
+                      ? "Voice listens and responds turn by turn. Silence detection can finish a turn automatically; Stop ends the conversation."
                       : "Speak, review your words, then add them to chat."
                     : replyAvailable
                       ? "Listen to a completed reply using your selected voice."
                       : "Recording and reply playback are unavailable right now."
                   : phase === "recording"
                     ? mode === "voice"
-                      ? "Finish turn sends this recording through transcription and your chat. Stop ends the session and discards the current recording."
+                      ? handsFreeListening
+                        ? "Listening live. Pause after speaking to send your turn automatically. Finish turn also works manually; Stop ends the conversation."
+                        : "Listening now. Press Finish turn when you finish speaking; Stop ends the conversation."
                       : "Stop when you’re ready to turn your recording into text."
                     : phase === "requesting"
                       ? "Your browser will ask before the microphone can start."
@@ -165,7 +169,7 @@ export function ComposerVoiceDialogView({
                               ? "Your completed reply is being prepared for playback."
                               : hasTranscript
                                 ? mode === "voice"
-                                  ? "Review the transcript and saved reply in chat. Start begins a new turn."
+                                  ? "Your previous turn is saved in chat. The microphone resumes after Kova finishes speaking, or you can restart manually."
                                   : "Make any changes before adding this to your chat."
                                 : "Press play to hear your completed reply.");
 
@@ -270,7 +274,7 @@ export function ComposerVoiceDialogView({
             <p className="kova-voice-limit">
               {ready && microphoneAvailable
                 ? mode === "voice"
-                  ? "Up to 59 seconds per turn · Finish turn to send · Stop ends Voice"
+                  ? "Live conversation · Automatic turn detection when supported · Stop ends Voice"
                   : "Up to 59 seconds · Stop to transcribe"
                 : "Your conversation is here when you’re ready"}
             </p>
@@ -307,7 +311,7 @@ export function ComposerVoiceDialogView({
                       <p className="kova-voice-popover-title">How your audio is processed</p>
                       <p>
                         {mode === "voice"
-                          ? "After explicit Start, Finish turn or the 59-second limit sends your recording to ElevenLabs for transcription. The transcript is submitted through your chat and saved to history; the saved reply is then sent to ElevenLabs for speech. The microphone restarts after actual playback ends. Stop or Close ends the session. Recordings are limited to 8 MB."
+                          ? "After you start Voice, the microphone listens for speech and a pause. Each completed turn is sent to ElevenLabs for transcription, answered using your chat model, and spoken through ElevenLabs. The microphone resumes after playback finishes. You may manually Finish turn; Stop or Close ends the session. Recordings are limited to 8 MB and 59 seconds per turn."
                           : "When you stop or reach 59 seconds, your recording is sent to ElevenLabs for transcription. Reply text is sent there when you choose to hear it aloud. Cancel before stopping to discard audio. Recordings are limited to 8 MB."}
                       </p>
                       <p>

@@ -44,12 +44,13 @@ const [
 
 const homeView = await readFile("src/components/HomeChatStarters.tsx", "utf8");
 const sidebarCatalog = await readFile("src/lib/sidebar-layout.mjs", "utf8");
-test("chat stays primary while authenticated Work has its own secondary destination", () => {
+test("chat remains primary and Work is accessible only through direct route, not sidebar", () => {
   assert.doesNotMatch(appShell, /WorkspaceModeSwitch/);
   assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
   assert.match(workRoute, /component: WorkPage/);
   assert.match(workRoute, /isLoaded && isSignedIn/);
-  assert.match(sidebarCatalog, /to: "\/work"/);
+  assert.doesNotMatch(sidebarCatalog, /to: "\/work"/);
+  assert.doesNotMatch(sidebar, /navLink\("\/work"/);
   assert.match(sidebar, /aria-label="New chat"/);
 });
 
@@ -59,8 +60,7 @@ test("customizable core destinations precede the scrollable More disclosure", ()
   assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>/);
   assert.doesNotMatch(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
   assert.match(disclosure, /Customize sidebar/);
-  assert.match(disclosure, /signedIn && !railShortcuts.includes\("work"\)/);
-  assert.match(disclosure, /navLink\("\/work", "Work", SHORTCUT_ICONS.work\)/);
+  assert.doesNotMatch(disclosure, /\/work|SHORTCUT_ICONS\.work/);
   for (const path of ["/library", "/projects", "/apps", "/scheduled-tasks"])
     assert.ok(sidebarCatalog.includes('to: "' + path + '"'));
   assert.ok(
@@ -71,10 +71,7 @@ test("customizable core destinations precede the scrollable More disclosure", ()
 
 test("secondary navigation remains discoverable without active unavailable destinations", () => {
   assert.match(sidebar, /data-ui-reference="gemini-sidebar-disclosure"/);
-  assert.match(
-    sidebar,
-    /isOn\("\/maps"\) \|\| \(isOn\("\/work"\) && !railShortcuts.includes\("work"\)\)/,
-  );
+  assert.match(sidebar, /open=\{isOn\("\/maps"\) \|\| undefined\}/);
   assert.match(sidebar, /Expand sidebar/);
   assert.match(sidebar, /mapsReleaseApproved && railShortcuts.includes\("maps"\)/);
   assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances)"/);

@@ -46,22 +46,14 @@ for (const theme of themes) {
     const width = Number(testInfo.project.metadata.width ?? 0);
     if (width >= 1024) {
       if (authenticated) {
-        for (const label of ["New chat", "Search", "Work", "Projects", "Library", "Images"])
+        for (const label of ["New chat", "Search", "Projects", "Library", "Images"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
         await page.getByRole("button", { name: "More", exact: true }).click();
         await expect(page.getByRole("group", { name: "More destinations" })).toBeVisible();
         for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       } else {
-        for (const label of [
-          "New chat",
-          "Work",
-          "Images",
-          "Library",
-          "Projects",
-          "Plugins",
-          "Discover",
-        ])
+        for (const label of ["New chat", "Images", "Library", "Projects", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       }
     } else {

@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as principalStorage from "../../src/lib/principal-browser-storage.mjs";
 import { createSpeechPlayback, stopActiveSpeechPlayback } from "../../src/lib/speech-playback.mjs";
+import { createVoiceSilenceGate } from "../../src/lib/voice/speech-pause.mjs";
 import { createHash, webcrypto } from "node:crypto";
 import { createHookHarness, elements, loadUiModule, settle } from "../helpers/ui-state-harness.mjs";
 
@@ -102,6 +103,9 @@ function fixture(initial = {}, options = {}) {
     dispatched = [],
     storageWrites = [],
     storageReads = [];
+  let fakeNow = Date.now();
+  let fakeRms = 0;
+  const audioContexts = [];
   const storage = options.storage ?? new Map();
   const listeners = new Map();
   const fakeWindow = {
@@ -232,6 +236,27 @@ function fixture(initial = {}, options = {}) {
       });
     }
   }
+  class FakeAudioContext {
+    constructor() {
+      this.state = "running";
+      this.closed = 0;
+      audioContexts.push(this);
+    }
+    createMediaStreamSource() {
+      return { connect() {}, disconnect() {} };
+    }
+    createAnalyser() {
+      return {
+        fftSize: 1024,
+        getFloatTimeDomainData(samples) {
+          samples.fill(fakeRms);
+        },
+      };
+    }
+    async close() {
+      this.closed++;
+    }
+  }
   const player = {
     paused: 0,
     removed: 0,
@@ -276,6 +301,7 @@ function fixture(initial = {}, options = {}) {
       ...principalStorage,
       safeBrowserStorage: (area) => principalStorage.safeBrowserStorage(area, fakeWindow),
     },
+    "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
         const pending = deferred();
@@ -348,7 +374,12 @@ function fixture(initial = {}, options = {}) {
     File,
     FormData,
     Error,
-    Date,
+    Date: class extends Date {
+      static now() {
+        return fakeNow;
+      }
+    },
+    AudioContext: options.audioAnalysis ? FakeAudioContext : undefined,
     crypto: webcrypto,
     TextEncoder,
     console,
@@ -439,6 +470,7 @@ function fixture(initial = {}, options = {}) {
     voiceSubmissions,
     playbackSinks,
     microphoneRequests,
+    audioContexts,
     recorders,
     timers,
     urls,
@@ -463,6 +495,14 @@ function fixture(initial = {}, options = {}) {
     text: () => text(tree),
     nodes: () => nodes(tree),
     trackStream,
+    async speechLevelAt(rms, now) {
+      fakeRms = rms;
+      fakeNow = now;
+      for (const timer of [...timers.values()]) {
+        if (timer.interval && timer.delay === 100) timer.callback();
+      }
+      await flush();
+    },
     async ready(value = configured) {
       requests[0].resolve(Response.json(value));
       await flush();
@@ -1360,6 +1400,57 @@ async function voiceReply(f) {
   await f.flush();
   return { ...turn, speech, sink: f.playbackSinks[0] };
 }
+
+test("hands-free Voice sends only after sustained speech and a genuine pause", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true }, { audioAnalysis: true });
+  await f.ready();
+  const stream = await f.acquire();
+  assert.equal(f.audioContexts.length, 1);
+  await f.speechLevelAt(0.03, 100);
+  await f.speechLevelAt(0.03, 350);
+  await f.speechLevelAt(0.001, 900);
+  assert.equal(f.requests.length, 1, "A short pause must not send a transcript");
+  await f.speechLevelAt(0.001, 1510);
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.requests[1]?.url, "/api/voice", "Silence after speech submits STT");
+  assert.equal(f.requests[1]?.init?.method, "POST");
+  assert.equal(f.audioContexts[0].closed, 1, "Audio analysis stops before upload");
+  f.unmount();
+});
+
+test("hands-free Voice never sends a billable empty recording after idle timeout", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true }, { audioAnalysis: true });
+  await f.ready();
+  await f.acquire();
+  await f.speechLevelAt(0.001, 100);
+  await f.timer(59_000);
+  assert.equal(f.requests.length, 1, "No provider POST without detected speech");
+  assert.equal(f.audioContexts[0].closed, 1);
+  assert.match(f.text(), /No speech detected/);
+  f.unmount();
+});
+
+test("empty-composer Voice begins exactly once after the authorized ElevenLabs capability check", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true });
+  assert.equal(f.requests[0].url, "/api/voice");
+  assert.equal(f.microphoneRequests.length, 0, "No microphone access before server authorization");
+  await f.ready();
+  assert.equal(f.microphoneRequests.length, 1, "Approved Voice click starts recording");
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1, "Rerenders must not restart the microphone");
+  const acquired = await f.acquire();
+  await f.click("Finish turn");
+  assert.ok(acquired.tracks.every((track) => track.stopped > 0));
+  f.unmount();
+});
+
+test("automatic Voice never requests a microphone for unavailable conversation configuration", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true });
+  await f.ready({ ...configured, conversation: false });
+  assert.equal(f.microphoneRequests.length, 0);
+  assert.equal(f.requests.length, 1, "Only the safe configuration GET is allowed");
+  f.unmount();
+});
 
 test("Voice requires explicit Start and uses STT before the existing chat callback; Dictate never submits chat", async () => {
   const f = fixture({ mode: "voice" });

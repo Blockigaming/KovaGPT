@@ -112,3 +112,36 @@ test("explicit non-stop completion never authorizes speech, while native complet
     { provider: "openai", modelId: "fixture-model" },
   );
 });
+
+test("approved hosted Kova model streams get provider-bound receipts only after completion", async () => {
+  const hostedPolicy = voiceModelPolicy(
+    (key) =>
+      ({
+        KOVA_VOICE_HOSTED_MODELS_JSON: '["kova-xenon-5"]',
+        KOVA_VOICE_MODEL_PROOF_SECRET: "fixture-only-signing-key-with-enough-bytes",
+      })[key],
+  );
+  const hostedIdentity = { ...identity, provider: "openrouter", modelId: "kova-xenon-5" };
+  const receipt = await relayEligibleVoiceChat(
+    stream([delta("Hosted Kova reply."), "data: [DONE]\n\n"]),
+    { policy: hostedPolicy, identity: hostedIdentity, emit() {} },
+  );
+  assert.deepEqual(
+    verifyVoiceModelReceipt(hostedPolicy, receipt, {
+      ownerId: identity.ownerId,
+      chatId: identity.chatId,
+      messageId: identity.messageId,
+      content: "Hosted Kova reply.",
+    }),
+    { provider: "openrouter", modelId: "kova-xenon-5" },
+  );
+  assert.equal(
+    await relayEligibleVoiceChat(stream([delta("Hosted Kova reply."), "data: [DONE]\n\n"]), {
+      policy,
+      identity: hostedIdentity,
+      emit() {},
+    }),
+    null,
+    "An OpenAI-only policy cannot authorize hosted-model speech",
+  );
+});

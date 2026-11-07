@@ -183,10 +183,9 @@ test("sidebar search and all main destinations keep honest service states", asyn
     .locator("summary")
     .filter({ hasText: /^More$/ })
     .click();
-  const work = page.getByRole("link", { name: "Work", exact: true });
-  await expect(work).toBeVisible();
-  await expect(work).toHaveCount(1);
-  await work.click();
+  // Work remains a direct feature but is deliberately absent from sidebar and More.
+  await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+  await page.goto("/work");
   await expect(page).toHaveURL(/\/work$/);
   await expect(
     page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),

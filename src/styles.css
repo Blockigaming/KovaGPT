@@ -1421,7 +1421,7 @@ body {
 
   :root:not([data-kova-input-modality="pointer"]) [role="menuitem"]:focus-visible,
   :root:not([data-kova-input-modality="pointer"]) [role="option"]:focus-visible {
-    outline: 2px solid var(--ring) !important;
+    outline: 2px solid color-mix(in srgb, var(--foreground) 65%, transparent) !important;
     outline-offset: -2px !important;
     background: var(--accent) !important;
   }
@@ -1531,8 +1531,8 @@ body {
 
   .kova-secondary-page :is(input, textarea, select):focus-visible,
   .kova-auth-surface :is(input, textarea, select):focus-visible {
-    border-color: color-mix(in oklab, var(--kova-blue) 55%, var(--border));
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--kova-blue) 12%, transparent);
+    border-color: color-mix(in srgb, var(--foreground) 35%, var(--border));
+    box-shadow: none;
     outline: none;
   }
 
@@ -1986,7 +1986,39 @@ body {
 
 /* Programmatic menu focus after a pointer click is not keyboard focus. */
 :root[data-kova-input-modality="pointer"]
-  :is(button, a, [role="button"], [role="menu"], [role="menuitem"], [role="tab"]):focus {
+  :is(
+    button,
+    a,
+    [role="button"],
+    [role="menu"],
+    [role="menuitem"],
+    [role="tab"],
+    [data-slot="select-trigger"],
+    [data-slot="select-item"],
+    [data-slot="menu-item"],
+    [role="option"],
+    [role="combobox"]
+  ):focus {
   outline: none !important;
+  box-shadow: none !important;
+}
+
+/* One neutral, theme-aware focus indicator. Radix select/menu options and
+   triggers must not stack the browser outline, Tailwind ring, and inset shadow.
+   Keyboard focus stays visible; pointer-selected items use their filled state. */
+:root:not([data-kova-input-modality="pointer"])
+  :is(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [tabindex],
+    [role="option"],
+    [role="menuitem"],
+    [role="combobox"]
+  ):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 65%, transparent) !important;
+  outline-offset: -2px !important;
   box-shadow: none !important;
 }
