@@ -20,7 +20,7 @@ function SettingsPage() {
       <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">
         {!valid ? (
           <p role="status">
-            This settings section is unavailable. Profile settings are shown below.
+            This settings section is unavailable. General settings are shown below.
           </p>
         ) : null}
         <SettingsDialog
