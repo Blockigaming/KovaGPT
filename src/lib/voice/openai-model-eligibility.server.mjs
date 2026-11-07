@@ -3,6 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
 const RECORD_ID = /^[A-Za-z0-9._:-]{1,200}$/u;
 const RECEIPT = /^([A-Za-z0-9_-]{1,1800})\.([A-Za-z0-9_-]{43})$/u;
+const APPROVED_HOSTED_MODELS = new Set(["kova-xenon-5", "kova-neon-4.6", "kova-argon-4.6"]);
 
 function configuredModels(raw) {
   if (typeof raw !== "string" || raw.length > 4096) return null;
@@ -22,23 +23,36 @@ function configuredModels(raw) {
   }
 }
 
-/** Only an explicit exact model list and a separate signing key enable voice output. */
+/** Explicit operator allowlists and a separate signing key gate speech. */
 export function voiceModelPolicy(env) {
-  const models = configuredModels(env?.("KOVA_VOICE_OPENAI_MODELS_JSON"));
+  const openaiRaw = env?.("KOVA_VOICE_OPENAI_MODELS_JSON");
+  const hostedRaw = env?.("KOVA_VOICE_HOSTED_MODELS_JSON");
+  const openaiPresent = typeof openaiRaw === "string" && openaiRaw.length > 0;
+  const hostedPresent = typeof hostedRaw === "string" && hostedRaw.length > 0;
+  const models = openaiPresent ? configuredModels(openaiRaw) : new Set();
+  const hostedModels = hostedPresent ? configuredModels(hostedRaw) : new Set();
   const secret = env?.("KOVA_VOICE_MODEL_PROOF_SECRET");
-  if (!models || typeof secret !== "string" || Buffer.byteLength(secret, "utf8") < 32)
-    return { valid: false, models: new Set() };
-  return { valid: true, models, secret };
+  const valid =
+    (openaiPresent || hostedPresent) &&
+    models instanceof Set &&
+    hostedModels instanceof Set &&
+    [...hostedModels].every((model) => APPROVED_HOSTED_MODELS.has(model)) &&
+    typeof secret === "string" &&
+    Buffer.byteLength(secret, "utf8") >= 32;
+  if (!valid) return { valid: false, models: new Set(), hostedModels: new Set() };
+  return { valid: true, models, hostedModels, secret };
 }
 
 export function eligibleVoiceModel(policy, { provider, modelId } = {}) {
+  if (policy?.valid !== true || typeof modelId !== "string" || !MODEL_ID.test(modelId))
+    return false;
+  if (provider === "openai" || provider === "azure_openai")
+    return policy.models instanceof Set && policy.models.has(modelId);
   return (
-    policy?.valid === true &&
-    policy.models instanceof Set &&
-    provider === "openai" &&
-    typeof modelId === "string" &&
-    MODEL_ID.test(modelId) &&
-    policy.models.has(modelId)
+    provider === "openrouter" &&
+    policy.hostedModels instanceof Set &&
+    APPROVED_HOSTED_MODELS.has(modelId) &&
+    policy.hostedModels.has(modelId)
   );
 }
 
@@ -64,7 +78,7 @@ function signature(secret, encoded) {
   return createHmac("sha256", secret).update(encoded, "ascii").digest();
 }
 
-/** Call only after a completed OpenAI chat turn produced the exact content. */
+/** Call only after an authenticated, completed eligible chat turn. */
 export function issueVoiceModelReceipt(
   policy,
   { ownerId, chatId, messageId, content, provider, modelId } = {},
@@ -77,7 +91,7 @@ export function issueVoiceModelReceipt(
     return null;
   const payload = {
     v: 1,
-    p: "openai",
+    p: provider,
     m: modelId,
     o: ownerId,
     c: chatId,
@@ -128,7 +142,7 @@ export function verifyVoiceModelReceipt(
       !eligibleVoiceModel(policy, { provider: payload.p, modelId: payload.m })
     )
       return null;
-    return { provider: "openai", modelId: payload.m };
+    return { provider: payload.p, modelId: payload.m };
   } catch {
     return null;
   }

@@ -16,13 +16,14 @@ test("sidebar catalog preserves requested destinations and customizable order", 
     ["images", "/images"],
     ["library", "/library"],
     ["projects", "/projects"],
-    ["work", "/work"],
     ["scheduled-tasks", "/scheduled-tasks"],
     ["apps", "/apps"],
   ]) {
     assert.ok(catalog.some((item) => item.id === id && item.to === to));
     assert.ok(defaultLayout.shortcuts.includes(id));
   }
+  assert.ok(!catalog.some((item) => item.id === "work" || item.to === "/work"));
+  assert.doesNotMatch(sidebar, /navLink\("\/work"/);
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
   assert.match(sidebar, /<NovaLogo decorative/);
   assert.match(sidebar, /id="sidebar-pinned-heading"[^>]*>\s*Pinned\s*<\/h2>/);

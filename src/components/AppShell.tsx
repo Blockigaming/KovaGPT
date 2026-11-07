@@ -163,7 +163,7 @@ export function AppShell({
           navigate({ to: "/library" });
         },
         "open-settings": () => {
-          void navigate({ to: "/settings/$section", params: { section: "profile" } });
+          void navigate({ to: "/settings/$section", params: { section: "responses" } });
         },
         "generate-image": () => {
           navigate({ to: "/images" });

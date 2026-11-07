@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
 export function ContinueWorking({
@@ -50,8 +50,20 @@ export function HomeWelcome({
   children: ReactNode;
 }) {
   const greeting = useHomeGreeting(owner, firstName, chatId);
+  const homeScrollRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!owner) return;
+    const frame = window.requestAnimationFrame(() => {
+      const section = homeScrollRef.current;
+      if (section) section.scrollTop = section.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [owner, chatId, conversations.length]);
+
   return (
     <section
+      ref={homeScrollRef}
       className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
       data-ui-reference="grok.prompt-first-home"
       aria-labelledby="chat-greeting"

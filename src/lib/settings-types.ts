@@ -76,6 +76,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const SETTINGS_SECTIONS = {
   profile: "personalization",
+  archived: "archived",
+  voice: "voice",
   appearance: "appearance",
   responses: "general",
   notifications: "notifications",
@@ -98,5 +100,5 @@ export const SETTINGS_SECTIONS = {
   logout: "logout",
 } as const;
 export function settingsSectionForTab(tab?: string) {
-  return Object.entries(SETTINGS_SECTIONS).find(([, value]) => value === tab)?.[0] ?? "profile";
+  return Object.entries(SETTINGS_SECTIONS).find(([, value]) => value === tab)?.[0] ?? "responses";
 }

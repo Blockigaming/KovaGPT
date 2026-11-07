@@ -1999,6 +1999,7 @@ export function ChatInput({
       <ComposerVoiceDialog
         open={activeVoiceMode !== null}
         inlineDictation
+        autoStartVoice
         mode={activeVoiceMode ?? "dictate"}
         onOpenChange={(open) => {
           if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)

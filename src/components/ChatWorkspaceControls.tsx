@@ -33,7 +33,7 @@ export function ChatWorkspaceControls({
           </Link>
         )}
         {ownerId && <HistoryStatus key={`history:${ownerId}`} />}
-        {ownerId && !temporary && (
+        {ownerId && !temporary && Boolean(active?.messages.length) && (
           <ChatWorkControl key={`work:${ownerId}`} ownerId={ownerId} objective={objective} />
         )}
       </Suspense>

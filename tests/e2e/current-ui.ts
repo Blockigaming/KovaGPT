@@ -87,24 +87,22 @@ export async function openCurrentSettings(page: Page) {
 
 export async function chooseSettingsSection(page: Page, section: string) {
   const surface = page.locator(".kova-settings-dialog");
+  // The redesigned Settings navigation exposes these as top-level sections.
+  // Retain aliases for tests written against the old nested Settings labels.
   const labels: Record<string, string> = {
-    "Data control": "Privacy",
-    General: "Responses",
-    Personalization: "Profile",
-    Subscriptions: "Subscriptions",
+    "Data control": "Data controls",
+    Privacy: "Data controls",
+    Responses: "General",
+    General: "General",
     Billing: "Subscriptions",
-    "Safety & security": "Security",
+    "Safety & security": "Security and login",
+    Security: "Security and login",
+    "Keyboard shortcuts": "Keyboard",
+    Email: "Account",
+    Memory: "Personalization",
     Apps: "Connections",
   };
-  const secondary: Record<string, string> = {
-    "Keyboard shortcuts": "Responses",
-    Email: "Profile",
-    Location: "Privacy",
-    "Parental controls": "Privacy",
-    "Family Center": "Connections",
-    About: "Profile",
-  };
-  const label = secondary[section] ?? labels[section] ?? section;
+  const label = labels[section] ?? section;
   const tab = surface.getByRole("tab", { name: label, exact: true });
   const picker = surface.getByRole("button", { name: "Section", exact: true });
   const chooseWithPicker = async () => {
@@ -142,23 +140,6 @@ export async function chooseSettingsSection(page: Page, section: string) {
     }
   } else {
     await chooseWithPicker();
-  }
-  if (secondary[section]) {
-    const names: Record<string, string> = {
-      Memory: "Saved memory",
-      "Safety & security": "Security",
-    };
-    const button = surface.getByRole("button", { name: names[section] ?? section, exact: true });
-    const moreDetails = surface.locator("details").filter({
-      has: page.locator("summary").filter({ hasText: /^More / }),
-    });
-    // The section picker can retain an already-open disclosure across a
-    // same-section selection. Button visibility may be temporarily false while
-    // the page swaps content, so toggling on that signal can close it instead.
-    if (!(await moreDetails.evaluate((details) => (details as HTMLDetailsElement).open)))
-      await moreDetails.locator("summary").click();
-    await expect(button).toBeVisible();
-    await button.click();
   }
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();
   return surface;

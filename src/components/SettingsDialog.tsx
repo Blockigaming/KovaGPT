@@ -44,6 +44,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Trash2,
+  Archive,
+  Mic,
   Palette,
   User2,
   ShieldCheck,
@@ -1020,17 +1022,46 @@ export function SettingsDialog({
     };
   }, [open, userKey]);
 
+  // Full-page Settings uses the same page-first navigation hierarchy as the
+  // account Settings reference. Every destination is an existing functional tab.
   const pageGroups: TabGroup[] = [
     {
-      title: "Settings",
+      title: "Personal",
       tabs: [
-        { v: "personalization", label: "Profile", icon: User2 },
+        {
+          v: "general",
+          label: "General",
+          icon: Cog,
+          keywords: ["responses", "send", "shortcut"],
+        },
         { v: "appearance", label: "Appearance", icon: Palette },
-        { v: "general", label: "Responses", icon: Sparkles },
-        { v: "memory", label: "Memory", icon: Brain },
-        { v: "security", label: "Security", icon: ShieldCheck },
-        { v: "storage", label: "Storage", icon: HardDrive },
         { v: "notifications", label: "Notifications", icon: Bell },
+        { v: "personalization", label: "Profile", icon: User2 },
+        { v: "security", label: "Security and login", icon: ShieldCheck },
+        { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
+        {
+          v: "archived",
+          label: "Archived chats",
+          icon: Archive,
+          keywords: ["history", "trash"],
+        },
+        { v: "parental", label: "Parental controls", icon: Baby },
+        { v: "voice", label: "Voice", icon: Mic, keywords: ["microphone", "audio"] },
+        { v: "storage", label: "Storage", icon: HardDrive },
+        {
+          v: "data",
+          label: "Data controls",
+          icon: Database,
+          keywords: ["privacy", "export"],
+        },
+        { v: "memory", label: "Personalization", icon: Brain, keywords: ["memory"] },
+        { v: "shortcuts", label: "Keyboard", icon: Keyboard, keywords: ["keyboard shortcuts"] },
+        { v: "usage", label: "Usage", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "Workspace",
+      tabs: [
         { v: "linked", label: "Connections", icon: Link2 },
         {
           v: "cloud-browser",
@@ -1038,14 +1069,23 @@ export function SettingsDialog({
           icon: ShieldCheck,
           keywords: ["permissions", "websites", "login", "rules"],
         },
-        { v: "data", label: "Privacy", icon: ShieldCheck },
-        { v: "usage", label: "Usage", icon: BarChart3 },
+        { v: "family", label: "Family Center", icon: Users },
+        { v: "location", label: "Location", icon: MapPin },
+      ],
+    },
+    {
+      title: "Plan and support",
+      tabs: [
         {
           v: "billing",
           label: "Subscriptions",
           icon: CreditCard,
           keywords: ["subscription", "plan", "payment", "invoice"],
         },
+        { v: "report", label: "Report an issue", icon: Bug },
+        { v: "help", label: "Help center", icon: LifeBuoy },
+        { v: "about", label: "About", icon: Info },
+        { v: "logout", label: "Log out", icon: LogOut },
       ],
     },
   ];
@@ -1069,7 +1109,8 @@ export function SettingsDialog({
     : secondaryParents[tab];
   const secondaryTabs = TAB_GROUPS.flatMap((group) => group.tabs).filter(
     (item) =>
-      secondaryParents[item.v] === tab && !["memory", "security", "storage"].includes(item.v),
+      secondaryParents[item.v] === tab &&
+      !pageGroups.some((group) => group.tabs.some((primary) => primary.v === item.v)),
   );
   const allTabs = groups.flatMap((group) => group.tabs);
   const activeTab =
@@ -1368,7 +1409,7 @@ export function SettingsDialog({
             </aside>
 
             <SettingsNavigationResize
-              width={settings.settingsNavigationWidth ?? 280}
+              width={settings.settingsNavigationWidth ?? (page ? 352 : 280)}
               onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
             />
 
@@ -1429,6 +1470,22 @@ export function SettingsDialog({
                   </div>
                 </details>
               ) : null}
+              {/* DIRECT ACCOUNT SETTINGS */}
+              <TabsContent
+                value="archived"
+                aria-labelledby={currentSectionHeadingId}
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
+                <ArchivedChatsPanel userKey={userKey} />
+                <ChatTrashPanel userKey={userKey} />
+              </TabsContent>
+              <TabsContent
+                value="voice"
+                aria-labelledby={currentSectionHeadingId}
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
+                <VoiceConnectionStatus />
+              </TabsContent>
               {/* GENERAL */}
               <TabsContent
                 value="cloud-browser"
@@ -1442,6 +1499,79 @@ export function SettingsDialog({
                 value="general"
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
+                <section className="kova-settings-general-overview">
+                  <h3 className="text-sm font-semibold">General</h3>
+                  <div className="kova-settings-reference-group kova-settings-general-options">
+                    <div className="kova-settings-reference-row">
+                      <div>
+                        <label htmlFor="settings-send-shortcut" className="text-sm font-medium">
+                          Send shortcut
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Choose whether Enter sends a message or starts a new line.
+                        </p>
+                      </div>
+                      <Select
+                        value={sharedSendOnEnter ? "enter" : "modifier"}
+                        onValueChange={(value) => {
+                          const enabled = value === "enter";
+                          setSharedSendOnEnter(user?.id ?? null, enabled);
+                          onChange({ ...settings, sendOnEnter: enabled });
+                        }}
+                      >
+                        <SelectTrigger
+                          id="settings-send-shortcut"
+                          aria-label="Send shortcut"
+                          className="kova-settings-reference-select"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="enter">Enter</SelectItem>
+                          <SelectItem value="modifier">⌘/Ctrl + Enter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="kova-settings-reference-row">
+                      <div>
+                        <label htmlFor="settings-response-length" className="text-sm font-medium">
+                          Response length
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Choose the default length for new responses.
+                        </p>
+                      </div>
+                      <Select
+                        value={settings.responseLength}
+                        onValueChange={(v) =>
+                          onChange({
+                            ...settings,
+                            responseLength: v as Settings["responseLength"],
+                          })
+                        }
+                      >
+                        <SelectTrigger
+                          id="settings-response-length"
+                          aria-label="Preferred response length"
+                          className="kova-settings-reference-select"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="short">Concise</SelectItem>
+                          <SelectItem value="medium">Standard (default)</SelectItem>
+                          <SelectItem value="long">Detailed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <ToggleRow
+                      title="Live web search"
+                      hint="Allow fresh web results for time-sensitive questions."
+                      checked={settings.webSearch}
+                      onCheckedChange={(value) => onChange({ ...settings, webSearch: value })}
+                    />
+                  </div>
+                </section>
                 <section className="space-y-4">
                   <h3 className="text-sm font-semibold">Response defaults</h3>
                   <p className="text-sm text-muted-foreground">
@@ -1492,53 +1622,7 @@ export function SettingsDialog({
                       </Select>
                     </div>
                   </div>
-                  <div className="kova-settings-reference-group">
-                    <ToggleRow
-                      title="Live web search"
-                      hint="Fetch fresh results for time-sensitive questions."
-                      checked={settings.webSearch}
-                      onCheckedChange={(v) => onChange({ ...settings, webSearch: v })}
-                    />
-                    <ToggleRow
-                      title="Send on Enter"
-                      hint="On desktop, Enter sends when enabled. Shift+Enter always starts a new line; Ctrl/⌘+Enter sends either way. Mobile Enter starts a new line."
-                      checked={sharedSendOnEnter}
-                      onCheckedChange={(v) => {
-                        setSharedSendOnEnter(user?.id ?? null, v);
-                        onChange({ ...settings, sendOnEnter: v });
-                      }}
-                    />
-                    <div className="kova-settings-reference-row">
-                      <label htmlFor="settings-response-length" className="text-sm">
-                        Preferred response length
-                      </label>
-                      <Select
-                        value={settings.responseLength}
-                        onValueChange={(v) =>
-                          onChange({
-                            ...settings,
-                            responseLength: v as Settings["responseLength"],
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          id="settings-response-length"
-                          aria-label="Preferred response length"
-                          className="kova-settings-reference-select"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="short">Concise</SelectItem>
-                          <SelectItem value="medium">Standard (default)</SelectItem>
-                          <SelectItem value="long">Detailed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
                 </section>
-
-                <VoiceConnectionStatus />
 
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">Custom instructions and personality</h3>

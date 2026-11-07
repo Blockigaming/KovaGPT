@@ -21,7 +21,7 @@ const SelectTrigger = React.forwardRef<
     data-ui-reference="chatgpt.select-control"
     ref={ref}
     className={cn(
-      "font-[family-name:var(--font-ui)] flex min-h-9 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-full border border-input bg-transparent px-4 py-2 text-base font-medium leading-5 shadow-none ring-offset-background cursor-pointer transition-colors duration-150 hover:border-foreground/25 data-[placeholder]:text-muted-foreground focus-visible:outline-none focus-visible:border-foreground/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11 [&>span]:min-w-0 [&>span]:text-start [&>span]:leading-snug",
+      "font-[family-name:var(--font-ui)] flex min-h-9 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-full border border-input bg-transparent px-4 py-2 text-base font-medium leading-5 shadow-none ring-offset-background cursor-pointer transition-colors duration-150 hover:border-foreground/25 data-[placeholder]:text-muted-foreground focus-visible:outline-none focus-visible:border-foreground/50 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11 [&>span]:min-w-0 [&>span]:text-start [&>span]:leading-snug",
       className,
     )}
     {...props}

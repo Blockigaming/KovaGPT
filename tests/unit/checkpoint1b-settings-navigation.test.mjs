@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 const source = readFileSync("src/components/SettingsDialog.tsx", "utf8");
-test("both settings entry modes use the same twelve primary destinations", () => {
+test("both settings entry modes expose all twenty-three requested primary destinations", () => {
   assert.match(source, /const groups = pageGroups;/);
   const primary = source.slice(
     source.indexOf("const pageGroups:"),
@@ -10,18 +10,29 @@ test("both settings entry modes use the same twelve primary destinations", () =>
   );
   const labels = [...primary.matchAll(/label: "([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(labels, [
-    "Profile",
+    "General",
     "Appearance",
-    "Responses",
-    "Memory",
-    "Security",
-    "Storage",
     "Notifications",
+    "Profile",
+    "Security and login",
+    "Account",
+    "Archived chats",
+    "Parental controls",
+    "Voice",
+    "Storage",
+    "Data controls",
+    "Personalization",
+    "Keyboard",
+    "Usage",
     "Connections",
     "Cloud Browser",
-    "Privacy",
-    "Usage",
+    "Family Center",
+    "Location",
     "Subscriptions",
+    "Report an issue",
+    "Help center",
+    "About",
+    "Log out",
   ]);
 });
 test("secondary panels remain searchable with parent return and explicit heading labelling", () => {
