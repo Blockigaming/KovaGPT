@@ -1389,7 +1389,7 @@ export function SettingsDialog({
             </aside>
 
             <SettingsNavigationResize
-              width={settings.settingsNavigationWidth ?? 280}
+              width={settings.settingsNavigationWidth ?? (page ? 352 : 280)}
               onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
             />
 
@@ -1463,6 +1463,73 @@ export function SettingsDialog({
                 value="general"
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
+                <section className="kova-settings-general-overview">
+                  <h3 className="text-sm font-semibold">General</h3>
+                  <div className="kova-settings-reference-group kova-settings-general-options">
+                    <div className="kova-settings-reference-row">
+                      <div>
+                        <label htmlFor="settings-send-shortcut" className="text-sm font-medium">
+                          Send shortcut
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Choose whether Enter sends a message or starts a new line.
+                        </p>
+                      </div>
+                      <Select
+                        value={sharedSendOnEnter ? "enter" : "modifier"}
+                        onValueChange={(value) => {
+                          const enabled = value === "enter";
+                          setSharedSendOnEnter(user?.id ?? null, enabled);
+                          onChange({ ...settings, sendOnEnter: enabled });
+                        }}
+                      >
+                        <SelectTrigger id="settings-send-shortcut" aria-label="Send shortcut" className="kova-settings-reference-select">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="enter">Enter</SelectItem>
+                          <SelectItem value="modifier">⌘/Ctrl + Enter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="kova-settings-reference-row">
+                      <div>
+                        <label htmlFor="settings-response-length" className="text-sm font-medium">
+                          Response length
+                        </label>
+                        <p className="text-xs text-muted-foreground">Choose the default length for new responses.</p>
+                      </div>
+                      <Select
+                        value={settings.responseLength}
+                        onValueChange={(v) =>
+                          onChange({
+                            ...settings,
+                            responseLength: v as Settings["responseLength"],
+                          })
+                        }
+                      >
+                        <SelectTrigger
+                          id="settings-response-length"
+                          aria-label="Preferred response length"
+                          className="kova-settings-reference-select"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="short">Concise</SelectItem>
+                          <SelectItem value="medium">Standard (default)</SelectItem>
+                          <SelectItem value="long">Detailed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <ToggleRow
+                      title="Live web search"
+                      hint="Allow fresh web results for time-sensitive questions."
+                      checked={settings.webSearch}
+                      onCheckedChange={(value) => onChange({ ...settings, webSearch: value })}
+                    />
+                  </div>
+                </section>
                 <section className="space-y-4">
                   <h3 className="text-sm font-semibold">Response defaults</h3>
                   <p className="text-sm text-muted-foreground">
@@ -1509,50 +1576,6 @@ export function SettingsDialog({
                           <SelectItem value="direct">Direct</SelectItem>
                           <SelectItem value="formal">Formal</SelectItem>
                           <SelectItem value="conversational">Conversational</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="kova-settings-reference-group">
-                    <ToggleRow
-                      title="Live web search"
-                      hint="Fetch fresh results for time-sensitive questions."
-                      checked={settings.webSearch}
-                      onCheckedChange={(v) => onChange({ ...settings, webSearch: v })}
-                    />
-                    <ToggleRow
-                      title="Send on Enter"
-                      hint="On desktop, Enter sends when enabled. Shift+Enter always starts a new line; Ctrl/⌘+Enter sends either way. Mobile Enter starts a new line."
-                      checked={sharedSendOnEnter}
-                      onCheckedChange={(v) => {
-                        setSharedSendOnEnter(user?.id ?? null, v);
-                        onChange({ ...settings, sendOnEnter: v });
-                      }}
-                    />
-                    <div className="kova-settings-reference-row">
-                      <label htmlFor="settings-response-length" className="text-sm">
-                        Preferred response length
-                      </label>
-                      <Select
-                        value={settings.responseLength}
-                        onValueChange={(v) =>
-                          onChange({
-                            ...settings,
-                            responseLength: v as Settings["responseLength"],
-                          })
-                        }
-                      >
-                        <SelectTrigger
-                          id="settings-response-length"
-                          aria-label="Preferred response length"
-                          className="kova-settings-reference-select"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="short">Concise</SelectItem>
-                          <SelectItem value="medium">Standard (default)</SelectItem>
-                          <SelectItem value="long">Detailed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
