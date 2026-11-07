@@ -161,3 +161,60 @@ test("Team purchase offers the exact annual and monthly prices with a concrete t
   ).toBeEnabled();
   await contained(page);
 });
+
+test("sidebar deletion from Library permanently removes a chat without Trash", async ({ page }) => {
+  await visit(page, "/library");
+  const open = page.getByRole("button", { name: "Open menu", exact: true });
+  if (await open.isVisible()) await open.click();
+  const expand = page.getByRole("button", { name: "Expand sidebar", exact: true });
+  if (await expand.isVisible()) await expand.click();
+  await page.getByRole("button", { name: "Open chat Composer review chat", exact: true }).hover();
+  await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  const prompt = page.getByRole("alertdialog", { name: "Delete chat permanently?", exact: true });
+  await prompt.getByRole("button", { name: "Delete permanently", exact: true }).click();
+  await expect(page.getByText("Chat permanently deleted", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open chat Composer review chat", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() => {
+      const raw = localStorage.getItem(
+        "kova-chat-trash-v1:user:22222222-2222-4222-8222-222222222222",
+      );
+      return raw?.includes("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa") ?? false;
+    }),
+  ).toBe(false);
+});
+
+test("subscription checkout hides private errors and navigates to full-page Stripe", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    if (!(functionNames.get(id) ?? "").startsWith("createCheckoutSession_"))
+      return route.fallback();
+    attempts++;
+    return route.fulfill({
+      json: {
+        result:
+          attempts === 1
+            ? { error: "private database detail" }
+            : { url: "https://checkout.stripe.com/c/pay/cs_test_owner_fixture" },
+        context: {},
+      },
+    });
+  });
+  await page.route("https://checkout.stripe.com/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<h1>Secure checkout fixture</h1>" }),
+  );
+  await visit(page, "/subscribe?plan=plus_monthly");
+  const payment = page.getByRole("button", { name: "Continue to payment", exact: true });
+  await payment.click();
+  await expect(page.getByRole("alert")).toContainText("Secure checkout could not open. Try again.");
+  await expect(page.getByText("private database detail", { exact: true })).toHaveCount(0);
+  await payment.click();
+  await expect(page).toHaveURL("https://checkout.stripe.com/c/pay/cs_test_owner_fixture");
+  await expect(page.getByRole("heading", { name: "Secure checkout fixture" })).toBeVisible();
+});

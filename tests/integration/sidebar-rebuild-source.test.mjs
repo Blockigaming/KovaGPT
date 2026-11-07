@@ -13,7 +13,6 @@ const scheduled = await readFile("src/lib/scheduled-tasks.functions.ts", "utf8")
 
 test("sidebar catalog preserves requested destinations and customizable order", () => {
   for (const [id, to] of [
-    ["images", "/images"],
     ["library", "/library"],
     ["projects", "/projects"],
     ["scheduled-tasks", "/scheduled-tasks"],
@@ -22,6 +21,8 @@ test("sidebar catalog preserves requested destinations and customizable order", 
     assert.ok(catalog.some((item) => item.id === id && item.to === to));
     assert.ok(defaultLayout.shortcuts.includes(id));
   }
+  assert.ok(!catalog.some((item) => item.id === "images"));
+  assert.ok(!defaultLayout.shortcuts.includes("images"));
   assert.ok(!catalog.some((item) => item.id === "work" || item.to === "/work"));
   assert.doesNotMatch(sidebar, /navLink\("\/work"/);
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);

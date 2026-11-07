@@ -114,7 +114,6 @@ export function Sidebar({
   onRename,
   onShare,
   onDuplicate,
-  onArchive,
   onTogglePin,
   open,
   onToggle,
@@ -134,7 +133,6 @@ export function Sidebar({
   onRename?: (id: string, title: string) => void | boolean | Promise<void | boolean>;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
-  onArchive?: (id: string) => void;
   onTogglePin?: (id: string) => void;
   open: boolean;
   onToggle: () => void;

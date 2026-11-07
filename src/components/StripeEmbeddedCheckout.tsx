@@ -3,6 +3,15 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { createCheckoutSession } from "@/utils/payments.functions";
+const CHECKOUT_ERROR_MESSAGE = "Secure checkout could not open. Try again.";
+const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =
+  "You already have an active subscription. Manage your plan from the billing portal before starting a new one.";
+const SAFE_CHECKOUT_ERRORS = new Set([
+  ACTIVE_SUBSCRIPTION_ERROR_MESSAGE,
+  "Billing status couldn't be verified. Try again.",
+  "Checkout is being reconciled. Retry shortly or contact support; no second payment attempt was started.",
+  "Checkout is unavailable right now. Try again.",
+]);
 
 // Kept as an export for existing callers; payments now use Stripe's full-page hosted checkout.
 export function StripeEmbeddedCheckout({
@@ -38,14 +47,18 @@ export function StripeEmbeddedCheckout({
       window.location.assign(url.href);
     } catch (reason) {
       if (current.current === scope)
-        setError(reason instanceof Error ? reason.message : "Checkout could not open. Try again.");
+        setError(
+          reason instanceof Error && SAFE_CHECKOUT_ERRORS.has(reason.message)
+            ? reason.message
+            : CHECKOUT_ERROR_MESSAGE,
+        );
     } finally {
       pending.current = false;
       if (current.current === scope) setBusy(false);
     }
   }
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-checkout-state={error ? "error" : busy ? "loading" : "ready"}>
       <Button
         className="min-h-11 rounded-full"
         disabled={busy || !owner || Boolean(userId && owner !== userId)}

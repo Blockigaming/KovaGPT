@@ -1766,7 +1766,7 @@ function KovaGPT() {
   }, [commandOpen, startNewChat, openCommandPalette]);
 
   const historyAction = useCallback(
-    async (kind: "delete" | "archive" | "restore" | "title", item: string | Conversation) => {
+    async (kind: "delete" | "restore" | "title", item: string | Conversation) => {
       const generation = storageGenerationRef.current;
       const current = () => generation === storageGenerationRef.current;
       const context = {

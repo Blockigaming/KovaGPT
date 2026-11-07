@@ -52,9 +52,10 @@ test("project chat can stop generation and saves only non-empty assistant output
   );
   assert.match(projectChat, /setRenameOpen\(false\)/);
   assert.match(projectChat, /setRenaming\(false\)/);
-  assert.match(projectChat, /PROJECT_CHAT_DELETE_UNAVAILABLE/);
-  assert.match(projectChat, /aria-describedby="project-chat-delete-unavailable"/);
-  assert.doesNotMatch(projectChat, /deleteProjectChat|setDeleteOpen|setDeleting/);
+  assert.doesNotMatch(projectChat, /PROJECT_CHAT_DELETE_UNAVAILABLE/);
+  assert.match(projectChat, /confirmPermanentChat/);
+  assert.match(projectChat, /useServerFn\(deleteProjectChat\)/);
+  assert.match(projectChat, /setDeleting\(true\)/);
   assert.match(projectChat, /project\.role === "owner" \|\| project\.role === "editor"/);
   assert.match(projectChat, /projectId,/);
 });

@@ -118,7 +118,7 @@ export const HELP_STAGES = Object.freeze([
   {
     id: "moved",
     label: "After moving or deleting an item",
-    step: "Look in its project, Library folder, or Chat Trash. Do not recreate or permanently delete it before checking its destination and recovery options.",
+    step: "Look in its project, Library, or chat history search. Deleted chats are permanently removed and cannot be restored.",
   },
   {
     id: "permissions",

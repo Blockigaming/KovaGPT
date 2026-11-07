@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Copy, Check, Link2, Loader2, Mail, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Copy, Check, Link2, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,9 +13,6 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import type { Conversation } from "@/lib/chat-store";
 import { publicShareSnapshot, type PublicChatSnapshot } from "@/lib/public-chat-share-policy.mjs";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
-const EmailShare = lazy(() =>
-  import("./EmailShareChatDialog").then((m) => ({ default: m.EmailShareChatDialog })),
-);
 
 export function ShareChatDialog({
   open,
@@ -42,7 +39,6 @@ export function ShareChatDialog({
   const [busy, setBusy] = useState(false),
     [copied, setCopied] = useState(false),
     [error, setError] = useState("");
-  const [emailOpen, setEmailOpen] = useState(false);
   useEffect(() => {
     setReadyScope(scope);
     operation.current?.abort();
@@ -51,7 +47,6 @@ export function ShareChatDialog({
     setBusy(false);
     setCopied(false);
     setError("");
-    setEmailOpen(false);
     if (open && owner && conversation) {
       try {
         setPreview(publicShareSnapshot(conversation));
@@ -151,7 +146,7 @@ export function ShareChatDialog({
   }
   return (
     <>
-      <Dialog open={open && !emailOpen} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="kova-share-dialog">
           <DialogHeader>
             <div className="kova-share-symbol">
@@ -213,10 +208,6 @@ export function ShareChatDialog({
             {copied ? "Copy link again" : "Create & copy link"}
           </Button>
           <div className="kova-share-secondary">
-            <button type="button" disabled={busy || !owner} onClick={() => setEmailOpen(true)}>
-              <Mail aria-hidden />
-              Invite by email
-            </button>
             {link ? (
               <button type="button" disabled={busy} onClick={() => void revoke()}>
                 <Trash2 aria-hidden />
@@ -226,18 +217,6 @@ export function ShareChatDialog({
           </div>
         </DialogContent>
       </Dialog>
-      {open && emailOpen && readyScope === scope ? (
-        <Suspense fallback={null}>
-          <EmailShare
-            open
-            onOpenChange={(next) => {
-              setEmailOpen(next);
-              if (!next) onOpenChange(false);
-            }}
-            conversation={conversation}
-          />
-        </Suspense>
-      ) : null}
     </>
   );
 }
