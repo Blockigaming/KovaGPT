@@ -310,7 +310,6 @@
   }
 }
 
-
 /* Chat-style account settings: use the user's actual app/theme surfaces, not
    a fixed black or white recreation of the reference screenshot. */
 @media (min-width: 768px) {
@@ -431,7 +430,11 @@
     padding: 0 28px 60px;
   }
 
-  .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] > section,
+  .kova-settings-route
+    section.kova-settings-page
+    .kova-settings-content
+    > [role="tabpanel"]
+    > section,
   .kova-settings-route section.kova-settings-page .kova-profile-settings > section {
     padding: 0;
     border: 0;
@@ -439,7 +442,12 @@
     background: transparent;
   }
 
-  .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] > section + section {
+  .kova-settings-route
+    section.kova-settings-page
+    .kova-settings-content
+    > [role="tabpanel"]
+    > section
+    + section {
     margin-top: 34px;
     padding-top: 26px;
     border-top: 1px solid var(--border);
@@ -465,14 +473,20 @@
   background: var(--background);
 }
 
-.kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-reference-row,
+.kova-settings-route
+  section.kova-settings-page
+  .kova-settings-general-options
+  .kova-settings-reference-row,
 .kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-row {
   min-height: 78px;
   padding: 14px 0;
   gap: 20px;
 }
 
-.kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-reference-select {
+.kova-settings-route
+  section.kova-settings-page
+  .kova-settings-general-options
+  .kova-settings-reference-select {
   flex: none;
   width: auto;
   min-width: 130px;
@@ -486,7 +500,10 @@
   .kova-settings-route section.kova-settings-page .kova-settings-general-options {
     padding-inline: 14px;
   }
-  .kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-reference-row {
+  .kova-settings-route
+    section.kova-settings-page
+    .kova-settings-general-options
+    .kova-settings-reference-row {
     gap: 12px;
   }
 }

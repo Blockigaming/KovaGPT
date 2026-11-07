@@ -233,5 +233,8 @@ test("legacy saved Work choices are removed while preserving other destinations"
   );
   assert.deepEqual(readSidebarShortcuts(storage, "owner"), ["projects", "library"]);
   assert.equal(saveSidebarShortcuts(storage, "owner", ["work"]), false);
-  assert.equal(SIDEBAR_SHORTCUTS.some(({ id }) => id === "work"), false);
+  assert.equal(
+    SIDEBAR_SHORTCUTS.some(({ id }) => id === "work"),
+    false,
+  );
 });

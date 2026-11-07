@@ -95,7 +95,6 @@ for (const theme of ["dark", "light"] as const) {
   });
 }
 
-
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: Settings reference layout uses the selected theme and working sections`, async ({
     page,
@@ -119,7 +118,9 @@ for (const theme of ["dark", "light"] as const) {
         page.evaluate(() => {
           const screen = document.querySelector(".kova-settings-screen")!;
           const content = document.querySelector("section.kova-settings-page")!;
-          return getComputedStyle(screen).backgroundColor === getComputedStyle(content).backgroundColor;
+          return (
+            getComputedStyle(screen).backgroundColor === getComputedStyle(content).backgroundColor
+          );
         }),
       )
       .toBe(true);

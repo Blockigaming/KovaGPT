@@ -1995,13 +1995,29 @@ body {
    triggers must not stack the browser outline, Tailwind ring, and inset shadow.
    Keyboard focus stays visible; pointer-selected items use their filled state. */
 :root:not([data-kova-input-modality="pointer"])
-  :is(button, a, input, textarea, select, [tabindex], [role="option"], [role="menuitem"], [role="combobox"]):focus-visible {
+  :is(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [tabindex],
+    [role="option"],
+    [role="menuitem"],
+    [role="combobox"]
+  ):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--foreground) 65%, transparent) !important;
   outline-offset: -2px !important;
   box-shadow: none !important;
 }
 :root[data-kova-input-modality="pointer"]
-  :is([data-slot="select-trigger"], [data-slot="select-item"], [data-slot="menu-item"], [role="option"], [role="combobox"]):focus {
+  :is(
+    [data-slot="select-trigger"],
+    [data-slot="select-item"],
+    [data-slot="menu-item"],
+    [role="option"],
+    [role="combobox"]
+  ):focus {
   outline: none !important;
   box-shadow: none !important;
 }

@@ -126,7 +126,9 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
       page.evaluate(() => {
         const composer = document.querySelector(".spec400-composer")!;
         const recorder = document.querySelector(".kova-inline-dictation")!;
-        return getComputedStyle(composer).backgroundColor === getComputedStyle(recorder).backgroundColor;
+        return (
+          getComputedStyle(composer).backgroundColor === getComputedStyle(recorder).backgroundColor
+        );
       }),
     )
     .toBe(true);

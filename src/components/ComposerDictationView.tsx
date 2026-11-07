@@ -10,7 +10,9 @@ const WAVE_BARS = Array.from({ length: 72 }, (_, index) => {
     const distance = (index - center) / (cluster === 1 ? 4.4 : 3.1);
     return sum + Math.exp(-distance * distance) * (cluster === 1 ? 27 : 18);
   }, 0);
-  return Math.round(Math.min(38, Math.max(3, 3 + envelope * (0.42 + 0.58 * Math.abs(Math.sin(index * 1.47))))));
+  return Math.round(
+    Math.min(38, Math.max(3, 3 + envelope * (0.42 + 0.58 * Math.abs(Math.sin(index * 1.47))))),
+  );
 });
 
 /** Inline dictation shares the server-authorized voice controller and media cleanup. */
@@ -51,7 +53,9 @@ export function ComposerDictationView({
           : hasTranscript
             ? "Review your words, then add them to your message."
             : "Ready to record.");
-  const showDetails = Boolean(error || hasTranscript || unavailable || availabilityRetry || retryControl);
+  const showDetails = Boolean(
+    error || hasTranscript || unavailable || availabilityRetry || retryControl,
+  );
 
   return (
     <section
@@ -114,7 +118,10 @@ export function ComposerDictationView({
           )}
         </div>
       </div>
-      <p className={showDetails ? "kova-inline-dictation-status" : "sr-only"} role={error ? "alert" : "status"}>
+      <p
+        className={showDetails ? "kova-inline-dictation-status" : "sr-only"}
+        role={error ? "alert" : "status"}
+      >
         {notice}
       </p>
       {showDetails && (

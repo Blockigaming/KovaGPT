@@ -12,9 +12,7 @@ function SettingsPage() {
   const { user, isLoaded } = useUser();
   const [settings, setSettings] = useNovaSettings(user?.id ?? null, isLoaded);
   const valid = Object.prototype.hasOwnProperty.call(SETTINGS_SECTIONS, section);
-  const tab = valid
-    ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS]
-    : "general";
+  const tab = valid ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS] : "general";
   return (
     <div className="kova-settings-screen">
       <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">

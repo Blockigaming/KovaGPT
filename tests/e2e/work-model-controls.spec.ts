@@ -82,7 +82,9 @@ for (const legacy of [true, false]) {
     // Direct /work is unchanged. Only sidebar discovery/customization is removed.
     await page.goto("/work");
     await waitForKovaHydration(page);
-    await expect(page.getByRole("main").getByRole("heading", { name: "Work", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),
+    ).toBeVisible();
     expect(commands).toEqual([]);
   });
 }

@@ -660,7 +660,7 @@
   height: 52px;
   align-items: center;
   justify-content: center;
-  gap: clamp(1px, .26vw, 4px);
+  gap: clamp(1px, 0.26vw, 4px);
   overflow: hidden;
   color: var(--foreground);
   opacity: 0.62;
@@ -739,12 +739,22 @@
   }
 }
 @keyframes kova-dictation-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @media (max-width: 560px) {
-  .kova-inline-dictation { padding: 8px; }
-  .kova-inline-dictation-controls { gap: 6px; }
+  .kova-inline-dictation {
+    padding: 8px;
+  }
+  .kova-inline-dictation-controls {
+    gap: 6px;
+  }
   .kova-inline-dictation-controls button,
   .kova-inline-dictation-processing {
     width: 44px;
@@ -752,12 +762,19 @@
     min-width: 44px;
     min-height: 44px;
   }
-  .kova-inline-dictation-actions { gap: 6px; }
-  .kova-inline-dictation-wave { height: 44px; gap: 1px; }
+  .kova-inline-dictation-actions {
+    gap: 6px;
+  }
+  .kova-inline-dictation-wave {
+    height: 44px;
+    gap: 1px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .kova-inline-dictation,
-  .kova-inline-dictation-wave i { animation: none !important; }
+  .kova-inline-dictation-wave i {
+    animation: none !important;
+  }
 }
 :root[data-kova-motion="reduced"] .kova-inline-dictation-wave i {
   animation: none !important;

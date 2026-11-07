@@ -53,14 +53,7 @@ for (const theme of themes) {
         for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       } else {
-        for (const label of [
-          "New chat",
-          "Images",
-          "Library",
-          "Projects",
-          "Plugins",
-          "Discover",
-        ])
+        for (const label of ["New chat", "Images", "Library", "Projects", "Plugins", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       }
     } else {

@@ -253,7 +253,12 @@ export function ComposerVoiceDialog({
   const configRequest = useRef<AbortController | null>(null);
   const recordingDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recordingClock = useRef<ReturnType<typeof setInterval> | null>(null);
-  const silenceMonitor = useRef<{ context: AudioContext; source: MediaStreamAudioSourceNode; interval: ReturnType<typeof setInterval>; gate: ReturnType<typeof createVoiceSilenceGate> } | null>(null);
+  const silenceMonitor = useRef<{
+    context: AudioContext;
+    source: MediaStreamAudioSourceNode;
+    interval: ReturnType<typeof setInterval>;
+    gate: ReturnType<typeof createVoiceSilenceGate>;
+  } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
@@ -887,7 +892,11 @@ export function ComposerVoiceDialog({
         }
       }
       recordingDeadline.current = setTimeout(() => {
-        if (mode === "voice" && silenceMonitor.current && !silenceMonitor.current.gate.hasSpeech()) {
+        if (
+          mode === "voice" &&
+          silenceMonitor.current &&
+          !silenceMonitor.current.gate.hasSpeech()
+        ) {
           cancelOperation();
           setError("No speech detected before the listening limit. Press Start to try again.");
           return;
