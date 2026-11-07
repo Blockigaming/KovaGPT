@@ -133,7 +133,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     structuredOutput: true,
     maxOutputTokens: 8_192,
     pricePerMillion: { input: 0.5, cachedInput: 0.5, output: 1.5 },
-    tiers: ["free", "plus", "pro"],
+    tiers: ["plus", "pro"],
   },
   {
     id: "kova-xenon-5",
@@ -144,7 +144,7 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     structuredOutput: true,
     maxOutputTokens: 16_384,
     pricePerMillion: { input: 3, cachedInput: 3, output: 15 },
-    tiers: ["plus", "pro"],
+    tiers: ["pro"],
   },
 ] as const;
 
