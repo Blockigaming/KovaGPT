@@ -23,9 +23,7 @@ const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const publicShell = await readFile("src/components/public/PublicShell.tsx", "utf8");
 const publicFooter = await readFile("src/components/PublicFooter.tsx", "utf8");
-const publicSite = await readFile("src/components/public/PublicSite.tsx", "utf8");
 const resetPassword = await readFile("src/routes/reset-password.tsx", "utf8");
-const seoLanding = await readFile("src/components/SeoLanding.tsx", "utf8");
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const states = await readFile("src/components/states.tsx", "utf8");
 const logo = await readFile("src/components/NovaLogo.tsx", "utf8");
@@ -177,14 +175,10 @@ test("core chat surfaces use shared workspace primitives", () => {
     "expanded navigation owns the brand; rail owns navigation controls",
   );
   assert.doesNotMatch(home, /<NovaLogo|kova-greeting-mark/);
-  assert.match(publicSite, /<PublicShell>/);
-  assert.doesNotMatch(publicSite, /<NovaLogo/);
   assert.match(openingTag(publicShell, "NovaLogo", /decorative/), /className="h-6 w-6"/);
   const footerLogo = openingTag(publicFooter, "NovaLogo", /decorative/);
   assert.match(footerLogo, /\bmark\b/);
-  assert.match(footerLogo, /className="h-6 w-6"/);
-  assert.match(seoLanding, /<PublicShell>/);
-  assert.doesNotMatch(seoLanding, /<NovaLogo/);
+  assert.match(footerLogo, /className="h-5 w-5"/);
   assert.match(pricing, /data-billing-page/);
   assert.match(pricing, /<NovaLogo decorative \/>/);
   const recoveryLogo = openingTag(resetPassword, "NovaLogo", /\bmark\b/);

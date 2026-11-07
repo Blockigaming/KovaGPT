@@ -26,7 +26,7 @@ test("sidebar catalog preserves requested destinations and customizable order", 
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
   assert.match(sidebar, /<NovaLogo decorative/);
   assert.match(sidebar, /id="sidebar-pinned-heading"[^>]*>\s*Pinned\s*<\/h2>/);
-  assert.match(sidebar, /mapsReleaseApproved && railShortcuts.includes\("maps"\)/);
+  assert.doesNotMatch(sidebar, /mapsReleaseApproved|navLink\("\/maps"/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);
 });
 

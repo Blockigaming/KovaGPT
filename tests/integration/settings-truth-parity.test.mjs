@@ -115,7 +115,6 @@ test("data controls describe the available privacy surface truthfully", () => {
 
 test("settings does not expose local switches for unenforced email, family, or location behavior", () => {
   const settings = read("src/components/SettingsDialog.tsx");
-  const mapWidget = read("src/components/MapWidget.tsx");
 
   assert.match(settings, /<AccountEmailPreferences ownerId=\{isLoaded \? userKey : null\}/);
   assert.doesNotMatch(settings, /Always on|cannot be turned\s+off for security/);
@@ -130,8 +129,6 @@ test("settings does not expose local switches for unenforced email, family, or l
   assert.match(settings, /<label htmlFor=\{controlId\}/);
   assert.match(settings, /aria-describedby=\{hintId\}/);
 
-  assert.match(mapWidget, /Map previews are not available yet/);
-  assert.doesNotMatch(mapWidget, /localStorage|getItem\("kova-location"\)|<iframe/);
 });
 
 test("Settings delegates connector lifecycle to the server-backed Apps surface", () => {

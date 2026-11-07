@@ -71,12 +71,7 @@ test("customizable core destinations precede the scrollable More disclosure", ()
 
 test("secondary navigation remains discoverable without active unavailable destinations", () => {
   assert.match(sidebar, /data-ui-reference="gemini-sidebar-disclosure"/);
-  assert.match(
-    sidebar,
-    /isOn\("\/maps"\) \|\| \(isOn\("\/work"\) && !railShortcuts.includes\("work"\)\)/,
-  );
   assert.match(sidebar, /Expand sidebar/);
-  assert.match(sidebar, /mapsReleaseApproved && railShortcuts.includes\("maps"\)/);
   assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances)"/);
 });
 

@@ -220,7 +220,7 @@ test("navigation keeps dense desktop rows, touch targets and account outside scr
   assert.ok(account);
   assert.match(source, /const signedIn = isLoaded && isSignedIn;/);
   assert.match(source, /const availableShortcuts = SIDEBAR_ITEMS.filter/);
-  assert.match(source, /shortcut.id !== "maps" \|\| mapsReleaseApproved/);
+  assert.doesNotMatch(source, /mapsReleaseApproved/);
   assert.ok(SIDEBAR_SHORTCUTS.every((shortcut) => shortcut.to.startsWith("/")));
   assert.match(source, /<NovaLogo decorative/);
 });
