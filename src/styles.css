@@ -1986,7 +1986,19 @@ body {
 
 /* Programmatic menu focus after a pointer click is not keyboard focus. */
 :root[data-kova-input-modality="pointer"]
-  :is(button, a, [role="button"], [role="menu"], [role="menuitem"], [role="tab"], [data-slot="select-trigger"], [data-slot="select-item"], [data-slot="menu-item"], [role="option"], [role="combobox"]):focus {
+  :is(
+    button,
+    a,
+    [role="button"],
+    [role="menu"],
+    [role="menuitem"],
+    [role="tab"],
+    [data-slot="select-trigger"],
+    [data-slot="select-item"],
+    [data-slot="menu-item"],
+    [role="option"],
+    [role="combobox"]
+  ):focus {
   outline: none !important;
   box-shadow: none !important;
 }
