@@ -37,6 +37,13 @@ Existing backend authentication/database configuration and an explicitly enabled
 
 Before activation, confirm the cap/eligible user scope, voice choice, provider account/credits and privacy disclosure. Configuring persistent provider credentials requires the owner's secure configuration handoff and approval. The server does not expose or log key values. Do not claim zero provider retention: ElevenLabs logging defaults apply, and documented zero-retention mode is Enterprise-only. Kova's adapter does not persist uploaded audio or response audio; provider processing/retention is separate.
 
+The production operator must review and set `KOVA_VOICE_HOSTED_MODELS_JSON` using the existing
+server-only Azure configuration before Kova-hosted voice conversations can speak a response.
+The PR neither changes Azure variables nor assumes the existing ElevenLabs key and live
+model subscriptions are configured. Test a real authenticated microphone turn, saved
+model-proven chat reply, ElevenLabs playback, automatic resumed listening and Stop before
+declaring production voice ready.
+
 ## Contract
 
 POST also requires matching Origin (or same-origin Fetch Metadata when Origin is absent); cross-site requests are rejected before authorization. All calls require the existing authenticated request flow plus `X-Kova-Voice-Owner` matching the captured signed-in account ID. This separate captured-account header prevents an asynchronous auth refresh/account switch from silently billing another account. Missing/mismatched owner returns 409.
