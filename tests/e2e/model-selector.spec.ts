@@ -162,10 +162,10 @@ test.describe("short desktop model picker", () => {
     await expect(picker).toBeVisible();
     await expect(picker.getByTestId("model-option-instant")).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(picker.getByTestId("model-option-medium")).toBeFocused();
+    await expect(picker.getByTestId("model-option-thinking")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(picker).toHaveCount(0);
     await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Medium");
+    await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: Medium");
   });
 });
