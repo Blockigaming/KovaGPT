@@ -6,8 +6,8 @@ import { chooseSettingsSection } from "./current-ui";
 
 for (const [tier, choices] of [
   ["free", ["instant", "thinking"]],
-  ["plus", ["instant", "medium", "thinking", "high"]],
-  ["pro", ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"]],
+  ["plus", ["instant", "thinking", "high"]],
+  ["pro", ["instant", "thinking", "high", "extra_high", "max", "ultra"]],
 ] as const) {
   test(`${tier} composer presents exactly its models and keeps the writing surface quiet`, async ({
     page,
@@ -45,15 +45,18 @@ for (const [tier, choices] of [
       }
     } else {
       const picker = composer.getByTestId("model-selector-trigger");
-      await expect(picker).toContainText("Default");
+      await expect(picker).toContainText("Lite");
       await picker.click();
-      const menu = page.getByRole("dialog", { name: /^(Choose model|Models)$/, exact: true });
+      const menu = page.getByRole("dialog", {
+        name: /^(Choose response effort|Response effort)$/,
+        exact: true,
+      });
       await expect(menu).toBeVisible();
       await expect(menu.locator('[data-slot="model-selector-option"]')).toHaveCount(choices.length);
       for (const id of choices) await expect(menu.getByTestId(`model-option-${id}`)).toBeVisible();
       await menu.getByTestId("model-option-thinking").click();
       await expect(menu).toBeHidden();
-      await expect(picker).toContainText("Thinking");
+      await expect(picker).toContainText("Medium");
       await expect(picker.locator("svg")).toHaveCount(2);
       for (const id of choices) {
         await picker.click();
