@@ -20,7 +20,7 @@ const runGate = new Function(
 const getMode = (mode) => ({ id: mode ?? "instant" });
 
 test("Free locked modes return a stable upgrade response before downstream work", async () => {
-  for (const mode of ["medium", "high", "extra_high", "max", "ultra"]) {
+  for (const mode of ["high", "extra_high", "max", "ultra"]) {
     const response = runGate({}, "free", mode, getMode, modeUpgradeRequired);
     assert.equal(response.status, 403);
     assert.equal(response.headers.get("Cache-Control"), "no-store");
@@ -34,7 +34,7 @@ test("Free locked modes return a stable upgrade response before downstream work"
 });
 
 test("Free Default and Thinking, guests and paid tiers retain their downstream behavior", () => {
-  for (const mode of [undefined, "instant", "thinking"]) {
+  for (const mode of [undefined, "instant", "medium", "thinking"]) {
     assert.equal(runGate({}, "free", mode, getMode, modeUpgradeRequired), undefined);
   }
   for (const tier of ["plus", "pro"]) {
@@ -76,7 +76,7 @@ test("guest attachments are denied before custom context, provider or quota work
 });
 
 test("Plus premium modes reject before provider work instead of silently downgrading", async () => {
-  for (const mode of ["max", "ultra"]) {
+  for (const mode of ["extra_high", "max", "ultra"]) {
     const response = runGate({}, "plus", mode, getMode, modeUpgradeRequired);
     assert.equal(response.status, 403);
     assert.equal(

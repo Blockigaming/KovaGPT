@@ -9,10 +9,7 @@ test("current Chat packaging stays consistent across server, picker, composer an
     selector = read("src/components/ResponsiveModelSelector.tsx"),
     chat = read("src/routes/api/chat.ts");
   assert.match(entitlements, /free:\s*Object\.freeze\(\["instant", "thinking"\]\)/);
-  assert.match(
-    entitlements,
-    /plus:\s*Object\.freeze\(\["instant", "medium", "thinking", "high"\]\)/,
-  );
+  assert.match(entitlements, /plus:\s*Object\.freeze\(\["instant", "thinking", "high"\]\)/);
   assert.match(entitlements, /"extra_high", "max", "ultra"/);
   assert.match(selector, /if \(userTier === "free"\)/);
   assert.match(selector, /aria-pressed=\{mode === "thinking"\}/);
@@ -23,5 +20,5 @@ test("current Chat packaging stays consistent across server, picker, composer an
     /enforceDailyMessageQuota\(\s*auth,\s*callerTier,\s*m\.id !== "instant" && m\.id !== "medium",/,
   );
   assert.match(read("src/components/StudyPanel.tsx"), /mode: "instant",[\s\S]*clientTool: "study"/);
-  assert.match(read("public/llms.txt"), /Free users can select Default or Thinking/);
+  assert.match(read("public/llms.txt"), /Free users use Argon Lite normally and Argon Medium/);
 });

@@ -99,7 +99,7 @@ test("rejects disabled credential, upstream errors and wrong content type", asyn
 
 test("each Kova tier has distinct upstream budget and reasoning policy", () => {
   for (const [alias, expectedModel, effort, max] of [
-    ["kova-argon-4.6", "deepseek/deepseek-v4-flash-0731", undefined, 4096],
+    ["kova-argon-4.6", "deepseek/deepseek-v4-flash-0731", undefined, 8192],
     ["kova-neon-4.6", "meta-llama/llama-4-maverick", undefined, 8192],
     ["kova-xenon-5", "moonshotai/kimi-k3", "max", 16384],
   ]) {

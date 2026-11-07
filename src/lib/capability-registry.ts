@@ -9,7 +9,6 @@ import {
 } from "@/lib/modes";
 import { CHAT_USAGE_WINDOWS, chatUsageWindows } from "@/lib/plan-usage-policy.mjs";
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
-import { modeDisplayLabel } from "@/lib/mode-display-label";
 
 export type CapabilityAvailability =
   "available" | "limited" | "provider-dependent" | "unavailable" | "excluded";
@@ -151,11 +150,13 @@ export const PLAN_ALLOWANCE_COPY = {
 function planFeatures(tier: Tier): readonly string[] {
   const allowance = PLAN_ALLOWANCE_COPY[tier];
   // Public plan wording uses Instant; compatibility mode labels and routing stay intact.
-  const modeLabels = modesByTier[tier].map(modeDisplayLabel);
+
   const features = [
-    `${modeLabels
-      .join(modeLabels.length === 2 ? " and " : ", ")
-      .replace(/, ([^,]+)$/, ", and $1")} ${modeLabels.length === 1 ? "mode" : "modes"}`,
+    tier === "free"
+      ? "Argon Lite and Medium (Thinking)"
+      : tier === "plus"
+        ? "Argon and Neon: Lite, Medium, and High"
+        : "All three models: Lite, Medium, High, Extra High, Max, and Ultra",
     allowance.chat,
     allowance.image,
     allowance.upload,
@@ -297,7 +298,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "Default, Medium, Thinking, High, and Adaptive Memory. Operational usage limits still apply.",
+        "Argon and Neon with Lite, Medium and High, and Adaptive Memory. Operational usage limits still apply.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -307,7 +308,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
       description:
-        "Default, Medium, Thinking, High, Extra high, Max, and Ultra. Operational token and premium-request limits still apply.",
+        "All three models with Lite, Medium, High, Extra High, Max and Ultra. Operational token and premium-request limits still apply.",
       features: planFeatures("pro"),
     },
   },

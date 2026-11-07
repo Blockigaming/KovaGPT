@@ -9,7 +9,7 @@ const source = readFileSync(
 );
 test("onboarding describes the canonical Free mode boundary", () => {
   assert.deepEqual(MODE_IDS_BY_TIER.free, ["instant", "thinking"]);
-  assert.match(source, /Free includes Default and Thinking\./);
+  assert.match(source, /Free uses Argon Lite, or Argon Medium/);
   assert.doesNotMatch(source, /Thinking requires an upgrade/);
 });
 test("onboarding points daily usage to the existing Usage section", () => {

@@ -82,21 +82,14 @@ Mode: Lite. Optimize aggressively for speed and brevity.
 - Only expand when the user explicitly asks for more.`,
   },
   {
-    id: "medium",
-    label: "Medium",
-    description: "Balanced intelligence. The default KovaGPT experience.",
-    tier: "plus",
-    systemPrompt: BASE_SYSTEM,
-  },
-  {
     id: "thinking",
-    label: "Thinking",
+    label: "Medium",
     description: "Deepest reasoning. Careful, thorough, well-structured answers.",
     tier: "free",
     reasoning: "high",
     systemPrompt: `${BASE_SYSTEM}
 
-Mode: Thinking. Think carefully and thoroughly before answering.
+Mode: Medium. Think carefully and thoroughly before answering.
 - Structure hard problems with: understanding, approach, steps, final answer.
 - Verify assumptions and check your work.
 - Prefer accuracy and completeness over brevity when the topic warrants depth.`,
@@ -111,7 +104,7 @@ Mode: Thinking. Think carefully and thoroughly before answering.
   },
   {
     id: "extra_high",
-    label: "Extra high",
+    label: "Extra High",
     description: "Maximum-depth reasoning for complex work.",
     tier: "pro",
     reasoning: "high",
@@ -154,6 +147,7 @@ export function versionGroupsForTier(tier: Tier): VersionGroup[] {
 
 // Legacy IDs from older localStorage payloads map safely to the new modes.
 const LEGACY_ALIAS: Record<string, ModeId> = {
+  medium: "thinking",
   default: "instant",
   fast: "instant",
   auto: "instant",
@@ -161,15 +155,15 @@ const LEGACY_ALIAS: Record<string, ModeId> = {
   precise: "thinking",
   code: "thinking",
   study: "thinking",
-  history: "medium",
+  history: "thinking",
   reason: "thinking",
   research: "thinking",
   writer: "thinking",
   tutor: "thinking",
   pro: "max",
-  kova_5_5: "medium",
-  kova_5_4: "medium",
-  kova_o3: "medium",
+  kova_5_5: "thinking",
+  kova_5_4: "thinking",
+  kova_o3: "thinking",
 };
 
 /** Exact model menus promised by each plan. Each upgrade adds choices while preserving Default and Thinking. */
