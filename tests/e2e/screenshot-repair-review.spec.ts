@@ -137,7 +137,7 @@ for (const theme of ["dark", "light"] as const) {
       await page.getByRole("button", { name: "Back to settings" }).click();
       await page.getByRole("tab", { name: "Appearance", exact: true }).click();
     }
-    await expect(page).toHaveURL(/\\/settings\\/appearance$/);
+    await expect(page).toHaveURL(/\/settings\/appearance$/);
     await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
     await panel.screenshot({
       path: info.outputPath(`settings-reference-${theme}.png`),
