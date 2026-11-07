@@ -94,3 +94,54 @@ for (const theme of ["dark", "light"] as const) {
     });
   });
 }
+
+
+for (const theme of ["dark", "light"] as const) {
+  test(`${theme}: Settings reference layout uses the selected theme and working sections`, async ({
+    page,
+  }, info) => {
+    await installAuthenticatedFixture(page);
+    await page.addInitScript((mode) => localStorage.setItem("kova-theme-mode", mode), theme);
+    await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
+    await page.route("**/_serverFn/**", (route) =>
+      route.fulfill({ json: { result: [], context: {} } }),
+    );
+    await page.goto("/settings/responses");
+    await waitForKovaHydration(page);
+    const screen = page.locator(".kova-settings-screen");
+    const panel = page.locator("section.kova-settings-page");
+    await expect(screen).toBeVisible();
+    await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Send shortcut" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Preferred response length" })).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const screen = document.querySelector(".kova-settings-screen")!;
+          const content = document.querySelector("section.kova-settings-page")!;
+          return getComputedStyle(screen).backgroundColor === getComputedStyle(content).backgroundColor;
+        }),
+      )
+      .toBe(true);
+    if (page.viewportSize()!.width >= 768) {
+      const nav = page.getByRole("complementary", { name: "Settings navigation" });
+      await expect(nav).toBeVisible();
+      const geometry = await nav.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        return { width: box.width, border: getComputedStyle(node).borderRightWidth };
+      });
+      expect(geometry.width).toBeGreaterThan(270);
+      expect(geometry.border).toBe("1px");
+      await nav.getByRole("tab", { name: "Appearance", exact: true }).click();
+    } else {
+      await page.getByRole("button", { name: "Back to settings" }).click();
+      await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+    }
+    await expect(page).toHaveURL(/\\/settings\\/appearance$/);
+    await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
+    await panel.screenshot({
+      path: info.outputPath(`settings-reference-${theme}.png`),
+      animations: "disabled",
+    });
+  });
+}
