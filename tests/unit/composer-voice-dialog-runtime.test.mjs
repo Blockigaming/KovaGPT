@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as principalStorage from "../../src/lib/principal-browser-storage.mjs";
 import { createSpeechPlayback, stopActiveSpeechPlayback } from "../../src/lib/speech-playback.mjs";
+import { createVoiceSilenceGate } from "../../src/lib/voice/speech-pause.mjs";
 import { createHash, webcrypto } from "node:crypto";
 import { createHookHarness, elements, loadUiModule, settle } from "../helpers/ui-state-harness.mjs";
 
@@ -276,6 +277,7 @@ function fixture(initial = {}, options = {}) {
       ...principalStorage,
       safeBrowserStorage: (area) => principalStorage.safeBrowserStorage(area, fakeWindow),
     },
+    "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
         const pending = deferred();
