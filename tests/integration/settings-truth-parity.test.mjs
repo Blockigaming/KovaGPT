@@ -33,12 +33,13 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
   assert.doesNotMatch(preferences, /useState\([^\n]*localStorage/);
 
   const sendSetting = settings.slice(
-    settings.indexOf('title="Send on Enter"'),
-    settings.indexOf('title="Send on Enter"') + 700,
+    settings.indexOf('id="settings-send-shortcut"'),
+    settings.indexOf('id="settings-send-shortcut"') + 1150,
   );
   assert.match(settings, /useSharedSendOnEnter\(user\?\.id \?\? null\)/);
-  assert.match(sendSetting, /checked=\{sharedSendOnEnter\}/);
-  assert.match(sendSetting, /setSharedSendOnEnter\(user\?\.id \?\? null, v\)/);
+  assert.match(settings, /value=\{sharedSendOnEnter \? "enter" : "modifier"\}/);
+  assert.match(sendSetting, /aria-label="Send shortcut"/);
+  assert.match(settings, /setSharedSendOnEnter\(user\?\.id \?\? null, enabled\)/);
   assert.doesNotMatch(
     settings,
     /useEffect\(\(\) => \{[\s\S]{0,240}setSharedSendOnEnter/,
