@@ -1032,9 +1032,11 @@ export function SettingsDialog({
         { v: "personalization", label: "Profile", icon: User2 },
         { v: "security", label: "Security and login", icon: ShieldCheck },
         { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
-        { v: "data", label: "Data controls", icon: Database, keywords: ["archive", "archived chats", "privacy"] },
+        { v: "archived", label: "Archived chats", icon: Database, keywords: ["history", "trash"] },
         { v: "parental", label: "Parental controls", icon: Baby },
+        { v: "voice", label: "Voice", icon: Bell, keywords: ["microphone", "audio"] },
         { v: "storage", label: "Storage", icon: HardDrive },
+        { v: "data", label: "Data controls", icon: Database, keywords: ["privacy", "export"] },
         { v: "memory", label: "Personalization", icon: Brain, keywords: ["memory"] },
         { v: "shortcuts", label: "Keyboard", icon: Keyboard, keywords: ["keyboard shortcuts"] },
         { v: "usage", label: "Usage", icon: BarChart3 },
@@ -1090,7 +1092,8 @@ export function SettingsDialog({
     : secondaryParents[tab];
   const secondaryTabs = TAB_GROUPS.flatMap((group) => group.tabs).filter(
     (item) =>
-      secondaryParents[item.v] === tab && !["memory", "security", "storage"].includes(item.v),
+      secondaryParents[item.v] === tab &&
+      !pageGroups.some((group) => group.tabs.some((primary) => primary.v === item.v)),
   );
   const allTabs = groups.flatMap((group) => group.tabs);
   const activeTab =
@@ -1450,6 +1453,23 @@ export function SettingsDialog({
                   </div>
                 </details>
               ) : null}
+              {/* DIRECT ACCOUNT SETTINGS */}
+              <TabsContent
+                value="archived"
+                aria-labelledby={currentSectionHeadingId}
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
+                <ArchivedChatsPanel userKey={userKey} />
+                <ChatTrashPanel userKey={userKey} />
+              </TabsContent>
+              <TabsContent
+                value="voice"
+                aria-labelledby={currentSectionHeadingId}
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
+                <h3 className="text-sm font-semibold">Voice</h3>
+                <VoiceConnectionStatus />
+              </TabsContent>
               {/* GENERAL */}
               <TabsContent
                 value="cloud-browser"
@@ -1581,8 +1601,6 @@ export function SettingsDialog({
                     </div>
                   </div>
                 </section>
-
-                <VoiceConnectionStatus />
 
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">Custom instructions and personality</h3>
