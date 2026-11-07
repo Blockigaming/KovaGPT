@@ -625,7 +625,7 @@ export function ComposerVoiceDialog({
               speech_message_not_synced:
                 "The reply is not available in saved history. Use chat to review it before trying Voice again.",
               speech_not_eligible:
-                "This reply is not from an approved OpenAI model. Your reply remains in chat.",
+                "This reply is not from a voice-enabled model. Your reply remains in chat.",
               speech_text_too_long:
                 "This reply is too long to speak. Read it in chat, then start a new voice turn.",
               speech_unauthorized: "Your voice session ended. Sign in again before starting Voice.",
@@ -667,7 +667,7 @@ export function ComposerVoiceDialog({
           : code === "voice_reply_too_long"
             ? "This reply is too long to speak. Read it in chat, then start a new voice turn."
             : code === "voice_model_not_eligible"
-              ? "This model is not approved for Voice. Your reply remains in chat; choose an approved OpenAI model."
+              ? "This model is not approved for Voice. Your reply remains in chat; select a voice-enabled model."
               : "This voice turn could not be completed and saved. Review the conversation in chat before trying again.",
       );
     } finally {
@@ -983,7 +983,7 @@ export function ComposerVoiceDialog({
           if (state === "playing") updatePhase("speaking");
           if (state === "error") {
             const messages: Record<string, string> = {
-              speech_not_eligible: "This reply is not from an approved OpenAI model.",
+              speech_not_eligible: "This reply is not from a voice-enabled model.",
               speech_voice_plan_required: "This voice requires a different plan.",
               speech_forbidden: "Read aloud is not available for this account right now.",
               speech_unauthorized: "Sign in again before reading aloud.",
