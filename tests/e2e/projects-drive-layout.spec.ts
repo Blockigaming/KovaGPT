@@ -305,7 +305,10 @@ test("workspace destinations stay together in desktop navigation and the phone d
   }
   const more = page.locator("details.kova-sidebar-more-disclosure");
   await more.locator("summary").click();
-  await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+  const work = workspace.getByRole("link", { name: "Work", exact: true });
+  await expect(work).toBeVisible();
+  await expect(work).toHaveCount(1);
+  await expect(work).toHaveAttribute("href", "/work");
   await expect(more.getByRole("link", { name: "Discover", exact: true })).toHaveCount(0);
   if (page.viewportSize()!.width < 1024) {
     await page.keyboard.press("Escape");

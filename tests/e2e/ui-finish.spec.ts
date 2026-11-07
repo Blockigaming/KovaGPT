@@ -74,7 +74,9 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(sidebar.getByRole("link", { name: "Images", exact: true })).toHaveCount(0);
   await expect(sidebar.getByRole("button", { name: "Search chats", exact: true })).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+  const work = sidebar.getByRole("link", { name: "Work", exact: true });
+  await expect(work).toBeVisible();
+  await expect(work).toHaveCount(1);
   const trigger = sidebar.getByRole("button", { name: "Account menu" });
   const a = await trigger.boundingBox();
   await trigger.click();

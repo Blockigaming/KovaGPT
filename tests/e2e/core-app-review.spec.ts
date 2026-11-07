@@ -183,7 +183,15 @@ test("sidebar search and all main destinations keep honest service states", asyn
     .locator("summary")
     .filter({ hasText: /^More$/ })
     .click();
-  await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+  const work = page.getByRole("link", { name: "Work", exact: true });
+  await expect(work).toBeVisible();
+  await expect(work).toHaveCount(1);
+  await work.click();
+  await expect(page).toHaveURL(/\/work$/);
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),
+  ).toBeVisible();
+  await openSidebar(page);
   await expect(page.getByRole("link", { name: "Discover", exact: true })).toHaveCount(0);
   await page.goto("/discovery");
   await expect(page).toHaveURL(/\/$/u);
