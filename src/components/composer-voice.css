@@ -601,34 +601,121 @@
   font-size: 14px;
 }
 
-/* Dictation stays in the message composer instead of opening a voice modal. */
+/* Type with voice replaces the composer with a compact waveform bar.
+   It uses the same composer background/border variables as the main chatbox,
+   including user-selected backgrounds. No hard-coded dark/light background. */
 .kova-inline-dictation {
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  padding: 20px 16px 12px;
-  border: 1px solid var(--border);
-  border-radius: 28px;
-  background: var(--surface-input, var(--background));
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--composer-border, transparent);
+  border-radius: var(--kova-radius-composer, 26px);
+  background: var(--composer-background, var(--surface-secondary));
+  color: var(--foreground);
   animation: kova-dictation-enter 160ms ease-out;
 }
-.kova-inline-dictation-content {
-  min-height: 90px;
-  max-height: min(40dvh, 280px);
-  overflow-y: auto;
-  padding: 0 8px 12px;
+.kova-inline-dictation-controls {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  min-height: 66px;
+  align-items: center;
+  gap: clamp(10px, 1.5vw, 18px);
 }
-.kova-inline-dictation-title {
-  font-size: 14px;
-  font-weight: 500;
+.kova-inline-dictation-controls button,
+.kova-inline-dictation-processing {
+  display: grid;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--foreground);
+  box-shadow: none;
+  cursor: pointer;
 }
-.kova-inline-dictation-content p {
-  margin-top: 8px;
+.kova-inline-dictation-controls button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.kova-inline-dictation-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.kova-inline-dictation-controls button svg,
+.kova-inline-dictation-processing svg {
+  width: 25px;
+  height: 25px;
+  stroke-width: 2;
+}
+.kova-inline-dictation-wave {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1px, .26vw, 4px);
+  overflow: hidden;
+  color: var(--foreground);
+  opacity: 0.62;
+}
+.kova-inline-dictation-wave i {
+  display: block;
+  flex: 1 1 2px;
+  min-width: 1px;
+  max-width: 3px;
+  max-height: 38px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.77;
+  transform-origin: center;
+  transform: scaleY(0.13);
+}
+.kova-inline-dictation-wave[data-recording="true"] i {
+  opacity: 0.84;
+  transform: scaleY(1);
+  animation: kova-dictation-wave 920ms ease-in-out infinite alternate;
+}
+.kova-inline-dictation-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+.kova-inline-dictation-actions > button:last-child,
+.kova-inline-dictation-actions > .kova-inline-dictation-send,
+.kova-inline-dictation-actions > .kova-voice-use-transcript button {
+  background: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
+}
+.kova-inline-dictation-actions > .kova-voice-use-transcript {
+  display: contents;
+}
+.kova-inline-dictation-actions > .kova-voice-use-transcript button:hover:not(:disabled),
+.kova-inline-dictation-actions > .kova-inline-dictation-send:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 85%, var(--background));
+}
+.kova-inline-dictation-status {
+  margin: 8px 4px 0;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
 }
-.kova-inline-dictation-content [role="alert"] {
+.kova-inline-dictation-status[role="alert"] {
   color: var(--destructive);
+}
+.kova-inline-dictation-content {
+  min-width: 0;
+  max-height: min(40dvh, 280px);
+  overflow-y: auto;
+  padding: 10px 4px 0;
 }
 .kova-inline-dictation-content textarea {
   margin-top: 8px;
@@ -637,77 +724,41 @@
   resize: vertical;
   font-size: 16px;
 }
-.kova-inline-dictation-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
+.kova-inline-dictation-content label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
 }
-.kova-inline-dictation-controls button {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  padding: 0;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-}
-.kova-inline-dictation-cancel {
-  background: transparent;
-  transition: background-color 140ms ease;
-}
-.kova-inline-dictation-cancel:hover {
-  background: var(--accent);
-}
-.kova-inline-dictation-controls svg {
-  width: 20px;
-  height: 20px;
-}
-.kova-inline-dictation-wave {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  gap: 3px;
-  height: 44px;
-  overflow: hidden;
-  color: var(--muted-foreground);
-}
-.kova-inline-dictation-wave i {
-  width: 3px;
-  min-width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0.45;
-}
-.kova-inline-dictation-wave[data-recording="true"] i {
-  height: 16px;
-  animation: kova-dictation-wave 750ms ease-in-out infinite alternate;
-}
-.kova-inline-dictation-processing {
-  margin: 12px;
+.kova-inline-dictation-content > button {
+  min-height: 44px;
 }
 @keyframes kova-dictation-wave {
   to {
-    transform: scaleY(0.2);
-    opacity: 0.7;
+    transform: scaleY(0.28);
+    opacity: 0.52;
   }
 }
 @keyframes kova-dictation-enter {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 560px) {
+  .kova-inline-dictation { padding: 8px; }
+  .kova-inline-dictation-controls { gap: 6px; }
+  .kova-inline-dictation-controls button,
+  .kova-inline-dictation-processing {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .kova-inline-dictation-actions { gap: 6px; }
+  .kova-inline-dictation-wave { height: 44px; gap: 1px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .kova-inline-dictation,
-  .kova-inline-dictation-wave i {
-    animation: none !important;
-  }
+  .kova-inline-dictation-wave i { animation: none !important; }
+}
+:root[data-kova-motion="reduced"] .kova-inline-dictation-wave i {
+  animation: none !important;
 }
