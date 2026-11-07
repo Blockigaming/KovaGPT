@@ -35,9 +35,12 @@ try {
     throw new Error(
       "Configure an explicit positive daily voice request cap first. This script never selects or raises it.",
     );
-  if (!env.KOVA_VOICE_MODEL_PROOF_SECRET?.secretRef || !env.KOVA_VOICE_OPENAI_MODELS_JSON?.value)
+  const modelAllowlistConfigured =
+    Boolean(env.KOVA_VOICE_OPENAI_MODELS_JSON?.value) ||
+    Boolean(env.KOVA_VOICE_HOSTED_MODELS_JSON?.value);
+  if (!env.KOVA_VOICE_MODEL_PROOF_SECRET?.secretRef || !modelAllowlistConfigured)
     throw new Error(
-      "Preserve/configure the existing voice model policy and signing-secret reference before enabling spoken replies.",
+      "Preserve/configure an approved voice-model allowlist and signing-secret reference before enabling spoken replies.",
     );
   if (env.KOVA_GENERATION_DISABLED?.value === "true")
     throw new Error("Generation is disabled. Keep its separate rollout gate intact.");
