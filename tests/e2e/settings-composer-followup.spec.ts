@@ -118,6 +118,18 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await trigger.click();
   const dictation = page.getByRole("region", { name: "Type with voice", exact: true });
   await expect(dictation).toHaveAttribute("data-voice-phase", "recording");
+  await expect(dictation.locator(".kova-inline-dictation-wave i")).toHaveCount(72);
+  await expect(dictation.getByRole("button", { name: "Stop and transcribe" })).toBeVisible();
+  await expect(dictation.getByRole("button", { name: "Add transcript to chat" })).toBeDisabled();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const composer = document.querySelector(".spec400-composer")!;
+        const recorder = document.querySelector(".kova-inline-dictation")!;
+        return getComputedStyle(composer).backgroundColor === getComputedStyle(recorder).backgroundColor;
+      }),
+    )
+    .toBe(true);
   await expect(page.locator(".spec400-composer")).toBeHidden();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
