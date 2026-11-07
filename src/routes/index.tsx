@@ -3307,9 +3307,7 @@ function KovaGPT() {
       onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
       placeholder="Ask KovaGPT anything..."
       responseSettings={settings}
-      onResponseSettingsChange={(change) =>
-        setSettings((previous) => ({ ...previous, ...change }))
-      }
+      onResponseSettingsChange={(change) => setSettings((previous) => ({ ...previous, ...change }))}
       onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
       selectedTool={selectedTool}
       onToolSelect={setSelectedTool}
