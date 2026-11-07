@@ -155,6 +155,7 @@ function fixture(
     "ComposerModelStatus",
     "MobileBottomSheet",
     "ResponsiveModelSelector",
+    "ConsumerModelSelector",
     "OpenDesktopAppButton",
     "ComposerDrawingDialog",
     "ComposerPluginList",
