@@ -16,6 +16,8 @@ import { createBrowserContainerFactory } from "./browser-container.mjs";
 import { createBrowserManager, withBrowserActions } from "./browser-manager.mjs";
 import { createBrowserBackendAuthority } from "../src/lib/work-browser-transport.mjs";
 import { createWorkBackend, probeWorkRunner } from "./backend.mjs";
+import { configuredHostPower } from "./host-power.mjs";
+import { createWorkHostIdleControl } from "../src/lib/work-host-power.mjs";
 
 /** Owner-configured standalone TLS service. Importing this module never starts it. */
 export async function startConfiguredWorkRunner(env = process.env) {
@@ -28,6 +30,8 @@ export async function startConfiguredWorkRunner(env = process.env) {
     signingKey: env.KOVA_WORK_RUNNER_SIGNING_KEY,
   });
   if (!configuration) throw new Error("work_runner_disabled");
+  const hostPower = configuredHostPower(env);
+  const hostIdle = hostPower ? createWorkHostIdleControl() : null;
   const { createWorkSandboxExecutor } = await import("./sandbox-container.mjs");
   const sandbox = createWorkSandboxExecutor({
     enginePath: "/usr/bin/docker",
@@ -80,7 +84,7 @@ export async function startConfiguredWorkRunner(env = process.env) {
     drainActive = false;
   const notify = createWorkBackend(configuration, env.KOVA_WORK_BACKEND_ORIGIN);
   async function probe() {
-    if (probeActive || closed) return;
+    if (probeActive || closed || hostIdle?.draining) return;
     probeActive = true;
     try {
       await probeWorkRunner(sandbox, notify);
@@ -102,6 +106,7 @@ export async function startConfiguredWorkRunner(env = process.env) {
     render,
     notify,
     browser,
+    onActivity: () => hostIdle?.touch(),
     readiness: async () => lastProbe > 0 && Date.now() - lastProbe < 30000,
   });
   const server = https.createServer(
@@ -112,7 +117,9 @@ export async function startConfiguredWorkRunner(env = process.env) {
       maxHeaderSize: 8192,
     },
     async (request, response) => {
+      let release;
       try {
+        release = hostIdle?.enter();
         const headers = new Headers();
         for (const [name, value] of Object.entries(request.headers))
           if (value) headers.set(name, Array.isArray(value) ? value.join(",") : value);
@@ -129,6 +136,8 @@ export async function startConfiguredWorkRunner(env = process.env) {
       } catch {
         response.writeHead(503);
         response.end();
+      } finally {
+        release?.();
       }
     },
   );
@@ -145,17 +154,31 @@ export async function startConfiguredWorkRunner(env = process.env) {
   });
   const probeTimer = setInterval(() => void probe(), 10000);
   const drainTimer = setInterval(async () => {
-    if (closed || drainActive || !lastProbe) return;
+    if (closed || drainActive || !lastProbe || hostIdle?.draining) return;
     drainActive = true;
+    const release = hostIdle?.enter();
     try {
       await service.drain();
     } catch {
       /* Durable DB queue remains for the next bounded drain. */
     } finally {
       drainActive = false;
+      release?.();
     }
   }, 5000);
   const cleanupTimer = setInterval(() => void sandbox.reapExpired().catch(() => undefined), 60000);
+  const idleTimer =
+    hostPower && hostIdle
+      ? setInterval(() => {
+          if (closed) return;
+          void hostIdle.suspendIfIdle({
+            localIdle: () =>
+              !probeActive && !drainActive && service.isIdle() && (!browser || browser.isIdle()),
+            backendIdle: async () => (await notify("idle", null)).status === "idle",
+            suspend: () => hostPower.suspend(),
+          });
+        }, 37000)
+      : null;
   return {
     server,
     async close() {
@@ -163,6 +186,7 @@ export async function startConfiguredWorkRunner(env = process.env) {
       clearInterval(probeTimer);
       clearInterval(drainTimer);
       clearInterval(cleanupTimer);
+      if (idleTimer) clearInterval(idleTimer);
       service.close();
       await browser?.close();
       await new Promise((resolve) => server.close(resolve));

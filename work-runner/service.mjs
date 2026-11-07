@@ -22,6 +22,7 @@ export function createWorkRunnerService({
   readiness,
   concurrency = 2,
   browser,
+  onActivity = () => {},
 }) {
   if (
     !Number.isSafeInteger(concurrency) ||
@@ -207,6 +208,7 @@ export function createWorkRunnerService({
         )
           return new Response(null, { status: 401 });
         workUuid(request.requestId);
+        if (request.operation !== "heartbeat") onActivity();
         const input = request.payload;
         if (request.operation === "heartbeat") {
           if (!(await readiness())) return response(request, { status: "unavailable" }, 503);
@@ -470,7 +472,10 @@ export function createWorkRunnerService({
       }
     },
     async drain() {
-      await notify("drain", null);
+      return notify("drain", null);
+    },
+    isIdle() {
+      return active.size === 0 && operations.size === 0;
     },
     close() {
       for (const entry of active.values()) entry.controller.abort();

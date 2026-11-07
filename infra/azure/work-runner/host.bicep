@@ -23,6 +23,10 @@ param adminPublicKey string
 @maxLength(32)
 param adminUsername string = 'kovaworkadmin'
 
+@description('Keep current size until native acceptance and concurrent browser memory checks pass on the cheaper candidate. Resizing restarts the host.')
+@allowed(['Standard_D2as_v4', 'Standard_B2als_v2'])
+param vmSize string = 'Standard_D2as_v4'
+
 @secure()
 @minLength(64)
 param runnerToken string
@@ -134,7 +138,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
   tags: tags
   identity: { type: 'SystemAssigned' }
   properties: {
-    hardwareProfile: { vmSize: 'Standard_D2as_v4' }
+    hardwareProfile: { vmSize: vmSize }
     securityProfile: {
       securityType: 'TrustedLaunch'
       uefiSettings: {

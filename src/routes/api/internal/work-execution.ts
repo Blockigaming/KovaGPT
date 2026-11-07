@@ -10,6 +10,7 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import { workRunnerConfiguration } from "@/lib/work-runner.server";
 import { verifyRunnerInvocation } from "@/lib/work-runner-transport.mjs";
 import { workExecutionDatabase } from "@/lib/work-execution-database.server";
+import { workHostHasPendingWork } from "@/lib/work-host-power.server";
 import {
   executeConfiguredWorkRun,
   recoverConfiguredWorkRun,
@@ -53,6 +54,8 @@ export const Route = createFileRoute("/api/internal/work-execution")({
           return json({ error: "work_runner_rate_limited" }, rate.status === "limited" ? 429 : 503);
         try {
           const db = workExecutionDatabase(supabaseAdmin);
+          if (invocation.operation === "idle")
+            return json({ status: (await workHostHasPendingWork()) ? "busy" : "idle" });
           if (invocation.operation === "probe") {
             const probe = await db.from("work_execution_runs").select("id").limit(0);
             return probe.error

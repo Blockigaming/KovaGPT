@@ -11,6 +11,7 @@ import {
   listWorkExecutions,
   submitWorkExecution,
   workExecutionReadiness,
+  wakeWorkExecution,
 } from "@/lib/work-execution.server";
 
 const json = (value: unknown, status = 200) =>
@@ -82,6 +83,11 @@ export const Route = createFileRoute("/api/work/execution")({
           return json({ error: "json_content_type_required" }, 415);
         try {
           const body = await readBoundedJsonObject(request, 49152);
+          if (body.operation === "wake") {
+            if (Object.keys(body).some((key) => key !== "operation"))
+              return json({ error: "work_operation_invalid" }, 400);
+            return json(await wakeWorkExecution(auth), 202);
+          }
           if (body.operation === "submit") {
             if (hasKovaWorkSelection(body.input)) {
               const tier = await getAgentEntitlement(auth);

@@ -26,7 +26,12 @@ import { WORK_TERMINAL, type WorkRun } from "@/lib/work-execution-protocol.mjs";
 import { resolveKovaModelAlias } from "@/lib/ai/kova-model-migration.mjs";
 
 type Snapshot = {
-  readiness: { available: boolean; reason: string | null; modelOptions?: WorkModelOption[] };
+  readiness: {
+    available: boolean;
+    canWake?: boolean;
+    reason: string | null;
+    modelOptions?: WorkModelOption[];
+  };
   runs: WorkRun[];
   nextCursor: string | null;
 };
@@ -54,6 +59,7 @@ export function WorkExecutionPanel({
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [waking, setWaking] = useState(false);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   const lifetime = useRef<AbortController | null>(null);
   const requestVersion = useRef(0);
@@ -108,6 +114,7 @@ export function WorkExecutionPanel({
       setPending(null);
       setError(null);
       setBusy(false);
+      setWaking(false);
     });
     const controller = view.controller;
     lifetime.current = controller;
@@ -126,6 +133,42 @@ export function WorkExecutionPanel({
       view.dispose();
     };
   }, [load, fetchProjects, ownerId, reloadVersion]);
+  async function connectWork() {
+    const signal = lifetime.current?.signal;
+    if (!signal || signal.aborted) return;
+    setWaking(true);
+    setError(null);
+    try {
+      const deadline = Date.now() + 180000;
+      do {
+        const result = (await requestWorkSync(ownerId, "/api/work/execution", signal, {
+          operation: "wake",
+        })) as { status: string };
+        if (result.status === "ready") {
+          await load();
+          return;
+        }
+        await new Promise<void>((resolve, reject) => {
+          const stop = () => {
+            clearTimeout(timer);
+            reject(new Error("aborted"));
+          };
+          const timer = setTimeout(() => {
+            signal.removeEventListener("abort", stop);
+            resolve();
+          }, 10000);
+          if (signal.aborted) stop();
+          else signal.addEventListener("abort", stop, { once: true });
+        });
+      } while (!signal.aborted && Date.now() < deadline);
+      throw new Error("startup_unconfirmed");
+    } catch {
+      if (!signal.aborted)
+        setError("Work has not finished starting. Try connecting again shortly.");
+    } finally {
+      if (!signal.aborted) setWaking(false);
+    }
+  }
   async function send(body: Record<string, unknown>) {
     const signal = lifetime.current?.signal;
     if (!signal || signal.aborted) return;
@@ -161,7 +204,7 @@ export function WorkExecutionPanel({
     selectedModel?.available === true &&
     (reasoningEffort === null || selectedModel.reasoningEfforts.includes(reasoningEffort));
   const available = snapshot?.readiness.available === true && selectedSupported;
-  const locked = busy || Boolean(pending);
+  const locked = busy || waking || Boolean(pending);
   const command = (value: Record<string, unknown>) =>
     run &&
     void send({
@@ -202,12 +245,24 @@ export function WorkExecutionPanel({
         </Button>
       </div>
       <p className="mt-2 text-sm text-muted-foreground" role="status">
-        {available
-          ? "A connected runner is available. Review each consequential action before it runs."
-          : selectedModel?.reason ||
-            snapshot?.readiness.reason ||
-            "Checking execution availability. You can prepare a plan while this loads."}
+        {waking
+          ? "Starting Work and Cloud Browser. This can take a few minutes."
+          : available
+            ? "A connected runner is available. Review each consequential action before it runs."
+            : selectedModel?.reason ||
+              snapshot?.readiness.reason ||
+              "Checking execution availability. You can prepare a plan while this loads."}
       </p>
+      {snapshot?.readiness.canWake && !snapshot.readiness.available && (
+        <Button
+          variant="outline"
+          className="mt-2"
+          disabled={locked}
+          onClick={() => void connectWork()}
+        >
+          {waking ? "Starting Work…" : "Connect to Work"}
+        </Button>
+      )}
       <label className="mt-3 block text-sm">
         Objective
         <Textarea

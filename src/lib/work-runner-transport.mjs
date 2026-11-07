@@ -127,16 +127,18 @@ export async function verifyRunnerInvocation(configuration, raw, signature) {
     input.build !== config.build ||
     !Number.isSafeInteger(input.at) ||
     Math.abs(Date.now() - input.at) > 15000 ||
-    !["dispatch", "recover", "drain", "probe"].includes(input.operation) ||
+    !["dispatch", "recover", "drain", "probe", "idle"].includes(input.operation) ||
     !input.payload ||
     Object.keys(input.payload).some(
-      (name) => ["drain", "probe"].includes(input.operation) || name !== "runId",
+      (name) => ["drain", "probe", "idle"].includes(input.operation) || name !== "runId",
     )
   )
     fail("work_runner_invocation_invalid");
   return {
     operation: input.operation,
-    runId: ["drain", "probe"].includes(input.operation) ? null : workUuid(input.payload.runId),
+    runId: ["drain", "probe", "idle"].includes(input.operation)
+      ? null
+      : workUuid(input.payload.runId),
     requestId: workUuid(input.requestId),
   };
 }
