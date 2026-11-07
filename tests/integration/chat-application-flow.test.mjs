@@ -477,6 +477,10 @@ function composer(f) {
     editingMessage: null,
     pendingWorkflowSkill: null,
     mode: "instant",
+    // This suite exercises the legacy OpenAI Responses transport explicitly.
+    // Hosted aliases have separate request/routing qualification; never label
+    // an OpenAI fixture request as one of those foundations.
+    hostedModel: undefined,
     tempChat: false,
     tempChatContext: "clean",
     settings: { rememberAcross: false },
@@ -589,6 +593,7 @@ test("actual composer callback → route → adapter → visible completion clea
   assert.equal(ui.streaming, false);
   assert.equal(ui.context.inFlightRef.current, false);
   assert.equal(ui.httpCalls, 1);
+  assert.equal(JSON.parse(f.applicationBody).hostedModel, undefined);
   assert.equal(ui.retryTimers.length, 0);
 });
 

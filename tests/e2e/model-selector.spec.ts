@@ -14,6 +14,7 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   await waitForKovaHydration(page);
   const thinking = page.getByRole("button", { name: "Thinking", exact: true });
   await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
+  await expect(page.getByTestId("consumer-model-trigger")).toHaveCount(0);
   await expect(thinking).toHaveAttribute("aria-pressed", "false");
   await thinking.click();
   await expect(thinking).toHaveAttribute("aria-pressed", "true");
@@ -32,6 +33,7 @@ test("Plus model selector exposes Lite Medium and High", async ({ page }) => {
   const useSheet = await page.evaluate(
     () => window.innerWidth < 1024 || window.matchMedia("(pointer: coarse)").matches,
   );
+  await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();
@@ -68,6 +70,7 @@ test("Pro picker keeps all six modes and the High label", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "pro" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();

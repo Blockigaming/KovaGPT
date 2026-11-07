@@ -23,19 +23,26 @@ for (const [tier, selected, label, permitted] of [
     await page.goto("/");
     await waitForKovaHydration(page);
     const trigger = page.getByTestId("consumer-model-trigger");
-    await expect(trigger).toBeVisible();
-    await trigger.click();
-    const picker = page.getByRole("dialog", { name: /^(Choose Kova model|Kova models)$/ });
-    await expect(picker).toBeVisible();
-    for (const [index, id] of products.entries()) {
-      const button = picker.getByTestId(`consumer-model-${id}`);
-      await expect(button).toBeVisible();
-      if (index < permitted) await expect(button).toBeEnabled();
-      else await expect(button).toBeDisabled();
+    if (tier === "free") {
+      await expect(trigger).toHaveCount(0);
+      await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Thinking", exact: true })).toBeVisible();
+    } else {
+      await expect(trigger).toBeVisible();
+      await trigger.click();
+      const picker = page.getByRole("dialog", { name: /^(Choose Kova model|Kova models)$/ });
+      await expect(picker).toBeVisible();
+      for (const [index, id] of products.entries()) {
+        const button = picker.getByTestId(`consumer-model-${id}`);
+        await expect(button).toBeVisible();
+        if (index < permitted) await expect(button).toBeEnabled();
+        else await expect(button).toBeDisabled();
+      }
+      await picker.getByTestId(`consumer-model-${selected}`).click();
+      await expect(picker).toHaveCount(0);
+      await expect(trigger).toHaveAttribute("aria-label", `Choose Kova model: ${label}`);
+      await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
     }
-    await picker.getByTestId(`consumer-model-${selected}`).click();
-    await expect(picker).toHaveCount(0);
-    await expect(trigger).toHaveAttribute("aria-label", `Choose Kova model: ${label}`);
     expect(requests).toHaveLength(0);
     // Effort is a separate choice and cannot change the selected foundation.
     if (tier === "free") await page.getByRole("button", { name: "Thinking", exact: true }).click();
@@ -47,10 +54,12 @@ for (const [tier, selected, label, permitted] of [
     expect(requests).toHaveLength(1);
     expect(requests[0].hostedModel).toBe(selected);
     expect(requests[0].mode).toBe(tier === "free" ? "thinking" : "instant");
-    const box = await trigger.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    if (tier !== "free") {
+      const box = await trigger.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    }
     // Reload only after the real debounced device write commits. Seeing a
     // streamed response is not an acknowledgement that history has saved.
     await expect
@@ -97,10 +106,15 @@ for (const [tier, selected, label, permitted] of [
       .first()
       .click();
     await expect(page.getByText("Verified selected model request.", { exact: true })).toBeVisible();
-    await expect(page.getByTestId("consumer-model-trigger")).toHaveAttribute(
-      "aria-label",
-      `Choose Kova model: ${label}`,
-    );
+    if (tier === "free") {
+      await expect(page.getByTestId("consumer-model-trigger")).toHaveCount(0);
+      await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
+    } else {
+      await expect(page.getByTestId("consumer-model-trigger")).toHaveAttribute(
+        "aria-label",
+        `Choose Kova model: ${label}`,
+      );
+    }
   });
 }
 
