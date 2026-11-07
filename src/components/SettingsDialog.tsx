@@ -1020,17 +1020,29 @@ export function SettingsDialog({
     };
   }, [open, userKey]);
 
+  // Full-page Settings uses the same page-first navigation hierarchy as the
+  // account Settings reference. Every destination is an existing functional tab.
   const pageGroups: TabGroup[] = [
     {
-      title: "Settings",
+      title: "Personal",
       tabs: [
-        { v: "personalization", label: "Profile", icon: User2 },
+        { v: "general", label: "General", icon: Cog, keywords: ["responses", "send", "shortcut"] },
         { v: "appearance", label: "Appearance", icon: Palette },
-        { v: "general", label: "Responses", icon: Sparkles },
-        { v: "memory", label: "Memory", icon: Brain },
-        { v: "security", label: "Security", icon: ShieldCheck },
-        { v: "storage", label: "Storage", icon: HardDrive },
         { v: "notifications", label: "Notifications", icon: Bell },
+        { v: "personalization", label: "Profile", icon: User2 },
+        { v: "security", label: "Security and login", icon: ShieldCheck },
+        { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
+        { v: "data", label: "Data controls", icon: Database, keywords: ["archive", "archived chats", "privacy"] },
+        { v: "parental", label: "Parental controls", icon: Baby },
+        { v: "storage", label: "Storage", icon: HardDrive },
+        { v: "memory", label: "Personalization", icon: Brain, keywords: ["memory"] },
+        { v: "shortcuts", label: "Keyboard", icon: Keyboard, keywords: ["keyboard shortcuts"] },
+        { v: "usage", label: "Usage", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "Workspace",
+      tabs: [
         { v: "linked", label: "Connections", icon: Link2 },
         {
           v: "cloud-browser",
@@ -1038,14 +1050,23 @@ export function SettingsDialog({
           icon: ShieldCheck,
           keywords: ["permissions", "websites", "login", "rules"],
         },
-        { v: "data", label: "Privacy", icon: ShieldCheck },
-        { v: "usage", label: "Usage", icon: BarChart3 },
+        { v: "family", label: "Family Center", icon: Users },
+        { v: "location", label: "Location", icon: MapPin },
+      ],
+    },
+    {
+      title: "Plan and support",
+      tabs: [
         {
           v: "billing",
           label: "Subscriptions",
           icon: CreditCard,
           keywords: ["subscription", "plan", "payment", "invoice"],
         },
+        { v: "report", label: "Report an issue", icon: Bug },
+        { v: "help", label: "Help center", icon: LifeBuoy },
+        { v: "about", label: "About", icon: Info },
+        { v: "logout", label: "Log out", icon: LogOut },
       ],
     },
   ];
