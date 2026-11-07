@@ -568,7 +568,7 @@ for (const tier of ["plus", "pro"] as const) {
     await expect(page.getByTestId("model-option-high")).toHaveText("High");
     await expect(page.getByTestId("model-option-ultra")).toHaveCount(tier === "pro" ? 1 : 0);
     await page.getByTestId("model-option-high").click();
-    await expect(picker).toHaveAttribute("aria-label", `Choose model: KovaGPT ${"High"}`);
+    await expect(picker).toHaveAttribute("aria-label", "Choose response effort: High");
     await expect(picker).toContainText("High");
     await page.keyboard.press("Escape");
     await geometry(page);
