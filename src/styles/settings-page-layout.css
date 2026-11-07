@@ -309,3 +309,184 @@
     display: none;
   }
 }
+
+
+/* Chat-style account settings: use the user's actual app/theme surfaces, not
+   a fixed black or white recreation of the reference screenshot. */
+@media (min-width: 768px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
+    width: var(--kova-settings-navigation-width, 352px);
+    padding: 18px 8px 24px;
+    margin: 0;
+    border: 0;
+    border-right: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--background);
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-navigation-heading {
+    min-height: 116px;
+    padding: 0 8px 16px;
+    align-items: flex-end;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-return {
+    width: 100%;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 8px;
+    background: transparent;
+    border-radius: 12px;
+    color: var(--foreground);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-return:hover {
+    background: var(--surface-hover);
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-search {
+    height: 46px;
+    margin: 0 0 14px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-search input {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--surface-input);
+    color: var(--foreground);
+    padding-inline-start: 42px;
+    font-size: 15px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-search input:focus-visible {
+    border-color: var(--ring);
+    outline: 2px solid transparent;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-search > svg {
+    left: 14px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-nav {
+    padding: 0;
+    gap: 0;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-nav section + section {
+    margin-top: 16px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-nav-group {
+    padding: 0 12px 8px;
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-nav-item {
+    min-height: 44px;
+    margin: 0 0 1px;
+    gap: 12px;
+    padding: 9px 12px;
+    color: var(--foreground);
+    font-size: 15px;
+    font-weight: 400;
+    border-radius: 12px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-nav-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-nav-item[data-state="active"] {
+    background: var(--surface-selected);
+    color: var(--foreground);
+    font-weight: 500;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-content-header {
+    width: 100%;
+    max-width: 1030px;
+    min-height: 112px;
+    margin: 0 auto;
+    padding: 28px 28px 18px !important;
+    border: 0;
+    background: var(--background);
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-content-header h2 {
+    font-size: 28px !important;
+    line-height: 36px;
+    font-weight: 500 !important;
+    letter-spacing: -0.025em;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
+    width: 100%;
+    max-width: 1030px;
+    padding: 0 28px 60px;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] > section,
+  .kova-settings-route section.kova-settings-page .kova-profile-settings > section {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] > section + section {
+    margin-top: 34px;
+    padding-top: 26px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-general-overview {
+  margin-bottom: 24px;
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-general-overview > h3 {
+  margin: 0 0 22px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-general-options {
+  overflow: hidden;
+  padding: 0 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--background);
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-reference-row,
+.kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-row {
+  min-height: 78px;
+  padding: 14px 0;
+  gap: 20px;
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-reference-select {
+  flex: none;
+  width: auto;
+  min-width: 130px;
+  max-width: min(100%, 230px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-secondary);
+}
+
+@media (max-width: 767px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-general-options {
+    padding-inline: 14px;
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-general-options .kova-settings-reference-row {
+    gap: 12px;
+  }
+}
