@@ -167,29 +167,24 @@ function expandedFeatures(options = {}) {
   return { ...f, tree: compile(`return (${navigation.getText(file)});`, deps) };
 }
 
-test("expanded navigation renders selected Work in place and preserves saved shortcut order", () => {
-  const f = expandedFeatures({ railShortcuts: ["library", "work", "projects"], path: "/work" });
+test("expanded navigation preserves saved shortcut order without displaying Work", () => {
+  const f = expandedFeatures({ railShortcuts: ["library", "projects"], path: "/work" });
   assert.deepEqual(
     controls(f.tree)
       .filter(({ type }) => type === "Link")
       .map(({ props }) => props.to),
-    ["/library", "/work", "/projects"],
+    ["/library", "/projects"],
   );
-  assert.equal(
-    controls(f.tree).find(({ props }) => props.to === "/work").props["aria-current"],
-    "page",
-  );
-  assert.equal(controls(f.tree).filter(({ props }) => props.to === "/work").length, 1);
-  assert.deepEqual(f.calls, [], "rendering Work does not rewrite saved choices");
+  assert.equal(controls(f.tree).filter(({ props }) => props.to === "/work").length, 0);
+  assert.deepEqual(f.calls, [], "opening a direct Work URL must not change sidebar choices");
 });
 
-test("saved layouts without Work keep a signed-in route under More without duplicating or changing choices", () => {
+test("More never displays Work, including on the direct Work route", () => {
   for (const path of ["/", "/work"]) {
     const f = expandedFeatures({ railShortcuts: ["library"], path });
     const more = all(f.tree).find(({ type }) => type === "details");
-    assert.equal(controls(more).filter(({ props }) => props.to === "/work").length, 1);
-    assert.equal(more.props.open, path === "/work" ? true : undefined);
-    assert.deepEqual(f.calls, []);
+    assert.equal(controls(more).filter(({ props }) => props.to === "/work").length, 0);
+    assert.equal(more.props.open, undefined);
   }
   const guest = expandedFeatures({ signedIn: false, railShortcuts: ["library"] });
   assert.equal(controls(guest.tree).filter(({ props }) => props.to === "/work").length, 0);
@@ -229,7 +224,8 @@ test("all chosen tools are configurable and Maps retains its release gate", () =
     ["Maps", "Images"],
   );
   assert.equal(fixture().find("Additional shortcuts"), undefined);
-  assert.equal(SIDEBAR_ITEMS.find((item) => item.id === "work")?.to, "/work");
+  assert.equal(SIDEBAR_ITEMS.some((item) => item.id === "work"), false);
+  assert.equal(SIDEBAR_SHORTCUTS.some((item) => item.id === "work"), false);
 });
 
 test("guest/auth and scheduling gates are unchanged and hidden expanded rail is inert", () => {
