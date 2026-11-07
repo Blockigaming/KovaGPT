@@ -98,7 +98,7 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
   assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);
   assert.match(responsiveSelector, /<MobileBottomSheet/);
-  assert.match(responsiveSelector, /role="dialog"\s+aria-label="Choose model"/);
+  assert.match(responsiveSelector, /role="dialog"\s+aria-label="Choose response effort"/);
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 

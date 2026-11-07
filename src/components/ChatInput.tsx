@@ -1811,7 +1811,7 @@ export function ChatInput({
             )}
           </div>
           <div className="spec400-composer-trailing">
-            {canChangeAgent && hostedModel && onHostedModelChange ? (
+            {userTier !== "free" && canChangeAgent && hostedModel && onHostedModelChange ? (
               <ConsumerModelSelector
                 value={hostedModel}
                 onChange={onHostedModelChange}
