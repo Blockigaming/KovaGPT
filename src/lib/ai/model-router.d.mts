@@ -21,6 +21,7 @@ export type RouteInput = {
   task: RouterTask;
   utilityTask?: UtilityTask | string;
   mode?: string;
+  hostedModel?: import("../consumer-model-selection.mjs").ConsumerModelId;
   tier?: "free" | "plus" | "pro" | "business";
   deepMode?: boolean;
   hasImages?: boolean;

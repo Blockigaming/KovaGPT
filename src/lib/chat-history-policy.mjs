@@ -5,6 +5,7 @@ import {
 } from "./task-created-receipt.mjs";
 import { normalizeMemorySources } from "./memory-sources.mjs";
 import { normalizeSourceRetrievedAt } from "./response-source-time.mjs";
+import { consumerModel } from "./consumer-model-selection.mjs";
 
 export const CHAT_HISTORY_LIMITS = Object.freeze({
   snapshotBytes: 4 * 1024 * 1024,
@@ -150,10 +151,13 @@ export function normalizeChatHistory(value, ownerId) {
   )
     throw new Error("chat_history_invalid");
   const seen = new Set();
+  if (value.hostedModel !== undefined && !consumerModel(value.hostedModel))
+    throw new Error("chat_history_invalid");
   const result = {
     id: chatHistoryId(value.id),
     title: value.title,
     mode: value.mode === "pro" ? "max" : value.mode,
+    ...(value.hostedModel !== undefined ? { hostedModel: value.hostedModel } : {}),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     messages: value.messages.map((message) => {

@@ -35,8 +35,8 @@ export function activeModelConfig(): Record<ModelRole, string> {
 }
 
 /**
- * Server-side model routing. The request body never chooses a model; only the
- * logical role resolved here reaches the provider.
+ * Server-side model routing. A closed consumer alias is validated against its
+ * plan and trusted role binding; arbitrary provider identifiers never route.
  */
 export function routeAiModel(
   input: Omit<RouteInput, "env">,

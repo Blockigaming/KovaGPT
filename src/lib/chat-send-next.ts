@@ -1,5 +1,6 @@
 import type { ComposerToolId, PendingAttachment } from "@/components/ChatInput";
 import type { ModeId } from "@/lib/modes";
+import type { ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 
 export type NextPromptScope = {
   principal: string;
@@ -17,6 +18,7 @@ export type NextPrompt = {
   attachments: PendingAttachment[];
   tool: ComposerToolId | null;
   mode: ModeId;
+  hostedModel?: ConsumerModelId;
   status: "queued" | "ready" | "held";
   reason?: string;
 };
