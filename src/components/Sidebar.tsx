@@ -21,7 +21,6 @@ import {
   ChevronDown,
   LogOut,
   BriefcaseBusiness,
-  Map,
   CircleHelp,
   Copy as CopyIcon,
   Ellipsis,
@@ -83,7 +82,6 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   "scheduled-tasks": TasksGlyph,
   apps: PluginsGlyph,
   work: BriefcaseBusiness,
-  maps: Map,
   memory: Brain,
   settings: SettingsGlyph,
   notifications: Bell,
@@ -125,7 +123,6 @@ export function Sidebar({
   onOpenWorkspaceSearch,
   workspaceSearchOpen: externalWorkspaceSearchOpen = false,
   hideGuestLogin = false,
-  mapsReleaseApproved = false,
   compactOnly = false,
 }: {
   conversations: Conversation[];
@@ -145,7 +142,6 @@ export function Sidebar({
   onOpenWorkspaceSearch?: () => void;
   workspaceSearchOpen?: boolean;
   hideGuestLogin?: boolean;
-  mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
@@ -245,9 +241,7 @@ export function Sidebar({
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
   const railShortcuts = layout.shortcuts;
   const railDialogOpen = Boolean(railOwner && railDialogOwner === railOwner);
-  const availableShortcuts = SIDEBAR_ITEMS.filter(
-    (shortcut) => shortcut.id !== "maps" || mapsReleaseApproved,
-  );
+  const availableShortcuts = SIDEBAR_ITEMS;
   const sidebarStyle = {
     ...sidebarColors(layout.color),
     "--sidebar-expanded": `${layout.width}px`,
@@ -1679,7 +1673,7 @@ export function Sidebar({
                 </button>
               ) : null}
               {railShortcuts
-                .filter((id) => !["discovery", "maps"].includes(id))
+                .filter((id) => !["discovery"].includes(id))
                 .map((id) => {
                   const item = availableShortcuts.find((entry) => entry.id === id);
                   return item ? navLink(item.to, item.label, SHORTCUT_ICONS[id]) : null;
@@ -1688,16 +1682,13 @@ export function Sidebar({
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
                 open={
-                  isOn("/maps") || (isOn("/work") && !railShortcuts.includes("work")) || undefined
+                  isOn("/work") && !railShortcuts.includes("work") ? true : undefined
                 }
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
                   <span>More</span>
                 </summary>
-                {mapsReleaseApproved && railShortcuts.includes("maps")
-                  ? navLink("/maps", "Maps", Map)
-                  : null}
                 {signedIn && !railShortcuts.includes("work")
                   ? navLink("/work", "Work", SHORTCUT_ICONS.work)
                   : null}

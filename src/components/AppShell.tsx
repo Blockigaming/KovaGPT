@@ -39,7 +39,6 @@ import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
-import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -299,7 +298,6 @@ export function AppShell({
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
-        mapsReleaseApproved={MAPS_RELEASE_APPROVED}
       />
 
       <div
