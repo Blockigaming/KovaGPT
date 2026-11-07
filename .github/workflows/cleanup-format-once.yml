@@ -24,13 +24,12 @@ jobs:
         run: |
           npx --no-install prettier --write             src/components/DiscoveryWorkspace.tsx             src/components/InfoChip.tsx             src/components/PublicFooter.tsx             src/components/Sidebar.tsx             src/components/public/PublicShell.tsx             src/components/public/PublicWebsite.tsx             src/lib/ai/provider.server.ts             src/routes/__root.tsx             tests/integration/settings-truth-parity.test.mjs             tests/ui-foundations/fixture/main.tsx             tests/unit/core-app-only-routes.test.mjs \
             tests/e2e/requested-account-chat.spec.ts \
-            tests/unit/model-surface-capability-isolation.test.mjs \
-            .github/workflows/cleanup-format-once.yml
+            tests/unit/model-surface-capability-isolation.test.mjs
       - name: Commit formatting only
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- src/components/DiscoveryWorkspace.tsx src/components/InfoChip.tsx src/components/PublicFooter.tsx src/components/Sidebar.tsx src/components/public/PublicShell.tsx src/components/public/PublicWebsite.tsx src/lib/ai/provider.server.ts src/routes/__root.tsx tests/integration/settings-truth-parity.test.mjs tests/ui-foundations/fixture/main.tsx tests/unit/core-app-only-routes.test.mjs tests/e2e/requested-account-chat.spec.ts tests/unit/model-surface-capability-isolation.test.mjs .github/workflows/cleanup-format-once.yml
+          git add -- src/components/DiscoveryWorkspace.tsx src/components/InfoChip.tsx src/components/PublicFooter.tsx src/components/Sidebar.tsx src/components/public/PublicShell.tsx src/components/public/PublicWebsite.tsx src/lib/ai/provider.server.ts src/routes/__root.tsx tests/integration/settings-truth-parity.test.mjs tests/ui-foundations/fixture/main.tsx tests/unit/core-app-only-routes.test.mjs tests/e2e/requested-account-chat.spec.ts tests/unit/model-surface-capability-isolation.test.mjs
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'style: apply Prettier to core cleanup [core-format]'
           git push origin HEAD:${{ github.ref_name }}
