@@ -54,14 +54,14 @@ async function workFixture(
   return commands;
 }
 
-for (const selected of [true, false]) {
-  test(`saved sidebar ${selected ? "keeps its Work shortcut visible" : "can open Work under More"}`, async ({
+for (const legacy of [true, false]) {
+  test(`sidebar excludes Work ${legacy ? "even in saved legacy shortcuts" : "from the default navigation"}`, async ({
     page,
   }) => {
     const commands = await workFixture(page, "free", true);
     await page.goto("/");
     await waitForKovaHydration(page);
-    const shortcuts = selected ? ["library", "work", "projects"] : ["library", "projects"];
+    const shortcuts = legacy ? ["library", "work", "projects"] : ["library", "projects"];
     const key = sidebarLayoutKey(owner);
     await page.evaluate(
       ({ key, shortcuts }) => localStorage.setItem(key!, JSON.stringify({ shortcuts })),
@@ -71,18 +71,18 @@ for (const selected of [true, false]) {
     await waitForKovaHydration(page);
     await revealSidebar(page);
     const navigation = page.getByRole("navigation", { name: "KovaGPT features", exact: true });
-    if (!selected) await navigation.locator("summary").click();
-    const work = navigation.getByRole("link", { name: "Work", exact: true });
-    await expect(work).toBeVisible();
-    await expect(work).toHaveCount(1);
-    await work.click();
-    await expect(page).toHaveURL((url) => url.pathname === "/work");
-    await expect(
-      page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),
-    ).toBeVisible();
-    expect(
-      await page.evaluate((key) => JSON.parse(localStorage.getItem(key!)!).shortcuts, key),
-    ).toEqual(shortcuts);
+    await expect(navigation.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+    await navigation.locator("summary").click();
+    await expect(navigation.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+    await navigation.getByRole("button", { name: "Customize sidebar" }).click();
+    const customization = page.getByRole("dialog", { name: "Customize sidebar" });
+    await expect(customization.getByRole("switch", { name: "Work" })).toHaveCount(0);
+    await expect(customization.getByText("Work", { exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    // Direct /work is unchanged. Only sidebar discovery/customization is removed.
+    await page.goto("/work");
+    await waitForKovaHydration(page);
+    await expect(page.getByRole("main").getByRole("heading", { name: "Work", exact: true })).toBeVisible();
     expect(commands).toEqual([]);
   });
 }
