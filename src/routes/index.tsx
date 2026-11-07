@@ -1,3 +1,4 @@
+import { seoLandingHead } from "@/components/seo-landing-head";
 import { consumerModel, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
@@ -214,32 +215,15 @@ type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
-  head: () => ({
-    meta: [
-      { title: "KovaGPT" },
-      {
-        name: "description",
-        content:
-          "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
-      },
-      {
-        property: "og:description",
-        content:
-          "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
-      },
-      { property: "og:url", content: "https://kovagpt.com/" },
-      { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
-      {
-        name: "twitter:description",
-        content:
-          "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
-      },
-      { name: "twitter:image", content: "https://kovagpt.com/og/home.jpg" },
-    ],
-    links: [{ rel: "canonical", href: "https://kovagpt.com/" }],
-  }),
+  head: () => {
+    const { meta, links } = seoLandingHead({
+      title: "KovaGPT",
+      description:
+        "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
+      path: "/",
+    });
+    return { meta, links };
+  },
 });
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
@@ -3266,59 +3250,6 @@ function KovaGPT() {
       </header>
     ) : null;
 
-  const chatComposer = (
-    <ChatInput
-      value={principalReady ? input : ""}
-      onChange={setInput}
-      onSubmit={(tool) => send(input, attachments, tool)}
-      onStop={stop}
-      onSendNext={queueNextPrompt}
-      sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
-      nextPromptPanel={composerPromptPanel}
-      requestStatusPanel={requestStatusPanel}
-      isStreaming={isStreaming}
-      voiceMode={composerVoiceMode}
-      onVoiceModeChange={changeComposerVoiceMode}
-      onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
-      latestAssistantText={latestCompletedAssistant?.content}
-      latestAssistantReply={latestAssistantReply}
-      disabled={!principalReady}
-      sendDisabled={!historyReady}
-      saveAttachmentsToLibrary={principalReady && !tempChat}
-      attachments={principalReady ? attachments : []}
-      onAttachmentsChange={setAttachments}
-      attachmentContext={JSON.stringify([
-        storagePrincipal,
-        activeId,
-        editingMessage?.messageId ?? null,
-      ])}
-      hostedModel={active?.kova ? undefined : hostedModel}
-      onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
-      mode={mode}
-      onModeChange={active?.kova ? undefined : setMode}
-      userTier={tier}
-      canChangeAgent={!active?.kova}
-      showModelStatus
-      showChooseProject
-      showResources={!chatStarted}
-      savedConversations={userKey && principalReady ? conversations : []}
-      onOpenChatContext={active ? openChatWorkspace : undefined}
-      chatRulesActive={chatRulesActive}
-      onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-      placeholder="Ask KovaGPT anything..."
-      responseSettings={settings}
-      onResponseSettingsChange={(change) => setSettings((previous) => ({ ...previous, ...change }))}
-      onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
-      selectedTool={selectedTool}
-      onToolSelect={setSelectedTool}
-      recentLibraryFiles={recentLibraryFiles}
-      recentLibraryLoading={recentLibraryLoading}
-      recentLibraryError={recentLibraryError}
-      onRecentLibraryRetry={loadRecentLibraryFiles}
-      surface={showEmptyChat ? "empty" : undefined}
-    />
-  );
-
   return (
     <div
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
@@ -3514,7 +3445,58 @@ function KovaGPT() {
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
                   onSelect={setActiveId}
                 >
-                  {chatComposer}
+                  <ChatInput
+                    value={principalReady ? input : ""}
+                    onChange={setInput}
+                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onStop={stop}
+                    onSendNext={queueNextPrompt}
+                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
+                    nextPromptPanel={composerPromptPanel}
+                    requestStatusPanel={requestStatusPanel}
+                    isStreaming={isStreaming}
+                    voiceMode={composerVoiceMode}
+                    onVoiceModeChange={changeComposerVoiceMode}
+                    onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
+                    latestAssistantText={latestCompletedAssistant?.content}
+                    latestAssistantReply={latestAssistantReply}
+                    disabled={!principalReady}
+                    sendDisabled={!historyReady}
+                    saveAttachmentsToLibrary={principalReady && !tempChat}
+                    attachments={principalReady ? attachments : []}
+                    onAttachmentsChange={setAttachments}
+                    attachmentContext={JSON.stringify([
+                      storagePrincipal,
+                      activeId,
+                      editingMessage?.messageId ?? null,
+                    ])}
+                    hostedModel={active?.kova ? undefined : hostedModel}
+                    onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
+                    mode={mode}
+                    onModeChange={active?.kova ? undefined : setMode}
+                    userTier={tier}
+                    canChangeAgent={!active?.kova}
+                    showModelStatus
+                    showChooseProject
+                    showResources={!chatStarted}
+                    savedConversations={userKey && principalReady ? conversations : []}
+                    onOpenChatContext={active ? openChatWorkspace : undefined}
+                    chatRulesActive={chatRulesActive}
+                    onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
+                    placeholder="Ask KovaGPT anything..."
+                    responseSettings={settings}
+                    onResponseSettingsChange={(change) =>
+                      setSettings((previous) => ({ ...previous, ...change }))
+                    }
+                    onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                    selectedTool={selectedTool}
+                    onToolSelect={setSelectedTool}
+                    recentLibraryFiles={recentLibraryFiles}
+                    recentLibraryLoading={recentLibraryLoading}
+                    recentLibraryError={recentLibraryError}
+                    onRecentLibraryRetry={loadRecentLibraryFiles}
+                    surface="empty"
+                  />
                 </HomeWelcome>
               </Suspense>
             ) : (
@@ -3593,7 +3575,57 @@ function KovaGPT() {
                       </Button>
                     </div>
                   )}
-                  {chatComposer}
+                  <ChatInput
+                    value={principalReady ? input : ""}
+                    onChange={setInput}
+                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onStop={stop}
+                    onSendNext={queueNextPrompt}
+                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
+                    nextPromptPanel={composerPromptPanel}
+                    requestStatusPanel={requestStatusPanel}
+                    isStreaming={isStreaming}
+                    voiceMode={composerVoiceMode}
+                    onVoiceModeChange={changeComposerVoiceMode}
+                    onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
+                    latestAssistantText={latestCompletedAssistant?.content}
+                    latestAssistantReply={latestAssistantReply}
+                    disabled={!principalReady}
+                    sendDisabled={!historyReady}
+                    saveAttachmentsToLibrary={principalReady && !tempChat}
+                    attachments={principalReady ? attachments : []}
+                    onAttachmentsChange={setAttachments}
+                    attachmentContext={JSON.stringify([
+                      storagePrincipal,
+                      activeId,
+                      editingMessage?.messageId ?? null,
+                    ])}
+                    hostedModel={active?.kova ? undefined : hostedModel}
+                    onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
+                    mode={mode}
+                    onModeChange={active?.kova ? undefined : setMode}
+                    userTier={tier}
+                    canChangeAgent={!active?.kova}
+                    showModelStatus
+                    showChooseProject
+                    showResources={!chatStarted}
+                    savedConversations={userKey && principalReady ? conversations : []}
+                    onOpenChatContext={active ? openChatWorkspace : undefined}
+                    chatRulesActive={chatRulesActive}
+                    onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
+                    placeholder="Ask KovaGPT anything..."
+                    responseSettings={settings}
+                    onResponseSettingsChange={(change) =>
+                      setSettings((previous) => ({ ...previous, ...change }))
+                    }
+                    onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                    selectedTool={selectedTool}
+                    onToolSelect={setSelectedTool}
+                    recentLibraryFiles={recentLibraryFiles}
+                    recentLibraryLoading={recentLibraryLoading}
+                    recentLibraryError={recentLibraryError}
+                    onRecentLibraryRetry={loadRecentLibraryFiles}
+                  />
                 </div>
               </>
             )}

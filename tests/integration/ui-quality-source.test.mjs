@@ -367,7 +367,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(stopButton, /type="button"/);
   assert.match(stopButton, /onClick=\{onStop\}/);
   assert.doesNotMatch(stopButton, /disabled=|aria-disabled=/);
-  assert.match(home, /surface=\{showEmptyChat \? "empty" : undefined\}/);
+  assert.match(home, /surface="empty"/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
   assert.match(starters, /<div className="kova-empty-composer">\{children\}<\/div>/);
