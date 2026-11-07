@@ -41,6 +41,7 @@ const closedSurfaces = {
   },
   "@/components/MobileBottomSheet": { MobileBottomSheet: empty },
   "@/components/ResponsiveModelSelector": { ResponsiveModelSelector: empty },
+  "@/components/ConsumerModelSelector": { ConsumerModelSelector: empty },
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
   "@/components/ComposerPluginList": { ComposerPluginList: empty },
 };

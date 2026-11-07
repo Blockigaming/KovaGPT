@@ -221,6 +221,7 @@ function bridgeFixture({ active = null } = {}) {
     composerVoiceEligible: true,
     active,
     mode: "instant",
+    hostedModel: "kova-argon-4.6",
     pendingWorkflowSkill: { installationId: "skill-a" },
     composerVoiceSessionRef: { current: null },
     nextPromptScopeRef: {

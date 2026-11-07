@@ -189,12 +189,14 @@ function fixture() {
     activeId: "chat-a",
     activeIdRef: { current: "chat-a" },
     conversations: [{ id: "chat-a", messages: [], mode: "instant" }],
+    active: null,
     input: "First message",
     attachments: [],
     selectedTool: null,
     composerDraftRef: { current: { text: "First message", attachments: [], tool: null } },
     editingMessage: null,
     mode: "instant",
+    hostedModel: "kova-argon-4.6",
     pendingWorkflowSkill: null,
     tempChat: false,
     tempChatContext: "clean",
@@ -389,6 +391,26 @@ test("incidental typing never queues; explicit Send next snapshots one bounded m
   assert.equal(f.requests.length, 1);
   await f.respond();
   await pending;
+});
+
+test("a queued named model stays pinned when the composer choice changes before dispatch", async () => {
+  const f = fixture();
+  f.context.tier = "pro";
+  f.context.hostedModel = "kova-neon-4.6";
+  const { pending } = await f.start();
+  assert.equal(JSON.parse(f.requests[0].args.body).hostedModel, "kova-neon-4.6");
+  f.context.hostedModel = "kova-xenon-5";
+  f.type("Queued for Xenon", [], null);
+  assert.equal(f.context.queue(null), true);
+  assert.equal(f.context.nextPromptRef.current.hostedModel, "kova-xenon-5");
+  f.context.hostedModel = "kova-argon-4.6";
+  await f.respond();
+  await pending;
+  f.context.dispatch();
+  await settle();
+  assert.equal(f.requests.length, 2);
+  assert.equal(JSON.parse(f.requests[1].args.body).hostedModel, "kova-xenon-5");
+  await f.respond(1);
 });
 
 test("successful response dispatches exactly one snapshot through existing send and keeps a later draft", async () => {
