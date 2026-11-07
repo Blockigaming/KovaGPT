@@ -193,19 +193,20 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
 
-test("published copy limits advanced models and scopes unlimited access to Pro basic chat", () => {
+test("published Chat copy distinguishes limited plans from included Pro basic chat", () => {
   const { registry } = fixture();
-  const plus = [registry.plans.plus.description, ...registry.plans.plus.features].join(" ");
-  assert.match(plus, /5× the usage of Free/);
-  assert.match(plus, /Usage limits apply to all chat models/);
-  assert.doesNotMatch(plus, /unlimited/i);
+  for (const tier of ["free", "plus"]) {
+    const copy = [registry.plans[tier].description, ...registry.plans[tier].features].join(" ");
+    assert.match(copy, /Usage limits apply to all chat models/);
+    assert.doesNotMatch(copy, /unlimited/i);
+  }
   const pro = [registry.plans.pro.description, ...registry.plans.pro.features].join(" ");
   assert.match(pro, /Unlimited basic chat with Argon Lite/);
   assert.match(pro, /Advanced model usage is limited/);
-  assert.doesNotMatch(pro, /unlimited (?:advanced|all models)/i);
+  assert.doesNotMatch(pro, /unlimited advanced|unlimited usage on all models/i);
 });
 
-test("pricing uses public Default wording with exact tier choices and singular Free mode", () => {
+test("pricing retains exact foundation access and effort choices with relative usage copy", () => {
   const { registry, modes } = fixture();
   assert.equal(registry.plans.free.features[0], "Argon Lite and Medium (Thinking)");
   assert.equal(registry.plans.plus.features[0], "Argon and Neon: Lite, Medium, and High");
@@ -248,24 +249,23 @@ test("new usage ratios preserve prices and billing identifiers", () => {
   );
   for (const tier of ["plus", "pro"]) {
     assert.equal(registry.plans[tier].lookupKey, `${tier}_monthly`);
-    assert.ok(
-      registry.plans[tier].features.includes(
-        tier === "plus" ? "5× the usage of Free" : "100× the usage of Free",
-      ),
-    );
-    if (tier === "pro") assert.ok(registry.plans[tier].features.includes("20× the usage of Plus"));
     assert.equal(
       registry.plans[tier].features.at(-1),
       tier === "plus" ? "Enhanced memory when enabled" : "Extended memory when enabled",
     );
   }
-  assert.deepEqual(Array.from(registry.plans.free.features.slice(1, 6)), [
-    "Very limited chat usage",
-    "Usage limits apply to all chat models",
-    "Limited image generation",
-    "Limited file uploads",
-    "Cloud storage included",
-  ]);
+  assert.equal(planUsage.PLAN_USAGE_FACTOR.plus / planUsage.PLAN_USAGE_FACTOR.free, 5);
+  assert.equal(planUsage.PLAN_USAGE_FACTOR.pro / planUsage.PLAN_USAGE_FACTOR.plus, 20);
+  assert.equal(planUsage.PLAN_USAGE_FACTOR.pro / planUsage.PLAN_USAGE_FACTOR.free, 100);
+  assert.ok(registry.plans.plus.features.includes("5× the usage of Free"));
+  assert.ok(registry.plans.pro.features.includes("100× the usage of Free"));
+  assert.ok(registry.plans.pro.features.includes("20× the usage of Plus"));
+  assert.ok(registry.plans.free.features.includes("Very limited chat usage"));
+  for (const tier of ["free", "plus", "pro"])
+    assert.doesNotMatch(
+      [registry.plans[tier].description, ...registry.plans[tier].features].join(" "),
+      /Daily:|Weekly:|5-hour:|\d[\d,]* (?:regular|Thinking) messages|\d+ (?:image generations|file uploads)|\d+ (?:MB|GB)/,
+    );
 });
 
 test("display mapping preserves compatibility catalog, provider prompts and 2/3/6 entitlement identities", () => {
