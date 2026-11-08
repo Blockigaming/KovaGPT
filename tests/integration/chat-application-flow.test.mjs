@@ -309,11 +309,11 @@ function fixture({
         }
         return new Response(
           [
-            'event: response.created\\ndata: {"type":"response.created","response":{"id":"resp_fixture","status":"in_progress","model":"' +
+            'event: response.created\ndata: {"type":"response.created","response":{"id":"resp_fixture","status":"in_progress","model":"' +
               body.model +
-              '"}}\\n\\n',
-            'event: response.output_text.delta\\ndata: {"type":"response.output_text.delta","delta":"Reviewed answer."}\\n\\n',
-            'event: response.completed\\ndata: ' +
+              '"}}\n\n',
+            'event: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"Reviewed answer."}\n\n',
+            'event: response.completed\ndata: ' +
               JSON.stringify({
                 type: "response.completed",
                 response: {
@@ -329,7 +329,7 @@ function fixture({
                   },
                 },
               }) +
-              "\\n\\n",
+              "\n\n",
           ].join(""),
           { headers: { "Content-Type": "text/event-stream" } },
         );
