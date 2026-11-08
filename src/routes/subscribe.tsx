@@ -44,8 +44,9 @@ function CheckoutPage() {
               </span>
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
-              This is the subscription price before discounts and tax. Stripe shows any discount,
-              applicable tax, and the final amount due before you confirm payment.
+              Eligible accounts get 50% off the first month automatically. Stripe shows the
+              discounted first payment, renewal price, applicable tax, and final amount before you
+              confirm payment. No promo code is needed.
             </p>
           </section>
         )}
