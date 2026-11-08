@@ -595,3 +595,41 @@ test("PEM public assets are scanned before verification", () => {
     },
   );
 });
+
+test("hosted checkout attests its executable experience without requiring an unused Stripe.js key", () => {
+  const stripeKey = `pk_live_${"a".repeat(32)}`;
+  withBundle(
+    { "client/assets/app.js": browserSource('const experience="kova-stripe-checkout:hosted-v1";') },
+    ({ bundleDir }) => {
+      const result = verify(bundleDir, { stripePublishableKey: stripeKey });
+      assert.equal(result.provenance.stripeCheckoutExperience, "hosted");
+      assert.equal(result.provenance.stripeExecutableKeyOccurrences, 0);
+      assert.equal(result.provenance.stripePublishableKeySha256, sha256(stripeKey));
+    },
+  );
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+      "client/info.txt": "kova-stripe-checkout:hosted-v1",
+    },
+    ({ bundleDir }) =>
+      assert.throws(
+        () => verify(bundleDir, { stripePublishableKey: stripeKey }),
+        /Stripe publishable key was not found/u,
+      ),
+  );
+  for (const key of [`pk_test_${"b".repeat(32)}`, `sk_live_${"c".repeat(32)}`]) {
+    withBundle(
+      {
+        "client/assets/app.js": browserSource(
+          `const experience="kova-stripe-checkout:hosted-v1";const unexpected="${key}";`,
+        ),
+      },
+      ({ bundleDir }) =>
+        assert.throws(
+          () => verify(bundleDir, { stripePublishableKey: stripeKey }),
+          /unexpected Stripe publishable key|Stripe secret key/u,
+        ),
+    );
+  }
+});
