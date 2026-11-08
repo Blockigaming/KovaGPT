@@ -274,9 +274,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "dropbox",
     label: "Dropbox",
-    description: "Reference files from Dropbox.",
+    description: "Search files and folders in Dropbox. Requires account permission and provider setup.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "dropbox.com",
   },
   {
