@@ -102,7 +102,7 @@ export function responsesStreamToChatStream(response, { expectedModel } = {}) {
               );
               emitted = true;
             } else if (
-              event.type === "response.output_text.delta" &&
+              ["response.output_text.delta", "response.refusal.delta"].includes(event.type) &&
               typeof event.delta === "string"
             ) {
               controller.enqueue(

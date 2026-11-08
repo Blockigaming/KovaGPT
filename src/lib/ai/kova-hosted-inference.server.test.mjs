@@ -164,3 +164,25 @@ test("wrong foundation, malformed response and failed HTTP never appear as succe
     );
   await assert.rejects(requestKovaHostedChat({ request, token: "short" }));
 });
+
+test("native streamed refusals reach the customer with their usage receipt", async () => {
+  const response = await requestKovaHostedChat({
+    request: { ...request, stream: true },
+    token,
+    fetchImpl: async () =>
+      new Response(
+        [
+          { type: "response.created", response: { model: "gpt-6-luna" } },
+          { type: "response.refusal.delta", delta: "I cannot help with that request." },
+          { type: "response.completed", response: reply("gpt-6-luna") },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join(""),
+        { headers: { "content-type": "text/event-stream" } },
+      ),
+  });
+  const text = await response.text();
+  assert.match(text, /I cannot help with that request/);
+  assert.match(text, /prompt_tokens_details/);
+  assert.match(text, /\[DONE\]/);
+});
