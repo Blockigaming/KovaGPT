@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 const ALL_MODES = ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"];
 const EXPECTED = {
   free: ["instant", "thinking"],
-  plus: ["instant", "thinking", "high"],
+  plus: ["instant", "thinking", "high", "extra_high", "max"],
   pro: ["instant", "thinking", "high", "extra_high", "max", "ultra"],
 };
 

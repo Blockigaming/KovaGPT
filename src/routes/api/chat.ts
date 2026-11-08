@@ -782,7 +782,10 @@ export const Route = createFileRoute("/api/chat")({
                   },
                   { status: 403, headers: { "Cache-Control": "no-store" } },
                 );
-              if (modelForRole(selectedHostedModel.role) !== selectedHostedModel.id)
+              if (
+                modelForRole(selectedHostedModel.role) !==
+                (selectedHostedModel.routingBinding ?? selectedHostedModel.id)
+              )
                 return Response.json(
                   {
                     error:
@@ -2707,9 +2710,7 @@ export const Route = createFileRoute("/api/chat")({
               chatId &&
               voiceMessageId &&
               eligibleVoiceModel(voicePolicy, {
-                provider: isKovaHostedModelId(model)
-                  ? "openai"
-                  : getAiProviderConfig().provider,
+                provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
                 modelId: model,
               })
                 ? {

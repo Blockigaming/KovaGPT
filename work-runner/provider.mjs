@@ -1,3 +1,4 @@
+import { supportedKovaReasoningEfforts } from "../src/lib/kova-foundation-models.mjs";
 import { parseWorkModelCapabilities } from "../src/lib/work-model-policy.mjs";
 import {
   parseWorkSpecialistPlan,
@@ -34,11 +35,13 @@ export function configuredProvider(
       (models.some((model) => !isKovaHostedModelId(model)) || responses.href !== HOSTED_CHAT_URL))
   )
     throw new Error("work_provider_configuration_invalid");
+  const supportedEfforts = (model) =>
+    isKovaHostedModelId(model) ? supportedKovaReasoningEfforts(model) : [];
   const capabilities = parseWorkModelCapabilities(
     modelCapabilities ??
       models.map((model) => ({
         model,
-        reasoningEfforts: model === "kova-xenon-5" ? ["max"] : [],
+        reasoningEfforts: supportedEfforts(model),
         maxOutputTokens: Math.min(8192, MODEL_OUTPUT_LIMITS[model] ?? 8192),
       })),
   );
@@ -49,7 +52,7 @@ export function configuredProvider(
         (hosted &&
           (item.maxOutputTokens > MODEL_OUTPUT_LIMITS[item.model] ||
             item.reasoningEfforts.some(
-              (effort) => item.model !== "kova-xenon-5" || effort !== "max",
+              (effort) => !supportedEfforts(item.model).includes(effort),
             ))),
     )
   )
@@ -64,6 +67,7 @@ export function configuredProvider(
             max_completion_tokens: payload.max_output_tokens,
             response_format: { type: "json_object" },
           },
+          effort: payload.reasoning?.effort,
           token: providerKey,
           signal,
           fetchImpl: fetcher,

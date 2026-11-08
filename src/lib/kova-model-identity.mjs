@@ -1,4 +1,4 @@
-import { HOSTED_MODEL_MAP } from "./kova-foundation-models.mjs";
+import { HOSTED_MODEL_MAP, KOVA_MODEL_LABELS } from "./kova-foundation-models.mjs";
 /** Product names only. This catalog does not authorize or activate any route. */
 export const KOVA_MODEL_VERSION = "4.6";
 export const KOVA_MODEL_FAMILIES = Object.freeze([
@@ -29,7 +29,13 @@ export function buildKovaModelIdentityInstructions({
   provider,
   hasAssistantHistory,
 }) {
-  const identity = kovaModelIdentityForRole(role);
+  const roleIdentity = kovaModelIdentityForRole(role);
+  const identity = {
+    ...roleIdentity,
+    label: Object.hasOwn(KOVA_MODEL_LABELS, modelId)
+      ? KOVA_MODEL_LABELS[modelId]
+      : roleIdentity.label,
+  };
   if (
     typeof modelId !== "string" ||
     !/^[a-z0-9][a-z0-9._-]{2,63}$/i.test(modelId) ||

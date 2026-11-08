@@ -29,6 +29,10 @@ test("approved model mapping and trusted Kova identity on every native Responses
     "kova-xenon-5": "gpt-6.1-sol",
     "kova-neon-4.6": "gpt-6.1-terra",
     "kova-argon-4.6": "gpt-6-luna",
+    "kova-argon-4.5": "gpt-5.6-luna",
+    "kova-neon-4.5": "gpt-5.6-terra",
+    "kova-xenon-4.6": "gpt-6-sol",
+    "kova-xenon-6.1": "gpt-6-astra",
   });
   for (const [model, foundation] of Object.entries(HOSTED_MODEL_MAP)) {
     const prepared = prepareKovaHostedRequest({
@@ -43,7 +47,10 @@ test("approved model mapping and trusted Kova identity on every native Responses
     assert.match(body.instructions, /Introduce yourself using your Kova product name/);
     assert(body.instructions.includes(foundation));
     assert.match(body.instructions, /Never claim that Kova trained/);
-    assert.equal(body.reasoning.effort, model === "kova-xenon-5" ? "low" : "none");
+    assert.equal(
+      body.reasoning.effort,
+      ["kova-xenon-5", "kova-xenon-6.1"].includes(model) ? "low" : "none",
+    );
     assert.equal(body.temperature, undefined);
     assert.equal(body.max_output_tokens, 1200);
     assert.equal(body.store, false);

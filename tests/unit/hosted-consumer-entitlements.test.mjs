@@ -42,8 +42,8 @@ const guard = new Function(
 
 const entitled = {
   free: ["kova-argon-4.6"],
-  plus: ["kova-argon-4.6", "kova-neon-4.6"],
-  pro: ["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"],
+  plus: models.map((m) => m.id),
+  pro: models.map((m) => m.id),
 };
 for (const [tier, expected] of Object.entries(entitled)) {
   test(`${tier} hosted catalog exposes the exact approved foundation products`, () => {

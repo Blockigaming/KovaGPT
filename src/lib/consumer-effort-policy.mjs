@@ -1,3 +1,4 @@
+import { HOSTED_MODEL_MAP, resolveKovaReasoningEffort } from "./kova-foundation-models.mjs";
 /** Six product efforts. `thinking` retains the existing Medium usage-ledger ID. */
 export const CONSUMER_EFFORTS = Object.freeze(
   [
@@ -53,8 +54,7 @@ export function consumerEffort(mode) {
 
 export function hostedEffortProfile(model, mode) {
   const profile = consumerEffort(mode);
-  if (!profile || !["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"].includes(model))
-    throw new Error("invalid_hosted_effort");
+  if (!profile || !Object.hasOwn(HOSTED_MODEL_MAP, model)) throw new Error("invalid_hosted_effort");
   const effort = {
     instant: "none",
     thinking: "low",
@@ -65,7 +65,7 @@ export function hostedEffortProfile(model, mode) {
   }[profile.id];
   return {
     ...profile,
-    effort: model === "kova-xenon-5" && effort === "none" ? "low" : effort,
+    effort: resolveKovaReasoningEffort(model, effort),
     nativeReasoning: true,
     reviews: profile.reviews,
     parallel: profile.id === "ultra",

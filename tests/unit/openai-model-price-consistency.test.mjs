@@ -39,6 +39,10 @@ test("Kova OpenAI input ceilings cover cache writes and agree across routing and
     ["kova-argon-4.6", 0.125, 0.01, 0.5],
     ["kova-neon-4.6", 1.25, 0.05, 5],
     ["kova-xenon-5", 2.5, 0.1, 10],
+    ["kova-argon-4.5", 0.25, 0.02, 1.2],
+    ["kova-neon-4.5", 2.5, 0.2, 12],
+    ["kova-xenon-4.6", 2.5, 0.2, 10],
+    ["kova-xenon-6.1", 12.5, 1, 50],
   ]) {
     assert.deepEqual(catalog.KOVA_HOSTED_TEXT_MODELS.find((m) => m.id === id).pricePerMillion, {
       input,

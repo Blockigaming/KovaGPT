@@ -120,16 +120,16 @@ test("an unexplained empty checker response still fails closed", async () => {
   assert.equal(f.usages.length, 1);
 });
 
-test("the product matrix is exactly 18 configurations with Free 2, Plus 6 and Pro 18", () => {
+test("the product matrix is exactly 42 configurations with Free 2, Plus 35 and Pro 42", () => {
   assert.deepEqual(
     CONSUMER_EFFORTS.map((x) => x.label),
     ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"],
   );
-  assert.equal(CONSUMER_MODELS.length * CONSUMER_EFFORTS.length, 18);
+  assert.equal(CONSUMER_MODELS.length * CONSUMER_EFFORTS.length, 42);
   for (const [tier, count] of [
     ["free", 2],
-    ["plus", 6],
-    ["pro", 18],
+    ["plus", 35],
+    ["pro", 42],
   ])
     assert.equal(
       CONSUMER_MODELS.filter((m) => m.tiers.includes(tier)).length * MODE_IDS_BY_TIER[tier].length,
@@ -137,7 +137,7 @@ test("the product matrix is exactly 18 configurations with Free 2, Plus 6 and Pr
     );
 });
 
-test("all 54 plan/model/effort decisions enforce the matrix before selecting a foundation", () => {
+test("all 126 plan/model/effort decisions enforce the matrix before selecting a foundation", () => {
   const env = {
     KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
     KOVA_MODEL_ADVANCED_REASONING: "kova-neon-4.6",

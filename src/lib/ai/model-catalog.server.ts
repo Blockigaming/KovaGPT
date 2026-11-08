@@ -147,7 +147,51 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     structuredOutput: true,
     maxOutputTokens: 16_384,
     pricePerMillion: { input: 2.5, cachedInput: 0.1, output: 10 },
-    tiers: ["pro"],
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-argon-4.5",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 0.25, cachedInput: 0.02, output: 1.2 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-neon-4.5",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 2.5, cachedInput: 0.2, output: 12 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-xenon-4.6",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 2.5, cachedInput: 0.2, output: 10 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-xenon-6.1",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 12.5, cachedInput: 1, output: 50 },
+    tiers: ["plus", "pro"],
   },
 ] as const;
 
@@ -208,7 +252,9 @@ export function maximumServerOutputForModel(modelId: string): number {
 
 function longContextRate(model: CatalogModel, inputTokens: number) {
   // Official >272K full-request rate for Sol/Terra; Luna keeps its standard rate.
-  return inputTokens > 272_000 && ["kova-neon-4.6", "kova-xenon-5"].includes(model.id)
+  return inputTokens > 272_000 &&
+    KOVA_HOSTED_TEXT_MODELS.some((item) => item.id === model.id) &&
+    model.id !== "kova-argon-4.6"
     ? { input: 2, output: 1.5 }
     : { input: 1, output: 1 };
 }

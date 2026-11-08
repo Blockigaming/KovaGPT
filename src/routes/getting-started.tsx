@@ -30,7 +30,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "2. Choose a mode",
-    body: "Free uses Argon Lite, or Argon Medium with Thinking enabled. Plus includes Argon and Neon through High. Pro includes all three models through Ultra. Search is a separate tool with provider requirements.",
+    body: "Free uses Argon Lite, or Argon Medium with Thinking enabled. Plus includes all seven models through Max. Pro includes all seven models through Ultra. Search is a separate tool with provider requirements.",
   },
   {
     title: "3. Sign in to save your work",

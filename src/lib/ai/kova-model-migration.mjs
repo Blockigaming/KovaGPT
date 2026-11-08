@@ -24,6 +24,30 @@ export const KOVA_MODEL_CATALOG = Object.freeze({
     tier: "fast",
     purpose: "Low-latency chat and lightweight reasoning",
   }),
+  legacy0: Object.freeze({
+    id: "kova-argon-4.5",
+    name: "Kova Argon 4.5",
+    tier: "flagship",
+    purpose: "Previous-generation model",
+  }),
+  legacy1: Object.freeze({
+    id: "kova-neon-4.5",
+    name: "Kova Neon 4.5",
+    tier: "flagship",
+    purpose: "Previous-generation model",
+  }),
+  legacy2: Object.freeze({
+    id: "kova-xenon-4.6",
+    name: "Kova Xenon 4.6",
+    tier: "flagship",
+    purpose: "Previous-generation model",
+  }),
+  legacy3: Object.freeze({
+    id: "kova-xenon-6.1",
+    name: "Kova Xenon 6.1",
+    tier: "flagship",
+    purpose: "Most capable reasoning",
+  }),
 });
 
 export const KOVA_SELF_HOSTED_DEFAULT_ENABLED = false;

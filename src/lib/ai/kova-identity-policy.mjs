@@ -1,16 +1,15 @@
+import { KOVA_MODEL_LABELS as KOVA_ASSISTANT_IDENTITY } from "../kova-foundation-models.mjs";
 /**
  * Kova customer-facing identity policy for future self-hosted inference.
  * Do not claim that Kova authored a third-party foundation model.
  * License and attribution requirements must also be met outside the chat.
  */
-export const KOVA_ASSISTANT_IDENTITY = Object.freeze({
-  "kova-xenon-5": "Kova Xenon 5",
-  "kova-neon-4.6": "Kova Neon 4.6",
-  "kova-argon-4.6": "Kova Argon 4.6",
-});
+export { KOVA_MODEL_LABELS as KOVA_ASSISTANT_IDENTITY } from "../kova-foundation-models.mjs";
 
 export function kovaIdentityInstruction(modelId) {
-  const name = KOVA_ASSISTANT_IDENTITY[modelId];
+  const name = Object.hasOwn(KOVA_ASSISTANT_IDENTITY, modelId)
+    ? KOVA_ASSISTANT_IDENTITY[modelId]
+    : null;
   if (!name) throw new Error("unknown_kova_model");
   return [
     `You are ${name}, an AI assistant offered by KovaGPT.`,

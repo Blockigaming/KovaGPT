@@ -10,7 +10,7 @@ import { KOVA_ASSISTANT_IDENTITY } from "../src/lib/ai/kova-identity-policy.mjs"
 
 if (!process.argv.includes("--execute")) {
   console.log(
-    "Dry run: 18 mode generations (48 provider requests including 30 reviews), plus 6 tool-roundtrip requests. Use --execute with OPENAI_API_KEY, or --azure-existing-key to reuse the production app secret in memory. This does not deploy or change key limits.",
+    "Dry run: 42 mode generations (112 provider requests including 70 reviews), plus 14 tool-roundtrip requests. Use --execute with OPENAI_API_KEY, or --azure-existing-key to reuse the production app secret in memory. This does not deploy or change key limits.",
   );
   process.exit(0);
 }

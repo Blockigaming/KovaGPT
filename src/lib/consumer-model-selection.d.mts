@@ -1,4 +1,11 @@
-export type ConsumerModelId = "kova-argon-4.6" | "kova-neon-4.6" | "kova-xenon-5";
+export type ConsumerModelId =
+  | "kova-argon-4.6"
+  | "kova-neon-4.6"
+  | "kova-xenon-5"
+  | "kova-argon-4.5"
+  | "kova-neon-4.5"
+  | "kova-xenon-4.6"
+  | "kova-xenon-6.1";
 export type ConsumerModel = Readonly<{
   id: ConsumerModelId;
   label: string;
@@ -6,6 +13,7 @@ export type ConsumerModel = Readonly<{
   role: "DEFAULT_CHAT" | "ADVANCED_REASONING" | "PREMIUM_REASONING";
   tiers: readonly string[];
   vision: boolean;
+  routingBinding?: ConsumerModelId;
 }>;
 export const CONSUMER_MODELS: readonly ConsumerModel[];
 export function consumerModel(value: unknown): ConsumerModel | null;

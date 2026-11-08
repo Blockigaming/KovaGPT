@@ -117,7 +117,7 @@ test("Free mode guard preserves paid routing and utility tasks", () => {
   for (const tier of ["plus", "pro", "business"]) {
     assert.equal(freeModeUpgradeRequired(tier, "thinking", true), false);
   }
-  assert.throws(() => routeModel({ task: "chat", tier: "plus", mode: "max" }), /mode_not_entitled/);
+  assert.equal(routeModel({ task: "chat", tier: "plus", mode: "max" }).modelId, SOL);
   assert.equal(routeModel({ task: "chat", tier: "pro", mode: "ultra" }).modelId, SOL);
   assert.equal(
     routeModel({ task: "utility", tier: "free", mode: "thinking" }).modelId,
@@ -238,7 +238,11 @@ test("hosted consumer requests obey the final model matrix under complex prompts
   };
   for (const [tier, modes, models] of [
     ["free", ["instant", "thinking"], ["kova-argon-4.6"]],
-    ["plus", ["instant", "medium", "thinking", "high"], ["kova-argon-4.6", "kova-neon-4.6"]],
+    [
+      "plus",
+      ["instant", "medium", "thinking", "high", "extra_high", "max"],
+      ["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"],
+    ],
     [
       "pro",
       ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
@@ -256,12 +260,12 @@ test("hosted consumer requests obey the final model matrix under complex prompts
         );
       }
   }
-  for (const mode of ["max", "ultra"]) {
+  for (const mode of ["ultra"]) {
     assert.equal(modeUpgradeRequired("plus", mode), true);
     assert.throws(() => routeModel({ task: "chat", tier: "plus", mode, env }), /mode_not_entitled/);
   }
-  assert.throws(
-    () => routeModel({ task: "chat", tier: "plus", mode: "thinking", deepMode: true, env }),
-    /mode_not_entitled/,
+  assert.equal(
+    routeModel({ task: "chat", tier: "plus", mode: "thinking", deepMode: true, env }).modelId,
+    "kova-xenon-5",
   );
 });

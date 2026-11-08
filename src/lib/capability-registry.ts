@@ -135,8 +135,8 @@ function planFeatures(tier: Tier): readonly string[] {
     tier === "free"
       ? "Argon Lite and Medium (Thinking)"
       : tier === "plus"
-        ? "Argon and Neon: Lite, Medium, and High"
-        : "All three models: Lite, Medium, High, Extra High, Max, and Ultra",
+        ? "All seven models: Lite, Medium, High, Extra High, and Max"
+        : "All seven models: Lite, Medium, High, Extra High, Max, and Ultra",
     ...(tier === "pro"
       ? [`${proVsFree}× the usage of Free`, `${proVsPlus}× the usage of Plus`]
       : []),
@@ -279,7 +279,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "5× the usage of Free, with Argon and Neon through High. Usage limits apply to all chat models.",
+        "5× the usage of Free, with all seven models through Max. Usage limits apply to all chat models.",
       features: planFeatures("plus"),
     },
     pro: {

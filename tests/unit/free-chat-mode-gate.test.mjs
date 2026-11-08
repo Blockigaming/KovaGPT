@@ -75,8 +75,10 @@ test("guest attachments are denied before custom context, provider or quota work
   assert.equal(gate({}, [{ type: "file" }]), undefined);
 });
 
-test("Plus premium modes reject before provider work instead of silently downgrading", async () => {
-  for (const mode of ["extra_high", "max", "ultra"]) {
+test("Plus permits through Max and rejects Ultra before provider work", async () => {
+  for (const mode of ["extra_high", "max"])
+    assert.equal(runGate({}, "plus", mode, getMode, modeUpgradeRequired), undefined);
+  for (const mode of ["ultra"]) {
     const response = runGate({}, "plus", mode, getMode, modeUpgradeRequired);
     assert.equal(response.status, 403);
     assert.equal(

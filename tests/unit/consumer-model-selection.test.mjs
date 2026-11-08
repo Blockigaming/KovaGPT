@@ -28,7 +28,7 @@ test("ingress accepts only exact consumer aliases and refuses ambiguous custom s
     {},
     "gpt-5",
     "moonshotai/kimi-k3",
-    "kova-xenon-4.6",
+    "kova-xenon-4.5",
     "kova-argon-5",
     "kova-neon-4.6 ",
   ])
@@ -119,7 +119,7 @@ test("saved chat round-trips the exact selection and refuses obsolete or provide
   }
   assert.equal(Object.hasOwn(normalizeChatHistory(chat, owner), "hostedModel"), false);
   assert.throws(
-    () => normalizeChatHistory({ ...chat, hostedModel: "kova-xenon-4.6" }, owner),
+    () => normalizeChatHistory({ ...chat, hostedModel: "kova-xenon-4.5" }, owner),
     /chat_history_invalid/,
   );
 });
@@ -175,7 +175,7 @@ test("transient choice stays scoped and model changes require the current entitl
     resolveConsumerModelChoice(choice, "owner-a", "chat-b", "kova-neon-4.6"),
     "kova-neon-4.6",
   );
-  assert.equal(createConsumerModelChoice("kova-xenon-5", "plus", true, "owner-a", "chat-a"), null);
+  assert.equal(createConsumerModelChoice("kova-xenon-5", "free", true, "owner-a", "chat-a"), null);
   assert.equal(
     createConsumerModelChoice("kova-neon-4.6", "plus", false, "owner-a", "chat-a"),
     null,

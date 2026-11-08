@@ -1,4 +1,4 @@
-import { HOSTED_MODEL_MAP } from "../kova-foundation-models.mjs";
+import { HOSTED_MODEL_MAP, resolveKovaReasoningEffort } from "../kova-foundation-models.mjs";
 import { kovaIdentityInstruction } from "./kova-identity-policy.mjs";
 import { responsesStreamToChatStream } from "./responses-compat.server.mjs";
 import { readResponseBytesBounded } from "../endpoint-reliability.mjs";
@@ -16,6 +16,10 @@ export const MODEL_OUTPUT_LIMITS = Object.freeze({
   "kova-argon-4.6": 8192,
   "kova-neon-4.6": 8192,
   "kova-xenon-5": 16384,
+  "kova-argon-4.5": 16384,
+  "kova-neon-4.5": 16384,
+  "kova-xenon-4.6": 16384,
+  "kova-xenon-6.1": 16384,
 });
 const ALLOWED_KEYS = new Set([
   "model",
@@ -100,10 +104,7 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
   )
     throw new Error("conflicting_hosted_token_limit");
   // Reasoning is server-resolved; never trust a caller's reasoning object.
-  const effort =
-    value.model === "kova-xenon-5" && (selectedEffort ?? "none") === "none"
-      ? "low"
-      : (selectedEffort ?? "none");
+  const effort = resolveKovaReasoningEffort(value.model, selectedEffort);
   const instructions = [
     kovaIdentityInstruction(value.model),
     `Verified configuration: underlying foundation ${HOSTED_MODEL_MAP[value.model]}, developed by OpenAI. Kova is the product provider, not the foundation trainer.`,

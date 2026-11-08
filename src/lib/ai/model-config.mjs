@@ -55,6 +55,11 @@ export const MODEL_COST_PER_MTOK = Object.freeze({
   "kova-argon-4.6": { input: 0.125, output: 0.5 },
   "kova-neon-4.6": { input: 1.25, output: 5 },
   "kova-xenon-5": { input: 2.5, output: 10 },
+  "kova-argon-4.5": { input: 0.25, output: 1.2 },
+  "kova-neon-4.5": { input: 2.5, output: 12 },
+  "kova-xenon-4.6": { input: 2.5, output: 10 },
+  "kova-xenon-6.1": { input: 12.5, output: 50 },
+
   "gpt-image-1": { input: 5, output: 40 },
   // Current replacement; text input and image output estimates, checked 2026-10-24.
   "gpt-image-2.5-flare": { input: 5, output: 30 },

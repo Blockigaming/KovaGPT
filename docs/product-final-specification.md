@@ -13,17 +13,23 @@ Both use the same underlying Kova model gateway, security architecture, tool exe
 
 ## 1. The three official Kova AI models
 
-Owner-approved November 8, 2026 update: use the OpenAI API now while retaining Kova names, plan entitlements and all six modes. This supersedes the original foundation lock for the interim release. Azure continues hosting the Kova application; OpenAI hosts inference.
+Owner-approved November 8, 2026 update: use the OpenAI API now. Azure hosts Kova; OpenAI hosts inference. This supersedes the original foundation lock and the earlier three-model entitlement matrix.
 
-| Kova product | Current foundation | Future self-hosted target   |
-| ------------ | ------------------ | --------------------------- |
-| Argon 4.6    | `gpt-6-luna`       | DeepSeek V4 Flash July 2026 |
-| Neon 4.6     | `gpt-6.1-terra`    | Llama 4 Maverick            |
-| Xenon 5      | `gpt-6.1-sol`      | Kimi K3                     |
+| Kova product | Current foundation |
+| ------------ | ------------------ |
+| Argon 4.6    | `gpt-6-luna`       |
+| Neon 4.6     | `gpt-6.1-terra`    |
+| Xenon 5      | `gpt-6.1-sol`      |
+| Argon 4.5    | `gpt-5.6-luna`     |
+| Neon 4.5     | `gpt-5.6-terra`    |
+| Xenon 4.6    | `gpt-6-sol`        |
+| Xenon 6.1    | `gpt-6-astra`      |
 
-Use trusted server instructions for Kova identity. Never claim Kova trained OpenAI's weights. Lite/Medium/High/Extra High/Max/Ultra map to none/low/medium/high/xhigh/max native reasoning; Sol Lite uses low, its minimum supported setting. Ultra uses four independent same-foundation reviewers before synthesis. Increasing modes increase reserved compute, not a guaranteed intelligence score.
+Free: no model picker; regular chat is Argon 4.6 Lite, blue Thinking is Argon 4.6 Medium. Plus: all seven models, Lite through Max (35 combinations). Pro: all seven models, Lite through Ultra (42 combinations). Paid users use the model picker and effort slider, without a separate Thinking toggle.
 
-The original long-term foundations below require a separately verified, explicitly approved hosting cutover.
+All seven identify themselves by the selected Kova product name through trusted server instructions and accurately disclose OpenAI provenance when asked. Lite/Medium/High/Extra High/Max/Ultra use none/low/medium/high/xhigh/max native effort. GPT-6.1 Sol and Astra Lite use their supported minimum, low. Max reviews sequentially; Ultra uses four independent same-foundation reviewers. Increasing compute is not a guaranteed intelligence score.
+
+Original future self-hosted targets remain DeepSeek V4 Flash July 2026, Llama 4 Maverick and Kimi K3, subject to a separately verified hosting cutover.
 
 Kova Xenon 5
 

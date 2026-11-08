@@ -14,7 +14,7 @@ const rows = [
   { label: "Basic chat", values: ["Limited", "Limited", "Unlimited with Argon Lite"] },
   {
     label: "Advanced chat",
-    values: ["Argon Medium, limited", "Argon and Neon, limited", "All advanced models, limited"],
+    values: ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],
   },
   { label: "Images and files", values: ["Limited", "Expanded", "Highest allowance"] },
   { label: "Cloud storage", values: ["Included", "Included", "Included"] },

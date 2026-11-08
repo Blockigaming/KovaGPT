@@ -21,6 +21,7 @@ export function openAiServices(
     client: createOpenAiServiceClient(runtimeEnv("OPENAI_API_KEY")),
     model: HOSTED_MODEL_MAP[model as keyof typeof HOSTED_MODEL_MAP] ?? model,
     agentModel: (() => {
+      if (Object.hasOwn(HOSTED_MODEL_MAP, model)) return HOSTED_MODEL_MAP[model];
       const id = modelForPolicy("deep").id;
       return HOSTED_MODEL_MAP[id as keyof typeof HOSTED_MODEL_MAP] ?? id;
     })(),

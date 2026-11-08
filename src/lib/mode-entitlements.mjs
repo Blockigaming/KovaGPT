@@ -1,7 +1,7 @@
 /** Canonical current-generation mode entitlements. Keep UI and server guards on this policy. */
 export const MODE_IDS_BY_TIER = Object.freeze({
   free: Object.freeze(["instant", "thinking"]),
-  plus: Object.freeze(["instant", "thinking", "high"]),
+  plus: Object.freeze(["instant", "thinking", "high", "extra_high", "max"]),
   pro: Object.freeze(["instant", "thinking", "high", "extra_high", "max", "ultra"]),
 });
 
