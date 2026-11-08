@@ -74,6 +74,12 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 61_545,
       gzip: 20_259,
     }),
+    Object.freeze({
+      head: "9ae59f5b370cd43636968e1f002c3385c9bc86c8",
+      source: "CI OpenAI model and Free-offer candidate",
+      raw: 62_567,
+      gzip: 20_567,
+    }),
   ]),
   apiAudioAdjustment:
     "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
