@@ -250,7 +250,17 @@ for (const theme of ["dark", "light"] as const) {
           const box = control.getBoundingClientRect();
           if (!box.width || !box.height) return [];
           return box.left < -1 || box.right > document.documentElement.clientWidth + 1
-            ? [control.getAttribute("aria-label") || control.textContent || control.tagName]
+            ? [
+                {
+                  tag: control.tagName,
+                  type: control.getAttribute("type"),
+                  id: control.id,
+                  left: box.left,
+                  right: box.right,
+                  position: getComputedStyle(control).position,
+                  parent: control.parentElement?.outerHTML.slice(0, 300),
+                },
+              ]
             : [];
         }),
       ),

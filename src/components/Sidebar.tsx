@@ -1000,8 +1000,8 @@ export function Sidebar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          side="right"
-          align="start"
+          side={isMobileViewport() ? "bottom" : "right"}
+          align={isMobileViewport() ? "end" : "start"}
           sideOffset={12}
           collisionPadding={12}
           className="kova-sidebar-chat-menu"

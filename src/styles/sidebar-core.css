@@ -617,6 +617,9 @@ button.kova-auth-sign-up:hover {
   }
 }
 
+.kova-sidebar-chat-menu {
+  width: 240px;
+}
 .kova-sidebar-chat-menu [role="menuitem"] {
   min-height: 40px;
   border-radius: 12px;
