@@ -2,6 +2,14 @@ import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import { readFile, readdir } from "node:fs/promises";
 let bundle = "";
+type TeamFixtureWindow = Window & {
+  teamFixture: {
+    calls: { name: string; data: unknown }[];
+    added: boolean;
+    failSend: boolean;
+    workspace: { teams: { members: unknown[] }[] };
+  };
+};
 const owner = "11111111-1111-4111-8111-111111111111";
 test.beforeAll(async () => {
   const result = await build({
@@ -103,12 +111,16 @@ test("invitation reviews before-tax and recurring costs before any billing mutat
       fullPage: true,
     });
   expect(
-    await page.evaluate(() => (window as any).teamFixture.calls.map((c: any) => c.name)),
+    await page.evaluate(() =>
+      (window as unknown as TeamFixtureWindow).teamFixture.calls.map((c) => c.name),
+    ),
   ).toEqual(["review"]);
   await page.getByRole("button", { name: "Send invitation & add seat", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Invitation emailed");
   expect(
-    await page.evaluate(() => (window as any).teamFixture.calls.map((c: any) => c.name)),
+    await page.evaluate(() =>
+      (window as unknown as TeamFixtureWindow).teamFixture.calls.map((c) => c.name),
+    ),
   ).toEqual(["review", "send"]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -117,8 +129,8 @@ test("available seats carry no new charge and cancel never sends an invitation",
 }) => {
   await mount(page);
   await page.evaluate(() => {
-    (window as any).teamFixture.added = false;
-    (window as any).teamFixture.workspace.teams[0].members.pop();
+    (window as unknown as TeamFixtureWindow).teamFixture.added = false;
+    (window as unknown as TeamFixtureWindow).teamFixture.workspace.teams[0].members.pop();
   });
   await page.getByLabel("Email address", { exact: true }).fill("new@example.invalid");
   await page.getByRole("button", { name: "Review invitation", exact: true }).click();
@@ -127,14 +139,16 @@ test("available seats carry no new charge and cancel never sends an invitation",
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
   expect(
-    await page.evaluate(() => (window as any).teamFixture.calls.map((c: any) => c.name)),
+    await page.evaluate(() =>
+      (window as unknown as TeamFixtureWindow).teamFixture.calls.map((c) => c.name),
+    ),
   ).toEqual(["review", "manage"]);
 });
 test("payment failure preserves the reviewed invitation and never reports email success", async ({
   page,
 }) => {
   await mount(page);
-  await page.evaluate(() => ((window as any).teamFixture.failSend = true));
+  await page.evaluate(() => ((window as unknown as TeamFixtureWindow).teamFixture.failSend = true));
   await page.getByLabel("Email address", { exact: true }).fill("new@example.invalid");
   await page.getByRole("button", { name: "Review invitation", exact: true }).click();
   await page.getByRole("button", { name: "Send invitation & add seat", exact: true }).click();
