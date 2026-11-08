@@ -57,21 +57,16 @@ test("real sharing remains available without the misleading local-member flow", 
   await page.getByRole("button", { name: "Send message" }).click();
   const responseActions = page.getByRole("toolbar", { name: "Response actions" });
   await expect(responseActions.getByRole("button", { name: "Copy" })).toBeVisible();
-  const goodResponse = responseActions.getByRole("button", { name: "Good response" });
-  const badResponse = responseActions.getByRole("button", { name: "Bad response" });
-  await expect(goodResponse).toBeVisible();
-  await expect(badResponse).toBeVisible();
+  await expect(responseActions.getByRole("button")).toHaveCount(5);
   await expect(
     responseActions.getByRole("button", { name: "Share response", exact: true }),
   ).toBeVisible();
-  await goodResponse.click();
-  await expect(goodResponse).toHaveAttribute("aria-pressed", "true");
-  await badResponse.click();
-  await expect(goodResponse).toHaveAttribute("aria-pressed", "false");
-  await expect(badResponse).toHaveAttribute("aria-pressed", "true");
-  expect(feedbackWrites).toHaveLength(2);
+  await expect(
+    responseActions.getByRole("button", { name: "Save to Library", exact: true }),
+  ).toBeVisible();
+  expect(feedbackWrites).toHaveLength(0);
   await responseActions.getByRole("button", { name: "More actions" }).click();
-  await expect(page.getByRole("menuitem")).toHaveCount(1);
+  await expect(page.getByRole("menuitem")).toHaveCount(2);
   await expect(
     page.getByRole("menuitem", { name: "Branch into new chat", exact: true }),
   ).toBeVisible();

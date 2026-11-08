@@ -16,8 +16,12 @@ export function ConversationSourcesPanel({
   showActivity,
   activeBrowserOnly = false,
   separateInputs = false,
+  browserOnly = false,
+  hideBrowser = false,
 }: {
   showActivity?: boolean;
+  browserOnly?: boolean;
+  hideBrowser?: boolean;
   activeBrowserOnly?: boolean;
   separateInputs?: boolean;
   browserPreview?: ReactNode;
@@ -36,7 +40,13 @@ export function ConversationSourcesPanel({
   return (
     <>
       <ConversationSourcesView
-        inventory={inventory}
+        inventory={
+          browserOnly
+            ? { providers: [], web: [], memory: [], attachments: [], browser: inventory.browser }
+            : hideBrowser
+              ? { ...inventory, browser: [] }
+              : inventory
+        }
         activeBrowserOnly={activeBrowserOnly}
         separateInputs={separateInputs}
         browserPreview={browserPreview}

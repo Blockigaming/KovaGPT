@@ -23,11 +23,13 @@ export function ResponseSpeechButton({
   chatId,
   messageId,
   content,
+  disabled = false,
 }: {
   ownerId: string;
   chatId: string;
   messageId: string;
   content: string;
+  disabled?: boolean;
 }) {
   const [state, setState] = useState("idle");
   const [error, setError] = useState("");
@@ -85,6 +87,7 @@ export function ResponseSpeechButton({
         type="button"
         variant="ghost"
         size="icon"
+        disabled={disabled}
         onClick={() => void click()}
         aria-label={busy ? "Stop reading aloud" : "Read aloud"}
         title={busy ? "Stop reading aloud" : "Read aloud"}

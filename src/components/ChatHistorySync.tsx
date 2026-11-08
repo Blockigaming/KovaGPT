@@ -377,27 +377,25 @@ export function ChatHistorySyncStatus() {
     unavailable: "Account chat sync is unavailable in this browser.",
     cleared: "Device history was cleared. Reload to resume account sync.",
   };
+  const critical =
+    state.conflicts.length > 0 ||
+    ["device_error", "blocked", "auth_required", "cleared", "conflict"].includes(state.phase);
+  const transient = [
+    "offline",
+    "rate_limited",
+    "connecting",
+    "saving_device",
+    "syncing",
+    "pending",
+    "other_tab",
+    "unavailable",
+  ].includes(state.recoveryPhase ?? state.phase);
+  if (transient && !critical) return null;
   const visible =
-    Boolean(state.recoveryPhase) ||
     state.migration > 0 ||
     state.conflicts.length > 0 ||
-    [
-      "offline",
-      "rate_limited",
-      "device_error",
-      "blocked",
-      "auth_required",
-      "other_tab",
-      "unavailable",
-      "cleared",
-    ].includes(state.phase);
-  if (!visible) {
-    return (
-      <p className="sr-only" role="status" aria-live="polite">
-        {labels[state.recoveryPhase ?? state.phase] ?? "Chat sync is pending"}
-      </p>
-    );
-  }
+    ["device_error", "blocked", "auth_required", "cleared"].includes(state.phase);
+  if (!visible) return null;
   async function act(action: () => Promise<void> | undefined) {
     setBusy(true);
     try {

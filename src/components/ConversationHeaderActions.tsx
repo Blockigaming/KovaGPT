@@ -1,3 +1,4 @@
+import { MessageActivityList } from "./MessageActivityList";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { File, FileText, Image, Share, Download, SlidersHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -108,6 +109,7 @@ export function ConversationHeaderActions({
     restoreDialogFocus(returnFocusRef.current, returnUrlRef.current);
   };
   const restrictedTemporary = Boolean(conversation.temporary);
+  const steps = conversation.messages.flatMap((message) => message.activities ?? []);
   return (
     <>
       <div
@@ -154,12 +156,30 @@ export function ConversationHeaderActions({
               dialogOpeningRef.current = false;
             }}
           >
-            <ConversationActivitySummary
-              inventory={sourceInventory}
+            <ConversationSourcesPanel
+              browserOnly
+              showActivity={false}
+              conversation={conversation}
               browserTabCount={
                 signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
               }
+              browserPreview={
+                signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
+              }
+              onOpenAttachment={() => {}}
+              onOpenMemory={() => {}}
+              onOpenBrowser={(activity) => {
+                rememberFocus(outputsRef.current);
+                setOutputsOpen(false);
+                setSelectedBrowser(activity);
+              }}
             />
+            {steps.some((step) => step.tool !== "scheduled_task") && (
+              <section className="kova-activity-steps" aria-label="Steps">
+                <h2>Steps</h2>
+                <MessageActivityList activities={steps} />
+              </section>
+            )}
             <h2>Outputs</h2>
             {generatedOutputs.length === 0 ? (
               <p className="kova-header-note">No outputs yet.</p>
@@ -194,6 +214,7 @@ export function ConversationHeaderActions({
               </>
             )}
             <ConversationSourcesPanel
+              hideBrowser
               showActivity={false}
               browserTabCount={
                 signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined

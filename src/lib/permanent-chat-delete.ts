@@ -1,4 +1,4 @@
-import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
+import { deleteChatWithUndo, readChatDeleteIntents } from "./chat-delete-undo";
 import {
   loadConversations,
   saveConversations,
@@ -10,16 +10,22 @@ import {
 } from "./chat-store";
 import { canWriteChatHistory } from "./chat-history-bridge";
 
-/** The synced history write creates a content-free deletion tombstone. Never save a Trash copy. */
+/** A five-second grace period precedes the content-free deletion tombstone. */
 export async function permanentlyDeleteChat(
   owner: string | null,
   chat: Conversation,
   current: () => boolean = () => true,
-  confirmed = false,
-) {
+): Promise<boolean> {
   if (!current() || !canWriteChatHistory(owner)) return false;
-  if (!confirmed && !(await confirmPermanentChat(chat.title, Boolean(chat.temporary))))
-    return false;
+  return deleteChatWithUndo(owner, chat.id, current, () =>
+    commitPermanentChatDeletion(owner, chat, current),
+  );
+}
+async function commitPermanentChatDeletion(
+  owner: string | null,
+  chat: Conversation,
+  current: () => boolean,
+): Promise<boolean> {
   if (!current() || !canWriteChatHistory(owner)) return false;
   if (
     !chat.temporary &&
@@ -61,4 +67,22 @@ export async function permanentlyDeleteChat(
     /* Legacy cleanup must not undo a committed deletion. */
   }
   return true;
+}
+
+/** Resume ID-only deletion intentions after a reload, preserving the original Undo deadline. */
+export function resumePendingChatDeletions(owner: string | null, current: () => boolean) {
+  for (const intent of readChatDeleteIntents(owner)) {
+    void deleteChatWithUndo(
+      owner,
+      intent.id,
+      current,
+      async () => {
+        const chat = loadConversations(owner).find((item) => item.id === intent.id);
+        return chat ? commitPermanentChatDeletion(owner, chat, current) : true;
+      },
+      intent.deadline,
+    ).catch(() => {
+      /* Original chat remains available when persistence fails. */
+    });
+  }
 }

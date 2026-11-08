@@ -1,3 +1,4 @@
+import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
@@ -294,11 +295,12 @@ function ChatMessageInner({
   const lifecycleGenerationRef = useRef(0);
   const { isSignedIn } = useUser();
   const timeFormat = useTimeFormatPreference(userKey, principalResolved);
-  const getFeedbackBatchFn = useServerFn(getResponseFeedbackBatch);
-  const feedbackFn = useServerFn(submitResponseFeedback);
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
-  }, [principal]);
+    return () => {
+      lifecycleGenerationRef.current += 1;
+    };
+  }, [principal, message.id, message.content]);
   const isUser = message.role === "user";
   const imageActions = useMemo<ChatImageActions | undefined>(
     () =>
@@ -326,19 +328,6 @@ function ChatMessageInner({
   };
   const copyFallbackReturnUrlRef = useRef<string | undefined>(undefined);
   useEffect(() => setCopyFallbackOpen(false), [principal, message.id]);
-  const feedbackBaseKey = principalResolved
-    ? principalScopedStorageKey("kova-message-feedback", userKey)
-    : null;
-  const feedbackKey =
-    feedbackBaseKey && message.id ? `${feedbackBaseKey}:${encodeURIComponent(message.id)}` : null;
-  const [feedbackState, setFeedbackState] = useState<{
-    key: string | null;
-    value: "up" | "down" | null;
-  }>({ key: null, value: null });
-  const feedback = feedbackState.key === feedbackKey ? feedbackState.value : null;
-  const [feedbackSaving, setFeedbackSaving] = useState(false);
-  const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false);
-  const [feedbackReload, setFeedbackReload] = useState(0);
   const localStreamingStartedAtRef = useRef<number | null>(null);
   if (!streaming) localStreamingStartedAtRef.current = null;
   else if (localStreamingStartedAtRef.current === null)
@@ -346,151 +335,6 @@ function ChatMessageInner({
   const resolvedStreamingStartedAt =
     streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
   const waitingForFirstToken = Boolean(streaming && !message.content && !message.pendingImage);
-  useEffect(() => {
-    const requestGeneration = lifecycleGenerationRef.current;
-    const requestPrincipal = principal;
-    let cancelled = false;
-    const isCurrent = () =>
-      !cancelled &&
-      requestGeneration === lifecycleGenerationRef.current &&
-      requestPrincipal === principalRef.current;
-
-    if (isUser || !feedbackKey) {
-      setFeedbackState({ key: null, value: null });
-      setFeedbackSaving(false);
-      setFeedbackLoadFailed(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (!isSignedIn || !userKey) {
-      let stored: string | null = null;
-      try {
-        stored = safeBrowserStorage("localStorage")?.getItem(feedbackKey) ?? null;
-      } catch {
-        /* Keep guest feedback session-only when browser storage is unavailable. */
-      }
-      setFeedbackState({
-        key: feedbackKey,
-        value: stored === "up" || stored === "down" ? stored : null,
-      });
-      setFeedbackSaving(false);
-      setFeedbackLoadFailed(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setFeedbackState({ key: feedbackKey, value: null });
-    setFeedbackSaving(true);
-    setFeedbackLoadFailed(false);
-    void (async () => {
-      try {
-        const rating = await loadResponseFeedbackBatched(
-          userKey,
-          message.id,
-          async (messageIds) => {
-            const result = await getFeedbackBatchFn({
-              data: { expectedOwnerId: userKey, messageIds },
-            });
-            return result.ratings;
-          },
-        );
-        if (!isCurrent()) return;
-        setFeedbackState({ key: feedbackKey, value: rating });
-        try {
-          const storage = safeBrowserStorage("localStorage");
-          if (rating) storage?.setItem(feedbackKey, rating);
-          else storage?.removeItem(feedbackKey);
-        } catch {
-          /* The authenticated feedback row remains authoritative. */
-        }
-      } catch {
-        if (isCurrent()) {
-          setFeedbackState({ key: feedbackKey, value: null });
-          setFeedbackLoadFailed(true);
-        }
-      } finally {
-        if (isCurrent()) setFeedbackSaving(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    feedbackKey,
-    feedbackReload,
-    getFeedbackBatchFn,
-    isSignedIn,
-    isUser,
-    message.id,
-    principal,
-    userKey,
-  ]);
-
-  const persistFeedback = async (next: "up" | "down" | null) => {
-    if (!feedbackKey) {
-      toast.error("Your account is still loading. Try again.");
-      return;
-    }
-    const previous = feedback;
-    const requestGeneration = lifecycleGenerationRef.current;
-    const requestPrincipal = principal;
-    const isCurrent = () =>
-      requestGeneration === lifecycleGenerationRef.current &&
-      requestPrincipal === principalRef.current;
-    setFeedbackState({ key: feedbackKey, value: next });
-    setFeedbackSaving(true);
-
-    if (isSignedIn) {
-      if (!userKey) {
-        setFeedbackState({ key: feedbackKey, value: previous });
-        setFeedbackSaving(false);
-        toast.error("Your account is still loading. Try again.");
-        return;
-      }
-      try {
-        await feedbackFn({
-          data: { expectedOwnerId: userKey, messageId: message.id, rating: next },
-        });
-        if (!isCurrent()) return;
-        try {
-          const storage = safeBrowserStorage("localStorage");
-          if (next) storage?.setItem(feedbackKey, next);
-          else storage?.removeItem(feedbackKey);
-        } catch {
-          /* The authenticated feedback row remains authoritative. */
-        }
-        toast.success(next ? "Feedback saved" : "Feedback removed");
-      } catch (error) {
-        if (!isCurrent()) return;
-        setFeedbackState({ key: feedbackKey, value: previous });
-        toast.error(error instanceof Error ? error.message : "Feedback could not be saved.");
-      } finally {
-        if (isCurrent()) setFeedbackSaving(false);
-      }
-      return;
-    }
-
-    let persisted = false;
-    try {
-      const storage = safeBrowserStorage("localStorage");
-      if (next) storage?.setItem(feedbackKey, next);
-      else storage?.removeItem(feedbackKey);
-      persisted = Boolean(storage);
-    } catch {
-      /* The visible rating can remain session-only. */
-    }
-    toast.success(
-      next
-        ? persisted
-          ? "Rating saved on this device"
-          : "Rating applied for this session"
-        : "Rating removed",
-    );
-    setFeedbackSaving(false);
-  };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const pressTimer = useRef<number | null>(null);
@@ -518,6 +362,26 @@ function ChatMessageInner({
   const retryFocusRef = useRef<(() => void) | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const sharingPending = useRef(false);
+  const sharedResponse = useRef<{ key: string; url: string } | null>(null);
+  const [copyFallbackText, setCopyFallbackText] = useState<string | null>(null);
+  useEffect(() => {
+    let ids: string[] = [];
+    try {
+      ids = JSON.parse(
+        safeBrowserStorage("localStorage")?.getItem(
+          principalScopedStorageKey("kovagpt-saved-message-ids", userKey) ?? "",
+        ) || "[]",
+      );
+    } catch {
+      /* Storage is optional. */
+    }
+    setSaved(principalResolved && Array.isArray(ids) && ids.includes(message.id));
+    sharingPending.current = false;
+    setSharing(false);
+    sharedResponse.current = null;
+  }, [principal, principalResolved, userKey, message.id]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const [selectionTarget, setSelectionTarget] = useState<{
@@ -714,10 +578,6 @@ function ChatMessageInner({
       setSaved(false);
       setCopied(false);
       setCopyFallbackOpen(false);
-      setFeedbackSaving(Boolean(isSignedIn && !isUser));
-      setFeedbackLoadFailed(false);
-      setFeedbackState({ key: feedbackKey, value: null });
-      setFeedbackReload((current) => current + 1);
       setEditorOpen(false);
       responseDraftFocusRef.current = null;
       setSelectionAskOpen(false);
@@ -738,16 +598,7 @@ function ChatMessageInner({
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
-  }, [
-    cancelLongPress,
-    closeSources,
-    feedbackKey,
-    isSignedIn,
-    isUser,
-    principal,
-    principalResolved,
-    userKey,
-  ]);
+  }, [cancelLongPress, closeSources, isSignedIn, isUser, principal, principalResolved, userKey]);
 
   const cleanedResponse = useMemo(
     () => (isUser ? "" : cleanAssistantText(message.content)),
@@ -848,6 +699,7 @@ function ChatMessageInner({
   );
 
   const copy = async () => {
+    setCopyFallbackText(null);
     rememberCopyTrigger();
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
@@ -868,20 +720,52 @@ function ChatMessageInner({
   };
 
   const share = async () => {
-    const text = message.content;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ text, title: "KovaGPT response" });
-        return;
-      } catch {
-        /* Fall back to copying unless the browser completed a share. */
-      }
-    }
+    if (!principalResolved || !isSignedIn || !userKey || temporary || sharingPending.current)
+      return;
+    const generation = lifecycleGenerationRef.current;
+    const owner = principal;
+    const active = () =>
+      generation === lifecycleGenerationRef.current && owner === principalRef.current;
+    const key = JSON.stringify([principal, chatId, message.id, message.content]);
+    sharingPending.current = true;
+    setSharing(true);
+    rememberCopyTrigger();
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Response copied to clipboard");
-    } catch {
-      toast.error("Couldn't share");
+      let url = sharedResponse.current?.key === key ? sharedResponse.current.url : null;
+      if (!url) {
+        const response = await fetchWithTimeoutAuthenticated("/api/chat-share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Kova-Owner": userKey },
+          body: JSON.stringify({
+            title: "KovaGPT response",
+            messages: [{ role: "assistant", content: message.content }],
+          }),
+        });
+        if (!active()) return;
+        const data = await response.json();
+        if (!response.ok) throw new Error("The public link could not be created. Try again.");
+        if (typeof data.path !== "string" || !/^\/share\/[0-9a-f]{64}$/u.test(data.path))
+          throw new Error("The share service returned an invalid link.");
+        url = new URL(data.path, window.location.origin).href;
+        sharedResponse.current = { key, url };
+      }
+      if (!active()) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        if (active()) toast.success("Public view-only link copied");
+      } catch {
+        if (!active()) return;
+        setCopyFallbackText(url);
+        setCopyFallbackOpen(true);
+      }
+    } catch (error) {
+      if (active())
+        toast.error(error instanceof Error ? error.message : "Could not share response");
+    } finally {
+      if (active()) {
+        sharingPending.current = false;
+        setSharing(false);
+      }
     }
   };
 
@@ -958,10 +842,6 @@ function ChatMessageInner({
       }
       setSaved(true);
       toast.success("Saved to Library");
-      if (artifactKind === "writing") openResult();
-      setTimeout(() => {
-        if (isCurrent()) setSaved(false);
-      }, 2000);
     } catch (error) {
       if (isCurrent()) toast.error(error instanceof Error ? error.message : "Could not save");
     } finally {
@@ -1172,314 +1052,79 @@ function ChatMessageInner({
               role="toolbar"
               aria-label="Response actions"
             >
-              {isSignedIn &&
-                principalResolved &&
-                userKey &&
-                chatId &&
-                !temporary &&
-                !message.generationStatus &&
-                !message.pendingImage && (
-                  <ResponseSpeechButton
-                    ownerId={userKey}
-                    chatId={chatId}
-                    messageId={message.id}
-                    content={message.content}
-                  />
-                )}
-              {memorySources && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    memoryReturnFocusRef.current = event.currentTarget;
-                    memoryReturnUrlRef.current = window.location.href;
-                    setMemoryOpenFor(memoryKey);
-                  }}
-                  className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                >
-                  Memory provided ({memorySources.sources.length})
-                </button>
-              )}
-              {message.sources?.length ? (
-                <button
-                  type="button"
-                  ref={sourcesPillRef}
-                  onClick={(event) => {
-                    if (sourcesOpen) closeSources();
-                    else openSources(event.currentTarget);
-                  }}
-                  className="kova-message-source-toggle inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  aria-expanded={sourcesOpen}
-                  aria-controls={`message-sources-${message.id}`}
-                >
-                  <Globe className="h-3.5 w-3.5" />
-                  {message.sources.length} {message.sources.length === 1 ? "source" : "sources"}
-                </button>
-              ) : null}
-              {feedbackLoadFailed && (
-                <button
-                  type="button"
-                  aria-label="Retry loading response feedback"
-                  title="Retry loading response feedback"
-                  className="kova-message-icon-action text-muted-foreground hover:bg-accent"
-                  onClick={() => setFeedbackReload((current) => current + 1)}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              )}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={copy}
-                      className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
-                      aria-label={copied ? "Copied" : "Copy response"}
-                    >
-                      {copied ? (
-                        <Check className="w-4 h-4 text-[color:var(--kova-blue)] animate-check-pop" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>{copied ? "Copied" : "Copy response"}</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
-                      disabled={feedbackSaving || feedbackLoadFailed}
-                      className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                        feedback === "up" ? "bg-accent text-white" : ""
-                      }`}
-                      aria-label="Good response"
-                      aria-pressed={feedback === "up"}
-                    >
-                      <ThumbsUp className={`h-4 w-4 ${feedback === "up" ? "fill-current" : ""}`} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Good response</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
-                      disabled={feedbackSaving || feedbackLoadFailed}
-                      className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                        feedback === "down" ? "bg-accent text-white" : ""
-                      }`}
-                      aria-label="Bad response"
-                      aria-pressed={feedback === "down"}
-                    >
-                      <ThumbsDown
-                        className={`h-4 w-4 ${feedback === "down" ? "fill-current" : ""}`}
-                      />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Bad response</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => void saveItem()}
-                      disabled={saving}
-                      className="kova-message-icon-action"
-                      aria-label={
-                        saved
-                          ? "Saved to Library"
-                          : saving
-                            ? "Saving to Library"
-                            : "Save to Library"
-                      }
-                    >
-                      {saving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : saved ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {saved ? "Saved to Library" : saving ? "Saving to Library" : "Save to Library"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {email && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-accent hover:bg-accent/80 px-2.5 py-1.5 rounded-full transition-colors"
-                      title="Open email draft"
-                      aria-label="Open email draft"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>Open email draft</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
-                      Choose where to open a draft. Add recipients before sending.
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        await openEmailCompose("gmail", email.subject, email.body);
-                        toast.success("Opening Gmail compose");
-                      }}
-                    >
-                      <Mail className="w-4 h-4 mr-2" /> Open in Gmail
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        await openEmailCompose("outlook", email.subject, email.body);
-                        toast.success("Opening Outlook compose");
-                      }}
-                    >
-                      <Mail className="w-4 h-4 mr-2" /> Open in Outlook
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
               <button
                 type="button"
-                className="kova-message-icon-action text-muted-foreground hover:bg-accent"
+                onClick={() => void copy()}
+                className="kova-message-icon-action"
+                aria-label={copied ? "Copied" : "Copy response"}
+                title="Copy response"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </button>
+              <ResponseSpeechButton
+                ownerId={userKey ?? ""}
+                chatId={chatId ?? ""}
+                messageId={message.id}
+                content={message.content}
+                disabled={
+                  !isSignedIn ||
+                  !principalResolved ||
+                  !userKey ||
+                  !chatId ||
+                  temporary ||
+                  !!message.generationStatus ||
+                  !!message.pendingImage
+                }
+              />
+              <button
+                type="button"
+                className="kova-message-icon-action"
                 aria-label="Share response"
-                title="Share response"
+                title="Copy public view-only link"
+                disabled={sharing || !principalResolved || !isSignedIn || !userKey || temporary}
                 onClick={() => void share()}
               >
-                <Share2 className="h-4 w-4" />
+                {sharing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
               </button>
-              {onRetry && (
-                <DropdownMenu open={retryMenuOpen} onOpenChange={setRetryMenuOpen}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="kova-message-icon-action text-muted-foreground hover:bg-accent"
-                      aria-label="Try again"
-                      title="Try again"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="kova-response-retry-menu"
-                    onCloseAutoFocus={(event) => {
-                      if (!retryFocusRef.current) return;
-                      event.preventDefault();
-                      const focus = retryFocusRef.current;
-                      retryFocusRef.current = undefined;
-                      focus();
-                    }}
-                  >
-                    {onDraftPrompt && (
-                      <form
-                        className="kova-response-change-draft"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          if (!retryInstruction.trim()) return;
-                          retryFocusRef.current =
-                            onDraftPrompt(
-                              `Change the previous response: ${retryInstruction.trim()}`,
-                            ) ?? undefined;
-                          setRetryInstruction("");
-                          setRetryMenuOpen(false);
-                        }}
-                      >
-                        <input
-                          aria-label="Ask to change response"
-                          placeholder="Ask to change response"
-                          value={retryInstruction}
-                          onChange={(event) => setRetryInstruction(event.target.value)}
-                          onKeyDown={(event) => event.stopPropagation()}
-                        />
-                        <button
-                          type="submit"
-                          aria-label="Add change to draft"
-                          disabled={!retryInstruction.trim()}
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </button>
-                      </form>
-                    )}
-                    <DropdownMenuItem onSelect={() => onRetry()}>
-                      <RefreshCw className="h-4 w-4" /> Try again
-                      {userTier === "free" && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <Brain className="h-4 w-4" />
-                          <span>Thinking</span>
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onRetry({ webSearch: false })}>
-                      <Globe className="h-4 w-4" /> Don’t search the web
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              <button
+                type="button"
+                onClick={() => void saveItem()}
+                disabled={saving}
+                className="kova-message-icon-action"
+                aria-label={saved ? "Saved to Library" : "Save to Library"}
+                aria-pressed={saved}
+                title={saved ? "Saved to Library" : "Save to Library"}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+                )}
+              </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     ref={responseMoreRef}
-                    className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent"
+                    type="button"
+                    className="kova-message-icon-action"
                     title="More actions"
                     aria-label="More actions"
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <MoreHorizontal className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="kova-response-menu w-60"
-                  onCloseAutoFocus={(event) => {
-                    const focusDraft = responseDraftFocusRef.current;
-                    if (focusDraft) {
-                      responseDraftFocusRef.current = null;
-                      event.preventDefault();
-                      focusDraft();
-                      return;
-                    }
-                    if (memoryReviewOpeningRef.current) {
-                      memoryReviewOpeningRef.current = false;
-                      event.preventDefault();
-                      return;
-                    }
-                    if (!studyOpeningRef.current) return;
-                    studyOpeningRef.current = false;
-                    event.preventDefault();
-                  }}
-                >
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    {message.createdAt ? (
-                      <time dateTime={new Date(message.createdAt).toISOString()}>
-                        {formatDisplayDateTime(message.createdAt, timeFormat, {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                          second: "2-digit",
-                          timeZoneName: "short",
-                        })}
-                      </time>
-                    ) : (
-                      "Time unavailable"
-                    )}
-                  </div>
-                  <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
-                    <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
+                <DropdownMenuContent align="start" className="kova-response-menu w-60">
+                  <DropdownMenuItem onSelect={() => onRetry?.()} disabled={!onRetry}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Try again
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onBranch?.()} disabled={!onBranch}>
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    Branch into new chat
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1717,7 +1362,7 @@ function ChatMessageInner({
             }}
           >
             <DialogHeader>
-              <DialogTitle>Copy response</DialogTitle>
+              <DialogTitle>{copyFallbackText ? "Copy public link" : "Copy response"}</DialogTitle>
               <DialogDescription>
                 Copy is unavailable here. Select this text and copy it manually.
               </DialogDescription>
@@ -1725,8 +1370,8 @@ function ChatMessageInner({
             <textarea
               ref={copyFallbackRef}
               readOnly
-              value={message.content}
-              aria-label="Response text to copy"
+              value={copyFallbackText ?? message.content}
+              aria-label={copyFallbackText ? "Public link to copy" : "Response text to copy"}
               rows={10}
               className="max-h-[50vh] w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm"
             />

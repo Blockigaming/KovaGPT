@@ -54,7 +54,7 @@ test("Work remounts private planning and execution controls under the current ac
   }
 });
 
-test("chat Work review receives only the current draft and stays out of temporary and guest chats", async () => {
+test("the floating Work launcher stays out of all chats while account history controls remain", async () => {
   const module = loadUiModule("src/components/ChatWorkspaceControls.tsx", {
     react: { lazy: (load) => ({ load }), Suspense: "Suspense" },
     "@tanstack/react-router": { Link: "Link" },
@@ -77,15 +77,8 @@ test("chat Work review receives only the current draft and stays out of temporar
     assert.equal(elements(tree, (node) => Object.hasOwn(node.props, "objective")).length, 0);
   for (const owner of ["owner-a", "owner-b"]) {
     const tree = render(owner, false, [{ role: "user", content: "Hello" }]);
-    const control = elements(tree, (node) => Object.hasOwn(node.props, "objective"))[0];
-    assert.equal((await control.type.load()).default, "ChatWorkControl");
-    assert.equal(control.key, `work:${owner}`);
-    assert.equal(control.props.ownerId, owner);
-    assert.equal(control.props.objective, "Review this synthetic launch request");
-    assert.equal(
-      text(tree).trim(),
-      "",
-      "opening the entry point does not claim any task completed",
-    );
+    assert.equal(elements(tree, (node) => Object.hasOwn(node.props, "objective")).length, 0);
+    const history = elements(tree, (node) => node.key === `history:${owner}`)[0];
+    assert.equal((await history.type.load()).default, "HistoryStatus");
   }
 });

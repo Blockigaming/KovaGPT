@@ -63,13 +63,19 @@ export async function removeHomeChat(context: Context, id: string) {
   if (!context.current()) return;
   const chat = context.items.find((item) => item.id === id);
   if (!chat) return;
+  const wasActive = context.activeId === id;
+  if (wasActive) context.setActive(null);
   try {
-    if (!(await permanentlyDeleteChat(context.ownerId, chat, context.current))) return;
+    if (!(await permanentlyDeleteChat(context.ownerId, chat, context.current))) {
+      if (context.current() && wasActive) context.setActive(id);
+      return;
+    }
     if (!context.current()) return;
     context.setItems((items) => items.filter((item) => item.id !== id));
-    if (context.activeId === id) context.setActive(null);
-    toast.success("Chat permanently deleted");
   } catch {
-    if (context.current()) toast.error("Could not delete the chat. Try again.");
+    if (context.current()) {
+      if (wasActive) context.setActive(id);
+      toast.error("Could not delete the chat. Try again.");
+    }
   }
 }

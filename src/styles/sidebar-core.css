@@ -779,3 +779,8 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   outline: 1px solid var(--muted-foreground);
   outline-offset: -2px;
 }
+
+.kova-profile-menu .kova-profile-menu-account {
+  color: var(--foreground);
+  opacity: 1;
+}

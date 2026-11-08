@@ -703,3 +703,13 @@ This owner update supersedes the earlier chat archive, Trash, sidebar Images, an
 - Team activation requires the additive database migration, the four verified Stripe recurring prices with the lookup keys in `team-billing-policy.mjs`, and subscription/risk webhook delivery. Existing tax registrations and Stripe tax configuration must be reviewed before asserting that checkout calculates applicable tax. No source or fixture test establishes live billing acceptance.
 - The Images sidebar shortcut is removed; ordinary chat retains its image tools. Continue working displays at most two actual recommendations, with rounded cards and increased spacing.
 - Settings and management pages must fit narrow mobile viewports. Sync respects rate-limit backoff, reconnects on return to the page, and distinguishes session verification and revision reconciliation from offline transport errors.
+
+## Chat interaction update — November 8, 2026
+
+- Upgrade actions for a selected plan open hosted checkout automatically, without a second review page or payment button. Existing subscribers go directly to the supported customer-portal plan change. Management actions say “Manage subscription” and open the full-page portal.
+- Free accounts see a blue “Free offer” control with a gift icon. Its popup explains 50% off the first Plus month, then the regular monthly price before tax. Eligibility remains server enforced; checkout applies the existing discount automatically.
+- Profile-menu identity uses theme-aware foreground text. Desktop chat menus open beside the sidebar, with viewport collision handling on touch screens.
+- User prompts retain rounded bubbles. Assistant text has no surrounding bubble. A separator precedes exactly five icon actions: Copy, Read aloud, Share, Save to Library, More. Share copies a public, view-only snapshot of that response alone. Saved bookmarks stay filled. More has only Try again and Branch into new chat.
+- Activity uses a borderless surface. Recorded Cloud browser activity and actual Steps appear before Outputs, Inputs and other sources. The floating “Prepare or manage Work” chat launcher is removed; the separate Work product remains available.
+- Transient history reconnects and retries stay silent, including when older device history is awaiting migration. Explicit account verification, storage failures and real version conflicts retain actionable recovery.
+- Consumer chat deletion has a five-second Undo grace period before the existing permanent-delete operation. The countdown stores only a scoped chat ID and its original deadline, never a Trash copy, and resumes after reload without resetting that deadline. Undo expires when commit begins; owner changes cannot delete another account's chat.
