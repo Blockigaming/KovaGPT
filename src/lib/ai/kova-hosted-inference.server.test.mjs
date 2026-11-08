@@ -112,7 +112,7 @@ test("each Kova tier has distinct upstream budget and reasoning policy", () => {
     assert.equal(body.model, expectedModel);
     assert.equal(body.max_tokens, max);
     assert.equal(body.reasoning?.effort, effort);
-    assert.equal(body.provider.sort, "latency");
+    assert.equal(body.provider.sort, alias === "kova-neon-4.6" ? undefined : "latency");
     assert.equal(body.provider.require_parameters, true);
     assert.equal(body.provider.allow_fallbacks, true);
     assert.ok(body.provider.max_price.prompt > 0);

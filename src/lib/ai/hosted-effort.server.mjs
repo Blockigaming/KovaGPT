@@ -63,6 +63,7 @@ export async function requestHostedEffort({
       token,
       signal: AbortSignal.any([bounded, AbortSignal.timeout(18_000)]),
       fetchImpl,
+      beforeRetry: beforeSend,
       effort: profile.nativeReasoning ? "low" : undefined,
     });
     const bytes = await readResponseBytesBounded(response, 128 * 1024, {
@@ -145,6 +146,7 @@ export async function requestHostedEffort({
       token,
       signal: bounded,
       fetchImpl,
+      beforeRetry: beforeSend,
       effort: profile.nativeReasoning ? profile.effort : undefined,
     });
   } catch (error) {
