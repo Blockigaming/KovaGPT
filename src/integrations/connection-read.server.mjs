@@ -45,6 +45,14 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("$top", "10");
   } else if (id === "ms-teams") {
     url = new URL("https://graph.microsoft.com/v1.0/me/joinedTeams");
+  } else if (id === "dropbox") {
+    url = new URL("https://api.dropboxapi.com/2/files/search_v2");
+    body = JSON.stringify({ query, options: { max_results: 10 } });
+  } else if (id === "box") {
+    url = new URL("https://api.box.com/2.0/search");
+    url.searchParams.set("query", query);
+    url.searchParams.set("limit", "10");
+    url.searchParams.set("type", "file");
   } else if (id === "notion") {
     url = new URL("https://api.notion.com/v1/search");
     headers["Notion-Version"] = "2022-06-28";
@@ -100,7 +108,11 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
         ? data.data?.issues?.nodes
         : id === "slack"
           ? data.messages?.matches
-          : data.value;
+          : id === "dropbox"
+            ? data.matches
+            : id === "box"
+              ? data.entries
+              : data.value;
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
   if (id === "ms-teams")
     rows = rows.filter((row) =>
@@ -108,8 +120,11 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     );
   const result = { service: CONNECTION_FLOWS[id].label, results: [], limited: true };
   const encoder = new TextEncoder();
-  for (const row of rows.slice(0, 10)) {
-    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink;
+  for (const match of rows.slice(0, 10)) {
+    // Dropbox search matches wrap the actual file/folder metadata twice.
+    const row = id === "dropbox" ? match?.metadata?.metadata : match;
+    if (!row || typeof row !== "object") continue;
+    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
     const item = {
       id: str(row.id ?? row.ts, 300),
       title:
@@ -127,7 +142,9 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
             ]
               .filter(Boolean)
               .join("; ")
-          : str(row.bodyPreview ?? row.description ?? row.text),
+          : id === "dropbox"
+            ? str(row.path_display)
+            : str(row.bodyPreview ?? row.description ?? row.text),
     };
     // Measure the serialized UTF-8 result, including JSON escaping. A provider
     // can return control characters or very large URLs; never cut serialized
