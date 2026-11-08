@@ -98,7 +98,7 @@ export async function refreshExpiringConnection(
     (!(forceRejectedRead && ["salesforce", "notion"].includes(row.provider_id)) &&
       (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
     !row.refresh_token_ciphertext ||
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion"].includes(
+    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion", "dropbox", "box"].includes(
       row.provider_id,
     )
   )
