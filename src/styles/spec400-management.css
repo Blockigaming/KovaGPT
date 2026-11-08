@@ -288,15 +288,14 @@
   line-height: 1.6;
 }
 .spec400-schedules .kova-task-filters {
-  height: auto;
   min-height: 44px;
   height: 44px;
-  padding: 2px;
+  padding: 0;
   gap: 4px;
 }
 .spec400-schedules .kova-task-filters [role="tab"] {
   height: auto;
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 18px;
   gap: 8px;
   line-height: 24px;
