@@ -283,7 +283,7 @@ function TeamWorkspace({ owner }: { owner: string }) {
                           key={member.user_id}
                           className="flex flex-wrap items-center justify-between gap-4 py-4"
                         >
-                          <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="flex min-w-0 basis-full items-center gap-3 sm:basis-auto sm:flex-1">
                             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
                               {member.user_id === owner ? (
                                 <Crown aria-hidden className="size-4" />
@@ -334,7 +334,7 @@ function TeamWorkspace({ owner }: { owner: string }) {
                           key={invite.id}
                           className="flex flex-wrap items-center justify-between gap-4 py-4"
                         >
-                          <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="flex min-w-0 basis-full items-center gap-3 sm:basis-auto sm:flex-1">
                             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
                               <Mail aria-hidden className="size-4" />
                             </span>
@@ -551,7 +551,7 @@ function InviteComposer({
               : "This invitation uses a seat you've already paid for. "}
             The email is sent after billing is confirmed. Only the invited email can accept.
           </p>
-          <div className="flex flex-wrap justify-end gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <Button
               className={pill}
               variant="outline"
@@ -566,7 +566,11 @@ function InviteComposer({
             >
               Cancel
             </Button>
-            <Button className={pill} disabled={busy} onClick={() => void act(sendReviewed)}>
+            <Button
+              className={`${pill} w-full whitespace-normal sm:w-auto`}
+              disabled={busy}
+              onClick={() => void act(sendReviewed)}
+            >
               <Mail aria-hidden className="mr-2 size-4" />
               {busy
                 ? "Sending…"

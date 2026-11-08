@@ -89,6 +89,14 @@ test("invitation reviews before-tax and recurring costs before any billing mutat
   await expect(page.getByText("Estimated charge today, before tax", { exact: true })).toBeVisible();
   await expect(page.getByText("$12.50", { exact: true })).toBeVisible();
   await expect(page.getByText("$25.00 / month", { exact: true })).toBeVisible();
+  const contained = await page
+    .getByRole("button", { name: "Send invitation & add seat", exact: true })
+    .evaluate((el) => {
+      const r = el.getBoundingClientRect(),
+        card = el.closest("section")!.getBoundingClientRect();
+      return r.left >= card.left + 12 && r.right <= card.right - 12;
+    });
+  expect(contained).toBe(true);
   if (process.env.KOVA_TEAM_UI_PROOF === "1")
     await page.screenshot({
       path: test.info().outputPath("team-invitation-review.png"),
