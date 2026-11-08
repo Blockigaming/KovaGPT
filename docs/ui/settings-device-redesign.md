@@ -30,3 +30,15 @@ Sharp only encodes the generated result and creates the smaller responsive deriv
 ## Verification scope
 
 Browser fixtures contain synthetic account data and do not purchase subscriptions, send invitations, or call model providers. Review covers Settings navigation, all twenty-one content destinations, control containment, phone hit targets, return focus, responsive Library sorting, homepage image decoding/crops, and screenshots of core screens. This is not proof that every service or every public route works in production. No production deployment is part of this PR.
+
+## Review evidence
+
+- Production build and source/build audit: pass.
+- TypeScript: pass.
+- Targeted Settings and management unit tests: 124/124 pass.
+- New responsive browser checks: 26 pass, two desktop/tablet skips for the phone-only Library test. Tested at 320, 390, 768, and 1440 pixels; all twenty-one content routes loaded at each width.
+- Existing Settings header/close/resize/return browser regressions: five pass, one phone skip for the desktop resize test.
+- Six screenshot-capture scenarios: pass, covering core pages in light/dark themes at 390/1440 pixels and the logged-out homepage at both widths. Screenshots use synthetic account data; disconnected-service messages reflect the local fixture.
+- Targeted ESLint: no errors, one pre-existing Fast Refresh export warning in SettingsDialog.
+
+[Phone menu](previews/settings-phone-menu.png) · [Phone Appearance](previews/settings-phone-appearance.png) · [Desktop General](previews/settings-desktop-general.png)
