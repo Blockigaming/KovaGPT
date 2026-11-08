@@ -58,7 +58,11 @@ export function StripeEmbeddedCheckout({
     }
   }
   return (
-    <div className="space-y-4" data-checkout-state={error ? "error" : busy ? "loading" : "ready"}>
+    <div
+      className="space-y-4"
+      data-stripe-experience="kova-stripe-checkout:hosted-v1"
+      data-checkout-state={error ? "error" : busy ? "loading" : "ready"}
+    >
       <Button
         className="min-h-11 rounded-full"
         disabled={busy || !owner || Boolean(userId && owner !== userId)}
