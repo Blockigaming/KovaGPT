@@ -235,7 +235,9 @@
   line-height: 1.5;
 }
 .kova-settings-reference .kova-settings-content > [role="tabpanel"][hidden],
-.kova-settings-reference .kova-settings-content > [role="tabpanel"][data-state="inactive"] {
+.kova-settings-reference
+  .kova-settings-content
+  > [role="tabpanel"][data-state="inactive"] {
   display: none;
 }
 .kova-settings-reference .kova-settings-content > [role="tabpanel"] > * + * {
@@ -256,7 +258,9 @@
   font-weight: 600;
   letter-spacing: -0.01em;
 }
-.kova-settings-reference .kova-settings-content :is(input, textarea, [role="combobox"]) {
+.kova-settings-reference
+  .kova-settings-content
+  :is(input, textarea, [role="combobox"]) {
   min-width: 0;
   max-width: 100%;
 }
@@ -288,7 +292,9 @@
 .kova-settings-reference .kova-settings-reference-group > * + * {
   border-top: 1px solid var(--border);
 }
-.kova-settings-reference :is(.kova-settings-row, .kova-settings-reference-row) > :first-child {
+.kova-settings-reference
+  :is(.kova-settings-row, .kova-settings-reference-row)
+  > :first-child {
   min-width: 0;
   max-width: 60ch;
   overflow-wrap: break-word;
@@ -362,18 +368,23 @@
   color: var(--muted-foreground);
   font-size: 14px;
 }
-.kova-settings-reference :is(.kova-settings-metrics, .kova-settings-reference-metrics) {
+.kova-settings-reference
+  :is(.kova-settings-metrics, .kova-settings-reference-metrics) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
 }
-.kova-settings-reference :is(.kova-settings-metrics, .kova-settings-reference-metrics) > div {
+.kova-settings-reference
+  :is(.kova-settings-metrics, .kova-settings-reference-metrics)
+  > div {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 14px;
 }
-.kova-settings-reference :is(.kova-settings-metrics, .kova-settings-reference-metrics) :is(dt, dd) {
+.kova-settings-reference
+  :is(.kova-settings-metrics, .kova-settings-reference-metrics)
+  :is(dt, dd) {
   margin: 0;
 }
 .kova-settings-reference .kova-settings-plan-badge {
@@ -415,7 +426,8 @@
   width: 18px;
   height: 18px;
 }
-.kova-settings-reference :is(button, a, input, textarea, [role="combobox"]):focus-visible {
+.kova-settings-reference
+  :is(button, a, input, textarea, [role="combobox"]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
@@ -447,10 +459,12 @@
   .kova-settings-reference .kova-settings-sidebar {
     width: 100%;
     flex: 1 1 0;
-    padding: max(24px, var(--safe-top, 0px)) 20px max(32px, var(--safe-bottom, 0px));
+    padding: max(24px, var(--safe-top, 0px)) 20px
+      max(32px, var(--safe-bottom, 0px));
     border: 0;
   }
-  .kova-settings-reference :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden {
+  .kova-settings-reference
+    :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden {
     display: none;
   }
   .kova-settings-reference .kova-settings-content.mobile-content {
@@ -650,7 +664,9 @@
   .kova-settings-reference .kova-settings-row > :first-child {
     font-size: 15px;
   }
-  .kova-settings-reference .kova-settings-content :is(input, textarea, [role="combobox"]) {
+  .kova-settings-reference
+    .kova-settings-content
+    :is(input, textarea, [role="combobox"]) {
     font-size: 16px;
   }
   .kova-settings-reference
@@ -732,5 +748,14 @@
   .kova-settings-reference *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+@media (pointer: coarse) {
+  [role="dialog"].kova-settings-dialog > [data-kova-dialog-close],
+  .kova-settings-page .kova-settings-page-control {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
   }
 }

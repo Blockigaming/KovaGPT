@@ -4,8 +4,15 @@ import { coreFixture } from "./core-app-fixture";
 import { dismissMobileSidebar, openCurrentSettings } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
-const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
-test.beforeEach(({ page: _page }, info) => test.skip(!projects.has(info.project.name)));
+const projects = new Set([
+  "phone-320x700",
+  "phone-390x844",
+  "tablet-1024x768",
+  "desktop-1440x900",
+]);
+test.beforeEach(({ page: _page }, info) =>
+  test.skip(!projects.has(info.project.name)),
+);
 
 async function contained(page: Page, surface: Locator) {
   await expect(surface).toBeVisible();
@@ -51,8 +58,13 @@ async function contained(page: Page, surface: Locator) {
       }),
     )
     .toBe(true);
-  const overflow = await surface.evaluate((element) => element.scrollWidth - element.clientWidth);
-  expect(overflow, "The visible surface must not clip horizontal content").toBeLessThanOrEqual(1);
+  const overflow = await surface.evaluate(
+    (element) => element.scrollWidth - element.clientWidth,
+  );
+  expect(
+    overflow,
+    "The visible surface must not clip horizontal content",
+  ).toBeLessThanOrEqual(1);
 }
 async function usableClose(page: Page, button: Locator) {
   await expect(button).toBeVisible();
@@ -60,13 +72,18 @@ async function usableClose(page: Page, button: Locator) {
   expect(
     await button.evaluate((element) => {
       const box = element.getBoundingClientRect();
-      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      const hit = document.elementFromPoint(
+        box.x + box.width / 2,
+        box.y + box.height / 2,
+      );
       return hit !== null && element.contains(hit);
     }),
     "The close control must receive pointer hits inside the viewport",
   ).toBe(true);
   const target = await button.boundingBox();
-  const coarse = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+  const coarse = await page.evaluate(
+    () => matchMedia("(pointer: coarse)").matches,
+  );
   await test.info().attach("actual-close-target", {
     body: JSON.stringify({ coarse, rect: target }, null, 2),
     contentType: "application/json",
@@ -77,9 +94,11 @@ async function usableClose(page: Page, button: Locator) {
 async function focusStaysInside(page: Page, surface: Locator) {
   for (let step = 0; step < 4; step++) {
     await page.keyboard.press("Tab");
-    expect(await surface.evaluate((element) => element.contains(document.activeElement))).toBe(
-      true,
-    );
+    expect(
+      await surface.evaluate((element) =>
+        element.contains(document.activeElement),
+      ),
+    ).toBe(true);
   }
 }
 
@@ -104,26 +123,37 @@ for (const theme of ["light", "dark"] as const) {
     const modal = page.locator(".kova-settings-dialog");
     const mobile = page.viewportSize()!.width < 1024;
     if (!mobile) {
-      await page.getByRole("button", { name: "Account menu", exact: true }).click();
-      await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Account menu", exact: true })
+        .click();
+      await page
+        .getByRole("menuitem", { name: "Settings", exact: true })
+        .click();
     } else {
       await openCurrentSettings(page);
     }
     await contained(page, modal);
-    const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
+    const heading = modal
+      .getByRole("heading", { level: 2 })
+      .filter({ visible: true })
+      .first();
     await expect(heading).toBeInViewport({ ratio: 1 });
-    const close = modal.getByRole("button", { name: "Close settings", exact: true });
+    const close = modal.getByRole("button", {
+      name: "Close settings",
+      exact: true,
+    });
     await usableClose(page, close);
     await expect(modal).toHaveCSS("background-color", pageColor);
-    const content = mobile
-      ? modal.getByRole("tabpanel").first()
-      : modal.locator(".kova-settings-content");
+    const content = modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect
       .poll(() =>
         content.evaluate((element) => {
           element.scrollTop = element.scrollHeight;
-          return element.scrollHeight <= element.clientHeight || element.scrollTop > 0;
+          return (
+            element.scrollHeight <= element.clientHeight ||
+            element.scrollTop > 0
+          );
         }),
       )
       .toBe(true);
@@ -132,7 +162,10 @@ for (const theme of ["light", "dark"] as const) {
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
     if (mobile) {
-      await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
+      await expect(page.locator(".kova-sidebar")).toHaveAttribute(
+        "data-state",
+        "closed",
+      );
       await expect(page.locator(".kova-sidebar")).not.toBeInViewport();
     } else {
       await expect(page.locator(".kova-sidebar")).toHaveCount(0);
@@ -156,12 +189,17 @@ for (const theme of ["light", "dark"] as const) {
     await coreFixture(page, theme);
     await page.goto("/images");
     await waitForKovaHydration(page);
-    const prompt = page.getByRole("textbox", { name: "Describe the image to generate" });
+    const prompt = page.getByRole("textbox", {
+      name: "Describe the image to generate",
+    });
     await prompt.fill("Keep this unsaved image idea");
     await openCurrentSettings(page);
     const modal = page.getByRole("dialog", { name: "Settings", exact: true });
     await contained(page, modal);
-    const close = modal.getByRole("button", { name: "Close settings", exact: true });
+    const close = modal.getByRole("button", {
+      name: "Close settings",
+      exact: true,
+    });
     await usableClose(page, close);
     await focusStaysInside(page, modal);
     await close.click();
@@ -177,16 +215,24 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/apps");
     await waitForKovaHydration(page);
     const card = page.locator('[data-plugin-id="github"]');
-    const details = card.getByRole("button", { name: "Coming soon GitHub", exact: true });
+    const details = card.getByRole("button", {
+      name: "Coming soon GitHub",
+      exact: true,
+    });
     await expect(details).toBeVisible();
     await expect(details).toHaveAttribute("data-coming-soon", "true");
     await details.click(); // This card action opens metadata; it never connects a provider.
     const modal = page.getByRole("dialog", { name: "GitHub", exact: true });
     await contained(page, modal);
-    await expect(modal.getByRole("heading", { name: "GitHub", exact: true })).toBeInViewport({
+    await expect(
+      modal.getByRole("heading", { name: "GitHub", exact: true }),
+    ).toBeInViewport({
       ratio: 1,
     });
-    const close = modal.getByRole("button", { name: "Close connection details", exact: true });
+    const close = modal.getByRole("button", {
+      name: "Close connection details",
+      exact: true,
+    });
     await usableClose(page, close);
     const scrolling = await modal.evaluate((element) => ({
       overflow: getComputedStyle(element).overflowY,
@@ -224,7 +270,9 @@ for (const theme of ["light", "dark"] as const) {
       url: `https://example.invalid/review/${index + 1}`,
       domain: "example.invalid",
       snippet:
-        "This local supporting passage exercises the real scrollable evidence surface. ".repeat(5),
+        "This local supporting passage exercises the real scrollable evidence surface. ".repeat(
+          5,
+        ),
       retrievedAt: "2026-10-17T12:00:00Z",
     }));
     await page.route("**/api/chat", (route) => {
@@ -244,7 +292,9 @@ for (const theme of ["light", "dark"] as const) {
     await page
       .getByRole("textbox", { name: "Message KovaGPT", exact: true })
       .fill("Show the synthetic source.");
-    await page.getByRole("button", { name: "Send message", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Send message", exact: true })
+      .click();
     const citation = page.getByRole("button", {
       name: "View source: Synthetic source 1",
       exact: true,
@@ -256,17 +306,24 @@ for (const theme of ["light", "dark"] as const) {
     const box = (await drawer.boundingBox())!;
     expect(box.x + box.width).toBeCloseTo(page.viewportSize()!.width, 1);
     expect(box.y).toBeCloseTo(0, 1);
-    await expect(drawer.getByRole("heading", { name: "Sources", exact: true })).toBeInViewport({
+    await expect(
+      drawer.getByRole("heading", { name: "Sources", exact: true }),
+    ).toBeInViewport({
       ratio: 1,
     });
     const close = drawer.getByRole("button", { name: "Close", exact: true });
     await usableClose(page, close);
     const list = drawer.locator("ol");
     await expect(list).toHaveCSS("overflow-y", "auto");
-    expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
-      true,
-    );
-    const last = drawer.getByRole("heading", { name: "Synthetic source 12", exact: true });
+    expect(
+      await list.evaluate(
+        (element) => element.scrollHeight > element.clientHeight,
+      ),
+    ).toBe(true);
+    const last = drawer.getByRole("heading", {
+      name: "Synthetic source 12",
+      exact: true,
+    });
     await last.scrollIntoViewIfNeeded();
     await expect(last).toBeInViewport({ ratio: 1 });
     await usableClose(page, close);

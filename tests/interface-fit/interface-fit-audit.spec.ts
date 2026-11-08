@@ -52,30 +52,41 @@ async function expectContained(page: Page, route: string) {
     await expect(
       main.getByRole("article", { name: "KovaGPT response", exact: true }),
     ).toBeVisible();
-    await expect(main.getByRole("button", { name: "Activity", exact: true })).toBeVisible();
-    await expect(main.getByRole("button", { name: "Share chat", exact: true })).toBeVisible();
-    await expect(main.getByRole("button", { name: "More chat actions", exact: true })).toHaveCount(
-      0,
-    );
+    await expect(
+      main.getByRole("button", { name: "Activity", exact: true }),
+    ).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "Share chat", exact: true }),
+    ).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "More chat actions", exact: true }),
+    ).toHaveCount(0);
   }
   await page.evaluate(() => document.fonts.ready);
   const layout = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,
     scroll: document.documentElement.scrollWidth,
   }));
-  expect(layout.scroll, `${route}: page must not pan sideways`).toBeLessThanOrEqual(
-    layout.width + 1,
-  );
+  expect(
+    layout.scroll,
+    `${route}: page must not pan sideways`,
+  ).toBeLessThanOrEqual(layout.width + 1);
   // Native controls must not depend on clipping at the page edge. Local table/menu
   // scrollers are allowed and are exercised by their own interaction tests.
-  const controls = main.locator("button:visible, input:visible, textarea:visible, select:visible");
+  const controls = main.locator(
+    "button:visible, input:visible, textarea:visible, select:visible",
+  );
   const outside = await controls.evaluateAll((nodes) =>
     nodes.flatMap((node) => {
       const box = node.getBoundingClientRect();
       const style = getComputedStyle(node);
-      if (!box.width || !box.height || style.visibility !== "visible") return [];
+      if (!box.width || !box.height || style.visibility !== "visible")
+        return [];
       // The support form's non-focusable, hidden anti-spam field is intentional.
-      if (node.getAttribute("aria-hidden") === "true" && node.getAttribute("tabindex") === "-1")
+      if (
+        node.getAttribute("aria-hidden") === "true" &&
+        node.getAttribute("tabindex") === "-1"
+      )
         return [];
       let ancestor = node.parentElement;
       while (ancestor && ancestor !== document.body) {
@@ -90,10 +101,13 @@ async function expectContained(page: Page, route: string) {
           return [];
         ancestor = ancestor.parentElement;
       }
-      return box.left < -1 || box.right > document.documentElement.clientWidth + 1
+      return box.left < -1 ||
+        box.right > document.documentElement.clientWidth + 1
         ? [
             {
-              name: node.getAttribute("aria-label") || node.textContent?.trim().slice(0, 70),
+              name:
+                node.getAttribute("aria-label") ||
+                node.textContent?.trim().slice(0, 70),
               left: box.left,
               right: box.right,
             },
@@ -108,7 +122,9 @@ if (scope === "public") {
   for (const route of PUBLIC_REVIEW_PATHS) {
     test(`public page fits: ${route}`, async ({ page }) => {
       const errors = watchErrors(page);
-      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      const response = await page.goto(route, {
+        waitUntil: "domcontentloaded",
+      });
       expect(response?.status(), route).toBe(200);
       await waitForKovaHydration(page);
       await expectContained(page, route);
@@ -122,7 +138,9 @@ if (scope === "public") {
     await coreFixture(page, "dark", "plus");
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const toolbar = page.getByRole("toolbar", { name: "Response actions", exact: true }).last();
+    const toolbar = page
+      .getByRole("toolbar", { name: "Response actions", exact: true })
+      .last();
     await toolbar.scrollIntoViewIfNeeded();
     const dimensions = await toolbar.evaluate((element) => ({
       visible: element.clientWidth,
@@ -135,28 +153,43 @@ if (scope === "public") {
       const box = await button.boundingBox();
       expect(box).not.toBeNull();
       expect(box!.x).toBeGreaterThanOrEqual(bounds!.x - 1);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 1);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(
+        bounds!.x + bounds!.width + 1,
+      );
     }
     await page.screenshot({ path: info.outputPath("response-actions.png") });
     await page.route("**/api/speech", (route) =>
-      route.fulfill({ status: 403, json: { error: "speech_model_not_eligible" } }),
+      route.fulfill({
+        status: 403,
+        json: { error: "speech_model_not_eligible" },
+      }),
     );
-    await toolbar.getByRole("button", { name: "Read aloud", exact: true }).click();
+    await toolbar
+      .getByRole("button", { name: "Read aloud", exact: true })
+      .click();
     await expect(toolbar.getByRole("status")).toHaveText(
       "Read aloud is available for saved replies from approved OpenAI models.",
     );
     await expectContained(page, "response speech error");
     expect(
-      await toolbar.evaluate((element) => element.scrollWidth - element.clientWidth),
+      await toolbar.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
     ).toBeLessThanOrEqual(1);
-    await page.screenshot({ path: info.outputPath("response-actions-error.png") });
+    await page.screenshot({
+      path: info.outputPath("response-actions-error.png"),
+    });
   });
 
-  test("chat sync recovery controls stay inside their notice", async ({ page }, info) => {
+  test("chat sync recovery controls stay inside their notice", async ({
+    page,
+  }, info) => {
     await coreFixture(page, "dark", "plus");
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    const notice = page.getByLabel("Chat history synchronization", {
+      exact: true,
+    });
     await expect(notice).toBeVisible();
     // Measure recovery controls and their scroll reach in one rendered snapshot.
     await expect(async () => {
@@ -170,7 +203,9 @@ if (scope === "public") {
         element.scrollTop = element.scrollHeight;
         const lastButton = buttons.at(-1)?.getBoundingClientRect();
         const reachesLastButton = Boolean(
-          lastButton && lastButton.top >= bounds.top - 1 && lastButton.bottom <= bounds.bottom + 1,
+          lastButton &&
+          lastButton.top >= bounds.top - 1 &&
+          lastButton.bottom <= bounds.bottom + 1,
         );
         element.scrollTop = originalScroll;
         return {
@@ -181,7 +216,11 @@ if (scope === "public") {
           reachesLastButton,
           buttons: buttons.map((button) => {
             const box = button.getBoundingClientRect();
-            return { name: button.textContent?.trim(), left: box.left, right: box.right };
+            return {
+              name: button.textContent?.trim(),
+              left: box.left,
+              right: box.right,
+            };
           }),
         };
       });
@@ -215,12 +254,17 @@ if (scope === "public") {
         heldRequests++;
         await pending;
       }
-      await route.fulfill({ status: 503, json: { error: "Synthetic offline history" } });
+      await route.fulfill({
+        status: 503,
+        json: { error: "Synthetic offline history" },
+      });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await page.evaluate(() => document.fonts.ready);
-    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    const notice = page.getByLabel("Chat history synchronization", {
+      exact: true,
+    });
     await expect(
       notice.getByRole("button", { name: "Retry chat sync", exact: true }),
     ).toBeVisible();
@@ -233,24 +277,32 @@ if (scope === "public") {
         return {
           height: notice.getBoundingClientRect().height,
           status: notice.querySelector('[role="status"]')?.textContent,
-          composerTop: document.querySelector(".spec400-composer")!.getBoundingClientRect().top,
-          buttons: Array.from(notice.querySelectorAll("button")).map((button) => ({
-            name: button.textContent?.trim(),
-            width: button.getBoundingClientRect().width,
-            height: button.getBoundingClientRect().height,
-          })),
+          composerTop: document
+            .querySelector(".spec400-composer")!
+            .getBoundingClientRect().top,
+          buttons: Array.from(notice.querySelectorAll("button")).map(
+            (button) => ({
+              name: button.textContent?.trim(),
+              width: button.getBoundingClientRect().width,
+              height: button.getBoundingClientRect().height,
+            }),
+          ),
         };
       });
     const before = await measure();
     hold = true;
     try {
-      await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
+      await expect
+        .poll(() => heldRequests, { timeout: 10_000 })
+        .toBeGreaterThan(0);
       await expect(notice).toHaveAttribute("aria-busy", "true");
       const during = await measure();
       expect(during.status).toBe(before.status);
       expect(during.buttons).toEqual(before.buttons);
       expect(Math.abs(during.height - before.height)).toBeLessThanOrEqual(1);
-      expect(Math.abs(during.composerTop - before.composerTop)).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(during.composerTop - before.composerTop),
+      ).toBeLessThanOrEqual(1);
     } finally {
       release();
     }
@@ -260,7 +312,9 @@ if (scope === "public") {
     expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
   });
 
-  test("conversation loading keeps composer at the bottom", async ({ page }, info) => {
+  test("conversation loading keeps composer at the bottom", async ({
+    page,
+  }, info) => {
     await coreFixture(page, "dark", "plus");
     let release!: () => void;
     let heldModules = 0;
@@ -278,20 +332,28 @@ if (scope === "public") {
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       await expect.poll(() => heldModules).toBeGreaterThan(0);
-      await expect(page.locator("[data-chat-transcript-loading]")).toBeVisible();
+      await expect(
+        page.locator("[data-chat-transcript-loading]"),
+      ).toBeVisible();
       await expect(
         page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
       ).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
-      loadingBottom = await dock.evaluate((node) => node.getBoundingClientRect().bottom);
+      loadingBottom = await dock.evaluate(
+        (node) => node.getBoundingClientRect().bottom,
+      );
       await page.screenshot({ path: info.outputPath("chat-loading.png") });
     } finally {
       release();
     }
     await expect(page.locator("[data-chat-transcript-loading]")).toHaveCount(0);
     await expectContained(page, "/");
-    const loadedBottom = await dock.evaluate((node) => node.getBoundingClientRect().bottom);
-    expect(loadedBottom).toBeGreaterThanOrEqual(page.viewportSize()!.height - 24);
+    const loadedBottom = await dock.evaluate(
+      (node) => node.getBoundingClientRect().bottom,
+    );
+    expect(loadedBottom).toBeGreaterThanOrEqual(
+      page.viewportSize()!.height - 24,
+    );
     expect(Math.abs(loadingBottom - loadedBottom)).toBeLessThanOrEqual(1);
   });
 
@@ -306,7 +368,9 @@ if (scope === "public") {
         expect(errors, `${route}: client exceptions`).toEqual([]);
         if (["/", "/library", "/settings/appearance"].includes(route)) {
           await page.screenshot({
-            path: info.outputPath(`${theme}-${route.replaceAll("/", "-") || "home"}.png`),
+            path: info.outputPath(
+              `${theme}-${route.replaceAll("/", "-") || "home"}.png`,
+            ),
           });
         }
       });
@@ -319,12 +383,23 @@ if (scope === "public") {
     await coreFixture(page, "dark", "plus");
     await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const size = page.getByRole("slider", { name: "Interface size", exact: true });
-    const navigation = page.getByRole("slider", { name: "Settings sidebar width", exact: true });
-    for (const [slider, min, max] of [
-      [size, "85", "125"],
-      [navigation, "200", "440"],
-    ] as const) {
+    const size = page.getByRole("slider", {
+      name: "Interface size",
+      exact: true,
+    });
+    const navigation = page.getByRole("slider", {
+      name: "Settings sidebar width",
+      exact: true,
+    });
+    const phone = page.viewportSize()!.width < 768;
+    const controls = phone
+      ? ([[size, "85", "125"]] as const)
+      : ([
+          [size, "85", "125"],
+          [navigation, "200", "440"],
+        ] as const);
+    if (phone) await expect(navigation).toBeHidden();
+    for (const [slider, min, max] of controls) {
       await slider.scrollIntoViewIfNeeded();
       await slider.press("Home");
       await expect(slider).toHaveAttribute("aria-valuenow", min);
@@ -333,15 +408,20 @@ if (scope === "public") {
       await slider.scrollIntoViewIfNeeded();
       const box = (await slider.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(-1);
-      expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(
+        page.viewportSize()!.width + 1,
+      );
     }
     await expectContained(page, "/settings/appearance at 125%");
     await page
       .getByRole("button", { name: "Reset appearance", exact: true })
       .scrollIntoViewIfNeeded();
-    await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Reset appearance", exact: true })
+      .click();
     await expect(size).toHaveAttribute("aria-valuenow", "100");
-    await expect(navigation).toHaveAttribute("aria-valuenow", "280");
+    if (!phone)
+      await expect(navigation).toHaveAttribute("aria-valuenow", "280");
     await page.screenshot({ path: info.outputPath("appearance-reset.png") });
   });
 }

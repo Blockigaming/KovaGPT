@@ -30,29 +30,36 @@ test.beforeEach(async ({ page }, testInfo) => {
     ({ storageKeyPatternSource, observedStorageKey, user }) => {
       localStorage.clear();
       localStorage.setItem("kova-theme-mode", "light");
-      if (new URLSearchParams(location.search).get("e2e-settings-auth") !== "1") return;
+      if (new URLSearchParams(location.search).get("e2e-settings-auth") !== "1")
+        return;
 
       const base64Url = (value: unknown) =>
-        btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+        btoa(JSON.stringify(value))
+          .replaceAll("+", "-")
+          .replaceAll("/", "_")
+          .replace(/=+$/, "");
       const storageKeyPattern = new RegExp(storageKeyPatternSource);
       const nativeGetItem = Storage.prototype.getItem;
       Storage.prototype.getItem = function (key: string) {
         const match = storageKeyPattern.exec(key);
-        if (this !== localStorage || !match) return nativeGetItem.call(this, key);
+        if (this !== localStorage || !match)
+          return nativeGetItem.call(this, key);
 
         const now = Math.floor(Date.now() / 1000);
         const expiresAt = now + 60 * 60;
-        const accessToken = `${base64Url({ alg: "HS256", typ: "JWT" })}.${base64Url({
-          iss: `https://${match[1]}.supabase.co/auth/v1`,
-          aud: "authenticated",
-          role: "authenticated",
-          sub: user.id,
-          email: user.email,
-          aal: "aal1",
-          amr: [{ method: "password", timestamp: now }],
-          iat: now,
-          exp: expiresAt,
-        })}.c2ln`;
+        const accessToken = `${base64Url({ alg: "HS256", typ: "JWT" })}.${base64Url(
+          {
+            iss: `https://${match[1]}.supabase.co/auth/v1`,
+            aud: "authenticated",
+            role: "authenticated",
+            sub: user.id,
+            email: user.email,
+            aal: "aal1",
+            amr: [{ method: "password", timestamp: now }],
+            iat: now,
+            exp: expiresAt,
+          },
+        )}.c2ln`;
         sessionStorage.setItem(observedStorageKey, key);
         return JSON.stringify({
           access_token: accessToken,
@@ -108,11 +115,15 @@ test("guest Settings URLs require an account with a consistent first-paint surfa
   await expect(
     page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("combobox", { name: "Theme", exact: true }),
+  ).toHaveCount(0);
   const frames = await surface.evaluate(async (node) => {
     const colors: string[] = [];
     for (let i = 0; i < 12; i += 1) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
       colors.push(getComputedStyle(node).backgroundColor);
     }
     return colors;
@@ -132,7 +143,9 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   // The authenticated onboarding lookup settles after hydration. Wait for its
   // mocked empty-state dialog instead of racing a one-shot visibility check;
   // otherwise it can mount over Settings between that check and the click.
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  await onboarding
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .catch(() => undefined);
   if (await onboarding.isVisible().catch(() => false)) {
     await onboarding.getByRole("button", { name: "Close" }).click();
     await expect(onboarding).toHaveCount(0);
@@ -141,12 +154,16 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
     (key) => sessionStorage.getItem(key),
     observedAuthStorageKey,
   );
-  const storageMatch = supabaseAuthStorageKeyPattern.exec(runtimeStorageKey ?? "");
+  const storageMatch = supabaseAuthStorageKeyPattern.exec(
+    runtimeStorageKey ?? "",
+  );
   expect(
     storageMatch,
     "the deployed Supabase client should request its project-scoped auth key",
   ).not.toBeNull();
-  expect([...mockedBackendOrigins]).toEqual([`https://${storageMatch![1]}.supabase.co`]);
+  expect([...mockedBackendOrigins]).toEqual([
+    `https://${storageMatch![1]}.supabase.co`,
+  ]);
 
   const settingsDialog = await openCurrentSettings(page);
   const navigation = settingsDialog.getByRole("complementary", {
@@ -154,20 +171,35 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
     exact: true,
   });
   if (!(await navigation.isVisible())) {
-    await settingsDialog.getByRole("button", { name: "Back to settings", exact: true }).click();
+    await settingsDialog
+      .getByRole("button", { name: "Back to settings", exact: true })
+      .click();
   }
   await expect(navigation).toBeVisible();
   const options = navigation.getByRole("tab");
-  await expect(options).toHaveCount(22);
-  await expect(navigation.getByRole("tab", { name: "Archived chats", exact: true })).toHaveCount(0);
-  await expect(navigation.getByRole("tab", { name: "Cloud Browser", exact: true })).toBeVisible();
+  await expect(options).toHaveCount(10);
+  await expect(
+    navigation.getByRole("tab", { name: "Archived chats", exact: true }),
+  ).toHaveCount(0);
   for (let index = 0; index < (await options.count()); index++) {
     await options.nth(index).scrollIntoViewIfNeeded();
     await expect(options.nth(index)).toBeVisible();
     // Browser layout can report a subpixel clipped edge after scrolling.
     await expect(options.nth(index)).toBeInViewport({ ratio: 0.99 });
     expect(
-      await options.nth(index).evaluate((element: HTMLElement) => element.offsetHeight),
+      await options
+        .nth(index)
+        .evaluate((element: HTMLElement) => element.offsetHeight),
     ).toBeGreaterThanOrEqual(44);
   }
+  await navigation
+    .getByRole("tab", { name: "Connections", exact: true })
+    .click();
+  await settingsDialog
+    .getByRole("navigation", { name: "Connections sections" })
+    .getByRole("button", { name: "Cloud Browser", exact: true })
+    .click();
+  await expect(
+    settingsDialog.getByRole("heading", { name: "Cloud Browser", exact: true }),
+  ).toBeVisible();
 });
