@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Copy, Download, ExternalLink, EyeOff, ImagePlus } from "lucide-react";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -22,6 +22,8 @@ import {
   principalScopedStorageKey,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+
+const ChatImageViewer = lazy(() => import("./ChatImageViewer"));
 
 export type ChatImageActions = {
   ownerId: string | null;
@@ -71,6 +73,7 @@ export function ChatImage({
       : null;
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
+  const [viewerMarker, setViewerMarker] = useState<string | null>(null);
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const copyOnly = isMobile || touchMenu;
@@ -95,9 +98,11 @@ export function ChatImage({
     };
     setVisibility({ marker, hidden: hiddenMarkers(key).includes(marker) });
     setBusy(false);
+    setViewerMarker(null);
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, actions?.ownerId ?? null)) return;
       lifetime.current.generation++;
+      setViewerMarker(null);
       setVisibility({ marker, hidden: false });
       setBusy(false);
     };
@@ -188,11 +193,17 @@ export function ChatImage({
             decoding="async"
             referrerPolicy="no-referrer"
             tabIndex={0}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
+            onClick={() => setViewerMarker(marker)}
             style={{ WebkitTouchCallout: "none" }}
             className={imageClassName}
             onPointerDown={(event) => setTouchMenu(event.pointerType !== "mouse")}
             onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setViewerMarker(marker);
+                return;
+              }
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
               const box = event.currentTarget.getBoundingClientRect();
@@ -208,6 +219,21 @@ export function ChatImage({
           />
         </ContextMenuTrigger>
         {children}
+        {viewerMarker === marker && (
+          <Suspense fallback={null}>
+            <ChatImageViewer
+              key={marker}
+              src={src}
+              alt={alt}
+              onClose={() => setViewerMarker(null)}
+              onReturnFocus={() => {
+                if (lifetime.current.mounted && lifetime.current.marker === marker)
+                  imageRef.current?.focus({ preventScroll: true });
+              }}
+              onDownload={() => void run((allowed) => downloadChatImage(src, allowed))}
+            />
+          </Suspense>
+        )}
       </span>
       <ContextMenuContent className="w-60" aria-label="Image actions">
         {!copyOnly ? (

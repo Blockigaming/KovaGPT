@@ -92,11 +92,11 @@ function fixture() {
   };
 }
 
-test("quick deliberate right swipe closes once and removes listeners on cleanup", () => {
+test("quick deliberate left swipe closes once and removes listeners on cleanup", () => {
   const f = fixture();
   f.dispatch("touchstart");
-  f.dispatch("touchmove", { x: 310, time: 100 });
-  f.dispatch("touchmove", { x: 320, time: 110 });
+  f.dispatch("touchmove", { x: 70, time: 100 });
+  f.dispatch("touchmove", { x: 60, time: 110 });
   assert.equal(f.closed(), 1);
   f.cleanup();
   assert.equal(f.listeners.size, 0);
@@ -127,7 +127,7 @@ for (const scenario of [
     if (scenario === "vertical scroll") f.dispatch("touchmove", { x: 190, y: 220, time: 50 });
     if (scenario === "multiple touches") f.dispatch("touchmove", { count: 2, time: 50 });
     if (scenario === "cancelled") f.dispatch("touchcancel");
-    f.dispatch("touchmove", { x: 310, time: scenario === "long press" ? 900 : 100 });
+    f.dispatch("touchmove", { x: 70, time: scenario === "long press" ? 900 : 100 });
     assert.equal(f.closed(), 0);
     f.cleanup();
   });

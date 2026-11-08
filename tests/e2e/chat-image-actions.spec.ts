@@ -84,6 +84,49 @@ for (const role of ["user", "assistant"] as const) {
       .toBe(120);
     const original = await image.getAttribute("src");
     const expectedBytes = Buffer.from(original!.split(",", 2)[1], "base64");
+    await image.click();
+    const viewer = page.getByRole("dialog", { name: "Image preview", exact: true });
+    await expect(viewer).toBeVisible();
+    await expect(viewer.getByRole("img")).toHaveAttribute("src", original!);
+    if (page.viewportSize()!.width < 1024) {
+      const canvas = (await viewer.locator("[data-image-viewer-canvas]").boundingBox())!;
+      const x = canvas.x + canvas.width / 2,
+        y = canvas.y + canvas.height / 2;
+      const touch = await page.context().newCDPSession(page);
+      try {
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [
+            { x: x - 30, y },
+            { x: x + 30, y },
+          ],
+        });
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [
+            { x: x - 60, y },
+            { x: x + 60, y },
+          ],
+        });
+        await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await expect(viewer.getByRole("button", { name: "Reset image zoom" })).not.toHaveText(
+          "100%",
+        );
+        await viewer.getByRole("button", { name: "Reset image zoom" }).click();
+      } finally {
+        await touch.detach();
+      }
+    }
+    await viewer.getByRole("button", { name: "Zoom in", exact: true }).click();
+    await expect(viewer.getByRole("button", { name: "Reset image zoom" })).toHaveText("150%");
+    await viewer.getByRole("button", { name: "Reset image zoom" }).click();
+    await expect(viewer.getByRole("button", { name: "Zoom out", exact: true })).toBeDisabled();
+    const viewerBounds = (await viewer.boundingBox())!;
+    expect(viewerBounds.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+    expect(viewerBounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    await viewer.getByRole("button", { name: "Close image preview" }).click();
+    await expect(viewer).toBeHidden();
+    await expect(image).toBeFocused();
     const menu = page.getByRole("menu", { name: "Image actions", exact: true });
     const open = async () => {
       await image.scrollIntoViewIfNeeded();

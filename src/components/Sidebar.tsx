@@ -221,6 +221,13 @@ export function Sidebar({
   } | null>(null);
   const selectTimerRef = useRef<number | null>(null);
   const selectionPointerTypeRef = useRef<string | null>(null);
+  const [chatMenuId, setChatMenuId] = useState<string | null>(null);
+  const longPress = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const longPressOpened = useRef(false);
+  const cancelLongPress = () => {
+    if (longPress.current) window.clearTimeout(longPress.current.timer);
+    longPress.current = null;
+  };
   const renameOperationRef = useRef<object | null>(null);
   const accountRef = useRef(user?.id);
   accountRef.current = user?.id;
@@ -308,6 +315,11 @@ export function Sidebar({
   const chatActionContext = `${user?.id ?? ""}:${isLoaded}:${isSignedIn}:${pathname}:${open}`;
   const chatActionContextRef = useRef(chatActionContext);
   chatActionContextRef.current = chatActionContext;
+  useEffect(() => {
+    setChatMenuId(null);
+    longPressOpened.current = false;
+    return cancelLongPress;
+  }, [chatActionContext, open]);
   useEffect(() => {
     renameReturnFocusRef.current = null;
     archiveReturnFocusRef.current = null;
@@ -539,6 +551,7 @@ export function Sidebar({
           return;
       }
       const touch = event.touches[0];
+      if (touch.clientX > 24) return;
       gesture = {
         id: touch.identifier,
         x: touch.clientX,
@@ -561,7 +574,7 @@ export function Sidebar({
       }
       const dx = touch.clientX - gesture.x;
       const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 750 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
+      if (event.timeStamp - gesture.time > 750 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
         reset();
         return;
       }
@@ -583,7 +596,7 @@ export function Sidebar({
     };
   }, [open]);
 
-  // Close the mobile drawer with a deliberate right swipe, without stealing
+  // Close the mobile drawer with a deliberate left swipe, without stealing
   // vertical scrolling or horizontal gestures from nested scrollable controls.
   useEffect(() => {
     if (!open) return;
@@ -938,8 +951,47 @@ export function Sidebar({
               className="kova-chat-row-main"
               onPointerDown={(event) => {
                 selectionPointerTypeRef.current = event.pointerType;
+                cancelLongPress();
+                longPressOpened.current = false;
+                if (
+                  !event.isPrimary ||
+                  (event.pointerType !== "touch" && event.pointerType !== "pen")
+                )
+                  return;
+                const context = chatActionContextRef.current;
+                longPress.current = {
+                  x: event.clientX,
+                  y: event.clientY,
+                  timer: window.setTimeout(() => {
+                    longPress.current = null;
+                    if (chatActionContextRef.current !== context) return;
+                    longPressOpened.current = true;
+                    cancelPendingSelection();
+                    setChatMenuId(conversation.id);
+                  }, 500),
+                };
+              }}
+              onPointerMove={(event) => {
+                const start = longPress.current;
+                if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10)
+                  cancelLongPress();
+              }}
+              onPointerUp={cancelLongPress}
+              onPointerCancel={cancelLongPress}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                cancelLongPress();
+                cancelPendingSelection();
+                longPressOpened.current = true;
+                setChatMenuId(conversation.id);
               }}
               onClick={(event) => {
+                cancelLongPress();
+                if (longPressOpened.current && event.detail > 0) {
+                  longPressOpened.current = false;
+                  event.preventDefault();
+                  return;
+                }
                 const pointerType = selectionPointerTypeRef.current;
                 const fineMouse =
                   pointerType === "mouse" ||
@@ -985,7 +1037,11 @@ export function Sidebar({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DropdownMenu modal={false}>
+      <DropdownMenu
+        modal={false}
+        open={chatMenuId === conversation.id}
+        onOpenChange={(next) => setChatMenuId(next ? conversation.id : null)}
+      >
         <DropdownMenuTrigger asChild>
           <button
             type="button"

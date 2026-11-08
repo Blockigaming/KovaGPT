@@ -1,6 +1,5 @@
 /**
- * Owner-specified gesture directions intentionally invert the usual drawer:
- * right-to-left opens the closed drawer; left-to-right closes it.
+ * Touch drawer: swipe right from the left edge to open, swipe left to close.
  */
 export function isClearSidebarSwipe({ open, dx, dy, elapsedMs }) {
   if (![dx, dy, elapsedMs].every(Number.isFinite)) return false;
@@ -8,6 +7,6 @@ export function isClearSidebarSwipe({ open, dx, dy, elapsedMs }) {
   const horizontal = Math.abs(dx);
   const vertical = Math.abs(dy);
   return (
-    horizontal >= 88 && vertical <= 48 && horizontal >= vertical * 2 && (open ? dx > 0 : dx < 0)
+    horizontal >= 88 && vertical <= 48 && horizontal >= vertical * 2 && (open ? dx < 0 : dx > 0)
   );
 }

@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { isClearSidebarSwipe } from "../../src/lib/sidebar-swipe.mjs";
 
-test("right-to-left opens a collapsed mobile drawer", () => {
-  assert.equal(isClearSidebarSwipe({ open: false, dx: -110, dy: 10, elapsedMs: 280 }), true);
-  assert.equal(isClearSidebarSwipe({ open: false, dx: 110, dy: 10, elapsedMs: 280 }), false);
+test("left-to-right opens a collapsed mobile drawer", () => {
+  assert.equal(isClearSidebarSwipe({ open: false, dx: 110, dy: 10, elapsedMs: 280 }), true);
+  assert.equal(isClearSidebarSwipe({ open: false, dx: -110, dy: 10, elapsedMs: 280 }), false);
 });
-test("left-to-right closes an expanded mobile drawer", () => {
-  assert.equal(isClearSidebarSwipe({ open: true, dx: 110, dy: 10, elapsedMs: 280 }), true);
-  assert.equal(isClearSidebarSwipe({ open: true, dx: -110, dy: 10, elapsedMs: 280 }), false);
+test("right-to-left closes an expanded mobile drawer", () => {
+  assert.equal(isClearSidebarSwipe({ open: true, dx: -110, dy: 10, elapsedMs: 280 }), true);
+  assert.equal(isClearSidebarSwipe({ open: true, dx: 110, dy: 10, elapsedMs: 280 }), false);
 });
 test("vertical, incomplete and stale gestures are ignored", () => {
   for (const args of [

@@ -159,8 +159,13 @@ if (scope === "public") {
     });
   });
 
-  test("chat sync recovery controls stay inside their notice", async ({ page }, info) => {
+  test("actionable chat sync recovery controls stay inside their notice", async ({
+    page,
+  }, info) => {
     await coreFixture(page, "dark", "plus");
+    await page.route("**/api/chat/history**", (route) =>
+      route.fulfill({ status: 401, json: { error: "Authentication required" } }),
+    );
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const notice = page.getByLabel("Chat history synchronization", {

@@ -717,3 +717,11 @@ This owner update supersedes the earlier chat archive, Trash, sidebar Images, an
 ### November 8 mobile interaction refinement
 
 Phones and compact tablets use a separate two-row chat header: the conversation title and new-chat action stay on the navigation row, while offer/share/activity controls occupy a touch toolbar below. Activity opens as a viewport-anchored, swipe-dismissable sheet with safe-area padding, a visible close control, modal focus isolation and scroll containment. Desktop retains its anchored popover. Content ordering and account restrictions are shared, rather than duplicated or relaxed for phones.
+
+### November 8 mobile acceptance refinement (PR #631)
+
+- Phone navigation overlays the workspace without translating the conversation. A rightward swipe beginning within 24 CSS pixels of the left edge opens it; a leftward swipe closes it. Selection, horizontal scrollers, vertical scrolling, multi-touch, dialogs, and stale gestures retain priority.
+- Touch or pen holds on a chat row open its existing action menu after 500 ms. Moving more than 10 pixels cancels the hold; account, route, and drawer changes cancel pending actions. Desktop users retain explicit controls and gain the same menu through right-click.
+- Chat images open an accessible full-screen viewer with bounded pinch/pan, visible zoom/reset controls, safe-area spacing, explicit saving, and focus restoration. The viewer closes across principal/context reset and resets zoom when the viewport changes. Existing context-menu actions remain available.
+- Touch sheets use a 260 ms entrance and 200 ms exit; pointer menus use shorter desktop timings and touch-specific timings. Reduced-motion settings disable their animations.
+- The complete owner attachment is tracked in `docs/mobile-desktop-acceptance-ledger.md`. Unreviewed and conditional native capabilities are not accepted merely because they appear in the ledger.

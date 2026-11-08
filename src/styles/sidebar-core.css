@@ -683,7 +683,7 @@ button.kova-auth-sign-up:hover {
   }
   .kova-assistant:has(.kova-sidebar[data-state="open"]) > .kova-chat-main,
   .kova-app-content[data-sidebar="open"] {
-    transform: translateX(min(360px, calc(100vw - 80px)));
+    transform: none;
     /* The sidebar, not the conversation pane, owns the rounded corners. */
   }
 }
