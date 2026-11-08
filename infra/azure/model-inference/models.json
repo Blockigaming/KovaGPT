@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "deploymentStatus": "not_deployed",
+  "models": [
+    {
+      "product": "Kova Argon 4.6",
+      "alias": "kova-argon-4.6",
+      "repository": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "license": "MIT",
+      "recipe": "https://recipes.vllm.ai/deepseek-ai/DeepSeek-V4-Flash",
+      "qualificationCandidate": "Standard_ND96isr_H200_v5"
+    },
+    {
+      "product": "Kova Neon 4.6",
+      "alias": "kova-neon-4.6",
+      "repository": "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
+      "license": "Llama 4 Community License",
+      "recipe": "https://huggingface.co/meta-llama/Llama-4-Maverick-17B-128E-Instruct",
+      "qualificationCandidate": "Standard_ND96isr_H200_v5"
+    },
+    {
+      "product": "Kova Xenon 5",
+      "alias": "kova-xenon-5",
+      "repository": "moonshotai/Kimi-K3",
+      "license": "Kimi K3 License",
+      "recipe": "https://recipes.vllm.ai/moonshotai/Kimi-K3",
+      "qualificationCandidate": "Standard_ND128isr_GB300_v6",
+      "qualificationVmCount": 2,
+      "note": "Eight GPUs span two Azure four-GPU VMs; topology and runtime require qualification. Not a tested Azure deployment."
+    }
+  ]
+}
