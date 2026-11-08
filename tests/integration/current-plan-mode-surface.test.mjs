@@ -9,7 +9,10 @@ test("current Chat packaging stays consistent across server, picker, composer an
     selector = read("src/components/ResponsiveModelSelector.tsx"),
     chat = read("src/routes/api/chat.ts");
   assert.match(entitlements, /free:\s*Object\.freeze\(\["instant", "thinking"\]\)/);
-  assert.match(entitlements, /plus:\s*Object\.freeze\(\["instant", "thinking", "high"\]\)/);
+  assert.match(
+    entitlements,
+    /plus:\s*Object\.freeze\(\["instant", "thinking", "high", "extra_high", "max"\]\)/,
+  );
   assert.match(entitlements, /"extra_high", "max", "ultra"/);
   assert.match(selector, /if \(userTier === "free"\)/);
   assert.match(selector, /aria-pressed=\{mode === "thinking"\}/);
