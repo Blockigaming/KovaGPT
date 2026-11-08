@@ -15,9 +15,9 @@ import urllib.parse
 import urllib.request
 
 
-def azure(*args):
+def azure(*args, timeout=90):
     return json.loads(subprocess.check_output(
-        ["az", *args, "--only-show-errors", "-o", "json"], timeout=90
+        ["az", *args, "--only-show-errors", "-o", "json"], timeout=timeout
     ))
 
 
@@ -33,7 +33,10 @@ def public_json(url):
 
 
 def checkpoint(model):
-    info = public_json("https://huggingface.co/api/models/" + model["repository"] + "?blobs=true")
+    info = public_json("https://huggingface.co/api/models/" + model["repository"]
+                       + "/revision/" + model["revision"] + "?blobs=true")
+    if info.get("sha") != model["revision"]:
+        raise ValueError("Checkpoint revision mismatch")
     weights = [f for f in info.get("siblings", []) if f.get("rfilename", "").endswith(".safetensors")]
     sizes = [f.get("lfs", {}).get("size", f.get("size")) for f in weights]
     complete = bool(weights) and all(isinstance(n, int) and n > 0 for n in sizes)
@@ -82,7 +85,13 @@ def prices(location, sku):
 
 def inventory(location, skus):
     quotas = azure("vm", "list-usage", "-l", location)
-    offers = azure("vm", "list-skus", "-l", location, "--resource-type", "virtualMachines", "--all")
+    sku_error = None
+    try:
+        offers = azure("vm", "list-skus", "-l", location, "--resource-type", "virtualMachines",
+                       "--size", "Standard_ND", "--all", timeout=30)
+    except Exception as error:
+        offers = []
+        sku_error = type(error).__name__
     selected = [row for row in offers if row.get("name") in skus]
     normalize = lambda name: "".join(c for c in name.lower() if c.isalnum())
     families = {normalize(row.get("family", "")) for row in selected}
@@ -90,9 +99,12 @@ def inventory(location, skus):
         "location": location,
         "skus": [{key: row.get(key) for key in ["name", "family", "restrictions", "capabilities"]}
                  for row in selected],
+        "skuLookupError": sku_error,
+        "complete": sku_error is None,
         "quotas": [{"family": row["name"]["value"], "used": int(row["currentValue"]),
                     "limit": int(row["limit"])} for row in quotas
-                   if normalize(row["name"]["value"]) in families | {"cores"}],
+                   if normalize(row["name"]["value"]) in families | {"cores"}
+                   or any(tag in row["name"]["value"].lower() for tag in ["h100", "h200", "gb200", "gb300", "a100"])],
         "note": "Quota and SKU listing do not guarantee physical capacity or cross-node NVLink placement.",
     }
 
@@ -137,6 +149,8 @@ def main():
         json.dump(report, target, indent=2)
     print(json.dumps({"output": str(output), "readOnly": True,
                       "successfulChecks": sum(row["ok"] for row in results),
+                      "partialChecks": [row["task"] for row in results
+                                        if row.get("result", {}).get("complete") is False],
                       "checks": len(results), "deployable": False}))
 
 

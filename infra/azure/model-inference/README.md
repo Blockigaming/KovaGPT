@@ -6,7 +6,9 @@ No GPU runtime, model download, private endpoint or production self-hosted route
 is deployed by these files. Keep the working production route until its replacement
 has real inference evidence; do not label OpenRouter as self-hosted Azure inference.
 
-`models.json` preserves all three original foundations. GPU SKUs are qualification
+`models.json` preserves all three original foundations and the immutable revisions
+observed in their public repository metadata. These are not downloaded-weight
+integrity receipts. GPU SKUs are qualification
 candidates, not validated capacity assignments. In particular, Azure GB300 VMs
 have four GPUs: Kimi's eight-GPU recipe needs a qualified multi-VM topology,
 not merely two arbitrary VMs. Six efforts are execution policies over each model;
@@ -26,6 +28,9 @@ licenses, fetch gated tokens, download weights or model code, request quota,
 create storage/GPUs, or alter the current website. Missing quotes/sizes/errors remain
 explicit rather than being treated as free capacity or completed work. Retail
 prices exclude account discounts, disks, bandwidth, tax and other services.
+SKU discovery has its own 30-second deadline. If that lookup fails, verified quota
+results remain in the report with an explicit partial-inventory warning; it does
+not turn a timeout into an assertion that capacity is available.
 
 ## Required implementation and activation
 
