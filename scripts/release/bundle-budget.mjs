@@ -35,7 +35,22 @@ export const BUNDLE_BASELINE = Object.freeze({
       raw: 667_800,
       gzip: 198_923,
     }),
+    Object.freeze({
+      node: "24.22.1",
+      head: "386e03d26056eb1c9a460de108706c0e79a85f3c",
+      source: "Clean main client build before the device-specific Settings redesign",
+      raw: 648_696,
+      gzip: 200_896,
+    }),
+    Object.freeze({
+      head: "288e66f14d55771a41714e31f106a63ed35a5412",
+      source: "PR #626 CI production build, run 42501052050",
+      raw: 648_944,
+      gzip: 201_025,
+    }),
   ]),
+  deviceSettingsAdjustment:
+    "On 2026-11-08 the clean main client build measured 200,896 gzip bytes, already above the previous 200,000 ceiling. The device-specific Settings candidate measured 200,991 locally and 201,025 in CI. A 201,500 ceiling leaves 475 bytes (0.24%) above the measured CI candidate; raw, home-route, omega and chart ceilings remain unchanged.",
   adjustment:
     "The 2026-09-14 final build adds generated four-segment routing and expanded catalog registries. A clean rebuild of the authorized auth PR head b5a09278 on Node 24.19.0 already exceeded the older ceiling at 667,469 raw / 198,845 gzip before the current review fixes. The current source-only review batch measured 667,800 raw / 198,923 gzip on the same Node version and lockfile. The refreshed ceiling gives less than 1% headroom over that complete build while keeping the home route, omega, and chart ceilings unchanged.",
   voiceReceiptAdjustment:
@@ -66,7 +81,7 @@ export const BUNDLE_BASELINE = Object.freeze({
 
 export const BUNDLE_BUDGETS = Object.freeze({
   initial: Object.freeze({ raw: 62_500, gzip: 20_400 }),
-  main: Object.freeze({ raw: 670_000, gzip: 200_000 }),
+  main: Object.freeze({ raw: 670_000, gzip: 201_500 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
 });

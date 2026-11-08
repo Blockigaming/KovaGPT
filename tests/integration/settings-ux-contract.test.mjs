@@ -201,7 +201,7 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
   assert.match(settingsSource, /import "@\/styles\/settings-reference\.css"/);
   const hidden = styleRule(
     settingsStylesSource,
-    '[role="dialog"].kova-settings-dialog :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden',
+    ".kova-settings-reference :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden",
     "(max-width: 767px)",
   ).declarations;
   assert.equal(hidden.display, "none");
@@ -257,7 +257,13 @@ test("settings navigation is centralized and routes every rendered category", ()
   const sectionForTab = execute(sectionFunction[0].getText(parsedModel).replace(/^export\s+/, ""), {
     SETTINGS_SECTIONS: sections,
   });
-  const pageTabs = categories("pageGroups");
+  const pageTabs = categories("destinationGroups");
+  const primaryCalls = matching(
+    variable("pageGroups"),
+    (node) => ts.isCallExpression(node) && node.expression.getText(parsed) === "destination",
+  );
+  assert.equal(primaryCalls.length, 10);
+  assert.equal(new Set(primaryCalls.map((node) => node.arguments[0].text)).size, 10);
   assert.deepEqual(
     pageTabs.map((tab) => [sectionForTab(tab.value), tab.label]),
     [
@@ -307,9 +313,12 @@ test("full-page Settings keeps reference-style navigation theme-aware and functi
   assert.match(settingsSource, /label: "General",\s*icon: Cog/);
   assert.match(settingsSource, /aria-label="Send shortcut"/);
   assert.match(settingsSource, /setSharedSendOnEnter\(user\?\.id \?\? null, enabled\)/);
-  assert.match(settingsPageStylesSource, /\.kova-settings-general-options/);
+  assert.match(
+    settingsSource,
+    /className="kova-settings-reference-group kova-settings-general-options"/,
+  );
   assert.match(settingsPageStylesSource, /background: var\(--background\)/);
-  assert.match(settingsPageStylesSource, /background: var\(--surface-selected\)/);
+  assert.match(settingsStylesSource, /background: var\(--surface-selected\)/);
   assert.doesNotMatch(settingsPageStylesSource, /background:\s*#(?:000|fff|000000|ffffff)\b/i);
 });
 
@@ -318,7 +327,10 @@ test("mobile settings drill-in moves focus with the visible panel", () => {
   assert.match(settingsSource, /pendingMobileFocusRef\.current = "navigation"/);
   assert.match(settingsSource, /setMobileFocusRequest\(\(request\) => request \+ 1\)/);
   assert.match(settingsSource, /\[mobileFocusRequest, mobileHome, tab\]/);
-  assert.match(settingsSource, /settingsSearchRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(
+    settingsSource,
+    /navigationHeadingRef\.current\?\.focus\(\{ preventScroll: true \}\)/,
+  );
   assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
 });
 
@@ -364,9 +376,12 @@ test("data controls avoid internal migration language", () => {
 
 test("theme changes cannot interpolate the Settings surface colors", () => {
   const { declarations, rule } = styleRule(settingsStylesSource, ".kova-settings-reference");
-  assert.equal(declarations.background, "var(--surface-modal)");
-  assert.equal(declarations.color, "var(--popover-foreground)");
-  assert.equal(declarations["transition-property"], "opacity, transform");
+  assert.equal(declarations.background, "var(--background)");
+  assert.equal(declarations.color, "var(--foreground)");
+  assert.ok(
+    !declarations["transition-property"] ||
+      declarations["transition-property"] === "opacity, transform",
+  );
   assert.doesNotMatch(
     rule.toString(),
     /transition-property:[^;]*(?:all|background|color|border)/,
@@ -384,9 +399,9 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     settingsStylesSource,
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ).declarations;
-  assert.equal(auth.width, "min(calc(100vw - 40px), 1120px)");
-  assert.equal(auth.height, "min(88dvh, 820px)");
-  assert.equal(auth["max-height"], "88dvh");
+  assert.equal(auth.width, "min(1100px, calc(100vw - 64px))");
+  assert.equal(auth.height, "min(820px, calc(100dvh - 64px))");
+  assert.equal(auth["max-height"], "calc(100dvh - 64px)");
   assert.match(settingsSource, /const Surface = page \? SettingsPageContent : DialogContent/);
   assert.match(settingsSource, /loggedIn \? "is-authenticated" : "is-guest"/);
   const page = styleRule(
@@ -410,22 +425,20 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     const { rule, declarations } = styleRule(settingsStylesSource, selector, "(max-width: 767px)");
     for (const [property, value] of Object.entries({
       inset: "0",
-      width: "100vw",
+      width: "100%",
       height: "100dvh",
       transform: "none",
       translate: "none",
     }))
       assert.equal(declarations[property], value);
-    for (const edge of ["top", "bottom"])
-      assert.deepEqual(
-        rule.nodes.filter((node) => node.prop === `padding-${edge}`).map((node) => node.value),
-        [`var(--safe-${edge})`],
-        `The fullscreen dialog owns its ${edge} inset exactly once`,
-      );
+    assert.ok(
+      !declarations["padding-top"] && !declarations["padding-bottom"],
+      "Safe areas belong to the visible scroll pane, not an extra fullscreen inset",
+    );
   }
   const sidebar = styleRule(
     settingsStylesSource,
-    '[role="dialog"].kova-settings-dialog .kova-settings-sidebar',
+    ".kova-settings-reference .kova-settings-sidebar",
     "(max-width: 767px)",
   ).declarations;
   const header = styleRule(
@@ -433,7 +446,9 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     ".kova-settings-reference .kova-settings-content-header",
     "(max-width: 767px)",
   ).declarations;
-  assert.doesNotMatch(`${sidebar.padding} ${header.padding}`, /--safe-(?:top|bottom)/);
+  assert.match(sidebar.padding, /--safe-top/);
+  assert.match(sidebar.padding, /--safe-bottom/);
+  assert.match(header.padding, /--safe-top/);
   const panel = styleRule(
     settingsStylesSource,
     '.kova-settings-reference .kova-settings-content > [role="tabpanel"]',
@@ -441,8 +456,8 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   ).declarations;
   assert.equal(
     panel.padding,
-    "4px 16px 32px",
-    "Scrollable content retains its minimum bottom spacing independently of the fullscreen inset",
+    "0 16px max(32px, var(--safe-bottom, 0px))",
+    "The content scroll pane owns its bottom safe area",
   );
 });
 
