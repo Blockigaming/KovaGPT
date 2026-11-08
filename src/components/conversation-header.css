@@ -551,3 +551,36 @@
   border-radius: 16px;
   overflow: hidden;
 }
+
+/* Activity is a single borderless surface; browser and steps lead the inventory. */
+.kova-conversation-outputs {
+  border: 0;
+  padding: 16px;
+}
+.kova-activity-steps {
+  margin-block: 4px 16px;
+}
+.kova-activity-steps .kova-activity-list {
+  margin-block: 8px 0;
+}
+.kova-conversation-actions .kova-conversation-icon {
+  border: 0;
+  box-shadow: none;
+}
+
+.kova-conversation-outputs-touch {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+  padding: 0 12px 12px;
+}
+.kova-mobile-conversation-tools {
+  min-width: 0;
+  padding: 0 8px 4px;
+}
+.kova-mobile-conversation-tools .kova-free-offer {
+  margin-right: auto;
+}

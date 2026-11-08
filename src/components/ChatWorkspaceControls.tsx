@@ -6,14 +6,9 @@ const HistoryStatus = lazy(() =>
     default: module.ChatHistorySyncStatus,
   })),
 );
-const ChatWorkControl = lazy(() =>
-  import("@/components/ChatWorkControl").then((module) => ({ default: module.ChatWorkControl })),
-);
 export function ChatWorkspaceControls({
   ownerId,
   active,
-  temporary,
-  objective = "",
 }: {
   ownerId: string | null;
   active: Conversation | null | undefined;
@@ -33,9 +28,6 @@ export function ChatWorkspaceControls({
           </Link>
         )}
         {ownerId && <HistoryStatus key={`history:${ownerId}`} />}
-        {ownerId && !temporary && Boolean(active?.messages.length) && (
-          <ChatWorkControl key={`work:${ownerId}`} ownerId={ownerId} objective={objective} />
-        )}
       </Suspense>
     </div>
   );

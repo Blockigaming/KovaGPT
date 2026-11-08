@@ -112,7 +112,7 @@ const text = (value) =>
       : typeof value === "object"
         ? text(value.props?.children)
         : String(value);
-function fixture(overrides = {}) {
+function fixture(overrides = {}, desktop = true) {
   let cursor = 0;
   const states = [];
   const calls = [];
@@ -173,6 +173,9 @@ function fixture(overrides = {}) {
     "@/lib/conversation-sources": {
       conversationSources: () => ({ web: [], memory: [], attachments: [], browser: [] }),
     },
+    "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: desktop }) },
+    "./MobileBottomSheet": { MobileBottomSheet: "MobileBottomSheet" },
+    "./MessageActivityList": { MessageActivityList: "MessageActivityList" },
     "./ConversationSourcesPanel": {
       ConversationSourcesPanel: "ConversationSourcesPanel",
       ConversationActivitySummary: "ConversationActivitySummary",
@@ -259,7 +262,9 @@ test("Activity uses current chat data, separates inputs, and hides inactive brow
   const activity = nodes(root).find((node) => node.type === "PopoverContent");
   assert.equal(activity.props["aria-label"], "Activity");
   assert.match(text(activity), /No outputs yet/);
-  const sourcePanel = nodes(activity).find((node) => node.type === "ConversationSourcesPanel");
+  const sourcePanel = nodes(activity).find(
+    (node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly,
+  );
   assert.equal(sourcePanel.props.conversation, chat);
   assert.equal(sourcePanel.props.activeBrowserOnly, true);
   assert.equal(sourcePanel.props.separateInputs, true);
@@ -345,7 +350,7 @@ test("attachment preview returns focus to the visible Activity button", () => {
     (node) => node.type === "button" && node.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel")
+    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
     .props.onOpenAttachment("u:attachment:0");
   root = f.render();
   nodes(root)
@@ -370,7 +375,7 @@ test("per-output downloads still use only the selected attachment", async () => 
     },
   });
   nodes(f.render())
-    .find((node) => node.type === "ConversationSourcesPanel")
+    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
     .props.onOpenAttachment("file-message:attachment:0");
   const originalDocument = globalThis.document;
   const originalCreate = URL.createObjectURL;
@@ -430,7 +435,7 @@ test("outputs open real attachment content and report missing originals truthful
   });
   let root = f.render();
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel")
+    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
     .props.onOpenAttachment("u:attachment:0");
   root = f.render();
   assert.equal(text(nodes(root).find((node) => node.type === "pre")), "Exact attached content");
@@ -454,7 +459,7 @@ test("outputs open real attachment content and report missing originals truthful
   });
   root = library.render();
   nodes(root)
-    .find((node) => node.type === "ConversationSourcesPanel")
+    .find((node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly)
     .props.onOpenAttachment("u:attachment:0");
   root = library.render();
   assert.match(text(root), /This chat keeps a Library reference/);
@@ -492,7 +497,7 @@ test("memory inspection closes the popover and restores the Activity trigger", (
   ).props.ref.current = target;
   const sources = { ownerId: "owner", sources: [] };
   nodes(root)
-    .find((n) => n.type === "ConversationSourcesPanel")
+    .find((n) => n.type === "ConversationSourcesPanel" && !n.props.browserOnly)
     .props.onOpenMemory(sources);
   root = f.render();
   assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
@@ -511,7 +516,7 @@ test("unbound browser activity opens an honest detail dialog and restores Activi
     (n) => n.type === "button" && n.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((n) => n.type === "ConversationSourcesPanel")
+    .find((n) => n.type === "ConversationSourcesPanel" && !n.props.browserOnly)
     .props.onOpenBrowser({ id: "event", label: "Recorded sample" });
   root = f.render();
   assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
@@ -546,7 +551,9 @@ test("Free recorded browser history never grants sample takeover or claims a liv
     },
   });
   let root = f.render();
-  const sources = nodes(root).find((n) => n.type === "ConversationSourcesPanel");
+  const sources = nodes(root).find(
+    (n) => n.type === "ConversationSourcesPanel" && !n.props.browserOnly,
+  );
   assert.equal(sources.props.browserPreview, undefined);
   sources.props.onOpenBrowser({ id: "sample", label: "Recorded event" });
   root = f.render();
@@ -577,4 +584,25 @@ test("composer action disc uses a compact desktop control and full phone target"
   );
   assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
   assert.doesNotMatch(css, /border: 4px solid transparent !important/);
+});
+
+test("touch Activity uses its own modal sheet while desktop keeps the anchored popover", () => {
+  const touch = fixture({}, false);
+  let root = touch.render();
+  const activity = nodes(root).find(
+    (node) => node.type === "button" && node.props["aria-label"] === "Activity",
+  );
+  assert.equal(activity.props["aria-haspopup"], "dialog");
+  activity.props.onClick();
+  root = touch.render();
+  assert.equal(nodes(root).filter((node) => node.type === "Popover").length, 0);
+  const sheet = nodes(root).find((node) => node.type === "MobileBottomSheet");
+  assert.equal(sheet.props.open, true);
+  assert.equal(sheet.props.title, "Activity");
+  sheet.props.onOpenChange(false);
+  assert.equal(
+    nodes(touch.render()).find((node) => node.type === "MobileBottomSheet").props.open,
+    false,
+  );
+  assert.equal(nodes(fixture().render()).filter((node) => node.type === "Popover").length, 1);
 });

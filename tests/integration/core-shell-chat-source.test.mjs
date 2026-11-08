@@ -173,30 +173,17 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.doesNotMatch(message, /getUserMedia|MediaRecorder|voice_session/);
   assert.match(message, /saveItem/);
   assert.match(message, /aria-label="Response actions"/);
-  assert.match(message, /aria-label="Good response"/);
-  assert.match(message, /aria-label="Bad response"/);
-  assert.match(message, /principalScopedStorageKey\("kova-message-feedback", userKey\)/);
-  assert.match(message, /`\$\{feedbackBaseKey\}:\$\{encodeURIComponent\(message\.id\)\}`/);
-  assert.match(message, /useServerFn\(getResponseFeedbackBatch\)/);
-  assert.match(message, /if \(isUser \|\| !feedbackKey\)/);
-  assert.match(message, /loadResponseFeedbackBatched\(/);
-  assert.match(feedbackBatch, /const MAX_BATCH_SIZE = 200/);
-  assert.match(feedbackBatch, /pendingByOwner/);
-  assert.match(message, /useServerFn\(submitResponseFeedback\)/);
-  assert.match(
-    message,
-    /await getFeedbackBatchFn\(\{[\s\S]{0,160}expectedOwnerId: userKey[\s\S]{0,100}messageIds/,
+  assert.doesNotMatch(message, /aria-label="Good response"|aria-label="Bad response"/);
+  assert.match(message, /<ResponseSpeechButton/);
+  assert.match(message, /aria-label=\{copied \? "Copied" : "Copy response"\}/);
+  assert.match(message, /aria-label="More actions"/);
+  const toolbar = message.slice(
+    message.indexOf('aria-label="Response actions"'),
+    message.indexOf('aria-label="Response actions"') + 4200,
   );
-  assert.match(
-    message,
-    /await feedbackFn\(\{[\s\S]{0,160}expectedOwnerId: userKey[\s\S]{0,100}messageId: message\.id[\s\S]{0,100}rating: next/,
-  );
-  assert.match(message, /requestPrincipal === principalRef\.current/);
-  assert.match(message, /setFeedbackLoadFailed\(true\)/);
-  assert.match(message, /disabled=\{feedbackSaving \|\| feedbackLoadFailed\}/);
-  assert.match(message, /Retry loading response feedback/);
-  assert.match(message, /setFeedbackReload\(\(current\) => current \+ 1\)/);
-  assert.match(message, /setFeedbackSaving\(Boolean\(isSignedIn && !isUser\)\)/);
+  assert.equal((toolbar.match(/<DropdownMenuItem /g) ?? []).length, 2);
+  assert.match(toolbar, /Try again/);
+  assert.match(toolbar, /Branch into new chat/);
   assert.match(message, /aria-label="Share response"/);
   assert.match(message, /Save to Library/);
   assert.match(message, /MobileBottomSheet/);
@@ -237,8 +224,13 @@ test("temporary chat changes create a clean privacy boundary", () => {
   );
 });
 
-test("local-only message ratings make a local-only claim", () => {
-  assert.match(message, /storage\?\.setItem\(feedbackKey, next\)/);
-  assert.ok((message.match(/Rating saved on this device/g) ?? []).length >= 1);
-  assert.doesNotMatch(message, /Thanks for the feedback|Thanks, we'll improve/);
+test("removed rating controls do not write feedback or claim model improvement", () => {
+  assert.doesNotMatch(
+    message,
+    /useServerFn\(submitResponseFeedback\)|useServerFn\(getResponseFeedbackBatch\)/,
+  );
+  assert.doesNotMatch(
+    message,
+    /Rating saved on this device|Thanks for the feedback|Thanks, we'll improve/,
+  );
 });

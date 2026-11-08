@@ -16,7 +16,10 @@ function fixture({ confirm = true, save = true } = {}) {
   const module = loadUiModule(
     "src/lib/permanent-chat-delete.ts",
     {
-      "@/components/ChatDeleteConfirmation": { confirmPermanentChat: async () => confirm },
+      "./chat-delete-undo": {
+        deleteChatWithUndo: async (_owner, _id, _current, commit) => (confirm ? commit() : false),
+        readChatDeleteIntents: () => [],
+      },
       "./chat-history-bridge": { canWriteChatHistory: () => true },
       "./chat-store": {
         loadConversations: () => [chat, other],
@@ -51,7 +54,7 @@ test("permanent removal clears active, archived, draft and legacy Trash copies o
   assert.equal(f.events[0][1][0].id, "other");
   assert.deepEqual(f.events[1], ["draft", "A", "chat"]);
 });
-test("canceled confirmation and replaced account cannot persist deletion", async () => {
+test("canceled Undo window and replaced account cannot persist deletion", async () => {
   const f = fixture({ confirm: false });
   assert.equal(await f.run(() => true), false);
   assert.equal(f.events.length, 0);

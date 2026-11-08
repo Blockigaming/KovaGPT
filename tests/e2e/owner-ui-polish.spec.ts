@@ -34,7 +34,9 @@ test("short replies fit content, icons are compact, selection is native and menu
   await expect(response).toContainText("Hi! How can I help?");
   const bubble = response.locator(".kova-assistant-message");
   const size = await bubble.boundingBox();
-  expect(size!.width).toBeLessThan(300);
+  expect(size!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await expect(bubble).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(bubble).toHaveCSS("border-radius", "0px");
   const actions = response.getByRole("toolbar", { name: "Response actions" });
   await expect(actions.getByRole("button", { name: "Read aloud", exact: true })).toBeVisible();
   await expect(actions.getByRole("button", { name: "Read aloud", exact: true })).toHaveText("");
@@ -53,12 +55,11 @@ test("short replies fit content, icons are compact, selection is native and menu
   );
   await actions.getByRole("button", { name: "More actions", exact: true }).click();
   const menu = page.locator(".kova-response-menu");
-  await expect(menu.locator("time")).toHaveAttribute("datetime", "2026-11-05T21:15:30.000Z");
-  await expect(menu.getByRole("menuitem")).toHaveCount(1);
-  await expect(menu.getByRole("menuitem")).toHaveText("Branch into new chat");
+  await expect(menu.locator("time")).toHaveCount(0);
+  await expect(menu.getByRole("menuitem")).toHaveCount(2);
+  await expect(menu.getByRole("menuitem")).toHaveText(["Try again", "Branch into new chat"]);
   await page.keyboard.press("Escape");
-  await actions.getByRole("button", { name: "Try again", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: /Try again.*Thinking/ })).toBeVisible();
+  await expect(actions.getByRole("button", { name: "More actions", exact: true })).toBeFocused();
   await screenshot(page, "response");
 });
 

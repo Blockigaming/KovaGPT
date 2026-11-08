@@ -24,7 +24,7 @@ test("Library labels date semantics and uses confirmed permanent chat deletion",
   const source = readFileSync("src/routes/library.tsx", "utf8");
   assert.match(source, /Saved \{dateLabel\}/);
   assert.doesNotMatch(source, /<ChatTrashPanel/);
-  assert.match(source, /permanentlyDeleteChat\(userKey, chat, isCurrent, true\)/);
+  assert.match(source, /permanentlyDeleteChat\(userKey, chat, isCurrent\)/);
 });
 
 test("Library metadata does not visually capitalize exact filenames", () => {

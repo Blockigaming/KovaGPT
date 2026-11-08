@@ -9,5 +9,5 @@ test("retired Library folder controls and folder movement are absent", () => {
 test("selection retains its download and permanent-delete actions", () => {
   assert.match(source, /Selected items deleted/);
   assert.match(source, /LibrarySelectedDownloadsDialog/);
-  assert.match(source, /permanentlyDeleteChat\(userKey, chat, isCurrent, true\)/);
+  assert.match(source, /permanentlyDeleteChat\(userKey, chat, isCurrent\)/);
 });

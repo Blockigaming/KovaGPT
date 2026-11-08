@@ -42,6 +42,18 @@ export function MobileTopBar({
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
 
+  const newChatButton = (
+    <Button
+      variant="ghost"
+      type="button"
+      onClick={onNewChat}
+      aria-label="New chat"
+      className="kova-action flex h-11 w-11 items-center justify-center rounded-xl text-foreground hover:bg-accent/70 active:bg-accent"
+    >
+      <SquarePen className="h-5 w-5" strokeWidth={1.75} />
+    </Button>
+  );
+
   return (
     <header
       data-ui-reference="chatgpt-mobile-topbar"
@@ -82,6 +94,7 @@ export function MobileTopBar({
             </Button>
           ) : null}
         </div>
+        {chatStarted && newChatButton}
         {showAuth && !chatStarted ? (
           <div className="flex items-center justify-end gap-1">
             <SignInButton mode="modal">
@@ -104,7 +117,13 @@ export function MobileTopBar({
             </SignUpButton>
           </div>
         ) : (
-          <div className="flex items-center justify-end gap-0.5">
+          <div
+            className={
+              chatStarted
+                ? "kova-mobile-conversation-tools col-span-3 flex items-center justify-end gap-2"
+                : "flex items-center justify-end gap-0.5"
+            }
+          >
             {conversationActions}
             {!conversationActions && onOpenChatSettings ? (
               <Button
@@ -141,15 +160,7 @@ export function MobileTopBar({
               </Button>
             ) : null}
 
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={onNewChat}
-              aria-label="New chat"
-              className="kova-action flex h-11 w-11 items-center justify-center rounded-xl text-foreground hover:bg-accent/70 active:bg-accent"
-            >
-              <SquarePen className="h-5 w-5" strokeWidth={1.75} />
-            </Button>
+            {!chatStarted && newChatButton}
           </div>
         )}
       </div>

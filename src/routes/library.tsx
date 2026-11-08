@@ -1026,11 +1026,10 @@ function LibraryPage() {
       try {
         const chats = loadConversations(userKey);
         const chat = chats.find((item) => `chat:${item.id}` === id);
-        if (!chat || !(await permanentlyDeleteChat(userKey, chat, isCurrent, true))) {
+        if (!chat || !(await permanentlyDeleteChat(userKey, chat, isCurrent))) {
           if (isCurrent()) restoreDeletedItem();
           return;
         }
-        if (isCurrent()) toast.success("Chat permanently deleted.");
       } catch {
         if (isCurrent()) {
           restoreDeletedItem();
@@ -1201,15 +1200,20 @@ function LibraryPage() {
         }
       }
       if (!isCurrent()) return;
-      for (const id of ids.filter((value) => value.startsWith("chat:"))) {
-        if (!isCurrent()) return;
-        const chats = loadConversations(userKey);
-        const chat = chats.find((item) => `chat:${item.id}` === id);
-        if (chat && !(await permanentlyDeleteChat(userKey, chat, isCurrent, true)))
-          throw new Error("Chat removal was canceled or could not be saved.");
-        reconcileDeleted([id]);
-      }
+      const chatResults = await Promise.all(
+        ids
+          .filter((id) => id.startsWith("chat:"))
+          .map(async (id) => {
+            const chat = loadConversations(userKey).find((item) => `chat:${item.id}` === id);
+            return {
+              id,
+              deleted: chat ? await permanentlyDeleteChat(userKey, chat, isCurrent) : true,
+            };
+          }),
+      );
       if (!isCurrent()) return;
+      reconcileDeleted(chatResults.filter((item) => item.deleted).map((item) => item.id));
+      const chatDeletionUndone = chatResults.some((item) => !item.deleted);
       const workIds = ids.filter((id) => id.startsWith("work:"));
       if (workIds.length) {
         saveWorkTasks(
@@ -1218,7 +1222,12 @@ function LibraryPage() {
         );
         reconcileDeleted(workIds);
       }
-      if (isCurrent()) toast.success("Selected items deleted.");
+      if (isCurrent())
+        toast.success(
+          chatDeletionUndone
+            ? "Deletion finished. Undone chats were kept."
+            : "Selected items deleted.",
+        );
     } catch {
       if (!isCurrent()) return;
       toast.error(

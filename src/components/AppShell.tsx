@@ -239,7 +239,6 @@ export function AppShell({
     try {
       if (!(await permanentlyDeleteChat(userKey, chat, current)) || !current()) return;
       setConversationState({ principal: storagePrincipal, items: loadConversations(userKey) });
-      toast.success("Chat permanently deleted");
     } catch {
       if (current()) toast.error("Could not delete the chat. Try again.");
     }

@@ -40,11 +40,11 @@ test("reply bubbles, adjacent actions, and the compact composer fit the viewport
   expect(actionBox).not.toBeNull();
   expect(composerBox).not.toBeNull();
   const actionOffset = actionBox!.y - responseBox!.y - responseBox!.height;
-  expect(actionOffset).toBeGreaterThanOrEqual(0);
-  expect(actionOffset).toBeLessThanOrEqual(3);
-  await expect(bubble).toHaveCSS("border-top-left-radius", "26px");
+  expect(actionOffset).toBeGreaterThanOrEqual(15);
+  expect(actionOffset).toBeLessThanOrEqual(17);
+  await expect(bubble).toHaveCSS("border-top-left-radius", "0px");
   const copy = actions.getByRole("button", { name: "Copy response", exact: true });
-  const good = actions.getByRole("button", { name: "Good response", exact: true });
+  const good = actions.getByRole("button", { name: "Read aloud", exact: true });
   const fineDesktop = await page.evaluate(
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );

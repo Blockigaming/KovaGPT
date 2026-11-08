@@ -169,9 +169,10 @@ test("sidebar deletion from Library permanently removes a chat without Trash", a
   await page.getByRole("button", { name: "Open chat Composer review chat", exact: true }).hover();
   await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  const prompt = page.getByRole("alertdialog", { name: "Delete chat permanently?", exact: true });
-  await prompt.getByRole("button", { name: "Delete permanently", exact: true }).click();
-  await expect(page.getByText("Chat permanently deleted", { exact: true })).toBeVisible();
+  await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0, {
+    timeout: 10000,
+  });
   await expect(
     page.getByRole("button", { name: "Open chat Composer review chat", exact: true }),
   ).toHaveCount(0);
@@ -208,8 +209,8 @@ test("subscription checkout hides private errors and navigates to full-page Stri
     route.fulfill({ contentType: "text/html", body: "<h1>Secure checkout fixture</h1>" }),
   );
   await visit(page, "/subscribe?plan=plus_monthly");
-  const payment = page.getByRole("button", { name: "Continue to payment", exact: true });
-  await payment.click();
+  // Selected plans start checkout automatically; failed requests remain retryable.
+  const payment = page.getByRole("button", { name: "Retry checkout", exact: true });
   await expect(page.getByRole("alert")).toContainText("Secure checkout could not open. Try again.");
   await expect(page.getByText("private database detail", { exact: true })).toHaveCount(0);
   await payment.click();

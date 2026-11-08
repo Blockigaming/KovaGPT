@@ -1,10 +1,7 @@
-import { BillingPortalButton } from "@/components/BillingPortalButton";
-import { PublicFooter } from "@/components/PublicFooter";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { resolveBillingPlan } from "@/lib/billing-plans";
-import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 export const Route = createFileRoute("/subscribe")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -15,41 +12,11 @@ export const Route = createFileRoute("/subscribe")({
 function CheckoutPage() {
   const { openSignIn } = useClerkSafe();
   const { plan } = Route.useSearch();
-  const selectedPlan = resolveBillingPlan(plan);
-  const publishedPlan = selectedPlan ? CAPABILITY_REGISTRY.plans[selectedPlan.tier] : null;
   const { user, isLoaded, isSignedIn } = useUser();
   return (
     <main id="main-content" tabIndex={-1} className="min-h-dvh bg-background text-foreground">
-      <header className="mx-auto flex max-w-5xl items-center justify-between border-b border-border px-6 py-5">
-        <h1 className="text-xl font-semibold">Complete your subscription</h1>
-        <Link to="/pricing" className="rounded-xl border border-border px-4 py-2">
-          Back to plans
-        </Link>
-      </header>
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <p className="mb-6 text-muted-foreground">
-          Review your plan, payment and renewal details securely with Stripe.
-        </p>
-        {publishedPlan && (
-          <section
-            aria-label="Plan price before tax"
-            className="mb-6 rounded-3xl border border-border p-6"
-          >
-            <h2 className="text-lg font-semibold">Kova {publishedPlan.name}</h2>
-            <p className="mt-2 text-3xl font-semibold">
-              ${publishedPlan.monthlyPriceUsd}
-              <span className="text-base font-normal text-muted-foreground">
-                {" "}
-                / month before tax
-              </span>
-            </p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Eligible accounts get 50% off the first month automatically. Stripe shows the
-              discounted first payment, renewal price, applicable tax, and final amount before you
-              confirm payment. No promo code is needed.
-            </p>
-          </section>
-        )}
+      <section className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-6 px-6 py-10">
+        <h1 className="text-xl font-semibold">Opening checkout…</h1>
         {!plan ? (
           <p>Choose a plan to continue.</p>
         ) : !isLoaded ? (
@@ -64,12 +31,18 @@ function CheckoutPage() {
           </button>
         ) : (
           <>
-            <BillingPortalButton />
-            <StripeEmbeddedCheckout key={`${user?.id}:${plan}`} priceId={plan} userId={user?.id} />
+            <StripeEmbeddedCheckout
+              key={`${user?.id}:${plan}`}
+              priceId={plan}
+              userId={user?.id}
+              autoStart
+            />
           </>
         )}
       </section>
-      <PublicFooter />
+      <Link to="/pricing" className="fixed left-6 top-6 rounded-full px-4 py-2">
+        Back to plans
+      </Link>
     </main>
   );
 }

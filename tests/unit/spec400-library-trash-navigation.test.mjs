@@ -5,7 +5,7 @@ import ts from "typescript";
 const library = readFileSync("src/routes/library.tsx", "utf8");
 test("Library single and bulk chat removal use permanent deletion", () => {
   assert.equal(
-    (library.match(/await permanentlyDeleteChat\(userKey, chat, isCurrent, true\)/g) || []).length,
+    (library.match(/await permanentlyDeleteChat\(userKey, chat, isCurrent\)/g) || []).length,
     2,
   );
   assert.doesNotMatch(library, /readChatTrash|moveChatToTrash/);

@@ -93,26 +93,21 @@ function fixture(initial = [durable, chat, work], signedIn = true) {
   };
 }
 
-test("signed-in partial deletion retains canceled chat and unattempted Work while removing confirmed file", async () => {
-  const f = fixture();
-  f.deps.permanentlyDeleteChat = async () => false;
-  await f.run();
-  assert.deepEqual(f.state.rows, [chat, work]);
-  assert.deepEqual(f.state.selected, [chat.id, work.id]);
-  assert.equal(f.state.errors.length, 1);
-  assert.equal(f.state.successes.length, 0);
-  assert.equal(f.state.busy, false);
-  assert.ok(!f.state.calls.some(([kind]) => kind === "work"));
-});
-test("guest partial deletion never restores an already-deleted guest item", async () => {
-  const guest = { id: "guest:one" };
-  const f = fixture([guest, chat, work], false);
-  f.deps.permanentlyDeleteChat = async () => false;
-  await f.run();
-  assert.deepEqual(f.state.rows, [chat, work]);
-  assert.deepEqual(f.state.selected, [chat.id, work.id]);
-  assert.equal(f.state.errors.length, 1);
-});
+for (const signedIn of [true, false]) {
+  test(`${signedIn ? "signed-in" : "guest"} Undo retains its chat while independently confirmed items stay deleted`, async () => {
+    const first = signedIn ? durable : { id: "guest:one" };
+    const f = fixture([first, chat, work], signedIn);
+    f.deps.permanentlyDeleteChat = async () => false;
+    await f.run();
+    assert.deepEqual(f.state.rows, [chat]);
+    assert.deepEqual(f.state.selected, [chat.id]);
+    assert.equal(f.state.errors.length, 0);
+    assert.deepEqual(f.state.successes, ["Deletion finished. Undone chats were kept."]);
+    assert.equal(f.state.busy, false);
+    assert.ok(f.state.calls.some(([kind]) => kind === "work"));
+    assert.ok(f.state.calls.some(([kind]) => kind === (signedIn ? "durable" : "guest")));
+  });
+}
 test("Work save failure retains Work, while file and chat successes stay removed", async () => {
   const f = fixture();
   f.deps.saveWorkTasks = () => {

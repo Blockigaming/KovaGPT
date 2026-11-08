@@ -218,9 +218,8 @@ for (const theme of ["light", "dark"] as const) {
     });
     await expect(page.getByLabel("Remove Keep.txt", { exact: true })).toBeVisible();
     if (page.viewportSize()!.height <= 500) {
-      // Wait for the returning-account notice so this also covers the smallest
-      // remaining transcript space, after asynchronous history initialization.
-      await expect(page.getByLabel("Chat history synchronization", { exact: true })).toBeVisible();
+      // Routine account reconnection stays silent, including compact landscape.
+      await expect(page.getByText("Retry chat sync", { exact: true })).toHaveCount(0);
       await expect
         .poll(async () => {
           const dock = await page.locator(".spec400-composer-dock").boundingBox();

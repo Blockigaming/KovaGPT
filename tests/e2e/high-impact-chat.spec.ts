@@ -72,19 +72,19 @@ test("web answers expose their real sources instead of a placeholder action", as
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find the launch details");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  const sourcesButton = page.getByRole("button", { name: "2 sources" });
-  await expect(sourcesButton).toBeVisible();
-  await sourcesButton.click();
-  const sources = page.getByRole("dialog", { name: "Sources", exact: true });
-  await expect(
-    sources.getByRole("link", { name: /https:\/\/example.com\/report/ }),
-  ).toHaveAttribute("href", "https://example.com/report");
-  await expect(sources).toContainText("Verified launch details.");
-  await expect(sources.getByText("Publisher: example.com", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  const sources = page.locator(".kova-conversation-outputs");
+  await sources.getByText("Web search", { exact: true }).click();
+  await expect(sources.getByRole("link", { name: /Launch report/ })).toHaveAttribute(
+    "href",
+    "https://example.com/report",
+  );
+  await expect(sources.getByText("example.com", { exact: true })).toBeVisible();
+  await expect(sources).not.toContainText("reader:secret");
   await expect(sources).not.toContainText("spoofed.invalid");
   await expect(sources).not.toContainText("Unsafe result");
   await expect(sources).not.toContainText("Expanded URL");
-  await expect(sources.getByText("Publisher: docs.example.org", { exact: true })).toBeVisible();
+  await expect(sources.getByText("docs.example.org", { exact: true })).toBeVisible();
 });
 
 test("stopping before the first token preserves an honest response with immediate retry", async ({
@@ -428,7 +428,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await startAttachedConversation(page, "Regenerated response");
-  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await page.getByRole("button", { name: "More actions", exact: true }).click();
   await page.getByRole("menuitem", { name: /Try again/, exact: false }).click();
   await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
 
@@ -469,12 +469,13 @@ test("archived chats return to history and can be permanently deleted", async ({
   await page.getByRole("button", { name: "Options for Archived chat", exact: true }).click();
   await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  const confirmation = page.getByRole("alertdialog", { name: "Delete chat permanently?" });
-  await confirmation.getByRole("button", { name: "Delete permanently", exact: true }).click();
+  await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0, {
+    timeout: 10000,
+  });
   await expect(
     page.getByRole("button", { name: "Open chat Archived chat", exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByText("Chat permanently deleted", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("archive-cleanup-fixture-seeded"))).toBe(
     "true",
   );

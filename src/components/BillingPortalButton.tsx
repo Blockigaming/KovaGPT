@@ -6,7 +6,7 @@ import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 
 export function BillingPortalButton({
   priceId,
-  children = "Manage subscription in Stripe",
+  children = "Manage subscription",
 }: {
   priceId?: string;
   children?: React.ReactNode;

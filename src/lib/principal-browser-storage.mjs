@@ -347,6 +347,7 @@ function principalKeyPlan(identity, { purgeUnscopedPrivate = true } = {}) {
     `nova-gpt-conversations-v3:${principal}`,
     `kovagpt:archived:v2:${principal}`,
     `kova-chat-trash-v1:${principal}`,
+    `kova-chat-delete-intents-v1:${principal}`,
     `nova-gpt-pending-active:v2:${principal}`,
     `nova-gpt-settings-v1:${userKey ?? "guest"}`,
     `kova-work-tasks-v2:${principal}`,

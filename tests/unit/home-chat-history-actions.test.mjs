@@ -64,13 +64,23 @@ test("an action delayed across account clear cannot persist or change the new vi
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(f.events, []);
 });
-test("permanent deletion reports no Undo or recoverable Trash action", async () => {
+test("deletion clears the active view before the grace period and removes it only after a committed delete", async () => {
   const f = await fixture();
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(
-    f.events.find((row) => row[0] === "success"),
-    ["success", "Chat permanently deleted"],
+    f.events.map((row) => row[0]),
+    ["active", "save", "items"],
   );
+  assert.deepEqual(f.events[0], ["active", null]);
+});
+test("Undo restores the active chat without persisting a removal", async () => {
+  const f = await fixture(async () => false);
+  await f.module.removeHomeChat(f.context, f.chat.id);
+  assert.deepEqual(
+    f.events.map((row) => row[0]),
+    ["active", "save", "active"],
+  );
+  assert.deepEqual(f.events.at(-1), ["active", f.chat.id]);
 });
 test("a late successful durable delete does not repaint a replacement principal", async () => {
   let finish;
@@ -84,6 +94,6 @@ test("a late successful durable delete does not repaint a replacement principal"
   await action;
   assert.deepEqual(
     f.events.map((row) => row[0]),
-    ["save"],
+    ["active", "save"],
   );
 });

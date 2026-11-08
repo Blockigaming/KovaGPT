@@ -29,23 +29,6 @@ function compile(value, deps) {
     }).outputText,
   )(...Object.values(deps));
 }
-test("response memory remembers the exact invoking button and page", () => {
-  const target = { id: "memory-button" },
-    memoryReturnFocusRef = { current: null },
-    memoryReturnUrlRef = { current: null };
-  let opened;
-  const open = compile(expression("onClick", "memoryReturnFocusRef"), {
-    memoryReturnFocusRef,
-    memoryReturnUrlRef,
-    window: { location: { href: "https://review.invalid/chat" } },
-    memoryKey: "owner:message",
-    setMemoryOpenFor: (v) => (opened = v),
-  });
-  open({ currentTarget: target });
-  assert.equal(memoryReturnFocusRef.current, target);
-  assert.equal(memoryReturnUrlRef.current, "https://review.invalid/chat");
-  assert.equal(opened, "owner:message");
-});
 test("response memory dismissal restores focus with a stale-account guard", () => {
   for (const current of ["owner:message", "other:message"]) {
     let prevented = false,

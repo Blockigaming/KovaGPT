@@ -80,7 +80,6 @@ function fixture() {
     `return function Sources({ principal, chatId, message, temporary, principalResolved }) {
     ${source.slice(start, end)}
     return { sourcesSession, sourcesOpen, sourcesReturnFocusRef, sourcesPillRef, openSource, openSources, closeSources,
-      pillClick: ${attribute("onClick", "else openSources(event.currentTarget)")},
       closeAutoFocus: ${attribute("onCloseAutoFocus", "sourcesReturnFocusRef")},
     };
   };`,
@@ -126,13 +125,12 @@ function fixture() {
   };
 }
 
-for (const route of ["citation", "pill"]) {
+for (const route of ["citation"]) {
   test(`${route} restores its exact clicked opener after dismissing Sources`, () => {
     const f = fixture();
     const target = new f.HTMLElement(route);
     f.document.activeElement = new f.HTMLElement("unrelated-previous-focus");
-    if (route === "citation") f.view.openSource("one", target);
-    else f.view.pillClick({ currentTarget: target });
+    f.view.openSource("one", target);
     f.render();
     assert.equal(f.view.sourcesOpen, true);
     assert.equal(f.view.sourcesSession.trigger, target);
@@ -195,24 +193,6 @@ test("account clear closes Sources and invalidates its outstanding return", () =
   assert.match(
     source,
     /closeSources\(\);\s+sourcesReturnFocusRef.current = null;\s+setMemoryOpenFor\(null\)/,
-  );
-});
-
-test("the sources pill controls the matching inspector", () => {
-  const inspector = nodes.find(
-    (node) =>
-      ts.isJsxOpeningElement(node) &&
-      node.tagName.getText(parsed) === "DialogContent" &&
-      node.getText(parsed).includes("kova-sources-inspector"),
-  );
-  assert.ok(inspector);
-  const id = inspector.attributes.properties.find(
-    (node) => ts.isJsxAttribute(node) && node.name.getText(parsed) === "id",
-  );
-  assert.ok(id);
-  assert.equal(
-    id.initializer.expression.getText(parsed),
-    attribute("aria-controls", "message-sources-"),
   );
 });
 

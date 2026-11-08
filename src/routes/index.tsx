@@ -71,6 +71,9 @@ import { MobileTopBar } from "@/components/MobileTopBar";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
+const FreeOfferButton = lazy(() =>
+  import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
+);
 const ConversationHeaderActions = lazy(() =>
   import("@/components/ConversationHeaderActions").then((module) => ({
     default: module.ConversationHeaderActions,
@@ -3192,25 +3195,11 @@ function KovaGPT() {
       <ArrowDown className="h-5 w-5" aria-hidden="true" />
     </Button>
   ) : null;
-  const claimFreeOffer = () => {
-    void navigate({
-      to: "/subscribe" as never,
-      search: { plan: "plus_monthly" } as never,
-    });
-  };
   const freeOfferButton =
     isLoaded && isSignedIn && tier === "free" ? (
-      <button
-        type="button"
-        onClick={claimFreeOffer}
-        aria-label="Free offer: 50% off your first month"
-        title="50% off your first month"
-        data-free-introductory-offer="true"
-        className="kova-topbar-button inline-flex h-11 min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-full px-2 text-sm font-semibold text-sky-500 transition hover:bg-sky-500/10 lg:h-10 lg:min-h-10 lg:min-w-0 lg:justify-start lg:px-3"
-      >
-        <Sparkles className="h-4 w-4" aria-hidden="true" />
-        <span className="hidden lg:inline">Free offer</span>
-      </button>
+      <Suspense fallback={null}>
+        <FreeOfferButton />
+      </Suspense>
     ) : null;
 
   const desktopToolbar =

@@ -1,3 +1,6 @@
+import { useLayout } from "@/hooks/use-mobile";
+import { MobileBottomSheet } from "./MobileBottomSheet";
+import { MessageActivityList } from "./MessageActivityList";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { File, FileText, Image, Share, Download, SlidersHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -74,6 +77,7 @@ export function ConversationHeaderActions({
   onOpenContext?: (trigger: HTMLButtonElement) => void;
 }) {
   const { user, isLoaded, isSignedIn } = useUser();
+  const { isDesktop } = useLayout();
   const sourceInventory = useMemo(
     () => conversationSources(conversation, isLoaded && isSignedIn ? (user?.id ?? null) : null),
     [conversation, isLoaded, isSignedIn, user?.id],
@@ -108,6 +112,114 @@ export function ConversationHeaderActions({
     restoreDialogFocus(returnFocusRef.current, returnUrlRef.current);
   };
   const restrictedTemporary = Boolean(conversation.temporary);
+  const steps = conversation.messages.flatMap((message) => message.activities ?? []);
+  const activityContent = (
+    <>
+      <ConversationSourcesPanel
+        browserOnly
+        showActivity={false}
+        conversation={conversation}
+        browserTabCount={
+          signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+        }
+        browserPreview={
+          signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
+        }
+        onOpenAttachment={() => {}}
+        onOpenMemory={() => {}}
+        onOpenBrowser={(activity) => {
+          rememberFocus(outputsRef.current);
+          setOutputsOpen(false);
+          setSelectedBrowser(activity);
+        }}
+      />
+      {steps.some((step) => step.tool !== "scheduled_task") && (
+        <section className="kova-activity-steps" aria-label="Steps">
+          <h2>Steps</h2>
+          <MessageActivityList activities={steps} />
+        </section>
+      )}
+      <h2>Outputs</h2>
+      {generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
+      {generatedOutputs.length > 0 && (
+        <>
+          <div className="kova-output-list">
+            {generatedOutputs.map((output) => (
+              <button
+                key={output.id}
+                type="button"
+                className="kova-output-row"
+                onClick={() => {
+                  rememberFocus(outputsRef.current);
+                  setSelectedOutput(output);
+                  setOutputsOpen(false);
+                }}
+                title={output.name}
+              >
+                {output.kind === "image" ? (
+                  <Image aria-hidden="true" />
+                ) : output.kind === "artifact" ? (
+                  <FileText aria-hidden="true" />
+                ) : (
+                  <File aria-hidden="true" />
+                )}
+                <span className="kova-output-name">{output.name}</span>
+                <span className="kova-output-label">{output.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <ConversationSourcesPanel
+        hideBrowser
+        showActivity={false}
+        browserTabCount={
+          signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+        }
+        browserPreview={
+          signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
+        }
+        activeBrowserOnly
+        separateInputs
+        conversation={conversation}
+        onOpenBrowser={(activity) => {
+          rememberFocus(outputsRef.current);
+          setOutputsOpen(false);
+          setSelectedBrowser(activity);
+        }}
+        onOpenMemory={(sources) => {
+          rememberFocus(outputsRef.current);
+          setOutputsOpen(false);
+          setSelectedMemory(sources);
+        }}
+        onOpenAttachment={(outputId) => {
+          const output = outputs.find((item) => item.id === outputId);
+          if (!output) return;
+          rememberFocus(outputsRef.current);
+          setSelectedOutput(output);
+          setOutputsOpen(false);
+        }}
+      />
+      {onOpenContext ? (
+        <button
+          type="button"
+          className="kova-activity-context"
+          onClick={(event) => {
+            dialogOpeningRef.current = true;
+            setOutputsOpen(false);
+            onOpenContext(outputsRef.current ?? event.currentTarget);
+          }}
+        >
+          Chat instructions and context
+        </button>
+      ) : null}
+      {isStreaming ? (
+        <p className="kova-header-note">
+          A response is still being generated. Its output may change.
+        </p>
+      ) : null}
+    </>
+  );
   return (
     <>
       <div
@@ -131,117 +243,68 @@ export function ConversationHeaderActions({
           <Share aria-hidden="true" />
           <span>Share</span>
         </button>
-        <Popover open={outputsOpen} onOpenChange={setOutputsOpen}>
-          <PopoverTrigger asChild>
+        {!isDesktop ? (
+          <>
             <button
               ref={outputsRef}
               type="button"
               className="kova-conversation-icon"
               aria-label="Activity"
               title="Activity"
+              aria-haspopup="dialog"
+              aria-expanded={outputsOpen}
+              onClick={() => {
+                dialogOpeningRef.current = false;
+                setOutputsOpen(true);
+              }}
             >
               <OutputsIcon />
             </button>
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            sideOffset={10}
-            className="kova-conversation-outputs"
-            aria-label="Activity"
-            onCloseAutoFocus={(event) => {
-              if (!dialogOpeningRef.current) return;
-              event.preventDefault();
-              dialogOpeningRef.current = false;
+            <MobileBottomSheet
+              open={outputsOpen}
+              onOpenChange={setOutputsOpen}
+              title="Activity"
+              restoreFocus={!dialogOpeningRef.current}
+            >
+              <div className="kova-conversation-outputs kova-conversation-outputs-touch">
+                {activityContent}
+              </div>
+            </MobileBottomSheet>
+          </>
+        ) : (
+          <Popover
+            open={outputsOpen}
+            onOpenChange={(open) => {
+              if (open) dialogOpeningRef.current = false;
+              setOutputsOpen(open);
             }}
           >
-            <ConversationActivitySummary
-              inventory={sourceInventory}
-              browserTabCount={
-                signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
-              }
-            />
-            <h2>Outputs</h2>
-            {generatedOutputs.length === 0 ? (
-              <p className="kova-header-note">No outputs yet.</p>
-            ) : null}
-            {generatedOutputs.length > 0 && (
-              <>
-                <div className="kova-output-list">
-                  {generatedOutputs.map((output) => (
-                    <button
-                      key={output.id}
-                      type="button"
-                      className="kova-output-row"
-                      onClick={() => {
-                        rememberFocus(outputsRef.current);
-                        setSelectedOutput(output);
-                        setOutputsOpen(false);
-                      }}
-                      title={output.name}
-                    >
-                      {output.kind === "image" ? (
-                        <Image aria-hidden="true" />
-                      ) : output.kind === "artifact" ? (
-                        <FileText aria-hidden="true" />
-                      ) : (
-                        <File aria-hidden="true" />
-                      )}
-                      <span className="kova-output-name">{output.name}</span>
-                      <span className="kova-output-label">{output.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-            <ConversationSourcesPanel
-              showActivity={false}
-              browserTabCount={
-                signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
-              }
-              browserPreview={
-                signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
-              }
-              activeBrowserOnly
-              separateInputs
-              conversation={conversation}
-              onOpenBrowser={(activity) => {
-                rememberFocus(outputsRef.current);
-                setOutputsOpen(false);
-                setSelectedBrowser(activity);
-              }}
-              onOpenMemory={(sources) => {
-                rememberFocus(outputsRef.current);
-                setOutputsOpen(false);
-                setSelectedMemory(sources);
-              }}
-              onOpenAttachment={(outputId) => {
-                const output = outputs.find((item) => item.id === outputId);
-                if (!output) return;
-                rememberFocus(outputsRef.current);
-                setSelectedOutput(output);
-                setOutputsOpen(false);
-              }}
-            />
-            {onOpenContext ? (
+            <PopoverTrigger asChild>
               <button
+                ref={outputsRef}
                 type="button"
-                className="kova-activity-context"
-                onClick={(event) => {
-                  dialogOpeningRef.current = true;
-                  setOutputsOpen(false);
-                  onOpenContext(outputsRef.current ?? event.currentTarget);
-                }}
+                className="kova-conversation-icon"
+                aria-label="Activity"
+                title="Activity"
               >
-                Chat instructions and context
+                <OutputsIcon />
               </button>
-            ) : null}
-            {isStreaming ? (
-              <p className="kova-header-note">
-                A response is still being generated. Its output may change.
-              </p>
-            ) : null}
-          </PopoverContent>
-        </Popover>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={10}
+              className="kova-conversation-outputs"
+              aria-label="Activity"
+              onCloseAutoFocus={(event) => {
+                if (!dialogOpeningRef.current) return;
+                event.preventDefault();
+                dialogOpeningRef.current = false;
+              }}
+            >
+              {activityContent}
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
       <Dialog
         open={dialog === "share-restricted"}

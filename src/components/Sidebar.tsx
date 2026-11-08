@@ -1,3 +1,5 @@
+import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
+import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
 import {
   NewChatGlyph,
   LibraryGlyph,
@@ -145,6 +147,57 @@ export function Sidebar({
   compactOnly?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
+  const deleteOwner = isLoaded ? (isSignedIn ? user?.id : null) : undefined;
+  const deleteOwnerRef = useRef(deleteOwner);
+  deleteOwnerRef.current = deleteOwner;
+  const [pendingDeleteState, setPendingDeleteState] = useState<{
+    owner: string | null | undefined;
+    ids: Set<string>;
+  }>({ owner: undefined, ids: new Set() });
+  const pendingDeleteIds =
+    pendingDeleteState.owner === deleteOwner ? pendingDeleteState.ids : new Set<string>();
+  useEffect(() => {
+    if (!isLoaded) return;
+    const owner = isSignedIn ? (user?.id ?? null) : null;
+    let mounted = true;
+    const update = () => {
+      if (mounted) {
+        const next = new Set(readChatDeleteIntents(owner).map((item) => item.id));
+        setPendingDeleteState((previous) =>
+          previous.owner === owner &&
+          previous.ids.size === next.size &&
+          [...previous.ids].every((id) => next.has(id))
+            ? previous
+            : { owner, ids: next },
+        );
+      }
+    };
+    const resume = () => {
+      resumePendingChatDeletions(owner, () => mounted && deleteOwnerRef.current === owner);
+      update();
+    };
+    const unsubscribe = subscribeChatDeleteIntents(update);
+    update();
+    resume();
+    const timer = window.setInterval(() => {
+      if (readChatDeleteIntents(owner).length) resume();
+    }, 2000);
+    const storage = (event: StorageEvent) => {
+      if (event.key?.startsWith("kova-chat-delete-intents-v1:")) {
+        update();
+        resume();
+      }
+    };
+    window.addEventListener("online", resume);
+    window.addEventListener("storage", storage);
+    return () => {
+      mounted = false;
+      unsubscribe();
+      window.clearInterval(timer);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("storage", storage);
+    };
+  }, [isLoaded, isSignedIn, user?.id]);
   const clerk = useClerkSafe();
   const { tier, status: tierStatus } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
@@ -859,7 +912,9 @@ export function Sidebar({
   );
 
   const query = localSearchOpen ? searchQuery.trim() : "";
-  const savedConversations = signedIn ? conversations : [];
+  const savedConversations = signedIn
+    ? conversations.filter((chat) => !pendingDeleteIds.has(chat.id))
+    : [];
   const filtered = query
     ? searchConversations(savedConversations, query).map((result) => result.conversation)
     : savedConversations;
@@ -945,7 +1000,10 @@ export function Sidebar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          align="end"
+          side="right"
+          align="start"
+          sideOffset={12}
+          collisionPadding={12}
           className="kova-sidebar-chat-menu"
           onCloseAutoFocus={(event) => {
             if (closePinMenu(conversation.id, event)) return;
@@ -1035,15 +1093,23 @@ export function Sidebar({
         </span>
         <span className="min-w-0">
           <strong className="block truncate">{displayName}</strong>
-          <small className="block truncate text-muted-foreground">{planLabel}</small>
-          <small className="block truncate text-muted-foreground">
+          <small className="block truncate text-foreground">{planLabel}</small>
+          <small className="block truncate text-foreground">
             {accountEmail || "Email unavailable"}
           </small>
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
-        <Link to="/pricing" onClick={() => cancelPendingSelection()}>
+        <Link
+          to={tierStatus === "ready" && tier === "pro" ? "/pricing" : "/subscribe"}
+          search={
+            tier === "pro"
+              ? undefined
+              : ({ plan: tier === "plus" ? "pro_monthly" : "plus_monthly" } as never)
+          }
+          onClick={() => cancelPendingSelection()}
+        >
           <Sparkles aria-hidden="true" />
           {tierStatus === "ready" && tier === "pro" ? "View plans" : "Upgrade plan"}
         </Link>
