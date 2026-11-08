@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
-import { choosePickerValue } from "./select-control";
 // This fixture verifies mutation replay, independently of the host's timezone database.
 test.use({ timezoneId: "UTC" });
 type TaskBrowserFixture = {
@@ -109,90 +108,47 @@ test("Tasks retries the exact captured mutation and pins the rendered account", 
   expect(calls[0].data.expectedUserId).toBe(owner);
   expect(calls[0].data.mutationId).toBeTruthy();
 });
-test("Tasks discards late resource pages and resets private state on account change", async ({
+test("removed context and connection controls stay absent across account changes", async ({
   page,
 }) => {
   await mount(page);
-  await page.getByText("Connected sources and event filters", { exact: true }).click();
-  await choosePickerValue(
-    page,
-    page.getByRole("combobox", { name: "Task background approval", exact: true }),
-    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-  );
-  await page.getByRole("button", { name: "Browse readable sources" }).click();
-  await choosePickerValue(
-    page,
-    page.getByRole("combobox", { name: "Task background approval", exact: true }),
-    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-  );
-  await page.getByRole("button", { name: "Browse readable sources" }).click();
-  await page.evaluate(() => {
-    const pending = (window as unknown as TaskBrowserWindow).fixture.pending;
-    pending[1].resolve({ items: [{ id: "new/repo", label: "Current source" }], nextCursor: null });
-  });
-  await choosePickerValue(
-    page,
-    page.getByRole("combobox", { name: "Connected source", exact: true }),
-    "new/repo",
-  );
-  await expect(page.getByLabel("Connected source")).toContainText("Current source");
-  await page.evaluate(() => {
-    (window as unknown as TaskBrowserWindow).fixture.pending[0].resolve({
-      items: [{ id: "private/repo", label: "Stale private source" }],
-      nextCursor: null,
-    });
-  });
-  await expect(page.getByLabel("Connected source")).not.toContainText("Stale private source");
-  await page.getByRole("combobox", { name: "Connected source", exact: true }).click();
-  await expect(page.getByRole("option", { name: "Stale private source", exact: true })).toHaveCount(
-    0,
-  );
-  await page.keyboard.press("Escape");
+  for (const text of [
+    "Saved chat or uploaded context",
+    "Connected sources and event filters",
+    "Approve background reads",
+    "Browse readable sources",
+  ]) {
+    await expect(page.getByText(text, { exact: false })).toHaveCount(0);
+  }
+  await expect(page.getByRole("combobox", { name: "Task background approval" })).toHaveCount(0);
   await page.evaluate(() => (window as unknown as TaskBrowserWindow).fixture.switchUser());
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue("New account draft");
-  await expect(page.locator("body")).not.toContainText("Current source");
-  const last = await page.evaluate(() =>
-    (window as unknown as TaskBrowserWindow).fixture.calls
-      .filter((call) => call.name === "listScheduledTaskConnections")
-      .at(-1),
+  const reads = await page.evaluate(() =>
+    (window as unknown as TaskBrowserWindow).fixture.calls.filter((call) =>
+      /^(listScheduledTaskConnections|listScheduledTaskContextOptions|listScheduledTaskResourceOptions)$/.test(
+        call.name,
+      ),
+    ),
   );
-  expect(last?.data.expectedUserId).toBe(other);
+  expect(reads).toEqual([]);
 });
 
-test("selected Gmail event controls capture the approved account and disappear on account switch", async ({
+test("new scheduled tasks never offer connected events or request event sources", async ({
   page,
 }) => {
-  const requests: Array<{
-    user: string | null;
-    grant: string | null;
-    authorization: string | undefined;
-  }> = [];
-  await page.route("**/api/tasks/event-sources?**", async (route) => {
-    const url = new URL(route.request().url());
-    requests.push({
-      user: url.searchParams.get("expectedUserId"),
-      grant: url.searchParams.get("grantId"),
-      authorization: route.request().headers().authorization,
-    });
-    await route.fulfill({
-      json: { configured: { gmail: false }, watchConfigured: false, sources: [] },
-    });
+  const requests: string[] = [];
+  await page.route("**/api/tasks/event-sources?**", (route) => {
+    requests.push(route.request().url());
+    return route.fulfill({ json: { sources: [] } });
   });
   await mount(page);
   await page.getByRole("combobox", { name: "Run when", exact: true }).click();
-  await page.getByRole("option", { name: "A connected event matches", exact: true }).click();
-  await choosePickerValue(
-    page,
-    page.getByRole("combobox", { name: "Task background approval", exact: true }),
-    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-  );
-  await expect(page.getByRole("region", { name: "Gmail event delivery" })).toBeVisible();
-  await expect.poll(() => requests.length).toBe(1);
-  expect(requests[0]).toEqual({
-    user: owner,
-    grant: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-    authorization: "Bearer fixture-token",
-  });
+  await expect(
+    page.getByRole("option", { name: "A connected event matches", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await page.evaluate(() => (window as unknown as TaskBrowserWindow).fixture.switchUser());
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("New account draft");
   await expect(page.getByRole("region", { name: "Gmail event delivery" })).toHaveCount(0);
+  expect(requests).toEqual([]);
 });
