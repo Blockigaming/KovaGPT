@@ -157,6 +157,30 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
 type TabDef = { v: string; label: string; icon: typeof Cog; keywords?: string[] };
 type TabGroup = { title: string; hint?: string; tabs: TabDef[] };
 
+const SETTINGS_DESCRIPTIONS: Record<string, string> = {
+  general: "Messages, response style, and chat defaults.",
+  appearance: "Theme, text size, and your reading experience.",
+  personalization: "Your profile and account details.",
+  memory: "Memories and preferences that make Kova feel like yours.",
+  notifications: "Choose what reaches you and when.",
+  data: "Manage your privacy, security, and saved data.",
+  linked: "Connected apps, browser access, and shared workspaces.",
+  billing: "Your plan, payments, and usage in one place.",
+  help: "Find answers, get support, or report a problem.",
+  security: "Sign-in methods, trusted devices, and account protection.",
+  email: "Your account email and email preferences.",
+  parental: "Manage parental controls for this account.",
+  voice: "Voice preferences and connection status.",
+  storage: "Review and manage your stored files.",
+  shortcuts: "Keyboard shortcuts for working faster on desktop.",
+  usage: "Your current usage and plan allowances.",
+  "cloud-browser": "Browser permissions, websites, and saved rules.",
+  family: "Manage family access and shared plan settings.",
+  location: "Control how your location is used.",
+  report: "Tell us what went wrong so we can help.",
+  about: "App information and important links.",
+};
+
 // Settings are grouped into clear sections with headers so it doesn't read as
 // one long stack of icons. Each group has a short caption describing what
 // lives inside.
@@ -291,6 +315,7 @@ export function SettingsDialog({
   const [usageRetry, setUsageRetry] = useState(0);
   const usageStatusRef = useRef<HTMLDivElement>(null);
   const settingsSearchRef = useRef<HTMLInputElement>(null);
+  const navigationHeadingRef = useRef<HTMLHeadingElement>(null);
   const contentHeadingRef = useRef<HTMLHeadingElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const pendingMobileFocusRef = useRef<"content" | "navigation" | null>(null);
@@ -1022,7 +1047,7 @@ export function SettingsDialog({
 
   // Full-page Settings uses the same page-first navigation hierarchy as the
   // account Settings reference. Every destination is an existing functional tab.
-  const pageGroups: TabGroup[] = [
+  const destinationGroups: TabGroup[] = [
     {
       title: "Personal",
       tabs: [
@@ -1081,13 +1106,29 @@ export function SettingsDialog({
       ],
     },
   ];
+  const destinations = destinationGroups.flatMap((group) => group.tabs);
+  const destination = (value: string) => destinations.find((item) => item.v === value)!;
+  const pageGroups: TabGroup[] = [
+    { title: "Your account", tabs: [destination("personalization"), destination("billing")] },
+    {
+      title: "Preferences",
+      tabs: [
+        destination("general"),
+        destination("appearance"),
+        destination("memory"),
+        destination("notifications"),
+      ],
+    },
+    { title: "Privacy & workspace", tabs: [destination("data"), destination("linked")] },
+    { title: "Support", tabs: [destination("help"), destination("logout")] },
+  ];
   const groups = pageGroups;
   const secondaryParents: Record<string, string> = {
     email: "personalization",
     logout: "personalization",
-    report: "personalization",
-    help: "personalization",
-    about: "personalization",
+    report: "help",
+    about: "help",
+    voice: "general",
     shortcuts: "general",
     memory: "data",
     security: "data",
@@ -1095,11 +1136,13 @@ export function SettingsDialog({
     location: "data",
     parental: "data",
     family: "linked",
+    usage: "billing",
+    "cloud-browser": "linked",
   };
   const parentTab = pageGroups.some((group) => group.tabs.some((item) => item.v === tab))
     ? undefined
     : secondaryParents[tab];
-  const secondaryTabs = TAB_GROUPS.flatMap((group) => group.tabs).filter(
+  const secondaryTabs = destinations.filter(
     (item) =>
       secondaryParents[item.v] === tab &&
       !pageGroups.some((group) => group.tabs.some((primary) => primary.v === item.v)),
@@ -1107,7 +1150,7 @@ export function SettingsDialog({
   const allTabs = groups.flatMap((group) => group.tabs);
   const activeTab =
     allTabs.find((item) => item.v === tab) ??
-    TAB_GROUPS.flatMap((group) => group.tabs).find((item) => item.v === tab) ??
+    destinations.find((item) => item.v === tab) ??
     allTabs[0];
   const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
   const matchesSettingsQuery = (item: TabDef) =>
@@ -1115,7 +1158,7 @@ export function SettingsDialog({
       term.toLocaleLowerCase().includes(normalizedQuery),
     );
   const matchingSecondaryTabs = normalizedQuery
-    ? TAB_GROUPS.flatMap((group) => group.tabs).filter(
+    ? destinations.filter(
         (item) =>
           secondaryParents[item.v] &&
           !allTabs.some((primary) => primary.v === item.v) &&
@@ -1152,7 +1195,8 @@ export function SettingsDialog({
     if (!pendingFocus) return;
     pendingMobileFocusRef.current = null;
     if (pendingFocus === "navigation" && mobileHome) {
-      settingsSearchRef.current?.focus({ preventScroll: true });
+      // Returning to the phone menu must not summon the on-screen keyboard.
+      navigationHeadingRef.current?.focus({ preventScroll: true });
     } else if (pendingFocus === "content" && !mobileHome) {
       contentHeadingRef.current?.focus({ preventScroll: true });
     }
@@ -1357,9 +1401,23 @@ export function SettingsDialog({
               <div className="kova-settings-navigation-heading">
                 {pageBack}
                 <div className="kova-settings-nav-title">
-                  <h2>Settings</h2>
+                  <h2 ref={navigationHeadingRef} tabIndex={-1}>
+                    Settings
+                  </h2>
+                  <p>Your space, your preferences.</p>
                 </div>
                 {page ? <div className="kova-settings-navigation-close">{pageClose}</div> : null}
+              </div>
+              <div className="kova-settings-account-summary">
+                <span className="kova-settings-account-avatar" aria-hidden="true">
+                  <User2 />
+                </span>
+                <div>
+                  <strong>{user?.fullName || "Your account"}</strong>
+                  <span>
+                    {tier === "pro" ? "Kova Pro" : tier === "plus" ? "Kova Plus" : "Kova Free"}
+                  </span>
+                </div>
               </div>
               <label className="kova-settings-search">
                 <Search aria-hidden="true" />
@@ -1386,8 +1444,16 @@ export function SettingsDialog({
                           if (mobileHome && v === tab) selectTab(v);
                         }}
                       >
-                        <Icon aria-hidden="true" />
-                        <span>{label}</span>
+                        <span className="kova-settings-nav-icon">
+                          <Icon aria-hidden="true" />
+                        </span>
+                        <span className="kova-settings-nav-copy">
+                          <span>{label}</span>
+                          {v !== "logout" && <small>{SETTINGS_DESCRIPTIONS[v]}</small>}
+                        </span>
+                        <span className="kova-settings-nav-chevron" aria-hidden="true">
+                          ›
+                        </span>
                       </TabsTrigger>
                     ))}
                   </section>
@@ -1422,10 +1488,11 @@ export function SettingsDialog({
                 >
                   <ArrowLeft aria-hidden="true" />
                 </button>
-                <div>
+                <div className="kova-settings-section-copy">
                   <h2 id={currentSectionHeadingId} ref={contentHeadingRef} tabIndex={-1}>
                     {activeTab.label}
                   </h2>
+                  <p>{SETTINGS_DESCRIPTIONS[tab]}</p>
                 </div>
                 <span
                   aria-live="polite"
@@ -1441,26 +1508,32 @@ export function SettingsDialog({
                   </div>
                 ) : null}
               </header>
+              <p className="kova-settings-mobile-intro">{SETTINGS_DESCRIPTIONS[tab]}</p>
               {parentTab ? (
-                <div className="px-7 py-2">
+                <div className="kova-settings-parent-link">
                   <Button variant="ghost" onClick={() => selectTab(parentTab)}>
                     <ArrowLeft aria-hidden="true" />
                     Back to {allTabs.find((item) => item.v === parentTab)?.label ?? "Settings"}
                   </Button>
                 </div>
               ) : secondaryTabs.length ? (
-                <details className="mx-7 my-2 rounded-[var(--kova-radius-card)] border border-border px-4">
-                  <summary className="min-h-11 cursor-pointer py-3 text-sm">
-                    More {activeTab.label.toLocaleLowerCase()} settings
-                  </summary>
-                  <div className="flex flex-wrap gap-2 pb-4">
+                <nav className="kova-settings-related" aria-label={`${activeTab.label} sections`}>
+                  <p>Also in {activeTab.label.toLocaleLowerCase()}</p>
+                  <div>
                     {secondaryTabs.map((item) => (
-                      <Button key={item.v} variant="outline" onClick={() => selectTab(item.v)}>
-                        {item.label}
+                      <Button
+                        key={item.v}
+                        variant="ghost"
+                        data-desktop-only={item.v === "shortcuts" || undefined}
+                        onClick={() => selectTab(item.v)}
+                      >
+                        <item.icon aria-hidden="true" />
+                        <span>{item.label}</span>
+                        <span aria-hidden="true">›</span>
                       </Button>
                     ))}
                   </div>
-                </details>
+                </nav>
               ) : null}
               {/* DIRECT ACCOUNT SETTINGS */}
               <TabsContent
@@ -1484,9 +1557,9 @@ export function SettingsDialog({
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
                 <section className="kova-settings-general-overview">
-                  <h3 className="text-sm font-semibold">General</h3>
+                  <h3 className="text-sm font-semibold">Chat behavior</h3>
                   <div className="kova-settings-reference-group kova-settings-general-options">
-                    <div className="kova-settings-reference-row">
+                    <div className="kova-settings-reference-row kova-desktop-only">
                       <div>
                         <label htmlFor="settings-send-shortcut" className="text-sm font-medium">
                           Send shortcut

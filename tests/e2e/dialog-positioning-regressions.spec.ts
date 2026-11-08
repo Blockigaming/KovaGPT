@@ -112,12 +112,13 @@ for (const theme of ["light", "dark"] as const) {
     await contained(page, modal);
     const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
     await expect(heading).toBeInViewport({ ratio: 1 });
-    const close = modal.getByRole("button", { name: "Close settings", exact: true });
+    const close = modal.getByRole("button", {
+      name: "Close settings",
+      exact: true,
+    });
     await usableClose(page, close);
     await expect(modal).toHaveCSS("background-color", pageColor);
-    const content = mobile
-      ? modal.getByRole("tabpanel").first()
-      : modal.locator(".kova-settings-content");
+    const content = modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect
       .poll(() =>
@@ -156,12 +157,17 @@ for (const theme of ["light", "dark"] as const) {
     await coreFixture(page, theme);
     await page.goto("/images");
     await waitForKovaHydration(page);
-    const prompt = page.getByRole("textbox", { name: "Describe the image to generate" });
+    const prompt = page.getByRole("textbox", {
+      name: "Describe the image to generate",
+    });
     await prompt.fill("Keep this unsaved image idea");
     await openCurrentSettings(page);
     const modal = page.getByRole("dialog", { name: "Settings", exact: true });
     await contained(page, modal);
-    const close = modal.getByRole("button", { name: "Close settings", exact: true });
+    const close = modal.getByRole("button", {
+      name: "Close settings",
+      exact: true,
+    });
     await usableClose(page, close);
     await focusStaysInside(page, modal);
     await close.click();
@@ -177,7 +183,10 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/apps");
     await waitForKovaHydration(page);
     const card = page.locator('[data-plugin-id="github"]');
-    const details = card.getByRole("button", { name: "Coming soon GitHub", exact: true });
+    const details = card.getByRole("button", {
+      name: "Coming soon GitHub",
+      exact: true,
+    });
     await expect(details).toBeVisible();
     await expect(details).toHaveAttribute("data-coming-soon", "true");
     await details.click(); // This card action opens metadata; it never connects a provider.
@@ -186,7 +195,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(modal.getByRole("heading", { name: "GitHub", exact: true })).toBeInViewport({
       ratio: 1,
     });
-    const close = modal.getByRole("button", { name: "Close connection details", exact: true });
+    const close = modal.getByRole("button", {
+      name: "Close connection details",
+      exact: true,
+    });
     await usableClose(page, close);
     const scrolling = await modal.evaluate((element) => ({
       overflow: getComputedStyle(element).overflowY,
@@ -266,7 +278,10 @@ for (const theme of ["light", "dark"] as const) {
     expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
       true,
     );
-    const last = drawer.getByRole("heading", { name: "Synthetic source 12", exact: true });
+    const last = drawer.getByRole("heading", {
+      name: "Synthetic source 12",
+      exact: true,
+    });
     await last.scrollIntoViewIfNeeded();
     await expect(last).toBeInViewport({ ratio: 1 });
     await usableClose(page, close);

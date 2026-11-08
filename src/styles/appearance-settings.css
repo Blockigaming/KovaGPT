@@ -185,9 +185,26 @@
 @container (max-width: 380px) {
   .kova-preference-row:has([data-slot="select-trigger"]) {
     display: grid;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 12px;
   }
   .kova-preference-row [data-slot="select-trigger"] {
     width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-appearance-settings .kova-preference-row:has([data-slot="select-trigger"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .kova-appearance-settings .kova-preference-row [data-slot="select-trigger"] {
+    width: 100%;
+    min-height: 48px;
   }
 }

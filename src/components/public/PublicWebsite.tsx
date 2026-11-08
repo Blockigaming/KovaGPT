@@ -106,9 +106,11 @@ export function PublicWebsiteHome({
           </div>
           <figure className="public-classroom">
             <img
-              src="/images/classroom-hero.webp"
-              width={1312}
-              height={936}
+              src="/images/classroom-hero-restored.webp"
+              srcSet="/images/classroom-hero-restored-768.webp 768w, /images/classroom-hero-restored.webp 1485w"
+              sizes="(min-width: 1600px) 640px, (min-width: 1024px) 46vw, (min-width: 520px) 448px, calc(100vw - 48px)"
+              width={1485}
+              height={1059}
               fetchPriority="high"
               alt="Students in a classroom, with a student in an orange sweater raising her hand."
             />

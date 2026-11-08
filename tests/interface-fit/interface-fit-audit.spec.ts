@@ -108,7 +108,9 @@ if (scope === "public") {
   for (const route of PUBLIC_REVIEW_PATHS) {
     test(`public page fits: ${route}`, async ({ page }) => {
       const errors = watchErrors(page);
-      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      const response = await page.goto(route, {
+        waitUntil: "domcontentloaded",
+      });
       expect(response?.status(), route).toBe(200);
       await waitForKovaHydration(page);
       await expectContained(page, route);
@@ -139,7 +141,10 @@ if (scope === "public") {
     }
     await page.screenshot({ path: info.outputPath("response-actions.png") });
     await page.route("**/api/speech", (route) =>
-      route.fulfill({ status: 403, json: { error: "speech_model_not_eligible" } }),
+      route.fulfill({
+        status: 403,
+        json: { error: "speech_model_not_eligible" },
+      }),
     );
     await toolbar.getByRole("button", { name: "Read aloud", exact: true }).click();
     await expect(toolbar.getByRole("status")).toHaveText(
@@ -149,14 +154,18 @@ if (scope === "public") {
     expect(
       await toolbar.evaluate((element) => element.scrollWidth - element.clientWidth),
     ).toBeLessThanOrEqual(1);
-    await page.screenshot({ path: info.outputPath("response-actions-error.png") });
+    await page.screenshot({
+      path: info.outputPath("response-actions-error.png"),
+    });
   });
 
   test("chat sync recovery controls stay inside their notice", async ({ page }, info) => {
     await coreFixture(page, "dark", "plus");
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    const notice = page.getByLabel("Chat history synchronization", {
+      exact: true,
+    });
     await expect(notice).toBeVisible();
     // Measure recovery controls and their scroll reach in one rendered snapshot.
     await expect(async () => {
@@ -181,7 +190,11 @@ if (scope === "public") {
           reachesLastButton,
           buttons: buttons.map((button) => {
             const box = button.getBoundingClientRect();
-            return { name: button.textContent?.trim(), left: box.left, right: box.right };
+            return {
+              name: button.textContent?.trim(),
+              left: box.left,
+              right: box.right,
+            };
           }),
         };
       });
@@ -215,12 +228,17 @@ if (scope === "public") {
         heldRequests++;
         await pending;
       }
-      await route.fulfill({ status: 503, json: { error: "Synthetic offline history" } });
+      await route.fulfill({
+        status: 503,
+        json: { error: "Synthetic offline history" },
+      });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await page.evaluate(() => document.fonts.ready);
-    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    const notice = page.getByLabel("Chat history synchronization", {
+      exact: true,
+    });
     await expect(
       notice.getByRole("button", { name: "Retry chat sync", exact: true }),
     ).toBeVisible();
@@ -319,12 +337,23 @@ if (scope === "public") {
     await coreFixture(page, "dark", "plus");
     await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const size = page.getByRole("slider", { name: "Interface size", exact: true });
-    const navigation = page.getByRole("slider", { name: "Settings sidebar width", exact: true });
-    for (const [slider, min, max] of [
-      [size, "85", "125"],
-      [navigation, "200", "440"],
-    ] as const) {
+    const size = page.getByRole("slider", {
+      name: "Interface size",
+      exact: true,
+    });
+    const navigation = page.getByRole("slider", {
+      name: "Settings sidebar width",
+      exact: true,
+    });
+    const phone = page.viewportSize()!.width < 768;
+    const controls = phone
+      ? ([[size, "85", "125"]] as const)
+      : ([
+          [size, "85", "125"],
+          [navigation, "200", "440"],
+        ] as const);
+    if (phone) await expect(navigation).toBeHidden();
+    for (const [slider, min, max] of controls) {
       await slider.scrollIntoViewIfNeeded();
       await slider.press("Home");
       await expect(slider).toHaveAttribute("aria-valuenow", min);
@@ -341,7 +370,7 @@ if (scope === "public") {
       .scrollIntoViewIfNeeded();
     await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
     await expect(size).toHaveAttribute("aria-valuenow", "100");
-    await expect(navigation).toHaveAttribute("aria-valuenow", "280");
+    if (!phone) await expect(navigation).toHaveAttribute("aria-valuenow", "280");
     await page.screenshot({ path: info.outputPath("appearance-reset.png") });
   });
 }

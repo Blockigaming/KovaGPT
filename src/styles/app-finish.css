@@ -767,42 +767,6 @@
     border-color 0.16s,
     background 0.16s;
 }
-.kova-settings-route .kova-settings-page {
-  max-width: 1220px;
-  margin: 0 auto;
-  border-radius: 24px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
-  background: var(--background);
-}
-.kova-settings-route .kova-settings-page .kova-settings-sidebar {
-  padding: 16px 12px;
-  margin: 12px;
-  border: 0;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--foreground) 3%, transparent);
-}
-.kova-settings-reference .kova-settings-search input {
-  border-radius: 999px;
-}
-.kova-settings-reference .kova-settings-nav [role="tab"] {
-  border-radius: 12px;
-  margin-bottom: 3px;
-}
-.kova-settings-route .kova-settings-content-header {
-  margin-inline: 28px;
-  border-bottom: 1px solid var(--border);
-  padding-block: 20px !important;
-}
-.kova-settings-route .kova-settings-content-header h2 {
-  font-size: 22px !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.035em;
-}
-.kova-settings-reference [role="tabpanel"] input:not([type="checkbox"]):not([type="radio"]),
-.kova-settings-reference [role="tabpanel"] textarea,
-.kova-settings-reference [role="tabpanel"] [data-slot="select-trigger"] {
-  border-radius: 24px;
-}
 .kova-billing-plan-grid {
   gap: 16px !important;
 }
@@ -845,10 +809,6 @@
   border-radius: 99px;
 }
 @media (max-width: 719px) {
-  .kova-settings-route .kova-settings-page {
-    border: 0;
-    border-radius: 0;
-  }
   .kova-tool-page[data-ui-reference="grok.search.results"] form {
     padding: 16px;
   }

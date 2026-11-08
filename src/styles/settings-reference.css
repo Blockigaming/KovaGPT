@@ -1,186 +1,207 @@
-/* CG-SETTINGS: one owner for the dialog, navigation, preference rows and feedback.
-   Shared controls use CG-SDK. The multi-pane Settings composition and phone
-   navigation preserve existing behavior; uncaptured web pixels remain a gap. */
+/* Settings has one shared control system. Page and dialog sizing live in
+   settings-page-layout.css; phone navigation is intentionally a separate view. */
 .kova-settings-reference {
+  --settings-space: 24px;
+  --settings-control-width: 208px;
+  --settings-card: color-mix(in srgb, var(--foreground) 3%, var(--background));
   font-family: var(--font-ui);
-  background: var(--surface-modal);
-  color: var(--popover-foreground);
-  transition-property: opacity, transform;
+  color: var(--foreground);
+  background: var(--background);
+  isolation: isolate;
 }
 [role="dialog"].kova-settings-dialog.is-authenticated {
-  width: min(calc(100vw - 32px), 1008px);
-  max-width: 1008px;
-  height: min(86dvh, 720px);
-  max-height: 86dvh;
-  border-radius: 20px;
+  width: min(1100px, calc(100vw - 64px));
+  max-width: 1100px;
+  height: min(820px, calc(100dvh - 64px));
+  max-height: calc(100dvh - 64px);
+  border-radius: 24px;
 }
 [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
-  top: 12px;
-  right: 12px;
-  left: auto;
-  z-index: 5;
-  width: 36px;
-  height: 36px;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--foreground);
   opacity: 1;
-}
-[role="dialog"].kova-settings-dialog > [data-kova-dialog-close] > svg {
-  width: 18px;
-  height: 18px;
-}
-[role="dialog"].kova-settings-dialog > [data-kova-dialog-close]:hover {
-  background: var(--surface-hover);
 }
 .kova-settings-reference .kova-settings-sidebar {
   display: flex;
-  width: var(--kova-settings-navigation-width, 280px);
-  min-width: 0;
-  min-height: 0;
   flex: 0 0 auto;
   flex-direction: column;
-  overflow: hidden;
-  border-right: 1px solid var(--border-subtle);
-  padding: 20px 12px 16px;
-  background: var(--surface-secondary);
+  width: var(--kova-settings-navigation-width, 256px);
+  min-width: 0;
+  min-height: 0;
+  padding: 24px 16px;
+  border-right: 1px solid var(--border);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--background);
 }
-@media (min-width: 768px) {
-  [role="dialog"].kova-settings-reference .kova-settings-sidebar {
-    max-width: min(440px, calc(100% - 344px));
-  }
+.kova-settings-reference .kova-settings-sidebar-top,
+.kova-settings-reference .kova-settings-section-select,
+.kova-settings-reference .kova-settings-nav-chevron,
+.kova-settings-reference .kova-settings-nav-copy small,
+.kova-settings-reference .kova-settings-account-summary,
+.kova-settings-reference .kova-settings-mobile-intro {
+  display: none;
 }
-.kova-settings-reference .kova-settings-sidebar-top {
+.kova-settings-reference .kova-settings-navigation-heading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  margin-bottom: 24px;
+}
+.kova-settings-reference .kova-settings-nav-title h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.kova-settings-reference .kova-settings-nav-title p {
   display: none;
 }
 .kova-settings-reference .kova-settings-search {
   position: relative;
   display: flex;
-  height: 36px;
   flex: none;
   align-items: center;
-  margin-bottom: 12px;
+  height: 42px;
+  margin-bottom: 28px;
 }
 .kova-settings-reference .kova-settings-search > svg {
   position: absolute;
-  left: 12px;
-  width: 16px;
-  height: 16px;
+  left: 13px;
+  width: 17px;
+  height: 17px;
   color: var(--muted-foreground);
   pointer-events: none;
 }
 .kova-settings-reference .kova-settings-search input {
   width: 100%;
   height: 100%;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 0 12px 0 36px;
-  background: var(--surface-input);
-  font-family: var(--font-ui);
+  min-width: 0;
+  padding: 0 14px 0 39px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--settings-card);
+  color: var(--foreground);
+  font: inherit;
   font-size: 14px;
-  line-height: 20px;
 }
 .kova-settings-reference .kova-settings-nav {
   display: block;
+  flex: none;
   width: 100%;
   height: auto;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding: 0;
   border-radius: 0;
-  padding: 0 2px 0 0;
   background: transparent;
   color: inherit;
-  scrollbar-width: thin;
+  overflow: visible;
 }
 .kova-settings-reference .kova-settings-nav section + section {
-  margin-top: 12px;
+  margin-top: 24px;
 }
 .kova-settings-reference .kova-settings-nav-group {
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   padding: 0 12px;
-  color: var(--muted-foreground);
   font-size: 12px;
   font-weight: 500;
-  line-height: 20px;
-  letter-spacing: 0;
+  line-height: 18px;
+  color: var(--muted-foreground);
 }
-.kova-settings-reference .kova-settings-nav-item {
+.kova-settings-reference .kova-settings-nav .kova-settings-nav-item {
   display: flex;
-  width: 100%;
-  min-height: 36px;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  margin: 2px 0;
+  padding: 10px 12px;
   border: 0;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 11px;
+  color: var(--foreground);
   background: transparent;
-  color: var(--muted-foreground);
-  font-family: var(--font-ui);
+  text-align: left;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
-  text-align: left;
   box-shadow: none;
-  transition:
-    color 150ms ease,
-    background-color 150ms ease;
+  transition: background-color 140ms ease;
 }
-.kova-settings-reference .kova-settings-nav-item svg {
-  width: 18px;
-  height: 18px;
+.kova-settings-reference .kova-settings-nav-icon {
+  display: grid;
   flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+.kova-settings-reference .kova-settings-nav-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.kova-settings-reference .kova-settings-nav-copy {
+  min-width: 0;
+}
+.kova-settings-reference .kova-settings-nav-copy > span {
+  display: block;
 }
 .kova-settings-reference .kova-settings-nav-item:hover {
   background: var(--surface-hover);
-  color: var(--foreground);
 }
 .kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
   background: var(--surface-selected);
-  color: var(--foreground);
   font-weight: 500;
-}
-.kova-settings-reference .kova-settings-nav-item:active {
-  transform: none;
 }
 .kova-settings-reference .kova-settings-no-results {
   padding: 20px 12px;
   color: var(--muted-foreground);
   font-size: 14px;
-  text-align: center;
 }
 .kova-settings-reference .kova-settings-content {
   display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--surface-modal);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  container-type: inline-size;
 }
 .kova-settings-reference .kova-settings-content-header {
   display: flex;
-  min-height: 64px;
   flex: none;
   align-items: center;
-  gap: 12px;
-  margin: 0 24px;
-  padding-right: 36px;
+  gap: 16px;
+  min-height: 120px;
+  margin: 0;
+  padding: 28px 36px 24px;
+}
+.kova-settings-reference .kova-settings-section-copy {
+  flex: 1;
+  min-width: 0;
 }
 .kova-settings-reference .kova-settings-content-header h2 {
-  font-family: var(--font-ui);
-  font-size: 20px;
+  margin: 0;
+  font-size: 28px;
   font-weight: 600;
-  line-height: 26px;
-  letter-spacing: -0.015em;
+  line-height: 36px;
+  letter-spacing: -0.035em;
 }
-.kova-settings-reference .kova-settings-content-header p {
-  margin-top: 4px;
+.kova-settings-reference .kova-settings-section-copy p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 21px;
   color: var(--muted-foreground);
-  font-size: 12px;
-  line-height: 16px;
 }
 .kova-settings-reference .kova-settings-back {
   display: none;
@@ -188,206 +209,249 @@
 .kova-settings-reference .kova-settings-saved {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  color: var(--muted-foreground);
+  flex: none;
+  gap: 5px;
   font-size: 12px;
+  color: var(--muted-foreground);
   opacity: 0;
-  transition: opacity 150ms ease;
 }
 .kova-settings-reference .kova-settings-saved.visible {
   opacity: 1;
 }
 .kova-settings-reference .kova-settings-saved svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 .kova-settings-reference .kova-settings-content > [role="tabpanel"] {
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0 24px 24px;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--settings-space);
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0 36px 40px;
+  overflow: visible;
+  line-height: 1.5;
 }
-.kova-settings-reference
-  :is(.kova-settings-content > [role="tabpanel"], .kova-settings-guest-content)
-  h3 {
-  font-size: 14px;
+.kova-settings-reference .kova-settings-content > [role="tabpanel"][hidden],
+.kova-settings-reference .kova-settings-content > [role="tabpanel"][data-state="inactive"] {
+  display: none;
+}
+.kova-settings-reference .kova-settings-content > [role="tabpanel"] > * + * {
+  margin-top: 0;
+}
+.kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
+.kova-settings-reference .kova-profile-settings > section {
+  min-width: 0;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--settings-card);
+}
+.kova-settings-reference .kova-settings-content h3 {
+  font-size: 16px;
+  line-height: 24px;
   font-weight: 600;
-  line-height: 20px;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
-.kova-settings-reference .kova-settings-content > [role="tabpanel"] > section + section,
-.kova-settings-reference .kova-settings-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border-subtle);
+.kova-settings-reference .kova-settings-content :is(input, textarea, [role="combobox"]) {
+  min-width: 0;
+  max-width: 100%;
+}
+.kova-settings-reference .kova-settings-content textarea {
+  min-height: 112px;
+  line-height: 1.6;
 }
 .kova-settings-reference .kova-settings-reference-group {
   min-width: 0;
+  margin-top: 16px;
+  padding: 0;
   border: 0;
   border-radius: 0;
-  padding: 0;
   background: transparent;
 }
 .kova-settings-reference :is(.kova-settings-row, .kova-settings-reference-row) {
-  display: flex;
-  min-width: 0;
-  min-height: 56px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 16px 24px;
+  min-width: 0;
+  min-height: 68px;
+  margin: 0;
+  padding: 16px 0;
   border: 0;
   border-radius: 0;
-  padding: 12px 0;
   background: transparent;
 }
 .kova-settings-reference .kova-settings-reference-group > * + * {
-  margin-top: 0;
-  border-top: 1px solid var(--border-subtle);
-}
-.kova-settings-reference .kova-settings-row label {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
+  border-top: 1px solid var(--border);
 }
 .kova-settings-reference :is(.kova-settings-row, .kova-settings-reference-row) > :first-child {
   min-width: 0;
+  max-width: 60ch;
+  overflow-wrap: break-word;
+}
+.kova-settings-reference
+  :is(.kova-settings-row, .kova-settings-reference-row)
+  :is(p, [id$="-hint"], .text-xs) {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted-foreground);
 }
 .kova-settings-reference .kova-settings-reference-select {
-  width: auto;
-  min-width: 112px;
-  min-height: 36px;
-  flex: 0 1 auto;
-  gap: 8px;
-  border: 0;
-  padding: 8px 0 8px 12px;
-  background: transparent;
+  width: var(--settings-control-width);
+  min-width: 0;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--background);
   font-size: 14px;
   box-shadow: none;
 }
-.kova-settings-reference .kova-settings-danger-row,
-.kova-settings-reference .kova-profile-settings > section + section {
-  padding-top: 24px;
-  border-top: 1px solid var(--border-subtle);
+.kova-settings-reference .kova-settings-parent-link {
+  padding: 0 36px 16px;
 }
-.kova-settings-reference :is(.kova-settings-usage-card, .kova-settings-usage-summary) {
-  margin-top: 16px;
-  border: 1px solid var(--border-subtle);
+.kova-settings-reference .kova-settings-related {
+  flex: none;
+  padding: 0 36px 24px;
+}
+.kova-settings-reference .kova-settings-related > p {
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.kova-settings-reference .kova-settings-related > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kova-settings-reference .kova-settings-related button {
+  justify-content: flex-start;
+  min-height: 40px;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
-  background: transparent;
+  font-size: 13px;
+}
+.kova-settings-reference .kova-settings-related button > svg {
+  width: 16px;
+  height: 16px;
+}
+.kova-settings-reference .kova-settings-related button > span:last-child {
+  margin-left: auto;
+  color: var(--muted-foreground);
+}
+.kova-settings-reference .kova-profile-settings {
+  display: grid;
+  gap: 24px;
+}
+.kova-settings-reference .kova-settings-usage-card,
+.kova-settings-reference .kova-settings-usage-summary {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
 }
 .kova-settings-reference .kova-settings-current-plan {
   margin: 0;
   color: var(--muted-foreground);
   font-size: 14px;
-  line-height: 20px;
 }
 .kova-settings-reference :is(.kova-settings-metrics, .kova-settings-reference-metrics) {
-  display: block;
-  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
 }
 .kova-settings-reference :is(.kova-settings-metrics, .kova-settings-reference-metrics) > div {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid var(--border-subtle);
-  padding-block: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 .kova-settings-reference :is(.kova-settings-metrics, .kova-settings-reference-metrics) :is(dt, dd) {
   margin: 0;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  font-variant-numeric: tabular-nums;
 }
 .kova-settings-reference .kova-settings-plan-badge {
-  border: 1px solid var(--border-subtle);
-  border-radius: 9999px;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
   font-size: 12px;
+  background: var(--surface-secondary);
 }
 .kova-settings-reference .kova-settings-skeleton {
-  display: grid;
-  min-height: 80px;
-  place-items: center;
-  margin-top: 24px;
-  border-radius: 12px;
-  background: var(--muted);
-  color: var(--muted-foreground);
+  height: 14px;
+  width: 70%;
+  border-radius: 6px;
+  background: var(--surface-secondary);
 }
 .kova-settings-reference .kova-settings-inline-error {
-  margin-top: 24px;
-  border-radius: 12px;
   padding: 16px;
-  background: color-mix(in srgb, var(--destructive) 8%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--muted-foreground);
+  font-size: 14px;
 }
 .kova-settings-reference .kova-settings-inline-error button {
-  margin-top: 8px;
+  margin-top: 12px;
 }
 .kova-settings-reference .kova-settings-help-links {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 .kova-settings-reference .kova-settings-help-links a {
   display: flex;
-  min-height: 44px;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 14px;
+  min-height: 44px;
 }
-.kova-settings-reference .kova-settings-help-links a svg {
+.kova-settings-reference .kova-settings-help-links svg {
   width: 18px;
   height: 18px;
 }
-.kova-settings-reference :is(button, a, [role="combobox"]):focus-visible {
+.kova-settings-reference :is(button, a, input, textarea, [role="combobox"]):focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
-.kova-settings-reference .kova-settings-surface > nav > button {
-  min-height: 36px;
-  border-radius: 8px;
-  text-align: left;
+@container (max-width: 560px) {
+  .kova-settings-reference-row:has([role="combobox"]) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .kova-settings-reference-row [role="combobox"] {
+    width: 100%;
+  }
 }
 @media (max-width: 767px) {
+  .kova-settings-reference {
+    --settings-space: 20px;
+  }
   [role="dialog"].kova-settings-dialog,
   [role="dialog"].kova-settings-dialog.is-authenticated {
+    position: fixed;
     inset: 0;
-    width: 100vw;
+    width: 100%;
     max-width: none;
     height: 100dvh;
     max-height: none;
-    transform: none;
-    translate: none;
     border: 0;
     border-radius: 0;
-    padding-top: var(--safe-top);
-    padding-bottom: var(--safe-bottom);
-    background: var(--background);
+    transform: none;
+    translate: none;
   }
-  [role="dialog"].kova-settings-dialog .kova-settings-content {
-    background: var(--background);
-  }
-  [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
-    top: max(12px, var(--safe-top));
-    right: max(12px, var(--safe-right));
-    width: 44px;
-    height: 44px;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-sidebar {
+  .kova-settings-reference .kova-settings-sidebar {
     width: 100%;
     flex: 1 1 0;
+    padding: max(24px, var(--safe-top, 0px)) 20px max(32px, var(--safe-bottom, 0px));
     border: 0;
-    padding: 20px max(16px, var(--safe-right)) 24px max(16px, var(--safe-left));
-    background: var(--background);
   }
-  [role="dialog"].kova-settings-dialog
-    :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden {
+  .kova-settings-reference :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden {
     display: none;
   }
   .kova-settings-reference .kova-settings-content.mobile-content {
@@ -395,17 +459,151 @@
     width: 100%;
     height: 100%;
   }
+  .kova-settings-reference .kova-settings-navigation-heading {
+    min-height: 48px;
+    margin: 0 0 24px;
+  }
+  .kova-settings-reference .kova-settings-nav-title h2 {
+    font-size: 30px;
+    line-height: 38px;
+    letter-spacing: -0.04em;
+  }
+  .kova-settings-reference .kova-settings-nav-title p {
+    display: block;
+    margin-top: 5px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--muted-foreground);
+  }
+  .kova-settings-reference .kova-settings-account-summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--settings-card);
+  }
+  .kova-settings-reference .kova-settings-account-avatar {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+    background: var(--surface-secondary);
+  }
+  .kova-settings-reference .kova-settings-account-avatar svg {
+    width: 22px;
+    height: 22px;
+  }
+  .kova-settings-reference .kova-settings-account-summary strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .kova-settings-reference .kova-settings-account-summary div > span {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted-foreground);
+    font-size: 13px;
+  }
+  .kova-settings-reference .kova-settings-search {
+    height: 48px;
+    margin-bottom: 26px;
+  }
+  .kova-settings-reference .kova-settings-search input {
+    border-radius: 14px;
+    font-size: 16px;
+  }
+  .kova-settings-reference .kova-settings-nav-group {
+    margin-bottom: 10px;
+    padding-inline: 2px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .kova-settings-reference .kova-settings-nav section + section {
+    margin-top: 26px;
+  }
+  .kova-settings-reference .kova-settings-nav section {
+    overflow: hidden;
+  }
+  .kova-settings-reference .kova-settings-nav .kova-settings-nav-item {
+    min-height: 70px;
+    margin: 0;
+    padding: 15px 14px;
+    gap: 13px;
+    border-radius: 0;
+    background: var(--settings-card);
+  }
+  .kova-settings-reference .kova-settings-nav-item + .kova-settings-nav-item {
+    border-top: 1px solid var(--border);
+  }
+  .kova-settings-reference .kova-settings-nav-item:first-of-type {
+    border-radius: 18px 18px 0 0;
+  }
+  .kova-settings-reference .kova-settings-nav-item:last-child {
+    border-radius: 0 0 18px 18px;
+  }
+  .kova-settings-reference .kova-settings-nav-item:only-of-type {
+    border-radius: 18px;
+  }
+  .kova-settings-reference .kova-settings-nav-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--surface-secondary);
+  }
+  .kova-settings-reference .kova-settings-nav-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .kova-settings-reference .kova-settings-nav-copy {
+    flex: 1;
+  }
+  .kova-settings-reference .kova-settings-nav-copy > span {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 21px;
+  }
+  .kova-settings-reference .kova-settings-nav-copy small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 17px;
+    white-space: normal;
+  }
+  .kova-settings-reference .kova-settings-nav-chevron {
+    display: block;
+    font-size: 24px;
+    color: var(--muted-foreground);
+  }
   .kova-settings-reference .kova-settings-content-header {
-    min-height: 64px;
-    margin-inline: 16px;
-    padding: 8px 44px 8px 0;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    gap: 8px;
+    min-height: 68px;
+    padding: max(10px, var(--safe-top, 0px)) 16px 10px;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+  }
+  .kova-settings-reference .kova-settings-content-header h2 {
+    font-size: 20px;
+    line-height: 27px;
+    letter-spacing: -0.025em;
+  }
+  .kova-settings-reference .kova-settings-section-copy p {
+    display: none;
   }
   .kova-settings-reference .kova-settings-back {
     display: grid;
-    width: 44px;
-    height: 44px;
     flex: none;
     place-items: center;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
   }
   .kova-settings-reference .kova-settings-back svg {
@@ -413,232 +611,136 @@
     height: 20px;
   }
   .kova-settings-reference .kova-settings-saved {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
-  .kova-settings-reference .kova-settings-content > [role="tabpanel"] {
-    padding: 0 16px max(24px, var(--safe-bottom));
-    min-width: 0;
-    overflow-x: hidden;
-    overscroll-behavior-y: contain;
-  }
-  .kova-settings-reference .kova-settings-reference-row {
-    flex-wrap: wrap;
-    gap: 8px 16px;
-  }
-  .kova-settings-reference .kova-settings-reference-select {
-    max-width: 100%;
-    margin-left: auto;
-  }
-  [role="dialog"].kova-settings-dialog.is-guest .kova-settings-surface {
-    max-height: none;
-    flex: 1 1 auto;
-  }
-}
-@media (pointer: coarse) {
-  [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
-    width: 44px;
-    height: 44px;
-  }
-  .kova-settings-reference :is(.kova-settings-nav-item, .kova-settings-reference-select),
-  .kova-settings-reference .kova-settings-surface > nav > button {
-    min-height: 44px;
-  }
-  .kova-settings-reference .kova-settings-search {
-    height: 44px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .kova-settings-reference * {
-    transition-duration: 0ms;
-    animation: none;
-  }
-}
-
-.kova-settings-navigation-heading {
-  padding: 4px 12px 20px;
-}
-.kova-settings-navigation-heading h2 {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-.kova-settings-navigation-heading p {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--muted-foreground);
-}
-.kova-settings-reference .kova-settings-search input {
-  border-radius: 999px;
-}
-.kova-settings-reference .kova-settings-nav-item {
-  border-radius: 14px;
-}
-.kova-settings-reference .kova-settings-reference-group {
-  border-radius: 20px;
-}
-@media (max-width: 767px) {
-  .kova-settings-reference .kova-settings-navigation-heading {
-    padding-right: 56px;
-    padding-bottom: 24px;
-  }
-  .kova-settings-reference .kova-settings-navigation-heading h2 {
-    font-size: 28px;
-  }
-  .kova-settings-reference .kova-settings-search {
-    margin-bottom: 22px;
-    height: 46px;
-  }
-  .kova-settings-reference .kova-settings-search input {
-    font-size: 16px;
-    background: var(--muted);
-    border: 0;
-  }
-  .kova-settings-reference .kova-settings-nav section {
-    border-radius: 20px;
-    padding: 8px;
-    background: var(--muted);
-  }
-  .kova-settings-reference .kova-settings-nav section + section {
-    margin-top: 18px;
-  }
-  .kova-settings-reference .kova-settings-nav-group {
-    padding: 6px 12px 8px;
-  }
-  .kova-settings-reference .kova-settings-nav-item {
-    min-height: 52px;
-    gap: 14px;
-    font-size: 16px;
-    color: var(--foreground);
-  }
-  .kova-settings-reference .kova-settings-nav-item::after {
-    content: "›";
-    margin-left: auto;
+  .kova-settings-reference .kova-settings-mobile-intro {
+    display: block;
+    flex: none;
+    margin: 0;
+    padding: 20px 20px 18px;
+    font-size: 14px;
+    line-height: 22px;
     color: var(--muted-foreground);
-    font-size: 22px;
-  }
-  .kova-settings-reference .kova-settings-nav-item svg {
-    width: 21px;
-    height: 21px;
-  }
-  .kova-settings-reference .kova-settings-reference-row {
-    padding-block: 18px;
-    gap: 12px;
-  }
-  .kova-settings-reference .kova-settings-reference-row > * {
-    max-width: 100%;
-    min-width: 0;
-  }
-  .kova-settings-reference .kova-settings-reference-row input:not([type="checkbox"]) {
-    font-size: 16px;
-  }
-}
-
-/* Avoid the browser's native focus halo stacking with Tailwind/Radix rings.
-   Keep one visible keyboard focus outline, but no focus ring on mouse clicks. */
-.kova-settings-reference :is(button, [role="button"]):focus-visible {
-  outline: 1px solid var(--ring);
-  outline-offset: 2px;
-  box-shadow: none;
-}
-.kova-settings-reference :is(button, [role="button"]):focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Consistent room for labels, descriptions and controls in every section. */
-[role="dialog"].kova-settings-dialog.is-authenticated {
-  width: min(calc(100vw - 40px), 1120px);
-  max-width: 1120px;
-  height: min(88dvh, 820px);
-  max-height: 88dvh;
-  border-radius: 24px;
-}
-.kova-settings-reference .kova-settings-sidebar {
-  padding: 24px 16px;
-}
-.kova-settings-reference .kova-settings-nav {
-  gap: 8px;
-}
-.kova-settings-reference .kova-settings-nav-item {
-  min-height: 46px;
-  border-radius: 12px;
-  padding: 12px;
-}
-.kova-settings-reference .kova-settings-content-header {
-  min-height: 94px;
-  margin-inline: 32px;
-  gap: 16px;
-}
-.kova-settings-reference .kova-settings-content-header h2 {
-  font-size: 24px;
-  line-height: 30px;
-}
-.kova-settings-reference .kova-settings-content-header p {
-  font-size: 13px;
-  line-height: 20px;
-}
-.kova-settings-reference .kova-settings-content > [role="tabpanel"] {
-  padding: 8px 32px 32px;
-  scroll-padding-top: 24px;
-}
-.kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
-.kova-settings-reference .kova-profile-settings > section {
-  padding: 24px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--surface-secondary) 58%, var(--surface-modal));
-}
-.kova-settings-reference .kova-settings-content > [role="tabpanel"] > section + section {
-  margin-top: 24px;
-}
-.kova-settings-reference .kova-settings-content h3 {
-  font-size: 16px;
-  line-height: 24px;
-}
-.kova-settings-reference :is(.kova-settings-row, .kova-settings-reference-row) {
-  min-height: 72px;
-  padding-block: 16px;
-  gap: 24px;
-}
-.kova-settings-reference :is(.kova-settings-row, .kova-settings-reference-row) p {
-  line-height: 1.6;
-}
-.kova-settings-reference .kova-settings-reference-select {
-  min-height: 42px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--surface-modal);
-}
-@media (max-width: 767px) {
-  [role="dialog"].kova-settings-dialog.is-authenticated {
-    width: 100vw;
-    max-width: none;
-    height: 100dvh;
-    max-height: none;
-    border-radius: 0;
-  }
-  .kova-settings-reference .kova-settings-content-header {
-    margin-inline: 20px;
-    min-height: 84px;
   }
   .kova-settings-reference .kova-settings-content > [role="tabpanel"] {
-    padding: 4px 16px 32px;
+    padding: 0 16px max(32px, var(--safe-bottom, 0px));
   }
   .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
   .kova-settings-reference .kova-profile-settings > section {
-    padding: 18px;
+    padding: 20px 18px;
+    border-radius: 20px;
   }
-  .kova-settings-reference :is(.kova-settings-row, .kova-settings-reference-row) {
+  .kova-settings-reference .kova-settings-reference-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    min-height: 0;
+  }
+  .kova-settings-reference .kova-settings-reference-row [role="combobox"] {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+  .kova-settings-reference .kova-settings-row {
+    grid-template-columns: minmax(0, 1fr) 48px;
     gap: 16px;
   }
-}
-@media (max-width: 420px) {
-  .kova-settings-reference .kova-settings-reference-row:has([role="combobox"]) {
-    align-items: stretch;
-    flex-direction: column;
+  .kova-settings-reference .kova-settings-row > :first-child {
+    font-size: 15px;
   }
-  .kova-settings-reference .kova-settings-reference-select {
+  .kova-settings-reference .kova-settings-content :is(input, textarea, [role="combobox"]) {
+    font-size: 16px;
+  }
+  .kova-settings-reference
+    .kova-settings-content
+    :is(button:not([role="switch"]), [role="button"]) {
+    min-height: 44px;
+  }
+  .kova-settings-reference
+    .kova-settings-content
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+    min-height: 48px;
+  }
+  .kova-settings-reference .kova-settings-content [role="combobox"] {
     width: 100%;
-    min-width: 0;
+    min-height: 48px;
+  }
+  [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
+    top: max(12px, var(--safe-top, 0px));
+    right: max(12px, var(--safe-right, 0px));
+    width: 44px;
+    height: 44px;
+  }
+  [role="dialog"].kova-settings-dialog .kova-settings-content-header {
+    padding-right: 64px;
+  }
+  .kova-settings-reference [data-slot="switch"] {
+    width: 48px;
+    height: 48px;
+  }
+  .kova-settings-reference [data-slot="switch-track"] {
+    width: 44px;
+    height: 28px;
+  }
+  .kova-settings-reference [data-slot="switch-thumb"] {
+    width: 22px;
+    height: 22px;
+  }
+  .kova-settings-reference [data-slot="switch-thumb"][data-state="checked"] {
+    transform: translateX(16px);
+  }
+  .kova-settings-reference .kova-settings-parent-link {
+    display: none;
+  }
+  .kova-settings-reference .kova-settings-related {
+    padding: 0 16px 20px;
+  }
+  .kova-settings-reference .kova-settings-related > div {
+    display: grid;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+  .kova-settings-reference .kova-settings-related button {
+    min-height: 50px;
+    border: 0;
+    border-radius: 0;
+    padding: 12px 14px;
+    gap: 12px;
+    background: var(--settings-card);
+    font-size: 14px;
+  }
+  .kova-settings-reference .kova-settings-related button + button {
+    border-top: 1px solid var(--border);
+  }
+  .kova-settings-reference .kova-settings-related button > svg {
+    width: 18px;
+    height: 18px;
+  }
+  .kova-settings-reference .kova-desktop-only,
+  .kova-settings-reference .kova-desktop-navigation-preference,
+  .kova-settings-reference [data-desktop-only="true"] {
+    display: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-settings-reference *,
+  .kova-settings-reference *::before,
+  .kova-settings-reference *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media (pointer: coarse) {
+  [role="dialog"].kova-settings-dialog > [data-kova-dialog-close],
+  .kova-settings-route section.kova-settings-page .kova-settings-page-control {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
   }
 }

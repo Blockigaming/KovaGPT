@@ -18,7 +18,7 @@ test.beforeEach(async () => {
   await mkdir(evidenceDirectory(test.info().project.name), { recursive: true });
 });
 
-test("implemented homepage, pricing tabs, FAQ, original asset, and responsive evidence", async ({
+test("implemented homepage, pricing tabs, FAQ, restored responsive asset, and responsive evidence", async ({
   page,
   context,
 }, testInfo) => {
@@ -42,9 +42,13 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
   ).toBeVisible();
   await expect(page.locator(".public-classroom img")).toHaveAttribute(
     "src",
-    "/images/classroom-hero.webp",
+    "/images/classroom-hero-restored.webp",
   );
-  await expect(page.locator(".public-classroom img")).toHaveJSProperty("naturalWidth", 1312);
+  expect(
+    await page
+      .locator(".public-classroom img")
+      .evaluate((node) => (node as HTMLImageElement).naturalWidth),
+  ).toBeGreaterThan(0);
   await page.screenshot({ path: `${evidence}/desktop-hero.png` });
   await page.screenshot({ path: `${evidence}/desktop-full.png`, fullPage: true });
   await page.locator(".public-plans").screenshot({ path: `${evidence}/pricing-individual.png` });
