@@ -98,6 +98,23 @@ export async function requestHostedEffort({
       cachedInput: cached,
     });
     const text = value.choices?.[0]?.message?.content;
+    const message = value.choices?.[0]?.message;
+    if (
+      value.choices?.[0]?.finish_reason === "length" &&
+      message?.role === "assistant" &&
+      (text == null || (typeof text === "string" && !text.trim())) &&
+      (message.tool_calls === undefined ||
+        (Array.isArray(message.tool_calls) && message.tool_calls.length === 0))
+    ) {
+      // A metered reasoning pass can exhaust its bounded output before writing
+      // findings. Keep that cost and report the missing findings honestly; do
+      // not retry a billable generation or turn an advisory check into an outage.
+      return {
+        task: TASKS[index],
+        findings:
+          "This checker exhausted its output budget without returning findings. No verification result is available from this checker.",
+      };
+    }
     if (
       typeof text !== "string" ||
       !text.trim() ||
