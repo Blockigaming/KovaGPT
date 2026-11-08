@@ -1051,6 +1051,11 @@ html[data-kova-density="compact"]
 /* Phone directories use full-width search and horizontally scrollable collections.
    Desktop keeps its denser, multi-column toolbar. */
 @media (max-width: 767px) {
+  .spec400-schedules .kova-task-filters,
+  .spec400-schedules .kova-task-filters [role="tab"] {
+    height: 48px;
+    min-height: 48px;
+  }
   .spec400-management :is(input:not([type="checkbox"]):not([type="radio"]), [role="combobox"]) {
     min-height: 48px;
     font-size: 16px;

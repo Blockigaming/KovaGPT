@@ -54,11 +54,31 @@ export function HomeWelcome({
 
   useEffect(() => {
     if (!owner) return;
-    const frame = window.requestAnimationFrame(() => {
-      const section = homeScrollRef.current;
-      if (section) section.scrollTop = section.scrollHeight;
-    });
-    return () => window.cancelAnimationFrame(frame);
+    const section = homeScrollRef.current;
+    if (!section) return;
+    let following = true;
+    const followLatest = () => {
+      if (following) section.scrollTop = section.scrollHeight;
+    };
+    const stopFollowing = () => {
+      following = false;
+    };
+    const frame = window.requestAnimationFrame(followLatest);
+    // Composer measurement and font loading can change the initial content height.
+    // Follow those changes until the user starts navigating the welcome surface.
+    const observer = new ResizeObserver(followLatest);
+    observer.observe(section);
+    if (section.firstElementChild) observer.observe(section.firstElementChild);
+    for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+      section.addEventListener(event, stopFollowing, { passive: true });
+    }
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+        section.removeEventListener(event, stopFollowing);
+      }
+    };
   }, [owner, chatId, conversations.length]);
 
   return (
