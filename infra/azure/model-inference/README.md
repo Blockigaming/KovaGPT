@@ -14,6 +14,40 @@ have four GPUs: Kimi's eight-GPU recipe needs a qualified multi-VM topology,
 not merely two arbitrary VMs. Six efforts are execution policies over each model;
 they do not require downloading eighteen independent checkpoints.
 
+## Low-cost candidates and the owner's 120-token target
+
+The target is now 120 visible output tokens/second across the service: 120 for one
+active chat, 60 each for two, and 30 each for four. `throughput-target.json` records
+the acceptance cases. A quoted server price is not proof it satisfies those cases.
+System RAM, GPU memory, memory bandwidth and compute throughput are separate
+constraints. Add capacity according to measured queueing and decode performance;
+do not assume that adding RAM increases generation speed proportionally.
+
+The earlier eight-GB300 Kimi example is a published vLLM qualification profile,
+not proof of the cheapest possible deployment across all runtimes and formats.
+Likewise, the earlier H200 quote is not a minimum price for hosting Argon.
+
+KTransformers documents the original `DeepSeek-V4-Flash-0731` on a CPU/GPU offload
+path with one RTX 5090 (32 GB GPU memory), at least 200 GB system RAM and roughly
+340 GB storage. It reports 20+ tokens/second and 4–5 minute startup. That result
+does not establish 120 tokens/second or equivalent performance on Azure A100/H100
+hardware. It also does not establish a shared server for all three foundations.
+
+Read-only Azure Retail Prices API quotes obtained November 8, 2026 UTC:
+
+| East US candidate          | GPU / system RAM           | Standard USD/hour | Spot USD/hour | Spot compute for 730 hours |
+| -------------------------- | -------------------------- | ----------------- | ------------- | -------------------------- |
+| `Standard_NC24ads_A100_v4` | 1 A100 80 GB / 220 GiB     | 3.673             | 0.67877       | 495.50                     |
+| `Standard_NC40ads_H100_v5` | 1 H100 NVL 94 GB / 320 GiB | 6.98              | 1.418336      | 1,035.39                   |
+
+These are smaller qualification candidates, not validated 120-token solutions.
+Spot prices can change, capacity is not guaranteed, and Spot VMs can be evicted.
+The monthly arithmetic excludes disks, networking, tax and all other machines;
+it is not a complete fleet quote. No GPU was provisioned or charged by this check.
+The lowest quoted candidate must not be advertised as the cheapest configuration
+meeting the target until actual inference and concurrency tests pass. Relevant
+GPU-family quotas were zero when inspected.
+
 ## Read-only preflight
 
 From an authenticated Azure CLI session, run:
@@ -74,5 +108,10 @@ not turn a timeout into an assertion that capacity is available.
 - https://huggingface.co/moonshotai/Kimi-K3/blob/main/LICENSE
 - https://recipes.vllm.ai/deepseek-ai/DeepSeek-V4-Flash
 - https://recipes.vllm.ai/moonshotai/Kimi-K3
+- https://github.com/kvcache-ai/ktransformers/blob/main/doc/en/DeepSeek-V4-Flash.md
+- https://learn.microsoft.com/en-us/azure/virtual-machines/ncads-h100-v5
+- https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/gpu-accelerated/nca100v4-series
+- https://learn.microsoft.com/en-us/azure/virtual-machines/spot-vms
+- https://prices.azure.com/api/retail/prices
 - https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/gpu-accelerated/nd-h200-v5-series
 - https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/gpu-accelerated/nd-gb300-v6-series
