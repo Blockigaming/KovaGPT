@@ -35,7 +35,7 @@ test("full-screen phone Settings cancels both transform systems for guests and s
   ]) {
     const css = declarations(path, selector, "(max-width: 767px)");
     assert.equal(css.inset, "0");
-    assert.equal(css.width, "100vw");
+    assert.equal(css.width, "100%");
     assert.equal(css.height, "100dvh");
     assert.equal(css.transform, "none");
     assert.equal(css.translate, "none");

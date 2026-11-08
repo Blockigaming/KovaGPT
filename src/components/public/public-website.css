@@ -629,6 +629,9 @@
     width: min(100%, 448px);
     margin: 0 auto;
   }
+  .public-classroom img {
+    aspect-ratio: 4 / 3;
+  }
   .public-plans {
     padding: 85px 24px 20px;
   }

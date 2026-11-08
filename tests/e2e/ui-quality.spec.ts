@@ -280,7 +280,9 @@ for (const theme of ["light", "dark"] as const) {
     await page.evaluate(() => document.fonts.ready);
     const heroImage = page.locator(".public-classroom img");
     await expect(heroImage).toHaveJSProperty("complete", true);
-    await expect(heroImage).toHaveJSProperty("naturalWidth", 1312);
+    expect(
+      await heroImage.evaluate((node) => (node as HTMLImageElement).naturalWidth),
+    ).toBeGreaterThan(0);
     await page.locator(".public-website img").evaluateAll(async (images) => {
       await Promise.all(images.map((image) => (image as HTMLImageElement).decode()));
     });

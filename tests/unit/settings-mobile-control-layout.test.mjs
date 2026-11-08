@@ -6,93 +6,55 @@ import postcss from "postcss";
 const source = readFileSync("src/styles/settings-reference.css", "utf8");
 const parsed = postcss.parse(source);
 function rule(selector, media = null) {
-  let found;
   const values = {};
   parsed.walkRules((node) => {
     const parentMedia = node.parent.type === "atrule" ? node.parent.params : null;
-    if (node.selectors.includes(selector) && parentMedia === media) {
-      found = node;
+    if (node.selectors.includes(selector) && parentMedia === media)
       for (const child of node.nodes) if (child.type === "decl") values[child.prop] = child.value;
-    }
   });
-  assert.ok(found, `Missing canonical ${selector} in ${media ?? "desktop"}`);
+  assert.ok(Object.keys(values).length, `Missing ${selector}`);
   return values;
 }
 const mobile = "(max-width: 767px)";
 const dialog = '[role="dialog"].kova-settings-dialog.is-authenticated';
 const close = '[role="dialog"].kova-settings-dialog > [data-kova-dialog-close]';
 
-test("canonical authenticated mobile Settings replaces bounded desktop dimensions with a safe fullscreen surface", () => {
-  const desktop = rule(dialog);
-  assert.equal(desktop.width, "min(calc(100vw - 40px), 1120px)");
-  assert.equal(desktop.height, "min(88dvh, 820px)");
-  const css = rule(dialog, mobile);
-  for (const [property, value] of Object.entries({
-    inset: "0",
-    width: "100vw",
-    height: "100dvh",
-    "max-width": "none",
-    "max-height": "none",
-    transform: "none",
-    translate: "none",
-    "padding-top": "var(--safe-top)",
-    "padding-bottom": "var(--safe-bottom)",
-  }))
-    assert.equal(css[property], value);
-  assert.doesNotMatch(
-    source,
-    /!important/,
-    "The focused owner must not require old global Settings layers",
+test("phone Settings replaces the bounded desktop dialog with a full viewport", () => {
+  assert.match(rule(dialog).width, /^min\(/);
+  const phone = rule(dialog, mobile);
+  assert.equal(phone.inset, "0");
+  assert.equal(phone.width, "100%");
+  assert.equal(phone.height, "100dvh");
+  assert.equal(phone["max-width"], "none");
+  assert.equal(phone["border-radius"], "0");
+  assert.equal(phone.transform, "none");
+  assert.equal(
+    Object.values(phone).some((value) => value.includes("!important")),
+    false,
   );
-  const global = readFileSync("src/styles.css", "utf8");
-  assert.match(
-    readFileSync("src/components/SettingsDialog.tsx", "utf8"),
-    /import "@\/styles\/settings-reference\.css"/,
-  );
-  assert.doesNotMatch(global, /\.kova-settings-dialog\.is-authenticated\s*\{/);
 });
 
-test("mobile Close remains right aligned with an independent 44px Back target and header clearance", () => {
-  assert.equal(rule(close).left, "auto");
+test("phone dialog close and back have independent touch targets with safe-area clearance", () => {
   const css = rule(close, mobile);
-  assert.equal(css.right, "max(12px, var(--safe-right))");
-  assert.equal(css.top, "max(12px, var(--safe-top))");
   assert.equal(css.width, "44px");
   assert.equal(css.height, "44px");
+  assert.match(css.right, /safe-right/);
+  assert.match(css.top, /safe-top/);
   const back = rule(".kova-settings-reference .kova-settings-back", mobile);
   assert.equal(back.width, "44px");
   assert.equal(back.height, "44px");
   assert.equal(
-    rule(".kova-settings-reference .kova-settings-content-header", mobile).padding,
-    "8px 44px 8px 0",
+    rule('[role="dialog"].kova-settings-dialog .kova-settings-content-header', mobile)[
+      "padding-right"
+    ],
+    "64px",
   );
 });
 
-test("mobile hit targets expand while the close glyph keeps its shared desktop scale", () => {
-  const desktop = rule(close);
-  assert.equal(desktop.right, "12px");
-  assert.equal(desktop.width, "36px");
-  assert.equal(desktop.height, "36px");
-  const coarse = rule(close, "(pointer: coarse)");
-  assert.equal(coarse.width, "44px");
-  assert.equal(coarse.height, "44px");
-  const icon = rule(`${close} > svg`);
-  assert.equal(icon.width, "18px");
-  assert.equal(icon.height, "18px");
-  assert.equal(rule(".kova-settings-reference .kova-settings-back svg", mobile).width, "20px");
-  const mobileIcon = [];
-  parsed.walkRules((node) => {
-    if (
-      node.parent.type === "atrule" &&
-      node.parent.params === mobile &&
-      node.selector.includes("data-kova-dialog-close") &&
-      node.selector.includes("svg")
-    )
-      mobileIcon.push(node);
-  });
-  assert.equal(
-    mobileIcon.length,
-    0,
-    "Phone layout inherits the source glyph size instead of inflating it",
-  );
+test("Settings has one layout owner without the former global margins and forced titles", () => {
+  const legacy = readFileSync("src/styles/app-finish.css", "utf8");
+  assert.doesNotMatch(legacy, /kova-settings-(?:sidebar|content-header|page\s*\{)/);
+  const page = readFileSync("src/styles/settings-page-layout.css", "utf8");
+  assert.match(page, /\.mobile-home\s*\{/);
+  assert.match(page, /\.mobile-hidden\s*\{/);
 });

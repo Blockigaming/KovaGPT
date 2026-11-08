@@ -290,12 +290,12 @@
   align-items: center;
   gap: 12px;
   padding: 5px 12px;
-  border: 0 !important;
+  border: 0;
   border-radius: 0;
-  background: transparent !important;
+  background: transparent;
 }
 .kova-core-page.kova-file-directory .kova-file-row + .kova-file-row {
-  border-top: 1px solid var(--border-subtle) !important;
+  border-top: 1px solid var(--border-subtle);
 }
 .kova-core-page.kova-file-directory .kova-file-row-name {
   flex: 1;

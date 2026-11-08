@@ -31,7 +31,9 @@ export async function revealSidebar(page: Page) {
   if (!(await navigation.isVisible())) {
     try {
       await page
-        .getByRole("button", { name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/ })
+        .getByRole("button", {
+          name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/,
+        })
         .filter({ visible: true })
         .first()
         .click({ timeout: 5_000 });
@@ -46,7 +48,10 @@ export async function revealSidebar(page: Page) {
 }
 
 export async function dismissMobileSidebar(page: Page) {
-  const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
+  const drawer = page.getByRole("dialog", {
+    name: "Primary navigation",
+    exact: true,
+  });
   await expect(drawer).toBeVisible();
   await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(drawer).toBeHidden();
@@ -62,7 +67,10 @@ export async function openCurrentSettings(page: Page) {
   const railSettings = page
     .getByRole("navigation", { name: "Collapsed navigation", exact: true })
     .getByRole("button", { name: "Settings", exact: true });
-  const account = navigation.getByRole("button", { name: "Account menu", exact: true });
+  const account = navigation.getByRole("button", {
+    name: "Account menu",
+    exact: true,
+  });
   try {
     await revealSidebar(page);
     // Authentication can replace the guest Settings button with Account menu.
@@ -78,7 +86,10 @@ export async function openCurrentSettings(page: Page) {
     if ((await navigation.isVisible()) || !(await railSettings.isVisible())) throw error;
     await railSettings.click({ timeout: 4_000 });
   }
-  const menuSettings = page.getByRole("menuitem", { name: "Settings", exact: true });
+  const menuSettings = page.getByRole("menuitem", {
+    name: "Settings",
+    exact: true,
+  });
   await expect(surface.or(menuSettings).filter({ visible: true }).first()).toBeVisible();
   if (!(await surface.isVisible())) await menuSettings.click();
   await expect(surface).toBeVisible();
@@ -103,44 +114,17 @@ export async function chooseSettingsSection(page: Page, section: string) {
     Apps: "Connections",
   };
   const label = labels[section] ?? section;
-  const tab = surface.getByRole("tab", { name: label, exact: true });
-  const picker = surface.getByRole("button", { name: "Section", exact: true });
-  const chooseWithPicker = async () => {
-    await picker.click();
-    await page
-      .getByRole("listbox", { name: "Suggestions", exact: true })
-      .getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) })
-      .click();
-  };
-  const back = surface.getByRole("button", { name: "Back to settings", exact: true });
-  // Route changes can briefly hide navigation while React replaces the section.
-  // Wait for whichever responsive navigation control is actually available.
-  await expect(tab.or(picker).or(back).filter({ visible: true }).first()).toBeVisible();
-  if (!(await tab.isVisible()) && !(await picker.isVisible())) {
-    if (await back.isVisible()) {
-      await back.click();
-      await expect(tab).toBeVisible();
-    }
-  }
-  if (await tab.isVisible()) {
-    try {
-      await tab.click({ timeout: 4_000 });
-    } catch (error) {
-      // Restoring the sidebar can narrow the settings container after its tabs
-      // first appear. Use the real section picker only if that layout replaced
-      // the tab; unrelated click failures must still fail the test.
-      if (
-        !(error instanceof Error) ||
-        error.name !== "TimeoutError" ||
-        (await tab.isVisible()) ||
-        !(await picker.isVisible())
-      )
-        throw error;
-      await chooseWithPicker();
-    }
-  } else {
-    await chooseWithPicker();
-  }
+  const search = surface.getByPlaceholder("Search settings", { exact: true });
+  const back = surface.getByRole("button", {
+    name: "Back to settings",
+    exact: true,
+  });
+  await expect(search.or(back).filter({ visible: true }).first()).toBeVisible();
+  if (!(await search.isVisible())) await back.click();
+  // Search includes secondary destinations, so this exercises the actual
+  // grouped navigation without assuming that every section is top-level.
+  await search.fill(label);
+  await surface.getByRole("tab", { name: label, exact: true }).click();
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();
   return surface;
 }
