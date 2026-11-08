@@ -194,7 +194,9 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientSecretEnv: "BOX_OAUTH_CLIENT_SECRET",
     requiredScopes: ["root_readonly"],
     optionalScopes: ["root_readwrite"],
-    usesPkce: true,
+    // Box's classic confidential-client OAuth flow does not support PKCE.
+    // Keep browser-bound, single-use state and server-side client authentication.
+    usesPkce: false,
     profileEndpoint: "https://api.box.com/2.0/users/me",
     profileId: (v) => text(v.id),
     profileLabel: (v) => text(v.login) || text(v.name),
