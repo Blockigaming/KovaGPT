@@ -62,11 +62,13 @@ export const BUNDLE_BASELINE = Object.freeze({
   ]),
   apiAudioAdjustment:
     "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
+  openAiModelOfferAdjustment:
+    "The 2026-11-08 OpenAI model catalog and Free upgrade offer measured 62,567 raw / 20,567 gzip for the initial route and 648,770 raw / 200,927 gzip for the Vite entry in CI. The initial ceilings move to 62,600 raw / 20,600 gzip and the entry gzip ceiling to 201,000, each less than 1% above the prior ceiling; the entry raw, omega and chart ceilings remain unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_500, gzip: 20_400 }),
-  main: Object.freeze({ raw: 670_000, gzip: 200_000 }),
+  initial: Object.freeze({ raw: 62_600, gzip: 20_600 }),
+  main: Object.freeze({ raw: 670_000, gzip: 201_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),
 });
