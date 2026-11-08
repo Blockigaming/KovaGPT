@@ -1,4 +1,3 @@
-import { ResponseAdvertisement } from "./ResponseAdvertisement";
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
@@ -85,6 +84,12 @@ import {
   principalScopedStorageKey,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+
+const ResponseAdvertisement = lazy(() =>
+  import("./ResponseAdvertisement").then(({ ResponseAdvertisement }) => ({
+    default: ResponseAdvertisement,
+  })),
+);
 
 const MemorySourcesDialog = lazy(() =>
   import("./MemorySourcesDialog").then(({ MemorySourcesDialog }) => ({
@@ -1506,7 +1511,11 @@ function ChatMessageInner({
         !streaming &&
         !temporary &&
         message.content.trim() &&
-        !message.generationStatus && <ResponseAdvertisement key={message.id} />}
+        !message.generationStatus && (
+          <Suspense fallback={null}>
+            <ResponseAdvertisement key={message.id} />
+          </Suspense>
+        )}
       {studySession?.key === studyContextKey && (
         <Suspense
           fallback={
