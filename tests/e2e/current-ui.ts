@@ -2,23 +2,16 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 
 // Response preferences remain in Settings after the composer tray was simplified.
-export async function openResponseOptions(
-  page: Page,
-  recordTrigger?: (trigger: Locator) => void,
-) {
+export async function openResponseOptions(page: Page, recordTrigger?: (trigger: Locator) => void) {
   const panel = await openCurrentSettings(page);
-  recordTrigger?.(
-    page.getByRole("button", { name: "Account menu", exact: true }),
-  );
+  recordTrigger?.(page.getByRole("button", { name: "Account menu", exact: true }));
   await chooseSettingsSection(page, "Responses");
   return panel;
 }
 
 export async function closeCurrentSettings(page: Page) {
   const settings = page.locator(".kova-settings-dialog");
-  await settings
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click();
+  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
   await expect(settings).toBeHidden();
 }
 
@@ -60,9 +53,7 @@ export async function dismissMobileSidebar(page: Page) {
     exact: true,
   });
   await expect(drawer).toBeVisible();
-  await drawer
-    .getByRole("button", { name: "Close sidebar", exact: true })
-    .click();
+  await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(drawer).toBeHidden();
 }
 
@@ -92,17 +83,14 @@ export async function openCurrentSettings(page: Page) {
   } catch (error) {
     // Only use the rail once the expanded navigation is actually gone. During
     // its animation the rail can still be visible underneath the open footer.
-    if ((await navigation.isVisible()) || !(await railSettings.isVisible()))
-      throw error;
+    if ((await navigation.isVisible()) || !(await railSettings.isVisible())) throw error;
     await railSettings.click({ timeout: 4_000 });
   }
   const menuSettings = page.getByRole("menuitem", {
     name: "Settings",
     exact: true,
   });
-  await expect(
-    surface.or(menuSettings).filter({ visible: true }).first(),
-  ).toBeVisible();
+  await expect(surface.or(menuSettings).filter({ visible: true }).first()).toBeVisible();
   if (!(await surface.isVisible())) await menuSettings.click();
   await expect(surface).toBeVisible();
   return surface;
