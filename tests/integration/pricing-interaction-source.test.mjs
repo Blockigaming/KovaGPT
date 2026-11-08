@@ -78,18 +78,17 @@ test("checkout uses an account-bound page with truthful loading and safe errors"
   assert.match(subscribe, /!isLoaded/);
   assert.match(subscribe, /!isSignedIn/);
   assert.match(subscribe, /key=\{`\$\{user\?\.id\}:\$\{plan\}`\}/);
-  assert.match(checkout, /data-checkout-state="error"/);
+  assert.match(checkout, /data-checkout-state=\{error \? "error" : busy \? "loading" : "ready"\}/);
   assert.match(checkout, /const CHECKOUT_ERROR_MESSAGE =/);
   assert.match(checkout, /const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =/);
-  assert.match(checkout, /result\.error === ACTIVE_SUBSCRIPTION_ERROR_MESSAGE/);
-  assert.match(checkout, /setCheckoutErrorMessage\(publicErrorMessage\)/);
-  assert.match(checkout, /onLoadCapture=/);
-  assert.match(checkout, /event\.target instanceof HTMLIFrameElement/);
-  assert.match(checkout, /data-checkout-state=\{checkoutFrameLoaded \? "loaded" : "loading"\}/);
-  assert.match(checkout, /errorName: safeErrorName\(error\)/);
-  assert.match(checkout, /throw new Error\(publicErrorMessage, \{ cause: error \}\)/);
-  assert.doesNotMatch(checkout, /setCheckoutErrorMessage\(result\.error\)/);
-  assert.doesNotMatch(checkout, /setError\(msg\)/);
+  assert.match(checkout, /SAFE_CHECKOUT_ERRORS\.has\(reason\.message\)/);
+  assert.match(checkout, /current\.current !== scope/);
+  assert.match(checkout, /url\.origin !== "https:\/\/checkout\.stripe\.com"/);
+  assert.match(checkout, /window\.location\.assign\(url\.href\)/);
+  assert.doesNotMatch(
+    checkout,
+    /EmbeddedCheckoutProvider|HTMLIFrameElement|setError\(result\.error\)/,
+  );
 });
 
 test("plan cards expose aligned 44px actions and the flat ChatGPT pricing hierarchy", async () => {

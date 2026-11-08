@@ -92,8 +92,8 @@
 }
 
 .kova-core-page.kova-file-directory.spec400-management .kova-file-filters button {
-  border-radius: 0;
-  border-width: 0 0 2px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   min-height: 44px;
 }
 .kova-core-page.kova-file-directory.spec400-management .kova-file-filters [aria-pressed="true"] {
@@ -101,7 +101,7 @@
   font-weight: 600;
 }
 .kova-core-page.kova-file-directory.spec400-management .kova-file-filters {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 /* Grid thresholds depend on available CONTENT width, not viewport width. */
 .kova-core-page.kova-file-directory.spec400-projects .kova-grid.kova-file-grid {
@@ -289,14 +289,15 @@
 }
 .spec400-schedules .kova-task-filters {
   height: auto;
-  min-height: 48px;
-  padding: 4px;
+  min-height: 44px;
+  height: 44px;
+  padding: 2px;
   gap: 4px;
 }
 .spec400-schedules .kova-task-filters [role="tab"] {
   height: auto;
   min-height: 40px;
-  padding: 8px 18px;
+  padding: 6px 18px;
   gap: 8px;
   line-height: 24px;
 }
@@ -1014,5 +1015,36 @@ html[data-kova-density="compact"]
 @media (max-width: 480px) {
   .spec400-schedule-editor .spec400-form-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Equal toolbar geometry, including icon-only controls. */
+.kova-core-page.kova-file-directory.spec400-library .kova-file-toolbar input,
+.kova-core-page.kova-file-directory.spec400-library .kova-file-toolbar button {
+  min-height: 44px;
+  height: 44px;
+  border-radius: 999px;
+}
+.kova-core-page.kova-file-directory.spec400-library
+  .kova-file-toolbar
+  button[aria-label="Show favorites"] {
+  width: 44px;
+  min-width: 44px;
+}
+.spec400-schedule-footer button {
+  border-radius: 999px;
+  min-height: 44px;
+}
+@media (max-width: 640px) {
+  .spec400-management,
+  .kova-core-page.kova-file-directory.spec400-management {
+    padding: 20px 16px max(24px, env(safe-area-inset-bottom));
+  }
+  .spec400-page-header {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .spec400-management :is(input, textarea, select) {
+    font-size: 16px;
   }
 }

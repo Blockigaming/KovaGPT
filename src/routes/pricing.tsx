@@ -128,7 +128,7 @@ function PricingPage() {
         </Link>
         <Link
           to="/"
-          className="inline-flex h-11 items-center rounded-xl border border-border px-4 text-sm"
+          className="inline-flex h-11 items-center rounded-full border border-border px-4 text-sm"
         >
           Back to chat
         </Link>
@@ -383,7 +383,7 @@ function OrganizationPlans({ onContact }: { onContact: () => void }) {
         Plans that grow with you
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted-foreground">
-        Proposed pricing. Contact sales to confirm availability, features, and terms.
+        Choose Team seats directly, or contact sales for Enterprise.
       </p>
       <div className="mt-8 grid gap-5 md:grid-cols-2">
         <article className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-6">
@@ -398,16 +398,16 @@ function OrganizationPlans({ onContact }: { onContact: () => void }) {
                 name: "Standard seat",
                 annual: 20,
                 monthly: 25,
-                description: "More usage than Pro",
+                description: "All Kova models with shared team billing",
               },
               {
                 name: "Premium seat",
                 annual: 100,
                 monthly: 125,
-                description: "5× Standard seat usage",
+                description: "Premium team seat",
               },
             ].map(({ name, annual, monthly, description }) => (
-              <div key={name} className="rounded-2xl bg-muted p-4">
+              <div key={name} className="rounded-2xl bg-muted p-4 text-left">
                 <h4 className="font-medium">{name}</h4>
                 <p className="mt-2">
                   <strong className="text-2xl">${annual}</strong> / seat / mo
@@ -418,14 +418,15 @@ function OrganizationPlans({ onContact }: { onContact: () => void }) {
               </div>
             ))}
           </div>
-          <OrganizationTopics topics={teamTopics} />
-          <button
-            type="button"
-            onClick={onContact}
-            className="mt-auto min-h-11 rounded-full border border-border px-5 font-medium hover:bg-accent"
+          <p className="text-left text-sm text-muted-foreground">
+            Buy seats, invite verified accounts, and manage billing in your Team workspace.
+          </p>
+          <Link
+            to="/team"
+            className="mt-auto inline-flex min-h-11 items-center justify-center rounded-full border border-border px-5 font-medium hover:bg-accent"
           >
-            Contact sales about Team
-          </button>
+            Get Team
+          </Link>
         </article>
         <article className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-6">
           <div>
@@ -433,7 +434,7 @@ function OrganizationPlans({ onContact }: { onContact: () => void }) {
             <h3 className="mt-1 text-2xl font-semibold">Enterprise</h3>
             <p className="mt-1 text-muted-foreground">Flexible pooled usage</p>
           </div>
-          <div className="rounded-2xl bg-muted p-4">
+          <div className="rounded-2xl bg-muted p-4 text-left">
             <p className="text-lg font-semibold">Seat price + usage at API rates</p>
             <p className="mt-2 text-sm text-muted-foreground">
               $20 per seat per month plus tax, billed annually. Usage costs vary by model and task.

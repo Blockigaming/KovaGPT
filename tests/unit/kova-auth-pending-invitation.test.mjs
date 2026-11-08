@@ -1,3 +1,4 @@
+import { projectAppearanceSchema, projectAppearance } from "../../src/lib/project-appearance.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -17,6 +18,7 @@ function fixture({ failure = false } = {}) {
   const exports = {};
   const modules = {
     zod: { z },
+    "./project-appearance": { projectAppearanceSchema, projectAppearance },
     "./project-chat-deletion": { PROJECT_CHAT_DELETE_UNAVAILABLE },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: "verified-middleware" },
     "@/lib/supabase-loose": { loose: (client) => client },

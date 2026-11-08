@@ -34,7 +34,7 @@ const compile = (code, deps) =>
     ...Object.keys(deps),
     ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText,
   )(...Object.values(deps));
-const identityEffect = effect(route, "const savedFolder").getText(route.file);
+const identityEffect = effect(route, "const savedQuery").getText(route.file);
 const cleanupEffect = effect(route, "const reset = (event: Event)").getText(route.file);
 const saveEffect = effect(route, "JSON.stringify({\n          query,").getText(route.file);
 const preferenceNames = [
@@ -212,14 +212,14 @@ test("existing principal record restores folder and unchanged filters on same-ow
     f.props.principalReady = false; // Item loading/error must not own preference hydration.
     assert.equal(f.render().folder, "all");
     assert.equal(storage.writes.length, 0, "initial render cannot erase the saved scope");
-    assert.deepEqual(values(f.render()), saved(scope));
+    assert.deepEqual(values(f.render()), saved("all"));
     f.render().setFolderScope(folderB);
     assert.deepEqual(values(f.render()), saved(folderB));
     f.unmount();
     const back = fixture(storage);
     back.render();
-    assert.deepEqual(values(back.render()), saved(folderB));
-    assert.equal(JSON.parse(storage.getItem(key("A"))).folder, folderB);
+    assert.deepEqual(values(back.render()), saved("all"));
+    assert.equal(JSON.parse(storage.getItem(key("A"))).folder, "all");
   }
 });
 
@@ -240,10 +240,10 @@ test("account change hides old folder before effects and rejects outgoing callba
   assert.equal(storage.writes.length, writesBeforeSwitch);
   staleSetScope(folderA);
   staleReset({ detail: { principal: storagePolicy.browserStoragePrincipal("A") } });
-  assert.equal(f.render().folder, folderB);
+  assert.equal(f.render().folder, "all");
   assert.equal(f.render().libraryCleared, false);
   assert.equal(f.render().searchQuery, "B query");
-  assert.equal(JSON.parse(storage.getItem(key("B"))).folder, folderB);
+  assert.equal(JSON.parse(storage.getItem(key("B"))).folder, "all");
   f.switchOwner(null);
   assert.equal(f.render().folder, "all");
   assert.equal(f.render().folder, "all");
@@ -259,7 +259,7 @@ test("unresolved auth never reads preferences or writes incoming defaults", () =
   f.switchOwner("A");
   assert.equal(f.render().folderScopeReady, false);
   assert.equal(storage.writes.length, 0);
-  assert.equal(f.render().folder, folderA);
+  assert.equal(f.render().folder, "all");
 });
 
 test("malformed or unsupported saved scopes default safely; canonical durable IDs restore", () => {
@@ -280,57 +280,17 @@ test("malformed or unsupported saved scopes default safely; canonical durable ID
   }
   const f = fixture(memoryStorage([[key("A"), JSON.stringify(saved(folderA.toUpperCase()))]]));
   f.render();
-  assert.equal(f.render().folder, folderA);
+  assert.equal(f.render().folder, "all");
   const guest = fixture(memoryStorage([[key(null), JSON.stringify(saved(folderA))]]), null);
   guest.render();
   assert.equal(guest.render().folder, "all");
 });
 
-test("owned-folder validator clears missing/deleted/foreign IDs only after successful load", () => {
-  const validator = effect(folders, 'scope !== "all"').arguments[0].getText(folders.file);
-  const storage = memoryStorage([[key("A"), JSON.stringify(saved(folderA))]]);
-  const f = fixture(storage);
+test("retired folder scopes cannot conceal Library items", () => {
+  assert.doesNotMatch(source, /<LibraryFolderOrganizer/);
+  const f = fixture(memoryStorage([[key("A"), JSON.stringify(saved(folderA))]]));
   f.render();
-  const validate = (changes = {}) => {
-    const state = f.render();
-    compile(`return (${validator});`, {
-      scope: state.folder,
-      folders: [{ id: folderA }],
-      foldersLoaded: true,
-      loading: false,
-      error: null,
-      onScopeChange: state.setFolderScope,
-      ...changes,
-    })();
-  };
-  validate();
-  assert.equal(f.render().folder, folderA);
-  for (const change of [
-    { foldersLoaded: false },
-    { loading: true },
-    { error: "Folder service unavailable" },
-  ]) {
-    validate({ folders: [], ...change });
-    assert.equal(f.render().folder, folderA, "incomplete/failed load is not proof of deletion");
-  }
-  for (const missing of [folderA, folderB]) {
-    f.render().setFolderScope(missing);
-    validate({ folders: [] });
-    assert.equal(f.render().folder, "all");
-    assert.equal(JSON.parse(storage.getItem(key("A"))).folder, "all");
-  }
-  for (const scope of ["all", "unfiled"]) {
-    f.render().setFolderScope(scope);
-    validate({ folders: [] });
-    assert.equal(f.render().folder, scope);
-  }
-  assert.match(source, /<LibraryFolderOrganizer\s+key=\{principal\}/);
-  assert.match(
-    organizer,
-    /if \(generationRef.current !== generation\) return;\s*setFolders\(next\)/,
-  );
-  const service = readFileSync("src/routes/api/library/folders.ts", "utf8");
-  assert.match(service, /\.eq\("user_id", auth.userId\)/);
+  assert.equal(f.render().folder, "all");
 });
 
 test("matching cleanup resets all filter state without recreating the deleted record", () => {
@@ -342,7 +302,7 @@ test("matching cleanup resets all filter state without recreating the deleted re
   f.render();
   f.render();
   f.clear("B");
-  assert.equal(f.render().folder, folderA);
+  assert.equal(f.render().folder, "all");
   f.clear("A");
   const writesBeforeReset = storage.writes.length;
   const reset = f.render();

@@ -12,7 +12,7 @@ async function fixture(save = async () => true) {
       error: (...v) => events.push(["error", ...v]),
     },
     readChatTrash: () => ({ retentionMs: 30 * 86400000, entries: [{ conversation: chat }] }),
-    moveChatToTrash: async (...args) => {
+    permanentlyDeleteChat: async (...args) => {
       events.push(["save", ...args]);
       return save();
     },
@@ -64,14 +64,13 @@ test("an action delayed across account clear cannot persist or change the new vi
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(f.events, []);
 });
-test("Undo remains bound to the original account generation", async () => {
+test("permanent deletion reports no Undo or recoverable Trash action", async () => {
   const f = await fixture();
   await f.module.removeHomeChat(f.context, f.chat.id);
-  const undo = f.events.find((row) => row[0] === "success")[2].action.onClick;
-  const count = f.events.length;
-  f.clear();
-  await undo();
-  assert.equal(f.events.length, count);
+  assert.deepEqual(
+    f.events.find((row) => row[0] === "success"),
+    ["success", "Chat permanently deleted"],
+  );
 });
 test("a late successful durable delete does not repaint a replacement principal", async () => {
   let finish;

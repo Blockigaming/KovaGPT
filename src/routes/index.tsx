@@ -1766,7 +1766,7 @@ function KovaGPT() {
   }, [commandOpen, startNewChat, openCommandPalette]);
 
   const historyAction = useCallback(
-    async (kind: "delete" | "archive" | "restore" | "title", item: string | Conversation) => {
+    async (kind: "delete" | "restore" | "title", item: string | Conversation) => {
       const generation = storageGenerationRef.current;
       const current = () => generation === storageGenerationRef.current;
       const context = {
@@ -1781,7 +1781,7 @@ function KovaGPT() {
       if (!current()) return;
       if (kind === "title") await actions.titleHomeChat(context, item as Conversation);
       else if (kind === "restore") await actions.restoreHomeChat(context, item as Conversation);
-      else await actions.removeHomeChat(context, item as string, kind === "archive");
+      else await actions.removeHomeChat(context, item as string);
     },
     [activeId, conversations, setConversations, userKey],
   );
@@ -3155,7 +3155,6 @@ function KovaGPT() {
           }}
           onRename={(title) => renameChat(active.id, title)}
           onTogglePin={() => toggleChatPin(active.id)}
-          onArchive={() => historyAction("archive", active.id)}
           onDelete={() => deleteChat(active.id)}
           onOpenContext={(trigger) =>
             window.dispatchEvent(
@@ -3321,7 +3320,6 @@ function KovaGPT() {
           });
           toast.success("Chat duplicated");
         }}
-        onArchive={(id) => historyAction("archive", id)}
         onTogglePin={toggleChatPin}
       />
 
@@ -3836,7 +3834,7 @@ function KovaGPT() {
             query={commandQuery}
             onQueryChange={setCommandQuery}
             conversations={historyConversations}
-            archivedConversations={archivedConversations}
+            archivedConversations={[]}
             workspaceItems={workspaceItems}
             workspaceStatus={workspaceStatus}
             retryWorkspaceSearch={retryWorkspaceSearch}

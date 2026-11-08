@@ -46,8 +46,9 @@ const property = (rule, name) => rule.nodes.findLast((node) => node.prop === nam
 test("shortcut defaults include Scheduled tasks, and choices remain stable after reload", () => {
   const storage = memoryStorage();
   assert.ok(DEFAULT_SIDEBAR_SHORTCUTS.includes("scheduled-tasks"));
+  assert.ok(!DEFAULT_SIDEBAR_SHORTCUTS.includes("images"));
   assert.deepEqual(readSidebarShortcuts(storage, "owner"), DEFAULT_SIDEBAR_SHORTCUTS);
-  const chosen = ["projects", "images", "scheduled-tasks"];
+  const chosen = ["projects", "library", "scheduled-tasks"];
   assert.equal(saveSidebarShortcuts(storage, "owner", chosen), true);
   assert.deepEqual(readSidebarShortcuts(storage, "owner"), chosen);
   assert.equal(saveSidebarShortcuts(storage, "owner", []), true);
@@ -56,14 +57,14 @@ test("shortcut defaults include Scheduled tasks, and choices remain stable after
 
 test("preferences never migrate across accounts or unresolved/guest identities", () => {
   const storage = memoryStorage();
-  saveSidebarShortcuts(storage, "account/a", ["images"]);
+  saveSidebarShortcuts(storage, "account/a", ["projects"]);
   saveSidebarShortcuts(storage, "account:b", ["library"]);
   assert.notEqual(sidebarShortcutsKey("account/a"), sidebarShortcutsKey("account:b"));
-  assert.deepEqual(readSidebarShortcuts(storage, "account/a"), ["images"]);
+  assert.deepEqual(readSidebarShortcuts(storage, "account/a"), ["projects"]);
   assert.deepEqual(readSidebarShortcuts(storage, "account:b"), ["library"]);
   for (const userId of [undefined, null, ""]) {
     assert.equal(sidebarShortcutsKey(userId), null);
-    assert.equal(saveSidebarShortcuts(storage, userId, ["images"]), false);
+    assert.equal(saveSidebarShortcuts(storage, userId, ["projects"]), false);
     assert.equal(resetSidebarShortcuts(storage, userId), false);
     assert.deepEqual(readSidebarShortcuts(storage, userId), DEFAULT_SIDEBAR_SHORTCUTS);
   }

@@ -170,7 +170,10 @@ function fixture({
               livemode: true,
               mode: "subscription",
               metadata: params.metadata,
+              ui_mode: params.ui_mode,
+              success_url: params.success_url,
               return_url: params.return_url,
+              url: "https://checkout.stripe.com/c/pay/nonsecret",
               line_items: {
                 has_more: false,
                 data: [{ quantity: 1, price: { id: params.line_items[0].price } }],
@@ -218,7 +221,9 @@ test("both monthly paid tiers retain their Price and use 50%-once, never new tri
     assert.deepEqual(request.subscription_data, { metadata: { userId } });
     assert.equal("trial_period_days" in request.subscription_data, false);
     assert.equal("trial_end" in request.subscription_data, false);
-    assert.equal(request.ui_mode, "embedded_page");
+    assert.equal(request.ui_mode, "hosted");
+    assert.equal(request.success_url, returnUrl);
+    assert.equal(request.cancel_url, "https://kovagpt.com/pricing");
     assert.equal(request.managed_payments.enabled, true);
   }
 });

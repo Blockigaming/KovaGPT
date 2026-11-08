@@ -37,7 +37,7 @@ function chatHistoryPresentation(
   previous: ChatHistoryPresentation,
   next: ChatHistoryStatus,
 ): ChatHistoryPresentation {
-  const recoverable = ["offline", "device_error", "blocked"].includes(next.phase);
+  const recoverable = ["offline", "device_error", "blocked", "auth_required"].includes(next.phase);
   const waiting = ["connecting", "saving_device", "syncing", "pending"].includes(next.phase);
   const recoveryPhase = recoverable
     ? next.phase
@@ -194,13 +194,22 @@ export function ChatHistorySyncRuntime() {
           timer = setTimeout(() => void readOnlyRefresh(), 500);
         }
       };
+    let ticking = false;
     const tick = async () => {
-      if (lifetime.signal.aborted) return;
-      await controller?.pump();
+      if (lifetime.signal.aborted || ticking || document.visibilityState === "hidden") return;
+      ticking = true;
+      try {
+        await controller?.pump();
+      } finally {
+        ticking = false;
+      }
       if (!lifetime.signal.aborted)
         timer = setTimeout(
           () => void tick(),
-          current.pending || !controller?.getState()?.complete ? 1200 : 15000,
+          Math.max(
+            controller?.retryDelay ?? 0,
+            current.pending || !controller?.getState()?.complete ? 1200 : 15000,
+          ),
         );
     };
     const online = () => {
@@ -208,7 +217,13 @@ export function ChatHistorySyncRuntime() {
       void tick();
     };
     window.addEventListener("online", online);
-    document.addEventListener("visibilitychange", readOnlyRefresh);
+    const visibility = () => {
+      if (document.visibilityState !== "hidden") {
+        void readOnlyRefresh();
+        online();
+      }
+    };
+    document.addEventListener("visibilitychange", visibility);
     event("connecting");
     async function acquire(lock: Lock | null): Promise<void> {
       if (!ownerId || lifetime.signal.aborted) return;
@@ -227,6 +242,7 @@ export function ChatHistorySyncRuntime() {
       event("connecting");
       controller = createChatHistoryController({
         ownerId,
+        retireArchives: true,
         signal: lifetime.signal,
         loadDevice: loadChatHistoryDevice,
         commitDevice: commitChatHistoryDevice,
@@ -303,7 +319,7 @@ export function ChatHistorySyncRuntime() {
       channel?.close();
       window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
       window.removeEventListener("online", online);
-      document.removeEventListener("visibilitychange", readOnlyRefresh);
+      document.removeEventListener("visibilitychange", visibility);
       if (current.ownerId === ownerId) publish(EMPTY);
     };
   }, [ownerId]);
@@ -329,7 +345,9 @@ export function ChatHistorySyncStatus() {
     syncing: "Synchronizing chat history…",
     pending: "Chat changes are waiting to sync",
     saved: "Chat history is up to date",
-    offline: "Chat sync is offline. Device changes are retained.",
+    auth_required:
+      "Your session needs verification before chat sync can resume. Sign in again, then retry.",
+    offline: "Chats are saved on this device. Reconnecting to your account…",
     device_error:
       "Chat history could not be saved on this device. Keep this page open and export important drafts.",
     other_tab:
@@ -341,9 +359,15 @@ export function ChatHistorySyncStatus() {
     Boolean(state.recoveryPhase) ||
     state.migration > 0 ||
     state.conflicts.length > 0 ||
-    ["offline", "device_error", "blocked", "other_tab", "unavailable", "cleared"].includes(
-      state.phase,
-    );
+    [
+      "offline",
+      "device_error",
+      "blocked",
+      "auth_required",
+      "other_tab",
+      "unavailable",
+      "cleared",
+    ].includes(state.phase);
   if (!visible) {
     return (
       <p className="sr-only" role="status" aria-live="polite">
@@ -364,7 +388,7 @@ export function ChatHistorySyncStatus() {
   const controller = controls.get(user.id);
   return (
     <div
-      className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
+      className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
       aria-label="Chat history synchronization"
       aria-busy={working || undefined}
     >
@@ -380,7 +404,7 @@ export function ChatHistorySyncStatus() {
           <Button
             data-ui-reference="chatgpt.chat-history.control"
             variant="outline"
-            className="rounded-md   font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
+            className="rounded-full font-medium text-foreground hover:bg-background"
             disabled={working || !controller}
             onClick={() => void act(() => controller?.migrate())}
           >
@@ -392,7 +416,7 @@ export function ChatHistorySyncStatus() {
         <Button
           data-ui-reference="chatgpt.chat-history.control"
           variant="outline"
-          className="mt-1 rounded-md   font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
+          className="mt-1 rounded-full font-medium text-foreground hover:bg-background"
           disabled={working || !controller}
           onClick={() => void act(() => controller?.retry())}
         >

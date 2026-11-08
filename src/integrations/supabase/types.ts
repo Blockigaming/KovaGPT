@@ -1283,6 +1283,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          appearance: Json;
           archived_at: string | null;
           color: string | null;
           created_at: string;
@@ -1296,6 +1297,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          appearance?: Json;
           archived_at?: string | null;
           color?: string | null;
           created_at?: string;
@@ -1309,6 +1311,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          appearance?: Json;
           archived_at?: string | null;
           color?: string | null;
           created_at?: string;

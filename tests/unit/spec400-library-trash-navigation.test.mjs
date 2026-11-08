@@ -3,18 +3,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 const library = readFileSync("src/routes/library.tsx", "utf8");
-test("Library single and bulk chat removal reuse recoverable Trash", () => {
+test("Library single and bulk chat removal use permanent deletion", () => {
   assert.equal(
-    (library.match(/await moveChatToTrash\(userKey, chat, chats, isCurrent\)/g) || []).length,
+    (library.match(/await permanentlyDeleteChat\(userKey, chat, isCurrent, true\)/g) || []).length,
     2,
   );
-  assert.doesNotMatch(library, /saveConversations/);
-  assert.match(library, /libraryDeleteConfirmation\(/);
-  assert.match(library, /readChatTrash\(userKey\)\.retentionMs/);
-  const confirmation = readFileSync("src/lib/library-delete-confirmation.ts", "utf8");
-  assert.match(confirmation, /will move to Trash and can be restored for/);
-  assert.match(confirmation, /your current retention setting/);
-  assert.match(library, /if \(isCurrent\(\)\) restoreDeletedItem\(\)/);
+  assert.doesNotMatch(library, /readChatTrash|moveChatToTrash/);
 });
 test("management Search preserves the Sidebar choice and opens the appropriate search surface", () => {
   const shell = readFileSync("src/components/AppShell.tsx", "utf8");

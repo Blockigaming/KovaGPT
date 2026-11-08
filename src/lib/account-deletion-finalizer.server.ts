@@ -1,3 +1,7 @@
+import {
+  teamCustomersForAccountDeletion,
+  acknowledgeTeamCustomerRetired,
+} from "@/lib/team-account-deletion.server";
 // Current launch is Supabase; no owned-Auth grants, credentials or session lifecycle changes.
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { prepareAccountDeletionNotification } from "@/lib/account-email-lifecycle.server.mjs";
@@ -94,6 +98,7 @@ export async function finalizeAccountAfterRecovery(
     customerId: string;
     environment: "live" | "sandbox";
     retiredAt: string | null;
+    team?: boolean;
   }> = [];
   let deletionFailure: Response | null = null;
   let authDeletionAttempted = false;
@@ -162,6 +167,20 @@ export async function finalizeAccountAfterRecovery(
           retiredAt: mapping.retiredAt,
         };
       });
+      for (const customerId of await teamCustomersForAccountDeletion(
+        auth.supabaseAdmin,
+        auth.userId,
+      )) {
+        if (preparedBilling.some((mapping) => mapping.customerId === customerId))
+          throw new Error("team_billing_retirement_identity_conflict");
+        preparedBilling.push({
+          stripe: createStripeClient("live"),
+          customerId,
+          environment: "live",
+          retiredAt: null,
+          team: true,
+        });
+      }
       // Reuse the bounded, zero-retry Stripe client. Verify every actual
       // Customer before deleting private Work or Storage, as the previous
       // deletion preflight did. A prior remote deletion is idempotent proof.
@@ -261,13 +280,20 @@ export async function finalizeAccountAfterRecovery(
         try {
           await renewAccountFinalization(auth.supabaseAdmin, auth.userId, claim.attemptId);
           await retireStripeCustomerForAccountDeletion(billing);
-          await acknowledgePolicyCustomerRetired(
-            auth.supabaseAdmin,
-            auth.userId,
-            claim.attemptId,
-            billing.environment,
-            billing.customerId,
-          );
+          if (billing.team)
+            await acknowledgeTeamCustomerRetired(
+              auth.supabaseAdmin,
+              auth.userId,
+              billing.customerId,
+            );
+          else
+            await acknowledgePolicyCustomerRetired(
+              auth.supabaseAdmin,
+              auth.userId,
+              claim.attemptId,
+              billing.environment,
+              billing.customerId,
+            );
         } catch {
           return jsonError(
             "Billing could not be retired, so deletion is pending. Retry shortly or contact support.",

@@ -45,11 +45,7 @@ export function confirmPermanentChat(title: string, temporary: boolean): Promise
             <AlertDialogHeader>
               <AlertDialogTitle>Delete chat permanently?</AlertDialogTitle>
               <AlertDialogDescription>
-                “{title || "Untitled chat"}” will be permanently deleted.{" "}
-                {temporary
-                  ? "Temporary chats are not saved in Trash."
-                  : "Trash retention is set to Instantly."}{" "}
-                This cannot be undone. Drafts are kept.
+                “{title || "Untitled chat"}” will be permanently deleted. This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

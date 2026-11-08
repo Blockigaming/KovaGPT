@@ -102,6 +102,7 @@ function baseHarness() {
     dependencies: {
       React,
       PROJECT_CHAT_DELETE_UNAVAILABLE,
+      confirmPermanentChat: async () => false,
       ...h.react,
       ...components,
       useUser: () => auth,
@@ -737,22 +738,15 @@ test("viewers have no move control and cancellation invalidates destination resu
 });
 
 for (const role of ["owner", "editor"]) {
-  test(`project-chat ${role} sees disabled deletion with a visible accessible recovery explanation`, async () => {
+  test(`project-chat ${role} cancels permanent deletion without changing drafts or calling the server`, async () => {
     const f = chatFixture();
     await f.finishLoad({ role });
     f.type("Keep my draft");
     const button = f.find(
-      (node) => node.props["aria-label"] === "Delete Title chat-a unavailable",
+      (node) => node.props["aria-label"] === "Delete Title chat-a permanently",
     )[0];
-    assert.equal(button.props.disabled, true);
-    assert.equal(button.props.onClick, undefined);
-    const description = f.find((node) => node.props.id === button.props["aria-describedby"])[0];
-    assert.equal(text(description), PROJECT_CHAT_DELETE_UNAVAILABLE);
-    assert.equal(button.props.title, PROJECT_CHAT_DELETE_UNAVAILABLE);
-    assert.equal(
-      f.find((node) => node.type === "AlertDialog" && text(node).includes("Delete “")).length,
-      0,
-    );
+    assert.equal(button.props.disabled, false);
+    await button.props.onClick();
     assert.equal(f.requests.delete.length, 0);
     assert.equal(f.composer().props.value, "Keep my draft");
     assert.equal(f.storage.get(f.draftKey()), "Keep my draft");
@@ -760,24 +754,16 @@ for (const role of ["owner", "editor"]) {
   });
 }
 
-test("project chat list deletion is unavailable without a delete callback or misleading confirmation", () => {
+test("project chat list exposes confirmed permanent deletion only to editors", async () => {
   const f = moveFixture();
-  const originalChats = JSON.stringify(f.props.chats);
-  const button = f.find((node) => node.props["aria-label"] === "Delete Shared chat unavailable")[0];
-  assert.equal(button.props.disabled, true);
-  assert.equal(button.props.onClick, undefined);
-  assert.equal(
-    text(f.find((node) => node.props.id === button.props["aria-describedby"])[0]),
-    PROJECT_CHAT_DELETE_UNAVAILABLE,
-  );
-  assert.equal(f.find((node) => node.type === "ConfirmDialog").length, 0);
+  const button = f.find((node) => node.props["aria-label"] === "Delete Shared chat permanently")[0];
+  assert.equal(button.props.disabled, false);
+  await button.props.onClick();
   assert.equal(f.requests.delete.length, 0);
-  assert.equal(JSON.stringify(f.props.chats), originalChats);
-  assert.equal(f.refreshes(), 0);
   f.props.canEdit = false;
   f.render();
   assert.equal(
-    f.find((node) => node.props["aria-label"] === "Delete Shared chat unavailable").length,
+    f.find((node) => node.props["aria-label"] === "Delete Shared chat permanently").length,
     0,
   );
 });

@@ -18,7 +18,7 @@ import {
   requireMonthlyIntroReadiness,
 } from "@/lib/billing-policy.mjs";
 
-type CheckoutSessionResult = { clientSecret: string } | { error: string };
+type CheckoutSessionResult = { url: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
 // browser is never trusted to select Stripe credentials or subscription rows.
 
@@ -74,10 +74,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         returnUrl: billingReturnUrls(process.env.KOVA_BILLING_RETURN_ORIGIN).checkout,
       });
 
-      if (!session.client_secret) {
-        throw new Error("Checkout Session client secret missing");
-      }
-      return { clientSecret: session.client_secret };
+      if (!session.url || new URL(session.url).origin !== "https://checkout.stripe.com")
+        throw new Error("Secure checkout URL missing");
+      return { url: session.url };
     } catch (error) {
       if (error instanceof BillingPolicyError && error.code.includes("active_subscription")) {
         return { error: "You already have an open subscription. Manage it from Billing." };

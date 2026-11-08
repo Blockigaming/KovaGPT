@@ -3,6 +3,7 @@ export type ChatHistoryStatus = {
   ownerId: string | null;
   phase: string;
   error: string | null;
+  retryAt?: number;
   pending: number;
   migration: number;
   conflicts: {
@@ -25,6 +26,8 @@ export type ChatHistoryState = {
 };
 export function createChatHistoryController(options: {
   ownerId: string;
+  now?: () => number;
+  retireArchives?: boolean;
   signal: AbortSignal;
   loadDevice(ownerId: string): Promise<ChatHistoryState | null>;
   commitDevice(
@@ -54,6 +57,7 @@ export function createChatHistoryController(options: {
   pump(): Promise<void>;
   getState(): ChatHistoryState | null;
   readonly dirty: boolean;
+  readonly retryDelay: number;
   migrate(): Promise<void>;
   resolve(id: string, choice: "cloud" | "keep"): Promise<void>;
   retry(): Promise<void>;

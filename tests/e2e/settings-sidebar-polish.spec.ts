@@ -34,7 +34,7 @@ test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ pag
   await expect(sidebar).toBeVisible();
 });
 
-test("sidebar keeps separate desktop and phone preferences across Images and reload", async ({
+test("sidebar keeps separate desktop and phone preferences across Library and reload", async ({
   page,
 }, info) => {
   test.skip(info.project.name !== "desktop-1440x900");
@@ -49,10 +49,10 @@ test("sidebar keeps separate desktop and phone preferences across Images and rel
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open menu", exact: true }).click();
   const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
-  await drawer.getByRole("link", { name: "Images", exact: true }).click();
-  await expect(page).toHaveURL(/\/images$/);
+  await drawer.getByRole("link", { name: "Library", exact: true }).click();
+  await expect(page).toHaveURL(/\/library$/);
   await expect(drawer).toBeHidden();
-  await expect(page.locator(".spec400-images")).not.toHaveAttribute("inert", "");
+  await expect(page.getByRole("main")).not.toHaveAttribute("inert", "");
   await page.reload();
   await waitForKovaHydration(page);
   await expect(drawer).toBeHidden();
@@ -61,12 +61,12 @@ test("sidebar keeps separate desktop and phone preferences across Images and rel
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(rail).toBeVisible();
-  await expect(page.locator(".spec400-images")).not.toHaveAttribute("inert", "");
+  await expect(page.getByRole("main")).not.toHaveAttribute("inert", "");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(drawer).toBeVisible();
   await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(drawer).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Images", exact: true })).toBeVisible();
+  await expect(page.locator("#library-title")).toBeVisible();
 });
 
 test("desktop Settings width is editable and Back restores the originating page", async ({

@@ -69,7 +69,6 @@ export function ConversationHeaderActions({
   onShare: (trigger: HTMLButtonElement | null) => void;
   onRename: (title: string) => void;
   onTogglePin: () => void;
-  onArchive: () => void | Promise<void>;
   onDelete: () => void | Promise<void>;
   onManagePlugins: (trigger: HTMLButtonElement | null) => void;
   onOpenContext?: (trigger: HTMLButtonElement) => void;

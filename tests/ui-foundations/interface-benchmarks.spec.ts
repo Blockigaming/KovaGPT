@@ -167,12 +167,24 @@ for (const width of [320, 390, 768, 1440]) {
       ]);
       await expect(region.getByRole("rowheader")).toHaveText([
         "Chat modes",
-        "Regular messages",
-        "Thinking messages",
-        "Image generations / day",
-        "File uploads / day",
+        "Usage",
+        "Basic chat",
+        "Advanced chat",
+        "Images and files",
         "Cloud storage",
       ]);
+      await expect(
+        region
+          .getByRole("row")
+          .filter({ has: page.getByRole("rowheader", { name: "Usage", exact: true }) })
+          .getByRole("cell"),
+      ).toHaveText(["Very limited", "5× Free", "100× Free (20× Plus)"]);
+      await expect(
+        region
+          .getByRole("row")
+          .filter({ has: page.getByRole("rowheader", { name: "Basic chat", exact: true }) })
+          .getByRole("cell"),
+      ).toHaveText(["Limited", "Limited", "Unlimited with Argon Lite"]);
       const included = region.getByRole("columnheader", { name: "Included", exact: true });
       await expect
         .poll(async () => {

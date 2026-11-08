@@ -133,7 +133,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/desktop-polish.spec.ts", 2, 2],
     ["tests/e2e/final-readiness.spec.ts", 2, 3, 2],
     ["tests/e2e/functional-reliability.spec.ts", 1, 1],
-    ["tests/e2e/high-impact-chat.spec.ts", 10, 11, 10],
+    ["tests/e2e/high-impact-chat.spec.ts", 11, 12, 11],
     ["tests/e2e/mobile-quality.spec.ts", 5, 5],
     ["tests/e2e/mobile-shell-ui-truth.spec.ts", 2, 2],
     ["tests/e2e/model-selector.spec.ts", 5, 5],
@@ -181,9 +181,9 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
 
   const highImpact = specsByPath.get("tests/e2e/high-impact-chat.spec.ts");
   assert.match(highImpact, /kovagpt:archived:v2:user:22222222-2222-4222-8222-222222222222/);
-  assert.match(highImpact, /localStorage\.getItem\("kovagpt:archived"\)\)\)\.toBeNull\(\)/);
+  assert.match(highImpact, /name: "Delete permanently", exact: true/);
   assert.match(highImpact, /await page\.reload\(\);\s*await waitForKovaHydration\(page\);/);
-  assert.match(highImpact, /name: "Archived chats"[\s\S]{0,100}"No archived chats"/);
+  assert.match(highImpact, /name: "Archived chats"[\s\S]{0,100}toHaveCount\(0\)/);
 
   const uiQuality = specsByPath.get("tests/e2e/ui-quality.spec.ts");
   assert.match(uiQuality, /await home\.click\(\);\s*await waitForKovaHydration\(page\);/);

@@ -69,8 +69,10 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const defaultIds = DEFAULT_SIDEBAR_LAYOUT.shortcuts;
-  for (const id of ["images", "library", "projects", "scheduled-tasks", "apps"])
+  for (const id of ["library", "projects", "scheduled-tasks", "apps"])
     assert.ok(defaultIds.includes(id), id);
+  assert.ok(!defaultIds.includes("images"));
+  assert.ok(!SIDEBAR_ITEMS.some((item) => item.id === "images"));
   assert.ok(!SIDEBAR_ITEMS.some((item) => item.id === "work"));
   assert.doesNotMatch(sidebar, /navLink\("\/work"/);
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);

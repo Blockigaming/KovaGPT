@@ -57,10 +57,10 @@ test("chat interaction primitives retain bounded input, Stop, copy and focus fee
 test("assistant response contract covers implicit formatting and honest correction", async () => {
   const modes = await read("src/lib/modes.ts");
   for (const phrase of [
-    "compact Markdown table",
-    "correct language identifier",
-    "Correct a false premise",
-    "strongest relevant perspectives",
+    "compact comparison tables",
+    "language-tagged code fences",
+    "Correct false premises",
+    "relevant perspectives fairly",
     "human feelings",
   ])
     assert.match(modes, new RegExp(phrase));

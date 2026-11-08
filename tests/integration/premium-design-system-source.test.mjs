@@ -62,6 +62,6 @@ test("selected account navigation is visible while healthy sync stays visually q
     /\.kova-sidebar \.kova-nav-row:is\(\[aria-current="page"\], \.is-active\),\s*\.kova-sidebar \.kova-chat-row\.is-active\s*\{\s*background: var\(--sidebar-active\)/,
   );
   assert.match(historySync, /if \(!visible\)[\s\S]*?className="sr-only"/);
-  assert.match(historySync, /rounded-xl border border-border\/70 bg-muted\/40/);
+  assert.match(historySync, /rounded-2xl border border-border\/70 bg-card/);
   assert.match(historySync, /role="status" aria-live="polite"/);
 });
