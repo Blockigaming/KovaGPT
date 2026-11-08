@@ -53,3 +53,19 @@ export async function resolveEffectiveBillingTier(
 ): Promise<BillingTier> {
   return resolveTier(supabaseAdmin, userId, "effective_user_plan_tier");
 }
+
+/** Paid Premium membership is resolved by the same server-only entitlement authority. */
+export async function resolveEffectiveUsageMultiplier(
+  supabaseAdmin: SupabaseClient<Database>,
+  userId: string,
+): Promise<1 | 5> {
+  try {
+    const { data, error } = await loose(supabaseAdmin)
+      .rpc("effective_user_usage_multiplier", { _user_id: userId })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (error || (data !== 1 && data !== 5)) throw new BillingEntitlementUnavailableError();
+    return data;
+  } catch {
+    throw new BillingEntitlementUnavailableError();
+  }
+}

@@ -11,7 +11,9 @@ const count = new Intl.NumberFormat("en-US");
 
 export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
   const { tier, windows, images, uploads } = usage;
-  const limits = DAILY_PLAN_ALLOWANCES[tier];
+  const base = DAILY_PLAN_ALLOWANCES[tier];
+  const multiplier = usage.usageMultiplier ?? 1;
+  const limits = { images: base.images * multiplier, uploads: base.uploads * multiplier };
   return (
     <div className="kova-plan-usage">
       {windows.map(({ id, resetsAt, regularUsed, regularLimit, thinkingUsed, thinkingLimit }) => {

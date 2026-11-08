@@ -317,7 +317,7 @@ export async function enforceQuota(
     if (kind === "voice") return tooMany(`Daily voice request limit reached (${limit}/day).`);
     const label = kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
     return tooMany(
-      `Daily ${label} limit reached (${limit}/day). Resets at midnight UTC. Upgrade for more.`,
+      `Daily ${label} allowance used. Check Usage for your limits. Resets at midnight UTC.`,
     );
   }
   if (data !== true) return jsonError("Quota could not be verified", 503);

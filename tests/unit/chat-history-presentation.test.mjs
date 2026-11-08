@@ -60,3 +60,11 @@ test("a new recovery failure replaces the retained message with its current caus
   assert.equal(present(retrying, state("device_error")).recoveryPhase, "device_error");
   assert.equal(present(retrying, state("blocked")).recoveryPhase, "blocked");
 });
+
+test("rate-limited recovery stays distinct from offline through retries and clears on success", () => {
+  let current = present(state("local"), state("rate_limited"));
+  current = present(current, state("syncing"));
+  assert.equal(current.recoveryPhase, "rate_limited");
+  assert.equal(present(current, state("saved")).recoveryPhase, undefined);
+  assert.equal(present(current, state("syncing", "owner-b")).recoveryPhase, undefined);
+});

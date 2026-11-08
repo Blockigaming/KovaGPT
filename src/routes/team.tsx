@@ -385,7 +385,8 @@ function TeamWorkspace({ owner }: { owner: string }) {
           </p>
           <p className="text-sm text-muted-foreground">
             Choose 2–150 seats, including your own. Payment opens full-screen in Stripe. Team
-            billing is separate from any personal subscription.
+            billing is separate from any personal subscription. Premium includes 5× Standard metered
+            messages, tokens, images, and uploads.
           </p>
           <Button className="rounded-full" type="submit" disabled={busy}>
             {busy ? "Opening…" : "Continue to Team payment"}

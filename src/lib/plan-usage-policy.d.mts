@@ -20,6 +20,7 @@ export const CHAT_USAGE_WINDOWS: Readonly<Record<ChatUsageWindowId, string>>;
 export function chatUsageWindows(
   tier: "free" | "plus" | "pro",
   now?: Date,
+  usageMultiplier?: 1 | 5,
 ): {
   id: ChatUsageWindowId;
   start: string;
