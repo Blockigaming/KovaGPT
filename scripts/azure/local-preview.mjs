@@ -27,6 +27,8 @@ const child = spawn(process.execPath, ["--import", guard, entry], {
     AI_GENERATION_ENABLED: "false",
     KOVA_GENERATION_DISABLED: "true",
     KOVA_AUTH_MODE: "supabase",
+    // Explicit test-only switch: no cloud credentials or advertising egress.
+    ...(process.argv.includes("--adsense-csp") ? { KOVA_ADSENSE_ENABLED: "true" } : {}),
   },
   stdio: "inherit",
 });

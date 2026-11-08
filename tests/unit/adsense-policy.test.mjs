@@ -28,6 +28,11 @@ test("missing, unsettled, rejected, or withdrawn CMP consent never enables ads",
     vendor: { consents: { 755: true } },
   };
   assert.equal(hasAdSenseConsent(consent, true), true);
+  assert.equal(
+    hasAdSenseConsent({ cmpStatus: "loaded", eventStatus: "tcloaded", gdprApplies: false }, true),
+    true,
+  );
+  assert.equal(hasAdSenseConsent({ cmpStatus: "loaded", eventStatus: "tcloaded" }, true), false);
   for (const value of [
     undefined,
     {},

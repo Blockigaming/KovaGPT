@@ -24,7 +24,7 @@ export function hasAdSenseConsent(data, success) {
     success === true &&
     data?.cmpStatus === "loaded" &&
     ["tcloaded", "useractioncomplete"].includes(data.eventStatus) &&
-    data.purpose?.consents?.["1"] === true &&
-    data.vendor?.consents?.["755"] === true
+    (data.gdprApplies === false ||
+      (data.purpose?.consents?.["1"] === true && data.vendor?.consents?.["755"] === true))
   );
 }

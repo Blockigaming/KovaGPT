@@ -14,6 +14,7 @@ export function requestKovaHostedChat(input?: {
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;
   effort?: "none" | "low" | "high" | "max";
+  beforeRetry?: () => Promise<void>;
 }): Promise<Response>;
 export const HOSTED_CHAT_URL: "https://openrouter.ai/api/v1/chat/completions";
 export const MODEL_OUTPUT_LIMITS: Readonly<Record<string, number>>;

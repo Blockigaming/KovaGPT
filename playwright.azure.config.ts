@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: [["list"]],
   outputDir: "test-results/azure-node",
   webServer: {
-    command: "node scripts/azure/local-preview.mjs",
+    command: "node scripts/azure/local-preview.mjs --adsense-csp",
     url: "http://127.0.0.1:4189/api/health",
     timeout: 20000,
     reuseExistingServer: false,

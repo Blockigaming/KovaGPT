@@ -18,17 +18,27 @@ type TcfApi = (
   parameter?: number,
 ) => void;
 type AdWindow = Window & {
+  googlefc?: {
+    callbackQueue: { push: (entry: Record<string, () => void>) => unknown };
+    showRevocationMessage?: () => void;
+    usstatesoptout?: { openConfirmationDialog?: (callback: (optedOut: boolean) => void) => void };
+  };
   __tcfapi?: TcfApi;
   adsbygoogle?: {
     push: (entry: Record<string, unknown>) => void;
     requestNonPersonalizedAds?: number;
   };
 };
-let configuration: ReturnType<typeof getAdSenseConfiguration> | undefined;
 let scriptReady: Promise<void> | undefined;
 function loadAdScript() {
   return (scriptReady ??= new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
+    const nonce = document.querySelector<HTMLMetaElement>('meta[property="csp-nonce"]')?.content;
+    if (!nonce) {
+      reject(new Error("Advertising requires a fresh nonce-enabled document"));
+      return;
+    }
+    script.nonce = nonce;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.src =
@@ -43,16 +53,20 @@ function loadAdScript() {
 export function ResponseAdvertisement() {
   const { tier, status } = useTier();
   const [consented, setConsented] = useState(false);
+  const [consentReady, setConsentReady] = useState(false);
+  const [gdprApplies, setGdprApplies] = useState(true);
   const [enabled, setEnabled] = useState(false);
   const [failed, setFailed] = useState(false);
   const unit = useRef<HTMLModElement>(null);
   const requested = useRef<HTMLModElement | null>(null);
-  const eligible = tier === "free" && status === "ready";
+  const privacyBlocked =
+    typeof navigator !== "undefined" &&
+    (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
+  const eligible = tier === "free" && status === "ready" && !privacyBlocked;
   useEffect(() => {
     if (!eligible) return;
     let active = true;
-    configuration ??= getAdSenseConfiguration();
-    void configuration
+    void getAdSenseConfiguration()
       .then((value) => {
         if (active) setEnabled(value.enabled);
       })
@@ -63,24 +77,59 @@ export function ResponseAdvertisement() {
   }, [eligible]);
   useEffect(() => {
     if (!eligible || !enabled) return;
-    const api = (window as AdWindow).__tcfapi;
-    // No certified CMP, no ads. Do not guess consent from locale or storage.
-    if (!api) return;
+    const adWindow = window as AdWindow;
+    const fc = (adWindow.googlefc ??= { callbackQueue: [] as Array<Record<string, () => void>> });
     let active = true;
     let listenerId: number | undefined;
-    api("addEventListener", 2, (data, success) => {
-      if (!active) return;
-      listenerId = data.listenerId;
-      setConsented(hasAdSenseConsent(data, success));
+    let api: TcfApi | undefined;
+    const attachConsent = () => {
+      if (!active || api) return;
+      api = adWindow.__tcfapi;
+      if (!api) return;
+      try {
+        api("addEventListener", 2, (data, success) => {
+          if (!active) return;
+          listenerId = data?.listenerId;
+          setConsentReady(success && data?.cmpStatus === "loaded");
+          setGdprApplies(data?.gdprApplies !== false);
+          setConsented(hasAdSenseConsent(data, success));
+        });
+      } catch {
+        setFailed(true);
+      }
+    };
+    // Google's AdSense tag deploys its published CMP. Install the callback
+    // before loading it; push no ad unit until the CMP has settled consent.
+    try {
+      fc.callbackQueue.push({ CONSENT_API_READY: attachConsent });
+    } catch {
+      setFailed(true);
+      return;
+    }
+    attachConsent();
+    const ads = (adWindow.adsbygoogle ??= [] as unknown as NonNullable<AdWindow["adsbygoogle"]>);
+    ads.requestNonPersonalizedAds = 1;
+    void loadAdScript().catch(() => {
+      if (active) setFailed(true);
     });
     return () => {
       active = false;
-      if (listenerId !== undefined) api("removeEventListener", 2, () => {}, listenerId);
+      try {
+        if (listenerId !== undefined && api) api("removeEventListener", 2, () => {}, listenerId);
+      } catch {
+        /* Vendor cleanup failure must not interrupt the conversation. */
+      }
     };
   }, [eligible, enabled]);
   const show = eligible && enabled && consented && !failed;
   useEffect(() => {
-    if (!show || !unit.current || requested.current === unit.current) return;
+    if (
+      !show ||
+      !unit.current ||
+      requested.current === unit.current ||
+      typeof IntersectionObserver === "undefined"
+    )
+      return;
     let active = true;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -115,23 +164,54 @@ export function ResponseAdvertisement() {
       observer.disconnect();
     };
   }, [show]);
-  if (!show) return null;
+  const canManageConsent = eligible && enabled && consentReady && !failed;
+  if (!show && !canManageConsent) return null;
   return (
     <aside
       aria-label="Advertisement"
       className="my-6 overflow-hidden rounded-xl border border-border p-3"
       data-response-ad
     >
-      <p className="mb-3 text-xs text-muted-foreground">Advertisements</p>
-      <ins
-        ref={unit}
-        className="adsbygoogle"
-        style={{ display: "block", minHeight: 100 }}
-        data-ad-client="ca-pub-5973080139144902"
-        data-ad-slot="4116284418"
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
+      {show && <p className="mb-3 text-xs text-muted-foreground">Advertisements</p>}
+      {show && (
+        <ins
+          ref={unit}
+          className="adsbygoogle"
+          style={{ display: "block", minHeight: 100 }}
+          data-ad-client="ca-pub-5973080139144902"
+          data-ad-slot="4116284418"
+          data-ad-format="auto"
+          data-restrict-data-processing="1"
+          data-tag-for-age-treatment="2"
+          data-full-width-responsive="true"
+        />
+      )}
+      {canManageConsent && (
+        <button
+          type="button"
+          className="mt-2 text-xs text-muted-foreground underline underline-offset-2"
+          onClick={() => {
+            setConsented(false);
+            const fc = (window as AdWindow).googlefc;
+            try {
+              fc?.callbackQueue.push({
+                [gdprApplies ? "CONSENT_API_READY" : "INITIAL_US_STATES_OPT_OUT_DATA_READY"]:
+                  () => {
+                    if (gdprApplies) fc.showRevocationMessage?.();
+                    else
+                      fc.usstatesoptout?.openConfirmationDialog?.((optedOut) => {
+                        if (!optedOut) setConsented(true);
+                      });
+                  },
+              });
+            } catch {
+              setFailed(true);
+            }
+          }}
+        >
+          Privacy and cookie settings
+        </button>
+      )}
     </aside>
   );
 }
