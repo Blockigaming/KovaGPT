@@ -133,6 +133,8 @@ export function connectionAuthorizationUrl(provider, value) {
     oura: "https://cloud.ouraring.com/oauth/authorize",
     whoop: "https://api.prod.whoop.com/oauth/oauth2/auth",
     salesforce: "https://login.salesforce.com/services/oauth2/authorize",
+    dropbox: "https://www.dropbox.com/oauth2/authorize",
+    box: "https://account.box.com/api/oauth2/authorize",
   };
   try {
     const url = new URL(value),
