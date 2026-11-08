@@ -67,6 +67,22 @@ export const CONNECTION_FLOWS = {
     label: "Slack",
     description: "Search Slack messages visible to your connected user.",
   },
+  dropbox: {
+    provider: "dropbox",
+    scopes: ["files.metadata.read"],
+    tool: "dropbox_search",
+    label: "Dropbox",
+    description: "Search file and folder names in your authorized Dropbox account. Read-only.",
+  },
+  box: {
+    provider: "box",
+    // Box app read access is configured in its developer console, not a
+    // dependable per-token scope claim. Every operation is still checked by Box.
+    scopes: [],
+    tool: "box_search",
+    label: "Box",
+    description: "Search files available to your Box account. Read-only.",
+  },
 };
 
 export function hasConnectionScopes(scopes, required) {
