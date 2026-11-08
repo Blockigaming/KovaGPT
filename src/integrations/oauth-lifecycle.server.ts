@@ -231,8 +231,10 @@ export async function completeOAuth(input: {
         token_expires_at: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
           : null,
-        health_checked_at: new Date().toISOString(),
-        last_success_at: new Date().toISOString(),
+        // OAuth profile validation proves identity, not an authorized service operation.
+        // A provider-specific API probe must establish operational health.
+        health_checked_at: null,
+        last_success_at: null,
         last_error_code: null,
         deleted_at: null,
         updated_at: new Date().toISOString(),
