@@ -453,9 +453,10 @@ for (const model of Object.keys(HOSTED_MODEL_MAP)) {
     "ultra",
   ].entries()) {
     test(`${model} ${mode} handles connected-tool review`, async () => {
-      const expectedReviews =
-        model === "kova-neon-4.6" ? [0, 1, 2, 3, 4, 4] : [0, 0, 1, 2, 3, 4];
-      const expected = expectedReviews[index];
+      const expected =
+        model === "kova-neon-4.6"
+          ? [0, 1, 2, 3, 4, 4][index]
+          : [0, 0, 1, 2, 3, 4][index];
       const f = fixture({
         connectedModel: model,
         connectedMode: mode,
