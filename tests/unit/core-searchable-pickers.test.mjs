@@ -279,7 +279,7 @@ function renderElement(element, values) {
   return context.result;
 }
 
-test("Settings retains all primary sections and includes a legacy current section through selectTab", () => {
+test("Settings retains every destination and includes a legacy current section through selectTab", () => {
   const path = "src/components/SettingsDialog.tsx";
   const element = pickerElements(path)[0];
   const changes = [];
@@ -304,8 +304,8 @@ test("Settings retains all primary sections and includes a legacy current sectio
   });
   assert.equal(normal.props.options.length, 8);
   const pageGroups = source(path)
-    .split("const pageGroups: TabGroup[] = [")[1]
-    .split("const groups")[0];
+    .split("const destinationGroups: TabGroup[] = [")[1]
+    .split("const destinations")[0];
   assert.deepEqual(
     [...pageGroups.matchAll(/\bv: "([^"]+)"/g)].map((match) => match[1]),
     [

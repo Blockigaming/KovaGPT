@@ -432,6 +432,7 @@
   .kova-settings-reference {
     --settings-space: 20px;
   }
+  [role="dialog"].kova-settings-dialog,
   [role="dialog"].kova-settings-dialog.is-authenticated {
     position: fixed;
     inset: 0;
