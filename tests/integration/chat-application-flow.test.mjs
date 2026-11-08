@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { consumeChatSse, chatResponseError } from "../../src/lib/chat-sse-client.mjs";
 import { withResponsePresentation } from "../../src/lib/spec400-response-preferences.mjs";
+import { HOSTED_MODEL_MAP } from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 import {
   createAcceptanceFixture,
   liveAcceptanceFixtureTime,
@@ -29,6 +30,7 @@ const mocks = {
     "enforceQuota",
   ],
   "@/lib/account-identity.server.mjs": ["readAccountIdentity"],
+  "@/integrations/connected-tools.server": ["getConnectedToolContext", "runConnectedTool"],
   "@/lib/google-tools.server": [
     "getGoogleToolContext",
     "TOOL_ACTIVITY",
@@ -84,14 +86,19 @@ function fixture({
   prompt = "Say hello.",
   now = Date.now,
   tokenLimit = 10_000,
+  connectedModel = null,
+  connectedMode = "instant",
 } = {}) {
   const ownerId = acceptance?.plan.ownerId ?? "owner-a";
   const chatId = acceptance?.plan.chatId ?? "123e4567-e89b-42d3-a456-426614174000";
   const calls = [],
+    hostedBodies = [],
     acquisitions = [],
     finalizations = [],
     logs = [];
   let controller,
+    activeReviews = 0,
+    peakReviews = 0,
     cancelled = false,
     providerSignal,
     providerBody,
@@ -104,17 +111,30 @@ function fixture({
     KOVA_AI_TIMEOUT_MS: "1000",
     KOVA_GENERATION_DISABLED: String(disabled),
     KOVA_GENERATION_ACCEPTANCE_ENABLED: acceptance ? "true" : undefined,
+    KOVA_HOSTED_INFERENCE_ENABLED: connectedModel ? "true" : undefined,
+    OPENROUTER_API_KEY: connectedModel ? "synthetic-hosted-test-key-only" : undefined,
+    ...(connectedModel
+      ? {
+          KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
+          KOVA_MODEL_ADVANCED_REASONING: "kova-neon-4.6",
+          KOVA_MODEL_PREMIUM_REASONING: "kova-xenon-5",
+        }
+      : {}),
   };
   const auth = {
     userId: ownerId,
     emailVerified: true,
     supabaseAdmin: {
       rpc(name, args) {
-        assert.equal(name, "try_consume_daily_message");
+        assert.equal(
+          name,
+          connectedModel ? "try_consume_paid_message" : "try_consume_daily_message",
+        );
         assert.equal(args._user_id, ownerId);
         const query = {
           abortSignal: () => query,
-          then: (yes, no) => Promise.resolve({ data: true, error: null }).then(yes, no),
+          then: (yes, no) =>
+            Promise.resolve({ data: connectedModel ? "allowed" : true, error: null }).then(yes, no),
         };
         return query;
       },
@@ -137,16 +157,40 @@ function fixture({
         return denied ? Response.json({ error: "Authentication required" }, { status: 401 }) : auth;
       },
       assertNotBanned: noop,
-      getCallerTier: async () => "free",
+      getCallerTier: async () => (connectedModel ? "pro" : "free"),
       assertFeatureEnabled: noop,
       enforceQuota: noop,
     },
     "@/lib/account-identity.server.mjs": { readAccountIdentity: async () => null },
+    "@/integrations/connected-tools.server": {
+      getConnectedToolContext: noop,
+      runConnectedTool: () => {
+        throw Error("Unexpected connected tool");
+      },
+    },
     "@/lib/google-tools.server": {
-      getGoogleToolContext: noop,
+      getGoogleToolContext: async () =>
+        connectedModel
+          ? {
+              tools: [
+                {
+                  type: "function",
+                  function: {
+                    name: "get_test_value",
+                    description: "Read a fixture value",
+                    parameters: { type: "object", properties: {} },
+                  },
+                },
+              ],
+            }
+          : null,
       TOOL_ACTIVITY: {},
       WRITE_TOOL_NAMES: new Set(),
       runGoogleTool: () => {
+        if (connectedModel) {
+          calls.push("tool");
+          return { value: "Verified fixture value" };
+        }
         throw Error("Unexpected tool");
       },
       stagePendingAction: noop,
@@ -197,6 +241,7 @@ function fixture({
     TextEncoder,
     TextDecoder,
     Uint8Array,
+    Buffer,
     Error,
     DOMException,
     Date: class extends Date {
@@ -216,6 +261,67 @@ function fixture({
     ),
     fetch: async (url, init) => {
       calls.push("provider");
+      if (connectedModel) {
+        assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
+        const body = JSON.parse(init.body);
+        hostedBodies.push(body);
+        assert.equal(body.model, HOSTED_MODEL_MAP[connectedModel]);
+        if (body.tools)
+          return Response.json({
+            model: body.model,
+            choices: [
+              {
+                finish_reason: body.messages.some((x) => x.role === "tool") ? "stop" : "tool_calls",
+                message: body.messages.some((x) => x.role === "tool")
+                  ? { role: "assistant", content: "Planner-only answer." }
+                  : {
+                      role: "assistant",
+                      content: null,
+                      tool_calls: [
+                        {
+                          id: "call_fixture",
+                          type: "function",
+                          function: { name: "get_test_value", arguments: "{}" },
+                        },
+                      ],
+                    },
+              },
+            ],
+            usage: { prompt_tokens: 130, completion_tokens: 20 },
+          });
+        if (!body.stream) {
+          peakReviews = Math.max(peakReviews, ++activeReviews);
+          await new Promise((resolve) => setTimeout(resolve, 2));
+          activeReviews--;
+          return Response.json({
+            model: body.model,
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: "The connected result is available; answer the user.",
+                },
+              },
+            ],
+            usage: { prompt_tokens: 130, completion_tokens: 20 },
+          });
+        }
+        return new Response(
+          "data: " +
+            JSON.stringify({
+              model: body.model,
+              choices: [{ delta: { content: "Reviewed answer." } }],
+            }) +
+            "\n\ndata: " +
+            JSON.stringify({
+              model: body.model,
+              choices: [],
+              usage: { prompt_tokens: 200, completion_tokens: 12 },
+            }) +
+            "\n\ndata: [DONE]\n\n",
+          { headers: { "Content-Type": "text/event-stream" } },
+        );
+      }
       assert.equal(url, "https://api.openai.com/v1/responses");
       assert.equal(init.redirect, "error");
       const body = JSON.parse(init.body);
@@ -255,7 +361,8 @@ function fixture({
     signal: requestAbort.signal,
     headers: { "Content-Type": "application/json", "Idempotency-Key": "fixture-message-123" },
     body: JSON.stringify({
-      mode: "instant",
+      mode: connectedModel ? connectedMode : "instant",
+      ...(connectedModel ? { hostedModel: connectedModel } : {}),
       chatId,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -277,6 +384,10 @@ function fixture({
       return context.module.exports.Route.server.handlers.POST({ request: selected });
     },
     calls,
+    hostedBodies,
+    get peakReviews() {
+      return peakReviews;
+    },
     acquisitions,
     finalizations,
     logs,
@@ -306,6 +417,47 @@ async function waitFor(predicate, message) {
   while (!predicate()) {
     assert.ok(performance.now() < deadline, message);
     await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+for (const model of Object.keys(HOSTED_MODEL_MAP)) {
+  for (const [index, mode] of [
+    "instant",
+    "thinking",
+    "high",
+    "extra_high",
+    "max",
+    "ultra",
+  ].entries()) {
+    test(`${model} ${mode} preserves its real review graph after a connected tool answer`, async () => {
+      const expected = (model === "kova-neon-4.6" ? [0, 1, 2, 3, 4, 4] : [0, 0, 1, 2, 3, 4])[index];
+      const f = fixture({
+        connectedModel: model,
+        connectedMode: mode,
+        prompt: "Read the requested value using the connected tool.",
+      });
+      const response = await f.post();
+      assert.equal(
+        response.status,
+        200,
+        response.status !== 200
+          ? JSON.stringify({ body: await response.text(), calls: f.calls, logs: f.logs })
+          : "",
+      );
+      let visible = "";
+      await consumeChatSse(response.body, {
+        onEvent: (event) => {
+          visible += event.choices?.[0]?.delta?.content ?? "";
+        },
+      });
+      assert.equal(visible, expected ? "Reviewed answer." : "Planner-only answer.");
+      assert.equal(f.calls.filter((x) => x === "tool").length, 1);
+      assert.equal(f.hostedBodies.filter((x) => x.tools).length, 2);
+      assert.equal(f.hostedBodies.filter((x) => !x.tools && !x.stream).length, expected);
+      assert.equal(f.hostedBodies.filter((x) => x.stream).length, expected ? 1 : 0);
+      assert.equal(f.peakReviews, expected ? (mode === "ultra" ? 4 : 1) : 0);
+      assert.equal(f.finalizations[0].status, "completed");
+    });
   }
 }
 

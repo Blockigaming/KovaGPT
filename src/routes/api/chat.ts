@@ -2144,6 +2144,10 @@ export const Route = createFileRoute("/api/chat")({
                   if (
                     !workflowSkill &&
                     toolsWereUsed &&
+                    // Connected-tool drafts must still pass the selected mode's
+                    // reserved same-foundation reviews and final streaming call.
+                    (!hostedExecutionBudget ||
+                      hostedExecutionBudget.providerCalls === maximumProviderCalls) &&
                     typeof msg.content === "string" &&
                     msg.content
                   ) {

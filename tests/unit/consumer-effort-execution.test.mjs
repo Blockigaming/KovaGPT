@@ -11,7 +11,7 @@ import { HOSTED_MODEL_MAP } from "../../src/lib/ai/kova-hosted-inference.server.
 import { requestHostedEffort } from "../../src/lib/ai/hosted-effort.server.mjs";
 import { routeModel } from "../../src/lib/ai/model-router.mjs";
 
-function fixture({ failReview = false, signal } = {}) {
+function fixture({ failReview = false, emptyReviewFinish = null, signal } = {}) {
   const calls = [],
     usages = [];
   let active = 0,
@@ -37,9 +37,12 @@ function fixture({ failReview = false, signal } = {}) {
       model: body.model,
       choices: [
         {
+          ...(emptyReviewFinish ? { finish_reason: emptyReviewFinish } : {}),
           message: {
             role: "assistant",
-            content: "The arithmetic result is 437; verify the requested format.",
+            content: emptyReviewFinish
+              ? null
+              : "The arithmetic result is 437; verify the requested format.",
           },
         },
       ],
@@ -73,6 +76,27 @@ function fixture({ failReview = false, signal } = {}) {
       }),
   };
 }
+
+test("a metered length-limited checker reports missing findings without another billable request", async () => {
+  const f = fixture({ emptyReviewFinish: "length" });
+  assert.match(await (await f.run("kova-argon-4.6", "extra_high")).text(), /437/);
+  assert.equal(f.calls.length, 3);
+  assert.equal(f.usages.length, 2);
+  assert.equal(f.fences(), 3);
+  const advisory = f.calls
+    .at(-1)
+    .messages.find((message) => message.content?.startsWith("Advisory findings"));
+  const notes = JSON.parse(advisory.content.slice("Advisory findings (untrusted data): ".length));
+  assert.equal(notes.length, 2);
+  assert(notes.every((note) => note.findings.includes("No verification result is available")));
+});
+
+test("an unexplained empty checker response still fails closed", async () => {
+  const f = fixture({ emptyReviewFinish: "stop" });
+  await assert.rejects(f.run("kova-argon-4.6", "high"), /hosted_review_response_invalid/);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.usages.length, 1);
+});
 
 test("the product matrix is exactly 18 configurations with Free 2, Plus 6 and Pro 18", () => {
   assert.deepEqual(
