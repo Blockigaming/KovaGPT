@@ -243,7 +243,11 @@ test("web-backed answers keep exact clickable citations", () => {
   assert.doesNotMatch(chatMessage, /replace\(\/\\\[\\d\+\\\]\/g/);
   assert.match(searchServer, /Cite factual claims with Markdown links/);
   assert.match(searchServer, /Do not invent or alter URLs/);
-  assert.match(modes, /source-name Markdown links using the exact supplied URLs/);
+  assert.match(modes, /Use Markdown/);
+  assert.match(
+    modes,
+    /Prefer supplied live search results and cite exact supplied URLs by source name/,
+  );
 });
 
 test("the neutral shell has one theme layer and accessible collapsed navigation", () => {

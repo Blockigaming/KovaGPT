@@ -42,8 +42,9 @@ test("location and copy controls expose truthful availability and failure states
   assert.match(settings, /Device location is not requested/);
   assert.match(settings, /will not request, save, or send your device coordinates/);
   assert.doesNotMatch(settings, /navigator\.geolocation|getCurrentPosition|LOCATION_KEY_BASE/);
-  assert.match(modes, /does not request or store device coordinates/);
-  assert.match(modes, /ask them to provide the relevant city, region, or place/);
+  assert.match(modes, /Settings does not request\/store device coordinates/);
+  assert.match(modes, /Never claim enabling Location improves answers/);
+  assert.match(modes, /ask for a relevant city\/region when needed/);
 });
 
 test("production response paths do not allow an unused map-frame origin", () => {
