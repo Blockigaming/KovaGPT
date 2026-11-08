@@ -130,6 +130,8 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "api.linear.app",
     "slack.com",
     "fixture.my.salesforce.com",
+    "api.dropboxapi.com",
+    "api.box.com",
   ]);
   const salesforceToken = packSalesforceCredential("fake-token", {
     active: true,
@@ -369,4 +371,81 @@ test("multibyte provider text stays within the UTF8 tool budget with complete JS
   assert.ok(new TextEncoder().encode(JSON.stringify(result)).byteLength <= 24000);
   assert.ok(result.results.length > 0 && result.results.length < 10);
   assert.ok(result.results.every((row) => row.id && row.title && row.snippet));
+});
+
+test("Dropbox and Box authorization URLs are pinned to official hosts", () => {
+  for (const [provider, url] of [
+    ["dropbox", "https://www.dropbox.com/oauth2/authorize?state=fixture"],
+    ["box", "https://account.box.com/api/oauth2/authorize?state=fixture"],
+  ]) {
+    assert.equal(connectionAuthorizationUrl(provider, url), url);
+    assert.equal(connectionAuthorizationUrl(provider, "https://evil.example/oauth2/authorize"), null);
+    assert.equal(connectionAuthorizationUrl(provider, url.replace("https://", "http://")), null);
+  }
+});
+
+test("Dropbox and Box searches are bounded, read-only and correctly encoded", () => {
+  const query = "report ' & https://evil.example";
+  const dropbox = connectionReadRequest("dropbox", query, "fake-token");
+  assert.equal(dropbox.url, "https://api.dropboxapi.com/2/files/search_v2");
+  assert.equal(dropbox.init.method, "POST");
+  assert.deepEqual(JSON.parse(dropbox.init.body), {
+    query,
+    options: { max_results: 10 },
+  });
+  const box = connectionReadRequest("box", query, "fake-token");
+  assert.equal(new URL(box.url).origin + new URL(box.url).pathname, "https://api.box.com/2.0/search");
+  assert.equal(new URL(box.url).searchParams.get("query"), query);
+  assert.equal(new URL(box.url).searchParams.get("limit"), "10");
+  assert.equal(new URL(box.url).searchParams.get("type"), "file");
+  assert.equal(box.init.method, "GET");
+  for (const req of [dropbox, box]) {
+    assert.equal(req.init.redirect, "error");
+    assert.ok(req.init.signal instanceof AbortSignal);
+  }
+});
+
+test("Dropbox and Box search results expose only safe metadata and at most ten items", async () => {
+  const dropbox = await readConnection("dropbox", "report", "fake-token", async () =>
+    Response.json({
+      matches: Array.from({ length: 16 }, (_, i) => ({
+        metadata: { ".tag": "metadata", metadata: {
+          id: "id:" + i,
+          name: "Report " + i,
+          path_display: "/Projects/Report " + i,
+          access_token: "must-not-leak",
+        } },
+      })),
+      cursor: "must-not-leak",
+    }),
+  );
+  assert.equal(dropbox.results.length, 10);
+  assert.equal(dropbox.results[0].title, "Report 0");
+  assert.equal(dropbox.results[0].snippet, "/Projects/Report 0");
+  assert.equal(dropbox.results[0].url, null);
+  const box = await readConnection("box", "budget", "fake-token", async () =>
+    Response.json({ entries: [{
+      id: "one", name: "Budget", description: "File",
+      shared_link: { url: "javascript:alert(1)" },
+      access_token: "must-not-leak",
+    }] }),
+  );
+  assert.equal(box.results.length, 1);
+  assert.equal(box.results[0].title, "Budget");
+  assert.equal(box.results[0].url, null);
+  assert.doesNotMatch(JSON.stringify({ dropbox, box }), /must-not-leak|fake-token|javascript:/);
+});
+
+test("Dropbox and Box token refresh requests use the confidential-client grant", () => {
+  for (const providerId of ["dropbox", "box"]) {
+    const refresh = oauthRefreshRequest({
+      providerId,
+      clientId: "client",
+      clientSecret: "secret",
+      refreshToken: "rotating-token",
+    });
+    assert.equal(refresh.method, "POST");
+    assert.equal(refresh.body.get("grant_type"), "refresh_token");
+    assert.equal(refresh.body.get("refresh_token"), "rotating-token");
+  }
 });
