@@ -84,7 +84,7 @@ function length(expression, viewportHeight, availableHeight, popoverHeight) {
   return Number(literal[1]) * (literal[2] === "dvh" ? viewportHeight / 100 : 1);
 }
 
-test("only response More receives the contained menu scope and retains its deliberate draft/focus handlers", () => {
+test("response More contains only retry and branch inside the viewport-bounded menu", () => {
   const contents = [];
   const visit = (node) => {
     if (
@@ -101,9 +101,10 @@ test("only response More receives the contained menu scope and retains its delib
   assert.equal(target.length, 1);
   const menuSource = target[0].getText(parsed);
   assert.match(menuSource, /className="kova-response-menu w-60"/);
-  assert.match(menuSource, /<time dateTime=/);
+  assert.doesNotMatch(menuSource, /<time dateTime=/);
+  assert.match(menuSource, /Try again/);
   assert.match(menuSource, /Branch into new chat/);
-  assert.equal((menuSource.match(/<DropdownMenuItem /g) || []).length, 1);
+  assert.equal((menuSource.match(/<DropdownMenuItem /g) || []).length, 2);
   assert.doesNotMatch(
     target[0].openingElement.getText(parsed),
     /onKeyDown|onWheel|onTouch|avoidCollisions=\{false\}/,

@@ -713,3 +713,7 @@ This owner update supersedes the earlier chat archive, Trash, sidebar Images, an
 - Activity uses a borderless surface. Recorded Cloud browser activity and actual Steps appear before Outputs, Inputs and other sources. The floating “Prepare or manage Work” chat launcher is removed; the separate Work product remains available.
 - Transient history reconnects and retries stay silent, including when older device history is awaiting migration. Explicit account verification, storage failures and real version conflicts retain actionable recovery.
 - Consumer chat deletion has a five-second Undo grace period before the existing permanent-delete operation. The countdown stores only a scoped chat ID and its original deadline, never a Trash copy, and resumes after reload without resetting that deadline. Undo expires when commit begins; owner changes cannot delete another account's chat.
+
+### November 8 mobile interaction refinement
+
+Phones and compact tablets use a separate two-row chat header: the conversation title and new-chat action stay on the navigation row, while offer/share/activity controls occupy a touch toolbar below. Activity opens as a viewport-anchored, swipe-dismissable sheet with safe-area padding, a visible close control, modal focus isolation and scroll containment. Desktop retains its anchored popover. Content ordering and account restrictions are shared, rather than duplicated or relaxed for phones.

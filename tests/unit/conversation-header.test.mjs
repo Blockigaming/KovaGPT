@@ -112,7 +112,7 @@ const text = (value) =>
       : typeof value === "object"
         ? text(value.props?.children)
         : String(value);
-function fixture(overrides = {}) {
+function fixture(overrides = {}, desktop = true) {
   let cursor = 0;
   const states = [];
   const calls = [];
@@ -173,6 +173,8 @@ function fixture(overrides = {}) {
     "@/lib/conversation-sources": {
       conversationSources: () => ({ web: [], memory: [], attachments: [], browser: [] }),
     },
+    "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: desktop }) },
+    "./MobileBottomSheet": { MobileBottomSheet: "MobileBottomSheet" },
     "./MessageActivityList": { MessageActivityList: "MessageActivityList" },
     "./ConversationSourcesPanel": {
       ConversationSourcesPanel: "ConversationSourcesPanel",
@@ -582,4 +584,25 @@ test("composer action disc uses a compact desktop control and full phone target"
   );
   assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
   assert.doesNotMatch(css, /border: 4px solid transparent !important/);
+});
+
+test("touch Activity uses its own modal sheet while desktop keeps the anchored popover", () => {
+  const touch = fixture({}, false);
+  let root = touch.render();
+  const activity = nodes(root).find(
+    (node) => node.type === "button" && node.props["aria-label"] === "Activity",
+  );
+  assert.equal(activity.props["aria-haspopup"], "dialog");
+  activity.props.onClick();
+  root = touch.render();
+  assert.equal(nodes(root).filter((node) => node.type === "Popover").length, 0);
+  const sheet = nodes(root).find((node) => node.type === "MobileBottomSheet");
+  assert.equal(sheet.props.open, true);
+  assert.equal(sheet.props.title, "Activity");
+  sheet.props.onOpenChange(false);
+  assert.equal(
+    nodes(touch.render()).find((node) => node.type === "MobileBottomSheet").props.open,
+    false,
+  );
+  assert.equal(nodes(fixture().render()).filter((node) => node.type === "Popover").length, 1);
 });

@@ -567,3 +567,20 @@
   border: 0;
   box-shadow: none;
 }
+
+.kova-conversation-outputs-touch {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+  padding: 0 12px 12px;
+}
+.kova-mobile-conversation-tools {
+  min-width: 0;
+  padding: 0 8px 4px;
+}
+.kova-mobile-conversation-tools .kova-free-offer {
+  margin-right: auto;
+}

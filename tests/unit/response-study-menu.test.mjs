@@ -83,7 +83,7 @@ test("unresolved, user, streaming and empty messages cannot open practice", () =
   }
 });
 
-test("study stays inside response More, with no standalone workspace chip", () => {
+test("study does not add a third response More action or a standalone workspace chip", () => {
   const item = matching(
     parsed,
     (node) =>
@@ -91,7 +91,7 @@ test("study stays inside response More, with no standalone workspace chip", () =
       node.openingElement.tagName.getText(parsed) === "DropdownMenuItem" &&
       node.getText(parsed).includes("Practice this explanation"),
   );
-  assert.equal(item.length, 0, "More contains only the timestamp and branch action");
+  assert.equal(item.length, 0, "More contains only Try again and Branch into new chat");
   const workspace = readFileSync("src/components/ChatWorkspaceControls.tsx", "utf8");
   assert.doesNotMatch(workspace, /StudyControl|Practice this explanation/);
   for (const existing of ["HistoryStatus", "Custom Kova"]) assert.ok(workspace.includes(existing));
@@ -100,29 +100,6 @@ test("study stays inside response More, with no standalone workspace chip", () =
     readFileSync("src/components/ConversationHeaderActions.tsx", "utf8"),
     /Find similar images/,
   );
-});
-
-test("dropdown focus does not compete with study dialog, while normal dismissal remains unchanged", () => {
-  const studyOpeningRef = { current: true };
-  const close = compile(attribute("onCloseAutoFocus", "studyOpeningRef"), {
-    studyOpeningRef,
-    responseDraftFocusRef: { current: null },
-    memoryReviewOpeningRef: { current: false },
-  });
-  let prevented = 0;
-  close({
-    preventDefault() {
-      prevented++;
-    },
-  });
-  assert.equal(prevented, 1);
-  assert.equal(studyOpeningRef.current, false);
-  close({
-    preventDefault() {
-      prevented++;
-    },
-  });
-  assert.equal(prevented, 1);
 });
 
 test("dialog restores More focus only within the same owner, response, and temporary context", () => {

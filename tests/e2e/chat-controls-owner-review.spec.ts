@@ -212,6 +212,37 @@ test("cloud browser and steps precede outputs in the borderless activity surface
   expect(headings.indexOf("Steps")).toBeGreaterThan(headings.indexOf("Cloud browser"));
   expect(headings.indexOf("Outputs")).toBeGreaterThan(headings.indexOf("Steps"));
   await expect(panel.getByText("Read the supplied notes", { exact: true })).toBeVisible();
+  if (page.viewportSize()!.width < 1024) {
+    const sheet = page.getByRole("dialog", { name: "Activity", exact: true });
+    await expect(sheet).toBeVisible();
+    await expect
+      .poll(async () => {
+        const rect = (await sheet.boundingBox())!;
+        return rect.y + rect.height;
+      })
+      .toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    const bounds = (await sheet.boundingBox())!;
+    expect(bounds.x).toBe(0);
+    expect(bounds.width).toBe(page.viewportSize()!.width);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    await expect(sheet.getByRole("button", { name: "Close sheet", exact: true })).toBeVisible();
+    await page.screenshot({
+      path: test.info().outputPath("touch-activity.png"),
+      animations: "disabled",
+    });
+    await sheet.getByRole("button", { name: "Close sheet", exact: true }).click();
+    await expect(sheet).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Activity", exact: true }).filter({ visible: true }),
+    ).toBeFocused();
+    const title = page.locator("[data-kova-navigation-heading]").filter({ visible: true });
+    expect((await title.boundingBox())!.width).toBeGreaterThan(120);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      page.viewportSize()!.width + 1,
+    );
+  } else {
+    await expect(page.getByTestId("mobile-bottom-sheet")).toHaveCount(0);
+  }
 });
 
 test("transient history failures retry quietly without a reconnect banner", async ({ page }) => {

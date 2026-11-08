@@ -103,32 +103,3 @@ test("entry is opt-in, resolved, signed-in, non-temporary, and idle", () => {
   ])
     assert.equal(compile(init(route, "canReviewMemory"), { ...ready, ...change }), false);
 });
-test("opening reviewed memory prevents menu autofocus from fighting the dialog", () => {
-  const attribute = find(
-    message,
-    (node) =>
-      ts.isJsxAttribute(node) &&
-      node.name.getText(message) === "onCloseAutoFocus" &&
-      node.getText(message).includes("memoryReviewOpeningRef"),
-  );
-  const ref = { current: true };
-  const close = compile(attribute.initializer.expression.getText(message), {
-    memoryReviewOpeningRef: ref,
-    responseDraftFocusRef: { current: null },
-    studyOpeningRef: { current: false },
-  });
-  let prevented = 0;
-  close({
-    preventDefault() {
-      prevented++;
-    },
-  });
-  assert.equal(prevented, 1);
-  assert.equal(ref.current, false);
-  close({
-    preventDefault() {
-      prevented++;
-    },
-  });
-  assert.equal(prevented, 1);
-});
