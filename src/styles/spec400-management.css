@@ -1047,3 +1047,73 @@ html[data-kova-density="compact"]
     font-size: 16px;
   }
 }
+
+/* Phone directories use full-width search and horizontally scrollable collections.
+   Desktop keeps its denser, multi-column toolbar. */
+@media (max-width: 767px) {
+  .spec400-management :is(input:not([type="checkbox"]):not([type="radio"]), [role="combobox"]) {
+    min-height: 48px;
+    font-size: 16px;
+  }
+  .kova-core-page.kova-file-directory.spec400-management .kova-file-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-block: 4px;
+  }
+  .kova-core-page.kova-file-directory.spec400-management .kova-file-filters button {
+    flex: none;
+    min-height: 44px;
+    padding-inline: 16px;
+    white-space: nowrap;
+    background: var(--surface-secondary);
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .spec400-library-display-controls {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 88px;
+    grid-column: 1 / -1;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+  .kova-core-page.kova-file-directory.spec400-library
+    .spec400-library-display-controls
+    .kova-library-sort {
+    min-width: 0;
+    width: 100%;
+    grid-column: auto;
+    grid-row: auto;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-library-sort > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-row {
+    min-height: 88px;
+    padding: 16px 12px;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-list {
+    gap: 10px;
+    border: 0;
+    background: transparent;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-row {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--card);
+  }
+  .spec400-library-row-title {
+    font-weight: 500;
+    line-height: 22px;
+  }
+}

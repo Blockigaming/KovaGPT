@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 const source = readFileSync("src/components/SettingsDialog.tsx", "utf8");
-test("both settings entry modes expose all twenty-two requested primary destinations", () => {
+test("both settings entry modes expose all twenty-two destinations through the grouped hierarchy", () => {
   assert.match(source, /const groups = pageGroups;/);
   const primary = source.slice(
-    source.indexOf("const pageGroups:"),
+    source.indexOf("const destinationGroups:"),
     source.indexOf("const groups = pageGroups"),
   );
   const labels = [...primary.matchAll(/label: "([^"]+)"/g)].map((match) => match[1]);
@@ -42,9 +42,11 @@ test("secondary panels remain searchable with parent return and explicit heading
     Object.keys(parents).sort(),
     [
       "email",
+      "voice",
+      "usage",
+      "cloud-browser",
       "logout",
       "report",
-      "help",
       "about",
       "shortcuts",
       "memory",
