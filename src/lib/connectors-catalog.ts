@@ -290,9 +290,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "box",
     label: "Box",
-    description: "Reference files from Box.",
+    description: "Search files in Box. Requires account permission and provider setup.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "box.com",
   },
   {
