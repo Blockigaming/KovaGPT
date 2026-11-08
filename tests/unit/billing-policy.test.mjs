@@ -221,7 +221,7 @@ test("both monthly paid tiers retain their Price and use 50%-once, never new tri
     assert.deepEqual(request.subscription_data, { metadata: { userId } });
     assert.equal("trial_period_days" in request.subscription_data, false);
     assert.equal("trial_end" in request.subscription_data, false);
-    assert.equal(request.ui_mode, "hosted");
+    assert.equal(request.ui_mode, "hosted_page");
     assert.equal(request.success_url, returnUrl);
     assert.equal(request.cancel_url, "https://kovagpt.com/pricing");
     assert.equal(request.managed_payments.enabled, true);
@@ -593,4 +593,17 @@ test("production shared-state operations must support a real abort deadline", as
   f.supabase.rpc = async () => ({ data: {} });
   await assert.rejects(createMonthlyIntroCheckout(f.input), /shared_state_deadline_unavailable/u);
   assert.equal(f.calls.length, 0);
+});
+
+test("a legacy hosted checkout remains reusable with its verified success URL", async () => {
+  const f = fixture();
+  const previous = await createMonthlyIntroCheckout(f.input);
+  f.sessions.get(previous.id).ui_mode = "hosted";
+  const resumed = await createMonthlyIntroCheckout(f.input);
+  assert.equal(resumed.id, previous.id);
+  assert.equal(f.calls.filter((call) => call.method === "checkout.create").length, 1);
+  assert.equal(
+    f.calls.some((call) => call.method === "checkout.expire"),
+    false,
+  );
 });
