@@ -1,3 +1,4 @@
+import { canDisplayResponseAd } from "@/lib/adsense-policy.mjs";
 import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
@@ -254,7 +255,7 @@ const EMPTY_CONVERSATIONS: Conversation[] = [];
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
-  const { tier } = useTier();
+  const { tier, status: adTierStatus } = useTier();
   const navigate = useNavigate();
   const { openSignUp, openSignIn } = useClerkSafe();
   const userKey = user?.id ?? null;
@@ -2978,6 +2979,12 @@ function KovaGPT() {
       <ChatMessage
         key={m.id}
         message={m}
+        showAdvertisement={canDisplayResponseAd({
+          tier,
+          status: adTierStatus,
+          isLastAssistant,
+          content: m.content,
+        })}
         chatId={active.id}
         onSaveMemory={
           canReviewMemory && m.role === "assistant"

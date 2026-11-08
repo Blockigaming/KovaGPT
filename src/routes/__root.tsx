@@ -198,6 +198,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     return {
       meta: [
         { charSet: "utf-8" },
+        { name: "google-adsense-account", content: "ca-pub-5973080139144902" },
         {
           name: "viewport",
           content: "width=device-width, initial-scale=1, viewport-fit=cover",

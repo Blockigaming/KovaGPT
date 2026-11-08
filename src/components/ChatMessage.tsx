@@ -1,3 +1,4 @@
+import { ResponseAdvertisement } from "./ResponseAdvertisement";
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
@@ -252,8 +253,10 @@ function ChatMessageInner({
   onOpenResult,
   onOpenCanvas,
   onSelectSuggestion,
+  showAdvertisement = false,
 }: {
   message: Message;
+  showAdvertisement?: boolean;
   streaming?: boolean;
   /** Request start time survives chat navigation while the response remains active. */
   streamingStartedAt?: number;
@@ -1498,6 +1501,12 @@ function ChatMessageInner({
             ))}
           </nav>
         )}
+      {showAdvertisement &&
+        !isUser &&
+        !streaming &&
+        !temporary &&
+        message.content.trim() &&
+        !message.generationStatus && <ResponseAdvertisement key={message.id} />}
       {studySession?.key === studyContextKey && (
         <Suspense
           fallback={
