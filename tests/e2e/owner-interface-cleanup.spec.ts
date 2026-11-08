@@ -149,13 +149,11 @@ test("Team purchase offers the exact annual and monthly prices with a concrete t
   await expect(page.getByRole("heading", { name: "Start a team", exact: true })).toBeVisible();
   await page.getByRole("combobox", { name: "Billing period", exact: true }).selectOption("year");
   await page.getByRole("spinbutton", { name: "Premium seats", exact: true }).fill("1");
-  await expect(
-    page.getByText("3 seats · $1680 per year, plus applicable tax", { exact: true }),
-  ).toBeVisible();
+  const total = page.getByText("3 seats · Total before tax", { exact: true }).locator("..");
+  await expect(total).toBeVisible();
+  await expect(total).toContainText(/\$1,680(?:\.00)?\s*\/ year/);
   await page.getByRole("combobox", { name: "Billing period", exact: true }).selectOption("month");
-  await expect(
-    page.getByText("3 seats · $175 per month, plus applicable tax", { exact: true }),
-  ).toBeVisible();
+  await expect(total).toContainText(/\$175(?:\.00)?\s*\/ month/);
   await expect(
     page.getByRole("button", { name: "Continue to Team payment", exact: true }),
   ).toBeEnabled();

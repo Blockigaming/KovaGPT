@@ -8,14 +8,13 @@ for (const theme of ["light", "dark"] as const) {
   }, info) => {
     await coreFixture(page, theme);
     const width = page.viewportSize()!.width;
-    // Projects' scoped owner overrides management. Library keeps management's
-    // literal padding; Apps and Tasks inherit body :is(...)'s stronger fallback.
-    // Keep these exact effective values until the production cascade changes.
+    // Projects fills the available workspace. The other directories retain their
+    // readable width limits; each surface owns its responsive gutters.
     for (const route of [
       {
         path: "/projects",
         selector: ".kova-project-directory",
-        maximum: 1040,
+        maximum: null,
         gutter: width < 768 ? 16 : Math.min(32, Math.max(16, width * 0.03)),
         top: width < 768 ? 20 : 32,
       },
@@ -23,8 +22,8 @@ for (const theme of ["light", "dark"] as const) {
         path: "/library",
         selector: ".kova-library-page",
         maximum: 1200,
-        gutter: width < 640 ? 16 : width < 1024 ? 24 : 32,
-        top: width < 640 ? 16 : width < 1024 ? 24 : 32,
+        gutter: width <= 640 ? 16 : width < 1024 ? 24 : 32,
+        top: width <= 640 ? 20 : width < 1024 ? 24 : 32,
       },
       {
         path: "/apps",
@@ -49,7 +48,11 @@ for (const theme of ["light", "dark"] as const) {
         const style = getComputedStyle(element);
         const box = element.getBoundingClientRect();
         return {
-          maximum: parseFloat(style.maxWidth),
+          maximum: style.maxWidth,
+          available:
+            element.parentElement!.clientWidth -
+            parseFloat(getComputedStyle(element.parentElement!).paddingLeft) -
+            parseFloat(getComputedStyle(element.parentElement!).paddingRight),
           left: parseFloat(style.paddingLeft),
           right: parseFloat(style.paddingRight),
           top: parseFloat(style.paddingTop),
@@ -57,8 +60,13 @@ for (const theme of ["light", "dark"] as const) {
           overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         };
       });
-      expect(geometry.maximum, route.path).toBe(route.maximum);
-      expect(geometry.width, route.path).toBeLessThanOrEqual(route.maximum);
+      if (route.maximum === null) {
+        expect(geometry.maximum, route.path).toBe("none");
+        expect(geometry.width, route.path).toBeCloseTo(geometry.available, 0);
+      } else {
+        expect(parseFloat(geometry.maximum), route.path).toBe(route.maximum);
+        expect(geometry.width, route.path).toBeLessThanOrEqual(route.maximum);
+      }
       expect(geometry.left, route.path).toBeCloseTo(route.gutter, 1);
       expect(geometry.right, route.path).toBeCloseTo(route.gutter, 1);
       expect(geometry.top, route.path).toBe(route.top);
