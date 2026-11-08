@@ -276,7 +276,13 @@ function fixture({
           output_tokens_details: { reasoning_tokens: 0 },
         };
         const completed = (output) =>
-          Response.json({ id: "resp_fixture", status: "completed", model: body.model, output, usage });
+          Response.json({
+            id: "resp_fixture",
+            status: "completed",
+            model: body.model,
+            output,
+            usage,
+          });
         if (body.tools) {
           return hasToolOutput
             ? completed([
@@ -303,7 +309,12 @@ function fixture({
             {
               type: "message",
               role: "assistant",
-              content: [{ type: "output_text", text: "The connected result is available; answer the user." }],
+              content: [
+                {
+                  type: "output_text",
+                  text: "The connected result is available; answer the user.",
+                },
+              ],
             },
           ]);
         }
