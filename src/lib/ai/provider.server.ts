@@ -735,7 +735,7 @@ export async function chatCompletions(
 ): Promise<Response> {
   const stream = body.stream === true;
   if (isKovaHostedModelId(body.model)) {
-    // Independent opt-in. Never route a Kova alias to OpenAI by accident.
+    // Owner-approved OpenAI backing; aliases and plan checks remain Kova-owned.
     // Existing generation kill switch and capabilities remain authoritative.
     const unavailable = providerUnavailableEnvelope(stream ? "streaming" : "chat");
     if (unavailable) throw new AiProviderError(unavailable);
@@ -755,7 +755,7 @@ export async function chatCompletions(
       if (!execution)
         return await requestKovaHostedChat({
           request: body,
-          token: env("OPENROUTER_API_KEY"),
+          token: env("OPENAI_API_KEY"),
           signal: init?.signal ?? undefined,
         });
       const { requestHostedEffort } = await import("@/lib/ai/hosted-effort.server.mjs");
@@ -764,7 +764,7 @@ export async function chatCompletions(
         mode: execution?.mode ?? "instant",
         onUsage: execution?.onUsage,
         beforeSend: execution?.beforeSend,
-        token: env("OPENROUTER_API_KEY"),
+        token: env("OPENAI_API_KEY"),
         signal: init?.signal ?? undefined,
       });
     } catch (error) {

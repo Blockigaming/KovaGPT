@@ -1,1 +1,4 @@
-export function responsesStreamToChatStream(response: Response): Response;
+export function responsesStreamToChatStream(
+  response: Response,
+  options?: { expectedModel?: string },
+): Response;

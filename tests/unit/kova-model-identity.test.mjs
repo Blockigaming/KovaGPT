@@ -66,11 +66,12 @@ test("hosted Kova name discloses operator-confirmed underlying inference when as
   const prompt = buildKovaModelIdentityInstructions({
     role: "DEFAULT_CHAT",
     modelId: "kova-argon-4.6",
-    provider: "openrouter",
+    provider: "openai",
     hasAssistantHistory: false,
   });
   assert.match(prompt, /Kova Argon 4.6/);
-  assert.match(prompt, /OpenRouter \(third-party hosted inference\)/);
+  assert.match(prompt, /OpenAI/);
+  assert.match(prompt, /configured provider model is gpt-6-luna/);
 });
 
 test("unknown identities and unsafe metadata fail closed without echoing input", () => {
@@ -107,7 +108,7 @@ test("chat and isolated tool planning receive the same server-resolved identity"
   assert.match(source, /role: routeDecision\.role/);
   assert.match(
     source,
-    /provider: isKovaHostedModelId\(model\) \? "openrouter" : getAiProviderConfig\(\)\.provider/,
+    /provider: isKovaHostedModelId\(model\) \? "openai" : getAiProviderConfig\(\)\.provider/,
   );
   assert.match(source, /hasAssistantHistory: transformed\.some/);
   assert.equal(

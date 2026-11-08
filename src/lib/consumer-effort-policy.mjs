@@ -55,12 +55,19 @@ export function hostedEffortProfile(model, mode) {
   const profile = consumerEffort(mode);
   if (!profile || !["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"].includes(model))
     throw new Error("invalid_hosted_effort");
-  const nativeReasoning = model !== "kova-neon-4.6";
+  const effort = {
+    instant: "none",
+    thinking: "low",
+    high: "medium",
+    extra_high: "high",
+    max: "xhigh",
+    ultra: "max",
+  }[profile.id];
   return {
     ...profile,
-    nativeReasoning,
-    reviews:
-      profile.reviews + (!nativeReasoning && !["instant", "ultra"].includes(profile.id) ? 1 : 0),
+    effort: model === "kova-xenon-5" && effort === "none" ? "low" : effort,
+    nativeReasoning: true,
+    reviews: profile.reviews,
     parallel: profile.id === "ultra",
   };
 }

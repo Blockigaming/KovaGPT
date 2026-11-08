@@ -13,25 +13,35 @@ Both use the same underlying Kova model gateway, security architecture, tool exe
 
 ## 1. The three official Kova AI models
 
-These foundation models are final and must not be changed without your explicit approval.
+Owner-approved November 8, 2026 update: use the OpenAI API now while retaining Kova names, plan entitlements and all six modes. This supersedes the original foundation lock for the interim release. Azure continues hosting the Kova application; OpenAI hosts inference.
+
+| Kova product | Current foundation | Future self-hosted target   |
+| ------------ | ------------------ | --------------------------- |
+| Argon 4.6    | `gpt-6-luna`       | DeepSeek V4 Flash July 2026 |
+| Neon 4.6     | `gpt-6.1-terra`    | Llama 4 Maverick            |
+| Xenon 5      | `gpt-6.1-sol`      | Kimi K3                     |
+
+Use trusted server instructions for Kova identity. Never claim Kova trained OpenAI's weights. Lite/Medium/High/Extra High/Max/Ultra map to none/low/medium/high/xhigh/max native reasoning; Sol Lite uses low, its minimum supported setting. Ultra uses four independent same-foundation reviewers before synthesis. Increasing modes increase reserved compute, not a guaranteed intelligence score.
+
+The original long-term foundations below require a separately verified, explicitly approved hosting cutover.
 
 Kova Xenon 5
 
 Flagship
 
-Foundation: Kimi K3
+Current foundation: GPT 6.1 Sol. Future target: Kimi K3
 
 Highest-capability tier for demanding reasoning, programming, research and complex agent tasks.
 
 Kova Neon 4.6
 
-Foundation: Llama 4 Maverick
+Current foundation: GPT 6.1 Terra. Future target: Llama 4 Maverick
 
 Balanced model for everyday conversations, writing, analysis and tool-driven tasks.
 
 Kova Argon 4.6
 
-Foundation: DeepSeek V4 Flash, July 2026 release
+Current foundation: GPT 6 Luna. Future target: DeepSeek V4 Flash, July 2026 release
 
 Speed-first model for quick conversations, simple tasks and responsive tool coordination.
 

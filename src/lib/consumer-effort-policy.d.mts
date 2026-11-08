@@ -5,7 +5,7 @@ export type EffortProfile = {
   outputTokens: number;
   reviewTokens: number;
   reviews: number;
-  effort: "none" | "low" | "high" | "max";
+  effort: "none" | "low" | "medium" | "high" | "xhigh" | "max";
 };
 export const CONSUMER_EFFORTS: readonly Readonly<EffortProfile>[];
 export function consumerEffort(mode: string): Readonly<EffortProfile> | null;

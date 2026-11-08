@@ -756,7 +756,7 @@ for (const mode of ["instant", "default"]) {
         finalText: "156",
         env: {
           KOVA_HOSTED_INFERENCE_ENABLED: "true",
-          OPENROUTER_API_KEY: "offline-fixture-hosted-key",
+          OPENAI_API_KEY: "offline-fixture-hosted-key",
           KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
         },
       });
@@ -769,7 +769,7 @@ for (const mode of ["instant", "default"]) {
       assert.equal(f.acquisitions.length, 1);
       assert.ok(f.acquisitions[0].reservedTokens <= 4_201);
       const normalized = f.normalizedProviders[0];
-      const output = normalized.max_tokens;
+      const output = normalized.max_output_tokens;
       assert.ok(output > 0);
       assert.ok(output < (mode === "instant" ? 1_200 : 4_000));
       assert.ok(
@@ -927,9 +927,9 @@ const hostedRouting = {
   KOVA_MODEL_PREMIUM_REASONING: "kova-xenon-5",
 };
 for (const [tier, mode, alias, foundation] of [
-  ["free", "instant", "kova-argon-4.6", "deepseek/deepseek-v4-flash-0731"],
-  ["plus", "thinking", "kova-neon-4.6", "meta-llama/llama-4-maverick"],
-  ["pro", "max", "kova-xenon-5", "moonshotai/kimi-k3"],
+  ["free", "instant", "kova-argon-4.6", "gpt-6-luna"],
+  ["plus", "thinking", "kova-neon-4.6", "gpt-6.1-terra"],
+  ["pro", "max", "kova-xenon-5", "gpt-6.1-sol"],
 ]) {
   test(`actual chat route admits ${alias} with its selected model and unchanged account admission`, async () => {
     const f = fixture({ tier, mode, noTools: true, env: hostedRouting });
@@ -953,8 +953,11 @@ test("Argon connector fallback retains the selected hosted model and complete co
   const { response, text } = await f.post();
   assert.equal(response.status, 200, text);
   assert.equal(f.providers.length, 1);
-  assert.equal(f.normalizedProviders[0].model, "deepseek/deepseek-v4-flash-0731");
-  const sent = JSON.stringify(f.normalizedProviders[0].messages);
+  assert.equal(f.normalizedProviders[0].model, "gpt-6-luna");
+  const sent = JSON.stringify({
+    input: f.normalizedProviders[0].input,
+    instructions: f.normalizedProviders[0].instructions,
+  });
   for (const message of ordinaryFollowUp) assert.ok(sent.includes(message.content));
   assert.ok(sent.includes("Connected tools were not run"));
   assert.equal(f.reads.length, 0);

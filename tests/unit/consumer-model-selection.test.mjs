@@ -156,7 +156,13 @@ test("actual API named-choice guard rejects locked, unconfigured and unsupported
   const wrongRole = check(selected, "pro", () => "kova-xenon-5", []);
   assert.equal(wrongRole.status, 503);
   assert.equal((await wrongRole.json()).code, "kova_model_runtime_unverified");
-  const unsupported = check(selected, "free", () => selected.id, [{ kind: "image" }]);
+  assert.equal(
+    check(selected, "free", () => selected.id, [{ kind: "image" }]),
+    undefined,
+  );
+  const unsupported = check({ ...selected, vision: false }, "free", () => selected.id, [
+    { kind: "image" },
+  ]);
   assert.equal(unsupported.status, 400);
   assert.equal((await unsupported.json()).code, "kova_model_vision_unavailable");
 });

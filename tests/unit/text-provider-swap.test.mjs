@@ -68,13 +68,19 @@ for (const [alias, foundation] of Object.entries(hosted.HOSTED_MODEL_MAP)) {
       },
       async (url, init) => {
         calls.push({ url, init });
-        return new Response(init.body.includes('"stream":true') ? "data: [DONE]\n\n" : "{}", {
-          headers: {
-            "content-type": init.body.includes('"stream":true')
-              ? "text/event-stream"
-              : "application/json",
-          },
-        });
+        const body = JSON.parse(init.body);
+        const value = {
+          model: body.model,
+          status: "completed",
+          output: [],
+          usage: { input_tokens: 10, output_tokens: 0, total_tokens: 10 },
+        };
+        return body.stream
+          ? new Response(
+              `data: ${JSON.stringify({ type: "response.completed", response: value })}\n\n`,
+              { headers: { "content-type": "text/event-stream" } },
+            )
+          : Response.json(value);
       },
     );
     for (const stream of [false, true]) {
@@ -90,10 +96,13 @@ for (const [alias, foundation] of Object.entries(hosted.HOSTED_MODEL_MAP)) {
       const response = await api.chatCompletions(request);
       await response.text();
       const sent = calls.at(-1);
-      assert.equal(sent.url, "https://openrouter.ai/api/v1/chat/completions");
+      assert.equal(sent.url, "https://api.openai.com/v1/responses");
       assert.deepEqual(JSON.parse(sent.init.body), prepared);
-      assert.equal(sent.init.headers.Authorization, "Bearer fixture-openrouter-server-key");
-      assert.doesNotMatch(sent.init.body, /"service_tier"|"input"|"max_output_tokens"/);
+      assert.equal(
+        sent.init.headers.Authorization,
+        "Bearer fixture-retained-for-existing-capabilities",
+      );
+      assert.equal(JSON.parse(sent.init.body).service_tier, "default");
     }
     assert.equal(calls.length, 2);
     assert.doesNotMatch(JSON.stringify(api.logs), /fixture-openrouter-server-key/);

@@ -1,23 +1,17 @@
+import { HOSTED_MODEL_MAP } from "../kova-foundation-models.mjs";
+import { kovaIdentityInstruction } from "./kova-identity-policy.mjs";
+import { responsesStreamToChatStream } from "./responses-compat.server.mjs";
+import { readResponseBytesBounded } from "../endpoint-reliability.mjs";
 /**
  * Optional Kova hosted text inference transport.
  * Fixed upstream destination, no caller-specified providers or URLs.
  * Never enable before provider billing, data-processing, model tool calling,
  * and production latency are validated.
  */
-export const HOSTED_MODEL_MAP = Object.freeze({
-  "kova-xenon-5": "moonshotai/kimi-k3",
-  "kova-neon-4.6": "meta-llama/llama-4-maverick",
-  "kova-argon-4.6": "deepseek/deepseek-v4-flash-0731",
-});
+export { HOSTED_MODEL_MAP } from "../kova-foundation-models.mjs";
 
-export const HOSTED_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+export const HOSTED_CHAT_URL = "https://api.openai.com/v1/responses";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
-// Server-controlled provider price caps in USD per million tokens.
-const MODEL_PRICE_CEILINGS = Object.freeze({
-  "kova-argon-4.6": { prompt: 0.2, completion: 0.8 },
-  "kova-neon-4.6": { prompt: 0.5, completion: 1.5 },
-  "kova-xenon-5": { prompt: 3.0, completion: 15.0 },
-});
 export const MODEL_OUTPUT_LIMITS = Object.freeze({
   "kova-argon-4.6": 8192,
   "kova-neon-4.6": 8192,
@@ -46,7 +40,10 @@ export function isKovaHostedModelId(value) {
 }
 
 export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {}) {
-  if (selectedEffort !== undefined && !["none", "low", "high", "max"].includes(selectedEffort))
+  if (
+    selectedEffort !== undefined &&
+    !["none", "low", "medium", "high", "xhigh", "max"].includes(selectedEffort)
+  )
     throw new Error("invalid_hosted_effort");
   if (
     !value ||
@@ -89,8 +86,6 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
         throw new Error("invalid_hosted_image");
     }
   }
-  if (value.model === "kova-argon-4.6" && totalImages > 0)
-    throw new Error("hosted_model_vision_unavailable");
   if (value.tools !== undefined && (!Array.isArray(value.tools) || value.tools.length > 64))
     throw new Error("invalid_hosted_tools");
   if (value.stream !== undefined && typeof value.stream !== "boolean")
@@ -104,31 +99,105 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
     value.max_tokens !== value.max_completion_tokens
   )
     throw new Error("conflicting_hosted_token_limit");
-  // Reasoning effort is an operator policy, never copied from untrusted callers.
-  // The server-authorized product effort controls supported native reasoning.
-  // Llama 4 Maverick does not expose a native reasoning-effort parameter.
+  // Reasoning is server-resolved; never trust a caller's reasoning object.
   const effort =
-    value.model === "kova-neon-4.6"
-      ? null
-      : (selectedEffort ?? (value.model === "kova-xenon-5" ? "max" : null));
-  const { model, max_completion_tokens, reasoning: _discard, ...rest } = value;
-  const body = JSON.stringify({
-    ...rest,
-    model: HOSTED_MODEL_MAP[model],
-    max_tokens: rawMax,
-    ...(effort ? { reasoning: { effort } } : {}),
-    provider: {
-      max_price: MODEL_PRICE_CEILINGS[model],
-      // Maverick's review fan-out needs capacity-aware provider balancing.
-      // An explicit latency sort disables OpenRouter's adaptive routing.
-      ...(model === "kova-neon-4.6" ? {} : { sort: "latency" }),
-      require_parameters: true,
-      allow_fallbacks: true,
-    },
-  });
+    value.model === "kova-xenon-5" && (selectedEffort ?? "none") === "none"
+      ? "low"
+      : (selectedEffort ?? "none");
+  const instructions = [
+    kovaIdentityInstruction(value.model),
+    `Verified configuration: underlying foundation ${HOSTED_MODEL_MAP[value.model]}, developed by OpenAI. Kova is the product provider, not the foundation trainer.`,
+  ];
+  const input = [];
+  for (const message of value.messages) {
+    if (["system", "developer"].includes(message.role)) {
+      if (typeof message.content !== "string") throw new Error("invalid_hosted_messages");
+      instructions.push(message.content);
+      continue;
+    }
+    if (message.role === "tool") {
+      if (typeof message.tool_call_id !== "string" || typeof message.content !== "string")
+        throw new Error("invalid_hosted_tool_output");
+      input.push({
+        type: "function_call_output",
+        call_id: message.tool_call_id,
+        output: message.content,
+      });
+      continue;
+    }
+    if (message.content)
+      input.push({
+        role: message.role,
+        content: Array.isArray(message.content)
+          ? message.content.map((part) =>
+              part.type === "image_url"
+                ? { type: "input_image", image_url: part.image_url.url }
+                : {
+                    type: message.role === "assistant" ? "output_text" : "input_text",
+                    text: part.text,
+                  },
+            )
+          : message.content,
+      });
+    if (message.tool_calls !== undefined && !Array.isArray(message.tool_calls))
+      throw new Error("invalid_hosted_tools");
+    for (const call of message.tool_calls ?? []) {
+      if (
+        typeof call.id !== "string" ||
+        typeof call.function?.name !== "string" ||
+        typeof call.function?.arguments !== "string"
+      )
+        throw new Error("invalid_hosted_tools");
+      input.push({
+        type: "function_call",
+        call_id: call.id,
+        name: call.function.name,
+        arguments: call.function.arguments,
+      });
+    }
+  }
+  const payload = {
+    model: HOSTED_MODEL_MAP[value.model],
+    instructions: instructions.join("\n\n"),
+    input,
+    stream: value.stream === true,
+    max_output_tokens: rawMax,
+    reasoning: { effort },
+    store: false,
+    service_tier: "default",
+  };
+  if (value.tools)
+    payload.tools = value.tools.map((tool) => {
+      if (tool?.type !== "function" || typeof tool.function?.name !== "string")
+        throw new Error("invalid_hosted_tools");
+      return {
+        type: "function",
+        name: tool.function.name,
+        description: tool.function.description,
+        parameters: tool.function.parameters ?? {},
+        strict: tool.function.strict ?? false,
+      };
+    });
+  if (value.tool_choice !== undefined) {
+    const choice = value.tool_choice;
+    if (["auto", "none", "required"].includes(choice)) payload.tool_choice = choice;
+    else if (choice?.type === "function" && typeof choice.function?.name === "string")
+      payload.tool_choice = { type: "function", name: choice.function.name };
+    else throw new Error("invalid_hosted_tools");
+  }
+  if (value.parallel_tool_calls !== undefined)
+    payload.parallel_tool_calls = value.parallel_tool_calls;
+  if (value.response_format?.type === "json_object")
+    payload.text = { format: { type: "json_object" } };
+  else if (value.response_format?.type === "json_schema")
+    payload.text = { format: { type: "json_schema", ...value.response_format.json_schema } };
+  else if (value.response_format !== undefined && value.response_format?.type !== "text")
+    throw new Error("invalid_hosted_response_format");
+  // Sampling controls are unsupported with reasoning. Do not forward old-provider options.
+  const body = JSON.stringify(payload);
   if (Buffer.byteLength(body, "utf8") > MAX_REQUEST_BYTES)
     throw new Error("hosted_request_too_large");
-  return { endpoint: HOSTED_CHAT_URL, body, alias: model };
+  return { endpoint: HOSTED_CHAT_URL, body, alias: value.model };
 }
 
 export async function requestKovaHostedChat({
@@ -137,78 +206,25 @@ export async function requestKovaHostedChat({
   signal,
   fetchImpl = fetch,
   effort,
-  beforeRetry,
 } = {}) {
   if (typeof token !== "string" || token.trim().length < 16)
     throw new Error("hosted_api_key_unavailable");
   const prepared = prepareKovaHostedRequest(request, { effort });
-  const timeoutSignal = AbortSignal.timeout(45_000);
-  const boundedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-  const options = {
+  const boundedSignal = AbortSignal.any([AbortSignal.timeout(90_000), ...(signal ? [signal] : [])]);
+  boundedSignal.throwIfAborted();
+  const response = await fetchImpl(prepared.endpoint, {
     method: "POST",
     redirect: "error",
     signal: boundedSignal,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://kovagpt.com",
-      "X-Title": "KovaGPT",
-    },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: prepared.body,
-  };
-  const deadline = Date.now() + 45_000;
-  let response;
-  for (let attempt = 0; ; attempt++) {
-    boundedSignal.throwIfAborted();
-    response = await fetchImpl(prepared.endpoint, options);
-    // Retry only rejected Maverick requests, never an accepted generation,
-    // broken stream, ambiguous network error, or another foundation's call.
-    if (
-      request.model !== "kova-neon-4.6" ||
-      response.status !== 429 ||
-      response.redirected ||
-      attempt === 3
-    )
-      break;
-    const header = response.headers.get("retry-after");
-    const seconds = header?.trim() ? Number(header) : NaN;
-    const date = header ? Date.parse(header) : NaN;
-    const delay =
-      Number.isFinite(seconds) && seconds >= 0
-        ? seconds * 1000
-        : Number.isFinite(date)
-          ? Math.max(0, date - Date.now())
-          : 750 * 2 ** attempt + Math.floor(Math.random() * 250);
-    // Never shorten Retry-After to fit a request deadline.
-    if (delay >= deadline - Date.now()) break;
-    try {
-      await response.body?.cancel();
-    } catch {
-      /* best effort */
-    }
-    await new Promise((resolve, reject) => {
-      const abort = () => {
-        clearTimeout(timer);
-        reject(boundedSignal.reason);
-      };
-      const timer = setTimeout(() => {
-        boundedSignal.removeEventListener("abort", abort);
-        resolve();
-      }, delay);
-      boundedSignal.addEventListener("abort", abort, { once: true });
-      if (boundedSignal.aborted) abort();
-    });
-    boundedSignal.throwIfAborted();
-    // Re-run the caller's authorization fence before each extra attempt.
-    await beforeRetry?.();
-  }
+  });
   if (!response.ok || response.redirected) {
     try {
       await response.body?.cancel();
     } catch {
       /* best effort */
     }
-    // Never leak provider-specific errors, private prompt contents or credentials.
     const error = new Error("kova_hosted_inference_unavailable");
     error.status = response.status === 429 ? 429 : 502;
     throw error;
@@ -222,5 +238,67 @@ export async function requestKovaHostedChat({
     }
     throw new Error("kova_hosted_response_invalid");
   }
-  return response;
+  const expectedModel = HOSTED_MODEL_MAP[request.model];
+  if (request.stream === true) return responsesStreamToChatStream(response, { expectedModel });
+  const bytes = await readResponseBytesBounded(response, 8 * 1024 * 1024, {
+    signal: boundedSignal,
+    timeoutMs: 90_000,
+  });
+  const value = JSON.parse(new TextDecoder().decode(bytes));
+  const lengthLimited =
+    value.status === "incomplete" && value.incomplete_details?.reason === "max_output_tokens";
+  if (
+    value.error ||
+    (!lengthLimited && value.status !== "completed") ||
+    !matchesOpenAiModel(value.model, expectedModel)
+  )
+    throw new Error("kova_hosted_response_invalid");
+  let content = "";
+  const calls = [];
+  for (const item of value.output ?? []) {
+    if (item.type === "message")
+      for (const part of item.content ?? []) {
+        if (part.type === "output_text") content += part.text;
+        if (part.type === "refusal") content += part.refusal;
+      }
+    if (item.type === "function_call")
+      calls.push({
+        id: item.call_id,
+        type: "function",
+        function: { name: item.name, arguments: item.arguments },
+      });
+  }
+  const usage = value.usage;
+  return Response.json({
+    model: expectedModel,
+    choices: [
+      {
+        index: 0,
+        finish_reason: lengthLimited ? "length" : calls.length ? "tool_calls" : "stop",
+        message: {
+          role: "assistant",
+          content: content || null,
+          ...(calls.length ? { tool_calls: calls } : {}),
+        },
+      },
+    ],
+    usage: usage
+      ? {
+          prompt_tokens: usage.input_tokens,
+          completion_tokens: usage.output_tokens,
+          total_tokens: usage.total_tokens,
+          prompt_tokens_details: usage.input_tokens_details,
+          completion_tokens_details: usage.output_tokens_details,
+        }
+      : undefined,
+  });
+}
+
+export function matchesOpenAiModel(actual, expected) {
+  return (
+    actual === expected ||
+    (typeof actual === "string" &&
+      actual.startsWith(expected + "-") &&
+      /^\d{4}-\d{2}-\d{2}$/.test(actual.slice(expected.length + 1)))
+  );
 }

@@ -6,7 +6,7 @@ export const CONSUMER_MODELS = Object.freeze([
     description: "Fast replies",
     role: "DEFAULT_CHAT",
     tiers: Object.freeze(["free", "plus", "pro"]),
-    vision: false,
+    vision: true,
   }),
   Object.freeze({
     id: "kova-neon-4.6",
