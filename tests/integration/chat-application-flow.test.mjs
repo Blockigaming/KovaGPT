@@ -452,7 +452,7 @@ for (const model of Object.keys(HOSTED_MODEL_MAP)) {
     "max",
     "ultra",
   ].entries()) {
-    test(`${model} ${mode} preserves its real review graph after a connected tool answer`, async () => {
+    test(`${model} ${mode} handles connected-tool review`, async () => {
       const expected = (model === "kova-neon-4.6" ? [0, 1, 2, 3, 4, 4] : [0, 0, 1, 2, 3, 4])[index];
       const f = fixture({
         connectedModel: model,
