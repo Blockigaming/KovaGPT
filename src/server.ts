@@ -6,7 +6,8 @@ import {
   enforceAzureProductionOriginBoundary,
   normalizeAzureProductionRequest,
 } from "./lib/origin-boundary.server";
-import { withRuntimeBindings } from "./lib/runtime-env.server";
+import { adSenseCsp, createCspNonce } from "./lib/adsense-csp.mjs";
+import { runtimeEnv, withRuntimeBindings } from "./lib/runtime-env.server";
 
 validateAzureRuntimeEnv();
 
@@ -34,7 +35,10 @@ const CONTENT_SECURITY_POLICY = [
 function hardenResponse(response: Response, request?: Request): Response {
   const headers = new Headers(response.headers);
   const securityHeaders: Record<string, string> = {
-    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+    "Content-Security-Policy": adSenseCsp(
+      CONTENT_SECURITY_POLICY,
+      request?.headers.get("x-kova-csp-nonce"),
+    ),
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
@@ -46,6 +50,13 @@ function hardenResponse(response: Response, request?: Request): Response {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
   };
+  if (
+    request?.headers.has("x-kova-csp-nonce") &&
+    headers.get("content-type")?.includes("text/html")
+  ) {
+    // Never share a nonce-bearing document between visits or principals.
+    headers.set("Cache-Control", "private, no-store");
+  }
   const documentExportPost =
     request?.method === "POST" && new URL(request.url).pathname === "/api/document-export";
   for (const [name, value] of Object.entries(securityHeaders)) {
@@ -142,6 +153,26 @@ export default {
       const rejectedOrigin = enforceAzureProductionOriginBoundary(request);
       if (rejectedOrigin) return hardenResponse(rejectedOrigin);
       request = normalizeAzureProductionRequest(request);
+      // Never trust a caller-supplied nonce. Both CSP layers and SSR receive
+      // this fresh, request-local value only when advertising is activated.
+      const nonce = withRuntimeBindings(env, () =>
+        runtimeEnv("KOVA_ADSENSE_ENABLED") === "true" ? createCspNonce() : undefined,
+      );
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.delete("x-kova-csp-nonce");
+      if (nonce) requestHeaders.set("x-kova-csp-nonce", nonce);
+      if (nonce || request.headers.has("x-kova-csp-nonce")) {
+        // Nitro supplies a Request-compatible proxy, not an Undici Request.
+        // Copy fields explicitly so native Request never probes its private state.
+        request = new Request(request.url, {
+          method: request.method,
+          headers: requestHeaders,
+          signal: request.signal,
+          ...(!["GET", "HEAD"].includes(request.method)
+            ? { body: request.body, duplex: "half" as const }
+            : {}),
+        });
+      }
 
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);

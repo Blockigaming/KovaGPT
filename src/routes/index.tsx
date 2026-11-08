@@ -2978,6 +2978,7 @@ function KovaGPT() {
       <ChatMessage
         key={m.id}
         message={m}
+        showAdvertisement={isLastAssistant}
         chatId={active.id}
         onSaveMemory={
           canReviewMemory && m.role === "assistant"

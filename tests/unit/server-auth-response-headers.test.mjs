@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { adSenseCsp, createCspNonce } from "../../src/lib/adsense-csp.mjs";
 
 const compiled = ts.transpileModule(
   readFileSync(new URL("../../src/server.ts", import.meta.url), "utf8"),
@@ -14,7 +15,7 @@ const compiled = ts.transpileModule(
   },
 ).outputText;
 
-function serverWithRoute(fetch) {
+function serverWithRoute(fetch, enabled = false) {
   const module = { exports: {} };
   const modules = {
     "./lib/error-page": { renderErrorPage: () => "Fixture error" },
@@ -24,13 +25,19 @@ function serverWithRoute(fetch) {
       enforceAzureProductionOriginBoundary: () => null,
       normalizeAzureProductionRequest: (request) => request,
     },
-    "./lib/runtime-env.server": { withRuntimeBindings: (_env, operation) => operation() },
+    "./lib/runtime-env.server": {
+      withRuntimeBindings: (_env, operation) => operation(),
+      runtimeEnv: () => (enabled ? "true" : undefined),
+    },
+    "./lib/adsense-csp.mjs": { adSenseCsp, createCspNonce },
     "@tanstack/react-start/server-entry": { default: { fetch } },
   };
   vm.runInNewContext(compiled, {
     module,
     exports: module.exports,
+    URL,
     Headers,
+    Request,
     Response,
     console: { error: () => assert.fail("Unexpected outer-server failure") },
     require: (name) => {
@@ -123,6 +130,7 @@ test("Start middleware permits same-origin microphone and preserves a route's st
       createMiddleware: () => ({ server: (handler) => handler }),
       createStart: (factory) => factory(),
     },
+    "./lib/adsense-csp.mjs": { adSenseCsp },
     "@/integrations/supabase/auth-attacher": { attachSupabaseAuth: "fixture_auth_attacher" },
     "./lib/error-page": { renderErrorPage: () => "Fixture error" },
     "./lib/http-security.server": { rejectCrossSiteRequest: () => null },
@@ -130,7 +138,9 @@ test("Start middleware permits same-origin microphone and preserves a route's st
   vm.runInNewContext(start, {
     module,
     exports: module.exports,
+    URL,
     Headers,
+    Request,
     Response,
     console: { error: () => assert.fail("Unexpected Start middleware failure") },
     require: (name) => {
@@ -156,4 +166,72 @@ test("Start middleware permits same-origin microphone and preserves a route's st
   assert.match(response.headers.get("content-security-policy"), /media-src 'self' blob:/u);
   const restricted = await invoke({ "Permissions-Policy": "microphone=()" });
   assert.equal(restricted.headers.get("permissions-policy"), "microphone=()");
+});
+
+test("ad documents use fresh server-owned nonces and cannot enter shared caches", async () => {
+  const seen = [];
+  const app = serverWithRoute((request) => {
+    seen.push(request.headers.get("x-kova-csp-nonce"));
+    return new Response("<main>Answer remains unchanged</main>", {
+      headers: { "content-type": "text/html", "cache-control": "public, max-age=3600" },
+    });
+  }, true);
+  for (let i = 0; i < 2; i++) {
+    const response = await app.fetch(
+      new Request("https://app.example.test/", {
+        headers: { "x-kova-csp-nonce": "AAAAAAAAAAAAAAAAAAAAAA==" },
+      }),
+      {},
+      {},
+    );
+    assert.match(seen[i], /^[A-Za-z0-9+/]{22}==$/);
+    assert.notEqual(seen[i], "AAAAAAAAAAAAAAAAAAAAAA==");
+    assert.ok(response.headers.get("content-security-policy").includes(`'nonce-${seen[i]}'`));
+    assert.match(response.headers.get("content-security-policy"), /'strict-dynamic'/);
+    assert.doesNotMatch(
+      response.headers.get("content-security-policy"),
+      /unsafe-eval|script-src 'self'/,
+    );
+    assert.equal(response.headers.get("cache-control"), "private, no-store");
+    assert.equal(await response.text(), "<main>Answer remains unchanged</main>");
+  }
+  assert.notEqual(seen[0], seen[1]);
+});
+
+test("an incoming nonce cannot activate advertising CSP when the feature is disabled", async () => {
+  const app = serverWithRoute((request) => {
+    assert.equal(request.headers.has("x-kova-csp-nonce"), false);
+    return new Response("Fixture");
+  });
+  const response = await app.fetch(
+    new Request("https://app.example.test/", {
+      headers: { "x-kova-csp-nonce": "AAAAAAAAAAAAAAAAAAAAAA==" },
+    }),
+    {},
+    {},
+  );
+  assert.doesNotMatch(
+    response.headers.get("content-security-policy"),
+    /strict-dynamic|googlesyndication/,
+  );
+});
+
+test("nonce wrapping preserves streamed prompt bodies and authentication headers", async () => {
+  const prompt = JSON.stringify({ message: "Keep this exact prompt", model: "argon" });
+  const app = serverWithRoute(async (request) => {
+    assert.equal(request.method, "POST");
+    assert.equal(request.headers.get("authorization"), "Bearer synthetic-fixture");
+    assert.equal(await request.text(), prompt);
+    return new Response("Answer");
+  }, true);
+  const response = await app.fetch(
+    new Request("https://app.example.test/api/chat", {
+      method: "POST",
+      headers: { authorization: "Bearer synthetic-fixture", "content-type": "application/json" },
+      body: prompt,
+    }),
+    {},
+    {},
+  );
+  assert.equal(await response.text(), "Answer");
 });

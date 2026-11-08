@@ -2,6 +2,7 @@ import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
+import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
 import { ResponseMarkdown } from "./ResponseMarkdown";
@@ -252,8 +253,10 @@ function ChatMessageInner({
   onOpenResult,
   onOpenCanvas,
   onSelectSuggestion,
+  showAdvertisement = false,
 }: {
   message: Message;
+  showAdvertisement?: boolean;
   streaming?: boolean;
   /** Request start time survives chat navigation while the response remains active. */
   streamingStartedAt?: number;
@@ -1498,6 +1501,12 @@ function ChatMessageInner({
             ))}
           </nav>
         )}
+      {showAdvertisement &&
+        !isUser &&
+        !streaming &&
+        !temporary &&
+        message.content.trim() &&
+        !message.generationStatus && <SafeResponseAdvertisement key={message.id} />}
       {studySession?.key === studyContextKey && (
         <Suspense
           fallback={

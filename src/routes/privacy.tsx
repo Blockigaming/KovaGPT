@@ -229,6 +229,13 @@ function PrivacyPage() {
               third-party advertising. External services used to operate the product receive data as
               described in this policy and under their applicable terms.
             </p>
+            <p>
+              If advertising is enabled for Free accounts, Google may show a separate advertisement
+              below a completed response. Google may process your IP address, device information,
+              cookies, and content on the page to select and measure ads. Ad selection does not
+              influence Kova's answers. Advertising choices are available through Privacy and cookie
+              settings beside the ad area. Temporary chats and paid plans do not display these ads.
+            </p>
           </section>
 
           <section id="children" data-legal-section className="legal-section">

@@ -223,3 +223,38 @@ test("retired integration routes stay absent and chat rejects malformed ingress"
   expect(malformed.status()).toBe(400);
   expect(await malformed.json()).toMatchObject({ code: "invalid_json", retryable: false });
 });
+
+test("advertising CSP nonces match the real hydrated scripts and block untrusted inline handlers", async ({
+  page,
+  request,
+}) => {
+  const first = await request.get("/");
+  const second = await request.get("/", {
+    headers: { "x-kova-csp-nonce": "AAAAAAAAAAAAAAAAAAAAAA==" },
+  });
+  const extract = (value: string) => value.match(/'nonce-([A-Za-z0-9+/]{22}==)'/)?.[1];
+  const firstNonce = extract(first.headers()["content-security-policy"]);
+  const secondNonce = extract(second.headers()["content-security-policy"]);
+  expect(firstNonce).toBeTruthy();
+  expect(secondNonce).toBeTruthy();
+  expect(firstNonce).not.toBe(secondNonce);
+  expect(secondNonce).not.toBe("AAAAAAAAAAAAAAAAAAAAAA==");
+  expect(first.headers()["cache-control"]).toBe("private, no-store");
+  const response = await page.goto("/");
+  await waitForKovaHydration(page);
+  const nonce = await page.locator('meta[property="csp-nonce"]').getAttribute("content");
+  expect(response?.headers()["content-security-policy"]).toContain(`'nonce-${nonce}'`);
+  expect(response?.headers()["content-security-policy"]).not.toContain("unsafe-eval");
+  const scripts = await page
+    .locator('script:not([type="application/json"])')
+    .evaluateAll((nodes) => nodes.map((node) => (node as HTMLScriptElement).nonce));
+  expect(scripts.length).toBeGreaterThan(1);
+  expect(scripts.every((value) => value === nonce)).toBe(true);
+  await page.evaluate(() => {
+    const button = document.createElement("button");
+    button.setAttribute("onclick", "window.__kovaUntrustedInline = true");
+    document.body.append(button);
+    button.click();
+  });
+  expect(await page.evaluate(() => Reflect.get(window, "__kovaUntrustedInline"))).toBeUndefined();
+});
