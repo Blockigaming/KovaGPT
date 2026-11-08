@@ -1,6 +1,6 @@
 # Settings and device-specific layout review
 
-Status: PR review only. Do not merge or publish without Zachary's approval.
+Status: Zachary approved production publication on November 8, 2026. Deployment remains pending passing release checks and authenticated Azure access.
 
 ## Device behavior
 
@@ -42,3 +42,5 @@ Browser fixtures contain synthetic account data and do not purchase subscription
 - Targeted ESLint: no errors, one pre-existing Fast Refresh export warning in SettingsDialog.
 
 [Phone menu](previews/settings-phone-menu.png) · [Phone Appearance](previews/settings-phone-appearance.png) · [Desktop General](previews/settings-desktop-general.png)
+
+Release follow-up: update the shared test navigator for secondary Settings destinations, verify the single content scroll surface, keep the sidebar-width slider desktop-only, and use 44px close targets on coarse-pointer devices. Homepage visual baselines were reviewed from CI artifacts: differences are confined to the restored photograph, with unchanged surrounding layout. Fresh CI is required for the final source revision.
