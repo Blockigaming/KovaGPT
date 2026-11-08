@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
+import { resolve } from "node:path";
 import { adSenseCsp } from "../../src/lib/adsense-csp.mjs";
 
 const nonce = "AAAAAAAAAAAAAAAAAAAAAA==";
@@ -7,7 +8,7 @@ let bundle: string;
 test.beforeAll(async () => {
   const result = await build({
     stdin: {
-      contents: `import React from 'react';import{createRoot}from'react-dom/client';import{ResponseAdvertisement}from'./src/components/ResponseAdvertisement';createRoot(document.getElementById('root')).render(<main><p id="answer">29 × 31 = 899</p><ResponseAdvertisement/></main>);`,
+      contents: `import React from 'react';import{createRoot}from'react-dom/client';import{SafeResponseAdvertisement}from'./src/components/SafeResponseAdvertisement';createRoot(document.getElementById('root')).render(<main><p id="answer">29 × 31 = 899</p><SafeResponseAdvertisement/></main>);`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -16,10 +17,15 @@ test.beforeAll(async () => {
     format: "iife",
     platform: "browser",
     jsx: "automatic",
+    define: { "import.meta.env.DEV": "false" },
     plugins: [
       {
         name: "ad-fixture",
         setup(builder) {
+          builder.onResolve({ filter: /^\.\/ResponseAdvertisement$/ }, () => ({
+            path: "ad-loader",
+            namespace: "fixture",
+          }));
           builder.onResolve({ filter: /^@\/hooks\/useTier$/ }, () => ({
             path: "tier",
             namespace: "fixture",
@@ -30,10 +36,13 @@ test.beforeAll(async () => {
           }));
           builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
             loader: "js",
+            resolveDir: process.cwd(),
             contents:
-              path === "tier"
-                ? `export const useTier=()=>({tier:window.fixtureTier||'free',status:window.fixtureStatus||'ready'});`
-                : `export const getAdSenseConfiguration=async()=>({enabled:window.fixtureEnabled!==false});`,
+              path === "ad-loader"
+                ? `window.fixtureChunkAttempted=true;if(window.fixtureChunkFailure)throw Error('Optional ad chunk unavailable');export{ResponseAdvertisement}from${JSON.stringify(resolve("src/components/ResponseAdvertisement.tsx"))};`
+                : path === "tier"
+                  ? `export const useTier=()=>{window.fixtureRenderAttempted=true;if(window.fixtureRenderFailure)throw Error('Optional ad render failed');return {tier:window.fixtureTier||'free',status:window.fixtureStatus||'ready'}};`
+                  : `export const getAdSenseConfiguration=async()=>({enabled:window.fixtureEnabled!==false});`,
           }));
         },
       },
@@ -66,6 +75,9 @@ async function install(
     gpc?: boolean;
     broken?: boolean;
     blocked?: boolean;
+    chunkFailure?: boolean;
+    renderFailure?: boolean;
+    freezeAds?: boolean;
   } = {},
 ) {
   let loads = 0;
@@ -74,7 +86,10 @@ async function install(
       fixtureTier: options.tier,
       fixtureStatus: options.status,
       fixtureEnabled: options.enabled,
+      fixtureChunkFailure: options.chunkFailure,
+      fixtureRenderFailure: options.renderFailure,
     });
+    if (options.freezeAds) Reflect.set(window, "adsbygoogle", Object.freeze([]));
     if (options.gpc) Object.defineProperty(navigator, "globalPrivacyControl", { value: true });
   }, options);
   await page.route("https://pagead2.googlesyndication.com/**", async (route) => {
@@ -171,4 +186,20 @@ for (const options of [{ blocked: true }, { broken: true }])
     await expect(page.locator("[data-response-ad]")).toHaveCount(0);
     await expect(page.locator("#answer")).toHaveText("29 × 31 = 899");
     expect(errors).toEqual([]);
+  });
+
+for (const options of [{ chunkFailure: true }, { renderFailure: true }, { freezeAds: true }])
+  test(`optional ad failure cannot replace the answer: ${JSON.stringify(options)}`, async ({
+    page,
+  }) => {
+    const loads = await install(page, options);
+    await page.waitForFunction(
+      () =>
+        Reflect.get(window, "fixtureChunkAttempted") ||
+        Reflect.get(window, "fixtureRenderAttempted"),
+    );
+    await expect(page.locator("[data-app-error-boundary]")).toHaveCount(0);
+    await expect(page.locator("[data-response-ad]")).toHaveCount(0);
+    await expect(page.locator("#answer")).toHaveText("29 × 31 = 899");
+    expect(loads()).toBe(0);
   });
