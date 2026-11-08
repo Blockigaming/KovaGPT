@@ -27,7 +27,7 @@ function fixture(response, throws = false) {
     },
   };
   vm.runInNewContext(
-    `${compiled}\nglobalThis.subject={resolveUserBillingTier,resolveEffectiveBillingTier};`,
+    `${compiled}\nglobalThis.subject={resolveUserBillingTier,resolveEffectiveBillingTier,resolveEffectiveUsageMultiplier};`,
     context,
   );
   const client = {
@@ -138,4 +138,25 @@ test("chat preflight preserves a tier outage as retryable 503, not authenticatio
   } finally {
     runner.close();
   }
+});
+
+test("Premium multiplier accepts only the two authoritative bounded values", async () => {
+  for (const value of [1, 5]) {
+    const f = fixture({ data: value, error: null });
+    assert.equal(await f.resolveEffectiveUsageMultiplier(f.client, "owner"), value);
+    assert.equal(f.calls[0].name, "effective_user_usage_multiplier");
+    assert.equal(f.calls[0].args._user_id, "owner");
+  }
+  for (const value of [null, 0, 2, 20, "5", {}, undefined]) {
+    const f = fixture({ data: value, error: null });
+    await assert.rejects(
+      f.resolveEffectiveUsageMultiplier(f.client, "owner"),
+      (e) => e.code === "billing_entitlement_unavailable",
+    );
+  }
+  const f = fixture(new Error("private fixture error"), true);
+  await assert.rejects(
+    f.resolveEffectiveUsageMultiplier(f.client, "owner"),
+    (e) => e.code === "billing_entitlement_unavailable" && !e.message.includes("private"),
+  );
 });

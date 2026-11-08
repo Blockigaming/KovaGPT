@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { loose } from "@/lib/supabase-loose";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
+import {
+  resolveEffectiveBillingTier,
+  resolveEffectiveUsageMultiplier,
+} from "@/lib/billing-entitlement.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { chatUsageWindows } from "@/lib/plan-usage-policy.mjs";
 import type { BillingTier } from "@/lib/billing-plans";
@@ -18,6 +21,7 @@ export type DailyUsageDto = {
 type ChatWindow = ReturnType<typeof chatUsageWindows>[number];
 export type PlanUsageDto = {
   tier: BillingTier;
+  usageMultiplier?: 1 | 5;
   windows: (ChatWindow & { regularUsed: number; thinkingUsed: number })[];
   images: number;
   uploads: number;
@@ -31,7 +35,9 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
     const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
-    const windows = chatUsageWindows(tier, now);
+    const usageMultiplier =
+      tier === "pro" ? await resolveEffectiveUsageMultiplier(supabaseAdmin, context.userId) : 1;
+    const windows = chatUsageWindows(tier, now, usageMultiplier);
     const ledgerStart = windows.find(({ id }) => id === "weekly")?.start.slice(0, 10) ?? today;
     const short = windows.find(({ id }) => id === "five_hour");
     const [ledger, shortWindow] = await Promise.all([
@@ -71,6 +77,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
     );
     return {
       tier,
+      usageMultiplier,
       windows: windows.map((window) => ({
         ...window,
         ...(window.id === "five_hour"

@@ -33,7 +33,9 @@ export const CHAT_USAGE_WINDOWS = Object.freeze({
 const DAY_MS = 24 * 60 * 60_000;
 const FIVE_HOURS_MS = 5 * 60 * 60_000;
 
-export function chatUsageWindows(tier, now = new Date()) {
+export function chatUsageWindows(tier, now = new Date(), usageMultiplier = 1) {
+  if (![1, 5].includes(usageMultiplier) || (usageMultiplier !== 1 && tier !== "pro"))
+    throw new Error("Invalid usage multiplier");
   const dailyStart = Math.floor(now.getTime() / DAY_MS) * DAY_MS;
   const weekStart = dailyStart - ((now.getUTCDay() + 6) % 7) * DAY_MS;
   const fiveHourStart = Math.floor(now.getTime() / FIVE_HOURS_MS) * FIVE_HOURS_MS;
@@ -42,8 +44,8 @@ export function chatUsageWindows(tier, now = new Date()) {
     id,
     start: new Date(start).toISOString(),
     resetsAt: new Date(start + duration).toISOString(),
-    regularLimit: limits.regularMessages * multiplier,
-    thinkingLimit: limits.thinkingMessages * multiplier,
+    regularLimit: limits.regularMessages * multiplier * usageMultiplier,
+    thinkingLimit: limits.thinkingMessages * multiplier * usageMultiplier,
   });
   if (tier === "free") return [window("daily", dailyStart, DAY_MS, 1)];
   const weekly = window("weekly", weekStart, 7 * DAY_MS, 7);

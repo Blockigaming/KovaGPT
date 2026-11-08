@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
   createChatHistoryController,
@@ -37,7 +37,13 @@ function chatHistoryPresentation(
   previous: ChatHistoryPresentation,
   next: ChatHistoryStatus,
 ): ChatHistoryPresentation {
-  const recoverable = ["offline", "device_error", "blocked", "auth_required"].includes(next.phase);
+  const recoverable = [
+    "offline",
+    "rate_limited",
+    "device_error",
+    "blocked",
+    "auth_required",
+  ].includes(next.phase);
   const waiting = ["connecting", "saving_device", "syncing", "pending"].includes(next.phase);
   const recoveryPhase = recoverable
     ? next.phase
@@ -334,6 +340,21 @@ export function ChatHistorySyncStatus() {
     () => EMPTY,
   );
   const [busy, setBusy] = useState(false);
+  const [connection, setConnection] = useState<{
+    ownerId: string;
+    phase: "connected" | "failed";
+  } | null>(null);
+  const checkGeneration = useRef(0);
+  const checkOwner = useRef(user?.id);
+  checkOwner.current = user?.id;
+  useEffect(() => {
+    setConnection(null);
+    setBusy(false);
+    const pendingCheck = checkGeneration;
+    return () => {
+      pendingCheck.current++;
+    };
+  }, [user?.id]);
   const working = busy || ["connecting", "saving_device", "syncing"].includes(state.phase);
   if (!user || state.ownerId !== user.id) return null;
   const labels: Record<string, string> = {
@@ -347,6 +368,7 @@ export function ChatHistorySyncStatus() {
     saved: "Chat history is up to date",
     auth_required:
       "Your session needs verification before chat sync can resume. Sign in again, then retry.",
+    rate_limited: "Sync is busy. Your chats are saved here and will retry shortly.",
     offline: "Chats are saved on this device. Reconnecting to your account…",
     device_error:
       "Chat history could not be saved on this device. Keep this page open and export important drafts.",
@@ -361,6 +383,7 @@ export function ChatHistorySyncStatus() {
     state.conflicts.length > 0 ||
     [
       "offline",
+      "rate_limited",
       "device_error",
       "blocked",
       "auth_required",
@@ -386,6 +409,37 @@ export function ChatHistorySyncStatus() {
     }
   }
   const controller = controls.get(user.id);
+  async function checkConnection() {
+    const ownerId = state.ownerId;
+    if (!ownerId || busy) return;
+    const generation = ++checkGeneration.current;
+    setBusy(true);
+    const currentCheck = () =>
+      checkOwner.current === ownerId && checkGeneration.current === generation;
+    try {
+      const result = await requestWorkSync(
+        ownerId,
+        "/api/chat/history?cursor=0",
+        AbortSignal.timeout(15000),
+      );
+      if (
+        !result ||
+        typeof result !== "object" ||
+        !("ownerId" in result) ||
+        result.ownerId !== ownerId ||
+        !("epoch" in result) ||
+        typeof result.epoch !== "string" ||
+        !("records" in result) ||
+        !Array.isArray(result.records)
+      )
+        throw new Error("chat_history_invalid_response");
+      if (currentCheck()) setConnection({ ownerId, phase: "connected" });
+    } catch {
+      if (currentCheck()) setConnection({ ownerId, phase: "failed" });
+    } finally {
+      if (currentCheck()) setBusy(false);
+    }
+  }
   return (
     <div
       className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
@@ -395,6 +449,25 @@ export function ChatHistorySyncStatus() {
       <p role="status" aria-live="polite" className="font-medium text-foreground/80">
         {labels[state.recoveryPhase ?? state.phase] ?? "Chat sync is pending"}
       </p>
+      {state.phase === "other_tab" && (
+        <div className="mt-2 space-y-2">
+          {connection?.ownerId === user.id && (
+            <p role="status">
+              {connection.phase === "connected"
+                ? "Your account sync connection is working."
+                : "The sync connection could not be verified. Try again shortly."}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            className="rounded-full"
+            disabled={working}
+            onClick={() => void checkConnection()}
+          >
+            {busy ? "Checking connection…" : "Check sync connection"}
+          </Button>
+        </div>
+      )}
       {state.migration > 0 && (
         <div className="mt-2 space-y-2">
           <p>

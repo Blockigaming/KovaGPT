@@ -404,7 +404,7 @@ function OrganizationPlans({ onContact }: { onContact: () => void }) {
                 name: "Premium seat",
                 annual: 100,
                 monthly: 125,
-                description: "Premium team seat",
+                description: "5× Standard metered usage",
               },
             ].map(({ name, annual, monthly, description }) => (
               <div key={name} className="rounded-2xl bg-muted p-4 text-left">

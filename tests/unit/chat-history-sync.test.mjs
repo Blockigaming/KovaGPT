@@ -560,6 +560,7 @@ test("rate-limit responses respect Retry-After without discarding pending change
   await h.controller.pump();
   assert.equal(calls, 1);
   assert.equal(h.controller.retryDelay, 60000);
+  assert.equal(h.statuses.at(-1).phase, "rate_limited");
   h.advance(60001);
   await h.controller.pump();
   assert.equal(calls, 2);
@@ -573,4 +574,33 @@ test("confirmed permanent deletion rebases over concurrent cloud edits without r
   assert.equal(state.records.chat.conflict, null);
   assert.equal(nextChatHistoryRequest(state).payload, null);
   assert.equal(nextChatHistoryRequest(state).expectedRevision, 2);
+});
+
+test("large initial history pulls stay below the deployed per-minute read allowance", async () => {
+  let reads = 0;
+  const h = controllerHarness(async () => {
+    reads++;
+    return page([row(chat(`chat-${reads}`), 1, reads)], {
+      hasMore: reads < 100,
+      currentVersion: 100,
+    });
+  });
+  await h.controller.initialize();
+  await h.controller.pump();
+  assert.equal(reads, 12);
+  assert.equal(h.controller.retryDelay, 8000);
+  for (let i = 0; i < 7; i++) {
+    h.advance(7999);
+    await h.controller.pump();
+    assert.equal(reads, (i + 1) * 12);
+    h.advance(1);
+    await h.controller.pump();
+  }
+  assert.equal(reads, 96);
+  assert.equal(h.controller.getState().cursor, 96);
+  h.advance(8000);
+  await h.controller.pump();
+  assert.equal(reads, 100);
+  assert.equal(h.controller.getState().complete, true);
+  assert.equal(h.statuses.at(-1).phase, "saved");
 });

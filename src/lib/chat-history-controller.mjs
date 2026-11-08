@@ -31,6 +31,7 @@ export function createChatHistoryController({
     dirty = false,
     running = false,
     retryAt = 0,
+    nextPullAt = 0,
     failures = 0;
   let operations = Promise.resolve(),
     cloudCommit = null;
@@ -150,10 +151,11 @@ export function createChatHistoryController({
     }
   }
   async function pump() {
-    if (!alive() || !state || running || dirty || now() < retryAt) return;
+    if (!alive() || !state || running || dirty || now() < Math.max(retryAt, nextPullAt)) return;
     running = true;
     try {
       summary("syncing");
+      const pullStartedAt = now();
       // Bound each turn; the runtime schedules the next turn while more pages remain.
       for (let i = 0; i < 12 && alive() && !dirty; i++) {
         const epoch = state.epoch,
@@ -173,6 +175,9 @@ export function createChatHistoryController({
             cloudCommit = null;
           }
         });
+        // At most twelve reads per eight seconds stays below the server
+        // allowance of 100/minute, even for a large first-device history.
+        if (i === 11 && page.hasMore) nextPullAt = Math.max(nextPullAt, pullStartedAt + 8000);
         if (dirty || !page.hasMore) break;
       }
       if (!alive() || dirty || !state.complete) return;
@@ -243,9 +248,11 @@ export function createChatHistoryController({
             ? "blocked"
             : dirty || conflict
               ? "pending"
-              : [401, 403].includes(error.status)
-                ? "auth_required"
-                : "offline",
+              : error.status === 429
+                ? "rate_limited"
+                : [401, 403].includes(error.status)
+                  ? "auth_required"
+                  : "offline",
           error.message,
         );
       }
@@ -260,7 +267,7 @@ export function createChatHistoryController({
     pump,
     getState: () => state,
     get retryDelay() {
-      return Math.max(0, retryAt - now());
+      return Math.max(0, retryAt - now(), nextPullAt - now());
     },
     get dirty() {
       return dirty;
