@@ -6,6 +6,7 @@ import { waitForKovaHydration } from "./hydration";
 
 declare global {
   interface Window {
+    imageMenuShares: { type: string; size: number }[];
     imageMenuCopies: { type: string; signature: number[]; width: number; height: number }[];
   }
 }
@@ -39,6 +40,17 @@ for (const role of ["user", "assistant"] as const) {
         ];
         localStorage.setItem(key, JSON.stringify(chats));
         window.imageMenuCopies = [];
+        window.imageMenuShares = [];
+        Object.defineProperty(navigator, "canShare", {
+          configurable: true,
+          value: ({ files }: ShareData) => files?.length === 1,
+        });
+        Object.defineProperty(navigator, "share", {
+          configurable: true,
+          value: async ({ files }: ShareData) => {
+            window.imageMenuShares.push({ type: files![0].type, size: files![0].size });
+          },
+        });
         Object.defineProperty(navigator, "clipboard", {
           configurable: true,
           value: {
@@ -88,6 +100,12 @@ for (const role of ["user", "assistant"] as const) {
     const viewer = page.getByRole("dialog", { name: "Image preview", exact: true });
     await expect(viewer).toBeVisible();
     await expect(viewer.getByRole("img")).toHaveAttribute("src", original!);
+    await viewer.getByRole("button", { name: "Share image", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.imageMenuShares.length)).toBe(1);
+    expect(await page.evaluate(() => window.imageMenuShares[0])).toEqual({
+      type: original!.slice(5, original!.indexOf(";")),
+      size: expectedBytes.length,
+    });
     if (page.viewportSize()!.width < 1024) {
       const canvas = (await viewer.locator("[data-image-viewer-canvas]").boundingBox())!;
       const x = canvas.x + canvas.width / 2,
@@ -124,6 +142,10 @@ for (const role of ["user", "assistant"] as const) {
     const viewerBounds = (await viewer.boundingBox())!;
     expect(viewerBounds.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
     expect(viewerBounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    await page.screenshot({
+      path: info.outputPath(`${role}-image-viewer.png`),
+      animations: "disabled",
+    });
     await viewer.getByRole("button", { name: "Close image preview" }).click();
     await expect(viewer).toBeHidden();
     await expect(image).toBeFocused();

@@ -787,3 +787,40 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   color: var(--foreground);
   opacity: 1;
 }
+
+/* Destination shortcuts form a touch strip; desktop keeps its vertical list. */
+.kova-sidebar-destinations {
+  display: contents;
+}
+@media (max-width: 1023px) {
+  .kova-sidebar-destinations {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding: 4px 2px 8px;
+  }
+  .kova-sidebar-destinations > .kova-nav-row {
+    flex: 0 0 auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    width: 96px;
+    min-height: 76px;
+    padding: 10px 6px;
+    border-radius: 16px;
+    scroll-snap-align: start;
+    text-align: center;
+    font-size: 13px;
+    line-height: 18px;
+    background: var(--sidebar-active);
+  }
+  .kova-sidebar-destinations .kova-sidebar-label {
+    white-space: normal;
+    overflow: visible;
+  }
+}

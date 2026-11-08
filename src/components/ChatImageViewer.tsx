@@ -8,12 +8,14 @@ export default function ChatImageViewer({
   onClose,
   onDownload,
   onReturnFocus,
+  onShare,
 }: {
   src: string;
   alt: string;
   onClose: () => void;
   onDownload: () => void;
   onReturnFocus: () => void;
+  onShare?: () => void;
 }) {
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function ChatImageViewer({
             onReturnFocus();
           }}
           aria-describedby={undefined}
-          className="fixed inset-0 z-[120] flex h-[100dvh] min-w-0 flex-col bg-black text-white outline-none"
+          className="fixed inset-0 z-[120] flex h-[100dvh] min-w-0 flex-col bg-black text-white outline-none lg:inset-x-[8vw] lg:inset-y-[6dvh] lg:h-[88dvh] lg:rounded-2xl"
           style={{
             paddingTop: "env(safe-area-inset-top)",
             paddingBottom: "env(safe-area-inset-bottom)",
@@ -70,6 +72,11 @@ export default function ChatImageViewer({
             <button className={control} type="button" onClick={onDownload}>
               Save image
             </button>
+            {onShare && (
+              <button className={control} type="button" onClick={onShare}>
+                Share image
+              </button>
+            )}
             <Dialog.Close className={control} aria-label="Close image preview">
               Close
             </Dialog.Close>

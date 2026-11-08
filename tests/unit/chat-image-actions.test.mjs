@@ -225,7 +225,12 @@ function menuFixture(mobile = false) {
   const image = loadUiModule(
     "src/components/ChatImage.tsx",
     {
-      react: { ...hooks.react, lazy: () => "ChatImageViewer", Suspense: "Suspense", useMemo: (factory) => factory() },
+      react: {
+        ...hooks.react,
+        lazy: () => "ChatImageViewer",
+        Suspense: "Suspense",
+        useMemo: (factory) => factory(),
+      },
       "@/hooks/use-mobile": { useLayout: () => ({ isMobile: mobile }) },
       "lucide-react": Object.fromEntries(
         ["Copy", "Download", "ExternalLink", "EyeOff", "ImagePlus"].map((name) => [name, name]),

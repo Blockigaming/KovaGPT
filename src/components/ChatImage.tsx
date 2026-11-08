@@ -231,6 +231,25 @@ export function ChatImage({
                   imageRef.current?.focus({ preventScroll: true });
               }}
               onDownload={() => void run((allowed) => downloadChatImage(src, allowed))}
+              onShare={
+                typeof navigator !== "undefined" && typeof navigator.share === "function"
+                  ? () =>
+                      void run(async (allowed) => {
+                        const file = await chatImageFile(src, allowed);
+                        if (!allowed()) return;
+                        if (!navigator.canShare?.({ files: [file] }))
+                          throw new Error(
+                            "Image sharing is unavailable here. Use Save image instead.",
+                          );
+                        try {
+                          await navigator.share({ files: [file], title: alt.slice(0, 120) });
+                        } catch (error) {
+                          if (!(error instanceof DOMException && error.name === "AbortError"))
+                            throw error;
+                        }
+                      })
+                  : undefined
+              }
             />
           </Suspense>
         )}

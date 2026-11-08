@@ -1782,12 +1782,14 @@ export function Sidebar({
                   <span>Search</span>
                 </button>
               ) : null}
-              {railShortcuts
-                .filter((id) => !["discovery", "maps"].includes(id))
-                .map((id) => {
-                  const item = availableShortcuts.find((entry) => entry.id === id);
-                  return item ? navLink(item.to, item.label, SHORTCUT_ICONS[id]) : null;
-                })}
+              <div className="kova-sidebar-destinations">
+                {railShortcuts
+                  .filter((id) => !["discovery", "maps"].includes(id))
+                  .map((id) => {
+                    const item = availableShortcuts.find((entry) => entry.id === id);
+                    return item ? navLink(item.to, item.label, SHORTCUT_ICONS[id]) : null;
+                  })}
+              </div>
               <details
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
