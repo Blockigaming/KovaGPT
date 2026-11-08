@@ -54,7 +54,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { ArrowDown, Gift, PanelLeft, X } from "lucide-react";
+import { ArrowDown, PanelLeft, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
@@ -3208,7 +3208,7 @@ function KovaGPT() {
         data-free-introductory-offer="true"
         className="kova-topbar-button inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-semibold text-sky-500 transition hover:bg-sky-500/10"
       >
-        <Gift className="h-4 w-4" aria-hidden="true" />
+        <Sparkles className="h-4 w-4" aria-hidden="true" />
         <span>Free offer</span>
       </button>
     ) : null;
