@@ -96,8 +96,13 @@ export function ConnectedAccountManager({
         },
       });
       if (active.current) {
-        if ("error" in next) toast.error(next.error);
-        else setResult(next);
+        if ("error" in next) {
+          toast.error(next.error);
+        } else {
+          setResult(next);
+          // Fetch server-recorded API success instead of showing stale OAuth-only status.
+          await reload();
+        }
       }
     } catch {
       if (active.current) toast.error("The connected service could not be read. Try again later.");
