@@ -54,7 +54,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { ArrowDown, PanelLeft, X } from "lucide-react";
+import { ArrowDown, Gift, PanelLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
@@ -3192,6 +3192,27 @@ function KovaGPT() {
       <ArrowDown className="h-5 w-5" aria-hidden="true" />
     </Button>
   ) : null;
+  const claimFreeOffer = () => {
+    void navigate({
+      to: "/subscribe" as never,
+      search: { plan: "plus_monthly" } as never,
+    });
+  };
+  const freeOfferButton =
+    isLoaded && isSignedIn && tier === "free" ? (
+      <button
+        type="button"
+        onClick={claimFreeOffer}
+        aria-label="Free offer: 50% off your first month"
+        title="50% off your first month"
+        data-free-introductory-offer="true"
+        className="kova-topbar-button inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-semibold text-sky-500 transition hover:bg-sky-500/10"
+      >
+        <Gift className="h-4 w-4" aria-hidden="true" />
+        <span>Free offer</span>
+      </button>
+    ) : null;
+
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
       <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
@@ -3236,6 +3257,7 @@ function KovaGPT() {
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {jumpToLatestButton}
+          {freeOfferButton}
           {conversationActions()}
           {isLoaded && isSignedIn && !chatStarted && (
             <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
@@ -3343,14 +3365,11 @@ function KovaGPT() {
           temporaryChat={tempChat}
           chatStarted={chatStarted}
           conversationActions={
-            jumpToLatestButton ? (
-              <>
-                {jumpToLatestButton}
-                {conversationActions(true)}
-              </>
-            ) : (
-              conversationActions(true)
-            )
+            <>
+              {jumpToLatestButton}
+              {freeOfferButton}
+              {conversationActions(true)}
+            </>
           }
           onTemporaryChatChange={(enabled, trigger) => {
             temporaryTriggerRef.current = trigger;
