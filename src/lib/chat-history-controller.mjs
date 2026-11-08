@@ -22,12 +22,16 @@ export function createChatHistoryController({
   changed = () => {},
   status = () => {},
   signal,
+  now = Date.now,
+  retireArchives = false,
 }) {
   let state = null,
     stopped = false,
     dirtyGeneration = 0,
     dirty = false,
-    running = false;
+    running = false,
+    retryAt = 0,
+    failures = 0;
   let operations = Promise.resolve(),
     cloudCommit = null;
   const inputs = new WeakMap();
@@ -45,6 +49,7 @@ export function createChatHistoryController({
     const rows = Object.values(state?.records ?? {});
     status({
       ownerId,
+      retryAt,
       phase,
       error,
       pending: rows.filter((r) => r.dirty).length,
@@ -71,6 +76,15 @@ export function createChatHistoryController({
       dirty,
     });
   }
+  async function normalizeArchives(next) {
+    if (!retireArchives || !visibleChatHistory(next, true).length) return next;
+    return updateChatHistoryList(
+      next,
+      [...visibleChatHistory(next), ...visibleChatHistory(next, true)],
+      false,
+      () => false,
+    );
+  }
   async function initialize() {
     return queue(async () => {
       summary("connecting");
@@ -93,6 +107,7 @@ export function createChatHistoryController({
           legacy.archived,
         );
       }
+      state = await normalizeArchives(state);
       await commitDevice(null, state, { signal });
       if (!alive()) return;
       changed({
@@ -135,7 +150,7 @@ export function createChatHistoryController({
     }
   }
   async function pump() {
-    if (!alive() || !state || running || dirty) return;
+    if (!alive() || !state || running || dirty || now() < retryAt) return;
     running = true;
     try {
       summary("syncing");
@@ -149,7 +164,7 @@ export function createChatHistoryController({
           cloudCommit = new AbortController();
           try {
             await commit(
-              await applyChatHistoryPage(state, page),
+              await normalizeArchives(await applyChatHistoryPage(state, page)),
               "cloud",
               AbortSignal.any([signal, cloudCommit.signal]),
             );
@@ -163,6 +178,8 @@ export function createChatHistoryController({
       if (!alive() || dirty || !state.complete) return;
       const request = nextChatHistoryRequest(state);
       if (!request) {
+        retryAt = 0;
+        failures = 0;
         const rows = Object.values(state.records),
           blocked = rows.find((r) => r.failure);
         summary(
@@ -204,9 +221,34 @@ export function createChatHistoryController({
         });
         throw error;
       }
+      retryAt = 0;
+      failures = 0;
       summary("pending");
     } catch (error) {
-      if (alive()) summary(dirty ? "pending" : "offline", error.message);
+      if (alive()) {
+        // Revision races are ordinary reconciliation, not a lost connection.
+        const conflict = error.status === 409;
+        const blocked = [400, 413].includes(error.status);
+        failures = conflict ? 0 : Math.min(6, failures + 1);
+        const delay = blocked
+          ? 0
+          : conflict
+            ? 200
+            : error.status === 429
+              ? Math.max(1000, Math.min(300000, (error.retryAfter || 60) * 1000))
+              : Math.min(60000, 1000 * 2 ** failures);
+        retryAt = now() + delay;
+        summary(
+          blocked
+            ? "blocked"
+            : dirty || conflict
+              ? "pending"
+              : [401, 403].includes(error.status)
+                ? "auth_required"
+                : "offline",
+          error.message,
+        );
+      }
     } finally {
       running = false;
     }
@@ -217,6 +259,9 @@ export function createChatHistoryController({
     markDirty,
     pump,
     getState: () => state,
+    get retryDelay() {
+      return Math.max(0, retryAt - now());
+    },
     get dirty() {
       return dirty;
     },

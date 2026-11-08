@@ -326,6 +326,18 @@ export async function applyChatHistoryPage(state, page) {
         syncVersion: row.sync_version,
       });
       next.records[id] = { ...next.records[id], seenInEpoch: true };
+    } else if (r?.dirty && r.local === null && !r.migration && !r.failure) {
+      // Explicit permanent deletion wins over concurrent edits; rebase its
+      // content-free tombstone to the latest revision instead of offering Restore.
+      next.records[id] = {
+        ...r,
+        revision: row.revision,
+        serverHash: hash,
+        seenInEpoch: true,
+        request: null,
+        conflict: null,
+        dirty: payload !== null,
+      };
     } else if (
       r &&
       (r.dirty || r.migration || r.conflict) &&

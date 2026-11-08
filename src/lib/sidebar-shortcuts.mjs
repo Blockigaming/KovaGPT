@@ -3,7 +3,6 @@ import { principalScopedStorageKey } from "./principal-browser-storage.mjs";
 export const SIDEBAR_SHORTCUTS_KEY = "kova-sidebar-shortcuts-v1";
 export const SIDEBAR_SHORTCUTS = Object.freeze(
   [
-    { id: "images", label: "Images", to: "/images" },
     { id: "library", label: "Library", to: "/library" },
     { id: "projects", label: "Projects", to: "/projects" },
     { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
@@ -12,7 +11,6 @@ export const SIDEBAR_SHORTCUTS = Object.freeze(
   ].map((shortcut) => Object.freeze(shortcut)),
 );
 export const DEFAULT_SIDEBAR_SHORTCUTS = Object.freeze([
-  "images",
   "library",
   "projects",
   "scheduled-tasks",
@@ -44,7 +42,7 @@ export function readSidebarShortcuts(storage, userId) {
     const saved = JSON.parse(raw);
     const choices =
       Array.isArray(saved?.shortcuts) && new Set(saved.shortcuts).size === saved.shortcuts.length
-        ? saved.shortcuts.filter((id) => id !== "discovery" && id !== "work")
+        ? saved.shortcuts.filter((id) => id !== "discovery" && id !== "work" && id !== "images")
         : null;
     return saved?.version === 1 && validChoices(choices)
       ? [...choices]

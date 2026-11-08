@@ -51,10 +51,11 @@ async function checkout({
     createMonthlyIntroCheckout: async (input) => {
       options = input;
       if (adapterError) throw adapterError;
-      return { client_secret: "nonsecret_fixture_secret" };
+      return { url: "https://checkout.stripe.com/c/pay/fixture" };
     },
     BillingPolicyError,
     AbortSignal,
+    URL,
     supabaseAdmin: {},
     loose: (client) => client,
     BILLING_ENV,
@@ -88,7 +89,7 @@ async function checkout({
 
 test("handler passes canonical monthly Price, fixed URL, configured Coupon and live environment to the verified adapter", async () => {
   const attempt = await checkout({ priceId: "pro_monthly" });
-  assert.equal(attempt.result.clientSecret, "nonsecret_fixture_secret");
+  assert.equal(attempt.result.url, "https://checkout.stripe.com/c/pay/fixture");
   assert.equal(attempt.options.plan, resolveBillingPlan("pro_monthly"));
   assert.equal(attempt.options.environment, "live");
   assert.equal(attempt.options.couponId, "nonsecret_fixture_coupon");
@@ -115,7 +116,7 @@ test("expired local history reaches the authoritative adapter, without reinstati
   const attempt = await checkout({
     localRows: [{ status: "active", current_period_end: "2020-01-01T00:00:00Z" }],
   });
-  assert.equal(attempt.result.clientSecret, "nonsecret_fixture_secret");
+  assert.equal(attempt.result.url, "https://checkout.stripe.com/c/pay/fixture");
   assert.equal(attempt.options.plan.trialPeriodDays, 0);
 });
 

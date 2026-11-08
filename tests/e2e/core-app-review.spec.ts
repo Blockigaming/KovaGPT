@@ -98,25 +98,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await page.keyboard.press("Escape");
 
   await openSidebar(page);
-  await page.getByRole("link", { name: "Images", exact: true }).click();
-  await expect(page).toHaveURL(/\/images$/);
-  await confirmSidebarState();
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Images", exact: true }),
-  ).toBeVisible();
-  const imagePrompt = page.getByRole("textbox", { name: "Describe the image to generate" });
-  await imagePrompt.fill("A rounded paper sculpture in morning light");
-  await page.getByRole("combobox", { name: "Output image shape", exact: true }).click();
-  await page.getByRole("option", { name: /Portrait.*2:3/ }).click();
-  await expect(
-    page.getByRole("combobox", { name: "Output image shape", exact: true }),
-  ).toContainText("2:3");
-  await page.getByRole("button", { name: "Generate", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Image generation is temporarily unavailable" }),
-  ).toBeVisible();
-  await expect(imagePrompt).toHaveValue("A rounded paper sculpture in morning light");
-  await capture(page, info, "images");
+  await expect(page.getByRole("link", { name: "Images", exact: true })).toHaveCount(0);
 
   for (const [name, heading] of [
     ["Library", "Library"],

@@ -1,3 +1,5 @@
+import { ProjectAppearanceEditor, ProjectIcon } from "@/components/ProjectAppearanceEditor";
+import { projectAppearance, type ProjectAppearance } from "@/lib/project-appearance";
 import "@/styles/spec400-management.css";
 import "@/styles/project-detail.css";
 import {
@@ -77,7 +79,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PROJECT_CHAT_DELETE_UNAVAILABLE } from "@/lib/project-chat-deletion";
+import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -91,6 +93,7 @@ import {
   listInvites,
   listProjectChats,
   createProjectChat,
+  deleteProjectChat,
   type ProjectDetail,
   type ProjectMember,
   type ProjectInvite,
@@ -624,6 +627,7 @@ function ProjectDetailPage() {
           <div className="kova-project-heading">
             <div className="min-w-0">
               <div className="kova-project-title-line">
+                <ProjectIcon appearance={project.appearance} />
                 <h1 className="kova-project-title">{project.name}</h1>
                 {archived && <span className="kova-project-status">Archived</span>}
               </div>
@@ -1421,6 +1425,8 @@ function ChatsTab({
 }) {
   const navigate = useNavigate();
   const fnCreate = useServerFn(createProjectChat);
+  const fnDeleteChat = useServerFn(deleteProjectChat);
+  const [deletingChat, setDeletingChat] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("New chat");
   const [busy, setBusy] = useState(false);
@@ -1611,15 +1617,6 @@ function ChatsTab({
           </Button>
         )}
       </div>
-      {canEdit && chats.length > 0 && (
-        <p
-          id="project-chat-delete-unavailable"
-          className="kova-project-collection-note"
-          role="note"
-        >
-          {PROJECT_CHAT_DELETE_UNAVAILABLE}
-        </p>
-      )}
       {chats.length === 0 ? (
         <EmptyState
           icon={<MessageCircle className="w-10 h-10" />}
@@ -1692,10 +1689,33 @@ function ChatsTab({
                       variant="ghost"
                       size="icon"
                       className="shrink-0"
-                      disabled
-                      aria-label={`Delete ${c.title} unavailable`}
-                      aria-describedby="project-chat-delete-unavailable"
-                      title={PROJECT_CHAT_DELETE_UNAVAILABLE}
+                      disabled={Boolean(deletingChat) || moving}
+                      aria-label={`Delete ${c.title} permanently`}
+                      title="Delete chat permanently"
+                      onClick={async () => {
+                        const scope = moveScope;
+                        if (!canEdit || !scope.active || deletingChat) return;
+                        if (
+                          !(await confirmPermanentChat(c.title, false)) ||
+                          !scope.active ||
+                          currentMoveScopeRef.current !== scope
+                        )
+                          return;
+                        setDeletingChat(c.id);
+                        try {
+                          await fnDeleteChat({ data: { id: c.id } });
+                          if (!scope.active || currentMoveScopeRef.current !== scope) return;
+                          await onRefresh();
+                          toast.success("Chat permanently deleted");
+                        } catch (error) {
+                          if (scope.active)
+                            toast.error(
+                              error instanceof Error ? error.message : "Chat could not be deleted.",
+                            );
+                        } finally {
+                          if (scope.active) setDeletingChat(null);
+                        }
+                      }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -3568,12 +3588,14 @@ function SettingsTab({
     name?: string;
     description?: string | null;
     system_prompt?: string | null;
+    appearance?: ProjectAppearance;
   }) => Promise<void>;
   onDelete: (trigger?: HTMLElement) => void;
 }) {
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(project.system_prompt ?? "");
+  const [appearance, setAppearance] = useState(() => projectAppearance(project.appearance));
   const [saving, setSaving] = useState(false);
   return (
     <div className="space-y-6">
@@ -3601,6 +3623,7 @@ function SettingsTab({
             placeholder="Persistent instructions added to every chat in this project (e.g. brand voice, product details)."
           />
         </div>
+        <ProjectAppearanceEditor value={appearance} onChange={setAppearance} disabled={saving} />
         <div>
           <Button
             disabled={saving || !name.trim()}
@@ -3612,6 +3635,7 @@ function SettingsTab({
                   name: name.trim(),
                   description: description.trim() || null,
                   system_prompt: systemPrompt.trim() || null,
+                  appearance,
                 });
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Failed");

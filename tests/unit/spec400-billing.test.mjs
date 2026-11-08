@@ -197,7 +197,7 @@ test("family access never exposes another person's billing or management actions
   };
   const facts = fixture("BillingSubscriptionFacts", overrides);
   assert.equal(valueFor(facts, "Subscription status"), "Family Sharing");
-  assert.equal(valueFor(facts, "Next billing date"), "Managed by family owner");
+  assert.equal(valueFor(facts, "Next billing date"), "Managed by plan owner");
   assert.doesNotMatch(facts.text(), /2099/);
   const plans = fixture("BillingPlans", overrides);
   assert.equal(plans.nodes().filter((n) => n.type === "button" && n.props.disabled).length, 3);

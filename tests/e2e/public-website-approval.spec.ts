@@ -166,7 +166,7 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });
 
-test("deferred checkout opens a recoverable configuration error without payment requests", async ({
+test("hosted checkout waits for explicit payment action without contacting Stripe", async ({
   page,
 }, testInfo) => {
   const evidence = evidenceDirectory(testInfo.project.name);
@@ -184,9 +184,13 @@ test("deferred checkout opens a recoverable configuration error without payment 
   await start.click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
   const dialog = page.getByRole("main");
-  await expect(dialog.locator('[data-checkout-state="error"]')).toBeVisible();
-  await expect(dialog).toContainText("Checkout couldn't load");
-  await page.screenshot({ path: `${evidence}/checkout-unconfigured-error.png` });
+  await expect(dialog.locator('[data-checkout-state="ready"]')).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Continue to payment", exact: true }),
+  ).toBeEnabled();
+  await expect(dialog.locator("iframe")).toHaveCount(0);
+  await expect(dialog).toContainText("Payment opens full-screen in Stripe.");
+  await page.screenshot({ path: `${evidence}/checkout-ready.png` });
   await page.getByRole("link", { name: "Back to plans", exact: true }).click();
   await expect(page).toHaveURL(/\/pricing/);
   await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();

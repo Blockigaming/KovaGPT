@@ -70,7 +70,7 @@ function fixture(initial = [durable, chat, work], signedIn = true) {
       state.calls.push(["durable", data]);
     },
     loadConversations: () => [{ id: "c" }],
-    async moveChatToTrash() {
+    async permanentlyDeleteChat() {
       state.calls.push(["chat"]);
       return true;
     },
@@ -95,7 +95,7 @@ function fixture(initial = [durable, chat, work], signedIn = true) {
 
 test("signed-in partial deletion retains canceled chat and unattempted Work while removing confirmed file", async () => {
   const f = fixture();
-  f.deps.moveChatToTrash = async () => false;
+  f.deps.permanentlyDeleteChat = async () => false;
   await f.run();
   assert.deepEqual(f.state.rows, [chat, work]);
   assert.deepEqual(f.state.selected, [chat.id, work.id]);
@@ -107,7 +107,7 @@ test("signed-in partial deletion retains canceled chat and unattempted Work whil
 test("guest partial deletion never restores an already-deleted guest item", async () => {
   const guest = { id: "guest:one" };
   const f = fixture([guest, chat, work], false);
-  f.deps.moveChatToTrash = async () => false;
+  f.deps.permanentlyDeleteChat = async () => false;
   await f.run();
   assert.deepEqual(f.state.rows, [chat, work]);
   assert.deepEqual(f.state.selected, [chat.id, work.id]);
@@ -221,21 +221,8 @@ test("single guest deletion restores its row and reports persistence failure", a
   assert.equal(f.state.successes.length, 0);
   assert.equal(f.state.errors.length, 1);
 });
-test("Move completion excludes only moved IDs from the latest selection", () => {
-  const attr = nodes.find(
-    (node) => ts.isJsxAttribute(node) && node.name.getText(file) === "onMoved",
-  );
-  const f = fixture([durable, other, chat, work]);
-  f.deps.libraryCleared = false;
-  f.deps.libraryRenderGeneration = 1;
-  f.deps.loadGenerationRef = { current: 1 };
-  f.deps.setLoading = () => {};
-  compile(attr.initializer.expression.getText(file), f.deps)([durable.id], "folder");
-  assert.deepEqual(f.state.selected, [other.id, chat.id, work.id]);
-  assert.equal(f.state.rows[0].folder_id, "folder");
-  f.deps.principalRef.current = "user:B";
-  compile(attr.initializer.expression.getText(file), f.deps)([other.id], null);
-  assert.deepEqual(f.state.selected, [other.id, chat.id, work.id]);
+test("Library does not expose folder moves", () => {
+  assert.doesNotMatch(source, /Move to folder|<LibraryFolderOrganizer/);
 });
 test("real unmount cleanup invalidates lifecycle, aborts requests and clears pending return/batch references", () => {
   const effect = nodes.find(

@@ -988,7 +988,7 @@ function ScheduledTasksPage() {
                     maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search tasks"
-                    className="w-full border border-border bg-background pl-9 pr-3 text-sm"
+                    className="h-11 min-h-11 w-full rounded-full border border-border bg-background pl-9 pr-3 text-sm"
                   />
                 </label>
                 <TabsList aria-label="Task filters" className="kova-task-filters rounded-full">

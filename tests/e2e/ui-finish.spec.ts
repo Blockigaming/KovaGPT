@@ -70,9 +70,11 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   const dialog = page.getByRole("dialog", { name: "Customize sidebar" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel("Search position").selectOption("navigation");
-  await dialog.getByRole("switch", { name: "Images", exact: true }).click();
+  await expect(dialog.getByRole("switch", { name: "Images", exact: true })).toHaveCount(0);
+  await dialog.getByRole("switch", { name: "Projects", exact: true }).click();
   await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(sidebar.getByRole("link", { name: "Images", exact: true })).toHaveCount(0);
+  await expect(sidebar.getByRole("link", { name: "Projects", exact: true })).toHaveCount(0);
   await expect(sidebar.getByRole("button", { name: "Search chats", exact: true })).toBeVisible();
   await expect(sidebar.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
   const trigger = sidebar.getByRole("button", { name: "Account menu" });

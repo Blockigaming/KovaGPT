@@ -2,10 +2,10 @@
    CG-LIBRARY structure with CG-SDK geometry; list dimensions are an adaptation. */
 .kova-app-shell[data-ui="modern"]
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects {
-  --page-max: 1040px;
+  --page-max: none;
   --page-padding: 32px clamp(16px, 3vw, 32px) max(48px, var(--safe-bottom));
   width: 100%;
-  max-width: 1040px;
+  max-width: none;
   padding: var(--page-padding);
   gap: 32px;
   container-name: project-directory;
@@ -58,7 +58,7 @@
   .kova-project-directory-search {
   display: block;
   width: 100%;
-  max-width: 760px;
+  max-width: none;
 }
 
 .kova-app-shell[data-ui="modern"]
@@ -390,7 +390,7 @@
 .kova-app-shell[data-ui="modern"]
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
   .kova-grid.kova-file-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 12px;
 }
 
@@ -627,4 +627,18 @@
   .kova-project-directory .kova-project-directory-search input {
     min-height: 44px;
   }
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  :is(.kova-file-filters button, .kova-file-view-toggle, .kova-file-view-toggle button) {
+  border-radius: 999px;
+}
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-view-toggle
+  button {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
 }

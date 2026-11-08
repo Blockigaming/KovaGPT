@@ -121,17 +121,10 @@ test("Library shared preview and item/version inspectors keep bounded, padded sc
   const versionContents = dialogContents(versions);
   assert.equal(
     libraryContents.length,
-    3,
-    "Library retains item, shared-snapshot and recovery dialogs",
+    2,
+    "Library retains its item and existing snapshot inspectors",
   );
-  const recovery = libraryContents.find(
-    (surface) => surface.className === "max-h-[90dvh] overflow-y-auto",
-  );
-  assert.ok(recovery, "Recovery has its own bounded scrolling surface");
-  assert.match(
-    recovery.source,
-    /<ChatTrashPanel key=\{principal \?\? "guest"\} userKey=\{userKey\}/,
-  );
+  assert.doesNotMatch(library, /<ChatTrashPanel/);
   assert.equal(versionContents.length, 1, "Version history uses its own inspector component");
   const shared = libraryContents.find((surface) => surface.className.startsWith("mx-auto gap-0"));
   assert.ok(shared, "Shared snapshots keep their centered responsive preview");

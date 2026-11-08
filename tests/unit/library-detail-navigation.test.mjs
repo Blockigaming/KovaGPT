@@ -314,12 +314,8 @@ test("the route preserves list state, has a clickable parent, and integrates mea
     source,
     /aria-label="Breadcrumb"[\s\S]*?href="\/library"[\s\S]*?closeItemPreview\(\)/,
   );
-  assert.match(source, /Account cloud storage/);
-  assert.match(source, /<StorageDashboard/);
-  assert.match(source, /Loaded file sizes cover this list only and are not account storage usage/);
-  assert.match(source, /Last-modified sorting, project references, and processing status are not/);
-  assert.match(source, /File Trash and moving files to projects are not supported/);
-  assert.match(source, /Rename saved title\s+changes only the Library title/);
+  assert.doesNotMatch(source, /aria-label="Library details and availability"/);
+  assert.match(readFileSync("src/components/SettingsDialog.tsx", "utf8"), /StorageDashboard/);
 });
 
 function routeCallbacks() {

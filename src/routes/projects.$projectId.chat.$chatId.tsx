@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
@@ -27,13 +27,14 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { PROJECT_CHAT_DELETE_UNAVAILABLE } from "@/lib/project-chat-deletion";
+import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { authFetch } from "@/lib/auth-fetch";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
 import { loadDraft, saveDraft, type Message } from "@/lib/chat-store";
 import { normalizeResponseSources, type ResponseSource } from "@/lib/response-sources";
 import {
   getProjectChat,
+  deleteProjectChat,
   saveProjectChat,
   getProject,
   type ProjectChatMessage,
@@ -52,6 +53,9 @@ function isAbortError(error: unknown) {
 }
 
 function ProjectChatPage() {
+  const navigate = useNavigate();
+  const deleteChat = useServerFn(deleteProjectChat);
+  const [deleting, setDeleting] = useState(false);
   const { projectId, chatId } = Route.useParams();
   const { isSignedIn, isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
@@ -498,24 +502,46 @@ function ProjectChatPage() {
               variant="ghost"
               size="icon"
               className="h-11 w-11"
-              disabled
-              aria-label={`Delete ${title} unavailable`}
-              aria-describedby="project-chat-delete-unavailable"
-              title={PROJECT_CHAT_DELETE_UNAVAILABLE}
+              disabled={sending || deleting}
+              aria-label={`Delete ${title} permanently`}
+              title="Delete chat permanently"
+              onClick={async () => {
+                const key = requestKey;
+                if (!key || sending || deleting || mutationOperationRef.current) return;
+                if (
+                  !(await confirmPermanentChat(title, false)) ||
+                  !mountedRef.current ||
+                  currentRequestKeyRef.current !== key
+                )
+                  return;
+                setDeleting(true);
+                const operation = Symbol("delete project chat");
+                mutationOperationRef.current = operation;
+                try {
+                  await deleteChat({ data: { id: chatId } });
+                  if (!mountedRef.current || currentRequestKeyRef.current !== key) return;
+                  setInput("");
+                  setMessages([]);
+                  toast.success("Chat permanently deleted");
+                  void navigate({ to: "/projects/$projectId", params: { projectId } });
+                } catch (error) {
+                  if (currentRequestKeyRef.current === key)
+                    toast.error(
+                      error instanceof Error ? error.message : "Chat could not be deleted.",
+                    );
+                } finally {
+                  if (mountedRef.current && currentRequestKeyRef.current === key) {
+                    if (mutationOperationRef.current === operation)
+                      mutationOperationRef.current = null;
+                    setDeleting(false);
+                  }
+                }
+              }}
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </header>
-        {canEdit && (
-          <p
-            id="project-chat-delete-unavailable"
-            className="px-5 py-2 text-xs text-muted-foreground"
-            role="note"
-          >
-            {PROJECT_CHAT_DELETE_UNAVAILABLE}
-          </p>
-        )}
 
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
           {visibleMessages.length === 0 ? (

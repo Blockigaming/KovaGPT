@@ -100,7 +100,8 @@ test("retired modes and unsupported product promises stay off public routes", ()
     /Deepest reasoning/i,
   ];
 
-  assert.match(pricing, /Proposed pricing\. Contact sales to confirm availability/);
+  assert.match(pricing, /Get Team/);
+  assert.doesNotMatch(pricing, /Contact sales about Team/);
   for (const claim of forbiddenClaims) {
     assert.doesNotMatch(publishedSources, claim);
   }

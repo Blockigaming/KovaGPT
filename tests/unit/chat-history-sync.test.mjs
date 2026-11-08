@@ -356,11 +356,13 @@ test("durable reload rejects foreign owner, altered body hashes and Temporary sn
   await assert.rejects(restoreChatHistoryState(temporary, OWNER), /invalid/);
 });
 function controllerHarness(transport, commitDevice = async () => {}) {
+  let clock = Date.now();
   const abort = new AbortController(),
     changes = [],
     statuses = [];
   const controller = createChatHistoryController({
     ownerId: OWNER,
+    now: () => clock,
     signal: abort.signal,
     loadDevice: async () => null,
     commitDevice,
@@ -369,7 +371,15 @@ function controllerHarness(transport, commitDevice = async () => {}) {
     changed: (value) => changes.push(value),
     status: (value) => statuses.push(value),
   });
-  return { controller, abort, changes, statuses };
+  return {
+    controller,
+    abort,
+    changes,
+    statuses,
+    advance: (ms = 61000) => {
+      clock += ms;
+    },
+  };
 }
 test("local editor dirtiness aborts a pending cloud commit before it can replace the draft", async () => {
   const begun = defer();
@@ -451,6 +461,8 @@ test("lost accepted response is reconciled by mutation identity without a duplic
   h.controller.markDirty();
   await h.controller.write([chat()], false);
   await h.controller.pump();
+  assert.ok(h.controller.retryDelay > 0);
+  h.advance();
   await h.controller.pump();
   assert.equal(writes, 1);
   assert.equal(h.controller.getState().records.chat.dirty, false);
@@ -535,4 +547,30 @@ test("delayed archive followed by an already-captured autosave cannot unarchive 
   await h.controller.write([], false, true);
   assert.ok(h.controller.getState().records.chat.local);
   assert.equal(h.controller.getState().records.chat.archived, true);
+});
+
+test("rate-limit responses respect Retry-After without discarding pending changes", async () => {
+  let calls = 0;
+  const h = controllerHarness(async () => {
+    calls++;
+    throw Object.assign(new Error("chat_history_rate_limited"), { status: 429, retryAfter: 60 });
+  });
+  await h.controller.initialize();
+  await h.controller.pump();
+  await h.controller.pump();
+  assert.equal(calls, 1);
+  assert.equal(h.controller.retryDelay, 60000);
+  h.advance(60001);
+  await h.controller.pump();
+  assert.equal(calls, 2);
+});
+
+test("confirmed permanent deletion rebases over concurrent cloud edits without restoring content", async () => {
+  let state = await applyChatHistoryPage(await loaded(), page([row(chat())]));
+  state = await updateChatHistoryList(state, [], false);
+  state = await applyChatHistoryPage(state, page([row(chat("chat", "new cloud edit"), 2, 2)]));
+  assert.equal(state.records.chat.local, null);
+  assert.equal(state.records.chat.conflict, null);
+  assert.equal(nextChatHistoryRequest(state).payload, null);
+  assert.equal(nextChatHistoryRequest(state).expectedRevision, 2);
 });

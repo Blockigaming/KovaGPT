@@ -57,23 +57,16 @@ test("metadata fields live in the closed-by-default Filters popover while active
     assert.ok(chips.getText(parsed).includes(reset));
 });
 
-test("Library utilities share one quiet row and loaded file sizes stay within Details", () => {
-  const utilities = elementWithClass("spec400-library-secondary");
-  const availability = elementWithClass("spec400-library-availability");
-  assert.ok(hasAncestor(availability, utilities));
-  for (const label of ["Shared chats", "Folders", "Refresh Library"])
-    assert.ok(utilities.getText(parsed).includes(label));
-  assert.match(availability.getText(parsed), /Loaded file sizes:/);
+test("Library omits secondary panels and keeps Refresh with Upload", () => {
+  assert.equal(elementWithClass("spec400-library-secondary"), undefined);
+  assert.equal(elementWithClass("spec400-library-availability"), undefined);
+  assert.doesNotMatch(library, /<ChatTrashPanel|<LibraryFolderOrganizer/);
   const header = nodes.find(
     (node) =>
       ts.isJsxSelfClosingElement(node) && node.tagName.getText(parsed) === "WorkspacePageHeader",
   );
-  assert.doesNotMatch(header.getText(parsed), /meta=|Refresh Library/);
+  assert.match(header.getText(parsed), /Refresh Library/);
   assert.match(header.getText(parsed), /setUploadOpen\(true\)/);
-  assert.match(
-    css,
-    /\.spec400-library-secondary summary\s*\{[^}]*font-size: 0\.8125rem;[^}]*font-weight: 400;/,
-  );
 });
 
 test("Library preview combines title and metadata in one minimum 44px target without clipping long names", () => {

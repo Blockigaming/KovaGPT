@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Stripe.js uses the pure entry and initializes only for an opened checkout", async () => {
+test("hosted checkout needs no Stripe.js; legacy SDK loading remains lazy", async () => {
   const [stripe, checkout, hook, responsive, migration] = await Promise.all([
     read("src/lib/stripe.ts"),
     read("src/components/StripeEmbeddedCheckout.tsx"),
@@ -25,9 +25,10 @@ test("Stripe.js uses the pure entry and initializes only for an opened checkout"
     /if \(!stripePromise\)[\s\S]*getBillingClientConfiguration\(\)[\s\S]*loadStripe\(token\)/,
   );
 
-  assert.match(checkout, /const stripe = useMemo\(\(\) => \{[\s\S]*?return getStripe\(\)/);
-  assert.match(checkout, /<EmbeddedCheckoutProvider key=\{attemptKey\} stripe=\{stripe\}/);
-  assert.match(checkout, /if \(checkoutErrorMessage \|\| !stripe\)/);
+  assert.doesNotMatch(checkout, /getStripe\(|EmbeddedCheckoutProvider|<iframe/);
+  assert.match(checkout, /createCheckoutSession/);
+  assert.match(checkout, /window\.location\.assign\(url\.href\)/);
+  assert.match(checkout, /url\.origin !== "https:\/\/checkout\.stripe\.com"/);
   assert.match(
     hook,
     /const checkoutElement =\s*isOpen && options \? \(\s*<Suspense[\s\S]*?<StripeEmbeddedCheckout \{\.\.\.options\} \/>[\s\S]*?<\/Suspense>\s*\) : null;/,

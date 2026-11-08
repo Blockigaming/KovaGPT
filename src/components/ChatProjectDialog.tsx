@@ -233,7 +233,8 @@ export function ChatProjectDialog({
           source: conversation,
           isCurrent,
           readActive: () => loadConversations(principalId),
-          archive: (chat) => archiveConversation(principalId, chat),
+          archive: async () =>
+            !conversation.messages.some((message) => message.attachments?.length),
           remove: (items) =>
             saveConversations(principalId, items, { snapshot: chatHistorySnapshot(principalId) }),
         });
@@ -268,8 +269,9 @@ export function ChatProjectDialog({
           </DialogTitle>
           <DialogDescription>
             Move this chat’s text into a project. Project members can view it. After the project
-            copy is saved, the original goes to Archived chats for recovery. Attachments stay with
-            the archived original. Future replies in the project update only the project chat.
+            copy is saved, the original leaves your chat list. If the chat has attachments, its
+            original stays in your chat list because attachments are not copied. Future replies in
+            the project update only the project chat.
           </DialogDescription>
         </DialogHeader>
         {!canAccess ? (
@@ -281,7 +283,7 @@ export function ChatProjectDialog({
             <p role="status" className="text-sm">
               {added.moved
                 ? `Moved to ${added.name}.`
-                : `Saved to ${added.name}. The original was kept because it changed or could not be archived. You can open the project copy below.`}
+                : `Saved to ${added.name}. The original was kept because it changed or could not be moved. You can open the project copy below.`}
             </p>
             <Button asChild className="w-full">
               <Link

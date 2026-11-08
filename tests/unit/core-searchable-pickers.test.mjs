@@ -315,7 +315,6 @@ test("Settings retains all primary sections and includes a legacy current sectio
       "personalization",
       "security",
       "email",
-      "archived",
       "parental",
       "voice",
       "storage",
@@ -381,66 +380,11 @@ test("Project and Work dynamic pickers retain ids, disabled state, placeholders 
   );
 });
 
-test("Scheduled Task dynamic pickers preserve file additions, consent reset, grant invalidation and source ids", () => {
-  const elements = pickerElements("src/components/ScheduledTaskEditor.tsx");
-  assert.equal(elements.length, 4);
-  const refs = [];
-  const fileValues = {
-    control: "field",
-    options: [{ id: "file-id", label: "Notes", projectId: "project-id" }],
-    refs,
-    kind: "project_file",
-    setRefs: (updater) => refs.push(...updater([])),
-  };
-  const file = renderElement(elements[0], fileValues);
-  assert.equal(file.props.value, "");
-  file.props.onValueChange("file-id");
-  assert.equal(refs[0].kind, "project_file");
-  assert.equal(refs[0].id, "file-id");
-  assert.equal(refs[0].projectId, "project-id");
-  const changes = [];
-  const connections = [{ id: "connection-id", provider: "gmail", label: "Work account" }];
-  const connection = renderElement(elements[1], {
-    control: "field",
-    connections,
-    connectionId: "",
-    setConnectionId: (value) => changes.push(["connection", value]),
-    setConnectionConsent: (value) => changes.push(["consent", value]),
-  });
-  connection.props.onValueChange("connection-id");
-  assert.deepEqual(changes, [
-    ["connection", "connection-id"],
-    ["consent", false],
-  ]);
-  const resourceRead = { current: 2 };
-  const approval = renderElement(elements[2], {
-    control: "field",
-    resourceRead,
-    connections,
-    grants: [{ id: "grant-id", provider: "gmail", connection_ref: "connection-id" }],
-    grantId: "",
-    setGrantId: (value) => changes.push(["grant", value]),
-    setResources: (value) => changes.push(["resources", value.length]),
-    setResource: (value) => changes.push(["resource", value]),
-    setResourceCursor: (value) => changes.push(["cursor", value]),
-  });
-  approval.props.onValueChange("grant-id");
-  assert.equal(resourceRead.current, 3);
-  assert.equal(approval.props.options[0].label, "gmail · Work account");
-  assert.deepEqual(changes.slice(2), [
-    ["grant", "grant-id"],
-    ["resources", 0],
-    ["resource", ""],
-    ["cursor", null],
-  ]);
-  const resource = renderElement(elements[3], {
-    control: "field",
-    resource: "",
-    resources: [{ id: "source-id", label: "Inbox" }],
-    setResource: (value) => changes.push(["resource", value]),
-  });
-  resource.props.onValueChange("source-id");
-  assert.deepEqual(changes.at(-1), ["resource", "source-id"]);
+test("Scheduled Task editor has no context or connection pickers", () => {
+  assert.equal(pickerElements("src/components/ScheduledTaskEditor.tsx").length, 0);
+  const editor = source("src/components/ScheduledTaskEditor.tsx");
+  assert.doesNotMatch(editor, /Saved chat or uploaded context|Connected sources and event filters/);
+  assert.match(editor, /contextRefs: refs/);
 });
 
 const branches = (count) =>

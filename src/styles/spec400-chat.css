@@ -589,6 +589,9 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 .spec400-recent-work a {
   display: flex;
@@ -596,8 +599,8 @@
   justify-content: space-between;
   gap: 16px;
   min-height: 56px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 16px;
+  border: 1px solid var(--border);
   color: var(--foreground);
   text-decoration: none;
 }
@@ -812,11 +815,12 @@
   justify-content: space-between;
   gap: 16px;
   min-height: 56px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 16px;
+  border: 1px solid var(--border);
   color: var(--foreground);
   text-align: left;
-  border-radius: var(--kova-radius-compact);
+  border-radius: 20px;
+  flex-wrap: wrap;
 }
 .spec400-recent-work button:hover {
   background: var(--accent);
@@ -1102,5 +1106,16 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   .spec400-composer-tools > [aria-label="Context"],
   .spec400-composer-tools > [aria-label="Options"] {
     display: none;
+  }
+}
+
+@media (max-width: 540px) {
+  .spec400-recent-work ul {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .spec400-recent-work button {
+    padding: 16px;
+    border-radius: 20px;
   }
 }

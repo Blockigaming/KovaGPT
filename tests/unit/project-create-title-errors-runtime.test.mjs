@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { z } from "zod";
 import {
   createHookHarness,
   elements,
@@ -28,6 +29,8 @@ const components = Object.fromEntries(
     "Textarea",
     "Link",
     "SearchablePicker",
+    "ProjectAppearanceEditor",
+    "ProjectIcon",
   ].map((name) => [name, name]),
 );
 function compile(source, deps) {
@@ -75,6 +78,8 @@ function base() {
     },
     deps: {
       React,
+      projectAppearance: loadUiModule("src/lib/project-appearance.ts", { zod: { z } })
+        .projectAppearance,
       ...components,
       ...h.react,
       document,

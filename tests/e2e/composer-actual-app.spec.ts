@@ -340,10 +340,8 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
     },
     { owner, chatA },
   );
-  expect(retained.record.archived).toBe(true);
-  expect(retained.record.local.messages).toEqual(
-    expect.arrayContaining([expect.objectContaining({ content: "Draft a release checklist." })]),
-  );
+  // Moving stores the durable project copy and removes the ordinary-history source.
+  expect(retained.record?.local ?? null).toBeNull();
   expect(retained.draft).toBe("Keep this unsent draft");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(input).toHaveValue("Keep this unsent draft");
