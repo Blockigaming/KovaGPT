@@ -14,7 +14,7 @@ export function buildMonthlyIntroSessionParams(input: {
     integration_identifier: "kovagpt_checkout_wshrfyef",
     line_items: [{ price: input.priceId, quantity: 1 }],
     mode: "subscription",
-    ui_mode: "hosted",
+    ui_mode: "hosted_page",
     success_url: input.returnUrl,
     cancel_url: `${new URL(input.returnUrl).origin}/pricing`,
     expires_at: input.expiresAt,

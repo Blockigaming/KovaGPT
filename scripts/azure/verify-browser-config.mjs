@@ -344,6 +344,7 @@ export function verifyBrowserConfig({
     "The optional Stripe browser key must be a publishable key",
   );
   let stripeExecutableOccurrences = 0;
+  let hostedCheckoutExecutableOccurrences = 0;
   const discoveredStripeKeys = new Set();
   const normalizedSourceSha = normalizeSourceSha(sourceSha);
   const normalizedSourceTree = normalizeSourceTree(sourceTree);
@@ -411,6 +412,10 @@ export function verifyBrowserConfig({
       executableExpectedUrlOccurrences += urlOccurrences;
       executableExpectedKeyOccurrences += keyOccurrences;
       if (stripeKey) stripeExecutableOccurrences += countOccurrences(text, stripeKey);
+      hostedCheckoutExecutableOccurrences += countOccurrences(
+        text,
+        "kova-stripe-checkout:hosted-v1",
+      );
     }
     for (const match of text.matchAll(BROWSER_AUTH_MODE_PATTERN)) {
       discoveredAuthModes.add(match[1]);
@@ -496,7 +501,7 @@ export function verifyBrowserConfig({
     "An unexpected Stripe publishable key was detected in browser assets",
   );
   assertCondition(
-    !stripeKey || stripeExecutableOccurrences > 0,
+    !stripeKey || stripeExecutableOccurrences > 0 || hostedCheckoutExecutableOccurrences > 0,
     "The intended Stripe publishable key was not found in executable browser assets",
   );
 
@@ -510,7 +515,16 @@ export function verifyBrowserConfig({
     supabaseProjectRef: projectRef,
     supabaseUrl: normalizedUrl,
     publishableKeySha256: sha256(normalizedKey),
+    // Hosted checkout does not ship Stripe.js or its key. Preserve the configured
+    // input fingerprint for existing release consumers, and explicitly attest
+    // the hosted experience and absence/presence of a compiled browser key.
     stripePublishableKeySha256: stripeKey ? sha256(stripeKey) : null,
+    ...(hostedCheckoutExecutableOccurrences > 0
+      ? {
+          stripeCheckoutExperience: "hosted",
+          stripeExecutableKeyOccurrences: stripeExecutableOccurrences,
+        }
+      : {}),
     browserBundleSha256: bundleHash.digest("hex"),
     scannedFiles: browserFiles.length,
     executableFiles: browserFiles.filter((file) => file.executable).length,

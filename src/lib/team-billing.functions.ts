@@ -206,7 +206,7 @@ export const createTeamCheckout = createServerFn({ method: "POST" })
           {
             integration_identifier: "kovagpt_team_checkout_xcrqvpza",
             mode: "subscription",
-            ui_mode: "hosted",
+            ui_mode: "hosted_page",
             customer: team.customer_id!,
             client_reference_id: team.checkout_generation,
             line_items: lineItems,
