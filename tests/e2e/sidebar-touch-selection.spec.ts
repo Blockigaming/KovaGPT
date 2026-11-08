@@ -276,6 +276,11 @@ test("touch hold opens chat actions without navigating and scrolling cancels it"
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
+  const destinations = sidebar.locator(".kova-sidebar-destinations");
+  await expect(destinations).toHaveCSS(
+    "display",
+    page.viewportSize()!.width < 1024 ? "flex" : "contents",
+  );
   const row = sidebar.locator(".kova-chat-row-main").first();
   const pointer = {
     pointerId: 99,

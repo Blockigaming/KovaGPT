@@ -142,6 +142,13 @@ for (const role of ["user", "assistant"] as const) {
     const viewerBounds = (await viewer.boundingBox())!;
     expect(viewerBounds.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
     expect(viewerBounds.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+    if (page.viewportSize()!.width >= 1024) {
+      expect(viewerBounds.x).toBeGreaterThan(0);
+      expect(viewerBounds.width).toBeLessThan(page.viewportSize()!.width);
+    } else {
+      expect(viewerBounds.x).toBeCloseTo(0, 0);
+      expect(viewerBounds.width).toBeCloseTo(page.viewportSize()!.width, 0);
+    }
     await page.screenshot({
       path: info.outputPath(`${role}-image-viewer.png`),
       animations: "disabled",

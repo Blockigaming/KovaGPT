@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { clampImageView, type ImageView } from "@/lib/image-viewer-geometry";
 
 /** A touch-first viewer; all image operations remain explicit user actions. */
 export default function ChatImageViewer({
@@ -23,6 +24,19 @@ export default function ChatImageViewer({
     window.addEventListener("resize", reset);
     return () => window.removeEventListener("resize", reset);
   }, []);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  function bounded(view: ImageView) {
+    const canvas = canvasRef.current,
+      image = imageRef.current;
+    return canvas && image
+      ? clampImageView(
+          view,
+          { width: image.clientWidth, height: image.clientHeight },
+          { width: canvas.clientWidth, height: canvas.clientHeight },
+        )
+      : view;
+  }
   const points = useRef(new Map<number, { x: number; y: number }>());
   const previous = useRef<{ x: number; y: number; distance: number } | null>(null);
   function geometry() {
@@ -39,7 +53,7 @@ export default function ChatImageViewer({
   function zoom(delta: number) {
     setView((v) => {
       const scale = Math.min(5, Math.max(1, v.scale + delta));
-      return scale === 1 ? { scale, x: 0, y: 0 } : { ...v, scale };
+      return bounded({ ...v, scale });
     });
   }
   const control =
@@ -83,6 +97,7 @@ export default function ChatImageViewer({
           </div>
           <div
             className="relative flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden"
+            ref={canvasRef}
             data-image-viewer-canvas=""
             onPointerDown={(event) => {
               if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -93,7 +108,6 @@ export default function ChatImageViewer({
             onPointerMove={(event) => {
               if (!points.current.has(event.pointerId)) return;
               points.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-              const bounds = event.currentTarget.getBoundingClientRect();
               const next = geometry(),
                 last = previous.current;
               if (next && last)
@@ -107,18 +121,7 @@ export default function ChatImageViewer({
                         : v.scale,
                     ),
                   );
-                  if (scale === 1) return { scale, x: 0, y: 0 };
-                  return {
-                    scale,
-                    x: Math.max(
-                      (-bounds.width * (scale - 1)) / 2,
-                      Math.min((bounds.width * (scale - 1)) / 2, v.x + next.x - last.x),
-                    ),
-                    y: Math.max(
-                      (-bounds.height * (scale - 1)) / 2,
-                      Math.min((bounds.height * (scale - 1)) / 2, v.y + next.y - last.y),
-                    ),
-                  };
+                  return bounded({ scale, x: v.x + next.x - last.x, y: v.y + next.y - last.y });
                 });
               previous.current = next;
             }}
@@ -136,6 +139,7 @@ export default function ChatImageViewer({
             }}
           >
             <img
+              ref={imageRef}
               src={src}
               alt={alt}
               draggable={false}
