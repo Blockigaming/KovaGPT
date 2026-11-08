@@ -5,6 +5,7 @@ import {
   runProductionEmailWorker,
 } from "@/lib/kova-email-worker.server.mjs";
 import { readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
+import { retryTeamInvitationEmail } from "@/lib/team-invitations.server";
 
 export const Route = createFileRoute("/api/internal/email-dispatch")({
   server: {
@@ -31,10 +32,10 @@ export const Route = createFileRoute("/api/internal/email-dispatch")({
           return Response.json({ ok: false, error: "unauthorized" }, { status: 401, headers });
         }
         try {
-          return Response.json(
-            { ok: true, ...(await runProductionEmailWorker(run, config)) },
-            { headers },
-          );
+          const summary = await runProductionEmailWorker(run, config);
+          const teamEmailAttempted =
+            summary.claimed && summary.attempted === 0 ? await retryTeamInvitationEmail() : 0;
+          return Response.json({ ok: true, ...summary, teamEmailAttempted }, { headers });
         } catch {
           return Response.json(
             { ok: false, error: "email_worker_pending" },

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 216,
-  "latest": "20261108013500_kova_team_premium_usage.sql",
+  "count": 217,
+  "latest": "20261108034500_team_email_invitations.sql",
   "migrations": [
     {
       "order": 1,
@@ -4590,6 +4590,31 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 217,
+      "filename": "20261108034500_team_email_invitations.sql",
+      "timestamp": "20261108034500",
+      "sha256": "7add335e9ec75a86c8c1c3c907bc224071785bf7fc7e09f755c4ae69d4408a38",
+      "tables": ["team_email_invitations"],
+      "functions": [
+        "prepare_team_email_invitation",
+        "claim_team_email_invitation",
+        "finalize_team_email_invitation",
+        "manage_team_email_invitation",
+        "list_team_email_invitations",
+        "claim_team_invitation_email"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["team_email_invitations"],
+      "policies": [],
+      "indexes": [
+        "team_email_invitation_recipient",
+        "team_email_invitation_billing",
+        "team_email_invitation_recipient_lookup"
+      ]
     }
   ]
 }

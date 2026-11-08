@@ -139,5 +139,7 @@ export async function projectTeamStripeEvent(event: {
     if (hold.error) throw new Error("Team billing review could not be saved.");
   }
   await reconcileTeam(result.data as TeamRow);
+  const { reconcileTeamEmailInvitations } = await import("./team-invitations.server");
+  await reconcileTeamEmailInvitations(await readTeam(result.data.id));
   return true;
 }

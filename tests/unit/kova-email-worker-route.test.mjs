@@ -12,9 +12,16 @@ const source = ts.transpileModule(
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   },
 ).outputText;
-function fixture({ enabled = true, failure = false, publicOrigin = "https://kovagpt.com" } = {}) {
+function fixture({
+  enabled = true,
+  failure = false,
+  publicOrigin = "https://kovagpt.com",
+  claimed = true,
+  attempted = 0,
+} = {}) {
   const calls = [],
     exports = {};
+  const invitationCalls = [];
   const modules = {
     "@tanstack/react-router": {
       createFileRoute: (path) => {
@@ -34,10 +41,16 @@ function fixture({ enabled = true, failure = false, publicOrigin = "https://kova
       runProductionEmailWorker: async (run) => {
         calls.push(run);
         if (failure) throw new Error("private-key-and-provider-content");
-        return { claimed: true, attempted: 0, auth: null, account: null };
+        return { claimed, attempted, auth: null, account: null };
       },
     },
     "@/lib/endpoint-reliability.mjs": reliability,
+    "@/lib/team-invitations.server": {
+      retryTeamInvitationEmail: async () => {
+        invitationCalls.push(true);
+        return 1;
+      },
+    },
   };
   vm.runInNewContext(source, {
     exports,
@@ -49,7 +62,11 @@ function fixture({ enabled = true, failure = false, publicOrigin = "https://kova
       return modules[name];
     },
   });
-  return { calls, handle: (request) => exports.Route.server.handlers.POST({ request }) };
+  return {
+    calls,
+    invitationCalls,
+    handle: (request) => exports.Route.server.handlers.POST({ request }),
+  };
 }
 function request({ body = "{}", origin = "https://kovagpt.com", signature = true } = {}) {
   const run = { runId: "10000000-0000-4000-8000-000000000001", issuedAt: new Date().toISOString() };
@@ -71,6 +88,7 @@ test("only a valid signed exact production request with fixed {} body reaches wo
   const response = await f.handle(request());
   assert.equal(response.status, 200);
   assert.equal(f.calls.length, 1);
+  assert.equal(f.invitationCalls.length, 1);
   assert.equal(response.headers.get("Cache-Control"), "no-store");
   for (const options of [
     { body: '{"recipient":"other@example.test"}' },
@@ -83,7 +101,17 @@ test("only a valid signed exact production request with fixed {} body reaches wo
     const rejected = await f.handle(request(options));
     assert.equal(rejected.status, 401);
     assert.equal(f.calls.length, 1);
+    assert.equal(f.invitationCalls.length, 1);
     assert.deepEqual(await rejected.json(), { ok: false, error: "unauthorized" });
+  }
+});
+test("Team email retries require a fresh worker claim and spare send capacity", async () => {
+  for (const options of [{ claimed: false }, { attempted: 1 }]) {
+    const f = fixture(options);
+    const response = await f.handle(request());
+    assert.equal(response.status, 200);
+    assert.equal(f.invitationCalls.length, 0);
+    assert.equal((await response.json()).teamEmailAttempted, 0);
   }
 });
 test("disabled configuration and uncertain worker return safe errors without raw content", async () => {
