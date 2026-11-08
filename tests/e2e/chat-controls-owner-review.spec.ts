@@ -61,7 +61,8 @@ test("response is unboxed with five ordered actions, public response sharing, an
   await expect(
     toolbar.getByRole("button", { name: "Saved to Library", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page.waitForTimeout(2200); // The previous implementation incorrectly cleared the saved state at two seconds.
+  await toolbar.getByRole("button", { name: "Saved to Library", exact: true }).click();
+  await page.waitForTimeout(2200); // Saving again must not clear the filled bookmark after two seconds.
   await expect(
     toolbar.getByRole("button", { name: "Saved to Library", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -110,12 +111,15 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
   await expect(offer.getByText("Free offer", { exact: true })).toBeVisible();
   await expect(offer).toHaveCSS("display", /^(inline-)?flex$/);
   await expect(offer).toHaveCSS("color", "rgb(56, 189, 248)");
-  const iconBox = await offer.locator("svg").boundingBox();
-  const labelBox = await offer.getByText("Free offer", { exact: true }).boundingBox();
-  expect(iconBox!.x + iconBox!.width).toBeLessThanOrEqual(labelBox!.x);
-  expect(
-    Math.abs(iconBox!.y + iconBox!.height / 2 - labelBox!.y - labelBox!.height / 2),
-  ).toBeLessThan(2);
+  // Read both boxes in one frame: opening the returning sidebar can move the header.
+  const { iconBox, labelBox } = await offer.evaluate((node) => ({
+    iconBox: node.querySelector("svg")!.getBoundingClientRect().toJSON(),
+    labelBox: node.querySelector("span")!.getBoundingClientRect().toJSON(),
+  }));
+  expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(labelBox.x);
+  expect(Math.abs(iconBox.y + iconBox.height / 2 - labelBox.y - labelBox.height / 2)).toBeLessThan(
+    2,
+  );
   await offer.click();
   const dialog = page.getByRole("dialog", {
     name: "50% off your first month of Plus",

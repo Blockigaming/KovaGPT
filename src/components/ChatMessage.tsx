@@ -793,7 +793,6 @@ function ChatMessageInner({
     if (message.id && savedIds.includes(message.id)) {
       setSaved(true);
       toast.info("Already in your Library.");
-      setTimeout(() => setSaved(false), 2000);
       return;
     }
     setSaving(true);
