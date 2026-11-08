@@ -73,7 +73,9 @@ test("checkout uses an account-bound page with truthful loading and safe errors"
   ]);
   assert.doesNotMatch(pricing, /<Dialog/);
   assert.match(subscribe, /<main/);
-  assert.match(subscribe, /Complete your subscription/);
+  assert.doesNotMatch(subscribe, /Complete your subscription|Continue to payment|PageFooter/);
+  assert.match(subscribe, /Opening checkout/);
+  assert.match(subscribe, /autoStart/);
   assert.match(subscribe, /Back to plans/);
   assert.match(subscribe, /!isLoaded/);
   assert.match(subscribe, /!isSignedIn/);
@@ -82,7 +84,8 @@ test("checkout uses an account-bound page with truthful loading and safe errors"
   assert.match(checkout, /const CHECKOUT_ERROR_MESSAGE =/);
   assert.match(checkout, /const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =/);
   assert.match(checkout, /SAFE_CHECKOUT_ERRORS\.has\(reason\.message\)/);
-  assert.match(checkout, /current\.current !== scope/);
+  assert.match(checkout, /current\.current === scope && generation\.current === token/);
+  assert.match(checkout, /pending\.current/);
   assert.match(checkout, /url\.origin !== "https:\/\/checkout\.stripe\.com"/);
   assert.match(checkout, /window\.location\.assign\(url\.href\)/);
   assert.doesNotMatch(

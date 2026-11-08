@@ -129,7 +129,7 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
   );
   assert.match(
     message,
-    /<DropdownMenuItem onSelect=\{\(\) => onRetry\(\)\}>[\s\S]{0,100}Try again/u,
+    /<DropdownMenuItem onSelect=\{\(\) => onRetry\?\.\(\)\} disabled=\{!onRetry\}>[\s\S]{0,100}Try again/u,
   );
   assert.match(message, /message\.generationStatus \? "Retry response" : "Regenerate response"/u);
   assert.match(homeChat, /generationStatus: "failed"/u);

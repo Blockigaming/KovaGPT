@@ -211,7 +211,9 @@ test("actual route and UI bind attribution to prompt assembly, current generatio
   assert.match(fn, /middleware\(\[requireSupabaseAuth\]\)/);
   assert.match(fn, /inspectMemorySources\(context\.supabase, context\.userId, data\)/);
   assert.match(fn, /private, no-store/);
-  assert.match(read("src/components/ChatMessage.tsx"), /Memory provided/);
+  assert.match(read("src/components/ConversationSourcesView.tsx"), /<span>Memory<\/span>/);
+  assert.match(read("src/components/ConversationSourcesView.tsx"), /onOpenMemory\(entry\.sources\)/);
+  assert.match(read("src/components/ConversationHeaderActions.tsx"), /<MemorySourcesDialog/);
   assert.match(
     read("src/components/EmailShareChatDialog.tsx"),
     /prepareShareSnapshot\(conversation, email, myEmail\)/,

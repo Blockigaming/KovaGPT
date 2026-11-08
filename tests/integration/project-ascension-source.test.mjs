@@ -47,7 +47,11 @@ test("chat retirement has no archive UI or recoverable Trash path", async () => 
   assert.doesNotMatch(chat, /historyAction\("archive", id\)/);
   assert.match(history, /permanentlyDeleteChat\(context\.ownerId, chat, context\.current\)/);
   assert.match(shell, /permanentlyDeleteChat\(userKey, chat, current\)/);
-  assert.match(deletion, /confirmPermanentChat/);
+  assert.match(deletion, /deleteChatWithUndo\(owner, chat\.id, current/);
+  const undo = await read("src/lib/chat-delete-undo.ts");
+  assert.match(undo, /Date\.now\(\) \+ 5000/);
+  assert.match(undo, /label: "Undo"/);
   assert.match(deletion, /clearDraft\(owner, chat\.id\)/);
-  assert.doesNotMatch(history, /Undo|moveChatToTrash/);
+  assert.doesNotMatch(history, /moveChatToTrash/);
+  assert.doesNotMatch(deletion, /confirmPermanentChat/);
 });

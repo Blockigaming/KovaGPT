@@ -181,7 +181,10 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
 
   const highImpact = specsByPath.get("tests/e2e/high-impact-chat.spec.ts");
   assert.match(highImpact, /kovagpt:archived:v2:user:22222222-2222-4222-8222-222222222222/);
-  assert.match(highImpact, /name: "Delete permanently", exact: true/);
+  assert.match(
+    highImpact,
+    /name: "Undo", exact: true[\s\S]{0,100}toHaveCount\(0, \{\s*timeout: 10000,?\s*\}\)/,
+  );
   assert.match(highImpact, /await page\.reload\(\);\s*await waitForKovaHydration\(page\);/);
   assert.match(highImpact, /name: "Archived chats"[\s\S]{0,100}toHaveCount\(0\)/);
 
