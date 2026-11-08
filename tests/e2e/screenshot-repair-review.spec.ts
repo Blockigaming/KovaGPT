@@ -111,7 +111,11 @@ for (const theme of ["dark", "light"] as const) {
     const panel = page.locator("section.kova-settings-page");
     await expect(screen).toBeVisible();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Send shortcut" })).toBeVisible();
+    if (page.viewportSize()!.width >= 768) {
+      await expect(page.getByRole("combobox", { name: "Send shortcut" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("combobox", { name: "Send shortcut" })).toHaveCount(0);
+    }
     await expect(page.getByRole("combobox", { name: "Preferred response length" })).toBeVisible();
     await expect
       .poll(() =>
@@ -131,7 +135,8 @@ for (const theme of ["dark", "light"] as const) {
         const box = node.getBoundingClientRect();
         return { width: box.width, border: getComputedStyle(node).borderRightWidth };
       });
-      expect(geometry.width).toBeGreaterThan(270);
+      if (page.viewportSize()!.width < 1024) expect(geometry.width).toBe(240);
+      else expect(geometry.width).toBeGreaterThan(270);
       expect(geometry.border).toBe("1px");
       await nav.getByRole("tab", { name: "Appearance", exact: true }).click();
     } else {

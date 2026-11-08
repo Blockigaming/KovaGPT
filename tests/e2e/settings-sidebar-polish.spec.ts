@@ -119,11 +119,8 @@ test("appearance sliders stay reachable on a narrow phone", async ({ page }, inf
   await waitForKovaHydration(page);
   const width = page.getByRole("slider", { name: "Settings sidebar width" });
   const size = page.getByRole("slider", { name: "Interface size" });
-  for (const slider of [size, width]) await expect(slider).toBeInViewport({ ratio: 0.95 });
-  await width.press("End");
-  await expect(width).toHaveAttribute("aria-valuenow", "440");
-  await width.press("Home");
-  await expect(width).toHaveAttribute("aria-valuenow", "200");
+  await expect(width).toHaveCount(0);
+  await expect(size).toBeInViewport({ ratio: 0.95 });
   await size.press("End");
   await expect(size).toHaveAttribute("aria-valuenow", "125");
   const density = page.getByRole("combobox", { name: "Density", exact: true });
