@@ -97,7 +97,7 @@ test("Knowledge Graph supports keyboard selection and timeline navigation", asyn
   await expect(page).toHaveURL(/\/library$/);
 });
 
-test("response More contains only timestamp and branching and returns focus on dismissal", async ({
+test("response More contains only retry and branching and returns focus on dismissal", async ({
   page,
 }, info) => {
   await linkedFixture(page);
@@ -109,13 +109,12 @@ test("response More contains only timestamp and branching and returns focus on d
     .getByRole("button", { name: "More actions", exact: true });
   await trigger.click();
   const menu = page.getByRole("menu");
-  await expect(menu.getByRole("menuitem")).toHaveCount(1);
+  await expect(menu.getByRole("menuitem")).toHaveCount(2);
+  await expect(menu.getByRole("menuitem", { name: "Try again", exact: true })).toBeVisible();
   await expect(
     menu.getByRole("menuitem", { name: "Branch into new chat", exact: true }),
   ).toBeVisible();
-  await expect(
-    menu.locator("time").or(menu.getByText("Time unavailable", { exact: true })),
-  ).toBeVisible();
+  await expect(menu.locator("time")).toHaveCount(0);
   await expect(menu.getByText("Practice this explanation", { exact: true })).toHaveCount(0);
   await capture(page, info, "minimal-response-menu");
   await page.keyboard.press("Escape");
