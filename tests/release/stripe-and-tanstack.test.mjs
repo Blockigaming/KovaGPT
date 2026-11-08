@@ -44,7 +44,9 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
     /returnUrl: billingReturnUrls\(process\.env\.KOVA_BILLING_RETURN_ORIGIN\)\.checkout/,
   );
   assert.match(policySource, /returnUrl: claim\.returnUrl/);
-  assert.match(paramsSource, /return_url: input\.returnUrl/);
+  assert.match(paramsSource, /ui_mode: "hosted_page"/);
+  assert.match(paramsSource, /success_url: input\.returnUrl/);
+  assert.doesNotMatch(paramsSource, /\breturn_url\s*:/);
   assert.match(
     checkoutSource,
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,
