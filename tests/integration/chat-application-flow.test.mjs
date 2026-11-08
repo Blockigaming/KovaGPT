@@ -324,7 +324,7 @@ function fixture({
               body.model +
               '"}}\n\n',
             'event: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"Reviewed answer."}\n\n',
-            'event: response.completed\ndata: ' +
+            "event: response.completed\ndata: " +
               JSON.stringify({
                 type: "response.completed",
                 response: {
@@ -453,8 +453,7 @@ for (const model of Object.keys(HOSTED_MODEL_MAP)) {
     "ultra",
   ].entries()) {
     test(`${model} ${mode} handles connected-tool review`, async () => {
-      const isNeon = model === "kova-neon-4.6";
-      const expected = isNeon ? Math.min(index, 4) : Math.max(index - 1, 0);
+      const expected = [0, 0, 1, 2, 3, 4][index];
       const f = fixture({
         connectedModel: model,
         connectedMode: mode,
