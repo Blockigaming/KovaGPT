@@ -15,6 +15,13 @@ import {
   teamCheckoutUrl,
 } from "./team-billing-policy.mjs";
 import { readTeam, reconcileTeam, teamRpc, type TeamRow } from "./team-billing.server";
+import {
+  quoteTeamEmailInvitation,
+  sendTeamEmailInvitation,
+  reconcileTeamEmailInvitations,
+  ownedEmailInvitations,
+  type InvitationQuote,
+} from "./team-invitations.server";
 
 const verified = createMiddleware({ type: "function" }).server(async ({ next }) => {
   const auth = await requireVerifiedUser(getRequest());
@@ -43,8 +50,9 @@ export type TeamWorkspaceView = {
     premium: number;
     paidUntil: string | null;
     members: { user_id: string; email?: string; seat: string; state: string }[];
+    emailInvitations: Awaited<ReturnType<typeof ownedEmailInvitations>>;
   }[];
-  invitations: { id: string; name: string; seat: string }[];
+  invitations: { id: string; name: string; seat: string; emailInvitation?: boolean }[];
 };
 export const getTeamWorkspace = createServerFn({ method: "GET" })
   .middleware([verified])
@@ -66,11 +74,21 @@ export const getTeamWorkspace = createServerFn({ method: "GET" })
         ...(members.data ?? []).map((t: { team_id: string }) => t.team_id),
       ]),
     ] as string[];
-    const view: TeamWorkspaceView = { teams: [], invitations: [] };
+    const emailInvites = (await teamRpc("list_team_email_invitations", { p_actor: owner })) as {
+      id: string;
+      teamId: string;
+      name: string;
+      seat: string;
+    }[];
+    const view: TeamWorkspaceView = {
+      teams: [],
+      invitations: emailInvites.map((i) => ({ ...i, emailInvitation: true })),
+    };
     for (const id of ids) {
       let team = await readTeam(id);
       await reconcileTeam(team);
       team = await readTeam(id);
+      await reconcileTeamEmailInvitations(team);
       const membership = members.data?.find((m: { team_id: string }) => m.team_id === id);
       if (membership?.state === "invited" && team.owner_id !== owner) {
         view.invitations.push({ id, name: team.name, seat: membership.seat });
@@ -91,10 +109,53 @@ export const getTeamWorkspace = createServerFn({ method: "GET" })
         premium: team.premium_seats,
         paidUntil: team.paid_until,
         members: team.owner_id === owner ? (rows.data ?? []) : [],
+        emailInvitations: team.owner_id === owner ? await ownedEmailInvitations(id) : [],
       });
     }
     return view;
   });
+export type TeamInvitationReview = { id: string; state: string; quote: InvitationQuote };
+export const reviewTeamInvitation = createServerFn({ method: "POST" })
+  .middleware([verified])
+  .validator((value: unknown) =>
+    z
+      .object({
+        teamId: z.string().uuid(),
+        email: z
+          .string()
+          .trim()
+          .email()
+          .max(254)
+          .transform((v) => v.toLowerCase()),
+        seat: z.enum(["standard", "premium"]),
+      })
+      .strict()
+      .parse(value),
+  )
+  .handler(async ({ data, context }): Promise<TeamInvitationReview> => {
+    const team = await owned(data.teamId, context.userId);
+    await reconcileTeam(team);
+    return quoteTeamEmailInvitation(context.userId, await readTeam(team.id), data.email, data.seat);
+  });
+export const sendTeamInvitation = createServerFn({ method: "POST" })
+  .middleware([verified])
+  .validator((value: unknown) => z.object({ id: z.string().uuid() }).strict().parse(value))
+  .handler(({ data, context }) => sendTeamEmailInvitation(context.userId, data.id));
+export const manageTeamInvitation = createServerFn({ method: "POST" })
+  .middleware([verified])
+  .validator((value: unknown) =>
+    z
+      .object({ id: z.string().uuid(), action: z.enum(["accept", "cancel"]) })
+      .strict()
+      .parse(value),
+  )
+  .handler(async ({ data, context }) => ({
+    ok: await teamRpc("manage_team_email_invitation", {
+      p_actor: context.userId,
+      p_id: data.id,
+      p_action: data.action,
+    }),
+  }));
 export const createTeamCheckout = createServerFn({ method: "POST" })
   .middleware([verified])
   .validator((input: unknown) =>
