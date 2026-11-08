@@ -8,6 +8,7 @@ import {
   DEFAULT_SIDEBAR_SHORTCUTS,
   readSidebarShortcuts,
   saveSidebarShortcuts,
+  sidebarShortcutsKey,
 } from "../../src/lib/sidebar-shortcuts.mjs";
 
 import { SIDEBAR_ITEMS, DEFAULT_SIDEBAR_LAYOUT } from "../../src/lib/sidebar-layout.mjs";
@@ -221,7 +222,7 @@ test("all chosen tools are configurable and Maps retains its release gate", () =
   const approved = fixture({ mapsReleaseApproved: true, railShortcuts: ["maps", "images"] });
   assert.deepEqual(
     controls(approved.find("Additional shortcuts")).map(({ props }) => props["aria-label"]),
-    ["Maps", "Images"],
+    ["Maps"],
   );
   assert.equal(fixture().find("Additional shortcuts"), undefined);
   assert.equal(
@@ -249,7 +250,6 @@ for (const [path, label] of [
   ["/scheduled-tasks/task-1", "Scheduled tasks"],
   ["/library", "Library"],
   ["/apps/plugin-1", "Plugins"],
-  ["/images", "Images"],
 ]) {
   test(`selected destination remains marked on ${path}`, () => {
     const f = fixture({ path, railShortcuts: SIDEBAR_ITEMS.map((item) => item.id) });
@@ -292,16 +292,23 @@ test("Search without a workspace callback opens the existing chat search", () =>
   assert.deepEqual(f.calls, [["local-search", true]]);
 });
 
-test("optional switches preserve legacy stored primary IDs without migration or destructive reset", () => {
+test("legacy Images is filtered without losing other stored choices", () => {
   const values = new Map();
   const storage = {
     getItem: (key) => values.get(key),
     setItem: (key, value) => values.set(key, value),
   };
-  const previous = ["projects", "library", "apps", "scheduled-tasks", "images"];
-  assert.equal(saveSidebarShortcuts(storage, "owner", previous), true);
+  const previous = ["projects", "library", "apps", "scheduled-tasks", "maps", "images"];
+  storage.setItem(
+    sidebarShortcutsKey("owner"),
+    JSON.stringify({ version: 1, shortcuts: previous }),
+  );
   const loaded = readSidebarShortcuts(storage, "owner");
-  assert.deepEqual(loaded, previous);
+  assert.deepEqual(
+    loaded,
+    previous.filter((id) => id !== "images"),
+  );
+  assert.ok(storage.getItem(sidebarShortcutsKey("owner")).includes("images"));
   const handler = nodes
     .find(
       (node) =>
@@ -313,14 +320,14 @@ test("optional switches preserve legacy stored primary IDs without migration or 
   let changed;
   compile(`return (${handler});`, {
     railShortcuts: loaded,
-    shortcut: { id: "images" },
+    shortcut: { id: "maps" },
     changeRailShortcuts: (next) => {
       changed = next;
     },
   })(false);
   assert.deepEqual(
     changed,
-    previous.filter((id) => id !== "images"),
+    previous.filter((id) => id !== "images" && id !== "maps"),
   );
   assert.deepEqual(
     controls(fixture({ railShortcuts: changed }).find("Primary destinations")).map(

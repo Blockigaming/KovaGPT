@@ -1,10 +1,14 @@
+import {
+  projectAppearanceSchema,
+  projectAppearance,
+  type ProjectAppearance,
+} from "./project-appearance";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { loose } from "@/lib/supabase-loose";
 import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
 import { normalizeSourceRetrievedAt } from "./response-source-time.mjs";
 import { z } from "zod";
-import { PROJECT_CHAT_DELETE_UNAVAILABLE } from "./project-chat-deletion";
 
 export type ProjectRole = "owner" | "editor" | "viewer";
 
@@ -13,6 +17,7 @@ export type ProjectSummary = {
   name: string;
   description: string | null;
   color: string | null;
+  appearance?: ProjectAppearance;
   owner_id: string;
   role: ProjectRole;
   member_count: number;
@@ -55,6 +60,7 @@ export type ProjectDetail = {
   description: string | null;
   system_prompt: string | null;
   color: string | null;
+  appearance?: ProjectAppearance;
   owner_id: string;
   role: ProjectRole;
   created_at: string;
@@ -164,7 +170,7 @@ export const listProjects = createServerFn({ method: "GET" })
     const { data: projects, error: pErr } = await loose(context.supabase)
       .from("projects")
       .select(
-        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, pinned_at, archived_at, deletion_requested_at",
+        "id, name, description, system_prompt, color, appearance, owner_id, created_at, updated_at, pinned_at, archived_at, deletion_requested_at",
       )
       .in("id", ids)
       .order("pinned_at", { ascending: false, nullsFirst: false })
@@ -195,6 +201,7 @@ export const listProjects = createServerFn({ method: "GET" })
       name: p.name as string,
       description: (p.description as string | null) ?? null,
       color: (p.color as string | null) ?? null,
+      appearance: projectAppearance(p.appearance),
       owner_id: p.owner_id as string,
       role: roleMap.get(p.id as string) ?? "viewer",
       member_count: countMap.get(p.id as string) ?? 1,
@@ -219,6 +226,7 @@ export const createProject = createServerFn({ method: "POST" })
         description: z.string().trim().max(1000).optional().nullable(),
         system_prompt: z.string().trim().max(4000).optional().nullable(),
         color: z.string().trim().max(24).optional().nullable(),
+        appearance: projectAppearanceSchema.optional(),
       })
       .parse(input),
   )
@@ -249,6 +257,7 @@ export const createProject = createServerFn({ method: "POST" })
         description: data.description ?? null,
         system_prompt: data.system_prompt ?? null,
         color: data.color ?? "blue",
+        appearance: data.appearance ?? {},
       })
       .select("id")
       .single();
@@ -288,7 +297,7 @@ export const duplicateProject = createServerFn({ method: "POST" })
     // Load source (must be visible under RLS = caller is a member)
     const { data: src, error: sErr } = await context.supabase
       .from("projects")
-      .select("name, description, system_prompt, color")
+      .select("name, description, system_prompt, color, appearance")
       .eq("id", data.id)
       .maybeSingle();
     if (sErr || !src) throw new Error("Project not found");
@@ -317,6 +326,7 @@ export const duplicateProject = createServerFn({ method: "POST" })
         description: src.description,
         system_prompt: src.system_prompt,
         color: src.color ?? "blue",
+        appearance: projectAppearance(src.appearance),
       })
       .select("id")
       .single();
@@ -334,7 +344,7 @@ export const getProject = createServerFn({ method: "GET" })
     const { data: p, error } = await loose(context.supabase)
       .from("projects")
       .select(
-        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, archived_at, deletion_requested_at",
+        "id, name, description, system_prompt, color, appearance, owner_id, created_at, updated_at, archived_at, deletion_requested_at",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -351,6 +361,7 @@ export const getProject = createServerFn({ method: "GET" })
       .maybeSingle();
     return {
       ...p,
+      appearance: projectAppearance(p.appearance),
       role:
         (mem?.role as ProjectRole | undefined) ??
         (p.owner_id === context.userId ? "owner" : "viewer"),
@@ -367,6 +378,7 @@ export const updateProject = createServerFn({ method: "POST" })
         description: z.string().trim().max(1000).nullable().optional(),
         system_prompt: z.string().trim().max(4000).nullable().optional(),
         color: z.string().trim().max(24).optional(),
+        appearance: projectAppearanceSchema.optional(),
       })
       .parse(input),
   )
@@ -774,7 +786,31 @@ export const saveProjectChat = createServerFn({ method: "POST" })
 export const deleteProjectChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async (): Promise<{ ok: true }> => {
-    // Auth and input checks remain, but no server record can be removed without recovery.
-    throw new Error(PROJECT_CHAT_DELETE_UNAVAILABLE);
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const { data: chat, error: readError } = await context.supabase
+      .from("project_chats")
+      .select("project_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readError || !chat) throw new Error("The project chat is unavailable.");
+    const { data: project, error: projectError } = await loose(context.supabase)
+      .from("projects")
+      .select("archived_at,deletion_requested_at")
+      .eq("id", chat.project_id)
+      .maybeSingle();
+    if (projectError || !project || project.archived_at || project.deletion_requested_at)
+      throw new Error("This project is read-only.");
+    // Caller RLS enforces editor/owner authority. Never fall back to an admin delete.
+    const { data: removed, error } = await context.supabase
+      .from("project_chats")
+      .delete()
+      .eq("id", data.id)
+      .eq("project_id", chat.project_id)
+      .select("id")
+      .maybeSingle();
+    if (error || removed?.id !== data.id)
+      throw new Error(
+        "The chat could not be deleted. Only project editors and owners can delete it.",
+      );
+    return { ok: true };
   });

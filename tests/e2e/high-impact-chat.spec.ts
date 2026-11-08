@@ -7,6 +7,7 @@ import {
   dismissMobileSidebar,
   openCurrentSettings,
   chooseSettingsSection,
+  revealSidebar,
 } from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
@@ -440,8 +441,10 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   ]);
 });
 
-test("archived chats can be removed from Settings data controls", async ({ page }) => {
+test("archived chats return to history and can be permanently deleted", async ({ page }) => {
   await page.addInitScript(() => {
+    if (localStorage.getItem("archive-cleanup-fixture-seeded")) return;
+    localStorage.setItem("archive-cleanup-fixture-seeded", "true");
     const now = Date.now();
     localStorage.setItem(
       "kovagpt:archived:v2:user:22222222-2222-4222-8222-222222222222",
@@ -459,34 +462,32 @@ test("archived chats can be removed from Settings data controls", async ({ page 
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  if (page.viewportSize()!.width < 1024) {
-    await page.getByRole("button", { name: "Open menu" }).click();
-  }
-  await openCurrentSettings(page);
-  await chooseSettingsSection(page, "Archived chats");
-
-  const archived = page.getByRole("region", { name: "Archived chats" });
-  await expect(archived).toBeVisible();
-  await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
-  const confirmation = page.getByRole("alertdialog", { name: "Move “Archived chat” to Trash?" });
-  await confirmation.getByRole("button", { name: "Move to Trash", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Trash", exact: true })).toContainText(
-    "Archived chat",
+  await revealSidebar(page);
+  await expect(
+    page.getByRole("button", { name: "Open chat Archived chat", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Options for Archived chat", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Delete chat permanently?" });
+  await confirmation.getByRole("button", { name: "Delete permanently", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Open chat Archived chat", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Chat permanently deleted", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("archive-cleanup-fixture-seeded"))).toBe(
+    "true",
   );
-  await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   await page.reload();
   await waitForKovaHydration(page);
-  if (page.viewportSize()!.width < 1024) {
-    await openCurrentSettings(page);
-    await chooseSettingsSection(page, "Archived chats");
-  }
-  await expect(page.getByRole("region", { name: "Archived chats" })).toContainText(
-    "No archived chats",
-  );
-  await expect(page.getByRole("region", { name: "Trash", exact: true })).toContainText(
-    "Archived chat",
-  );
-  expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBeNull();
+  await revealSidebar(page);
+  await expect(
+    page.getByRole("button", { name: "Open chat Archived chat", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/settings/privacy");
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("region", { name: "Archived chats", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Trash", exact: true })).toHaveCount(0);
 });
 test("signed-out chat cannot start a generation or create history", async ({ page }) => {
   let requests = 0;

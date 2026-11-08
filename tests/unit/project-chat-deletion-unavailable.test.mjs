@@ -3,34 +3,13 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { z } from "zod";
-import { loadUiModule } from "../helpers/ui-state-harness.mjs";
-
-const { PROJECT_CHAT_DELETE_UNAVAILABLE } = loadUiModule("src/lib/project-chat-deletion.ts", {});
 const source = readFileSync("src/lib/projects.functions.ts", "utf8");
-const file = ts.createSourceFile("projects.functions.ts", source, ts.ScriptTarget.Latest, true);
-const declaration = file.statements.find(
-  (node) =>
-    ts.isVariableStatement(node) &&
-    node.declarationList.declarations.some(
-      (item) => item.name.getText(file) === "deleteProjectChat",
-    ),
-);
-assert.ok(declaration);
-const fragment = declaration.getText(file);
-const javascript = ts.transpileModule(
-  fragment.replace(/^export\s+/, "") + "\nreturn deleteProjectChat;",
-  {
-    compilerOptions: { target: ts.ScriptTarget.ES2022 },
-  },
-).outputText;
-
-function fixture() {
+const fragment = source.slice(source.indexOf("export const deleteProjectChat ="));
+function fixture({ denied = false, archived = false, missing = false } = {}) {
+  const calls = [];
   let validator, handler;
-  const requiredAuth = Symbol("required authentication");
-  const config = {};
   const builder = {
-    middleware(values) {
-      config.middleware = values;
+    middleware() {
       return this;
     },
     validator(fn) {
@@ -42,64 +21,79 @@ function fixture() {
       return fn;
     },
   };
-  new Function(
-    "createServerFn",
-    "requireSupabaseAuth",
-    "z",
-    "PROJECT_CHAT_DELETE_UNAVAILABLE",
-    javascript,
-  )(
-    (options) => {
-      config.options = options;
-      return builder;
-    },
-    requiredAuth,
+  const js = ts.transpileModule(fragment.replace(/^export /, ""), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  new Function("createServerFn", "requireSupabaseAuth", "z", "loose", js)(
+    () => builder,
+    {},
     z,
-    PROJECT_CHAT_DELETE_UNAVAILABLE,
+    (client) => client,
   );
-  return { validator, handler, config, requiredAuth };
-}
-
-test("project chat deletion retains POST, authenticated middleware and UUID input validation", () => {
-  const f = fixture();
-  assert.equal(f.config.options.method, "POST");
-  assert.deepEqual(f.config.middleware, [f.requiredAuth]);
-  assert.equal(
-    f.validator({ id: "11111111-1111-4111-8111-111111111111" }).id,
-    "11111111-1111-4111-8111-111111111111",
-  );
-  assert.throws(() => f.validator({ id: "invalid" }));
-});
-
-for (const role of ["owner", "editor", "viewer"]) {
-  test(`project chat deletion fails closed for ${role} before any database access`, async () => {
-    const f = fixture();
-    const accesses = [];
-    const supabase = new Proxy(
-      {},
-      {
-        get(_target, key) {
-          accesses.push(key);
-          throw new Error("Database access must not occur");
-        },
+  const context = {
+    userId: "caller",
+    supabase: {
+      from(table) {
+        let deleting = false;
+        const query = {
+          select() {
+            return this;
+          },
+          eq(...args) {
+            calls.push([table, ...args]);
+            return this;
+          },
+          delete() {
+            deleting = true;
+            calls.push(["delete", table]);
+            return this;
+          },
+          async maybeSingle() {
+            if (table === "projects")
+              return {
+                data: { archived_at: archived ? "date" : null, deletion_requested_at: null },
+                error: null,
+              };
+            if (deleting)
+              return {
+                data: denied ? null : { id: "11111111-1111-4111-8111-111111111111" },
+                error: null,
+              };
+            return { data: missing ? null : { project_id: "project" }, error: null };
+          },
+        };
+        return query;
       },
-    );
-    await assert.rejects(
-      f.handler({
-        data: { id: "11111111-1111-4111-8111-111111111111" },
-        context: { supabase, userId: "synthetic-user", role },
-      }),
-      (error) => error.message === PROJECT_CHAT_DELETE_UNAVAILABLE,
-    );
-    assert.deepEqual(accesses, []);
-  });
+    },
+  };
+  return {
+    calls,
+    validator,
+    run: () => handler({ data: { id: "11111111-1111-4111-8111-111111111111" }, context }),
+  };
 }
-
-test("unavailable deletion neither hard-deletes nor invents local recovery for server project records", () => {
-  assert.doesNotMatch(
-    fragment,
-    /\.delete\(|\.from\(|\.rpc\(|writeChatTrash|moveChatToTrash|localStorage/,
+test("project chat deletion uses caller RLS and confirms the exact removed row", async () => {
+  const f = fixture();
+  assert.equal((await f.run()).ok, true);
+  assert.deepEqual(
+    f.calls.find((c) => c[0] === "delete"),
+    ["delete", "project_chats"],
   );
-  assert.match(fragment, /throw new Error\(PROJECT_CHAT_DELETE_UNAVAILABLE\)/);
-  assert.match(PROJECT_CHAT_DELETE_UNAVAILABLE, /recoverable Trash.*unchanged/);
+  assert.ok(f.calls.some((c) => c[1] === "project_id" && c[2] === "project"));
+  assert.throws(() => f.validator({ id: "bad" }));
+  assert.doesNotMatch(fragment, /supabaseAdmin|Trash/);
+});
+test("denied, missing, and archived project chats cannot report a successful delete", async () => {
+  for (const input of [{ denied: true }, { missing: true }, { archived: true }])
+    await assert.rejects(fixture(input).run());
+});
+test("project chat entry points expose permanent confirmation and no recoverable-Trash dependency", () => {
+  for (const path of [
+    "src/routes/projects.$projectId.tsx",
+    "src/routes/projects.$projectId.chat.$chatId.tsx",
+  ]) {
+    const text = readFileSync(path, "utf8");
+    assert.match(text, /confirmPermanentChat/);
+    assert.doesNotMatch(text, /PROJECT_CHAT_DELETE_UNAVAILABLE/);
+  }
 });

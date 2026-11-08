@@ -159,27 +159,24 @@ test("library workspace supports filters, sorting, view preference, safe actions
     library,
     /const storageTotal = storageKnown\s+\? items\.reduce\([\s\S]*?\)\s+: null/,
   );
-  assert.match(
-    library,
-    /storageTotal !== null && <p>Loaded file sizes: \{humanBytes\(storageTotal\)\}<\/p>/,
-  );
+  assert.doesNotMatch(library, /Loaded file sizes:/);
   assert.match(library, /title=\{deleteSummary\.title\}/);
   assert.match(library, /description=\{deleteSummary\.description\}/);
   assert.match(library, /confirmLabel=\{deleteSummary\.confirmLabel\}/);
   assert.match(library, /pendingDelete\.principal === principal/);
-  assert.match(library, /retentionMs !== pending\.retentionMs/);
+  assert.doesNotMatch(library, /retentionMs !== pending\.retentionMs/);
   const chat = libraryDeleteConfirmation(
     [{ id: "chat:one", title: "Saved chat" }],
     30 * 86_400_000,
   );
-  assert.equal(chat.confirmLabel, "Move to Trash");
-  assert.match(chat.description, /can be restored for 30 days/);
+  assert.equal(chat.confirmLabel, "Delete permanently");
+  assert.match(chat.description, /permanently deleted and cannot be restored/);
   const file = libraryDeleteConfirmation(
     [{ id: "file:one", title: "Saved file", item_type: "upload" }],
     null,
   );
   assert.equal(file.confirmLabel, "Delete permanently");
-  assert.match(file.description, /does not go to Trash and cannot be restored/);
+  assert.match(file.description, /permanently deleted and cannot be restored/);
   assert.doesNotMatch(library, /Storage totals require backend usage records/);
 });
 

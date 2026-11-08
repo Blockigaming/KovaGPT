@@ -302,7 +302,7 @@ export function WorkspaceIntelligence() {
         (item.kind === "automation" &&
           ["scheduled", "running", "paused"].includes(item.status ?? "")),
     )
-    .slice(0, 5);
+    .slice(0, 2);
   const recent = combined
     .filter(
       (item) =>
@@ -361,9 +361,16 @@ export function WorkspaceIntelligence() {
                 <h3 className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Continue working
                 </h3>
-                {active.map((item) => (
-                  <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} userKey={userKey} />
-                ))}
+                <div className="grid gap-4 p-2">
+                  {active.map((item) => (
+                    <div
+                      key={`${item.kind}:${item.id}`}
+                      className="overflow-hidden rounded-2xl border border-border"
+                    >
+                      <IntelligenceRow item={item} userKey={userKey} />
+                    </div>
+                  ))}
+                </div>
               </section>
             ) : null}
             <section className="rounded-2xl border bg-card/35 p-2">

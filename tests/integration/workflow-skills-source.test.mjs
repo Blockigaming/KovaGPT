@@ -114,8 +114,8 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.ok(imageBranch.indexOf("assertSelectedContextsCurrent") < imageQuota);
   assert.ok(imageQuota < imageBranch.lastIndexOf("assertSelectedContextsCurrent"));
   const chatQuotaBranch = chat.slice(
-    chat.indexOf("if (auth && !isOwner)"),
-    chat.indexOf("const MAX_ATTACHMENTS_PER_REQUEST"),
+    chat.indexOf("if (auth && !isOwner && !capture)"),
+    chat.indexOf("const modelIdentityInstructions"),
   );
   const contextBeforeChatQuota = chatQuotaBranch.indexOf("assertSelectedContextsCurrent");
   const chatQuota = chatQuotaBranch.search(/enforceDailyMessageQuota\(\s*auth,/u);

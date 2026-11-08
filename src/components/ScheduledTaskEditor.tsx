@@ -20,8 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TaskGmailEventSource } from "@/components/TaskGmailEventSource";
-import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { useEffect, useId, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -60,7 +58,7 @@ type Draft = {
 };
 type Option = { id: string; label: string; projectId?: string };
 const control = "min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm";
-const button = "min-h-11 rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50";
+const button = "min-h-11 rounded-full border border-border px-3 py-2 text-sm disabled:opacity-50";
 type ScheduledTaskEditorProps = {
   task?: ScheduledTask;
   draft?: Draft;
@@ -164,22 +162,6 @@ function ScheduledTaskEditorBody({
   useEffect(() => {
     if (validationAttempt > 0) validationSummaryRef.current?.focus();
   }, [validationAttempt]);
-  const [connections, setConnections] = useState<TaskConnectionOption[]>([]),
-    [grants, setGrants] = useState<TaskGrantView[]>([]);
-  const [connectionId, setConnectionId] = useState(""),
-    [connectionConsent, setConnectionConsent] = useState(false);
-  const [kind, setKind] = useState<"library" | "project_file">("library"),
-    [options, setOptions] = useState<Option[]>([]),
-    [cursor, setCursor] = useState<string | null>(null);
-  const [grantId, setGrantId] = useState(""),
-    [resources, setResources] = useState<Option[]>([]),
-    [resource, setResource] = useState(""),
-    [resourceCursor, setResourceCursor] = useState<string | null>(null);
-  const [author, setAuthor] = useState(""),
-    [contains, setContains] = useState(""),
-    [label, setLabel] = useState(""),
-    [includeReplies, setIncludeReplies] = useState(false),
-    [activity, setActivity] = useState("opened");
   const [email, setEmail] = useState(""),
     [runs, setRuns] = useState<Array<Record<string, unknown>>>([]),
     [runCursor, setRunCursor] = useState<string | null>(null),
@@ -208,11 +190,6 @@ function ScheduledTaskEditorBody({
     update = useServerFn(updateScheduledTask),
     share = useServerFn(offerScheduledTaskCopy),
     history = useServerFn(listScheduledTaskRuns);
-  const listConnections = useServerFn(listScheduledTaskConnections),
-    grantConnection = useServerFn(grantScheduledTaskConnection),
-    revokeConnection = useServerFn(revokeScheduledTaskConnection),
-    listOptions = useServerFn(listScheduledTaskContextOptions),
-    listResources = useServerFn(listScheduledTaskResourceOptions);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -252,23 +229,6 @@ function ScheduledTaskEditorBody({
       null;
     if (!opensHistory) headingRef.current?.focus();
   }, [userKey, opensHistory]);
-  useEffect(() => {
-    let canceled = false;
-    listConnections({ data: { expectedUserId: userKey } })
-      .then((value) => {
-        if (!canceled && active.current) {
-          setConnections(value.connections);
-          setGrants(value.grants);
-        }
-      })
-      .catch(() => {
-        if (!canceled && active.current)
-          setError("Connections could not be loaded. Refresh this task before selecting one.");
-      });
-    return () => {
-      canceled = true;
-    };
-  }, [listConnections, userKey]);
   const fail = (reason: unknown) => {
     if (active.current)
       setError(reason instanceof Error ? reason.message : "The action could not be confirmed.");
@@ -472,86 +432,6 @@ function ScheduledTaskEditorBody({
       submitter,
     );
   }
-  async function loadFiles(more = false) {
-    const request = ++sourceRead.current;
-    setError("");
-    try {
-      const result = await listOptions({
-        data: { expectedUserId: userKey, kind, after: more ? cursor : null },
-      });
-      if (active.current && sourceRead.current === request) {
-        setOptions((previous) => (more ? [...previous, ...result.items] : result.items));
-        setCursor(result.nextCursor);
-      }
-    } catch (reason) {
-      if (sourceRead.current === request) fail(reason);
-    }
-  }
-  async function loadResources(more = false) {
-    if (!grantId) return;
-    const request = ++resourceRead.current;
-    setError("");
-    try {
-      const result = await listResources({
-        data: { expectedUserId: userKey, grantId, cursor: more ? resourceCursor : null },
-      });
-      if (active.current && resourceRead.current === request) {
-        setResources((previous) => (more ? [...previous, ...result.items] : result.items));
-        setResourceCursor(result.nextCursor);
-      }
-    } catch (reason) {
-      if (resourceRead.current === request) fail(reason);
-    }
-  }
-  async function authorizeConnection() {
-    const connection = connections.find((value) => value.id === connectionId);
-    if (!connection || !connectionConsent || busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    setError("");
-    try {
-      await grantConnection({
-        data: {
-          expectedUserId: userKey,
-          id: stableId("grant:" + connection.id + ":" + connection.generation),
-          connectionId: connection.id,
-          provider: connection.provider,
-          generation: connection.generation,
-          account: connection.account,
-          consent: true,
-        },
-      });
-      const result = await listConnections({ data: { expectedUserId: userKey } });
-      if (active.current) {
-        setGrants(result.grants);
-        setConnections(result.connections);
-        setConnectionConsent(false);
-      }
-    } catch (reason) {
-      fail(reason);
-    } finally {
-      busyRef.current = false;
-      if (active.current) setBusy(false);
-    }
-  }
-  async function revoke(grant: TaskGrantView) {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    try {
-      await revokeConnection({ data: { expectedUserId: userKey, id: grant.id } });
-      if (active.current) {
-        setGrants((current) => current.filter((item) => item.id !== grant.id));
-        onSaved();
-        closeEditor(true);
-      }
-    } catch (reason) {
-      fail(reason);
-    } finally {
-      busyRef.current = false;
-      if (active.current) setBusy(false);
-    }
-  }
   async function loadHistory(more = false) {
     if (!task) return;
     const request = ++historyRead.current;
@@ -579,8 +459,6 @@ function ScheduledTaskEditorBody({
     // A newly opened history view reads its own task once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSection, task?.id]);
-  const selectedGrant = grants.find((value) => value.id === grantId);
-  const snapshot = refs.find((ref) => ref.kind === "snapshot");
   return (
     <Dialog
       open
@@ -744,7 +622,9 @@ function ScheduledTaskEditorBody({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="time">A scheduled time arrives</SelectItem>
-                  <SelectItem value="event">A connected event matches</SelectItem>
+                  {task?.trigger_mode === "event" && (
+                    <SelectItem value="event">Existing connected event</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </label>
@@ -884,381 +764,6 @@ function ScheduledTaskEditorBody({
                 </p>
               </section>
             )}
-            <details className="rounded-lg border border-border p-3">
-              <summary>Saved chat or uploaded context ({refs.length}/8)</summary>
-              <p className="my-2 text-xs text-muted-foreground">
-                Paste an explicit saved conversation excerpt, or select indexed text from your
-                Library and Projects. A saved excerpt is not synchronized with future chat messages.
-                Source access is checked again for every run.
-              </p>
-              <label className="block text-sm">
-                Saved conversation excerpt
-                <Textarea
-                  className={control}
-                  maxLength={14000}
-                  value={snapshot?.kind === "snapshot" ? snapshot.text : ""}
-                  onChange={(event) => {
-                    const text = event.target.value;
-                    setRefs((current) => [
-                      ...current.filter((ref) => ref.kind !== "snapshot"),
-                      ...(text
-                        ? [
-                            {
-                              kind: "snapshot" as const,
-                              text,
-                              sourceChatId: "task-saved-excerpt",
-                              capturedAt: new Date().toISOString(),
-                            },
-                          ]
-                        : []),
-                    ]);
-                  }}
-                />
-              </label>
-              <div className="my-2 flex gap-2">
-                <Select
-                  value={kind}
-                  disabled={busy || Boolean(pending.current) || task?.status === "running"}
-                  onValueChange={(value) => {
-                    sourceRead.current++;
-                    setKind(value as "library" | "project_file");
-                    setOptions([]);
-                    setCursor(null);
-                  }}
-                >
-                  <SelectTrigger aria-label="Context source" className={control}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="library">Library text</SelectItem>
-                    <SelectItem value="project_file">Project files</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className={button}
-                  onClick={() => void loadFiles()}
-                >
-                  Browse
-                </Button>
-              </div>
-              {options.length > 0 && (
-                <SearchablePicker
-                  aria-label="File to add"
-                  className={control}
-                  value=""
-                  onValueChange={(value) => {
-                    const option = options.find((item) => item.id === value);
-                    if (option && refs.length < 8)
-                      setRefs((current) => [
-                        ...current,
-                        kind === "library"
-                          ? { kind: "library", id: option.id }
-                          : { kind: "project_file", id: option.id, projectId: option.projectId! },
-                      ]);
-                  }}
-                  placeholder="Choose a file to add"
-                  searchLabel="Search files"
-                  options={options.map((item) => ({ value: item.id, label: item.label }))}
-                />
-              )}
-              {cursor && (
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className={button}
-                  onClick={() => void loadFiles(true)}
-                >
-                  Load more files
-                </Button>
-              )}
-              {refs
-                .filter((ref) => ref.kind !== "snapshot")
-                .map((ref, index) => (
-                  <div className="my-2 flex justify-between text-sm" key={index}>
-                    <span>
-                      {ref.kind === "connected"
-                        ? `${ref.provider} · ${ref.resource}`
-                        : (options.find((option) => option.id === ref.id)?.label ??
-                          "Saved " + ref.kind.replace("_", " "))}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      className={button}
-                      onClick={() => setRefs((current) => current.filter((item) => item !== ref))}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-            </details>
-            <details className="rounded-lg border border-border p-3" open={mode === "event"}>
-              <summary>Connected sources and event filters</summary>
-              <p className="my-2 text-xs text-muted-foreground">
-                Choose a personal connected account and explicitly allow background reads.
-                Workspace-bound accounts are unavailable until organization access is configured.
-                Approval expires after 30 days and stops when the connection changes. Copies sent to
-                someone else never include these approvals or context.
-              </p>
-              <SearchablePicker
-                aria-label="Connected account"
-                className={control}
-                value={connectionId}
-                onValueChange={(value) => {
-                  setConnectionId(value);
-                  setConnectionConsent(false);
-                }}
-                placeholder="Choose a connected account"
-                searchLabel="Search connected accounts"
-                options={connections.map((connection) => ({
-                  value: connection.id,
-                  label: `${connection.provider} · ${connection.label}`,
-                }))}
-              />
-              <label className="my-2 flex items-start gap-2 text-sm">
-                <input
-                  className="kova-native-check"
-                  data-ui-reference="chatgpt.checkbox"
-                  type="checkbox"
-                  checked={connectionConsent}
-                  onChange={(event) => setConnectionConsent(event.target.checked)}
-                />
-                Allow this account to read the sources I select for background tasks.
-              </label>
-              <Button
-                variant="ghost"
-                type="button"
-                className={button}
-                disabled={!connectionConsent || !connectionId}
-                onClick={() => void authorizeConnection()}
-              >
-                Approve background reads
-              </Button>
-              <div className="my-3 space-y-2">
-                {grants.map((grant) => (
-                  <div key={grant.id} className="flex justify-between gap-2 text-xs">
-                    <span>
-                      {grant.provider} ·{" "}
-                      {connections.find((item) => item.id === grant.connection_ref)?.label ??
-                        "Saved account"}{" "}
-                      · expires {new Date(grant.expires_at).toLocaleDateString()}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      className={button}
-                      onClick={() => void revoke(grant)}
-                    >
-                      Revoke and pause affected tasks
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <SearchablePicker
-                aria-label="Task background approval"
-                className={control}
-                value={grantId}
-                onValueChange={(value) => {
-                  resourceRead.current++;
-                  setGrantId(value);
-                  setResources([]);
-                  setResource("");
-                  setResourceCursor(null);
-                }}
-                placeholder="Choose a task approval"
-                searchLabel="Search task approvals"
-                options={grants.map((grant) => ({
-                  value: grant.id,
-                  label: `${grant.provider} · ${connections.find((item) => item.id === grant.connection_ref)?.label ?? "Saved account"}`,
-                }))}
-              />
-              {mode === "event" && selectedGrant?.provider === "gmail" && (
-                <TaskGmailEventSource
-                  key={`${userKey}:${selectedGrant.id}`}
-                  userId={userKey}
-                  grantId={selectedGrant.id}
-                />
-              )}
-              <Button
-                variant="ghost"
-                type="button"
-                className={button}
-                disabled={!grantId}
-                onClick={() => void loadResources()}
-              >
-                Browse readable sources
-              </Button>
-              {resources.length > 0 && (
-                <SearchablePicker
-                  aria-label="Connected source"
-                  className={control}
-                  value={resource}
-                  onValueChange={setResource}
-                  placeholder="Choose a source"
-                  searchLabel="Search connected sources"
-                  options={resources.map((item) => ({ value: item.id, label: item.label }))}
-                />
-              )}
-              {resourceCursor && (
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className={button}
-                  onClick={() => void loadResources(true)}
-                >
-                  Load more sources
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                type="button"
-                className={button}
-                disabled={!resource || !selectedGrant || refs.length >= 8}
-                onClick={() =>
-                  selectedGrant &&
-                  setRefs((current) => [
-                    ...current,
-                    {
-                      kind: "connected",
-                      grantId: selectedGrant.id,
-                      provider: selectedGrant.provider,
-                      resource,
-                    },
-                  ])
-                }
-              >
-                Add source to saved context
-              </Button>
-              {mode === "event" && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs">
-                    A task can match up to three event filters. It cannot also use a time schedule.
-                    Native provider registration must be active; choosing a filter does not register
-                    a webhook.
-                  </p>
-                  <label className="block text-sm">
-                    Sender or author (optional)
-                    <Input
-                      className={control}
-                      value={author}
-                      maxLength={120}
-                      onChange={(event) => setAuthor(event.target.value)}
-                      placeholder={
-                        selectedGrant?.provider === "gmail"
-                          ? "sender@example.com"
-                          : "Exact author account"
-                      }
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    Subject or title contains (optional)
-                    <Input
-                      className={control}
-                      value={contains}
-                      maxLength={120}
-                      onChange={(event) => setContains(event.target.value)}
-                    />
-                  </label>
-                  {selectedGrant?.provider === "github" && (
-                    <>
-                      <label className="block text-sm">
-                        Label (optional)
-                        <Input
-                          className={control}
-                          value={label}
-                          maxLength={120}
-                          onChange={(event) => setLabel(event.target.value)}
-                        />
-                      </label>
-                      <label className="block text-sm">
-                        Pull request activity
-                        <Select
-                          value={activity}
-                          disabled={busy || Boolean(pending.current) || task?.status === "running"}
-                          onValueChange={setActivity}
-                        >
-                          <SelectTrigger aria-label="Pull request activity" className={control}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["opened", "synchronize", "closed", "review", "comment", "merged"].map(
-                              (item) => (
-                                <SelectItem key={item} value={item}>
-                                  {item}
-                                </SelectItem>
-                              ),
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </label>
-                    </>
-                  )}
-                  {selectedGrant?.provider === "slack" && (
-                    <label className="flex gap-2 text-sm">
-                      <input
-                        className="kova-native-check"
-                        data-ui-reference="chatgpt.checkbox"
-                        type="checkbox"
-                        checked={includeReplies}
-                        onChange={(event) => setIncludeReplies(event.target.checked)}
-                      />
-                      Include replies in this channel
-                    </label>
-                  )}
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    className={button}
-                    disabled={
-                      !selectedGrant ||
-                      triggers.length >= 3 ||
-                      (selectedGrant.provider !== "gmail" && !resource)
-                    }
-                    onClick={() => {
-                      if (selectedGrant)
-                        setTriggers((current) => [
-                          ...current,
-                          {
-                            provider: selectedGrant.provider as TaskProvider,
-                            grantId: selectedGrant.id,
-                            resource: selectedGrant.provider === "gmail" ? "inbox" : resource,
-                            ...(author ? { author } : {}),
-                            ...(contains ? { contains } : {}),
-                            ...(label && selectedGrant.provider === "github" ? { label } : {}),
-                            ...(selectedGrant.provider === "slack" ? { includeReplies } : {}),
-                            ...(selectedGrant.provider === "github"
-                              ? { activities: [activity] }
-                              : {}),
-                          },
-                        ]);
-                    }}
-                  >
-                    Add event filter
-                  </Button>
-                  {triggers.map((trigger, index) => (
-                    <div className="flex justify-between text-sm" key={index}>
-                      <span>
-                        {trigger.provider} · {trigger.resource}
-                        {trigger.author ? ` · ${trigger.author}` : ""}
-                        {trigger.contains ? ` · contains ${trigger.contains}` : ""}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        type="button"
-                        className={button}
-                        onClick={() =>
-                          setTriggers((current) => current.filter((_, i) => i !== index))
-                        }
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </details>
             <h3 className="pt-3 text-base font-semibold">Review task</h3>
             <p className="spec400-supporting">
               {mode === "event"
@@ -1276,7 +781,7 @@ function ScheduledTaskEditorBody({
               />
               {task
                 ? "Save these settings in a paused state. I will review and resume the task separately."
-                : "Run this prompt in the background using the selected context and my account usage allowance."}
+                : "Run this prompt in the background using my account usage allowance."}
             </label>
             {validationFeedback("consent")}
           </fieldset>

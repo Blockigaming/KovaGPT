@@ -110,7 +110,7 @@ export function BillingSubscriptionFacts(props: BillingProps) {
             {plan
               ? "Monthly (configured plan)"
               : inheritedSubscription
-                ? "Managed by family owner"
+                ? "Managed by plan owner"
                 : own && !summary.status
                   ? "Not applicable"
                   : unavailable}
@@ -130,7 +130,7 @@ export function BillingSubscriptionFacts(props: BillingProps) {
               : own && !summary.status
                 ? "Not applicable"
                 : inheritedSubscription
-                  ? "Managed by family owner"
+                  ? "Managed by plan owner"
                   : unavailable}
           </dd>
         </div>
@@ -140,7 +140,7 @@ export function BillingSubscriptionFacts(props: BillingProps) {
             {noSubscription
               ? "Not applicable"
               : inheritedSubscription
-                ? "Managed by family owner"
+                ? "Managed by plan owner"
                 : "Unavailable · check Stripe"}
           </dd>
         </div>
@@ -285,7 +285,9 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
         })}
       </div>
       <p className="kova-billing-copy" id="billing-plan-change-help">
-        {inheritedSubscription ? "Your shared plan is managed by the Family Sharing owner. " : ""}
+        {inheritedSubscription
+          ? "Your shared plan is managed by its family or Team workspace owner. "
+          : ""}
         {summary?.hasBillingAccount && !summary.billingPortalAvailable
           ? "Plan management is unavailable. Contact support@kovagpt.com. "
           : ""}
@@ -370,6 +372,12 @@ export function BillingWorkspace({
       className="kova-billing-workspace"
       data-ui-reference="chatgpt-account-billing"
     >
+      <Link
+        to="/team"
+        className="mb-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm"
+      >
+        Team billing and invitations
+      </Link>
       <TabsList aria-label="Billing sections" className="kova-billing-tabs">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="plans">Plans</TabsTrigger>

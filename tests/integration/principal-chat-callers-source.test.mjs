@@ -20,13 +20,9 @@ test("all remaining local chat callers carry the resolved principal", async () =
   );
 
   assert.match(archived, /loadArchivedConversations\(userKey\)/);
-  assert.match(
-    archived,
-    /saveArchivedConversations\(\s*userKey,\s*loadArchivedConversations\(userKey\)\.filter\(\(item\) => item\.id !== chat\.id\)/,
-  );
-  assert.match(archived, /contextRef\.current\.userKey === userKey/);
-  assert.match(archived, /contextRef\.current\.epoch === epoch/);
-  assert.match(archived, /deleteTarget\?\.userKey === userKey/);
+  assert.match(archived, /saveConversations\(userKey, conversations\)/);
+  assert.match(archived, /saveArchivedConversations\(userKey, \[\]\)/);
+  assert.doesNotMatch(archived, /<ArchivedChatsPanel/);
 
   assert.match(intelligence, /loadConversations\(userKey\)/);
   assert.match(intelligence, /savePendingActive\(userKey, item\.id\)/);
@@ -42,7 +38,7 @@ test("all remaining local chat callers carry the resolved principal", async () =
   assert.match(graph, /graphState\.principal === principal/);
 
   assert.match(library, /loadConversations\(userKey\)/);
-  assert.match(library, /moveChatToTrash\(userKey, chat, chats, isCurrent\)/);
+  assert.match(library, /permanentlyDeleteChat\(userKey, chat, isCurrent, true\)/);
   assert.match(library, /saveDraft\(userKey, null, context\)/);
   assert.match(library, /clearPendingActive\(userKey\)/);
   assert.match(library, /itemState\.principal === principal/);

@@ -73,10 +73,11 @@ function headerActions(route, state) {
   return nodes(exports.actions);
 }
 
-test("compact Library refresh keeps its name, loading guard, and both refresh actions", () => {
+test("compact Library refresh keeps its name, loading guard, and the Library refresh action", () => {
   const called = [];
   const state = {
     principalReady: true,
+    isSignedIn: false,
     loading: false,
     folderBusy: false,
     sharesLoading: false,
@@ -89,8 +90,8 @@ test("compact Library refresh keeps its name, loading guard, and both refresh ac
   assert.match(text(refresh), /Refresh/);
   assert.equal(refresh.props.disabled, false);
   refresh.props.onClick();
-  assert.deepEqual(called, ["library", "shares"]);
-  for (const flag of ["loading", "folderBusy", "sharesLoading"]) {
+  assert.deepEqual(called, ["library"]);
+  for (const flag of ["loading", "folderBusy"]) {
     assert.equal(
       headerActions("library", { ...state, [flag]: true }).find((node) => node.type === "button")
         .props.disabled,

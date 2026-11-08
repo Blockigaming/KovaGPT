@@ -161,7 +161,6 @@ test("every primary settings destination opens its own working section", async (
     ["Connections", "connections"],
     ["Cloud Browser", "cloud-browser"],
     ["Data controls", "privacy"],
-    ["Archived chats", "archived"],
     ["Voice", "voice"],
     ["Usage", "usage"],
     ["Subscriptions", "billing"],

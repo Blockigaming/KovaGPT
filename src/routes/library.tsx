@@ -5,7 +5,6 @@ import { LibraryDocumentPreview } from "@/components/LibraryDocumentPreview";
 import { createLibraryDocumentViewMemory } from "@/lib/library-document-preview";
 import { LibrarySelectedDownloadsDialog } from "@/components/LibrarySelectedDownloadsDialog";
 import { selectedLibraryDownloadSnapshot } from "@/lib/library-selected-downloads";
-import { ChatTrashPanel } from "@/components/ChatTrashPanel";
 import { libraryListMetadata } from "@/lib/library-list-metadata";
 import { LibraryUploadDialog } from "@/components/LibraryUploadDialog";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
@@ -153,7 +152,7 @@ import {
   loadConversations,
   saveDraft,
 } from "@/lib/chat-store";
-import { moveChatToTrash, readChatTrash } from "@/lib/chat-trash";
+import { permanentlyDeleteChat } from "@/lib/permanent-chat-delete";
 import { libraryDeleteConfirmation } from "@/lib/library-delete-confirmation";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
 import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
@@ -531,7 +530,7 @@ function LibraryPage() {
   const sharesReady = principal !== null && shareState.principal === principal;
   const receivedShares = sharesReady ? shareState.received : EMPTY_RECEIVED_SHARES;
   const sentShares = sharesReady ? shareState.sent : EMPTY_SENT_SHARES;
-  const sharesLoading = Boolean(isSignedIn) && (!sharesReady || shareState.loading);
+  const sharesLoading = false;
   const sharesError = sharesReady ? shareState.error : null;
   const [sharedPreview, setSharedPreview] = useState<SharedChatInbox | null>(null);
   const visibleSharedPreview = sharesReady ? sharedPreview : null;
@@ -837,18 +836,8 @@ function LibraryPage() {
       loading: false,
       error: null,
     });
-    const savedFolder = typeof saved.folder === "string" ? saved.folder : "all";
-    setFolderScopeState({
-      principal,
-      // The keyed organizer validates durable IDs against the current owned
-      // folders after its successful load, including deleted/foreign IDs.
-      scope:
-        principal &&
-        principal !== "guest" &&
-        (savedFolder === "unfiled" || UUID_PATTERN.test(savedFolder))
-          ? savedFolder.toLowerCase()
-          : "all",
-    });
+    // Folder filters retired: a saved hidden folder must never conceal Library items.
+    setFolderScopeState({ principal, scope: "all" });
     if (!principal || !favoritesKey) {
       setFavorites(new Set());
       setFavoritesPrincipal(null);
@@ -929,9 +918,6 @@ function LibraryPage() {
     }
     void load();
   }, [isLoaded, load, principal]);
-  useEffect(() => {
-    if (isLoaded && principal && !libraryCleared) void loadShares();
-  }, [isLoaded, principal, loadShares, libraryCleared]);
 
   useEffect(() => {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
@@ -946,7 +932,6 @@ function LibraryPage() {
     items: Array<LibItem & { temporary?: boolean }>;
     principal: string;
     generation: number;
-    retentionMs: number | null;
   };
   const [pendingDelete, setPendingDelete] = useState<PendingLibraryDelete | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -966,10 +951,7 @@ function LibraryPage() {
     !libraryCleared
       ? pendingDelete
       : null;
-  const deleteSummary = libraryDeleteConfirmation(
-    visiblePendingDelete?.items ?? [],
-    visiblePendingDelete?.retentionMs ?? null,
-  );
+  const deleteSummary = libraryDeleteConfirmation(visiblePendingDelete?.items ?? []);
   useEffect(() => {
     setPendingDelete(null);
     setDeleteDialogOpen(false);
@@ -997,7 +979,6 @@ function LibraryPage() {
     try {
       const hasChats = targets.some((item) => item.id.startsWith("chat:"));
       const chats = hasChats ? loadConversations(userKey) : [];
-      const retentionMs = hasChats ? readChatTrash(userKey).retentionMs : null;
       const generation = lifecycleGenerationRef.current;
       const snapshot = targets.map((item) => ({
         ...item,
@@ -1011,10 +992,10 @@ function LibraryPage() {
       };
       if (kind === "one") deleteMenuHandoffRef.current.add(targets[0].id);
       confirmedDeleteRef.current = null;
-      setPendingDelete({ kind, items: snapshot, principal, generation, retentionMs });
+      setPendingDelete({ kind, items: snapshot, principal, generation });
       setDeleteDialogOpen(true);
     } catch {
-      toast.error("Your Trash setting could not be read. Nothing was deleted. Try again.");
+      toast.error("Deletion could not be prepared. Nothing was deleted. Try again.");
     }
   };
   const remove = async (id: string, confirmed = false) => {
@@ -1045,15 +1026,15 @@ function LibraryPage() {
       try {
         const chats = loadConversations(userKey);
         const chat = chats.find((item) => `chat:${item.id}` === id);
-        if (!chat || !(await moveChatToTrash(userKey, chat, chats, isCurrent))) {
+        if (!chat || !(await permanentlyDeleteChat(userKey, chat, isCurrent, true))) {
           if (isCurrent()) restoreDeletedItem();
           return;
         }
-        if (isCurrent()) toast.success("Chat removed using your Trash retention setting.");
+        if (isCurrent()) toast.success("Chat permanently deleted.");
       } catch {
         if (isCurrent()) {
           restoreDeletedItem();
-          toast.error("Could not save chat removal. Your recoverable copy has been kept.");
+          toast.error("Could not delete the chat. Try again.");
         }
       }
       return;
@@ -1224,7 +1205,7 @@ function LibraryPage() {
         if (!isCurrent()) return;
         const chats = loadConversations(userKey);
         const chat = chats.find((item) => `chat:${item.id}` === id);
-        if (chat && !(await moveChatToTrash(userKey, chat, chats, isCurrent)))
+        if (chat && !(await permanentlyDeleteChat(userKey, chat, isCurrent, true)))
           throw new Error("Chat removal was canceled or could not be saved.");
         reconcileDeleted([id]);
       }
@@ -1801,6 +1782,21 @@ function LibraryPage() {
           actions={
             principalReady ? (
               <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="kova-directory-refresh rounded-full"
+                  aria-label="Refresh Library"
+                  title="Refresh Library"
+                  disabled={loading || folderBusy}
+                  onClick={refreshLibrary}
+                >
+                  <RefreshCw
+                    aria-hidden="true"
+                    className={loading ? "animate-spin motion-reduce:animate-none" : ""}
+                  />
+                  <span>Refresh</span>
+                </Button>
                 {isSignedIn && (
                   <Button className="spec400-library-upload" onClick={() => setUploadOpen(true)}>
                     <Upload aria-hidden="true" />
@@ -1833,253 +1829,6 @@ function LibraryPage() {
           </section>
         ) : null}
 
-        <div
-          className="kova-library-utilities spec400-library-secondary"
-          aria-label="Library utilities"
-        >
-          {isSignedIn && isLoaded ? (
-            <>
-              <details className="kova-library-disclosure" aria-labelledby="shared-chats-title">
-                <summary className="cursor-pointer">
-                  <Share2 className="size-4" aria-hidden="true" />
-                  <span id="shared-chats-title">Shared chats</span>
-                  <ChevronDown className="size-3" aria-hidden="true" />
-                </summary>
-                {sharesError ? (
-                  <div role="alert" className="rounded-xl border border-destructive/30 p-4">
-                    <p className="text-sm font-medium text-destructive">
-                      Could not load shared chats
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{sharesError}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() => void loadShares()}
-                    >
-                      Retry
-                    </Button>
-                  </div>
-                ) : sharesLoading ? (
-                  <p role="status" className="text-sm text-muted-foreground">
-                    Loading shared chats…
-                  </p>
-                ) : (
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Shared with me</h3>
-                      {receivedShares.length === 0 ? (
-                        <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-                          No chats have been shared with you.
-                        </p>
-                      ) : (
-                        <ul className="divide-y divide-border rounded-xl border border-border">
-                          {receivedShares.map((share) => (
-                            <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{share.title}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {share.snapshot.messages.length} messages ·{" "}
-                                  {new Date(share.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="shrink-0"
-                                onClick={(event) => {
-                                  sharedPreviewReturnFocusRef.current = event.currentTarget;
-                                  setSharedPreview(share);
-                                }}
-                              >
-                                Open snapshot
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Shared by me</h3>
-                      {sentShares.length === 0 ? (
-                        <p className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-                          You have not shared a chat. Use Share chat from a conversation to send a
-                          read-only snapshot.
-                        </p>
-                      ) : (
-                        <ul className="divide-y divide-border rounded-xl border border-border">
-                          {sentShares.map((share) => (
-                            <li key={share.id} className="flex min-h-14 items-center gap-3 p-3">
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">{share.title}</p>
-                                <p className="truncate text-xs text-muted-foreground">
-                                  To {share.recipient_email} · {share.status} ·{" "}
-                                  {new Date(share.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
-                              {share.status !== "revoked" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="shrink-0"
-                                  disabled={revokingShareId === share.id}
-                                  onClick={() => setPendingRevokeShare(share)}
-                                >
-                                  Revoke
-                                </Button>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </details>
-
-              {principal ? (
-                <details
-                  ref={foldersDetailsRef}
-                  className="kova-library-disclosure"
-                  key={`folders:${principal}`}
-                >
-                  <summary>
-                    <FolderOpen className="size-4" aria-hidden="true" />
-                    Folders{folderScope !== "all" ? " · Filter active" : ""}
-                    <ChevronDown className="size-3" aria-hidden="true" />
-                  </summary>
-                  <LibraryFolderOrganizer
-                    key={principal}
-                    enabled={!libraryCleared}
-                    principalKey={principal}
-                    ownerId={userKey!}
-                    refreshKey={folderRefreshKey}
-                    itemStateUnavailable={loading || Boolean(loadError)}
-                    scope={folderScope}
-                    selectedItemIds={selectedDurableIds}
-                    onScopeChange={setFolderScope}
-                    onBusyChange={setFolderBusy}
-                    onRefresh={refreshLibrary}
-                    onMoved={(itemIds, folderId) => {
-                      if (
-                        principalRef.current !== principal ||
-                        libraryRenderGeneration !== lifecycleGenerationRef.current ||
-                        libraryCleared
-                      )
-                        return;
-                      loadGenerationRef.current += 1;
-                      setLoading(false);
-                      const moved = new Set(itemIds);
-                      setItems((current) =>
-                        libraryRenderGeneration === lifecycleGenerationRef.current
-                          ? current.map((item) =>
-                              moved.has(item.id) ? { ...item, folder_id: folderId } : item,
-                            )
-                          : current,
-                      );
-                      setSelected((current) =>
-                        principalRef.current === principal &&
-                        libraryRenderGeneration === lifecycleGenerationRef.current &&
-                        !libraryCleared
-                          ? current.filter((id) => !moved.has(id))
-                          : current,
-                      );
-                    }}
-                    onFoldersDeleted={() => {
-                      setSelected([]);
-                      void load();
-                    }}
-                  />
-                </details>
-              ) : null}
-            </>
-          ) : null}
-
-          {principalReady ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="self-start"
-              ref={trashTriggerRef}
-              onClick={() => {
-                const origin = {
-                  principal,
-                  generation: lifecycleGenerationRef.current,
-                  url: window.location.href,
-                };
-                trashOriginRef.current = origin;
-                setTrashOwner(origin);
-              }}
-            >
-              <Trash2 aria-hidden="true" /> Chat Trash
-            </Button>
-          ) : null}
-
-          <details
-            className="kova-library-disclosure spec400-library-availability"
-            open={storageDetailsOpen}
-            onToggle={(event) => setStorageDetailsOpen(event.currentTarget.open)}
-          >
-            <summary aria-label="Library details and availability">
-              <Info className="size-4" aria-hidden="true" />
-              Details
-              <ChevronDown className="size-3" aria-hidden="true" />
-            </summary>
-            {storageTotal !== null && <p>Loaded file sizes: {humanBytes(storageTotal)}</p>}
-            <p>Loaded file sizes cover this list only and are not account storage usage.</p>
-            {storageDetailsOpen && !libraryCleared ? (
-              <section className="my-4 max-w-2xl" aria-label="Account cloud storage">
-                <h3 className="mb-2 text-sm font-medium text-foreground">Account cloud storage</h3>
-                <p>
-                  Measured account usage includes Library files and other stored account content.
-                </p>
-                <Suspense fallback={<p role="status">Loading storage usage…</p>}>
-                  <StorageDashboard
-                    key={`${principal}:${folderRefreshKey}`}
-                    signedIn={Boolean(isSignedIn)}
-                  />
-                </Suspense>
-              </section>
-            ) : null}
-            <p>
-              List dates show when items were saved. File details show last-modified dates when
-              recorded. Last-modified sorting, project references, and processing status are not
-              available here. Source and date filters apply to loaded items; load more to include
-              older results.
-            </p>
-            <p>
-              Original shows a supported saved file preview. Extracted text shows readable text
-              saved from the document and may omit formatting or unreadable pages. An original
-              download preserves the stored file; a generated export is a separate file.
-            </p>
-            <p>
-              File Trash and moving files to projects are not supported here. Rename saved title
-              changes only the Library title, not its original filename. Chats use your configured
-              Trash retention; files and other saved items use the permanent-delete confirmation.
-              Use Folders to organize saved files.
-            </p>
-          </details>
-          {principalReady ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="kova-directory-refresh"
-              aria-label="Refresh Library"
-              title="Refresh Library"
-              onClick={() => {
-                refreshLibrary();
-                void loadShares();
-              }}
-              disabled={loading || folderBusy || sharesLoading}
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={`mr-1.5 h-3.5 w-3.5 ${loading || sharesLoading ? "animate-spin motion-reduce:animate-none" : ""}`}
-              />
-              <span>Refresh</span>
-            </Button>
-          ) : null}
-        </div>
         {uploadOpen && userKey && (
           <LibraryUploadDialog
             key={userKey}
@@ -2306,29 +2055,7 @@ function LibraryPage() {
               >
                 Clear
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
 
-                disabled={!principal || selectedDurableIds.length === 0 || folderBusy || loading}
-                onClick={() => {
-                  const details = foldersDetailsRef.current;
-                  if (!details || !principalReady || !selectedDurableIds.length) return;
-                  details.open = true;
-                  const picker = details.querySelector<HTMLElement>(
-                    '[aria-label="Move selected Library items to folder"]',
-                  );
-                  const target =
-                    picker && !picker.matches(":disabled")
-                      ? picker
-                      : details.querySelector<HTMLElement>("summary");
-                  target?.focus({ preventScroll: true });
-                  target?.scrollIntoView({ block: "nearest" });
-                }}
-              >
-                Move to folder
-              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -2667,52 +2394,7 @@ function LibraryPage() {
             }}
           />
         ) : null}
-        <Dialog
-          open={Boolean(
-            trashOwner &&
-            trashOwner.principal === principal &&
-            trashOwner.generation === lifecycleGenerationRef.current,
-          )}
-          onOpenChange={(open) => {
-            if (!open) {
-              const origin = trashOriginRef.current;
-              if (
-                origin?.principal === principalRef.current &&
-                origin?.generation === lifecycleGenerationRef.current
-              ) {
-                const chats = savedChatLibraryItems(userKey);
-                setItems((current) => [
-                  ...current.filter((item) => !item.id.startsWith("chat:")),
-                  ...chats,
-                ]);
-              }
-              setTrashOwner(null);
-            }
-          }}
-        >
-          <DialogContent
-            className="max-h-[90dvh] overflow-y-auto"
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              const origin = trashOriginRef.current;
-              restoreDialogFocus(
-                trashTriggerRef.current,
-                origin?.url,
-                !principalReady ||
-                  origin?.principal !== principalRef.current ||
-                  origin?.generation !== lifecycleGenerationRef.current,
-              );
-            }}
-          >
-            <DialogTitle>Chat Trash</DialogTitle>
-            <DialogDescription>
-              Recover deleted chats saved in this browser. Library files are not kept here.
-            </DialogDescription>
-            {trashOwner?.principal === principal ? (
-              <ChatTrashPanel key={principal ?? "guest"} userKey={userKey} />
-            ) : null}
-          </DialogContent>
-        </Dialog>
+
         <Dialog
           open={Boolean(detailKey || visiblePreviewItem)}
           onOpenChange={(open) => {
@@ -2974,13 +2656,6 @@ function LibraryPage() {
             const pending = visiblePendingDelete;
             if (!pending || folderBusy || bulkDeleteBusy || !principalReady) return;
             try {
-              if (pending.retentionMs !== null) {
-                const retentionMs = readChatTrash(userKey).retentionMs;
-                if (retentionMs !== pending.retentionMs) {
-                  toast.error("Your Trash setting changed. Open Delete again to review it.");
-                  return;
-                }
-              }
               // Confirm only the named snapshot, never a newer selection or another account.
               if (pending.items.some((target) => !items.some((item) => item.id === target.id))) {
                 toast.error(
@@ -2990,13 +2665,13 @@ function LibraryPage() {
               }
               confirmedDeleteRef.current = pending;
             } catch {
-              toast.error("Your Trash setting could not be read. Nothing was deleted. Try again.");
+              toast.error("Deletion could not be prepared. Nothing was deleted. Try again.");
             }
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             const origin = deleteReturnFocusRef.current;
-            let confirmed = confirmedDeleteRef.current;
+            const confirmed = confirmedDeleteRef.current;
             deleteReturnFocusRef.current = null;
             confirmedDeleteRef.current = null;
             setPendingDelete(null);
@@ -3006,19 +2681,6 @@ function LibraryPage() {
               origin.generation === lifecycleGenerationRef.current &&
               origin.url === window.location.href &&
               !libraryCleared;
-            if (current && confirmed && confirmed.retentionMs !== null) {
-              try {
-                if (readChatTrash(userKey).retentionMs !== confirmed.retentionMs) {
-                  confirmed = null;
-                  toast.error("Your Trash setting changed. Open Delete again to review it.");
-                }
-              } catch {
-                confirmed = null;
-                toast.error(
-                  "Your Trash setting could not be read. Nothing was deleted. Try again.",
-                );
-              }
-            }
             const active = document.activeElement;
             const focusMoved =
               active !== document.body &&
@@ -3036,8 +2698,7 @@ function LibraryPage() {
               origin?.url,
               !current || focusMoved,
             );
-            // Wait until this dialog has closed before the existing permanent-chat
-            // confirmation can open, and focus a stable control before removing rows.
+            // Close the confirmation and focus a stable control before removing rows.
             if (!current || !confirmed) return;
             if (confirmed.kind === "one") void remove(confirmed.items[0].id, true);
             else

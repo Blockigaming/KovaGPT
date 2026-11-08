@@ -125,7 +125,7 @@ const featureRows = [
       "Keep a copy of important original files",
     ],
     "Understand what is included",
-    "Library availability depends on the saved item type and your account. Archived chats do not appear in the normal Library collection. An extracted file representation is different from its original document.",
+    "Library availability depends on the saved item type and your account. An extracted file representation is different from its original document.",
     "/library",
   ],
   [

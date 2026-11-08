@@ -1,4 +1,4 @@
-import { moveChatToTrash } from "@/lib/chat-trash";
+import { permanentlyDeleteChat } from "@/lib/permanent-chat-delete";
 import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -237,11 +237,11 @@ export function AppShell({
     const current = () =>
       trashPrincipalRef.current.generation === generation && trashPrincipalRef.current.ready;
     try {
-      if (!(await moveChatToTrash(userKey, chat, conversations, current)) || !current()) return;
+      if (!(await permanentlyDeleteChat(userKey, chat, current)) || !current()) return;
       setConversationState({ principal: storagePrincipal, items: loadConversations(userKey) });
-      toast.success("Chat removed. Recoverable chats are in Settings → Data controls → Trash.");
+      toast.success("Chat permanently deleted");
     } catch {
-      if (current()) toast.error("Could not save Trash. Your chat was kept.");
+      if (current()) toast.error("Could not delete the chat. Try again.");
     }
   };
 

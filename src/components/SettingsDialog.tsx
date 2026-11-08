@@ -15,8 +15,6 @@ import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { parseAccountDeletionStatus, requestAccountDeletion } from "@/lib/account-deletion-client";
 import { AccountEmailPreferences } from "@/components/AccountEmailPreferences";
 import { AccountExportPanel } from "@/components/AccountExportPanel";
-import { ChatTrashPanel } from "@/components/ChatTrashPanel";
-import { readChatTrash, writeChatTrash } from "@/lib/chat-trash";
 import { TRASH_RETENTION_OPTIONS } from "@/lib/chat-trash-policy.mjs";
 import { PwaSettings } from "@/components/PwaSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1039,12 +1037,6 @@ export function SettingsDialog({
         { v: "personalization", label: "Profile", icon: User2 },
         { v: "security", label: "Security and login", icon: ShieldCheck },
         { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
-        {
-          v: "archived",
-          label: "Archived chats",
-          icon: Archive,
-          keywords: ["history", "trash"],
-        },
         { v: "parental", label: "Parental controls", icon: Baby },
         { v: "voice", label: "Voice", icon: Mic, keywords: ["microphone", "audio"] },
         { v: "storage", label: "Storage", icon: HardDrive },
@@ -1471,14 +1463,6 @@ export function SettingsDialog({
                 </details>
               ) : null}
               {/* DIRECT ACCOUNT SETTINGS */}
-              <TabsContent
-                value="archived"
-                aria-labelledby={currentSectionHeadingId}
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
-                <ArchivedChatsPanel userKey={userKey} />
-                <ChatTrashPanel userKey={userKey} />
-              </TabsContent>
               <TabsContent
                 value="voice"
                 aria-labelledby={currentSectionHeadingId}
@@ -2352,8 +2336,7 @@ export function SettingsDialog({
                     Storage
                   </Button>
                 </div>
-                <ArchivedChatsPanel userKey={userKey} />
-                <ChatTrashPanel userKey={userKey} />
+
                 <PublicShareLinks />
                 <div
                   role="note"
@@ -2378,7 +2361,7 @@ export function SettingsDialog({
                 />
                 <SecurityRow
                   title="Export this device's data"
-                  body="Download chats, archived chats, and preferences stored on this device. Cloud account records are not included."
+                  body="Download chats and preferences stored on this device. Cloud account records are not included."
                   actionLabel="Download"
                   onAction={() => {
                     try {
@@ -2420,17 +2403,14 @@ export function SettingsDialog({
                     if (!file) return;
                     try {
                       const imported = parseDeviceDataExport(await file.text());
-                      const conversations = mergeConversations(
-                        loadConversations(userKey),
-                        imported.conversations,
-                      );
-                      const archived = mergeConversations(
-                        loadArchivedConversations(userKey),
-                        imported.archivedConversations,
-                      );
+                      const conversations = mergeConversations(loadConversations(userKey), [
+                        ...imported.conversations,
+                        ...imported.archivedConversations,
+                        ...loadArchivedConversations(userKey),
+                      ]);
                       if (
                         !(await saveConversations(userKey, conversations)) ||
-                        !(await saveArchivedConversations(userKey, archived))
+                        !(await saveArchivedConversations(userKey, []))
                       )
                         throw new Error(
                           "Chat import could not be saved. Check chat sync and retry.",
@@ -2448,7 +2428,7 @@ export function SettingsDialog({
                 />
                 <SecurityRow
                   title="Import chat history"
-                  body="Merge active and archived chats from a KovaGPT device-data export. Existing newer chats are kept."
+                  body="Merge chats from a KovaGPT device-data export. Existing newer chats are kept."
                   actionLabel="Choose file"
                   onAction={() => importFileRef.current?.click()}
                 />
@@ -3047,8 +3027,7 @@ function SignedOutSettings({
         ) : section === "data" ? (
           <div className="space-y-5">
             <h3>Data controls</h3>
-            <ArchivedChatsPanel userKey={null} />
-            <ChatTrashPanel userKey={null} />
+
             <div className="rounded-xl border border-border/60 bg-card/40 p-4">
               <div className="text-sm font-medium">How signed-out data is stored</div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -3092,413 +3071,6 @@ function SignedOutSettings({
     </div>
   );
 }
-
-function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
-  type Chat = ReturnType<typeof loadArchivedConversations>[number];
-  type Failure = {
-    userKey: string | null;
-    chat: Chat;
-    action: "restore" | "archive" | "delete" | "delete-cleanup";
-    message: string;
-  };
-  type DeleteTarget = {
-    chat: Chat;
-    userKey: string | null;
-    epoch: number;
-    trigger: HTMLElement;
-    url: string;
-    retentionMs: number;
-    expiresAt?: number;
-    transferComplete?: boolean;
-  };
-  const [revision, setRevision] = useState(0);
-  useEffect(
-    () => subscribeToConversationChanges(userKey, () => setRevision((value) => value + 1)),
-    [userKey],
-  );
-  const [failure, setFailure] = useState<Failure | null>(null);
-  const [pending, setPending] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const contextRef = useRef({ userKey, epoch: 0, active: true });
-  if (contextRef.current.userKey !== userKey)
-    contextRef.current = { userKey, epoch: contextRef.current.epoch + 1, active: true };
-  const busyRef = useRef(false);
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const deleteHeadingRef = useRef<HTMLHeadingElement>(null);
-  const deleteReturnRef = useRef<DeleteTarget | null>(null);
-  const deleteConfirmedRef = useRef(false);
-  const deleteTargetRef = useRef(deleteTarget);
-  deleteTargetRef.current = deleteTarget;
-  const archived = loadArchivedConversations(userKey);
-  const visibleFailure = failure?.userKey === userKey ? failure : null;
-  const visibleDelete =
-    deleteTarget?.userKey === userKey && deleteTarget.epoch === contextRef.current.epoch
-      ? deleteTarget
-      : null;
-  useEffect(() => {
-    const reset = () => {
-      contextRef.current.epoch += 1;
-      busyRef.current = false;
-      deleteReturnRef.current = null;
-      deleteConfirmedRef.current = false;
-      setPending(false);
-      setFailure(null);
-      deleteTargetRef.current = null;
-      setDeleteTarget(null);
-      setRevision((value) => value + 1);
-    };
-    contextRef.current.active = true;
-    reset();
-    const cleared = (event: Event) => {
-      if (isPrincipalBrowserStorageClearedEvent(event, userKey)) reset();
-    };
-    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, cleared);
-    return () => {
-      contextRef.current.active = false;
-      contextRef.current.epoch += 1;
-      deleteReturnRef.current = null;
-      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, cleared);
-    };
-  }, [userKey]);
-  const run = async (chat: Chat, action: Failure["action"], target?: DeleteTarget) => {
-    const context = contextRef.current;
-    if (!context.active || context.userKey !== userKey || busyRef.current) return;
-    const deleting = action === "delete" || action === "delete-cleanup";
-    if (deleting && (!target || deleteTargetRef.current !== target)) return;
-    const epoch = context.epoch;
-    const current = () =>
-      contextRef.current.active &&
-      contextRef.current.userKey === userKey &&
-      contextRef.current.epoch === epoch;
-    busyRef.current = true;
-    (deleting ? deleteHeadingRef.current : headingRef.current)?.focus({
-      preventScroll: true,
-    });
-    setPending(true);
-    setFailure(null);
-    let stage = action;
-    try {
-      if (deleting && target && !target.transferComplete) {
-        const state = readChatTrash(userKey);
-        const existing = state.entries.find((entry) => entry.conversation.id === chat.id);
-        if (state.retentionMs !== target.retentionMs || existing?.expiresAt !== target.expiresAt) {
-          const next = {
-            ...target,
-            retentionMs: state.retentionMs,
-            expiresAt: existing?.expiresAt,
-          };
-          deleteTargetRef.current = next;
-          setDeleteTarget(next);
-          throw new Error(
-            `Trash retention changed for “${chat.title}”. Review the updated consequence and confirm again.`,
-          );
-        }
-        if (state.retentionMs !== 0 || existing) {
-          const deletedAt = Date.now();
-          const entry = existing ?? {
-            conversation: chat,
-            deletedAt,
-            expiresAt: deletedAt + state.retentionMs,
-          };
-          // Save a recoverable copy first. Reuse any previous transfer without extending its deadline.
-          if (!existing) writeChatTrash(userKey, { ...state, entries: [entry, ...state.entries] });
-          if (!current()) return;
-          const next = { ...target, expiresAt: entry.expiresAt, transferComplete: true };
-          deleteTargetRef.current = next;
-          setDeleteTarget(next);
-          stage = "delete-cleanup";
-        }
-      }
-      if (target?.transferComplete) stage = "delete-cleanup";
-      if (action === "restore") {
-        if (
-          !(await saveConversations(
-            userKey,
-            mergeConversations(loadConversations(userKey), [chat]),
-          ))
-        )
-          throw new Error(
-            `Could not restore “${chat.title}”. Retry restore when storage is available.`,
-          );
-        if (!current()) return;
-        stage = "archive";
-      }
-      if (
-        !(await saveArchivedConversations(
-          userKey,
-          loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
-        ))
-      )
-        throw new Error(
-          stage === "delete-cleanup"
-            ? `“${chat.title}” is in Trash, but removing it from Archived chats could not be confirmed. Retry archive cleanup; its Trash deadline is unchanged.`
-            : stage === "delete"
-              ? `Could not permanently delete archived chat “${chat.title}”. Retry deletion when storage is available.`
-              : `“${chat.title}” was restored, but the archive update could not be confirmed. Retry the archive update.`,
-        );
-      if (!current()) return;
-      setRevision((value) => value + 1);
-      if (deleting) {
-        deleteConfirmedRef.current = true;
-        deleteTargetRef.current = null;
-        setDeleteTarget(null);
-        toast.success(stage === "delete-cleanup" ? "Chat moved to Trash" : "Archived chat deleted");
-      } else {
-        window.dispatchEvent(new Event("kova:conversations-imported"));
-        toast.success("Chat restored");
-      }
-    } catch (cause) {
-      if (!current()) return;
-      setFailure({
-        userKey,
-        chat,
-        action: stage,
-        message:
-          cause instanceof Error && cause.message.includes(chat.title)
-            ? cause.message
-            : stage === "delete-cleanup"
-              ? `“${chat.title}” is in Trash, but removing it from Archived chats could not be confirmed. Retry archive cleanup; its Trash deadline is unchanged.`
-              : stage === "archive"
-                ? `“${chat.title}” was restored, but the archive update could not be confirmed. Retry the archive update.`
-                : stage === "delete"
-                  ? `Could not delete archived chat “${chat.title}”. Its archived copy is still available. Try again when Trash storage is available.`
-                  : `Could not restore “${chat.title}”. Try again.`,
-      });
-    } finally {
-      if (current()) {
-        busyRef.current = false;
-        setPending(false);
-      }
-    }
-  };
-  const reviewDelete = (chat: Chat, trigger: HTMLElement) => {
-    if (!contextRef.current.active || contextRef.current.userKey !== userKey || busyRef.current)
-      return;
-    try {
-      const state = readChatTrash(userKey);
-      const existing = state.entries.find((entry) => entry.conversation.id === chat.id);
-      const target = {
-        chat,
-        trigger,
-        userKey,
-        epoch: contextRef.current.epoch,
-        url: window.location.href,
-        retentionMs: state.retentionMs,
-        expiresAt: existing?.expiresAt,
-      };
-      if (failure && (failure.chat.id !== chat.id || !failure.action.startsWith("delete")))
-        setFailure(null);
-      deleteReturnRef.current = target;
-      deleteConfirmedRef.current = false;
-      deleteTargetRef.current = target;
-      setDeleteTarget(target);
-    } catch {
-      headingRef.current?.focus({ preventScroll: true });
-      setFailure({
-        userKey,
-        chat,
-        action: "delete",
-        message: `Could not review deletion of “${chat.title}” because Trash storage is unavailable. Its archived copy is unchanged. Try again.`,
-      });
-    }
-  };
-  const retentionLabel = visibleDelete
-    ? (TRASH_RETENTION_OPTIONS.find((option) => option.value === visibleDelete.retentionMs)
-        ?.label ?? `${visibleDelete.retentionMs / 60_000} minutes`)
-    : "";
-
-  const failureNotice = visibleFailure ? (
-    <div role="alert" className="space-y-2 rounded-lg border border-destructive/40 p-3 text-sm">
-      <p className="text-destructive">{visibleFailure.message}</p>
-      <div className="flex flex-wrap gap-2">
-        {!visibleDelete && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pending}
-            onClick={(event) => {
-              if (visibleFailure.action.startsWith("delete"))
-                reviewDelete(visibleFailure.chat, event.currentTarget);
-              else void run(visibleFailure.chat, visibleFailure.action);
-            }}
-          >
-            {visibleFailure.action.startsWith("delete")
-              ? "Review delete"
-              : visibleFailure.action === "archive"
-                ? "Retry archive update"
-                : "Retry restore"}
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={pending}
-          onClick={() => {
-            if (!contextRef.current.active || contextRef.current.userKey !== userKey) return;
-            (visibleDelete ? deleteHeadingRef.current : headingRef.current)?.focus({
-              preventScroll: true,
-            });
-            setFailure(null);
-          }}
-        >
-          Dismiss error
-        </Button>
-      </div>
-    </div>
-  ) : null;
-  return (
-    <section
-      className="rounded-xl border border-border/70 bg-card/60 p-4"
-      aria-label="Archived chats"
-      aria-busy={pending}
-    >
-      <div className="mb-3">
-        <h4 ref={headingRef} tabIndex={-1} className="text-sm font-medium">
-          Archived chats
-        </h4>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Review or restore conversations you moved out of your sidebar.
-        </p>
-      </div>
-      {!visibleDelete && failureNotice}
-      <div className="space-y-1" key={revision}>
-        {archived.length ? (
-          archived.map((chat) => (
-            <div
-              key={chat.id}
-              className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/60"
-            >
-              <span className="min-w-0 flex-1 truncate text-sm">{chat.title}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="rounded-full"
-                disabled={pending}
-                onClick={() => void run(chat, "restore")}
-              >
-                Restore
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="rounded-full text-muted-foreground hover:text-destructive"
-                disabled={pending}
-                aria-label={`Delete archived chat ${chat.title}`}
-                onClick={(event) => reviewDelete(chat, event.currentTarget)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))
-        ) : (
-          <p className="px-3 py-2 text-sm text-muted-foreground">No archived chats</p>
-        )}
-      </div>
-      <AlertDialog
-        open={Boolean(visibleDelete)}
-        onOpenChange={(next) => {
-          if (!next && !busyRef.current) {
-            deleteTargetRef.current = null;
-            setDeleteTarget(null);
-          }
-        }}
-      >
-        <AlertDialogContent
-          onOpenAutoFocus={(event) => {
-            event.preventDefault();
-            if (
-              visibleDelete &&
-              deleteTargetRef.current === visibleDelete &&
-              contextRef.current.active &&
-              visibleDelete.epoch === contextRef.current.epoch
-            )
-              cancelRef.current?.focus();
-          }}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            const origin = deleteReturnRef.current;
-            deleteReturnRef.current = null;
-            const active = document.activeElement;
-            const focusMoved =
-              active !== null &&
-              active !== document.body &&
-              active !== origin?.trigger &&
-              !(event.target instanceof HTMLElement && event.target.contains(active));
-            const trigger = origin?.trigger;
-            const canReturn =
-              trigger?.isConnected &&
-              trigger.getClientRects().length > 0 &&
-              !trigger.closest('[inert], [aria-hidden="true"]') &&
-              !trigger.matches(":disabled");
-            restoreDialogFocus(
-              !deleteConfirmedRef.current && canReturn ? trigger : headingRef.current,
-              origin?.url,
-              !contextRef.current.active ||
-                origin?.userKey !== contextRef.current.userKey ||
-                origin?.epoch !== contextRef.current.epoch ||
-                focusMoved,
-            );
-            deleteConfirmedRef.current = false;
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle ref={deleteHeadingRef} tabIndex={-1}>
-              {visibleDelete?.expiresAt !== undefined || visibleDelete?.retentionMs !== 0
-                ? `Move “${visibleDelete?.chat.title}” to Trash?`
-                : `Delete “${visibleDelete?.chat.title}” permanently?`}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {visibleDelete?.expiresAt !== undefined
-                ? `The existing Trash copy keeps its original deadline: ${new Date(visibleDelete.expiresAt).toLocaleString()}. Only the archived copy will be removed; this will not extend recovery time.`
-                : visibleDelete?.retentionMs === 0
-                  ? `Trash retention is Instantly. This permanently removes “${visibleDelete.chat.title}” from Archived chats without a recoverable Trash copy. This cannot be undone.`
-                  : `“${visibleDelete?.chat.title}” will leave Archived chats and can be restored from this browser’s Trash for ${retentionLabel}. Archive itself has no Trash expiry.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {visibleDelete && failureNotice}
-          <AlertDialogFooter>
-            <AlertDialogCancel ref={cancelRef} disabled={pending}>
-              Cancel
-            </AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending || !visibleDelete}
-              onClick={() => {
-                const target = visibleDelete;
-                if (
-                  !target ||
-                  deleteTargetRef.current !== target ||
-                  target.epoch !== contextRef.current.epoch ||
-                  target.userKey !== contextRef.current.userKey
-                )
-                  return;
-                void run(
-                  target.chat,
-                  target.transferComplete ? "delete-cleanup" : "delete",
-                  target,
-                );
-              }}
-            >
-              {pending
-                ? "Updating archived chat…"
-                : visibleDelete?.transferComplete
-                  ? "Retry archive cleanup"
-                  : visibleFailure?.action.startsWith("delete")
-                    ? "Retry delete"
-                    : visibleDelete?.expiresAt !== undefined || visibleDelete?.retentionMs !== 0
-                      ? "Move to Trash"
-                      : "Delete permanently"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </section>
-  );
-}
-
-// ---------- Family safety availability ----------
 
 function FamilyControlsUnavailable() {
   return (

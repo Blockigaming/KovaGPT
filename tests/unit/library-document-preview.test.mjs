@@ -900,7 +900,7 @@ test("Library wording distinguishes original, saved title, extraction and genera
   assert.match(route, /<dt>Stored size<\/dt>/);
   assert.match(route, /Original\s*<\/button>/);
   assert.match(route, /No extracted text available/);
-  assert.match(route, /a generated export is a separate file/);
+  assert.match(route, /anchor.download = item.file_name/);
   assert.match(
     readFileSync("src/components/LibraryRenameDialog.tsx", "utf8"),
     /<DialogTitle>Rename saved title<\/DialogTitle>/,

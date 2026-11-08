@@ -32,6 +32,7 @@ async function runFinalization({
   renewFailureAt = 0,
   customerResponse = { id: "cus_fixture" },
   customers = [customer],
+  teamCustomers = [],
   authLookupError = null,
 } = {}) {
   const calls = [],
@@ -46,6 +47,10 @@ async function runFinalization({
   }
   const mocks = {
     validateAccountFinalizationClaim,
+    teamCustomersForAccountDeletion: async () => teamCustomers,
+    acknowledgeTeamCustomerRetired: async () => {
+      calls.push("billing-team-ack");
+    },
     OrganizationAccountDeletionError,
     renewAccountFinalization: async (_admin, owner, attempt) => {
       assert.equal(owner, OWNER);
@@ -69,10 +74,10 @@ async function runFinalization({
     },
     createStripeClient: () => ({
       customers: {
-        retrieve: async () => {
+        retrieve: async (id) => {
           calls.push("billing-preflight");
           if (failPreflight) throw new Error("private billing transport detail");
-          return customerResponse;
+          return teamCustomers.includes(id) ? { id } : customerResponse;
         },
       },
     }),
@@ -391,4 +396,13 @@ test("an invalid worker principal starts no cleanup", async () => {
   const result = await runFinalization({ userId: "another-owner" });
   assert.equal(result.response.status, 503);
   assert.deepEqual(result.calls, []);
+});
+
+test("separate Team customers retire before Auth deletion without personal-policy acknowledgments", async () => {
+  const result = await runFinalization({ teamCustomers: ["cus_team"] });
+  assert.equal(result.state, "deleted");
+  assert.equal(result.calls.filter((call) => call === "billing-retire").length, 2);
+  assert.equal(result.calls.filter((call) => call === "billing-ack").length, 1);
+  assert.equal(result.calls.filter((call) => call === "billing-team-ack").length, 1);
+  assert.ok(result.calls.lastIndexOf("billing-retire") < result.calls.indexOf("auth-delete"));
 });
