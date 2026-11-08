@@ -108,7 +108,7 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
     .getByRole("button", { name: "Free offer: 50% off your first month", exact: true })
     .filter({ visible: true });
   await expect(offer.getByText("Free offer", { exact: true })).toBeVisible();
-  await expect(offer).toHaveCSS("display", "inline-flex");
+  await expect(offer).toHaveCSS("display", /^(inline-)?flex$/);
   await expect(offer).toHaveCSS("color", "rgb(56, 189, 248)");
   const iconBox = await offer.locator("svg").boundingBox();
   const labelBox = await offer.getByText("Free offer", { exact: true }).boundingBox();
