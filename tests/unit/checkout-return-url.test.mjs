@@ -76,7 +76,10 @@ test("does not expose a Checkout return URL browser input", async () => {
     "utf8",
   );
   assert.match(policySource, /p_return_url: returnUrl/);
-  assert.match(policySource, /session\.success_url : session\.return_url\) !== claim\.returnUrl/);
+  assert.match(
+    policySource,
+    /session\.success_url\s*:\s*session\.return_url\) !== claim\.returnUrl/,
+  );
   assert.doesNotMatch(componentSource, /\breturnUrl\b/);
   assert.doesNotMatch(hookSource, /\breturnUrl\b/);
   assert.doesNotMatch(pricingSource, /\breturnUrl\b|window\.location\.origin/);

@@ -119,7 +119,9 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
     ...(effort ? { reasoning: { effort } } : {}),
     provider: {
       max_price: MODEL_PRICE_CEILINGS[model],
-      sort: "latency",
+      // Maverick's review fan-out needs capacity-aware provider balancing.
+      // An explicit latency sort disables OpenRouter's adaptive routing.
+      ...(model === "kova-neon-4.6" ? {} : { sort: "latency" }),
       require_parameters: true,
       allow_fallbacks: true,
     },

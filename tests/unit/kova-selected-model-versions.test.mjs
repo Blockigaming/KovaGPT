@@ -82,6 +82,34 @@ test("retired version aliases fail closed instead of silently switching versions
   }
 });
 
+test("Neon uses adaptive provider balancing while all foundations retain price and parameter guards", () => {
+  const ceilings = {
+    "kova-argon-4.6": { prompt: 0.2, completion: 0.8 },
+    "kova-neon-4.6": { prompt: 0.5, completion: 1.5 },
+    "kova-xenon-5": { prompt: 3, completion: 15 },
+  };
+  for (const model of approved)
+    for (const stream of [false, true]) {
+      const prepared = prepareKovaHostedRequest({
+        model: model.id,
+        stream,
+        messages: [{ role: "user", content: "19 times 23" }],
+        max_completion_tokens: 300,
+      });
+      const body = JSON.parse(prepared.body);
+      assert.equal(prepared.endpoint, "https://openrouter.ai/api/v1/chat/completions");
+      assert.equal(body.model, model.foundation);
+      assert.deepEqual(body.provider, {
+        max_price: ceilings[model.id],
+        ...(model.id === "kova-neon-4.6" ? {} : { sort: "latency" }),
+        require_parameters: true,
+        allow_fallbacks: true,
+      });
+      assert.equal(body.stream, stream);
+      assert.equal(body.models, undefined);
+    }
+});
+
 test("related staging code and pricing configuration use the new names", () => {
   for (const path of [
     "src/lib/ai/model-config.mjs",
