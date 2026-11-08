@@ -1,3 +1,4 @@
+import { useTier } from "@/hooks/useTier";
 import { hasAdSenseConsent } from "@/lib/adsense-policy.mjs";
 import { useEffect, useRef, useState } from "react";
 import { getAdSenseConfiguration } from "@/lib/adsense.functions";
@@ -40,12 +41,13 @@ function loadAdScript() {
 
 /** A separate presentation surface: never modifies prompts, response text, or exports. */
 export function ResponseAdvertisement() {
+  const { tier, status } = useTier();
   const [consented, setConsented] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [failed, setFailed] = useState(false);
   const unit = useRef<HTMLModElement>(null);
   const requested = useRef<HTMLModElement | null>(null);
-  const eligible = true; // Parent mounts only for the current verified Free account.
+  const eligible = tier === "free" && status === "ready";
   useEffect(() => {
     if (!eligible) return;
     let active = true;

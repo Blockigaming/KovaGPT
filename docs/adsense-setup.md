@@ -4,7 +4,7 @@ Account: `pub-5973080139144902`. Responsive display unit: `4116284418` (Kova Fre
 
 Site connection uses the AdSense Ads.txt snippet verification method. `public/ads.txt` authorizes Google's seller entry without loading the advertising script globally or adding code to the initial application bundle. Auto Ads must remain off.
 
-The staged response component mounts only below the newest completed answer in an authenticated, verified Free account's ordinary chat. It is excluded from temporary chats, project/shared conversations, previews, streaming, failed or stopped responses, and paid/unresolved plans. No model prompt, response storage, copy/export text, or API generation is changed. Ad errors never block the answer. No chat-derived targeting payload is sent. Contextual/non-personalized requests leave ad selection to Google.
+The staged response component renders only below the newest completed answer in an authenticated, verified Free account's ordinary chat. It is excluded from temporary chats, project/shared conversations, previews, streaming, failed or stopped responses, and paid/unresolved plans. No model prompt, response storage, copy/export text, or API generation is changed. Ad errors never block the answer. No chat-derived targeting payload is sent. Contextual/non-personalized requests leave ad selection to Google.
 
 ## Activation gates
 
