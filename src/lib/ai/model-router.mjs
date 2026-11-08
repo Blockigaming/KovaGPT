@@ -58,7 +58,7 @@ export function modeUpgradeRequired(tier, mode, deepMode = false) {
     : mode === "medium"
       ? "thinking"
       : mode;
-  return !isModeAllowedForTier(plan, canonical) || (deepMode && plan !== "pro");
+  return !isModeAllowedForTier(plan, canonical) || (deepMode && plan === "free");
 }
 
 // Signals that extra reasoning will noticeably improve the answer. Length is
@@ -174,9 +174,9 @@ export function routeModel(input) {
   const tier = input.tier ?? "free";
   const mode = typeof input.mode === "string" ? input.mode : "instant";
 
-  /** @param {ModelRole} role @param {number} maxOutputTokens @param {string[]} reasons @param {number} score @param {ModelRole=} downgradedFrom */
-  const decide = (role, maxOutputTokens, reasons, score, downgradedFrom) => {
-    const modelId = config[role];
+  /** @param {ModelRole} role @param {number} maxOutputTokens @param {string[]} reasons @param {number} score @param {ModelRole=} downgradedFrom @param {string=} selectedModelId */
+  const decide = (role, maxOutputTokens, reasons, score, downgradedFrom, selectedModelId) => {
+    const modelId = selectedModelId ?? config[role];
     return {
       role,
       modelId,
@@ -224,10 +224,18 @@ export function routeModel(input) {
     if (!selected) throw new Error("invalid_hosted_model");
     if (!selected.tiers.includes(tier === "business" ? "pro" : tier))
       throw new Error("kova_model_not_entitled");
-    if (config[selected.role] !== selected.id) throw new Error("kova_model_runtime_unverified");
+    if (config[selected.role] !== (selected.routingBinding ?? selected.id))
+      throw new Error("kova_model_runtime_unverified");
     if ((input.hasImages || input.task === "image_analysis") && !selected.vision)
       throw new Error("kova_model_vision_unavailable");
-    return decide(selected.role, modeCap, [...reasons, "explicit_consumer_model"], score);
+    return decide(
+      selected.role,
+      modeCap,
+      [...reasons, "explicit_consumer_model"],
+      score,
+      undefined,
+      selected.id,
+    );
   }
 
   const explicitDeep = Boolean(input.deepMode) || PREMIUM_MODES.has(mode);

@@ -1,6 +1,6 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
 
-export const MODEL_CATALOG_VERSION = "2026-10-15";
+export const MODEL_CATALOG_VERSION = "2026-11-08";
 export const MODEL_CATALOG_SOURCES = [
   "https://platform.openai.com/docs/models",
   "https://platform.openai.com/docs/pricing",
@@ -109,30 +109,33 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
 /**
  * Staged hosted inference catalog. These are third-party foundation-model routing
  * aliases; they do not imply ownership of the base weights or quality parity.
- * Values reserve conservative provider price ceilings in USD per 1M tokens.
+ * Input ceilings include the 1.25x cache-write rate, USD per 1M tokens.
+ * Sources: https://developers.openai.com/api/docs/models/gpt-6-luna
+ * https://developers.openai.com/api/docs/models/gpt-6.1-terra
+ * https://developers.openai.com/api/docs/models/gpt-6.1-sol
  * Operator must re-check live prices/availability before activation.
  */
 export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
   {
     id: "kova-argon-4.6",
-    endpoint: "responses", // Catalog compatibility; actual transport uses chat completions.
+    endpoint: "responses", // Native OpenAI Responses, converted at the chat boundary.
     reasoning: true,
-    vision: false,
+    vision: true,
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 8_192,
-    pricePerMillion: { input: 0.2, cachedInput: 0.2, output: 0.8 },
+    pricePerMillion: { input: 0.125, cachedInput: 0.01, output: 0.5 },
     tiers: ["guest", "free", "plus", "pro"],
   },
   {
     id: "kova-neon-4.6",
     endpoint: "responses",
-    reasoning: false,
+    reasoning: true,
     vision: true,
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 8_192,
-    pricePerMillion: { input: 0.5, cachedInput: 0.5, output: 1.5 },
+    pricePerMillion: { input: 1.25, cachedInput: 0.05, output: 5 },
     tiers: ["plus", "pro"],
   },
   {
@@ -143,8 +146,52 @@ export const KOVA_HOSTED_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 16_384,
-    pricePerMillion: { input: 3, cachedInput: 3, output: 15 },
-    tiers: ["pro"],
+    pricePerMillion: { input: 2.5, cachedInput: 0.1, output: 10 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-argon-4.5",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 0.25, cachedInput: 0.02, output: 1.2 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-neon-4.5",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 2.5, cachedInput: 0.2, output: 12 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-xenon-4.6",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 2.5, cachedInput: 0.2, output: 10 },
+    tiers: ["plus", "pro"],
+  },
+  {
+    id: "kova-xenon-6.1",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 16_384,
+    pricePerMillion: { input: 12.5, cachedInput: 1, output: 50 },
+    tiers: ["plus", "pro"],
   },
 ] as const;
 
@@ -203,14 +250,24 @@ export function maximumServerOutputForModel(modelId: string): number {
   return Math.max(...configured);
 }
 
+function longContextRate(model: CatalogModel, inputTokens: number) {
+  // Official >272K full-request rate for Sol/Terra; Luna keeps its standard rate.
+  return inputTokens > 272_000 &&
+    KOVA_HOSTED_TEXT_MODELS.some((item) => item.id === model.id) &&
+    model.id !== "kova-argon-4.6"
+    ? { input: 2, output: 1.5 }
+    : { input: 1, output: 1 };
+}
+
 export function estimateMaximumCostUsd(
   model: CatalogModel,
   estimatedInputTokens: number,
   maximumOutputTokens: number,
 ): number {
+  const rate = longContextRate(model, estimatedInputTokens);
   return (
-    (estimatedInputTokens * model.pricePerMillion.input +
-      maximumOutputTokens * model.pricePerMillion.output) /
+    (estimatedInputTokens * model.pricePerMillion.input * rate.input +
+      maximumOutputTokens * model.pricePerMillion.output * rate.output) /
     1_000_000
   );
 }
@@ -220,10 +277,11 @@ export function actualCostUsd(
   usage: { input: number; cachedInput: number; output: number },
 ): number {
   const uncached = Math.max(0, usage.input - usage.cachedInput);
+  const rate = longContextRate(model, usage.input);
   return (
-    (uncached * model.pricePerMillion.input +
-      usage.cachedInput * model.pricePerMillion.cachedInput +
-      usage.output * model.pricePerMillion.output) /
+    (uncached * model.pricePerMillion.input * rate.input +
+      usage.cachedInput * model.pricePerMillion.cachedInput * rate.input +
+      usage.output * model.pricePerMillion.output * rate.output) /
     1_000_000
   );
 }

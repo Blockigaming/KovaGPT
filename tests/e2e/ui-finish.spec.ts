@@ -216,7 +216,7 @@ test("Share copies a real link and reports clipboard errors without false succes
 });
 
 for (const [tier, modes] of [
-  ["plus", ["instant", "thinking", "high"]],
+  ["plus", ["instant", "thinking", "high", "extra_high", "max"]],
   ["pro", ["instant", "thinking", "high", "extra_high", "max", "ultra"]],
 ] as const)
   test(`${tier} exposes exactly its additional model levels`, async ({ page }) => {

@@ -1,3 +1,4 @@
+import { HOSTED_MODEL_MAP } from "./kova-hosted-inference.server.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { modelForPolicy } from "@/lib/ai/model-catalog.server";
 import {
@@ -18,8 +19,12 @@ export function openAiServices(
   }
   return createOpenAiServices({
     client: createOpenAiServiceClient(runtimeEnv("OPENAI_API_KEY")),
-    model,
-    agentModel: modelForPolicy("deep").id,
+    model: HOSTED_MODEL_MAP[model as keyof typeof HOSTED_MODEL_MAP] ?? model,
+    agentModel: (() => {
+      if (Object.hasOwn(HOSTED_MODEL_MAP, model)) return HOSTED_MODEL_MAP[model];
+      const id = modelForPolicy("deep").id;
+      return HOSTED_MODEL_MAP[id as keyof typeof HOSTED_MODEL_MAP] ?? id;
+    })(),
     browserDomains: (() => {
       try {
         return JSON.parse(runtimeEnv("KOVA_OPENAI_BROWSER_ALLOWED_DOMAINS_JSON") || "[]");

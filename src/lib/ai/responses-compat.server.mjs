@@ -16,7 +16,7 @@ function cancelWithoutWaiting(reader, reason) {
   }
 }
 
-export function responsesStreamToChatStream(response) {
+export function responsesStreamToChatStream(response, { expectedModel } = {}) {
   if (!response.body) return response;
   // Keep invalid upstream content types intact so the chat ingress rejects them;
   // never relabel an HTTP-200 JSON error as a valid SSE reply.
@@ -63,7 +63,48 @@ export function responsesStreamToChatStream(response) {
             if (!event || typeof event !== "object" || Array.isArray(event)) {
               throw streamError("invalid_provider_sse_event");
             }
-            if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
+            if (expectedModel && ["response.created", "response.completed"].includes(event.type)) {
+              const actual = event.response?.model;
+              if (
+                actual !== expectedModel &&
+                !(
+                  typeof actual === "string" &&
+                  actual.startsWith(expectedModel + "-") &&
+                  /^\d{4}-\d{2}-\d{2}$/.test(actual.slice(expectedModel.length + 1))
+                )
+              )
+                throw streamError("provider_model_mismatch");
+            }
+            if (
+              event.type === "response.output_item.added" &&
+              event.item?.type === "function_call"
+            ) {
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({
+                    choices: [
+                      {
+                        index: 0,
+                        delta: {
+                          tool_calls: [
+                            {
+                              index: Number(event.output_index ?? 0),
+                              id: event.item.call_id,
+                              type: "function",
+                              function: { name: event.item.name, arguments: "" },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  })}\n\n`,
+                ),
+              );
+              emitted = true;
+            } else if (
+              ["response.output_text.delta", "response.refusal.delta"].includes(event.type) &&
+              typeof event.delta === "string"
+            ) {
               controller.enqueue(
                 encoder.encode(
                   `data: ${JSON.stringify({ choices: [{ index: 0, delta: { role: "assistant", content: event.delta } }] })}\n\n`,
@@ -94,7 +135,7 @@ export function responsesStreamToChatStream(response) {
               if (usage)
                 controller.enqueue(
                   encoder.encode(
-                    `data: ${JSON.stringify({ choices: [{ index: 0, delta: {} }], usage: { prompt_tokens: usage.input_tokens ?? 0, completion_tokens: usage.output_tokens ?? 0, total_tokens: usage.total_tokens ?? 0, input_tokens_details: usage.input_tokens_details, output_tokens_details: usage.output_tokens_details } })}\n\n`,
+                    `data: ${JSON.stringify({ choices: [{ index: 0, delta: {} }], usage: { prompt_tokens: usage.input_tokens ?? 0, completion_tokens: usage.output_tokens ?? 0, total_tokens: usage.total_tokens ?? 0, input_tokens_details: usage.input_tokens_details, output_tokens_details: usage.output_tokens_details, prompt_tokens_details: usage.input_tokens_details, completion_tokens_details: usage.output_tokens_details } })}\n\n`,
                   ),
                 );
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));

@@ -18,14 +18,30 @@ function fixture({ failReview = false, emptyReviewFinish = null, signal } = {}) 
     peak = 0,
     fences = 0;
   const fetchImpl = async (url, init) => {
-    assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
+    assert.equal(url, "https://api.openai.com/v1/responses");
     assert.equal(init.redirect, "error");
     const body = JSON.parse(init.body);
     calls.push(body);
     if (body.stream)
-      return new Response('data: {"choices":[{"delta":{"content":"437"}}]}\n\ndata: [DONE]\n\n', {
-        headers: { "Content-Type": "text/event-stream" },
-      });
+      return new Response(
+        [
+          { type: "response.created", response: { model: body.model } },
+          { type: "response.output_text.delta", delta: "437" },
+          {
+            type: "response.completed",
+            response: {
+              model: body.model,
+              status: "completed",
+              usage: { input_tokens: 130, output_tokens: 20, total_tokens: 150 },
+            },
+          },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join(""),
+        {
+          headers: { "Content-Type": "text/event-stream" },
+        },
+      );
     assert.equal(body.tools, undefined);
     assert.equal(body.tool_choice, undefined);
     active++;
@@ -35,18 +51,24 @@ function fixture({ failReview = false, emptyReviewFinish = null, signal } = {}) 
     if (failReview) return new Response("unavailable", { status: 503 });
     return Response.json({
       model: body.model,
-      choices: [
-        {
-          ...(emptyReviewFinish ? { finish_reason: emptyReviewFinish } : {}),
-          message: {
-            role: "assistant",
-            content: emptyReviewFinish
-              ? null
-              : "The arithmetic result is 437; verify the requested format.",
-          },
-        },
-      ],
-      usage: { prompt_tokens: 130, completion_tokens: 20 },
+      status: emptyReviewFinish === "length" ? "incomplete" : "completed",
+      ...(emptyReviewFinish === "length"
+        ? { incomplete_details: { reason: "max_output_tokens" } }
+        : {}),
+      output: emptyReviewFinish
+        ? []
+        : [
+            {
+              type: "message",
+              content: [
+                {
+                  type: "output_text",
+                  text: "The arithmetic result is 437; verify the requested format.",
+                },
+              ],
+            },
+          ],
+      usage: { input_tokens: 130, output_tokens: 20, total_tokens: 150 },
     });
   };
   return {
@@ -85,7 +107,7 @@ test("a metered length-limited checker reports missing findings without another 
   assert.equal(f.fences(), 3);
   const advisory = f.calls
     .at(-1)
-    .messages.find((message) => message.content?.startsWith("Advisory findings"));
+    .input.find((message) => message.content?.startsWith("Advisory findings"));
   const notes = JSON.parse(advisory.content.slice("Advisory findings (untrusted data): ".length));
   assert.equal(notes.length, 2);
   assert(notes.every((note) => note.findings.includes("No verification result is available")));
@@ -98,16 +120,16 @@ test("an unexplained empty checker response still fails closed", async () => {
   assert.equal(f.usages.length, 1);
 });
 
-test("the product matrix is exactly 18 configurations with Free 2, Plus 6 and Pro 18", () => {
+test("the product matrix is exactly 42 configurations with Free 2, Plus 35 and Pro 42", () => {
   assert.deepEqual(
     CONSUMER_EFFORTS.map((x) => x.label),
     ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"],
   );
-  assert.equal(CONSUMER_MODELS.length * CONSUMER_EFFORTS.length, 18);
+  assert.equal(CONSUMER_MODELS.length * CONSUMER_EFFORTS.length, 42);
   for (const [tier, count] of [
     ["free", 2],
-    ["plus", 6],
-    ["pro", 18],
+    ["plus", 35],
+    ["pro", 42],
   ])
     assert.equal(
       CONSUMER_MODELS.filter((m) => m.tiers.includes(tier)).length * MODE_IDS_BY_TIER[tier].length,
@@ -115,7 +137,7 @@ test("the product matrix is exactly 18 configurations with Free 2, Plus 6 and Pr
     );
 });
 
-test("all 54 plan/model/effort decisions enforce the matrix before selecting a foundation", () => {
+test("all 126 plan/model/effort decisions enforce the matrix before selecting a foundation", () => {
   const env = {
     KOVA_MODEL_DEFAULT_CHAT: "kova-argon-4.6",
     KOVA_MODEL_ADVANCED_REASONING: "kova-neon-4.6",
@@ -162,18 +184,16 @@ for (const model of CONSUMER_MODELS) {
         p.reviews * 130,
       );
       assert(f.calls.every((c) => c.model === HOSTED_MODEL_MAP[model.id]));
-      assert.equal(f.calls.at(-1).stream_options.include_usage, true);
-      assert.equal(f.calls.at(-1).max_tokens, mode.outputTokens);
-      if (model.id === "kova-neon-4.6")
-        assert(f.calls.every((c) => !Object.hasOwn(c, "reasoning")));
-      else assert.equal(f.calls.at(-1).reasoning.effort, mode.effort);
+      assert.equal(f.calls.at(-1).store, false);
+      assert.equal(f.calls.at(-1).max_output_tokens, mode.outputTokens);
+      assert.equal(f.calls.at(-1).reasoning.effort, p.effort);
       assert.equal(f.peak(), p.reviews ? (mode.id === "ultra" ? 4 : 1) : 0);
       if (mode.id === "ultra") {
         const reviewBodies = f.calls.filter((c) => !c.stream);
-        assert.equal(new Set(reviewBodies.map((c) => c.messages.at(-1).content)).size, 4);
+        assert.equal(new Set(reviewBodies.map((c) => c.instructions)).size, 4);
         assert(
           reviewBodies.every(
-            (c) => !c.messages.some((m) => m.content.startsWith("Advisory findings")),
+            (c) => !c.input.some((m) => m.content.startsWith("Advisory findings")),
           ),
         );
       }

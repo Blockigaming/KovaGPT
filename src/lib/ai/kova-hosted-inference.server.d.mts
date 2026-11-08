@@ -2,7 +2,7 @@ export const HOSTED_MODEL_MAP: Readonly<Record<string, string>>;
 export function isKovaHostedModelId(value: unknown): value is string;
 export function prepareKovaHostedRequest(
   value: unknown,
-  options?: { effort?: "none" | "low" | "high" | "max" },
+  options?: { effort?: "none" | "low" | "medium" | "high" | "xhigh" | "max" },
 ): {
   endpoint: string;
   body: string;
@@ -13,8 +13,8 @@ export function requestKovaHostedChat(input?: {
   token?: string;
   signal?: AbortSignal;
   fetchImpl?: typeof fetch;
-  effort?: "none" | "low" | "high" | "max";
+  effort?: "none" | "low" | "medium" | "high" | "xhigh" | "max";
   beforeRetry?: () => Promise<void>;
 }): Promise<Response>;
-export const HOSTED_CHAT_URL: "https://openrouter.ai/api/v1/chat/completions";
+export const HOSTED_CHAT_URL: "https://api.openai.com/v1/responses";
 export const MODEL_OUTPUT_LIMITS: Readonly<Record<string, number>>;

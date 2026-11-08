@@ -10,7 +10,15 @@ import {
 test("stable model names and tiers", () => {
   assert.deepEqual(
     Object.values(KOVA_MODEL_CATALOG).map(({ name }) => name),
-    ["Kova Xenon 5", "Kova Neon 4.6", "Kova Argon 4.6"],
+    [
+      "Kova Xenon 5",
+      "Kova Neon 4.6",
+      "Kova Argon 4.6",
+      "Kova Argon 4.5",
+      "Kova Neon 4.5",
+      "Kova Xenon 4.6",
+      "Kova Xenon 6.1",
+    ],
   );
   assert.equal(resolveKovaModelAlias("kova-neon-4.6")?.tier, "balanced");
   assert.equal(resolveKovaModelAlias("unknown"), null);

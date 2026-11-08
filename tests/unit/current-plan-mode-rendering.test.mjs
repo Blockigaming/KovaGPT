@@ -86,7 +86,7 @@ for (const desktop of [true, false]) {
     const open = fixture({ desktop, menuOpen: true });
     const expected = {
       free: ["Lite", "Medium"],
-      plus: ["Lite", "Medium", "High"],
+      plus: ["Lite", "Medium", "High", "Extra High", "Max"],
       pro: ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"],
     };
     assert.equal(closed.registry.plans.free.features[0], "Argon Lite and Medium (Thinking)");
@@ -188,7 +188,7 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   );
   assert.deepEqual(
     Array.from(registry.modesByTier.plus, (mode) => mode.label),
-    ["Lite", "Medium", "High"],
+    ["Lite", "Medium", "High", "Extra High", "Max"],
   );
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
@@ -209,14 +209,17 @@ test("published Chat copy distinguishes limited plans from included Pro basic ch
 test("pricing retains exact foundation access and effort choices with relative usage copy", () => {
   const { registry, modes } = fixture();
   assert.equal(registry.plans.free.features[0], "Argon Lite and Medium (Thinking)");
-  assert.equal(registry.plans.plus.features[0], "Argon and Neon: Lite, Medium, and High");
+  assert.equal(
+    registry.plans.plus.features[0],
+    "All seven models: Lite, Medium, High, Extra High, and Max",
+  );
   assert.equal(
     registry.plans.pro.features[0],
-    "All three models: Lite, Medium, High, Extra High, Max, and Ultra",
+    "All seven models: Lite, Medium, High, Extra High, Max, and Ultra",
   );
   assert.match(
     registry.plans.plus.description,
-    /^5× the usage of Free, with Argon and Neon through High\./,
+    /^5× the usage of Free, with all seven models through Max\./,
   );
   assert.match(
     registry.plans.pro.description,
@@ -268,12 +271,12 @@ test("new usage ratios preserve prices and billing identifiers", () => {
     );
 });
 
-test("display mapping preserves compatibility catalog, provider prompts and 2/3/6 entitlement identities", () => {
+test("display mapping preserves compatibility catalog, provider prompts and 2/5/6 entitlement identities", () => {
   const f = fixture();
   const before = JSON.stringify(f.modes.MODES);
   for (const tier of ["free", "plus", "pro"]) {
     const allowed = f.modes.modesForTier(tier);
-    assert.equal(allowed.length, { free: 2, plus: 3, pro: 6 }[tier]);
+    assert.equal(allowed.length, { free: 2, plus: 5, pro: 6 }[tier]);
     assert.deepEqual(
       Array.from(allowed, (mode) => mode.id),
       entitlements.MODE_IDS_BY_TIER[tier],

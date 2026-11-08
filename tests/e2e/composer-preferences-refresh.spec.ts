@@ -6,7 +6,7 @@ import { chooseSettingsSection } from "./current-ui";
 
 for (const [tier, choices] of [
   ["free", ["instant", "thinking"]],
-  ["plus", ["instant", "thinking", "high"]],
+  ["plus", ["instant", "thinking", "high", "extra_high", "max"]],
   ["pro", ["instant", "thinking", "high", "extra_high", "max", "ultra"]],
 ] as const) {
   test(`${tier} composer presents exactly its models and keeps the writing surface quiet`, async ({

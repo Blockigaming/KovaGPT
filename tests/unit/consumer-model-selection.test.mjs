@@ -28,7 +28,7 @@ test("ingress accepts only exact consumer aliases and refuses ambiguous custom s
     {},
     "gpt-5",
     "moonshotai/kimi-k3",
-    "kova-xenon-4.6",
+    "kova-xenon-4.5",
     "kova-argon-5",
     "kova-neon-4.6 ",
   ])
@@ -119,7 +119,7 @@ test("saved chat round-trips the exact selection and refuses obsolete or provide
   }
   assert.equal(Object.hasOwn(normalizeChatHistory(chat, owner), "hostedModel"), false);
   assert.throws(
-    () => normalizeChatHistory({ ...chat, hostedModel: "kova-xenon-4.6" }, owner),
+    () => normalizeChatHistory({ ...chat, hostedModel: "kova-xenon-4.5" }, owner),
     /chat_history_invalid/,
   );
 });
@@ -156,7 +156,13 @@ test("actual API named-choice guard rejects locked, unconfigured and unsupported
   const wrongRole = check(selected, "pro", () => "kova-xenon-5", []);
   assert.equal(wrongRole.status, 503);
   assert.equal((await wrongRole.json()).code, "kova_model_runtime_unverified");
-  const unsupported = check(selected, "free", () => selected.id, [{ kind: "image" }]);
+  assert.equal(
+    check(selected, "free", () => selected.id, [{ kind: "image" }]),
+    undefined,
+  );
+  const unsupported = check({ ...selected, vision: false }, "free", () => selected.id, [
+    { kind: "image" },
+  ]);
   assert.equal(unsupported.status, 400);
   assert.equal((await unsupported.json()).code, "kova_model_vision_unavailable");
 });
@@ -169,7 +175,7 @@ test("transient choice stays scoped and model changes require the current entitl
     resolveConsumerModelChoice(choice, "owner-a", "chat-b", "kova-neon-4.6"),
     "kova-neon-4.6",
   );
-  assert.equal(createConsumerModelChoice("kova-xenon-5", "plus", true, "owner-a", "chat-a"), null);
+  assert.equal(createConsumerModelChoice("kova-xenon-5", "free", true, "owner-a", "chat-a"), null);
   assert.equal(
     createConsumerModelChoice("kova-neon-4.6", "plus", false, "owner-a", "chat-a"),
     null,

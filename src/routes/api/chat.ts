@@ -782,7 +782,10 @@ export const Route = createFileRoute("/api/chat")({
                   },
                   { status: 403, headers: { "Cache-Control": "no-store" } },
                 );
-              if (modelForRole(selectedHostedModel.role) !== selectedHostedModel.id)
+              if (
+                modelForRole(selectedHostedModel.role) !==
+                (selectedHostedModel.routingBinding ?? selectedHostedModel.id)
+              )
                 return Response.json(
                   {
                     error:
@@ -1188,7 +1191,7 @@ export const Route = createFileRoute("/api/chat")({
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
               modelId: model,
-              provider: isKovaHostedModelId(model) ? "openrouter" : getAiProviderConfig().provider,
+              provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
               hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
             });
 
@@ -2707,9 +2710,7 @@ export const Route = createFileRoute("/api/chat")({
               chatId &&
               voiceMessageId &&
               eligibleVoiceModel(voicePolicy, {
-                provider: isKovaHostedModelId(model)
-                  ? "openrouter"
-                  : getAiProviderConfig().provider,
+                provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
                 modelId: model,
               })
                 ? {
@@ -2717,7 +2718,7 @@ export const Route = createFileRoute("/api/chat")({
                     chatId,
                     messageId: voiceMessageId,
                     provider: isKovaHostedModelId(model)
-                      ? "openrouter"
+                      ? "openai"
                       : getAiProviderConfig().provider,
                     modelId: model,
                   }

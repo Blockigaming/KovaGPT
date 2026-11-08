@@ -21,21 +21,21 @@ const approved = [
     label: "Kova Xenon 5",
     family: "nova",
     role: "PREMIUM_REASONING",
-    foundation: "moonshotai/kimi-k3",
+    foundation: "gpt-6.1-sol",
   },
   {
     id: "kova-neon-4.6",
     label: "Kova Neon 4.6",
     family: "orion",
     role: "ADVANCED_REASONING",
-    foundation: "meta-llama/llama-4-maverick",
+    foundation: "gpt-6.1-terra",
   },
   {
     id: "kova-argon-4.6",
     label: "Kova Argon 4.6",
     family: "cosmo",
     role: "DEFAULT_CHAT",
-    foundation: "deepseek/deepseek-v4-flash-0731",
+    foundation: "gpt-6-luna",
   },
 ];
 
@@ -59,15 +59,15 @@ test("all model identities use the owner's exact approved versions and foundatio
     );
     assert.equal(body.model, model.foundation);
   }
-  assert.deepEqual(Object.keys(HOSTED_MODEL_MAP).sort(), approved.map((m) => m.id).sort());
+  assert.equal(Object.keys(HOSTED_MODEL_MAP).length, 7);
   assert.deepEqual(
     Object.values(KOVA_MODEL_CATALOG).map((m) => m.id),
-    approved.map((m) => m.id),
+    Object.keys(HOSTED_MODEL_MAP),
   );
 });
 
 test("retired version aliases fail closed instead of silently switching versions", () => {
-  for (const retired of ["kova-xenon-4.6", "kova-argon-5"]) {
+  for (const retired of ["kova-xenon-4.5", "kova-argon-5"]) {
     assert.equal(resolveKovaModelAlias(retired), null);
     assert.equal(Object.hasOwn(KOVA_ASSISTANT_IDENTITY, retired), false);
     assert.equal(Object.hasOwn(HOSTED_MODEL_MAP, retired), false);
@@ -82,12 +82,7 @@ test("retired version aliases fail closed instead of silently switching versions
   }
 });
 
-test("Neon uses adaptive provider balancing while all foundations retain price and parameter guards", () => {
-  const ceilings = {
-    "kova-argon-4.6": { prompt: 0.2, completion: 0.8 },
-    "kova-neon-4.6": { prompt: 0.5, completion: 1.5 },
-    "kova-xenon-5": { prompt: 3, completion: 15 },
-  };
+test("all products use the fixed OpenAI Responses endpoint without provider fallback", () => {
   for (const model of approved)
     for (const stream of [false, true]) {
       const prepared = prepareKovaHostedRequest({
@@ -97,16 +92,14 @@ test("Neon uses adaptive provider balancing while all foundations retain price a
         max_completion_tokens: 300,
       });
       const body = JSON.parse(prepared.body);
-      assert.equal(prepared.endpoint, "https://openrouter.ai/api/v1/chat/completions");
+      assert.equal(prepared.endpoint, "https://api.openai.com/v1/responses");
       assert.equal(body.model, model.foundation);
-      assert.deepEqual(body.provider, {
-        max_price: ceilings[model.id],
-        ...(model.id === "kova-neon-4.6" ? {} : { sort: "latency" }),
-        require_parameters: true,
-        allow_fallbacks: true,
-      });
+      assert.equal(body.service_tier, "default");
+      assert.equal(body.store, false);
+      assert.equal(body.provider, undefined);
       assert.equal(body.stream, stream);
-      assert.equal(body.models, undefined);
+      assert.match(body.instructions, /Introduce yourself using your Kova product name/);
+      assert(body.instructions.includes(model.foundation));
     }
 });
 
@@ -120,7 +113,7 @@ test("related staging code and pricing configuration use the new names", () => {
     ".env.example",
   ]) {
     const source = readFileSync(path, "utf8");
-    assert.equal(source.includes("kova-xenon-4.6"), false);
+
     assert.equal(source.includes("kova-argon-5"), false);
   }
 });

@@ -61,13 +61,10 @@ test("public capability copy excludes retired or unsupported claims", () => {
   const writer = read("src/routes/ai-writer.tsx");
 
   assert.match(llms, /Free users use Argon Lite normally and Argon Medium with Thinking enabled/);
-  assert.match(llms, /Plus includes Argon and Neon in Lite, Medium and High/);
+  assert.match(llms, /Plus includes all seven models in Lite, Medium, High, Extra High and Max/);
   assert.match(llms, /Ultra uses four parallel subagents of the selected foundation/);
   assert.match(llms, /Product labels do not imply separately trained model weights/);
-  assert.match(
-    llms,
-    /Pro includes all three models in Lite, Medium, High, Extra High, Max and Ultra/,
-  );
+  assert.match(llms, /Pro includes all seven models through Ultra/);
   assert.doesNotMatch(llms, /Free includes Lite and Thinking modes/);
   assert.match(llms, /Voice input is not currently part of the supported web product/);
   assert.match(llms, /Scheduled background work and image editing are not currently available/);

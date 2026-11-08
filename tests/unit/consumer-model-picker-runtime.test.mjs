@@ -38,7 +38,7 @@ function fixture(overrides = {}) {
   return { ...f, config, changes };
 }
 for (const tier of ["plus", "pro"]) {
-  test(`${tier} picker shows three products but authorizes only its entitled choices`, () => {
+  test(`${tier} picker shows seven products but authorizes only its entitled choices`, () => {
     const f = fixture({ tier });
     assert.match(f.text(), /Argon 4\.6/);
     for (const model of selection.CONSUMER_MODELS) {

@@ -262,63 +262,86 @@ function fixture({
     fetch: async (url, init) => {
       calls.push("provider");
       if (connectedModel) {
-        assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
+        assert.equal(url, "https://api.openai.com/v1/responses");
+        assert.equal(init.redirect, "error");
         const body = JSON.parse(init.body);
         hostedBodies.push(body);
         assert.equal(body.model, HOSTED_MODEL_MAP[connectedModel]);
-        if (body.tools)
-          return Response.json({
+        const hasToolOutput = body.input.some((item) => item.type === "function_call_output");
+        const usage = {
+          input_tokens: 130,
+          output_tokens: 20,
+          total_tokens: 150,
+          input_tokens_details: { cached_tokens: 0 },
+          output_tokens_details: { reasoning_tokens: 0 },
+        };
+        const completed = (output) =>
+          Response.json({
+            id: "resp_fixture",
+            status: "completed",
             model: body.model,
-            choices: [
-              {
-                finish_reason: body.messages.some((x) => x.role === "tool") ? "stop" : "tool_calls",
-                message: body.messages.some((x) => x.role === "tool")
-                  ? { role: "assistant", content: "Planner-only answer." }
-                  : {
-                      role: "assistant",
-                      content: null,
-                      tool_calls: [
-                        {
-                          id: "call_fixture",
-                          type: "function",
-                          function: { name: "get_test_value", arguments: "{}" },
-                        },
-                      ],
-                    },
-              },
-            ],
-            usage: { prompt_tokens: 130, completion_tokens: 20 },
+            output,
+            usage,
           });
+        if (body.tools) {
+          return hasToolOutput
+            ? completed([
+                {
+                  type: "message",
+                  role: "assistant",
+                  content: [{ type: "output_text", text: "Planner-only answer." }],
+                },
+              ])
+            : completed([
+                {
+                  type: "function_call",
+                  call_id: "call_fixture",
+                  name: "get_test_value",
+                  arguments: "{}",
+                },
+              ]);
+        }
         if (!body.stream) {
           peakReviews = Math.max(peakReviews, ++activeReviews);
           await new Promise((resolve) => setTimeout(resolve, 2));
           activeReviews--;
-          return Response.json({
-            model: body.model,
-            choices: [
-              {
-                message: {
-                  role: "assistant",
-                  content: "The connected result is available; answer the user.",
+          return completed([
+            {
+              type: "message",
+              role: "assistant",
+              content: [
+                {
+                  type: "output_text",
+                  text: "The connected result is available; answer the user.",
                 },
-              },
-            ],
-            usage: { prompt_tokens: 130, completion_tokens: 20 },
-          });
+              ],
+            },
+          ]);
         }
         return new Response(
-          "data: " +
-            JSON.stringify({
-              model: body.model,
-              choices: [{ delta: { content: "Reviewed answer." } }],
-            }) +
-            "\n\ndata: " +
-            JSON.stringify({
-              model: body.model,
-              choices: [],
-              usage: { prompt_tokens: 200, completion_tokens: 12 },
-            }) +
-            "\n\ndata: [DONE]\n\n",
+          [
+            'event: response.created\ndata: {"type":"response.created","response":{"id":"resp_fixture","status":"in_progress","model":"' +
+              body.model +
+              '"}}\n\n',
+            'event: response.output_text.delta\ndata: {"type":"response.output_text.delta","delta":"Reviewed answer."}\n\n',
+            "event: response.completed\ndata: " +
+              JSON.stringify({
+                type: "response.completed",
+                response: {
+                  id: "resp_fixture",
+                  status: "completed",
+                  model: body.model,
+                  usage: {
+                    input_tokens: 200,
+                    output_tokens: 12,
+                    total_tokens: 212,
+                    input_tokens_details: { cached_tokens: 0 },
+                    output_tokens_details: { reasoning_tokens: 0 },
+                  },
+                },
+              }) +
+              "\n\n",
+          ].join(""),
           { headers: { "Content-Type": "text/event-stream" } },
         );
       }
@@ -429,8 +452,8 @@ for (const model of Object.keys(HOSTED_MODEL_MAP)) {
     "max",
     "ultra",
   ].entries()) {
-    test(`${model} ${mode} preserves its real review graph after a connected tool answer`, async () => {
-      const expected = (model === "kova-neon-4.6" ? [0, 1, 2, 3, 4, 4] : [0, 0, 1, 2, 3, 4])[index];
+    test(`${model} ${mode} handles connected-tool review`, async () => {
+      const expected = [0, 0, 1, 2, 3, 4][index];
       const f = fixture({
         connectedModel: model,
         connectedMode: mode,

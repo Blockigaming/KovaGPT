@@ -11,7 +11,8 @@ const ConfigSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
-  maxCostUsdPerRequest: z.coerce.number().positive().max(10).default(1),
+  // Astra Ultra reserves four reviews plus synthesis before any paid call.
+  maxCostUsdPerRequest: z.coerce.number().positive().max(10).default(2),
   maxTokensPerUserDay: positiveInteger(50_000, 10_000_000),
   maxTokensPerUserMonth: positiveInteger(500_000, 100_000_000),
   maxPremiumRequestsPeriod: positiveInteger(50, 100_000),

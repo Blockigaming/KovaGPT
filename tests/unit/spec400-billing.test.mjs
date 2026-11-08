@@ -15,8 +15,13 @@ function policy(path) {
   }).outputText;
   new Function("exports", "require", code)(exports, (name) => {
     if (name === "./plan-usage-policy.mjs") return usagePolicy;
-    assert.ok(name.startsWith("@/lib/"));
-    return policy(name.replace("@/", "src/") + (name.endsWith(".mjs") ? "" : ".ts"));
+    const target = name.startsWith("@/lib/")
+      ? name.replace("@/", "src/")
+      : name.startsWith("./")
+        ? `${path.slice(0, path.lastIndexOf("/") + 1)}${name.slice(2)}`
+        : null;
+    assert.ok(target, `Unexpected runtime import "${name}" from "${path}"`);
+    return policy(target + (name.endsWith(".mjs") ? "" : ".ts"));
   });
   cache.set(path, exports);
   return exports;
