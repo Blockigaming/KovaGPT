@@ -221,6 +221,12 @@ export function ConnectedAccountManager({
                     ? "Account authorized. Search to verify access."
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
+                {account.last_success_at && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Provider API last succeeded on {account.last_success_at.slice(0, 10)} (UTC).
+                    This does not verify every service or permission.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Button
                     variant="outline"
