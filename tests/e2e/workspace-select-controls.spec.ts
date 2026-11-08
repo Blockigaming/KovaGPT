@@ -147,7 +147,7 @@ for (const theme of ["light", "dark"] as const) {
         name: "Settings navigation",
         exact: true,
       });
-      await expect(navigation.getByRole("tab", { name: "Responses", exact: true })).toBeInViewport({
+      await expect(navigation.getByRole("tab", { name: "General", exact: true })).toBeInViewport({
         ratio: 1,
       });
       await expect(

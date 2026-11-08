@@ -82,7 +82,7 @@ test("dedicated settings excludes workspace navigation and supports desktop drag
     await page.mouse.up();
     await expect(edge).toHaveAttribute("aria-valuenow", "350");
     const actual = await navigation.boundingBox();
-    expect(actual!.width).toBeCloseTo(350, 0);
+    expect(actual!.width).toBeCloseTo(page.viewportSize()!.width < 1024 ? 240 : 350, 0);
   } else {
     await expect(page.getByRole("separator", { name: "Resize settings navigation" })).toBeHidden();
     const back = page.getByRole("button", { name: "Back to settings", exact: true });

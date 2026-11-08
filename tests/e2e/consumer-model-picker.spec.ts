@@ -2,11 +2,19 @@ import { expect, test } from "@playwright/test";
 import { fixture, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
-const products = ["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"];
+const products = [
+  "kova-argon-4.6",
+  "kova-neon-4.6",
+  "kova-xenon-5",
+  "kova-argon-4.5",
+  "kova-neon-4.5",
+  "kova-xenon-4.6",
+  "kova-xenon-6.1",
+];
 for (const [tier, selected, label, permitted] of [
   ["free", "kova-argon-4.6", "Argon 4.6", 1],
-  ["plus", "kova-neon-4.6", "Neon 4.6", 2],
-  ["pro", "kova-xenon-5", "Xenon 5", 3],
+  ["plus", "kova-neon-4.6", "Neon 4.6", 7],
+  ["pro", "kova-xenon-5", "Xenon 5", 7],
 ] as const) {
   test(`${tier} selects its exact product without sending, then submits and restores that choice`, async ({
     page,
@@ -143,56 +151,65 @@ test("keyboard model selection keeps the composer draft and makes no model reque
   expect(sends).toBe(0);
 });
 
-test("Pro slider sends all 18 exact foundation and effort configurations", async ({ page }) => {
-  test.setTimeout(120_000);
-  await fixture(page, "dark", true, false, "pro");
-  const requests: Record<string, unknown>[] = [];
-  await page.route("**/api/chat", async (route) => {
-    requests.push(route.request().postDataJSON());
-    await route.fulfill({
-      contentType: "text/event-stream",
-      body: `data: ${JSON.stringify({ choices: [{ delta: { content: `Configuration ${requests.length} verified.` } }] })}\n\ndata: [DONE]\n\n`,
+for (const [tier, count] of [
+  ["plus", 35],
+  ["pro", 42],
+] as const)
+  test(`${tier} slider sends all ${count} exact foundation and effort configurations`, async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await fixture(page, "dark", true, false, tier);
+    const requests: Record<string, unknown>[] = [];
+    await page.route("**/api/chat", async (route) => {
+      requests.push(route.request().postDataJSON());
+      await route.fulfill({
+        contentType: "text/event-stream",
+        body: `data: ${JSON.stringify({ choices: [{ delta: { content: `Configuration ${requests.length} verified.` } }] })}\n\ndata: [DONE]\n\n`,
+      });
     });
-  });
-  await page.goto("/");
-  await waitForKovaHydration(page);
-  const efforts = ["instant", "thinking", "high", "extra_high", "max", "ultra"];
-  const labels = ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"];
-  for (const model of products) {
-    await page.getByTestId("consumer-model-trigger").click();
-    await page.getByTestId(`consumer-model-${model}`).click();
-    for (const [index, mode] of efforts.entries()) {
-      await page.getByTestId("model-selector-trigger").click();
-      const slider = page.getByRole("slider", { name: "Response effort", exact: true });
-      await expect(slider).toHaveAttribute("max", "5");
-      await slider.press("Home");
-      for (let step = 0; step < index; step++) await slider.press("ArrowRight");
-      await expect(slider).toHaveAttribute("aria-valuetext", labels[index]);
-      await slider.press("Escape");
-      const number = requests.length + 1;
-      await page
-        .getByRole("textbox", { name: "Message KovaGPT", exact: true })
-        .fill(`Verify configuration ${number}.`);
-      await page.getByRole("button", { name: "Send message", exact: true }).click();
-      await expect(
-        page.getByText(`Configuration ${number} verified.`, { exact: true }),
-      ).toBeVisible();
-      expect(requests.at(-1)?.hostedModel).toBe(model);
-      expect(requests.at(-1)?.mode).toBe(mode);
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const efforts =
+      tier === "pro"
+        ? ["instant", "thinking", "high", "extra_high", "max", "ultra"]
+        : ["instant", "thinking", "high", "extra_high", "max"];
+    const labels = ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"];
+    for (const model of products) {
+      await page.getByTestId("consumer-model-trigger").click();
+      await page.getByTestId(`consumer-model-${model}`).click();
+      for (const [index, mode] of efforts.entries()) {
+        await page.getByTestId("model-selector-trigger").click();
+        const slider = page.getByRole("slider", { name: "Response effort", exact: true });
+        await expect(slider).toHaveAttribute("max", String(efforts.length - 1));
+        await slider.press("Home");
+        for (let step = 0; step < index; step++) await slider.press("ArrowRight");
+        await expect(slider).toHaveAttribute("aria-valuetext", labels[index]);
+        await slider.press("Escape");
+        const number = requests.length + 1;
+        await page
+          .getByRole("textbox", { name: "Message KovaGPT", exact: true })
+          .fill(`Verify configuration ${number}.`);
+        await page.getByRole("button", { name: "Send message", exact: true }).click();
+        await expect(
+          page.getByText(`Configuration ${number} verified.`, { exact: true }),
+        ).toBeVisible();
+        expect(requests.at(-1)?.hostedModel).toBe(model);
+        expect(requests.at(-1)?.mode).toBe(mode);
+      }
     }
-  }
-  expect(requests).toHaveLength(18);
-});
+    expect(requests).toHaveLength(count);
+  });
 
-test("Plus slider stops at High and never offers Pro effort positions", async ({ page }) => {
+test("Plus slider stops at Max and never offers Ultra", async ({ page }) => {
   await fixture(page, "dark", true, false, "plus");
   await page.goto("/");
   await waitForKovaHydration(page);
   await page.getByTestId("model-selector-trigger").click();
   const slider = page.getByRole("slider", { name: "Response effort", exact: true });
-  await expect(slider).toHaveAttribute("max", "2");
+  await expect(slider).toHaveAttribute("max", "4");
   await slider.press("End");
-  await expect(slider).toHaveAttribute("aria-valuetext", "High");
-  for (const mode of ["extra_high", "max", "ultra"])
+  await expect(slider).toHaveAttribute("aria-valuetext", "Max");
+  for (const mode of ["ultra"])
     await expect(page.getByTestId(`model-option-${mode}`)).toHaveCount(0);
 });

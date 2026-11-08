@@ -215,16 +215,20 @@ test("Share copies a real link and reports clipboard errors without false succes
   expect(creates).toBe(1);
 });
 
-for (const [tier, count] of [
-  ["plus", 4],
-  ["pro", 7],
+for (const [tier, modes] of [
+  ["plus", ["instant", "thinking", "high", "extra_high", "max"]],
+  ["pro", ["instant", "thinking", "high", "extra_high", "max", "ultra"]],
 ] as const)
   test(`${tier} exposes exactly its additional model levels`, async ({ page }) => {
     await fixture(page, "dark", true, false, tier);
     await page.goto("/");
     await waitForKovaHydration(page);
     await page.getByTestId("model-selector-trigger").click();
-    await expect(page.locator('[data-testid^="model-option-"]')).toHaveCount(count);
+    const options = page.locator('[data-testid^="model-option-"]');
+    await expect(options).toHaveCount(modes.length);
+    expect(
+      await options.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-testid"))),
+    ).toEqual(modes.map((mode) => `model-option-${mode}`));
     await expect(page.getByTestId("thinking-toggle")).toHaveCount(0);
   });
 test("appearance changes save and survive a reload", async ({ page }) => {
