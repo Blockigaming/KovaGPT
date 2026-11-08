@@ -25,7 +25,7 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   expect(chatRequests).toBe(0);
 });
 
-test("Plus model selector exposes Lite Medium and High", async ({ page }) => {
+test("Plus model selector exposes Lite through Max", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -46,8 +46,10 @@ test("Plus model selector exposes Lite Medium and High", async ({ page }) => {
   await expect(optionRoot.getByTestId("model-option-instant")).toBeVisible();
   await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Lite");
   await expect(optionRoot.getByTestId("model-option-high")).toContainText("High");
-  await expect(optionRoot.getByTestId("model-option-thinking")).toBeVisible();
-  await expect(optionRoot.getByTestId("model-option-extra_high")).toHaveCount(0);
+  for (const id of ["instant", "thinking", "high", "extra_high", "max"]) {
+    await expect(optionRoot.getByTestId(`model-option-${id}`)).toBeVisible();
+  }
+  await expect(optionRoot.getByTestId("model-option-ultra")).toHaveCount(0);
 
   await optionRoot.getByTestId("model-option-thinking").click();
   await expect(optionRoot).toHaveCount(0);
