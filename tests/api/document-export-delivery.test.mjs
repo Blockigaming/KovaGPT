@@ -11,6 +11,7 @@ import {
 } from "../../src/lib/document-export-policy.mjs";
 import { load, fonts } from "../helpers/document-writers.mjs";
 import { loadUiModule } from "../helpers/ui-state-harness.mjs";
+import { adSenseCsp, createCspNonce } from "../../src/lib/adsense-csp.mjs";
 
 const origin = "https://kova.test";
 const allowed = async () => ({ allowed: true, status: "allowed", retryAfter: 60 });
@@ -291,7 +292,11 @@ function serverFixture(handler) {
         enforceAzureProductionOriginBoundary: () => null,
         normalizeAzureProductionRequest: (request) => request,
       },
-      "./lib/runtime-env.server": { withRuntimeBindings: (_env, run) => run() },
+      "./lib/runtime-env.server": {
+        withRuntimeBindings: (_env, run) => run(),
+        runtimeEnv: () => undefined,
+      },
+      "./lib/adsense-csp.mjs": { adSenseCsp, createCspNonce },
       "@tanstack/react-start/server-entry": { __esModule: true, default: { fetch: handler } },
     },
     { Response, Headers, URL },
