@@ -137,13 +137,14 @@ export async function requestKovaHostedChat({
   signal,
   fetchImpl = fetch,
   effort,
+  beforeRetry,
 } = {}) {
   if (typeof token !== "string" || token.trim().length < 16)
     throw new Error("hosted_api_key_unavailable");
   const prepared = prepareKovaHostedRequest(request, { effort });
   const timeoutSignal = AbortSignal.timeout(45_000);
   const boundedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
-  const response = await fetchImpl(prepared.endpoint, {
+  const options = {
     method: "POST",
     redirect: "error",
     signal: boundedSignal,
@@ -154,7 +155,53 @@ export async function requestKovaHostedChat({
       "X-Title": "KovaGPT",
     },
     body: prepared.body,
-  });
+  };
+  const deadline = Date.now() + 45_000;
+  let response;
+  for (let attempt = 0; ; attempt++) {
+    boundedSignal.throwIfAborted();
+    response = await fetchImpl(prepared.endpoint, options);
+    // Retry only rejected Maverick requests, never an accepted generation,
+    // broken stream, ambiguous network error, or another foundation's call.
+    if (
+      request.model !== "kova-neon-4.6" ||
+      response.status !== 429 ||
+      response.redirected ||
+      attempt === 3
+    )
+      break;
+    const header = response.headers.get("retry-after");
+    const seconds = header?.trim() ? Number(header) : NaN;
+    const date = header ? Date.parse(header) : NaN;
+    const delay =
+      Number.isFinite(seconds) && seconds >= 0
+        ? seconds * 1000
+        : Number.isFinite(date)
+          ? Math.max(0, date - Date.now())
+          : 750 * 2 ** attempt + Math.floor(Math.random() * 250);
+    // Never shorten Retry-After to fit a request deadline.
+    if (delay >= deadline - Date.now()) break;
+    try {
+      await response.body?.cancel();
+    } catch {
+      /* best effort */
+    }
+    await new Promise((resolve, reject) => {
+      const abort = () => {
+        clearTimeout(timer);
+        reject(boundedSignal.reason);
+      };
+      const timer = setTimeout(() => {
+        boundedSignal.removeEventListener("abort", abort);
+        resolve();
+      }, delay);
+      boundedSignal.addEventListener("abort", abort, { once: true });
+      if (boundedSignal.aborted) abort();
+    });
+    boundedSignal.throwIfAborted();
+    // Re-run the caller's authorization fence before each extra attempt.
+    await beforeRetry?.();
+  }
   if (!response.ok || response.redirected) {
     try {
       await response.body?.cancel();
