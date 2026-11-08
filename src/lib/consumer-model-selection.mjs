@@ -19,7 +19,7 @@ export const CONSUMER_MODELS = Object.freeze([
   Object.freeze({
     id: "kova-xenon-5",
     label: "Xenon 5",
-    description: "Highest intelligence",
+    description: "Advanced reasoning",
     role: "PREMIUM_REASONING",
     tiers: Object.freeze(["plus", "pro"]),
     vision: true,

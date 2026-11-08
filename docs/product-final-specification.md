@@ -11,7 +11,7 @@ The final goal is to build one complete AI platform with two products powered by
 
 Both use the same underlying Kova model gateway, security architecture, tool execution services and inference providers. They have separate permissions, credentials, quotas and billing.
 
-## 1. The three official Kova AI models
+## 1. The seven official Kova AI models
 
 Owner-approved November 8, 2026 update: use the OpenAI API now. Azure hosts Kova; OpenAI hosts inference. This supersedes the original foundation lock and the earlier three-model entitlement matrix.
 
@@ -69,11 +69,11 @@ Reasoning effort, context limits and supported inputs must reflect each model's 
 
 Free has no model picker or effort slider: its only model control is Thinking, off for Argon Lite and blue/on for Argon Medium. Plus and Pro have a model picker and response-effort slider, with no separate Thinking toggle.
 
-There are exactly 18 model/effort configurations: each of the three foundations has Lite, Medium, High, Extra High, Max and Ultra. Free uses Argon Lite normally and Argon Medium with Thinking enabled. Plus unlocks Argon and Neon through High. Pro ($80/month) unlocks all three models and all six slider positions. Existing `thinking` ledger IDs represent Medium; obsolete `medium` saved requests normalize to that same position, not a seventh mode.
+There are exactly 42 model/effort configurations: seven models each have Lite, Medium, High, Extra High, Max and Ultra. Free uses Argon 4.6 Lite or Medium. Plus unlocks all seven through Max (35 choices); Pro ($80/month) unlocks all seven through Ultra. Existing `thinking` ledger IDs represent Medium; obsolete `medium` requests normalize to the same position.
 
 The November 7 owner usage contract replaces exact public usage counts with relative allowances: Free is very limited, Plus has 5× Free usage, and Pro ($80/month) has 20× Plus usage, advertised as 100× Free. Free and Plus remain limited on every model. Pro has unlimited basic chat, defined as server-resolved Argon 4.6 in Lite mode; all other model/effort combinations remain limited. Included Pro basic chat does not consume message or token allowances for advanced usage. Per-request sizing, concurrency, identity, security, and separate feature quotas still apply.
 
-Higher efforts increase allowed generation budgets and bounded same-model verification work. Actual usage determines cost; a higher setting does not guarantee that every simple question takes longer or costs more. Argon and Xenon use supported native none/low/high/max reasoning controls. Neon has no native reasoning switch, so additional same-foundation review passes provide its extra compute. Only Ultra runs four independent subagents in parallel, with the selected foundation coordinating the final answer. Max remains sequential self-review. All internal calls are reserved before execution, included in usage accounting, cancelled with the request, and inherit its account/context scope. Reviewers cannot call external tools or execute actions.
+Higher efforts increase allowed generation budgets and bounded same-model verification work. Actual usage determines cost; a higher setting does not guarantee that every simple question takes longer or costs more. Every current OpenAI foundation uses its supported native reasoning controls, with same-foundation verification passes for the higher modes. Only Ultra runs four independent subagents in parallel, with the selected foundation coordinating the final answer. Max remains sequential self-review. All internal calls are reserved before execution, included in usage accounting, cancelled with the request, and inherit its account/context scope. Reviewers cannot call external tools or execute actions.
 
 ## 2. One unified Kova intelligence platform
 
@@ -128,7 +128,7 @@ The interface keeps the approved Kova typography, colors, rounded controls and d
 ### Main chat capabilities
 
 - Continuous conversations with streaming responses, editing, retrying, branching and chat search.
-- Model selection between the three Kova models, based on plan entitlements.
+- Model selection between the seven Kova models, based on plan entitlements.
 - Thoughtful reasoning controls where supported.
 - Attachments, images, documents, pasted text and code.
 - Web search, research, browsing, images, file analysis and agent actions directly from the composer.
@@ -532,11 +532,11 @@ Free provides the cheapest Kova model and tightly metered basic features. Plus e
 
 The model availability design is:
 
-| Plan | Model access                 |
-| ---- | ---------------------------- |
-| Free | Argon 4.6                    |
-| Plus | Argon 4.6 and Neon 4.6       |
-| Pro  | All three, including Xenon 5 |
+| Plan | Model access                  |
+| ---- | ----------------------------- |
+| Free | Argon 4.6                     |
+| Plus | All seven, Lite through Max   |
+| Pro  | All seven, Lite through Ultra |
 
 Specific prices and usage allowances are controlled by the published billing catalog and must match the actual Stripe checkout price.
 
@@ -682,7 +682,7 @@ This is the standard for declaring the platform finished. A feature that works o
 
 KovaGPT becomes a complete AI company and developer platform, powered by three locked Kova-branded foundation-model products.
 
-A consumer can open `kovagpt.com`, select Xenon 5, Neon 4.6 or Argon 4.6, and ask Kova to answer questions, research, create, analyze, browse, connect services and execute authorized tasks. When authentication is required, Kova securely pauses, presents the genuine provider flow, protects credentials and resumes after verified completion.
+A consumer can open `kovagpt.com`, select one of the seven Kova models based on their plan, and ask Kova to answer questions, research, create, analyze, browse, connect services and execute authorized tasks. When authentication is required, Kova securely pauses, presents the genuine provider flow, protects credentials and resumes after verified completion.
 
 A developer can open the KovaGPT Developer Platform, create a funded project and scoped API key, and integrate those same models and supported capabilities into another application using `api.kovagpt.com/v1`. Usage is transparently metered, secured and billed.
 

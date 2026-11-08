@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-08",
+  "inferenceSourceCommit": "130ca322f962212839070f9e66c1b37a296966b6",
+  "executionLocation": "Azure Cloud Shell",
+  "transport": "Application requestHostedEffort and requestKovaHostedChat against OpenAI Responses",
+  "credentialSource": "Existing production Container App OpenAI secret, memory only",
+  "modeGenerations": 42,
+  "toolRoundTrips": 7,
+  "providerRequests": 126,
+  "reviewUsageReceipts": 70,
+  "failures": 0,
+  "checks": [
+    "All seven exact foundation IDs",
+    "All six modes for each model",
+    "Correct Kova product identity in each final response",
+    "Arithmetic result 437 in each final response",
+    "Completed streaming reply and final usage receipt",
+    "Every expected review has its own usage receipt",
+    "Four independent same-foundation reviewers in each Ultra run",
+    "Function planning, matched call ID, local tool output and final synthesis for all seven models"
+  ],
+  "applicationAdmissionCorrection": "Astra Ultra needs a reservation above the former USD 1 default. Default request reservation ceiling raised to USD 2; real API-handler fixture verifies admission. Account/key limits are unchanged.",
+  "consumerPlanAccess": {
+    "free": { "models": ["kova-argon-4.6"], "modes": ["instant", "thinking"], "combinations": 2 },
+    "plus": {
+      "models": "all seven",
+      "modes": ["instant", "thinking", "high", "extra_high", "max"],
+      "combinations": 35
+    },
+    "pro": {
+      "models": "all seven",
+      "modes": ["instant", "thinking", "high", "extra_high", "max", "ultra"],
+      "combinations": 42
+    }
+  },
+  "productionDeployed": false,
+  "limitations": [
+    "These are real provider requests from Azure using the application transport; they are not signed-in production website acceptance.",
+    "Plan decisions and account admission are covered by local handler tests; production revision and live account verification remain pending.",
+    "Latency and broader task-quality parity are not established by the identity/arithmetic smoke task."
+  ]
+}

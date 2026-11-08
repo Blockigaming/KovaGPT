@@ -74,7 +74,7 @@ test("comparison keeps each tier's mode and allowance data in the correct column
       ["free-mode", "plus-mode", "pro-mode"],
       ["Very limited", "5× Free", "100× Free (20× Plus)"],
       ["Limited", "Limited", "Unlimited with Argon Lite"],
-      ["Argon Medium, limited", "Argon and Neon, limited", "All advanced models, limited"],
+      ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],
       ["Limited", "Expanded", "Highest allowance"],
       ["Included", "Included", "Included"],
     ],

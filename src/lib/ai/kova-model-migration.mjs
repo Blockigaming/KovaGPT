@@ -27,13 +27,13 @@ export const KOVA_MODEL_CATALOG = Object.freeze({
   legacy0: Object.freeze({
     id: "kova-argon-4.5",
     name: "Kova Argon 4.5",
-    tier: "flagship",
+    tier: "fast",
     purpose: "Previous-generation model",
   }),
   legacy1: Object.freeze({
     id: "kova-neon-4.5",
     name: "Kova Neon 4.5",
-    tier: "flagship",
+    tier: "balanced",
     purpose: "Previous-generation model",
   }),
   legacy2: Object.freeze({

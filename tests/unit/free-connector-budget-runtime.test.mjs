@@ -932,6 +932,7 @@ for (const [tier, mode, alias, foundation] of [
   ["plus", "thinking", "kova-neon-4.6", "gpt-6.1-terra"],
   ["pro", "max", "kova-xenon-5", "gpt-6.1-sol"],
   ["plus", "max", "kova-xenon-6.1", "gpt-6-astra"],
+  ["pro", "ultra", "kova-xenon-6.1", "gpt-6-astra"],
 ]) {
   test(`actual chat route admits ${alias} with its selected model and unchanged account admission`, async () => {
     const f = fixture({ tier, mode, hostedModel: alias, noTools: true, env: hostedRouting });
