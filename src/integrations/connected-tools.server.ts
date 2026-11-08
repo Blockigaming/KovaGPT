@@ -404,6 +404,29 @@ export async function runConnectionAccountSearch(
   });
   if (auditError) throw new Error("connection_audit_unavailable");
   await ensureCurrentBinding();
+  // Only an actual authorized provider API read can establish operational
+  // success. Bind this write to the same owner, grant version and encrypted
+  // credential so a concurrent disconnect or reconnect cannot inherit it.
+  const verifiedAt = new Date().toISOString();
+  const { data: verified, error: verificationError } = await db
+    .from("integration_linked_accounts")
+    .update({
+      health_checked_at: verifiedAt,
+      last_success_at: verifiedAt,
+      last_error_code: null,
+    })
+    .eq("id", account.id)
+    .eq("owner_id", ownerId)
+    .eq("provider_id", flow.provider)
+    .eq("status", "connected")
+    .eq("updated_at", account.updated_at)
+    .eq("access_token_ciphertext", account.access_token_ciphertext)
+    .is("workspace_id", null)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+  if (verificationError || !verified) throw new Error("connection_verification_store_failed");
+  await ensureCurrentBinding();
   return result;
 }
 
