@@ -260,6 +260,8 @@ export function ComposerVoiceDialog({
     gate: ReturnType<typeof createVoiceSilenceGate>;
   } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
+  const [microphoneMuted, setMicrophoneMuted] = useState(false);
+  const microphoneMutedRef = useRef(false);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
   const objectUrl = useRef("");
@@ -333,6 +335,7 @@ export function ComposerVoiceDialog({
     }
     stopTracks(stream.current);
     stream.current = null;
+    microphoneMutedRef.current = false;
     chunks.current = [];
     audioBytes.current = 0;
     retainedRecording.current = null;
@@ -767,11 +770,21 @@ export function ComposerVoiceDialog({
     void transcribeRecording(scope, retainedRecording.current);
   };
 
+  const toggleMicrophoneMuted = () => {
+    if (mode !== "voice" || phaseRef.current !== "recording" || !stream.current) return;
+    const muted = !microphoneMutedRef.current;
+    microphoneMutedRef.current = muted;
+    for (const track of stream.current.getAudioTracks()) track.enabled = !muted;
+    setMicrophoneMuted(muted);
+  };
+
   const stopRecording = () => {
     if (phaseRef.current !== "recording" || recorder.current?.state !== "recording") return;
     updatePhase("stopping");
     clearRecordingTimers();
     setHandsFreeListening(false);
+    microphoneMutedRef.current = false;
+    setMicrophoneMuted(false);
     recorder.current.stop();
     stopTracks(stream.current);
     stream.current = null;
@@ -808,6 +821,8 @@ export function ComposerVoiceDialog({
     setAudioUrl("");
     setError("");
     setElapsed(0);
+    microphoneMutedRef.current = false;
+    setMicrophoneMuted(false);
     updatePhase("requesting");
     let acquired: MediaStream | null = null;
     try {
@@ -873,7 +888,8 @@ export function ComposerVoiceDialog({
           const samples = new Float32Array(analyser.fftSize);
           const gate = createVoiceSilenceGate();
           const interval = setInterval(() => {
-            if (!isCurrent(scope) || phaseRef.current !== "recording") return;
+            if (!isCurrent(scope) || phaseRef.current !== "recording" || microphoneMutedRef.current)
+              return;
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
@@ -1230,6 +1246,8 @@ export function ComposerVoiceDialog({
           </>
         ) : undefined
       }
+      microphoneMuted={microphoneMuted}
+      onToggleMicrophoneMuted={toggleMicrophoneMuted}
       recordingControl={
         ready ? (
           phase === "recording" ? (
