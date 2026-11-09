@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   lstatSync,
   realpathSync,
   readdirSync,
@@ -198,10 +199,12 @@ export function createLocalWorkspace() {
       // Must have been opened and previewed. The caller must separately
       // confirm saving through a native dialog before invoking this method.
       this.preview(relativePath, content, expectedHash);
-      const { actual } = checked(relativePath);
+      const { actual, stats } = checked(relativePath);
       const temporary = join(resolve(actual, ".."), `.kova-edit-${randomUUID()}.tmp`);
       try {
         writeFileSync(temporary, content, { flag: "wx", mode: 0o600 });
+        // Preserve ordinary permissions, including source scripts' executable bits.
+        chmodSync(temporary, stats.mode & 0o777);
         if (inspectText(relativePath).hash !== expectedHash)
           throw new Error("File changed before save");
         renameSync(temporary, actual);

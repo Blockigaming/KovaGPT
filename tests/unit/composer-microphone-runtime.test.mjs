@@ -1,3 +1,4 @@
+import * as sketchMention from "../../src/lib/composer-sketch-mention.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import assert from "node:assert/strict";
@@ -110,6 +111,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     },
   };
   const modules = {
+    "@/lib/composer-sketch-mention.mjs": sketchMention,
     react,
     "lucide-react": {},
     "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },

@@ -1,3 +1,4 @@
+import * as sketchMention from "../../src/lib/composer-sketch-mention.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
@@ -71,6 +72,7 @@ vm.runInNewContext(output, {
     }
   },
   require(id) {
+    if (id === "@/lib/composer-sketch-mention.mjs") return sketchMention;
     if (id === "@/lib/document-extraction/pdf-metadata.mjs") return pdfMetadata;
     if (id === "@/components/ComposerPdfPages") return { ComposerPdfPages: empty };
     if (id === "@/lib/composer-local-attachments.mjs") return localAttachments;

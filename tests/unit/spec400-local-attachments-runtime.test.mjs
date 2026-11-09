@@ -1,3 +1,4 @@
+import * as sketchMention from "../../src/lib/composer-sketch-mention.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import assert from "node:assert/strict";
@@ -116,6 +117,7 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/lib/composer-sketch-mention.mjs": sketchMention,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},

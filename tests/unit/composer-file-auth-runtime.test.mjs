@@ -1,3 +1,4 @@
+import * as sketchMention from "../../src/lib/composer-sketch-mention.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
@@ -105,6 +106,7 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/lib/composer-sketch-mention.mjs": sketchMention,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
         reads.push("document reader");

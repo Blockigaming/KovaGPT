@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createLocalWorkspace } from "../workspace-files.mjs";
@@ -108,3 +117,19 @@ test("external disk changes cannot be silently overwritten", () =>
     );
     assert.equal(readFileSync(join(root, "src/example.ts"), "utf8"), "a teammate updated this\n");
   }));
+
+test(
+  "saving local source preserves executable permissions",
+  { skip: process.platform === "win32" },
+  () =>
+    fixture(({ root, files }) => {
+      const path = join(root, "src", "script.sh");
+      writeFileSync(path, "#!/bin/sh\necho before\n");
+      chmodSync(path, 0o755);
+      files.chooseFolder(root);
+      const original = files.open("src/script.sh");
+      files.save("src/script.sh", "#!/bin/sh\necho after\n", original.hash);
+      assert.equal(statSync(path).mode & 0o777, 0o755);
+      assert.equal(readFileSync(path, "utf8"), "#!/bin/sh\necho after\n");
+    }),
+);
