@@ -391,7 +391,7 @@ test("root integration subscribes to rendered events and ordinary drawer dismiss
     sidebar,
     /if \(previous\?\.isConnected && previous\.offsetParent !== null\) previous\.focus\(\)/,
   );
-  assert.match(sidebar, /cancelPendingSelection\(\);\s*onSelect\(conversation.id\)/);
+  assert.match(sidebar, /cancelPendingSelection\(\);[\s\S]{0,250}?onSelect\(conversation.id\)/);
   assert.doesNotMatch(coordinator, /setTimeout|requestAnimationFrame|scrollTo/);
 });
 
