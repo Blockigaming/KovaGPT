@@ -1031,6 +1031,8 @@ export function ChatInput({
     }
   }
 
+  const externalImageChange = useRef(onChange);
+  externalImageChange.current = onChange;
   const externalImageFiles = useRef(addFiles);
   externalImageFiles.current = addFiles;
   useEffect(() => {
@@ -1043,7 +1045,7 @@ export function ChatInput({
       if (!detail || typeof detail.accept !== "function") return;
       const context = attachmentContextRef.current;
       const scope = attachmentScopeRef.current;
-      detail.accept(async (file, isCurrent) => {
+      detail.accept(async (file, isCurrent, instructions) => {
         const current = () =>
           mounted &&
           isCurrent() &&
@@ -1051,7 +1053,18 @@ export function ChatInput({
           scope === attachmentScopeRef.current;
         if (!current()) throw new DOMException("The image action was cancelled.", "AbortError");
         const attached = await externalImageFiles.current([file]);
-        if (!current() || !attached) return;
+        if (!current()) throw new DOMException("The image action was cancelled.", "AbortError");
+        if (!attached)
+          throw new Error(
+            "The image could not be added. Check the draft attachments and try again.",
+          );
+        const text = typeof instructions === "string" ? instructions.trim().slice(0, 4000) : "";
+        if (text) {
+          const draft = composerStateRef.current.value;
+          const next = draft ? `${draft}${draft.endsWith("\n") ? "" : "\n"}${text}` : text;
+          composerStateRef.current.value = next;
+          externalImageChange.current(next);
+        }
         toast.success("Image added to your message");
         const focused = document.activeElement;
         if (focused === document.body || focused?.closest('[data-chat-image], [role="menuitem"]'))

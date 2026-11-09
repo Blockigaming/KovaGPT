@@ -117,7 +117,7 @@ export function ConversationHeaderActions({
     <>
       <ConversationSourcesPanel
         browserOnly
-        showActivity={false}
+        showActivity
         conversation={conversation}
         browserTabCount={
           signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined

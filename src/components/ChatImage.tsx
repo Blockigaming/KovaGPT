@@ -74,11 +74,13 @@ export function ChatImage({
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
   const [viewerMarker, setViewerMarker] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ marker, text: "" });
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const copyOnly = isMobile || touchMenu;
   const imageRef = useRef<HTMLImageElement>(null);
   const showRef = useRef<HTMLButtonElement>(null);
+  const viewerToComposer = useRef(false);
   const lifetime = useRef({ marker, generation: 0, mounted: true });
   if (lifetime.current.marker !== marker) {
     lifetime.current.marker = marker;
@@ -99,10 +101,12 @@ export function ChatImage({
     setVisibility({ marker, hidden: hiddenMarkers(key).includes(marker) });
     setBusy(false);
     setViewerMarker(null);
+    setEditDraft({ marker, text: "" });
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, actions?.ownerId ?? null)) return;
       lifetime.current.generation++;
       setViewerMarker(null);
+      setEditDraft({ marker, text: "" });
       setVisibility({ marker, hidden: false });
       setBusy(false);
     };
@@ -194,13 +198,17 @@ export function ChatImage({
             referrerPolicy="no-referrer"
             tabIndex={0}
             aria-haspopup="dialog"
-            onClick={() => setViewerMarker(marker)}
+            onClick={() => {
+              viewerToComposer.current = false;
+              setViewerMarker(marker);
+            }}
             style={{ WebkitTouchCallout: "none" }}
             className={imageClassName}
             onPointerDown={(event) => setTouchMenu(event.pointerType !== "mouse")}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
+                viewerToComposer.current = false;
                 setViewerMarker(marker);
                 return;
               }
@@ -228,8 +236,32 @@ export function ChatImage({
               onClose={() => setViewerMarker(null)}
               onReturnFocus={() => {
                 if (lifetime.current.mounted && lifetime.current.marker === marker)
-                  imageRef.current?.focus({ preventScroll: true });
+                  (viewerToComposer.current
+                    ? document.querySelector<HTMLTextAreaElement>(
+                        'textarea[aria-label="Message KovaGPT"]',
+                      )
+                    : imageRef.current
+                  )?.focus({ preventScroll: true });
               }}
+              instructions={editDraft.marker === marker ? editDraft.text : ""}
+              onInstructionsChange={(text) => setEditDraft({ marker, text })}
+              busy={busy}
+              onPrepareEdit={
+                actions
+                  ? (instructions) =>
+                      void run(async (allowed) => {
+                        const add = actions.prepareAdd();
+                        const file = await chatImageFile(src, allowed);
+                        if (!allowed()) return;
+                        await add(file, allowed, instructions);
+                        if (allowed()) {
+                          viewerToComposer.current = true;
+                          setEditDraft({ marker, text: "" });
+                          setViewerMarker(null);
+                        }
+                      })
+                  : undefined
+              }
               onDownload={() => void run((allowed) => downloadChatImage(src, allowed))}
               onShare={
                 typeof navigator !== "undefined" && typeof navigator.share === "function"

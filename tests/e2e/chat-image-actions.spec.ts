@@ -203,6 +203,27 @@ for (const role of ["user", "assistant"] as const) {
         width: 120,
         height: 80,
       });
+      const draft = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+      await draft.fill("Keep my existing draft.");
+      await image.click();
+      await expect(viewer).toBeVisible();
+      await viewer
+        .getByRole("textbox", { name: "Image editing instructions", exact: true })
+        .fill("Make the background blue.");
+      await viewer.getByRole("button", { name: "Close image preview", exact: true }).click();
+      await image.click();
+      await expect(
+        viewer.getByRole("textbox", { name: "Image editing instructions", exact: true }),
+      ).toHaveValue("Make the background blue.");
+      await viewer.getByRole("button", { name: "Use in chat", exact: true }).click();
+      await expect(viewer).toBeHidden();
+      await expect(draft).toHaveValue("Keep my existing draft.\nMake the background blue.");
+      await expect(draft).toBeFocused();
+      await expect(
+        page
+          .getByRole("list", { name: "Attachments", exact: true })
+          .locator('[data-status="complete"]'),
+      ).toHaveCount(1);
       expect(sends).toBe(0);
       return;
     }

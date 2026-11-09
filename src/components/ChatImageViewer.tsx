@@ -10,6 +10,10 @@ export default function ChatImageViewer({
   onDownload,
   onReturnFocus,
   onShare,
+  onPrepareEdit,
+  busy = false,
+  instructions,
+  onInstructionsChange,
 }: {
   src: string;
   alt: string;
@@ -17,7 +21,32 @@ export default function ChatImageViewer({
   onDownload: () => void;
   onReturnFocus: () => void;
   onShare?: () => void;
+  onPrepareEdit?: (instructions: string) => void;
+  busy?: boolean;
+  instructions: string;
+  onInstructionsChange: (value: string) => void;
 }) {
+  const [visibleViewport, setVisibleViewport] = useState<{ height: number; top: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const update = () =>
+      setVisibleViewport(
+        viewport && window.innerWidth < 1024
+          ? { height: viewport.height, top: viewport.offsetTop }
+          : null,
+      );
+    update();
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   useEffect(() => {
     const reset = () => setView({ scale: 1, x: 0, y: 0 });
@@ -75,6 +104,9 @@ export default function ChatImageViewer({
           aria-describedby={undefined}
           className="fixed inset-0 z-[120] flex h-[100dvh] min-w-0 flex-col bg-black text-white outline-none lg:inset-x-[8vw] lg:inset-y-[6dvh] lg:h-[88dvh] lg:rounded-2xl"
           style={{
+            height: visibleViewport?.height,
+            top: visibleViewport?.top,
+            bottom: visibleViewport ? "auto" : undefined,
             paddingTop: "env(safe-area-inset-top)",
             paddingBottom: "env(safe-area-inset-bottom)",
             paddingLeft: "env(safe-area-inset-left)",
@@ -148,6 +180,38 @@ export default function ChatImageViewer({
               style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
             />
           </div>
+          {onPrepareEdit && (
+            <form
+              className="shrink-0 space-y-2 px-3 pt-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!busy && instructions.trim()) onPrepareEdit(instructions);
+              }}
+            >
+              <label className="block text-sm" htmlFor="image-edit-instructions">
+                Image editing instructions
+              </label>
+              <div className="flex items-end gap-2">
+                <textarea
+                  id="image-edit-instructions"
+                  aria-label="Image editing instructions"
+                  rows={2}
+                  maxLength={4000}
+                  value={instructions}
+                  onChange={(event) => onInstructionsChange(event.target.value)}
+                  disabled={busy}
+                  className="min-h-12 max-h-28 min-w-0 flex-1 resize-none rounded-2xl border border-white/30 bg-white/10 p-3 text-base text-white outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  placeholder="Describe the changes…"
+                />
+                <button className={control} type="submit" disabled={busy || !instructions.trim()}>
+                  {busy ? "Preparing…" : "Use in chat"}
+                </button>
+              </div>
+              <p className="text-xs text-white/70">
+                Adds this image and your instructions to the draft for review.
+              </p>
+            </form>
+          )}
           <div className="flex shrink-0 items-center justify-center gap-3 p-2">
             <button
               className={control}
