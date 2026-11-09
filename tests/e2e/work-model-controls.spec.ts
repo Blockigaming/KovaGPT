@@ -114,9 +114,7 @@ for (const tier of ["free", "plus", "pro"] as const) {
   });
 }
 
-test("chat draft remains intact without the retired floating Work launcher", async ({
-  page,
-}) => {
+test("chat draft remains intact without the retired floating Work launcher", async ({ page }) => {
   const commands = await workFixture(page, "plus", false, true);
   await page.goto("/");
   await waitForKovaHydration(page);
