@@ -267,16 +267,10 @@ test("desktop debugging is available through an explicit native menu, not a web 
   const f = await fixture();
   const developer = f.menus[0].find((item) => item.label === "Developer");
   assert.ok(developer);
-  assert.deepEqual(
-    developer.submenu.map(({ label, role, accelerator }) => ({ label, role, accelerator })),
-    [
-      {
-        label: "Toggle Developer Tools",
-        role: "toggleDevTools",
-        accelerator: "CommandOrControl+Alt+I",
-      },
-    ],
-  );
+  assert.equal(developer.submenu.length, 1);
+  assert.equal(developer.submenu[0].label, "Toggle Developer Tools");
+  assert.equal(developer.submenu[0].role, "toggleDevTools");
+  assert.equal(developer.submenu[0].accelerator, "CommandOrControl+Alt+I");
   assert.equal(f.window.options.webPreferences.preload, undefined);
   assert.equal(f.window.options.webPreferences.nodeIntegration, false);
 });
