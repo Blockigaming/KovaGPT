@@ -177,8 +177,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
       snippet = [
         row.start?.dateTime &&
           `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
-        row.end?.dateTime &&
-          `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
+        row.end?.dateTime && `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
       ]
         .filter(Boolean)
         .join("; ");
