@@ -485,10 +485,7 @@ test("Calendly requires explicit read scopes and a fixed account-scoped event ro
   );
   assert.equal(canReadConnection({ ...account, status: "expired" }, "calendly"), false);
   assert.equal(
-    connectionAuthorizationUrl(
-      "calendly",
-      "https://auth.calendly.com/oauth/authorize?state=fixture",
-    ),
+    connectionAuthorizationUrl("calendly", "https://auth.calendly.com/oauth/authorize?state=fixture"),
     "https://auth.calendly.com/oauth/authorize?state=fixture",
   );
   assert.equal(
