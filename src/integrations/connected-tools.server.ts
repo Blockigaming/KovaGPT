@@ -109,6 +109,7 @@ export async function refreshExpiringConnection(
       "dropbox",
       "box",
       "calendly",
+      "canva",
     ].includes(row.provider_id)
   )
     return null;
