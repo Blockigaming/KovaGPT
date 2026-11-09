@@ -142,6 +142,7 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
 const COMPOSER_TOOL_MENTIONS: Readonly<Record<ComposerToolId, readonly string[]>> = {
   web_search: ["search", "web"],
   image: ["image", "picture"],
+  study: ["study", "learn"],
   data_analysis: ["data", "analyze"],
   file_analysis: ["files", "document"],
 };
@@ -431,7 +432,7 @@ export function ChatInput({
     setDismissedSketchText(null);
     setDrawingOpen(true);
   };
-  const toolMentionMatch = /(?:^|\\s)@([a-z]*)$/i.exec(value);
+  const toolMentionMatch = /(?:^|\s)@([a-z]*)$/i.exec(value);
   const toolMentionQuery = toolMentionMatch?.[1]?.toLowerCase() ?? "";
   const toolMentionAt = toolMentionMatch ? value.length - toolMentionQuery.length - 1 : -1;
   const matchingToolMentions = COMPOSER_TOOLS.filter((tool) =>
