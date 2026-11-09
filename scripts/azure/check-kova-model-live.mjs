@@ -14,10 +14,23 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   try {
     const json = execFileSync(
       "az",
-      ["containerapp", "show", "--resource-group", "rg-kovagpt-prod",
-       "--name", "kovagpt-prod-web", "--output", "json", "--only-show-errors"],
-      { encoding: "utf8", timeout: 30000, maxBuffer: 4 * 1024 * 1024,
-        stdio: ["ignore", "pipe", "pipe"] },
+      [
+        "containerapp",
+        "show",
+        "--resource-group",
+        "rg-kovagpt-prod",
+        "--name",
+        "kovagpt-prod-web",
+        "--output",
+        "json",
+        "--only-show-errors",
+      ],
+      {
+        encoding: "utf8",
+        timeout: 30000,
+        maxBuffer: 4 * 1024 * 1024,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
     );
     const report = assessAzureAppReadiness(JSON.parse(json));
     process.stdout.write(JSON.stringify(report, null, 2) + "\n");
