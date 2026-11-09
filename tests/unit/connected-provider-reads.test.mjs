@@ -479,7 +479,10 @@ test("Calendly requires explicit read scopes and a fixed account-scoped event ro
     granted_scopes: ["users:read", "scheduled_events:read"],
   };
   assert.equal(canReadConnection(account, "calendly"), true);
-  assert.equal(canReadConnection({ ...account, granted_scopes: ["users:read"] }, "calendly"), false);
+  assert.equal(
+    canReadConnection({ ...account, granted_scopes: ["users:read"] }, "calendly"),
+    false,
+  );
   assert.equal(canReadConnection({ ...account, status: "expired" }, "calendly"), false);
   assert.equal(
     connectionAuthorizationUrl(
@@ -515,7 +518,9 @@ test("Calendly requires explicit read scopes and a fixed account-scoped event ro
   assert.equal(request.init.redirect, "error");
 });
 
-test("Calendly scheduled-event reads verify their owner before retrieving bounded metadata", async () => {
+test(
+  "Calendly scheduled-event reads verify their owner before retrieving bounded metadata",
+  async () => {
   const userUri = "https://api.calendly.com/users/KNOWN_USER";
   const calls = [];
   const result = await readConnection(
@@ -546,7 +551,8 @@ test("Calendly scheduled-event reads verify their owner before retrieving bounde
   assert.equal(result.results[0].url, null);
   assert.match(result.results[0].snippet, /Start: 2026-11-09T10:00:00Z/);
   assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|Unrelated/);
-});
+  },
+);
 
 test("Calendly rejects a changed user identity before listing events", async () => {
   const calls = [];
@@ -579,10 +585,16 @@ test("Calendly requires PKCE and Basic client authentication for tokens", () => 
   };
   const initial = oauthTokenRequest(args);
   assert.equal(initial.method, "POST");
-  assert.equal(initial.headers.Authorization, "Basic " + Buffer.from("client:secret").toString("base64"));
+  assert.equal(
+    initial.headers.Authorization,
+    "Basic " + Buffer.from("client:secret").toString("base64"),
+  );
   assert.equal(initial.body.get("code_verifier"), "random-verifier");
   assert.equal(initial.body.get("client_secret"), null);
-  assert.throws(() => oauthTokenRequest({ ...args, verifier: undefined }), /oauth_pkce_verifier_missing/);
+  assert.throws(
+    () => oauthTokenRequest({ ...args, verifier: undefined }),
+    /oauth_pkce_verifier_missing/,
+  );
   const refresh = oauthRefreshRequest({
     providerId: "calendly",
     clientId: "client",
