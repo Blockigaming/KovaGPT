@@ -1,4 +1,5 @@
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -130,6 +131,7 @@ function fixture(
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
     "@/lib/composer-keyboard-inset.mjs": keyboardInset,
+    "@/lib/consumer-model-selection.mjs": consumerModelSelection,
     "@/lib/document-extraction/pdf-metadata.mjs": pdfMetadata,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
