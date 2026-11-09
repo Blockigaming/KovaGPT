@@ -115,7 +115,7 @@ for (const tier of ["free", "plus", "pro"] as const) {
   });
 }
 
-test("chat opens a Work review without sending or clearing its composer draft", async ({
+test("chat keeps its draft without mounting the retired floating Work launcher", async ({
   page,
 }) => {
   const commands = await workFixture(page, "plus", false, true);
@@ -124,14 +124,10 @@ test("chat opens a Work review without sending or clearing its composer draft", 
   await expect(page.locator("[data-chat-transcript]")).toBeVisible();
   const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await composer.fill("Review this synthetic launch request");
-  await page.getByRole("button", { name: "Prepare or manage Work", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Work from this chat", exact: true });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("textbox", { name: "Objective", exact: true })).toHaveValue(
-    "Review this synthetic launch request",
-  );
-  await page.keyboard.press("Escape");
-  await expect(dialog).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Prepare or manage Work", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Work from this chat", exact: true })).toHaveCount(0);
   await expect(composer).toHaveValue("Review this synthetic launch request");
   expect(commands).toEqual([]);
 });
