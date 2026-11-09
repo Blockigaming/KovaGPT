@@ -260,7 +260,7 @@ if (scope === "public") {
     }
   }
 
-  test("appearance controls reach both endpoints without clipped controls at enlarged UI size", async ({
+  test("appearance controls fit at enlarged UI size", async ({
     page,
   }, info) => {
     await coreFixture(page, "dark", "plus");
