@@ -249,6 +249,10 @@ for (const theme of ["dark", "light"] as const) {
         [...section.querySelectorAll("button, input, textarea")].flatMap((control) => {
           const box = control.getBoundingClientRect();
           if (!box.width || !box.height) return [];
+          // A scrollable comparison table can intentionally hold offscreen cells.
+          // Its scrollability and selection reachability are checked separately.
+          const scroller = control.closest('[role="region"][tabindex="0"]');
+          if (scroller && scroller.scrollWidth > scroller.clientWidth) return [];
           return box.left < -1 || box.right > document.documentElement.clientWidth + 1
             ? [control.getAttribute("aria-label") || control.textContent || control.tagName]
             : [];
