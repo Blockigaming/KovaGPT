@@ -10,6 +10,8 @@ private enum NativeShortcut: String {
     case scan = "scan"
     case camera = "camera"
     case photos = "photos"
+    case voice = "voice"
+    case microphone = "microphone"
 
     init?(url: URL) {
         guard url.scheme?.lowercased() == "kovagpt",
@@ -65,6 +67,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
     private var browser: WKWebView!
     private var lastShortcutID: UUID?
     private var pendingShortcut: NativeShortcut?
+    private var pendingWebShortcut: (id: UUID, action: NativeShortcut)?
 
     fileprivate func accept(_ request: ShortcutRequest) {
         guard lastShortcutID != request.id else { return }
@@ -82,6 +85,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         guard isViewLoaded, view.window != nil, presentedViewController == nil,
               let action = pendingShortcut else { return }
         pendingShortcut = nil
+        pendingWebShortcut = nil
         switch action {
         case .newChat:
             browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
@@ -91,6 +95,49 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             takePhoto()
         case .photos:
             choosePhoto()
+        case .voice, .microphone:
+            // The widget may open the web voice/dictation interface but never
+            // starts recording or grants a microphone permission automatically.
+            pendingWebShortcut = (id: UUID(), action: action)
+            browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard let token = pendingWebShortcut?.id else { return }
+        openPendingWebShortcut(token: token, remainingAttempts: 10)
+    }
+
+    private func openPendingWebShortcut(token: UUID, remainingAttempts: Int) {
+        guard let request = pendingWebShortcut, request.id == token,
+              let url = browser.url, isKova(url) else { return }
+        let testID = request.action == .voice ? "voice-button" : "dictate-button"
+        // Native fixed-selector click is scoped to the real Kova composer.
+        // The web dialog still requires an explicit user Start for microphone use.
+        let script = """
+            (function() {
+              const button = document.querySelector('button[data-testid="\\(testID)"]');
+              if (!button || button.disabled || button.hidden ||
+                  button.getClientRects().length === 0) return false;
+              button.click();
+              return true;
+            })()
+            """
+        browser.evaluateJavaScript(script) { [weak self] result, _ in
+            DispatchQueue.main.async {
+                guard let self, self.pendingWebShortcut?.id == token else { return }
+                if result as? Bool == true {
+                    self.pendingWebShortcut = nil
+                } else if remainingAttempts > 1 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        self.openPendingWebShortcut(token: token,
+                                                     remainingAttempts: remainingAttempts - 1)
+                    }
+                } else {
+                    self.pendingWebShortcut = nil
+                    self.showMessage("Open a chat and sign in to use this voice shortcut.")
+                }
+            }
         }
     }
 
