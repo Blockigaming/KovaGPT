@@ -779,3 +779,226 @@
 :root[data-kova-motion="reduced"] .kova-inline-dictation-wave i {
   animation: none !important;
 }
+
+/* Immersive Kova Voice. Dictation remains the compact inline workspace.
+   The visualizer responds only to real controller phases: no synthetic
+   recording indication, no fake transcript, no microphone started by CSS. */
+[role="dialog"].kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] {
+  --voice-ink: #f5f7fc;
+  --voice-soft: #272c39;
+  --voice-muted: #bdc5d8;
+  width: min(1120px, calc(100vw - 48px));
+  max-width: min(1120px, calc(100vw - 48px));
+  height: min(820px, calc(100dvh - 48px));
+  max-height: calc(100dvh - 48px);
+  border: 1px solid #303745;
+  border-radius: 28px;
+  background: #10131b;
+  color: var(--voice-ink);
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-topbar {
+  padding: 22px 32px 14px;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-title {
+  color: #f5f7fc;
+  font-size: 15px;
+  font-weight: 550;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-picker-trigger {
+  border: 1px solid #3d4555;
+  background: #242a36;
+  color: #f5f7fc;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-body {
+  padding: 12px 32px 0;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-canvas {
+  min-height: 255px;
+  padding: 0 0 10px;
+  flex: 1 0 auto;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-shell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(186px, 32vh, 296px);
+  height: clamp(186px, 32vh, 296px);
+  margin: 0 0 24px;
+  isolation: isolate;
+  flex: 0 0 auto;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-glow {
+  position: absolute;
+  inset: 3%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #667ce18a 0%, #4655a752 40%, transparent 75%);
+  filter: blur(31px);
+  opacity: 0.68;
+  transform: scale(1.2);
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-mark {
+  width: 86%;
+  height: 86%;
+  margin: 0;
+  border: 1px solid #d9e9ff52;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 31% 25%, #f9ffff 0%, #dbeaff 16%, transparent 50%),
+    radial-gradient(ellipse at 78% 22%, #d1e1ff 0%, #92aeff 35%, transparent 68%),
+    radial-gradient(ellipse at 31% 73%, #a8c4ff 0%, #5a71dd 45%, transparent 80%),
+    radial-gradient(ellipse at 79% 77%, #e4efff 0%, #94aafa 40%, transparent 74%),
+    #6e83dd;
+  box-shadow:
+    inset -10px -14px 30px #4459b640,
+    inset 12px 18px 32px #ffffff7a,
+    0 9px 40px #677ce65c;
+  animation: kova-voice-idle-orb 6.8s ease-in-out infinite alternate;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-phase="recording"] .kova-voice-mark {
+  animation: kova-voice-active-orb 2s ease-in-out infinite alternate;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-phase="speaking"] .kova-voice-mark {
+  animation: kova-voice-speaking-orb 1.6s ease-in-out infinite alternate;
+}
+@keyframes kova-voice-idle-orb {
+  from { transform: scale(0.98) rotate(-5deg); }
+  to { transform: scale(1.02) rotate(5deg); }
+}
+@keyframes kova-voice-active-orb {
+  from { transform: scale(0.95) rotate(-7deg); filter: saturate(0.93); }
+  to { transform: scale(1.06) rotate(7deg); filter: saturate(1.2); }
+}
+@keyframes kova-voice-speaking-orb {
+  from { transform: scale(0.96) rotate(4deg); filter: brightness(0.98); }
+  to { transform: scale(1.075) rotate(-6deg); filter: brightness(1.17); }
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-heading {
+  color: #f6f8ff;
+  font-size: clamp(24px, 3vw, 30px);
+  letter-spacing: -0.035em;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-description,
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-status,
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-limit {
+  color: var(--voice-muted);
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-description {
+  max-width: 420px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-dock {
+  gap: 22px;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-record-control button,
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close {
+  width: 64px;
+  min-height: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-record-control button {
+  background: #f3f6ff;
+  color: #171b26;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close {
+  background: #ad454b;
+  color: #fff;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close:hover {
+  background: #c64e55;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-footnote {
+  color: #dae0ec;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-secondary-control {
+  align-items: center;
+  gap: 8px;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  color: #bec7d9;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle[aria-pressed="true"] {
+  color: #fff;
+  background: #34415a;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-detail-button {
+  color: #bec7d9;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-detail-button:hover,
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle:hover {
+  background: #303a4e;
+  color: #fff;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-transcript {
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto 8px;
+  border: 1px solid #394253;
+  border-radius: 16px;
+  padding: 12px 16px;
+  color: #f2f5fc;
+  background: #202735;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-transcript textarea {
+  color: #f2f5fc;
+  background: #161c29;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"][data-voice-content-first="true"] .kova-voice-canvas {
+  min-height: 120px;
+}
+@media (max-width: 639px) {
+  [role="dialog"].kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] {
+    width: 100%;
+    max-width: 100% !important;
+    height: 100dvh;
+    max-height: 100dvh !important;
+    bottom: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-topbar {
+    padding: max(18px, env(safe-area-inset-top)) 20px 10px;
+    min-height: 74px;
+  }
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-body {
+    padding: 0 18px;
+  }
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-bottom {
+    padding: 4px 18px max(14px, env(safe-area-inset-bottom));
+  }
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-shell {
+    width: min(61vw, 250px);
+    height: min(61vw, 250px);
+    margin-bottom: 18px;
+  }
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-description {
+    max-width: 315px;
+    font-size: 12px;
+  }
+}
+@media (max-height: 580px) {
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-shell {
+    width: 130px;
+    height: 130px;
+    margin-bottom: 8px;
+  }
+  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-canvas {
+    min-height: 140px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-voice-dialog[data-voice-mode="voice"] .kova-voice-mark {
+    animation: none;
+  }
+}
