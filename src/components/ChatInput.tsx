@@ -1,4 +1,5 @@
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
+import { CONSUMER_MODELS } from "@/lib/consumer-model-selection.mjs";
 import type { ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import {
   ArrowUp,
@@ -204,7 +205,7 @@ export function ChatInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
+  onSubmit: (tool?: ComposerToolId | null, oneShotModel?: ConsumerModelId) => void | Promise<unknown>;
   onStop: () => void;
   /** Explicitly snapshot one next message; ordinary typing and Enter never enqueue. */
   onSendNext?: (tool?: ComposerToolId | null, trigger?: HTMLButtonElement | null) => boolean;
@@ -377,6 +378,30 @@ export function ChatInput({
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
   const [drawingOpen, setDrawingOpen] = useState(false);
+  const [oneShotModelOpen, setOneShotModelOpen] = useState(false);
+  const oneShotTimerRef = useRef<number | null>(null);
+  const oneShotPressRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  const suppressLongPressClickRef = useRef(false);
+  const canOfferOneShotModel =
+    isMobileLayout &&
+    userTier !== "free" &&
+    canChangeAgent &&
+    Boolean(hostedModel) &&
+    isLoaded &&
+    Boolean(user) &&
+    !disabled &&
+    !sendDisabled &&
+    !isStreaming;
+  const cancelOneShotTimer = () => {
+    if (oneShotTimerRef.current !== null) window.clearTimeout(oneShotTimerRef.current);
+    oneShotTimerRef.current = null;
+    oneShotPressRef.current = null;
+  };
+  useEffect(() => {
+    return () => {
+      if (oneShotTimerRef.current !== null) window.clearTimeout(oneShotTimerRef.current);
+    };
+  }, []);
   const [dismissedSketchText, setDismissedSketchText] = useState<string | null>(null);
   const sketchAt = sketchMentionStart(value);
   const showSketchMention =
@@ -732,7 +757,7 @@ export function ChatInput({
     return true;
   };
 
-  const triggerSubmit = () => {
+  const triggerSubmit = (oneShotModel?: ConsumerModelId) => {
     if (disabled || sendDisabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
     if (!value.trim() && !validAttachmentInstruction) return;
@@ -747,7 +772,7 @@ export function ChatInput({
     submittingRef.current = true;
     setUploadAnnouncement("Sending message…");
     try {
-      const result = onSubmit(selectedToolRef.current);
+      const result = onSubmit(selectedToolRef.current, oneShotModel);
       if (result && typeof result.then === "function")
         void result.then(
           () => {
@@ -1951,9 +1976,44 @@ export function ChatInput({
                 type="button"
                 onPointerDown={(event) => {
                   if (event.button === 0) event.preventDefault();
+                  if (!canOfferOneShotModel || !canSubmit || event.pointerType !== "touch") return;
+                  cancelOneShotTimer();
+                  oneShotPressRef.current = {
+                    id: event.pointerId,
+                    x: event.clientX,
+                    y: event.clientY,
+                  };
+                  oneShotTimerRef.current = window.setTimeout(() => {
+                    if (oneShotPressRef.current?.id !== event.pointerId) return;
+                    oneShotTimerRef.current = null;
+                    suppressLongPressClickRef.current = true;
+                    setOneShotModelOpen(true);
+                  }, 500);
                 }}
+                onPointerMove={(event) => {
+                  const press = oneShotPressRef.current;
+                  if (
+                    press?.id === event.pointerId &&
+                    Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12
+                  )
+                    cancelOneShotTimer();
+                }}
+                onPointerUp={() => {
+                  cancelOneShotTimer();
+                  window.setTimeout(() => {
+                    suppressLongPressClickRef.current = false;
+                  }, 0);
+                }}
+                onPointerCancel={cancelOneShotTimer}
+                onPointerLeave={cancelOneShotTimer}
                 disabled={!canSubmit}
-                onClick={triggerSubmit}
+                onClick={() => {
+                  if (suppressLongPressClickRef.current || oneShotModelOpen) {
+                    suppressLongPressClickRef.current = false;
+                    return;
+                  }
+                  triggerSubmit();
+                }}
                 className="spec400-send-button"
                 hidden={!hasDraft}
                 aria-label="Send message"
@@ -2434,6 +2494,35 @@ export function ChatInput({
           </button>
         </DialogContent>
       </Dialog>
+      <MobileBottomSheet
+        open={oneShotModelOpen && canOfferOneShotModel && canSubmit}
+        onOpenChange={(open) => {
+          if (!open) setOneShotModelOpen(false);
+        }}
+        title="Send this message with"
+        ariaLabel="Choose a model for one message"
+      >
+        <div className="flex flex-col gap-1 p-2">
+          <p className="px-2 pb-1 text-sm text-muted-foreground">
+            Applies to this message only. Your default model stays unchanged.
+          </p>
+          {CONSUMER_MODELS.filter((model) => model.tiers.includes(userTier)).map((model) => (
+            <button
+              key={model.id}
+              type="button"
+              className="flex min-h-11 w-full flex-col rounded-xl px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => {
+                setOneShotModelOpen(false);
+                suppressLongPressClickRef.current = false;
+                triggerSubmit(model.id);
+              }}
+            >
+              <span className="text-sm font-medium">{model.label}</span>
+              <span className="text-xs text-muted-foreground">{model.description}</span>
+            </button>
+          ))}
+        </div>
+      </MobileBottomSheet>
       <ComposerDrawingDialog
         open={drawingOpen}
         onOpenChange={setDrawingOpen}
