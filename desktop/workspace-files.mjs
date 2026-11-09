@@ -137,6 +137,10 @@ export function createLocalWorkspace() {
       opened.clear();
       return { name: basename(root), selected: true };
     },
+    // Main-process use only. Never return this absolute path through renderer IPC.
+    executionRoot() {
+      return chosenRoot();
+    },
     info() {
       return { name: root ? basename(root) : null, selected: Boolean(root) };
     },

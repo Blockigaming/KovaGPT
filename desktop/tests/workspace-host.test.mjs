@@ -22,6 +22,7 @@ async function harness(action) {
   let permissionCheck;
   let permissionRequest;
   let allowSave = false;
+  let messageBoxOverride = null;
   const sessions = {
     fromPartition(partition) {
       assert.equal(partition, "persist:kova-local-workspace");
@@ -74,6 +75,7 @@ async function harness(action) {
       showOpenDialog: async () => ({ canceled: false, filePaths: [project] }),
       showMessageBox: async (_window, options) => {
         prompts.push(options);
+        if (messageBoxOverride) return messageBoxOverride(options);
         return { response: allowSave ? 1 : 0 };
       },
     },
@@ -99,6 +101,9 @@ async function harness(action) {
       authorizedEvent,
       permissionCheck,
       permissionRequest,
+      setMessageBox(handler) {
+        messageBoxOverride = handler;
+      },
       enableSave() {
         allowSave = true;
       },
@@ -220,4 +225,73 @@ test("workspace scheme registration is explicit and privileged only for offline 
       privileges: { standard: true, secure: true, supportFetchAPI: true },
     },
   ]);
+});
+
+test("terminal cannot execute before folder selection, without consent or from a remote frame", async () => {
+  await harness(async ({ call, project, prompts, enableSave, window }) => {
+    await assert.rejects(
+      () => call("runCommand", undefined, "echo denied"),
+      /Choose a repository/u,
+    );
+    await call("choose");
+    const denied = await call("runCommand", undefined, "echo local");
+    assert.deepEqual(denied, { started: false });
+    assert.deepEqual(await call("commandHistory"), []);
+    assert.equal(prompts.at(-1).message, "echo local");
+    assert.ok(prompts.at(-1).detail.includes(project));
+    for (const channel of [
+      "runCommand",
+      "git",
+      "commandHistory",
+      "cancelCommand",
+      "clearCommandHistory",
+    ])
+      await assert.rejects(
+        () =>
+          call(
+            channel,
+            { sender: window.webContents, senderFrame: { url: WORKSPACE_URL } },
+            "echo no",
+          ),
+        /denied/u,
+      );
+    enableSave();
+    const run = await call("runCommand", undefined, "echo allowed");
+    assert.equal(run.started, true);
+    for (let tries = 0; tries < 100; tries++) {
+      const records = await call("commandHistory");
+      if (records[0]?.finishedAt) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const records = await call("commandHistory");
+    assert.match(records[0].output, /allowed/u);
+    assert.equal(records[0].exitCode, 0);
+    await call("closeFolder");
+    assert.deepEqual(await call("commandHistory"), []);
+  });
+});
+
+test("pending command approval cannot be reused after navigation or folder changes", async () => {
+  await harness(async ({ call, setMessageBox, window }) => {
+    await call("choose");
+    let answer;
+    setMessageBox(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const pending = call("runCommand", undefined, "echo must-not-run");
+    await assert.rejects(() => call("choose"), /current action/u);
+    await assert.rejects(() => call("closeFolder"), /current action/u);
+    await assert.rejects(
+      () => call("runCommand", undefined, "echo second"),
+      /current local action/u,
+    );
+    window.webContents.mainFrame.url = "https://kovagpt.com/";
+    answer({ response: 1 });
+    assert.deepEqual(await pending, { started: false });
+    window.webContents.mainFrame.url = WORKSPACE_URL;
+    assert.deepEqual(await call("commandHistory"), []);
+  });
 });

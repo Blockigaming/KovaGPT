@@ -20,7 +20,7 @@ Remote renderers have sandboxing, context isolation and web security enabled, wi
 
 ## Release acceptance
 
-Before public distribution, install the artifacts on each target OS and verify password sign-in, window persistence, `kovagpt://open`, attachment selection, drawing, voice permissions and sign-out. Google sign-in through a system browser needs a separately reviewed session handoff; embedded Google login is not certified. macOS needs Developer ID signing and notarization, Windows needs a trusted signing certificate, and the public download page should link only to a verified release. There is no native background execution or native auto-updater in this preview. Updating the website updates its rendered UI; Electron security updates require a new package.
+Before public distribution, install the artifacts on each target OS and verify password sign-in, window persistence, `kovagpt://open`, attachment selection, drawing, voice permissions and sign-out. Google sign-in through a system browser needs a separately reviewed session handoff; embedded Google login is not certified. macOS needs Developer ID signing and notarization, Windows needs a trusted signing certificate, and the public download page should link only to a verified release. The local command runner executes only explicit, individually confirmed commands while its workspace is open. There is no scheduled background agent or native auto-updater in this preview. Updating the website updates its rendered UI; Electron security updates require a new package.
 
 Official references: [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [packaging](https://www.electronjs.org/docs/latest/tutorial/application-distribution), [protocol lifecycle](https://www.electronjs.org/docs/latest/api/app#event-open-url-macos), [electron-builder configuration](https://www.electron.build/configuration/).
 
@@ -66,10 +66,7 @@ JavaScript and other dangerous protocols remain blocked. Camera, microphone
 and notification choices are bound to the requesting native window. Closing
 an additional window removes it from the permission allowlist.
 
-This is real desktop multi-window behavior for the existing chat application,
-not yet a local coding workspace, OS automation environment, or local
-repository access feature. Native preview build and physical installation
-acceptance are still required.
+Native preview build and physical installation acceptance are still required.
 
 ## Local file import (user-authorized)
 
@@ -83,7 +80,7 @@ shell or IPC bridge.
 
 This separate clipboard action is intentionally limited. The dedicated offline
 coding workspace described below handles folder browsing and text editing.
-Neither surface provides a terminal or computer-control agent.
+The workspace also includes the separately authorized terminal described below; neither surface provides a computer-control agent.
 
 ## Local coding workspace — private repository editor
 
@@ -106,12 +103,44 @@ folder chooser**. Nothing is indexed or read before this approval.
 - A source file must be explicitly opened before it can be edited. A change
   preview shows its modified lines. **Saving requires a second native
   confirmation** and refuses to overwrite any file changed since opening.
-  Files are replaced atomically; nothing is executed or sent to any provider.
+  Files are replaced atomically; saving alone never executes or uploads them.
 - Closing the workspace or folder clears the selected path and in-memory
   authorization; authorization is not synchronized to the website.
 
-This adds a functional **local text repository explorer/editor and change
-preview**, not a Git branch/commit interface, local terminal, browser extension
-tab context, or computer-control system. Real multi-platform installation,
+This includes a functional **local text repository explorer/editor, Git inspection and local command runner**. Real multi-platform installation,
 keyboard accessibility, file locking, and signing/notarization acceptance remain
 outstanding before public release. The remote web app remains unchanged.
+
+## Local commands and source control
+
+Within **File → Open Local Coding Workspace**, open a folder and expand **Local terminal**.
+Enter a command and choose **Review and run…**. A native confirmation displays the exact
+command and full working directory. Cancelling does not start a process. Commands run
+under the installed user's OS permissions; the selected directory is a working directory,
+not a sandbox. Commands can read or modify files outside it or access the network.
+The remote site has no IPC channel to start commands, approve them, or read output.
+
+- POSIX uses `/bin/sh -c`; Windows uses the system `cmd.exe /d /s /c`.
+- Both output streams are displayed live, with exit code, failure, cancellation and timeout states.
+- **Stop** terminates the process group on POSIX or process tree on Windows. Closing the
+  workspace also stops its running command. Programs that detach from the process tree
+  can outlive it; this is a local tool, not an OS containment boundary.
+- Each command has a two-minute limit and a 256 KiB output limit. Input is closed;
+  interactive prompts, PTY programs and persistent shell sessions are not supported.
+- Runs and output stay in memory, limited to 30 entries. Clear history, close the folder,
+  or close the window to discard them. No background schedule or cloud synchronization exists.
+- Environment inheritance is restricted to OS execution, home and temporary-directory
+  variables; application API credentials, Node injection flags and Git override variables
+  are not passed to children. The user's own tools can still load their normal local config.
+- Folder switching is blocked while a command is awaiting confirmation or running.
+  Confirmation cannot be reused after navigation or a workspace identity change.
+
+**Source control** shows actual Git status, working diff, staged diff and the last 20 commits.
+Git must be installed and the selected folder must contain `.git`. These views use fixed,
+read-only argument lists, disable external diff/textconv/fsmonitor, and enforce time/output
+limits. Stage, commit, branch and other changes can be entered as individually confirmed
+terminal commands. This is not an autonomous coding agent or browser-tab integration.
+
+Validation includes actual temporary Git repositories and local processes, permission
+rejection, cancellation, bounds, and renderer interaction tests. Signed OS installation,
+Windows process-tree behavior and real-device acceptance remain release gates.

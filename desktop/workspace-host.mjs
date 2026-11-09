@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createLocalWorkspace } from "./workspace-files.mjs";
+import { createLocalCommandRunner, validateCommand, readGit } from "./workspace-process.mjs";
 
 export const WORKSPACE_ORIGIN = "kova-local://workspace";
 export const WORKSPACE_URL = WORKSPACE_ORIGIN + "/index.html";
@@ -30,6 +31,10 @@ export function installLocalWorkspace({
   const localSession = session.fromPartition("persist:kova-local-workspace");
   const filesystem = createLocalWorkspace();
   let window = null;
+  let commands = createLocalCommandRunner();
+  let scopeRevision = 0;
+  let confirmingCommand = false;
+  let choosingFolder = false;
 
   localSession.protocol.handle("kova-local", async (request) => {
     let location;
@@ -77,19 +82,36 @@ export function installLocalWorkspace({
 
   handler("info", () => filesystem.info());
   handler("choose", async (event) => {
-    const result = await dialog.showOpenDialog(window, {
-      title: "Choose a repository folder",
-      properties: ["openDirectory"],
-      buttonLabel: "Open local workspace",
-    });
-    if (!trusted(event) || result.canceled || result.filePaths?.length !== 1)
+    if (commands.isBusy() || confirmingCommand || choosingFolder)
+      throw new Error("Finish or stop the current action before changing folders");
+    const revision = scopeRevision;
+    choosingFolder = true;
+    let result;
+    try {
+      result = await dialog.showOpenDialog(window, {
+        title: "Choose a repository folder",
+        properties: ["openDirectory"],
+        buttonLabel: "Open local workspace",
+      });
+    } finally {
+      choosingFolder = false;
+    }
+    if (
+      !trusted(event) ||
+      revision !== scopeRevision ||
+      result.canceled ||
+      result.filePaths?.length !== 1
+    )
       return { selected: false };
+    scopeRevision++;
+    commands.clear();
     return filesystem.chooseFolder(result.filePaths[0]);
   });
   handler("list", (_event, directory) => filesystem.list(directory));
   handler("open", (_event, path) => filesystem.open(path));
   handler("preview", (_event, path, text, hash) => filesystem.preview(path, text, hash));
   handler("save", async (event, path, text, hash) => {
+    const revision = scopeRevision;
     const changes = filesystem.preview(path, text, hash);
     if (!changes.changed) return { saved: false, unchanged: true };
     const answer = await dialog.showMessageBox(window, {
@@ -102,12 +124,58 @@ export function installLocalWorkspace({
       defaultId: 0,
       cancelId: 0,
     });
-    if (!trusted(event) || answer.response !== 1) return { saved: false };
+    if (!trusted(event) || revision !== scopeRevision || answer.response !== 1)
+      return { saved: false };
     return { ...filesystem.save(path, text, hash), saved: true };
   });
   handler("closeFolder", () => {
+    if (commands.isBusy() || confirmingCommand || choosingFolder)
+      throw new Error("Finish or stop the current action before closing the folder");
+    scopeRevision++;
+    commands.clear();
     filesystem.close();
     return { selected: false };
+  });
+
+  handler("git", async (event, operation) => {
+    if (commands.isBusy() || confirmingCommand || choosingFolder)
+      throw new Error("Wait for the current local action to finish");
+    const revision = scopeRevision;
+    const result = await readGit(filesystem.executionRoot(), operation);
+    if (!trusted(event) || revision !== scopeRevision)
+      throw new Error("Repository changed during Git inspection");
+    return result;
+  });
+  handler("commandHistory", () => commands.snapshot());
+  handler("cancelCommand", () => commands.cancel());
+  handler("clearCommandHistory", () => {
+    commands.clear();
+    return { cleared: true };
+  });
+  handler("runCommand", async (event, command) => {
+    validateCommand(command);
+    if (confirmingCommand || choosingFolder || commands.isBusy())
+      throw new Error("Finish or stop the current local action first");
+    const root = filesystem.executionRoot();
+    const revision = scopeRevision;
+    confirmingCommand = true;
+    try {
+      const answer = await dialog.showMessageBox(window, {
+        type: "warning",
+        title: "Run this local command?",
+        message: command,
+        detail: `Working folder: ${root}\n\nThis command runs with your computer account's permissions. It can read or change files outside this folder and access the network. Review the complete command before allowing it. Input prompts are not supported; commands stop after two minutes or 256 KiB of output.`,
+        buttons: ["Cancel", "Run command"],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      if (!trusted(event) || revision !== scopeRevision || answer.response !== 1)
+        return { started: false };
+      return { ...commands.start(root, command), started: true };
+    } finally {
+      confirmingCommand = false;
+    }
   });
 
   return function openLocalWorkspace() {
@@ -143,6 +211,9 @@ export function installLocalWorkspace({
     });
     window.webContents.on("will-redirect", (event) => event.preventDefault());
     window.on("closed", () => {
+      scopeRevision++;
+      commands.dispose();
+      commands = createLocalCommandRunner();
       filesystem.close();
       window = null;
     });

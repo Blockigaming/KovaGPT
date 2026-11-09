@@ -117,6 +117,7 @@ choose.addEventListener("click", () =>
     const selected = await api.chooseFolder();
     if (!selected.selected) return;
     resetEditor();
+    gitOutput.textContent = "Select a source control view.";
     folderName.textContent = selected.name;
     closeFolder.disabled = false;
     await showFolder(tree);
@@ -163,14 +164,18 @@ preview.addEventListener("click", () =>
 );
 async function saveFile() {
   if (!opened) return;
-  const result = await api.save(opened, editor.value, openedHash);
+  const path = opened;
+  const content = editor.value;
+  const hash = openedHash;
+  const result = await api.save(path, content, hash);
+  if (opened !== path || openedHash !== hash) return;
   if (!result.saved) {
     if (result.unchanged) notify("No changes to save.");
     else notify("Save cancelled. Your edits remain in this window.");
     return;
   }
   openedHash = result.hash;
-  original = editor.value;
+  original = content;
   showDiff();
   updateButtons();
   notify("Saved the selected local file. Nothing was uploaded or executed.");
@@ -193,4 +198,116 @@ if (!api) {
     closeFolder.disabled = false;
     await showFolder(tree);
   });
+}
+
+const command = document.getElementById("command");
+const runCommand = document.getElementById("runCommand");
+const cancelCommand = document.getElementById("cancelCommand");
+const commandHistory = document.getElementById("commandHistory");
+const commandOutput = document.getElementById("commandOutput");
+const clearHistory = document.getElementById("clearHistory");
+const gitOutput = document.getElementById("gitOutput");
+let runs = [];
+let hasFolder = false;
+let commandBusy = false;
+let commandPending = false;
+let polling = false;
+let selectedRun = "";
+
+function updateLocalTools() {
+  command.disabled = !hasFolder;
+  runCommand.disabled = !hasFolder || commandBusy || !command.value.trim();
+  cancelCommand.disabled = !commandBusy;
+  clearHistory.disabled = commandBusy || runs.length === 0;
+  for (const button of document.querySelectorAll("[data-git]"))
+    button.disabled = !hasFolder || commandBusy;
+}
+function renderRuns() {
+  const selected = runs.find((entry) => entry.id === selectedRun) || runs[0];
+  if (selected) {
+    selectedRun = selected.id;
+    commandOutput.textContent = `${selected.command}\n${selected.state}${selected.exitCode !== null ? ` · Exit ${selected.exitCode}` : ""}${selected.truncated ? " · Output limit reached" : ""}\n\n${selected.output}`;
+  } else commandOutput.textContent = "No commands have run.";
+  commandHistory.replaceChildren();
+  for (const entry of runs) {
+    const option = document.createElement("option");
+    option.value = entry.id;
+    option.textContent = `${entry.state}: ${entry.command.slice(0, 100)}`;
+    option.selected = entry.id === selectedRun;
+    commandHistory.append(option);
+  }
+  commandBusy =
+    commandPending || runs.some((entry) => ["running", "stopping"].includes(entry.state));
+  updateLocalTools();
+}
+async function refreshLocalTools() {
+  if (!api || polling) return;
+  polling = true;
+  try {
+    const info = await api.info();
+    if (!info.selected && hasFolder) gitOutput.textContent = "Choose a Git repository folder.";
+    hasFolder = info.selected;
+    runs = await api.commandHistory();
+    renderRuns();
+  } catch (error) {
+    notify(error.message || "Cannot refresh local tasks", true);
+  } finally {
+    polling = false;
+  }
+}
+command.addEventListener("input", updateLocalTools);
+document.getElementById("commandForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (runCommand.disabled) return;
+  commandPending = true;
+  commandBusy = true;
+  updateLocalTools();
+  void guarded(async () => {
+    try {
+      const result = await api.runCommand(command.value);
+      if (result.started) {
+        selectedRun = result.id;
+        notify("Local command started.");
+      } else notify("Command cancelled. Nothing was run.");
+    } finally {
+      commandPending = false;
+      commandBusy = false;
+      await refreshLocalTools();
+    }
+  });
+});
+cancelCommand.addEventListener("click", () =>
+  guarded(async () => {
+    await api.cancelCommand();
+    await refreshLocalTools();
+  }),
+);
+clearHistory.addEventListener("click", () =>
+  guarded(async () => {
+    await api.clearCommandHistory();
+    selectedRun = "";
+    await refreshLocalTools();
+  }),
+);
+commandHistory.addEventListener("change", () => {
+  selectedRun = commandHistory.value;
+  renderRuns();
+});
+for (const button of document.querySelectorAll("[data-git]"))
+  button.addEventListener("click", () =>
+    guarded(async () => {
+      button.disabled = true;
+      try {
+        gitOutput.textContent = (await api.git(button.dataset.git)).output;
+      } finally {
+        updateLocalTools();
+      }
+    }),
+  );
+if (api) {
+  void refreshLocalTools();
+  const refreshTimer = setInterval(() => {
+    void refreshLocalTools();
+  }, 750);
+  window.addEventListener("beforeunload", () => clearInterval(refreshTimer));
 }

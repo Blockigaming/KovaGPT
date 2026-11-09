@@ -29,6 +29,7 @@
       "main.mjs",
       "policy.mjs",
       "workspace-host.mjs",
+      "workspace-process.mjs",
       "workspace-files.mjs",
       "workspace-preload.cjs",
       "workspace-ui.js",

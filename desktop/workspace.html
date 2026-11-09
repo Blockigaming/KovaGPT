@@ -190,6 +190,45 @@
         padding: 10px 14px;
         line-height: 1.5;
       }
+      details {
+        border-top: 1px solid #3a4050;
+        padding: 10px 16px;
+      }
+      summary {
+        cursor: pointer;
+        padding: 5px 0;
+      }
+      .tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 0;
+      }
+      .tools select,
+      #command {
+        color: inherit;
+        background: #12151c;
+        border: 1px solid #3a4050;
+        border-radius: 9px;
+        padding: 9px;
+        font: inherit;
+        min-width: 0;
+      }
+      #command {
+        flex: 1;
+        resize: vertical;
+        min-height: 42px;
+      }
+      .output {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        max-height: 28vh;
+        overflow: auto;
+        font:
+          12px/1.5 ui-monospace,
+          Consolas,
+          monospace;
+      }
       @media (max-width: 720px) {
         .layout {
           grid-template-columns: 175px minmax(0, 1fr);
@@ -223,8 +262,8 @@
         <div class="side-title" id="folderName">No folder selected</div>
         <nav id="tree" aria-label="Source tree"></nav>
         <p class="policy">
-          Only files in the folder you select are accessible. Hidden files, symlinks, binaries, and
-          files larger than 512 KiB are excluded.
+          The file editor excludes hidden files, symlinks, binaries, and files larger than 512 KiB.
+          Local commands run with your account’s permissions after native confirmation.
         </p>
       </aside>
       <main>
@@ -243,6 +282,46 @@
           placeholder="Choose a text or source file from the left navigation."
         ></textarea>
         <pre id="diff" role="region" aria-label="Changes preview"></pre>
+        <details id="gitPanel">
+          <summary>Source control</summary>
+          <div class="tools">
+            <button data-git="status" disabled>Status</button>
+            <button data-git="diff" disabled>Working changes</button>
+            <button data-git="staged" disabled>Staged changes</button>
+            <button data-git="log" disabled>Recent commits</button>
+          </div>
+          <pre id="gitOutput" class="output" role="region" aria-label="Git output">
+Choose a Git repository folder.</pre>
+        </details>
+        <details id="terminalPanel">
+          <summary>Local terminal</summary>
+          <form id="commandForm" class="tools">
+            <textarea
+              id="command"
+              aria-label="Local command"
+              placeholder="Enter a command to review and run…"
+              rows="2"
+              maxlength="4096"
+              spellcheck="false"
+              disabled
+            ></textarea>
+            <button id="runCommand" type="submit" disabled>Review and run…</button>
+            <button id="cancelCommand" type="button" disabled>Stop</button>
+          </form>
+          <div class="policy">
+            Commands can change files and access the network with your account’s permissions. Each
+            run requires confirmation. Output and the last 30 runs stay in this window until you
+            clear them or close the folder. Interactive input is unavailable.
+          </div>
+          <div class="tools">
+            <select id="commandHistory" aria-label="Local command history">
+              <option value="">No commands yet</option>
+            </select>
+            <button id="clearHistory" type="button">Clear history</button>
+          </div>
+          <pre id="commandOutput" class="output" role="region" aria-label="Command output">
+No commands have run.</pre>
+        </details>
       </main>
     </div>
     <div id="status" role="status" aria-live="polite">
