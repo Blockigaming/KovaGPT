@@ -21,7 +21,9 @@ async function fixture() {
   });
   const windows = [],
     external = [],
-    prompts = [];
+    prompts = [],
+    menus = [],
+    copiedImages = [];
   let permissions, checks;
   class Window extends EventEmitter {
     constructor(options) {
@@ -53,8 +55,8 @@ async function fixture() {
   }
   const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8")
     .replace(
-      /^import .* from "electron";$/m,
-      "const { app, BrowserWindow, dialog, globalShortcut, Menu, session, shell } = electron;",
+      /^import \{[\s\S]*?\} from "electron";$/m,
+      "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, Menu, session, shell, systemPreferences } = electron;",
     )
     .replace(/^import .* from "node:path";$/m, "const join = (...parts) => parts.join('/');")
     .replace(
@@ -72,6 +74,11 @@ async function fixture() {
     electron: {
       app,
       BrowserWindow: Window,
+      clipboard: { writeImage: (image) => copiedImages.push(image) },
+      desktopCapturer: {
+        getSources: async () => [{ thumbnail: { isEmpty: () => false } }],
+      },
+      systemPreferences: { getMediaAccessStatus: () => "granted" },
       globalShortcut: {
         register: () => true,
         unregister() {},
@@ -98,11 +105,11 @@ async function fixture() {
           },
         }),
       },
-      Menu: { setApplicationMenu() {}, buildFromTemplate: (value) => value },
+      Menu: { setApplicationMenu: (value) => menus.push(value), buildFromTemplate: (value) => value },
     },
   });
   await new Promise(setImmediate);
-  return { window: windows[0], permissions, checks, external, prompts, app, windows };
+  return { window: windows[0], permissions, checks, external, prompts, app, windows, menus, copiedImages };
 }
 
 test("native startup loads the real site into one sandboxed window", async () => {
@@ -165,4 +172,17 @@ test("permission requests reject other origins, subframes and unsupported powers
   );
   assert.equal(allowed, true);
   assert.equal(f.prompts.length, 1);
+});
+
+test("screen capture needs two native choices and only copies to clipboard", async () => {
+  const f = await fixture();
+  const companion = f.menus[0].find((item) => item.label === "Companion");
+  const capture = companion.submenu.find((item) => item.label === "Copy screen to clipboard...");
+  assert.ok(capture);
+  assert.equal(f.copiedImages.length, 0);
+  capture.click();
+  await new Promise(setImmediate);
+  assert.equal(f.prompts[0].title, "Copy a screen image?");
+  assert.equal(f.prompts[1].title, "Choose screen");
+  assert.equal(f.copiedImages.length, 1);
 });
