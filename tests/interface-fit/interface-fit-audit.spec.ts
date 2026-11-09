@@ -159,123 +159,52 @@ if (scope === "public") {
     });
   });
 
-  test("chat sync recovery controls stay inside their notice", async ({ page }, info) => {
+  test("temporary chat sync failures do not interrupt the chat interface", async ({
+    page,
+  }, info) => {
     await coreFixture(page, "dark", "plus");
+    await page.route("**/api/chat/history**", (route) =>
+      route.fulfill({ status: 503, json: { error: "Synthetic offline history" } }),
+    );
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const notice = page.getByLabel("Chat history synchronization", {
-      exact: true,
-    });
-    await expect(notice).toBeVisible();
-    // Measure recovery controls and their scroll reach in one rendered snapshot.
-    await expect(async () => {
-      const layout = await page.evaluate(() => {
-        const element = document.querySelector<HTMLElement>(
-          '[aria-label="Chat history synchronization"]',
-        )!;
-        const bounds = element.getBoundingClientRect();
-        const buttons = [...element.querySelectorAll("button")];
-        const originalScroll = element.scrollTop;
-        element.scrollTop = element.scrollHeight;
-        const lastButton = buttons.at(-1)?.getBoundingClientRect();
-        const reachesLastButton = Boolean(
-          lastButton && lastButton.top >= bounds.top - 1 && lastButton.bottom <= bounds.bottom + 1,
-        );
-        element.scrollTop = originalScroll;
-        return {
-          height: bounds.height,
-          left: bounds.left,
-          right: bounds.right,
-          overflow: getComputedStyle(element).overflowY,
-          reachesLastButton,
-          buttons: buttons.map((button) => {
-            const box = button.getBoundingClientRect();
-            return {
-              name: button.textContent?.trim(),
-              left: box.left,
-              right: box.right,
-            };
-          }),
-        };
-      });
-      expect(layout.height).toBeLessThanOrEqual(
-        Math.min(page.viewportSize()!.height * 0.3, 256) + 1,
-      );
-      expect(layout.overflow).toBe("auto");
-      expect(layout.reachesLastButton).toBe(true);
-      expect(layout.buttons.map((button) => button.name)).toEqual([
-        "Save existing chats to my account",
-        "Retry chat sync",
-      ]);
-      for (const button of layout.buttons) {
-        expect(button.left).toBeGreaterThanOrEqual(layout.left);
-        expect(button.right).toBeLessThanOrEqual(layout.right);
-      }
-    }).toPass({ timeout: 5_000 });
-    await page.screenshot({ path: info.outputPath("sync-recovery.png") });
+    const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    await expect(composer).toBeVisible();
+    // Offline, pending and retrying states are intentionally quiet; severe
+    // device errors and conflicts still have their own visible recovery flow.
+    await expect(
+      page.getByLabel("Chat history synchronization", { exact: true }),
+    ).toHaveCount(0);
+    await page.screenshot({ path: info.outputPath("quiet-sync-recovery.png") });
   });
 
-  test("sync retries keep recovery controls stable", async ({ page }) => {
+  test("reloading during an offline chat sync keeps the composer usable", async ({ page }) => {
     await coreFixture(page, "dark", "plus");
-    let hold = false;
-    let heldRequests = 0;
-    let release!: () => void;
-    const pending = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route("**/api/chat/history**", async (route) => {
-      if (hold) {
-        heldRequests++;
-        await pending;
-      }
-      await route.fulfill({
-        status: 503,
-        json: { error: "Synthetic offline history" },
-      });
+    let requests = 0;
+    await page.route("**/api/chat/history**", (route) => {
+      requests++;
+      return route.fulfill({ status: 503, json: { error: "Synthetic offline history" } });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await page.evaluate(() => document.fonts.ready);
-    const notice = page.getByLabel("Chat history synchronization", {
-      exact: true,
-    });
+    const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    await expect(composer).toBeVisible();
+    await expect.poll(() => requests).toBeGreaterThan(0);
     await expect(
-      notice.getByRole("button", { name: "Retry chat sync", exact: true }),
-    ).toBeVisible();
-    await expect(notice).not.toHaveAttribute("aria-busy", "true");
-    const measure = () =>
-      page.evaluate(() => {
-        const notice = document.querySelector<HTMLElement>(
-          '[aria-label="Chat history synchronization"]',
-        )!;
-        return {
-          height: notice.getBoundingClientRect().height,
-          status: notice.querySelector('[role="status"]')?.textContent,
-          composerTop: document.querySelector(".spec400-composer")!.getBoundingClientRect().top,
-          buttons: Array.from(notice.querySelectorAll("button")).map((button) => ({
-            name: button.textContent?.trim(),
-            width: button.getBoundingClientRect().width,
-            height: button.getBoundingClientRect().height,
-          })),
-        };
-      });
-    const before = await measure();
-    hold = true;
-    try {
-      await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
-      await expect(notice).toHaveAttribute("aria-busy", "true");
-      const during = await measure();
-      expect(during.status).toBe(before.status);
-      expect(during.buttons).toEqual(before.buttons);
-      expect(Math.abs(during.height - before.height)).toBeLessThanOrEqual(1);
-      expect(Math.abs(during.composerTop - before.composerTop)).toBeLessThanOrEqual(1);
-    } finally {
-      release();
-    }
-    await expect(notice).not.toHaveAttribute("aria-busy", "true");
-    const after = await measure();
-    expect(after.buttons).toEqual(before.buttons);
-    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+      page.getByLabel("Chat history synchronization", { exact: true }),
+    ).toHaveCount(0);
+    const before = await composer.boundingBox();
+    expect(before).not.toBeNull();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    await expect(composer).toBeVisible();
+    await expect(
+      page.getByLabel("Chat history synchronization", { exact: true }),
+    ).toHaveCount(0);
+    const after = await composer.boundingBox();
+    expect(after).not.toBeNull();
+    expect(Math.abs(after!.y - before!.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(after!.height - before!.height)).toBeLessThanOrEqual(1);
   });
 
   test("conversation loading keeps composer at the bottom", async ({ page }, info) => {
