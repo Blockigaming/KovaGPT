@@ -260,6 +260,7 @@ export function ComposerVoiceDialog({
     gate: ReturnType<typeof createVoiceSilenceGate>;
   } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
+  const [inputLevel, setInputLevel] = useState(0);
   const [microphoneMuted, setMicrophoneMuted] = useState(false);
   const [captionsOpen, setCaptionsOpen] = useState(false);
   const microphoneMutedRef = useRef(false);
@@ -281,6 +282,7 @@ export function ComposerVoiceDialog({
   const updatePhase = useCallback((next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
+    if (next !== "recording") setInputLevel(0);
   }, []);
 
   const clearRecordingTimers = useCallback(() => {
@@ -894,7 +896,9 @@ export function ComposerVoiceDialog({
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
-            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+            const amplitude = Math.sqrt(total / samples.length);
+            setInputLevel(Math.min(1, amplitude * 8));
+            if (gate.sample(amplitude, Date.now())) stopRecording();
           }, 100);
           silenceMonitor.current = { context, source, interval, gate };
           setHandsFreeListening(true);
@@ -1177,6 +1181,7 @@ export function ComposerVoiceDialog({
       mode={mode}
       status={status}
       handsFreeListening={mode === "voice" && handsFreeListening}
+      inputLevel={mode === "voice" && phase === "recording" && !microphoneMuted ? inputLevel : 0}
       availability={
         !userId
           ? "guest"
