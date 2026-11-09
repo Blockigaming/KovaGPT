@@ -88,7 +88,8 @@ export function ComposerUploadAllowance({ ownerId }: { ownerId: string | null })
     timeZone: "UTC",
     timeZoneName: "short",
   }).format(new Date(snapshot.data.resetsAt));
-  const percent = limit > 0 ? Math.min(100, Math.round((100 * snapshot.data.uploads) / limit)) : 100;
+  const percent =
+    limit > 0 ? Math.min(100, Math.round((100 * snapshot.data.uploads) / limit)) : 100;
   return (
     <span>
       Today's upload allowance is {percent}% used. Resets {reset}. The server checks the allowance
