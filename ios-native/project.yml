@@ -1,0 +1,23 @@
+name: KovaGPT
+options:
+  bundleIdPrefix: com.kovagpt
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  KovaGPT:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: KovaGPT
+        NSCameraUsageDescription: "Scan documents only after you tap Scan."
+        UIRequiresFullScreen: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGNING_ALLOWED: NO

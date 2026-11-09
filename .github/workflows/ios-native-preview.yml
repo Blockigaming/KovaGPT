@@ -1,0 +1,24 @@
+name: iOS native preview
+on:
+  pull_request:
+    paths: ["ios-native/**", ".github/workflows/ios-native-preview.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: ios-native
+      - run: |
+          xcodebuild -project KovaGPT.xcodeproj -scheme KovaGPT \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+        working-directory: ios-native
