@@ -793,7 +793,7 @@
   max-height: calc(100dvh - 48px);
   border: 1px solid #303745;
   border-radius: 28px;
-  background: #10131b;
+  background: #08090d;
   color: var(--voice-ink);
 }
 .kova-voice-immersive .kova-voice-topbar {
@@ -821,8 +821,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(186px, 32vh, 296px);
-  height: clamp(186px, 32vh, 296px);
+  width: clamp(130px, 23vh, 194px);
+  height: clamp(130px, 23vh, 194px);
   margin: 0 0 24px;
   isolation: isolate;
   flex: 0 0 auto;
@@ -1041,8 +1041,8 @@
     padding: 4px 18px max(14px, env(safe-area-inset-bottom));
   }
   .kova-voice-immersive .kova-voice-orb-shell {
-    width: min(61vw, 250px);
-    height: min(61vw, 250px);
+    width: min(38vw, 158px);
+    height: min(38vw, 158px);
     margin-bottom: 18px;
   }
   .kova-voice-immersive .kova-voice-description {
