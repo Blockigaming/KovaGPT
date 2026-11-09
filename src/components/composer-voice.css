@@ -942,6 +942,22 @@
   width: 24px;
   height: 24px;
 }
+.kova-voice-immersive .kova-voice-microphone-toggle {
+  position: relative;
+}
+.kova-voice-immersive .kova-voice-microphone-toggle .kova-voice-muted-icon {
+  opacity: 0.68;
+}
+.kova-voice-immersive .kova-voice-microphone-toggle[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  width: 30px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(-43deg);
+  pointer-events: none;
+}
 .kova-voice-immersive .kova-voice-microphone-toggle:hover {
   filter: brightness(1.12);
 }
