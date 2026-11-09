@@ -28,6 +28,11 @@
     "files": [
       "main.mjs",
       "policy.mjs",
+      "workspace-host.mjs",
+      "workspace-files.mjs",
+      "workspace-preload.cjs",
+      "workspace-ui.js",
+      "workspace.html",
       "package.json"
     ],
     "directories": {
