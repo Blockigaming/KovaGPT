@@ -11,7 +11,11 @@ import {
 } from "./oauth-providers.server";
 import { decryptCredential, encryptCredential } from "./credential-vault.server";
 import { readConnection } from "./connection-read.server.mjs";
-import { oauthRefreshRequest, selectRefreshTokens } from "./oauth-token-request.server.mjs";
+import {
+  oauthRefreshEndpoint,
+  oauthRefreshRequest,
+  selectRefreshTokens,
+} from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
 import type { GitHubChatContext } from "@/lib/github-chat-read.server.mjs";
@@ -109,6 +113,7 @@ export async function refreshExpiringConnection(
       "dropbox",
       "box",
       "calendly",
+      "figma",
     ].includes(row.provider_id)
   )
     return null;
@@ -159,7 +164,7 @@ export async function refreshExpiringConnection(
     const response = await fetch(
       oldSalesforceCredential
         ? salesforceOAuthEndpoint(oldSalesforceCredential, "token")
-        : provider.tokenEndpoint,
+        : oauthRefreshEndpoint(provider.id, provider.tokenEndpoint),
       oauthRefreshRequest({
         providerId: provider.id,
         clientId: process.env[provider.clientIdEnv],

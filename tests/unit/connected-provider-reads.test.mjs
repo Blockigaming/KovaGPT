@@ -134,6 +134,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "api.dropboxapi.com",
     "api.box.com",
     "api.calendly.com",
+    "api.figma.com",
   ]);
   const salesforceToken = packSalesforceCredential("fake-token", {
     active: true,
@@ -144,7 +145,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
   for (const id of Object.keys(CONNECTION_FLOWS)) {
     const req = connectionReadRequest(
       id,
-      "a&?$top=999' https://evil.example",
+      id === "figma" ? "MyFigmaFileKey123" : "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : "fake-token",
       id === "calendly" ? { calendlyUserUri: "https://api.calendly.com/users/KNOWN_USER" } : {},
     );

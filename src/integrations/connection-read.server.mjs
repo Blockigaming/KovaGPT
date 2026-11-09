@@ -13,6 +13,27 @@ const title = (page) => {
   );
 };
 
+function figmaFileKey(query) {
+  if (/^[a-zA-Z0-9_-]{6,128}$/u.test(query)) return query;
+  try {
+    const url = new URL(query);
+    if (
+      url.protocol !== "https:" ||
+      !["figma.com", "www.figma.com"].includes(url.hostname) ||
+      url.username ||
+      url.password
+    )
+      return null;
+    const match =
+      /^\/(?:file|design|board|proto|slides|buzz|make)\/([a-zA-Z0-9_-]{6,128})(?:\/|$)/u.exec(
+        url.pathname,
+      );
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function connectionReadRequest(id, query, token, options = {}) {
   if (!Object.hasOwn(CONNECTION_FLOWS, id)) throw new Error("unsupported_connection");
   if (id === "salesforce") return salesforceReadRequest(query, token, options.recordType);
@@ -45,6 +66,10 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("$top", "10");
   } else if (id === "ms-teams") {
     url = new URL("https://graph.microsoft.com/v1.0/me/joinedTeams");
+  } else if (id === "figma") {
+    const key = figmaFileKey(query);
+    if (!key) throw new Error("invalid_figma_file_key");
+    url = new URL(`https://api.figma.com/v1/files/${key}/meta`);
   } else if (id === "calendly") {
     const uri = options.calendlyUserUri;
     if (
@@ -138,6 +163,27 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   }
   const data = await readProviderJsonObject(response, 512_000);
   if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
+  if (id === "figma") {
+    const file = data.file;
+    if (!file || typeof file !== "object" || typeof file.name !== "string" || !file.name)
+      throw new Error("invalid_connection_response");
+    const key = figmaFileKey(query);
+    if (!key) throw new Error("invalid_figma_file_key");
+    const link = safeConnectionLink(file.url);
+    const origin = link ? new URL(link).hostname : null;
+    return {
+      service: "Figma",
+      results: [
+        {
+          id: key,
+          title: str(file.name, 300),
+          url: origin === "www.figma.com" || origin === "figma.com" ? link : null,
+          snippet: str(file.last_touched_at, 80),
+        },
+      ],
+      limited: true,
+    };
+  }
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows = data.value;

@@ -7,6 +7,7 @@ export type OAuthProviderId =
   | "dropbox"
   | "box"
   | "calendly"
+  | "figma"
   | "oura"
   | "whoop"
   | "salesforce";
@@ -28,6 +29,20 @@ export type OAuthProviderAdapter = {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  figma: {
+    id: "figma",
+    name: "Figma",
+    authorizationEndpoint: "https://www.figma.com/oauth",
+    tokenEndpoint: "https://api.figma.com/v1/oauth/token",
+    clientIdEnv: "FIGMA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "FIGMA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["current_user:read", "file_metadata:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.figma.com/v1/me",
+    profileId: (v) => text(v.id),
+    profileLabel: (v) => text(v.handle) || "Figma account",
+  },
   calendly: {
     id: "calendly",
     name: "Calendly",
