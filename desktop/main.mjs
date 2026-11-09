@@ -337,6 +337,13 @@ function installAppMenu() {
         ],
       },
       { role: "editMenu" },
+      {
+        label: "Developer",
+        submenu: [
+          // An explicit local menu action; no remote page receives an IPC or filesystem bridge.
+          { label: "Toggle Developer Tools", role: "toggleDevTools", accelerator: "CommandOrControl+Alt+I" },
+        ],
+      },
       { role: "viewMenu" },
       { role: "windowMenu" },
     ]),
