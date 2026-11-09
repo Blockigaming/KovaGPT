@@ -31,4 +31,13 @@ if (files.length === 0) {
 }
 
 const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
+if (result.status !== 0 && files.includes("tests/unit/usage-cost-windows.test.mjs") && process.env.CI) {
+  // Temporary diagnostics: show the formatter's exact diff without bypassing the failing gate.
+  spawnSync("npx", ["prettier", "--write", "tests/unit/usage-cost-windows.test.mjs"], {
+    stdio: "inherit",
+  });
+  spawnSync("git", ["diff", "--", "tests/unit/usage-cost-windows.test.mjs"], {
+    stdio: "inherit",
+  });
+}
 process.exit(result.status ?? 1);
