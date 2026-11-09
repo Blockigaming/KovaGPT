@@ -98,7 +98,10 @@ test("Figma token and refresh exchanges use server-side Basic auth with PKCE", (
   };
   const req = oauthTokenRequest(input);
   assert.equal(req.method, "POST");
-  assert.equal(req.headers.Authorization, "Basic " + Buffer.from("client:secret").toString("base64"));
+  assert.equal(
+    req.headers.Authorization,
+    "Basic " + Buffer.from("client:secret").toString("base64"),
+  );
   assert.equal(req.body.get("grant_type"), "authorization_code");
   assert.equal(req.body.get("code_verifier"), "pkce-verifier");
   assert.equal(req.body.get("client_id"), null);
