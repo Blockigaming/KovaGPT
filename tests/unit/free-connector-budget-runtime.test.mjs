@@ -254,16 +254,13 @@ function fixture(options = {}) {
       return q;
     },
     rpc(name, args) {
-      const paid = (options.tier ?? "free") !== "free";
-      assert.equal(name, paid ? "try_consume_paid_message" : "try_consume_daily_message");
+      assert.equal(name, "try_consume_paid_message");
       assert.equal(args._user_id, owner);
+      assert.ok(Number.isInteger(args._weekly_limit) && args._weekly_limit > 0);
+      assert.ok(args._short_limit === null || (Number.isInteger(args._short_limit) && args._short_limit > 0));
       messageReservations.push(args);
       const result = {
-        data: paid
-          ? options.messageQuota !== false
-            ? "allowed"
-            : "five_hour"
-          : options.messageQuota !== false,
+        data: options.messageQuota !== false ? "allowed" : "five_hour",
         error: null,
       };
       const query = {
