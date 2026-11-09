@@ -6,6 +6,7 @@ export type OAuthProviderId =
   | "linear"
   | "dropbox"
   | "box"
+  | "calendly"
   | "oura"
   | "whoop"
   | "salesforce";
@@ -27,6 +28,27 @@ export type OAuthProviderAdapter = {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  calendly: {
+    id: "calendly",
+    name: "Calendly",
+    authorizationEndpoint: "https://auth.calendly.com/oauth/authorize",
+    tokenEndpoint: "https://auth.calendly.com/oauth/token",
+    clientIdEnv: "CALENDLY_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CALENDLY_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["users:read", "scheduled_events:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.calendly.com/users/me",
+    profileId: (v) => {
+      const resource = v.resource as Record<string, unknown> | undefined;
+      const uri = text(resource?.uri);
+      return /^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]+$/u.test(uri) ? uri : "";
+    },
+    profileLabel: (v) => {
+      const resource = v.resource as Record<string, unknown> | undefined;
+      return text(resource?.name) || text(resource?.email) || "Calendly account";
+    },
+  },
   salesforce: {
     id: "salesforce",
     name: "Salesforce",
