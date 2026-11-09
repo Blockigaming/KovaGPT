@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
-import { AudioLines, Captions, Info, Loader2, Mic, X } from "lucide-react";
+import { AudioLines, Info, Loader2, Mic, TextSelect, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -345,7 +345,7 @@ export function ComposerVoiceDialogView({
                     title={captionsOpen ? "Hide captions" : "Show captions"}
                     onClick={() => onCaptionsChange?.(!captionsOpen)}
                   >
-                    <Captions aria-hidden="true" />
+                    <TextSelect aria-hidden="true" />
                   </button>
                 )}
                 {ready && (
