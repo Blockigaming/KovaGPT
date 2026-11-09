@@ -17,9 +17,28 @@ targets:
         CFBundleVersion: "1"
         NSCameraUsageDescription: "Scan documents only after you tap Scan."
         UIRequiresFullScreen: false
+    dependencies:
+      - target: KovaGPTShortcuts
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGNING_ALLOWED: NO
+
+  KovaGPTShortcuts:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: KovaGPT Shortcuts
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios.shortcuts
+        SWIFT_VERSION: "5.9"
         CODE_SIGNING_ALLOWED: NO
