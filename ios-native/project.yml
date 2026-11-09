@@ -15,7 +15,7 @@ targets:
         CFBundleDisplayName: KovaGPT
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
-        NSCameraUsageDescription: "Scan documents only after you tap Scan."
+        NSCameraUsageDescription: "Use the camera only after you choose Scan or Camera."
         UIRequiresFullScreen: false
     dependencies:
       - target: KovaGPTShortcuts
