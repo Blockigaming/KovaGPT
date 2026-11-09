@@ -1,9 +1,11 @@
 package com.kovagpt.mobile;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.net.Uri;
 import android.net.http.SslError;
@@ -13,17 +15,22 @@ import android.view.MenuItem;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.PermissionRequest;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import java.util.ArrayList;
 
 /** Native navigation, sharing and file selection without exposing a JavaScript bridge. */
 public final class MainActivity extends Activity {
     private static final String HOME = "https://kovagpt.com/";
     private static final int PICK_FILES = 1031;
+    private static final int MEDIA_PERMISSION = 1032;
     private WebView web;
     private ValueCallback<Uri[]> files;
+    private PermissionRequest pendingMedia;
+    private String[] pendingMediaResources;
 
     private static boolean trusted(Uri uri) {
         return uri != null && "https".equalsIgnoreCase(uri.getScheme())
@@ -47,6 +54,66 @@ public final class MainActivity extends Activity {
                         .setPositiveButton("OK", null).show();
                 }
             }).show();
+    }
+
+    private void denyPendingMedia() {
+        if (pendingMedia == null) return;
+        pendingMedia.deny();
+        pendingMedia = null;
+        pendingMediaResources = null;
+    }
+
+    private void requestMedia(PermissionRequest request) {
+        runOnUiThread(() -> {
+            if (web == null || web.getUrl() == null || !trusted(request.getOrigin())
+                    || !trusted(Uri.parse(web.getUrl())) || pendingMedia != null) {
+                request.deny();
+                return;
+            }
+            String[] resources = request.getResources();
+            if (resources.length == 0) {
+                request.deny();
+                return;
+            }
+            boolean audio = false, video = false;
+            for (String resource : resources) {
+                if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) audio = true;
+                else if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) video = true;
+                else {
+                    request.deny();
+                    return;
+                }
+            }
+            ArrayList<String> permissions = new ArrayList<>();
+            if (audio) permissions.add(Manifest.permission.RECORD_AUDIO);
+            if (video) permissions.add(Manifest.permission.CAMERA);
+            pendingMedia = request;
+            pendingMediaResources = resources.clone();
+            new AlertDialog.Builder(this)
+                .setTitle("Allow KovaGPT media access?")
+                .setMessage("Android will ask before allowing " +
+                    (audio && video ? "microphone and camera" : audio ? "microphone" : "camera") +
+                    " access. You can deny either request.")
+                .setNegativeButton("Don't allow", (d, choice) -> denyPendingMedia())
+                .setOnCancelListener(d -> denyPendingMedia())
+                .setPositiveButton("Continue", (d, choice) ->
+                    requestPermissions(permissions.toArray(new String[0]), MEDIA_PERMISSION))
+                .show();
+        });
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                                      int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != MEDIA_PERMISSION || pendingMedia == null) return;
+        boolean granted = permissions.length > 0 && permissions.length == results.length;
+        for (int result : results) granted &= result == PackageManager.PERMISSION_GRANTED;
+        if (granted && web != null && web.getUrl() != null
+                && trusted(pendingMedia.getOrigin()) && trusted(Uri.parse(web.getUrl()))) {
+            pendingMedia.grant(pendingMediaResources);
+            pendingMedia = null;
+            pendingMediaResources = null;
+        } else denyPendingMedia();
     }
 
     @Override public void onCreate(Bundle saved) {
@@ -91,9 +158,16 @@ public final class MainActivity extends Activity {
                     return false;
                 }
             }
-            @Override public void onPermissionRequest(android.webkit.PermissionRequest request) {
-                // No implicit camera, microphone or other native permissions.
-                request.deny();
+            @Override public void onPermissionRequest(PermissionRequest request) {
+                requestMedia(request);
+            }
+            @Override public void onPermissionRequestCanceled(PermissionRequest request) {
+                runOnUiThread(() -> {
+                    if (pendingMedia == request) {
+                        pendingMedia = null;
+                        pendingMediaResources = null;
+                    }
+                });
             }
         });
         setContentView(web);
@@ -140,6 +214,7 @@ public final class MainActivity extends Activity {
         else super.onBackPressed();
     }
     @Override protected void onDestroy() {
+        denyPendingMedia();
         if (files != null) files.onReceiveValue(null);
         files = null;
         if (web != null) { web.stopLoading(); web.destroy(); web = null; }
