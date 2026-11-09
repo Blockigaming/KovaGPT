@@ -3,6 +3,8 @@
  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>CFBundleDisplayName</key><string>KovaGPT</string>
+  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
   <key>NSCameraUsageDescription</key>
   <string>Scan documents only after you tap Scan.</string>
   <key>UIRequiresFullScreen</key><false/>
