@@ -114,9 +114,7 @@ test("requested: Upgrade opens selected checkout directly", async ({ page }) => 
   await sidebar.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Upgrade plan", exact: true }).click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly$/);
-  await expect(
-    page.getByRole("heading", { name: "Opening checkout…", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Opening checkout…", exact: true })).toBeVisible();
   await expect(page.locator(".kova-settings-dialog")).toHaveCount(0);
 });
 
