@@ -1,4 +1,15 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, session, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  desktopCapturer,
+  dialog,
+  globalShortcut,
+  Menu,
+  session,
+  shell,
+  systemPreferences,
+} from "electron";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -105,6 +116,60 @@ function updateCompanionShortcut(shortcut) {
     });
   installAppMenu();
 }
+/** Screen contents are copied only after two explicit native choices; never uploaded. */
+async function copyScreenToClipboard() {
+  const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : companionWindow;
+  if (!window || window.isDestroyed()) return;
+  const confirmation = await dialog.showMessageBox(window, {
+    type: "question",
+    title: "Copy a screen image?",
+    message: "Choose a screen to copy into your clipboard.",
+    detail: "KovaGPT will not upload, send, or store the screenshot. You can paste it into chat.",
+    buttons: ["Cancel", "Choose screen"],
+    defaultId: 0,
+    cancelId: 0,
+  });
+  if (confirmation.response !== 1) return;
+  if (
+    process.platform === "darwin" &&
+    systemPreferences.getMediaAccessStatus("screen") !== "granted"
+  ) {
+    await dialog.showMessageBox(window, {
+      type: "info",
+      title: "Screen recording permission required",
+      message: "Allow KovaGPT in System Settings > Privacy & Security > Screen & System Audio Recording.",
+      buttons: ["OK"],
+    });
+    return;
+  }
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: { width: 1920, height: 1080 },
+    });
+    if (sources.length === 0) throw new Error("No screens available");
+    const choice = await dialog.showMessageBox(window, {
+      type: "question",
+      title: "Choose screen",
+      message: "Which screen should be copied?",
+      buttons: ["Cancel", ...sources.map((_source, index) => `Screen ${index + 1}`)],
+      defaultId: 0,
+      cancelId: 0,
+    });
+    if (choice.response < 1 || choice.response > sources.length) return;
+    const image = sources[choice.response - 1].thumbnail;
+    if (!image || image.isEmpty()) throw new Error("No image available");
+    clipboard.writeImage(image);
+  } catch {
+    await dialog.showMessageBox(window, {
+      type: "warning",
+      title: "Screen capture unavailable",
+      message: "No image was copied. Check your screen-sharing permissions and try again.",
+      buttons: ["OK"],
+    });
+  }
+}
+
 function installAppMenu() {
   const shortcutItems = COMPANION_SHORTCUTS.map((value) => ({
     label: value === "Alt+Space" && process.platform === "darwin" ? "Option+Space" : value,
@@ -146,6 +211,7 @@ function installAppMenu() {
         submenu: [
           { label: "Open Companion Window", click: openCompanion },
           { label: "Keyboard shortcut", submenu: shortcutItems },
+          { label: "Copy screen to clipboard...", click: () => void copyScreenToClipboard() },
           ...launchSetting,
         ],
       },
