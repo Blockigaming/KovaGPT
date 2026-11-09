@@ -3,20 +3,53 @@ import WebKit
 import VisionKit
 import PDFKit
 
+/// Shortcuts accept only known in-app actions, never arbitrary web URLs or commands.
+private enum NativeShortcut: String {
+    case newChat = "new-chat"
+    case scan = "scan"
+
+    init?(url: URL) {
+        guard url.scheme?.lowercased() == "kovagpt",
+              let name = url.host?.lowercased(),
+              url.user == nil, url.password == nil, url.port == nil,
+              (url.path.isEmpty || url.path == "/"),
+              url.query == nil, url.fragment == nil else { return nil }
+        self.init(rawValue: name)
+    }
+}
+
+private struct ShortcutRequest {
+    let id: UUID
+    let action: NativeShortcut
+}
+
 @main
 struct KovaGPTApp: App {
+    @State private var shortcut: ShortcutRequest?
+
     var body: some Scene {
         WindowGroup {
-            NativeBrowser()
+            NativeBrowser(shortcut: shortcut)
+                .onOpenURL { url in
+                    guard let action = NativeShortcut(url: url) else { return }
+                    shortcut = ShortcutRequest(id: UUID(), action: action)
+                }
         }
     }
 }
 
 struct NativeBrowser: UIViewControllerRepresentable {
+    fileprivate let shortcut: ShortcutRequest?
+
     func makeUIViewController(context: Context) -> UINavigationController {
         UINavigationController(rootViewController: BrowserController())
     }
-    func updateUIViewController(_ controller: UINavigationController, context: Context) {}
+
+    func updateUIViewController(_ controller: UINavigationController, context: Context) {
+        guard let shortcut,
+              let browser = controller.viewControllers.first as? BrowserController else { return }
+        browser.accept(shortcut)
+    }
 }
 
 /// Native iPhone/iPad viewer with no JavaScript bridge, automatic screen capture or
@@ -24,6 +57,32 @@ struct NativeBrowser: UIViewControllerRepresentable {
 final class BrowserController: UIViewController, WKNavigationDelegate,
                                VNDocumentCameraViewControllerDelegate {
     private var browser: WKWebView!
+    private var lastShortcutID: UUID?
+    private var pendingShortcut: NativeShortcut?
+
+    fileprivate func accept(_ request: ShortcutRequest) {
+        guard lastShortcutID != request.id else { return }
+        lastShortcutID = request.id
+        pendingShortcut = request.action
+        runShortcutIfVisible()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        runShortcutIfVisible()
+    }
+
+    private func runShortcutIfVisible() {
+        guard isViewLoaded, view.window != nil, presentedViewController == nil,
+              let action = pendingShortcut else { return }
+        pendingShortcut = nil
+        switch action {
+        case .newChat:
+            browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
+        case .scan:
+            scanDocument()
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
