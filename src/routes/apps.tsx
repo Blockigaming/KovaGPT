@@ -33,6 +33,7 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { verifyGoogleServiceRead } from "@/lib/google-connection-verification.mjs";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
 import { BankConnectionsPanel } from "@/components/BankConnectionsPanel";
 import { HealthConnectionsPanel } from "@/components/HealthConnectionsPanel";
@@ -1249,16 +1250,11 @@ function AppsPage() {
     setGoogleBusy(true);
     setGoogleApiCheck(id);
     try {
-      if (id === "gmail") {
-        const response = await gmailSearch("in:anywhere", 1, connectionId);
-        if (!Array.isArray(response.messages)) throw new Error("invalid_gmail_verification");
-      } else if (id === "google-calendar") {
-        const response = await calendarList({ maxResults: 1, connectionId });
-        if (!Array.isArray(response.events)) throw new Error("invalid_calendar_verification");
-      } else {
-        const response = await driveSearch("Kova connection verification", 1, connectionId);
-        if (!Array.isArray(response.files)) throw new Error("invalid_drive_verification");
-      }
+      await verifyGoogleServiceRead(id, connectionId, {
+        gmailSearch,
+        calendarList,
+        driveSearch,
+      });
       if (current()) {
         recordActivity(label, "Authorized API read succeeded");
         toast.success(`${label} API read verified for the selected account.`);
