@@ -17,5 +17,8 @@ test("photo shortcut keeps normal tap, modal accessibility and sign-in checks", 
   assert.match(composer, /if \(!requireFileAccount\(event\.currentTarget\)\) return/);
   assert.match(composer, /setPlusOpen\(true\)/);
   assert.match(composer, /onContextMenu=\{\(event\) => \{/);
-  assert.match(composer, /Math\.hypot\(event\.clientX - press\.x, event\.clientY - press\.y\) > 12/);
+  assert.match(
+    composer,
+    /Math\.hypot\(event\.clientX - press\.x, event\.clientY - press\.y\) > 12/,
+  );
 });
