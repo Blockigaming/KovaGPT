@@ -25,28 +25,29 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
           window.costPercentUsed ?? 0,
         );
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
-          return (
-            <div key={window.id} className="kova-plan-usage-row">
-              <div>
-                <span>{label}</span>
-                <strong>{percent}% used</strong>
-              </div>
-              <div
-                className="kova-usage-track"
-                role="progressbar"
-                aria-label={label}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={percent}
-              >
-                <span style={{ width: `${percent}%` }} />
-              </div>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {window.id === "five_hour" ? "Rolling activity · Next hourly refresh " : "Weekly reset "}
-                {resetFormat.format(new Date(window.resetsAt))}
-              </p>
+        const resetLabel =
+          window.id === "five_hour" ? "Rolling activity · Next hourly refresh" : "Weekly reset";
+        return (
+          <div key={window.id} className="kova-plan-usage-row">
+            <div>
+              <span>{label}</span>
+              <strong>{percent}% used</strong>
             </div>
-          );
+            <div
+              className="kova-usage-track"
+              role="progressbar"
+              aria-label={label}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={percent}
+            >
+              <span style={{ width: `${percent}%` }} />
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              {resetLabel} {resetFormat.format(new Date(window.resetsAt))}
+            </p>
+          </div>
+        );
       })}
       <p className="text-xs leading-5 text-muted-foreground">
         Today's images {boundedPercent(images, base.images * multiplier)}% used · uploads{" "}
