@@ -159,8 +159,12 @@ if (scope === "public") {
     });
   });
 
-  test("chat sync recovery controls stay inside their notice", async ({ page }, info) => {
+  test("critical chat sync recovery controls stay inside their notice", async ({ page }, info) => {
     await coreFixture(page, "dark", "plus");
+    // Authentication failures require visible recovery; ordinary 503 retries remain unobtrusive.
+    await page.route("**/api/chat/history**", (route) =>
+      route.fulfill({ status: 401, json: { error: "Synthetic expired session" } }),
+    );
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const notice = page.getByLabel("Chat history synchronization", {
@@ -240,18 +244,18 @@ if (scope === "public") {
     const composer = page.locator(".spec400-composer");
     await expect(composer).toBeVisible();
     await expect(notice).toHaveCount(0);
-    const beforeTop = (await composer.boundingBox())!.top;
+    const beforeTop = (await composer.boundingBox())!.y;
     hold = true;
     try {
       await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
       await expect(notice).toHaveCount(0);
-      const duringTop = (await composer.boundingBox())!.top;
+      const duringTop = (await composer.boundingBox())!.y;
       expect(Math.abs(duringTop - beforeTop)).toBeLessThanOrEqual(1);
     } finally {
       release();
     }
     await expect(notice).toHaveCount(0);
-    expect(Math.abs((await composer.boundingBox())!.top - beforeTop)).toBeLessThanOrEqual(1);
+    expect(Math.abs((await composer.boundingBox())!.y - beforeTop)).toBeLessThanOrEqual(1);
   });
 
   test("conversation loading keeps composer at the bottom", async ({ page }, info) => {
