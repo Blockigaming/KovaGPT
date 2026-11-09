@@ -18,16 +18,15 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
 
   return (
     <div className="kova-plan-usage">
-      {windows.map(
-        ({ id, resetsAt, regularUsed, regularLimit, thinkingUsed, thinkingLimit, costPercentUsed }) => {
-          const percent = Math.max(
-            boundedPercent(regularUsed, regularLimit),
-            boundedPercent(thinkingUsed, thinkingLimit),
-            costPercentUsed ?? 0,
-          );
-          const label = `${CHAT_USAGE_WINDOWS[id]} chat usage`;
+      {windows.map((window) => {
+        const percent = Math.max(
+          boundedPercent(window.regularUsed, window.regularLimit),
+          boundedPercent(window.thinkingUsed, window.thinkingLimit),
+          window.costPercentUsed ?? 0,
+        );
+        const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
           return (
-            <div key={id} className="kova-plan-usage-row">
+            <div key={window.id} className="kova-plan-usage-row">
               <div>
                 <span>{label}</span>
                 <strong>{percent}% used</strong>
@@ -43,13 +42,12 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
                 <span style={{ width: `${percent}%` }} />
               </div>
               <p className="text-xs leading-5 text-muted-foreground">
-                {id === "five_hour" ? "Rolling activity · Next hourly refresh " : "Weekly reset "}
-                {resetFormat.format(new Date(resetsAt))}
+                {window.id === "five_hour" ? "Rolling activity · Next hourly refresh " : "Weekly reset "}
+                {resetFormat.format(new Date(window.resetsAt))}
               </p>
             </div>
           );
-        },
-      )}
+      })}
       <p className="text-xs leading-5 text-muted-foreground">
         Today's images {boundedPercent(images, base.images * multiplier)}% used · uploads{" "}
         {boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.
