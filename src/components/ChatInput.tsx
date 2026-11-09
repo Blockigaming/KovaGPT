@@ -205,7 +205,10 @@ export function ChatInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: (tool?: ComposerToolId | null, oneShotModel?: ConsumerModelId) => void | Promise<unknown>;
+  onSubmit: (
+    tool?: ComposerToolId | null,
+    oneShotModel?: ConsumerModelId,
+  ) => void | Promise<unknown>;
   onStop: () => void;
   /** Explicitly snapshot one next message; ordinary typing and Enter never enqueue. */
   onSendNext?: (tool?: ComposerToolId | null, trigger?: HTMLButtonElement | null) => boolean;
@@ -331,9 +334,7 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
-  const plusPressRef = useRef<{ id: number; x: number; y: number; startedAt: number } | null>(
-    null,
-  );
+  const plusPressRef = useRef<{ id: number; x: number; y: number; startedAt: number } | null>(null);
   const plusLongPressRef = useRef(false);
   const plusContextHandledRef = useRef(false);
   const [expanded, setExpanded] = useState(false);
@@ -1870,7 +1871,11 @@ export function ChatInput({
                     disabled={disabled || isStreaming}
                     className="spec400-toolbar-button spec400-toolbar-icon"
                     aria-label="Attach"
-                    title={isMobileLayout ? "Add files and tools; hold for photos" : "Add files and tools"}
+                    title={
+                      isMobileLayout
+                        ? "Add files and tools; hold for photos"
+                        : "Add files and tools"
+                    }
                     aria-haspopup="dialog"
                     aria-expanded={plusOpen}
                     onPointerDown={(event) => {
