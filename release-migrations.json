@@ -5407,7 +5407,7 @@
       "order": 218,
       "filename": "20261109145000_kova_hourly_windows_monthly_cost_safety.sql",
       "timestamp": "20261109145000",
-      "sha256": "97e787d226c5ac0f5f1e52c0fc9364d449fae3dd3b55c26d35302488eee155c4",
+      "sha256": "aada7a29adc717d52dde77dfef277f27608c9e33bad42e5adf802b07d3f67773",
       "tables": [
         "message_usage_hourly"
       ],
