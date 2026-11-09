@@ -12,8 +12,8 @@ import {
   shell,
   systemPreferences,
 } from "electron";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import {
   KOVA_URL,
   isKovaUrl,
@@ -144,6 +144,53 @@ function updateCompanionShortcut(shortcut) {
     });
   installAppMenu();
 }
+/** Access is limited to one explicitly selected local file, with no remote IPC bridge. */
+async function copyLocalSourceFile() {
+  const owner = mainWindow && !mainWindow.isDestroyed() ? mainWindow : companionWindow;
+  if (!owner || owner.isDestroyed()) return;
+  const selection = await dialog.showOpenDialog(owner, {
+    title: "Choose a local source file",
+    properties: ["openFile"],
+    filters: [
+      {
+        name: "Source and text files",
+        extensions: [
+          "js", "mjs", "cjs", "ts", "tsx", "jsx", "py", "go", "rs", "java", "kt",
+          "swift", "html", "css", "json", "md", "txt", "yml", "yaml", "sql",
+        ],
+      },
+    ],
+  });
+  if (selection.canceled || selection.filePaths?.length !== 1 || owner.isDestroyed()) return;
+  const filePath = selection.filePaths[0];
+  try {
+    const file = statSync(filePath);
+    if (!file.isFile() || file.size === 0 || file.size > 256 * 1024)
+      throw new Error("File must be a nonempty text file of at most 256 KiB");
+    const source = readFileSync(filePath, "utf8");
+    if (source.includes("\\u0000")) throw new Error("Binary files are not supported");
+    const answer = await dialog.showMessageBox(owner, {
+      type: "question",
+      title: "Copy this local file?",
+      message: `Copy ${basename(filePath)} to your system clipboard?`,
+      detail:
+        "The selected file is not uploaded or sent by this action. Other apps may read clipboard contents until you replace them.",
+      buttons: ["Cancel", "Copy file"],
+      defaultId: 0,
+      cancelId: 0,
+    });
+    if (answer.response === 1 && !owner.isDestroyed()) clipboard.writeText(source);
+  } catch {
+    if (!owner.isDestroyed())
+      await dialog.showMessageBox(owner, {
+        type: "warning",
+        title: "Cannot copy file",
+        message: "Choose a readable text file no larger than 256 KiB.",
+        buttons: ["OK"],
+      });
+  }
+}
+
 /** Screen contents are copied only after two explicit native choices; never uploaded. */
 async function copyScreenToClipboard() {
   const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : companionWindow;
@@ -343,6 +390,7 @@ function installAppMenu() {
             accelerator: "CommandOrControl+N",
             click: () => createWindow(false, true),
           },
+          { label: "Copy local source file...", click: () => void copyLocalSourceFile() },
           { role: "close" },
         ],
       },
