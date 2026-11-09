@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  WebContentsView,
   clipboard,
   desktopCapturer,
   dialog,
@@ -27,12 +28,14 @@ import {
   validatedCompanionShortcut,
 } from "./policy.mjs";
 import { installLocalWorkspace, registerWorkspaceScheme } from "./workspace-host.mjs";
+import { installBrowserWorkspace } from "./browser-host.mjs";
 
 // The remote page gets no preload, IPC bridge, filesystem, shell, or Node access.
 app.enableSandbox();
 app.setName("KovaGPT");
 registerWorkspaceScheme(protocol);
 let openLocalWorkspace = () => {};
+let openBrowserWorkspace = () => {};
 let mainWindow = null;
 let companionWindow = null;
 const extraWindows = new Set();
@@ -418,6 +421,11 @@ function installAppMenu() {
             accelerator: "CommandOrControl+Shift+E",
             click: () => openLocalWorkspace(),
           },
+          {
+            label: "Open Browser Workspace",
+            accelerator: "CommandOrControl+Shift+B",
+            click: () => openBrowserWorkspace(),
+          },
           { label: "Copy local source file...", click: () => void copyLocalSourceFile() },
           { role: "close" },
         ],
@@ -570,6 +578,16 @@ else {
       protocol,
       session,
       dialog,
+      assetsPath: app.getAppPath(),
+      iconPath: join(process.resourcesPath, "kova-logo.png"),
+    });
+    openBrowserWorkspace = installBrowserWorkspace({
+      BrowserWindow,
+      WebContentsView,
+      ipcMain,
+      session,
+      dialog,
+      clipboard,
       assetsPath: app.getAppPath(),
       iconPath: join(process.resourcesPath, "kova-logo.png"),
     });

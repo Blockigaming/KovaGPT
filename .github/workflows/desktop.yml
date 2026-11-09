@@ -31,6 +31,9 @@ jobs:
           node-version: 24
       - run: npm ci --no-audit --no-fund
       - run: npm test
+      - name: Exercise actual Electron browser and local command isolation
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:runtime
       - run: npm run dist -- --${{ matrix.arch }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"

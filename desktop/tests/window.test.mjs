@@ -83,7 +83,7 @@ async function fixture(platform = "linux") {
   const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8")
     .replace(
       /^import \{[\s\S]*?\} from "electron";$/m,
-      "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, protocol, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
+      "const { app, BrowserWindow, WebContentsView, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, protocol, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
     )
     .replace(
       /^import .* from "node:path";$/m,
@@ -101,7 +101,11 @@ async function fixture(platform = "linux") {
       /^import \{ installLocalWorkspace, registerWorkspaceScheme \} from "\.\/workspace-host\.mjs";$/m,
       "const registerWorkspaceScheme = () => {}; const installLocalWorkspace = () => () => {};",
     );
-  vm.runInNewContext(source, {
+  const instrumented = source.replace(
+    /^import \{ installBrowserWorkspace \} from "\.\/browser-host\.mjs";$/m,
+    "const installBrowserWorkspace = () => () => {};",
+  );
+  vm.runInNewContext(instrumented, {
     policy,
     process: { platform, resourcesPath: "/app/resources" },
     URL,

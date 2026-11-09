@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KovaGPT Browser</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font:
+          13px system-ui,
+          sans-serif;
+        background: #171717;
+        color: #eee;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      header {
+        height: 128px;
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        border-bottom: 1px solid #444;
+      }
+      button,
+      input {
+        font: inherit;
+        color: inherit;
+        background: #292929;
+        border: 1px solid #444;
+        border-radius: 10px;
+        padding: 7px 10px;
+        min-height: 34px;
+      }
+      button {
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 2px solid #9ebdff;
+        outline-offset: 1px;
+      }
+      #tabs {
+        display: flex;
+        gap: 5px;
+        overflow-x: auto;
+        min-height: 35px;
+      }
+      .tab {
+        display: flex;
+        gap: 2px;
+        min-width: 125px;
+        max-width: 230px;
+        flex-shrink: 0;
+      }
+      .tab button:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        text-align: left;
+      }
+      .tab[aria-current="true"] button {
+        background: #424242;
+        border-color: #818181;
+      }
+      form {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      input {
+        flex: 1;
+        min-width: 80px;
+      }
+      #status {
+        color: #bdbdbd;
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 15px;
+      }
+      #status[data-error="true"] {
+        color: #ffa9a9;
+      }
+      main {
+        padding: 30px;
+        color: #bdbdbd;
+      }
+    </style>
+    <script defer src="/browser-ui.js"></script>
+  </head>
+  <body>
+    <header aria-label="Browser controls">
+      <nav id="tabs" aria-label="Open browser tabs"></nav>
+      <form id="addressForm">
+        <button id="back" type="button" aria-label="Back" disabled>←</button>
+        <button id="forward" type="button" aria-label="Forward" disabled>→</button>
+        <button id="reload" type="button" aria-label="Reload tab">↻</button>
+        <input
+          id="address"
+          type="url"
+          aria-label="Website address"
+          placeholder="https://example.com"
+          autocomplete="off"
+          spellcheck="false"
+          required
+        />
+        <button type="submit">Go</button>
+        <button id="newTab" type="button">New tab</button>
+        <button id="copyContext" type="button">Copy context…</button>
+      </form>
+      <div id="status" role="status" aria-live="polite">
+        Local browser · Pages have no access to local commands or files.
+      </div>
+    </header>
+    <main id="empty">
+      Open a new tab to browse. Website content appears below the browser controls.
+    </main>
+  </body>
+</html>

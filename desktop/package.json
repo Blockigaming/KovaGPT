@@ -13,7 +13,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test tests/*.test.mjs",
-    "dist": "electron-builder --publish never"
+    "dist": "electron-builder --publish never",
+    "test:runtime": "electron tests/runtime-smoke.mjs"
   },
   "devDependencies": {
     "electron": "45.2.3",
@@ -27,6 +28,10 @@
     "icon": "../public/kova-logo.png",
     "files": [
       "main.mjs",
+      "browser-host.mjs",
+      "browser-preload.cjs",
+      "browser-ui.js",
+      "browser.html",
       "policy.mjs",
       "workspace-host.mjs",
       "workspace-process.mjs",

@@ -144,3 +144,30 @@ terminal commands. This is not an autonomous coding agent or browser-tab integra
 Validation includes actual temporary Git repositories and local processes, permission
 rejection, cancellation, bounds, and renderer interaction tests. Signed OS installation,
 Windows process-tree behavior and real-device acceptance remain release gates.
+
+## Built-in browser workspace
+
+**File → Open Browser Workspace** (Command/Ctrl+Shift+B) opens a native tabbed browser
+with an address bar, back/forward, reload, up to eight tabs and persistent browsing sessions.
+Only full HTTPS addresses without embedded credentials can be opened. New-window requests
+require native confirmation. Automatic downloads and permission requests are denied in this
+initial browser workspace.
+
+The toolbar is a packaged local renderer with its own allowlisted IPC. Remote pages run in
+separate sandboxed `WebContentsView` instances, with **no preload, Node access, command API,
+filesystem API or access to the local toolbar's IPC**. The browser profile is separate from
+the Kova chat window and the coding workspace; sign in inside the browser as needed.
+
+**Copy context…** requires native review before copying the active tab's title/address.
+A separate choice can include up to 16,000 characters explicitly selected on the page.
+Switching tabs, navigating or closing the browser invalidates a pending copy. Nothing is
+sent to chat automatically; paste the reviewed clipboard content into your conversation.
+Other installed apps may read the system clipboard. This does not install an extension in
+Chrome/Safari or grant access to tabs outside Kova's own browser.
+
+Unit tests cover tab lifecycle, permissions, remote isolation, navigation, downloads,
+clipboard consent and stale approvals. Browser tests check toolbar geometry/interactions.
+The Linux native CI runner also launches Electron itself against wholly intercepted local
+website fixtures, exercises real preloads, browser views and a confirmed local command,
+and checks that remote content has no native bridge. Signed OS installation and actual
+third-party website sign-in remain acceptance gates.
