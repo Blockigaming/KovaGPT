@@ -50,12 +50,12 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
         .abortSignal(AbortSignal.timeout(10_000)),
       short
         ? loose(supabaseAdmin)
-            .from("message_usage_short_window")
+            .from("message_usage_hourly")
             .select("regular_messages, thinking_messages")
             .eq("user_id", context.userId)
-            .eq("window_start", short.start)
+            .gte("window_start", short.start)
+            .lte("window_start", new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000).toISOString())
             .abortSignal(AbortSignal.timeout(10_000))
-            .maybeSingle()
         : null,
     ]);
     if (ledger.error || shortWindow?.error)
@@ -75,17 +75,19 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       }),
       { regularUsed: 0, thinkingUsed: 0 },
     );
+    const shortTotals = (shortWindow?.data ?? []).reduce(
+      (total, row: { regular_messages: number; thinking_messages: number }) => ({
+        regularUsed: total.regularUsed + row.regular_messages,
+        thinkingUsed: total.thinkingUsed + row.thinking_messages,
+      }),
+      { regularUsed: 0, thinkingUsed: 0 },
+    );
     return {
       tier,
       usageMultiplier,
       windows: windows.map((window) => ({
         ...window,
-        ...(window.id === "five_hour"
-          ? {
-              regularUsed: shortWindow?.data?.regular_messages ?? 0,
-              thinkingUsed: shortWindow?.data?.thinking_messages ?? 0,
-            }
-          : total),
+        ...(window.id === "five_hour" ? shortTotals : total),
       })),
       images: daily?.images ?? 0,
       uploads: daily?.uploads ?? 0,
