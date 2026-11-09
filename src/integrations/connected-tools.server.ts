@@ -362,7 +362,11 @@ export async function runConnectionAccountSearch(
   let token = await decryptCredential(account.access_token_ciphertext);
   await ensureCurrentBinding();
   const options =
-    id === "salesforce" ? { recordType: args.record_type as SalesforceRecordType | undefined } : {};
+    id === "salesforce"
+      ? { recordType: args.record_type as SalesforceRecordType | undefined }
+      : id === "calendly"
+        ? { calendlyExpectedUserUri: account.provider_account_id }
+        : {};
   let result;
   try {
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
