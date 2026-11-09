@@ -67,6 +67,13 @@ export const CONNECTION_FLOWS = {
     label: "Slack",
     description: "Search Slack messages visible to your connected user.",
   },
+  canva: {
+    provider: "canva",
+    scopes: ["design:meta:read"],
+    tool: "canva_search",
+    label: "Canva",
+    description: "Search titles of designs available to your authorized Canva account. Metadata only; no design contents or access links.",
+  },
   calendly: {
     provider: "calendly",
     scopes: ["users:read", "scheduled_events:read"],
@@ -144,6 +151,7 @@ export function connectionAuthorizationUrl(provider, value) {
     dropbox: "https://www.dropbox.com/oauth2/authorize",
     box: "https://account.box.com/api/oauth2/authorize",
     calendly: "https://auth.calendly.com/oauth/authorize",
+    canva: "https://www.canva.com/api/oauth/authorize",
   };
   try {
     const url = new URL(value),
