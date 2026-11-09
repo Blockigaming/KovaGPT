@@ -96,5 +96,8 @@ private struct KovaShortcutsWidget: Widget {
 struct KovaWidgetBundle: WidgetBundle {
     var body: some Widget {
         KovaShortcutsWidget()
+        if #available(iOS 16.1, *) {
+            KovaVoiceActivityWidget()
+        }
     }
 }

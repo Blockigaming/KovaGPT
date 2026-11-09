@@ -66,3 +66,22 @@ profile identity and actual cookie isolation. Two real signed-in accounts, Keych
 refresh, process restoration, external OAuth and device acceptance remain release gates.
 
 Reference: [WebKit persistent profiles](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/).
+
+## Lock Screen and Dynamic Island voice activity
+
+On iOS 16.1+, the app includes an ActivityKit/WidgetKit Voice activity with Lock Screen
+and Dynamic Island presentations. Its initial activity starts only when the existing
+Voice UI actually enters recording or speaking and system Live Activities are enabled.
+It tracks subsequent real phase attributes (Listening, Transcribing, Preparing reply,
+Speaking and ready) and ends when Voice closes, the page navigates, or the account changes.
+Return opens the existing Voice conversation without reloading the chat or starting audio.
+
+A fixed, main-frame-only DOM observer sends only a phase enum. The native handler validates
+the active WebView, first-party HTTPS origin, main frame, exact message shape and phase
+allowlist. It never receives audio, selected text, transcripts, account IDs or provider
+credentials. The weak message proxy avoids a WebView/controller reference cycle.
+
+This is status display, **not native background audio or CarPlay**. When the app enters
+the background, the activity says **Open KovaGPT to continue**, rather than claiming the
+web recording pipeline will keep running. A restart ends stale activities. Real-device
+Lock Screen/Dynamic Island acceptance and signed distribution remain pending.

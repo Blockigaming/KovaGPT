@@ -171,3 +171,15 @@ The Linux native CI runner also launches Electron itself against wholly intercep
 website fixtures, exercises real preloads, browser views and a confirmed local command,
 and checks that remote content has no native bridge. Signed OS installation and actual
 third-party website sign-in remain acceptance gates.
+
+## Multiple displays and external tab context
+
+**Displays → Move window to …** moves the focused Kova window to the selected physical
+display's available work area. This works for chat, companion, coding and built-in browser
+windows. Native menu options refresh when displays connect, disconnect or change geometry.
+This adds manual display placement; it does not authorize control of other applications.
+
+The separate [Tab Context extension](../browser-extension/README.md) can prepare reviewed
+context from an active HTTPS tab in desktop Chrome/Edge. It is optional and must be installed
+explicitly. It reads no pages on popup opening, has no permanent host permissions, and copies
+only the preview the user reviews. The Linux preview artifact includes its unpacked ZIP.

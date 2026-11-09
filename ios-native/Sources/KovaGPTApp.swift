@@ -57,8 +57,15 @@ struct NativeBrowser: UIViewControllerRepresentable {
     }
 }
 
-/// Native iPhone/iPad viewer with no JavaScript bridge, automatic screen capture or
-/// privileged WKScriptMessageHandler. All document scans remain local until shared.
+/// Native iPhone/iPad viewer. The only message handler accepts bounded Voice phase
+/// labels from the active first-party main frame. Scans stay local until shared.
+private final class VoiceActivityMessageProxy: NSObject, WKScriptMessageHandler {
+    weak var controller: BrowserController?
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        controller?.receiveVoiceActivity(message)
+    }
+}
+
 final class BrowserController: UIViewController, WKNavigationDelegate,
                                VNDocumentCameraViewControllerDelegate,
                                UINavigationControllerDelegate,
@@ -68,6 +75,53 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
     private var accountBrowsers: [Int: WKWebView] = [:]
     private var accountSlot = 1
     private var switchingAccount = false
+    private var voiceActivityStorage: AnyObject?
+    @available(iOS 16.1, *)
+    private var voiceActivity: NativeVoiceActivity {
+        if let existing = voiceActivityStorage as? NativeVoiceActivity { return existing }
+        let coordinator = NativeVoiceActivity()
+        voiceActivityStorage = coordinator
+        return coordinator
+    }
+
+    fileprivate func receiveVoiceActivity(_ message: WKScriptMessage) {
+        guard message.name == "kovaVoiceActivity", message.frameInfo.isMainFrame,
+              message.webView === browser,
+              message.frameInfo.securityOrigin.protocol == "https",
+              message.frameInfo.securityOrigin.host == "kovagpt.com",
+              [0, 443].contains(message.frameInfo.securityOrigin.port),
+              let url = browser.url, isKova(url),
+              let body = message.body as? [String: String], body.count == 1,
+              let phase = body["phase"], phase.count <= 20 else { return }
+        if #available(iOS 16.1, *) { voiceActivity.receive(phase) }
+    }
+
+    @objc private func activityBackgrounded() {
+        if #available(iOS 16.1, *), let activity = voiceActivityStorage as? NativeVoiceActivity { activity.enteredBackground() }
+    }
+    @objc private func activityForegrounded() {
+        if #available(iOS 16.1, *), let activity = voiceActivityStorage as? NativeVoiceActivity { activity.enteredForeground() }
+    }
+    private func endVoiceActivity() {
+        if #available(iOS 16.1, *), let activity = voiceActivityStorage as? NativeVoiceActivity { activity.end() }
+    }
+
+    private static let voiceObserver = """
+        (() => {
+          if (location.origin !== 'https://kovagpt.com' || window.top !== window) return;
+          let previous = '';
+          const publish = () => {
+            const node = document.querySelector('.kova-voice-dialog[data-voice-mode="voice"]');
+            const phase = node && node.getClientRects().length ? node.getAttribute('data-voice-phase') : 'inactive';
+            if (phase === previous) return;
+            previous = phase;
+            window.webkit.messageHandlers.kovaVoiceActivity.postMessage({phase});
+          };
+          new MutationObserver(publish).observe(document.documentElement, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-voice-phase', 'data-state', 'data-voice-mode']});
+          publish();
+          window.addEventListener('pagehide', () => window.webkit.messageHandlers.kovaVoiceActivity.postMessage({phase:'inactive'}));
+        })();
+        """
     private var lastShortcutID: UUID?
     private var pendingShortcut: NativeShortcut?
     private var pendingWebShortcut: (id: UUID, action: NativeShortcut)?
@@ -101,8 +155,11 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         case .voice, .microphone:
             // The widget may open the web voice/dictation interface but never
             // starts recording or grants a microphone permission automatically.
-            pendingWebShortcut = (id: UUID(), action: action)
-            browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
+            let token = UUID()
+            pendingWebShortcut = (id: token, action: action)
+            if let url = browser.url, isKova(url) {
+                openPendingWebShortcut(token: token, remainingAttempts: 10)
+            } else { browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!)) }
         }
     }
 
@@ -119,6 +176,8 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         // The web dialog still requires an explicit user Start for microphone use.
         let script = """
             (function() {
+              const existing = document.querySelector('\(request.action == .voice ? ".kova-voice-dialog[data-voice-mode=voice]" : "#kova-inline-dictation")');
+              if (existing && existing.getClientRects().length) return true;
               const button = document.querySelector('button[data-testid="\(testID)"]');
               if (!button || button.disabled || button.hidden ||
                   button.getClientRects().length === 0) return false;
@@ -148,6 +207,8 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         super.viewDidLoad()
         title = "KovaGPT"
         view.backgroundColor = .systemBackground
+        NotificationCenter.default.addObserver(self, selector: #selector(activityBackgrounded), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(activityForegrounded), name: UIApplication.didBecomeActiveNotification, object: nil)
 
         showAccount(1)
         navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -170,6 +231,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         if slot == 2 {
             guard #available(iOS 17.0, *) else { return }
         }
+        endVoiceActivity()
         browser?.pauseAllMediaPlayback(completionHandler: nil)
         browser?.removeFromSuperview()
         let selected: WKWebView
@@ -180,6 +242,10 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             guard let store = AccountWebStores.store(for: slot) else { return }
             config.websiteDataStore = store
             config.preferences.javaScriptCanOpenWindowsAutomatically = false
+            let voiceProxy = VoiceActivityMessageProxy()
+            voiceProxy.controller = self
+            config.userContentController.add(voiceProxy, name: "kovaVoiceActivity")
+            config.userContentController.addUserScript(WKUserScript(source: Self.voiceObserver, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
             selected = WKWebView(frame: .zero, configuration: config)
             selected.navigationDelegate = self
             selected.allowsBackForwardNavigationGestures = true
@@ -252,6 +318,10 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         url.host?.lowercased() == "kovagpt.com" &&
         url.user == nil && url.password == nil &&
         (url.port == nil || url.port == 443)
+    }
+
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        if webView === browser { endVoiceActivity() }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,

@@ -17,5 +17,6 @@
   </array>
   <key>NSMicrophoneUsageDescription</key>
   <string>Use your microphone only after you start Voice or Dictation.</string>
+  <key>NSSupportsLiveActivities</key><true/>
   <key>UIRequiresFullScreen</key><false/>
 </dict></plist>

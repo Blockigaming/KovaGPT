@@ -9,6 +9,7 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+      - path: Shared
     info:
       path: Sources/Info.plist
       properties:
@@ -18,6 +19,7 @@ targets:
         NSCameraUsageDescription: "Use the camera only after you choose Scan or Camera."
         NSMicrophoneUsageDescription: "Use your microphone only after you start Voice or Dictation."
         UIRequiresFullScreen: false
+        NSSupportsLiveActivities: true
     dependencies:
       - target: KovaGPTShortcuts
     settings:
@@ -32,6 +34,7 @@ targets:
     platform: iOS
     sources:
       - path: Widgets
+      - path: Shared
     info:
       path: Widgets/Info.plist
       properties:

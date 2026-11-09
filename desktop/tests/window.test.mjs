@@ -67,6 +67,15 @@ async function fixture(platform = "linux") {
         },
       });
     }
+    getNormalBounds() {
+      return { x: 0, y: 0, width: 1280, height: 850 };
+    }
+    isMaximized() {
+      return false;
+    }
+    setBounds(bounds) {
+      this.bounds = bounds;
+    }
     loadURL(url) {
       this.url = url;
       return Promise.resolve();
@@ -80,10 +89,11 @@ async function fixture(platform = "linux") {
     show() {}
     focus() {}
   }
+  Window.getFocusedWindow = () => windows.at(-1);
   const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8")
     .replace(
       /^import \{[\s\S]*?\} from "electron";$/m,
-      "const { app, BrowserWindow, WebContentsView, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, protocol, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
+      "const { app, BrowserWindow, WebContentsView, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, protocol, Menu, nativeImage, Tray, session, screen, shell, systemPreferences } = electron;",
     )
     .replace(
       /^import .* from "node:path";$/m,
@@ -112,6 +122,23 @@ async function fixture(platform = "linux") {
     electron: {
       app,
       BrowserWindow: Window,
+      screen: {
+        on() {},
+        getAllDisplays: () => [
+          {
+            id: 1,
+            label: "Primary",
+            size: { width: 1920, height: 1080 },
+            workArea: { x: 0, y: 0, width: 1920, height: 1040 },
+          },
+          {
+            id: 2,
+            label: "Secondary",
+            size: { width: 1280, height: 1024 },
+            workArea: { x: -1280, y: 0, width: 1280, height: 984 },
+          },
+        ],
+      },
       protocol: {},
       ipcMain: {},
       Tray: TestTray,
@@ -359,4 +386,17 @@ test("local-source import requires a chosen file and a second native clipboard c
   assert.equal(f.copiedTexts[0], "export const test = 42;");
   assert.equal(f.window.options.webPreferences.preload, undefined);
   assert.equal(f.window.options.webPreferences.nodeIntegration, false);
+});
+
+test("native display menu moves the focused app window into the selected screen work area", async () => {
+  const f = await fixture();
+  const menu = f.menus.at(-1).find((item) => item.label === "Displays");
+  assert.equal(menu.submenu.length, 2);
+  menu.submenu[1].click();
+  assert.deepEqual(JSON.parse(JSON.stringify(f.windows.at(-1).bounds)), {
+    x: -1280,
+    y: 67,
+    width: 1280,
+    height: 850,
+  });
 });

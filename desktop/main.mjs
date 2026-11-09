@@ -12,6 +12,7 @@ import {
   nativeImage,
   Tray,
   session,
+  screen,
   shell,
   systemPreferences,
 } from "electron";
@@ -316,6 +317,26 @@ function setDockIcon(visible) {
   return true;
 }
 
+function moveFocusedWindowToDisplay(displayID) {
+  const target = BrowserWindow.getFocusedWindow();
+  const display = screen.getAllDisplays().find((candidate) => candidate.id === displayID);
+  if (!target || target.isDestroyed() || !display) return;
+  if (target.isMinimized()) target.restore();
+  const bounds = target.getNormalBounds();
+  if (target.isMaximized()) target.unmaximize();
+  const area = display.workArea;
+  const width = Math.min(bounds.width, area.width);
+  const height = Math.min(bounds.height, area.height);
+  target.setBounds({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+  });
+  target.show();
+  target.focus();
+}
+
 function installAppMenu() {
   const shortcutItems = COMPANION_SHORTCUTS.map((value) => ({
     label: value === "Alt+Space" && process.platform === "darwin" ? "Option+Space" : value,
@@ -454,6 +475,13 @@ function installAppMenu() {
       },
       { role: "viewMenu" },
       { role: "windowMenu" },
+      {
+        label: "Displays",
+        submenu: screen.getAllDisplays().map((display, index) => ({
+          label: `Move window to ${display.label || `Display ${index + 1}`} (${display.size.width} × ${display.size.height})`,
+          click: () => moveFocusedWindowToDisplay(display.id),
+        })),
+      },
     ]),
   );
 }
@@ -603,6 +631,9 @@ else {
       if (savedDesktopPreferences.showDockIcon === false && showMenuBarIcon) setDockIcon(false);
     }
     installAppMenu();
+    screen.on("display-added", installAppMenu);
+    screen.on("display-removed", installAppMenu);
+    screen.on("display-metrics-changed", installAppMenu);
     createWindow();
   });
   app.on("activate", openApp);
