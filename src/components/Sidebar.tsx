@@ -2022,6 +2022,7 @@ export function Sidebar({
                         onClick={() => {
                           closeChatSearch();
                           cancelPendingSelection();
+                          closeAfterMobileNavigation("/");
                           onSelect(conversation.id);
                         }}
                       >
