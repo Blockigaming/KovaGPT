@@ -19,6 +19,8 @@ export type ConnectedAccount = {
   last_success_at?: string | null;
   health_checked_at?: string | null;
   last_error_code?: string | null;
+  /** Successful, audited API reads by connection id on the current grant. */
+  verified_reads?: Record<string, string>;
 };
 export const CONNECTION_FLOWS: Record<string, ConnectionFlow>;
 export function hasConnectionScopes(scopes: string[], required: string[]): boolean;
