@@ -49,5 +49,6 @@ test("GitHub refresh requires BOTH new tokens and bounded expiry before rotation
     { ...pair, expires_in: 90000000 },
     { ...pair, token_type: "unknown" },
     { ...pair, error: "bad_refresh_token" },
-  ]) assert.throws(() => selectRotatedGithubTokens(bad), /github_refresh_invalid_response/);
+  ])
+    assert.throws(() => selectRotatedGithubTokens(bad), /github_refresh_invalid_response/);
 });

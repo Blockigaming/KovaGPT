@@ -97,10 +97,7 @@ export async function refreshExpiringGitHubAccount(ownerId: string, accountId: s
       throw new Error("github_refreshed_identity_unavailable");
     }
     const profile = await readProviderJsonObject(profileResponse, 64_000);
-    if (
-      !Number.isSafeInteger(profile.id) ||
-      String(profile.id) !== String(row.github_user_id)
-    ) {
+    if (!Number.isSafeInteger(profile.id) || String(profile.id) !== String(row.github_user_id)) {
       rejected = true;
       throw new Error("github_refreshed_identity_changed");
     }
@@ -162,11 +159,10 @@ export async function refreshExpiringGitHubOwnerAccounts(ownerId: string) {
   // Keep refresh traffic bounded on each user-triggered request.
   let refreshed = 0;
   for (const row of data) {
-    const expiry = row.token_expires_at ? Date.parse(row.token_expires_at) : Number.POSITIVE_INFINITY;
-    if (
-      (row.status !== "connected" || expiry <= Date.now() + 60_000) &&
-      refreshed < 3
-    ) {
+    const expiry = row.token_expires_at
+      ? Date.parse(row.token_expires_at)
+      : Number.POSITIVE_INFINITY;
+    if ((row.status !== "connected" || expiry <= Date.now() + 60_000) && refreshed < 3) {
       refreshed += 1;
       await refreshExpiringGitHubAccount(ownerId, row.id);
     }

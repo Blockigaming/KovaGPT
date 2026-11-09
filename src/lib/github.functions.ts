@@ -73,8 +73,7 @@ export const getGitHubManagement = createServerFn({ method: "GET" })
         : rows.some(
               (item: any) =>
                 item.status === "degraded" ||
-                (item.token_expires_at &&
-                  Date.parse(item.token_expires_at) <= Date.now() + 30_000),
+                (item.token_expires_at && Date.parse(item.token_expires_at) <= Date.now() + 30_000),
             )
           ? "degraded"
           : "healthy";
