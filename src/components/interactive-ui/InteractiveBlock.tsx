@@ -317,7 +317,7 @@ function FieldControl({
           step={field.step}
           maxLength={field.kind === "text" ? 4000 : undefined}
           placeholder={field.placeholder}
-          className="min-h-11 sm:min-h-9"
+          className="min-h-11 min-w-0 max-w-full sm:min-h-9"
           onChange={(e) => onChange(e.target.value)}
         />
       );
