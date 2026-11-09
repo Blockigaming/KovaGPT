@@ -66,8 +66,9 @@ function load(file, modules) {
   );
   return exports;
 }
-function fixture({ hosted = false } = {}) {
+function fixture({ hosted = false, sleeping = false, banned = false, lockdown = false } = {}) {
   const committed = [];
+  let wakes = 0;
   let plan = "plus",
     activeRoles = { ...(hosted ? hostedRoles : roles) },
     generation = true;
@@ -89,7 +90,9 @@ function fixture({ hosted = false } = {}) {
   };
   const modules = {
     "@/lib/work-execution-database.server": { workExecutionDatabase: () => db },
-    "@/lib/api-auth.server": { assertNotBanned: async () => null },
+    "@/lib/api-auth.server": {
+      assertNotBanned: async () => (banned ? new Response(null, { status: 403 }) : null),
+    },
     "@/agents/execution.server": {
       getAgentEntitlement: async () => plan,
       AGENT_LIMITS: {
@@ -97,7 +100,11 @@ function fixture({ hosted = false } = {}) {
         pro: { maxActions: 30, maxRuntimeMs: 900000, concurrency: 3 },
       },
     },
-    "@/lib/lockdown-policy.mjs": { assertLockdownAllows: async () => {} },
+    "@/lib/lockdown-policy.mjs": {
+      assertLockdownAllows: async () => {
+        if (lockdown) throw Error("work_lockdown_denied");
+      },
+    },
     "@/lib/ai/config.server": {
       getAiRuntimeConfig: () => ({ ...config, generationEnabled: generation }),
     },
@@ -107,25 +114,36 @@ function fixture({ hosted = false } = {}) {
       KOVA_HOSTED_TEXT_MODELS: hosted ? hostedModels : [],
     },
     "@/lib/work-model-policy.mjs": policy,
+    "@/lib/work-host-power.server": {
+      workHostPowerConfigured: () => sleeping,
+      wakeWorkHost: async () => {
+        wakes++;
+        return "starting";
+      },
+    },
     "@/lib/work-runner.server": {
-      registeredWorkRunner: async () => ({
-        id: crypto.randomUUID(),
-        protocol: "kova-work-v1",
-        build: "a".repeat(40),
-        authenticated: true,
-        enabled: true,
-        heartbeatAt: Date.now(),
-        expiresAt: Date.now() + 45000,
-        capabilities: [...protocol.WORK_RUNNER_CAPABILITIES],
-        modelCapabilities: hosted ? hostedCapabilities : capabilities,
-      }),
+      registeredWorkRunner: async () =>
+        sleeping
+          ? null
+          : {
+              id: crypto.randomUUID(),
+              protocol: "kova-work-v1",
+              build: "a".repeat(40),
+              authenticated: true,
+              enabled: true,
+              heartbeatAt: Date.now(),
+              expiresAt: Date.now() + 45000,
+              capabilities: [...protocol.WORK_RUNNER_CAPABILITIES],
+              modelCapabilities: hosted ? hostedCapabilities : capabilities,
+            },
       configuredWorkRunnerTransport: () => ({ dispatch: async () => {} }),
     },
     "@/lib/work-execution-protocol.mjs": protocol,
   };
   return {
     api: load("src/lib/work-execution.server.ts", modules),
-    caller: { userId: owner, supabaseAdmin: {} },
+    caller: { userId: owner, emailVerified: true, supabaseAdmin: {} },
+    wakes: () => wakes,
     committed,
     plan: (next) => {
       plan = next;
@@ -138,6 +156,31 @@ function fixture({ hosted = false } = {}) {
     },
   };
 }
+test("only verified paid permitted accounts can wake Work; reading readiness never starts compute", async () => {
+  const f = fixture({ sleeping: true });
+  assert.equal((await f.api.workExecutionReadiness(f.caller)).canWake, true);
+  assert.equal(f.wakes(), 0);
+  assert.equal((await f.api.wakeWorkExecution(f.caller)).status, "starting");
+  assert.equal(f.wakes(), 1);
+  assert.equal(f.committed.length, 0);
+  for (const plan of ["free", null]) {
+    f.plan(plan);
+    await assert.rejects(f.api.wakeWorkExecution(f.caller), /entitlement/);
+  }
+  f.plan("pro");
+  await assert.rejects(
+    f.api.wakeWorkExecution({ ...f.caller, emailVerified: false }),
+    /entitlement/,
+  );
+  f.disable();
+  await assert.rejects(f.api.wakeWorkExecution(f.caller), /generation/);
+  assert.equal(f.wakes(), 1);
+  for (const options of [{ banned: true }, { lockdown: true }]) {
+    const denied = fixture({ sleeping: true, ...options });
+    await assert.rejects(denied.api.wakeWorkExecution(denied.caller), /denied/);
+    assert.equal(denied.wakes(), 0);
+  }
+});
 const input = () => ({
   mutationId: crypto.randomUUID(),
   objective: "Debug a distributed race condition and refactor architecture",

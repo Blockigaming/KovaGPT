@@ -17,7 +17,7 @@ export function createWorkBackend(configuration, rawOrigin, fetcher = fetch) {
   )
     throw new Error("work_backend_configuration_invalid");
   return async (operation, runId) => {
-    if (!["probe", "drain", "dispatch", "recover"].includes(operation))
+    if (!["probe", "drain", "dispatch", "recover", "idle"].includes(operation))
       throw new Error("work_backend_operation_invalid");
     const body = canonicalWorkInput({
       protocol: WORK_EXECUTION_PROTOCOL,

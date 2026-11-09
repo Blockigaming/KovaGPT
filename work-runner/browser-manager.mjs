@@ -51,6 +51,8 @@ export function createBrowserManager(
     fail();
   const sessions = new Map(),
     retired = new Map();
+  let closing = 0,
+    cleanupUnconfirmed = false;
   const capabilities = {
     protocol: "kova-browser-v1",
     available: true,
@@ -111,7 +113,15 @@ export function createBrowserManager(
     row.active?.controller.abort();
     sessions.delete(row.sessionId);
     retired.set(row.sessionId, row.expiresAt);
-    await row.container?.close();
+    closing++;
+    try {
+      await row.container?.close();
+    } catch (error) {
+      cleanupUnconfirmed = true;
+      throw error;
+    } finally {
+      closing--;
+    }
   }
   async function run(row, command, binding, signal) {
     if (row.busy || row.closed || command.sequence <= row.sequence || Date.now() >= row.expiresAt)
@@ -152,9 +162,11 @@ export function createBrowserManager(
   }
   return {
     capabilities,
+    isIdle: () => sessions.size === 0 && closing === 0 && !cleanupUnconfirmed,
     async probe() {
       for (const row of sessions.values()) if (row.expiresAt <= Date.now()) await close(row);
       await factory.reapExpired(new Set(sessions.keys()));
+      cleanupUnconfirmed = false;
       return factory.probe();
     },
     async command(input, signal) {

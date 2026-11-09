@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { timingSafeEqualText } from "@/lib/http-security.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { runScheduledExecutionBatch } from "@/lib/scheduled-execution.server";
+import { recoverSleepingWorkHost } from "@/lib/work-host-power.server";
 
 function configuredSecret(): string | null {
   return runtimeEnv("SCHEDULED_TASK_SECRET") || runtimeEnv("CRON_SECRET") || null;
@@ -60,6 +61,9 @@ export const Route = createFileRoute("/api/internal/scheduled-execution")({
         }
 
         try {
+          // Work wake recovery is independent of scheduled AI requests. A failed
+          // VM check must not prevent email or Scheduled Tasks from executing.
+          const workHost = await recoverSleepingWorkHost().catch(() => ({ status: "unconfirmed" }));
           const result = await runScheduledExecutionBatch({
             limit: 1,
           });
@@ -70,6 +74,7 @@ export const Route = createFileRoute("/api/internal/scheduled-execution")({
               claimed: result.claimed,
               complete: result.complete,
               failed: result.failed,
+              workHost,
             },
             {
               headers: {

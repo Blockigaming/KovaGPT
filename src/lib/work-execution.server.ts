@@ -12,6 +12,7 @@ import {
   assertWorkRunnerModel,
 } from "@/lib/work-model-policy.mjs";
 import { registeredWorkRunner, configuredWorkRunnerTransport } from "@/lib/work-runner.server";
+import { wakeWorkHost, workHostPowerConfigured } from "@/lib/work-host-power.server";
 import {
   admitWorkRun,
   parseWorkSubmission,
@@ -42,6 +43,13 @@ export async function workExecutionReadiness(caller: AuthedCaller) {
   const available = permitted && runnerReady(runner) && options.some((item) => item.available);
   return {
     available,
+    canWake:
+      !available &&
+      permitted &&
+      (tier === "plus" || tier === "pro") &&
+      caller.emailVerified === true &&
+      !(await assertNotBanned(caller)) &&
+      workHostPowerConfigured(),
     reason: available
       ? null
       : "Work execution is unavailable for this account or provider configuration. You can prepare and save work.",
@@ -51,6 +59,16 @@ export async function workExecutionReadiness(caller: AuthedCaller) {
         : { ...item, available: false, reason: "Execution is currently unavailable." },
     ),
   };
+}
+export async function wakeWorkExecution(caller: AuthedCaller) {
+  if (await assertNotBanned(caller)) throw new Error("work_admission_denied");
+  await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "agent");
+  const tier = await getAgentEntitlement(caller);
+  if (!caller.emailVerified || (tier !== "plus" && tier !== "pro"))
+    throw new Error("work_entitlement_required");
+  if (!getAiRuntimeConfig().generationEnabled) throw new Error("work_generation_unavailable");
+  if (runnerReady(await registeredWorkRunner())) return { status: "ready" };
+  return { status: await wakeWorkHost() };
 }
 function authorizeModelChoice(run: WorkRun) {
   if (!run.modelSelection) return;

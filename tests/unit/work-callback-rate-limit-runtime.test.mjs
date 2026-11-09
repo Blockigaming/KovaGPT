@@ -43,6 +43,7 @@ function fixture(kind, outcome = "allowed") {
       "@/lib/runtime-env.server": { runtimeEnv: () => "fixture" },
       "@/lib/endpoint-reliability.mjs": { readUtf8BodyBounded },
       "@/lib/work-runner.server": { workRunnerConfiguration: () => configuration },
+      "@/lib/work-host-power.server": { workHostHasPendingWork: async () => false },
       "@/lib/work-runner-transport.mjs": runnerTransport,
       "@/lib/work-browser-transport.mjs": browserTransport,
       "@/lib/work-execution-protocol.mjs": protocol,

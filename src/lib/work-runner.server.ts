@@ -236,5 +236,15 @@ export async function cleanupWorkRunnerOwner(ownerId: string) {
   });
   if (!configuration || !workRunnerMatchesOwnerHistory(configuration, records.data))
     throw new Error("work_owner_cleanup_unconfirmed");
-  return { complete: await createWorkRunnerTransport(configuration).cleanupOwner(ownerId) };
+  try {
+    return { complete: await createWorkRunnerTransport(configuration).cleanupOwner(ownerId) };
+  } catch (error) {
+    // Account erasure must also work while the paid runner is asleep. The
+    // existing deletion fence and retry flow retain metadata until erasure is
+    // acknowledged; a wake never substitutes for a successful cleanup receipt.
+    const { workHostPowerConfigured, wakeWorkHost } = await import("@/lib/work-host-power.server");
+    if (!workHostPowerConfigured()) throw error;
+    await wakeWorkHost();
+    return { complete: false };
+  }
 }

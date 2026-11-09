@@ -74,7 +74,7 @@ export function verifyRunnerInvocation(
   raw: string,
   signature: string | null,
 ): Promise<{
-  operation: "dispatch" | "recover" | "drain" | "probe";
+  operation: "dispatch" | "recover" | "drain" | "probe" | "idle";
   runId: string | null;
   requestId: string;
 }>;
