@@ -75,7 +75,7 @@ import {
 } from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
-import { isClearSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
+import { installInteractiveSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
 
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   images: ImagesGlyph,
@@ -201,6 +201,7 @@ export function Sidebar({
   const clerk = useClerkSafe();
   const { tier, status: tierStatus } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
+  const scrimRef = useRef<HTMLButtonElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const navigationOwnsFocusRef = useRef(false);
@@ -521,155 +522,57 @@ export function Sidebar({
     swipeToggleRef.current = onToggle;
   }, [onToggle]);
 
+  // A one-finger horizontal drag follows the touch until release.
+  // Interactive controls, selected text, modals and nested scrollers retain input.
   useEffect(() => {
-    if (open) return;
-    let gesture: { id: number; x: number; y: number; time: number } | null = null;
-    const reset = () => {
-      gesture = null;
-    };
-    const start = (event: TouchEvent) => {
-      reset();
-      const target = event.target;
-      if (
-        !isMobileViewport() ||
-        event.touches.length !== 1 ||
-        !(target instanceof Element) ||
-        !target.closest(".kova-assistant, .kova-app-shell") ||
-        target.closest(
-          'button, a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable]:not([contenteditable="false"])',
-        ) ||
-        document.querySelector('[aria-modal="true"], dialog[open]') ||
-        !window.getSelection()?.isCollapsed
-      )
-        return;
-      // Native horizontal scrollers (code, tables, carousels) retain their gesture.
-      for (let element: Element | null = target; element; element = element.parentElement) {
-        if (
-          element.scrollWidth > element.clientWidth + 1 &&
-          /^(auto|scroll)$/.test(getComputedStyle(element).overflowX)
-        )
-          return;
-      }
-      const touch = event.touches[0];
-      if (touch.clientX > 24) return;
-      gesture = {
-        id: touch.identifier,
-        x: touch.clientX,
-        y: touch.clientY,
-        time: event.timeStamp,
-      };
-    };
-    const move = (event: TouchEvent) => {
-      if (!gesture) return;
-      const touch = event.touches[0];
-      if (
-        event.touches.length !== 1 ||
-        touch.identifier !== gesture.id ||
-        !isMobileViewport() ||
-        !window.getSelection()?.isCollapsed ||
-        document.querySelector('[aria-modal="true"], dialog[open]')
-      ) {
-        reset();
-        return;
-      }
-      const dx = touch.clientX - gesture.x;
-      const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 750 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
-        reset();
-        return;
-      }
-      // Right-to-left opens, as requested; clear horizontal intent is required.
-      if (isClearSidebarSwipe({ open: false, dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
-        reset();
-        swipeToggleRef.current();
-      }
-    };
-    document.addEventListener("touchstart", start, { passive: true });
-    document.addEventListener("touchmove", move, { passive: true });
-    document.addEventListener("touchend", reset);
-    document.addEventListener("touchcancel", reset);
-    return () => {
-      document.removeEventListener("touchstart", start);
-      document.removeEventListener("touchmove", move);
-      document.removeEventListener("touchend", reset);
-      document.removeEventListener("touchcancel", reset);
-    };
-  }, [open]);
-
-  // Close the mobile drawer with a deliberate left swipe, without stealing
-  // vertical scrolling or horizontal gestures from nested scrollable controls.
-  useEffect(() => {
-    if (!open) return;
     const drawer = drawerRef.current;
-    if (!drawer) return;
-    let start: { id: number; x: number; y: number; time: number } | null = null;
-    const onStart = (event: TouchEvent) => {
-      start = null;
-      if (
-        !isMobileViewport() ||
-        drawer.inert ||
-        event.touches.length !== 1 ||
-        !window.getSelection()?.isCollapsed
-      )
-        return;
-      const target = event.target;
-      if (
-        !(target instanceof Element) ||
-        target.closest(
-          'button:not(.kova-sidebar-scrim), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
-        )
-      )
-        return;
-      for (let el: Element | null = target; el && el !== drawer; el = el.parentElement) {
+    const scrim = scrimRef.current;
+    if (!drawer || !scrim) return;
+    return installInteractiveSidebarSwipe({
+      open,
+      target: open ? drawer : document,
+      drawer,
+      scrim,
+      isMobile: isMobileViewport,
+      toggle: () => swipeToggleRef.current(),
+      canStart: (event) => {
+        const element = event.target;
         if (
-          el.scrollWidth > el.clientWidth + 1 &&
-          /^(auto|scroll)$/.test(getComputedStyle(el).overflowX)
+          !(element instanceof Element) ||
+          !window.getSelection()?.isCollapsed ||
+          document.querySelector('[aria-modal="true"]:not(.kova-sidebar), dialog[open]')
         )
-          return;
-      }
-      const t = event.touches[0];
-      start = { id: t.identifier, x: t.clientX, y: t.clientY, time: event.timeStamp };
-    };
-    const onMove = (event: TouchEvent) => {
-      if (!start) return;
-      if (
-        drawer.inert ||
-        event.touches.length !== 1 ||
-        !window.getSelection()?.isCollapsed ||
-        event.timeStamp - start.time > 700
-      ) {
-        start = null;
-        return;
-      }
-      const t = event.touches[0];
-      if (t.identifier !== start.id) {
-        start = null;
-        return;
-      }
-      const dx = t.clientX - start.x;
-      const dy = Math.abs(t.clientY - start.y);
-      if (dy > 32 && dy > Math.abs(dx)) {
-        start = null;
-        return;
-      }
-      if (isClearSidebarSwipe({ open: true, dx, dy, elapsedMs: event.timeStamp - start.time })) {
-        start = null;
-        swipeToggleRef.current();
-      }
-    };
-    const reset = () => {
-      start = null;
-    };
-    drawer.addEventListener("touchstart", onStart, { passive: true });
-    drawer.addEventListener("touchmove", onMove, { passive: true });
-    drawer.addEventListener("touchend", reset);
-    drawer.addEventListener("touchcancel", reset);
-    return () => {
-      drawer.removeEventListener("touchstart", onStart);
-      drawer.removeEventListener("touchmove", onMove);
-      drawer.removeEventListener("touchend", reset);
-      drawer.removeEventListener("touchcancel", reset);
-    };
+          return false;
+        if (open) {
+          if (
+            drawer.inert ||
+            element.closest(
+              'button:not(.kova-sidebar-scrim), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
+            )
+          )
+            return false;
+        } else if (
+          !element.closest(".kova-assistant, .kova-app-shell") ||
+          element.closest(
+            'button, a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable]:not([contenteditable="false"])',
+          )
+        )
+          return false;
+        for (let node: Element | null = element; node; node = node.parentElement) {
+          if (
+            node.scrollWidth > node.clientWidth + 1 &&
+            /^(auto|scroll)$/.test(getComputedStyle(node).overflowX)
+          )
+            return false;
+          if (node === drawer) break;
+        }
+        return true;
+      },
+      canContinue: () =>
+        (!open || !drawer.inert) &&
+        Boolean(window.getSelection()?.isCollapsed) &&
+        !document.querySelector('[aria-modal="true"]:not(.kova-sidebar), dialog[open]'),
+    });
   }, [open]);
 
   useEffect(() => {
@@ -1575,6 +1478,7 @@ export function Sidebar({
       ) : null}
       <button
         type="button"
+        ref={scrimRef}
         onClick={onToggle}
         className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 lg:hidden"
         aria-label="Close navigation menu"
