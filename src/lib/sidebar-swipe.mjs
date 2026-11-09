@@ -13,8 +13,8 @@ export function isClearSidebarSwipe({ open, dx, dy, elapsedMs }) {
 
 /** Release distance and velocity after an eligible one-finger horizontal drag. */
 export function shouldSettleSidebarSwipe({ open, dx, dy, width, elapsedMs }) {
-  if (![dx, dy, width, elapsedMs].every(Number.isFinite) || width <= 0 || elapsedMs < 0)
-    return false;
+  const invalidNumber = ![dx, dy, width, elapsedMs].every(Number.isFinite);
+  if (invalidNumber || width <= 0 || elapsedMs < 0) return false;
   const forward = open ? -dx : dx;
   if (forward <= 0 || Math.abs(dy) > 48 || forward < Math.abs(dy) * 2) return false;
   return (
@@ -47,13 +47,23 @@ export function installInteractiveSidebarSwipe({
     const { active, dx, dy } = gesture;
     gesture = null;
     if (!active) return;
-    const change = commit && shouldSettleSidebarSwipe({ open, dx, dy, width: width(), elapsedMs });
+    const shouldCommit = shouldSettleSidebarSwipe({
+      open,
+      dx,
+      dy,
+      width: width(),
+      elapsedMs,
+    });
+    const change = commit && shouldCommit;
     const finalOpen = change ? !open : open;
-    const finishDistance = open ? (finalOpen ? 0 : -width()) : finalOpen ? width() : 0;
+    let finishDistance = 0;
+    if (open && !finalOpen) finishDistance = -width();
+    if (!open && finalOpen) finishDistance = width();
     void drawer.offsetWidth;
     drawer.dataset.swipeDragging = open ? "settling-closing" : "settling-opening";
     scrim.dataset.swipeDragging = drawer.dataset.swipeDragging;
-    drawer.style.setProperty("--kova-swipe-distance", String(finishDistance) + "px");
+    const translation = String(finishDistance) + "px";
+    drawer.style.setProperty("--kova-swipe-distance", translation);
     scrim.style.setProperty("--kova-swipe-progress", finalOpen ? "1" : "0");
     if (change) toggle();
     // Keep the release animation alive across the React open-state render.
@@ -104,7 +114,8 @@ export function installInteractiveSidebarSwipe({
       String(open ? -distance : distance) + "px",
     );
     scrim.dataset.swipeDragging = drawer.dataset.swipeDragging;
-    scrim.style.setProperty("--kova-swipe-progress", String(open ? 1 - progress : progress));
+    const opacity = String(open ? 1 - progress : progress);
+    scrim.style.setProperty("--kova-swipe-progress", opacity);
     if (event.cancelable) event.preventDefault();
   };
   const end = (event) => {
