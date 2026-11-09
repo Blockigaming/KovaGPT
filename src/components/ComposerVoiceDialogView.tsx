@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { AudioLines, Captions, Info, Loader2, X } from "lucide-react";
 
@@ -76,7 +76,7 @@ export function ComposerVoiceDialogView({
   availabilityRetry,
 }: ComposerVoiceDialogViewProps) {
   const [captionsOpen, setCaptionsOpen] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) setCaptionsOpen(false);
   }, [open]);
   const ready = availability === "ready";
