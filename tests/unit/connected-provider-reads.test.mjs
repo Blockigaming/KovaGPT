@@ -518,9 +518,7 @@ test("Calendly requires explicit read scopes and a fixed account-scoped event ro
   assert.equal(request.init.redirect, "error");
 });
 
-test(
-  "Calendly scheduled-event reads verify their owner before retrieving bounded metadata",
-  async () => {
+test("Calendly event reads verify their owner and bounded metadata", async () => {
   const userUri = "https://api.calendly.com/users/KNOWN_USER";
   const calls = [];
   const result = await readConnection(
@@ -551,8 +549,7 @@ test(
   assert.equal(result.results[0].url, null);
   assert.match(result.results[0].snippet, /Start: 2026-11-09T10:00:00Z/);
   assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|Unrelated/);
-  },
-);
+ });
 
 test("Calendly rejects a changed user identity before listing events", async () => {
   const calls = [];
