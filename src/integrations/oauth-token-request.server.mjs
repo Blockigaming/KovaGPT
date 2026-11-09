@@ -23,6 +23,18 @@ export function oauthTokenRequest({
       body: JSON.stringify(fields),
     };
   }
+  if (providerId === "calendly") {
+    if (!verifier) throw new Error("oauth_pkce_verifier_missing");
+    return {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({ ...fields, client_id: clientId, code_verifier: verifier }),
+    };
+  }
   const body = new URLSearchParams({ ...fields, client_id: clientId, client_secret: clientSecret });
   if (verifier) body.set("code_verifier", verifier);
   return {
@@ -71,6 +83,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       "notion",
       "dropbox",
       "box",
+      "calendly",
     ].includes(providerId)
   )
     throw new Error("refresh_not_supported");
@@ -85,6 +98,22 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
         Authorization: "Basic " + Buffer.from(clientId + ":" + clientSecret).toString("base64"),
       },
       body: JSON.stringify({ grant_type: "refresh_token", refresh_token: refreshToken }),
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    };
+  if (providerId === "calendly")
+    return {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: clientId,
+        refresh_token: refreshToken,
+      }),
       redirect: "error",
       signal: AbortSignal.timeout(15_000),
     };
