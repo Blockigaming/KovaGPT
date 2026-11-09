@@ -476,7 +476,7 @@ export function Sidebar({
         }
         aria-label="Search chats"
         aria-haspopup="dialog"
-        aria-expanded={workspaceSearchOpen}
+        aria-expanded={searchOpen}
         onClick={openChatSearch}
       >
         <SearchGlyph aria-hidden="true" />
@@ -1670,16 +1670,8 @@ export function Sidebar({
                   className="kova-nav-row"
                   aria-label="Search chats"
                   aria-haspopup="dialog"
-                  aria-expanded={workspaceSearchOpen}
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) {
-                      cancelPendingSelection();
-                      onOpenWorkspaceSearch();
-                    } else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen((value) => !value);
-                    }
-                  }}
+                  aria-expanded={searchOpen}
+                  onClick={openChatSearch}
                 >
                   <span className="kova-sidebar-icon" aria-hidden="true">
                     <SearchGlyph />
