@@ -179,13 +179,13 @@ test("selected plan starts hosted checkout without an intermediate payment step"
   await installAuthenticatedFixture(page);
   const stripeRequests: string[] = [];
   page.on("request", (request) => {
-    if (/(?:^|\\.)stripe\\.(?:com|network)$/u.test(new URL(request.url()).hostname))
+    if (/(?:^|\.)stripe\.(?:com|network)$/u.test(new URL(request.url()).hostname))
       stripeRequests.push(request.method());
   });
   await page.goto("/pricing");
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Start Plus", exact: true }).click();
-  await expect(page).toHaveURL(/\\/subscribe\\?plan=plus_monthly/);
+  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { name: "Opening checkout…", exact: true })).toBeVisible();
   await expect(main.locator('[data-stripe-experience="kova-stripe-checkout:hosted-v1"]')).toBeVisible();
@@ -193,7 +193,7 @@ test("selected plan starts hosted checkout without an intermediate payment step"
   await expect(main.locator("iframe")).toHaveCount(0);
   await page.screenshot({ path: `${evidence}/checkout-auto-start.png` });
   await page.getByRole("link", { name: "Back to plans", exact: true }).click();
-  await expect(page).toHaveURL(/\\/pricing/);
+  await expect(page).toHaveURL(/\/pricing/);
   await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
   expect(stripeRequests).toEqual([]);
 });
