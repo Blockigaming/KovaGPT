@@ -257,9 +257,9 @@ function fixture(options = {}) {
       assert.equal(name, "try_consume_paid_message");
       assert.equal(args._user_id, owner);
       assert.ok(Number.isInteger(args._weekly_limit) && args._weekly_limit > 0);
-      assert.ok(
-        args._short_limit === null || (Number.isInteger(args._short_limit) && args._short_limit > 0),
-      );
+      const shortWindow = args._short_limit;
+      assert.ok(shortWindow === null || Number.isInteger(shortWindow));
+      if (shortWindow !== null) assert.ok(shortWindow > 0);
       messageReservations.push(args);
       const result = {
         data: options.messageQuota !== false ? "allowed" : "five_hour",
