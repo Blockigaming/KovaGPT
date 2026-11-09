@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   WORKSPACE_URL,
   registerWorkspaceScheme,
@@ -76,7 +77,7 @@ async function harness(action) {
         return { response: allowSave ? 1 : 0 };
       },
     },
-    assetsPath: new URL("..", import.meta.url).pathname,
+    assetsPath: fileURLToPath(new URL("..", import.meta.url)),
     iconPath: join(root, "icon.png"),
   });
   const window = open();
