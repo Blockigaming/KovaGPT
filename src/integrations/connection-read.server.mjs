@@ -24,9 +24,10 @@ function figmaFileKey(query) {
       url.password
     )
       return null;
-    const match = /^\/(?:file|design|board|proto|slides|buzz|make)\/([a-zA-Z0-9_-]{6,128})(?:\/|$)/u.exec(
-      url.pathname,
-    );
+    const match =
+      /^\/(?:file|design|board|proto|slides|buzz|make)\/([a-zA-Z0-9_-]{6,128})(?:\/|$)/u.exec(
+        url.pathname,
+      );
     return match?.[1] ?? null;
   } catch {
     return null;
