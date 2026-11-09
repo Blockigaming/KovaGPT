@@ -11,6 +11,7 @@ async function fixture(platform = "linux") {
     enableSandbox() {},
     setName() {},
     getVersion: () => "0.1.0",
+    getAppPath: () => "/app",
     requestSingleInstanceLock: () => true,
     whenReady: () => Promise.resolve(),
     setAppUserModelId() {},
@@ -82,7 +83,7 @@ async function fixture(platform = "linux") {
   const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8")
     .replace(
       /^import \{[\s\S]*?\} from "electron";$/m,
-      "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
+      "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, ipcMain, protocol, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
     )
     .replace(
       /^import .* from "node:path";$/m,
@@ -95,6 +96,10 @@ async function fixture(platform = "linux") {
     .replace(
       /^import [\s\S]*?from "\.\/policy\.mjs";$/m,
       "const { KOVA_URL, isKovaUrl, isOpenAppLink, externalUrl, WEB_PREFERENCES, COMPANION_SHORTCUTS, defaultCompanionShortcut, validatedCompanionShortcut } = policy;",
+    )
+    .replace(
+      /^import \\{ installLocalWorkspace, registerWorkspaceScheme \\} from "\\.\\/workspace-host\\.mjs";$/m,
+      "const registerWorkspaceScheme = () => {}; const installLocalWorkspace = () => () => {};",
     );
   vm.runInNewContext(source, {
     policy,
@@ -103,6 +108,8 @@ async function fixture(platform = "linux") {
     electron: {
       app,
       BrowserWindow: Window,
+      protocol: {},
+      ipcMain: {},
       Tray: TestTray,
       nativeImage: {
         createFromPath: () => ({
