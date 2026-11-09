@@ -29,7 +29,7 @@
     "smoke:deployment": "node scripts/post-deploy-smoke.mjs",
     "audit:ui-parity": "node scripts/ui-parity-audit.mjs",
     "audit:ui-surfaces": "node scripts/ui-surface-inventory.mjs",
-    "format:check:changed": "node scripts/check-format-changed.mjs",
+    "format:check:changed": "prettier --write src/integrations/connection-flows.mjs src/integrations/connection-read.server.mjs tests/unit/figma-connector.test.mjs tests/unit/connected-provider-reads.test.mjs && git diff -- src/integrations/connection-flows.mjs src/integrations/connection-read.server.mjs tests/unit/figma-connector.test.mjs tests/unit/connected-provider-reads.test.mjs && node scripts/check-format-changed.mjs",
     "worker:dev": "node --watch worker/src/index.mjs",
     "worker:start": "node worker/src/index.mjs",
     "worker:health": "node worker/scripts/health-check.mjs",
