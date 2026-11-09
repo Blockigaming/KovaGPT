@@ -262,3 +262,15 @@ test("macOS menu bar and Dock preferences preserve a visible native entry point"
   assert.equal(f.prompts.at(-1).title, "Keep an app entry point");
   assert.deepEqual(f.dockEvents, ["hide", "show"]);
 });
+
+test("desktop debugging is available through an explicit native menu, not a web bridge", async () => {
+  const f = await fixture();
+  const developer = f.menus[0].find((item) => item.label === "Developer");
+  assert.ok(developer);
+  assert.deepEqual(
+    developer.submenu.map(({ label, role, accelerator }) => ({ label, role, accelerator })),
+    [{ label: "Toggle Developer Tools", role: "toggleDevTools", accelerator: "CommandOrControl+Alt+I" }],
+  );
+  assert.equal(f.window.options.webPreferences.preload, undefined);
+  assert.equal(f.window.options.webPreferences.nodeIntegration, false);
+});
