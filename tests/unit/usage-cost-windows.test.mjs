@@ -5,7 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 
 const owner = "11111111-1111-4111-8111-111111111111";
-const migration = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
+const migrationFile = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
 
 async function fixture() {
   const db = new PGlite();
@@ -30,8 +30,9 @@ async function fixture() {
           thinking_chats=daily_usage.thinking_chats+case when $2 then 1 else 0 end;
         return true;
       end$$;`);
-  await db.exec(readFileSync("supabase/migrations/20260803130000_ai_usage_accounting.sql", "utf8"));
-  await db.exec(readFileSync(migration, "utf8"));
+  const baseline = readFileSync("supabase/migrations/20260803130000_ai_usage_accounting.sql", "utf8");
+  await db.exec(baseline);
+  await db.exec(readFileSync(migrationFile, "utf8"));
   await db.exec("set role service_role");
   return db;
 }
@@ -61,7 +62,7 @@ test("Free/Plus have hourly-refreshed five-hour and weekly bars; Pro only weekly
   assert.deepEqual(chatUsageWindows("pro", at).map((window) => window.id), ["weekly"]);
 });
 
-test("atomic message quota recovers one hourly bucket while retaining weekly history", async () => {
+test("hourly quota rollover preserves weekly usage", async () => {
   const db = await fixture();
   try {
     const consume = async () => {
@@ -87,14 +88,13 @@ test("atomic message quota recovers one hourly bucket while retaining weekly his
   }
 });
 
-test("Free cost-window limit prices every reserved request, not message count alone", async () => {
+test("Free uses reserved cost rather than message count alone", async () => {
   const db = await fixture();
   try {
     assert.equal((await request(db, "free", 0.09)).decision, "acquired");
     assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
-    const progress = await db.query("select * from public.kova_plan_cost_progress($1,'free')", [
-      owner,
-    ]);
+    const usageSql = "select * from public.kova_plan_cost_progress($1,'free')";
+    const progress = await db.query(usageSql, [owner]);
     const { rows } = progress;
     assert.equal(Number(rows[0].monthly_allowance), 3);
     assert.ok(Number(rows[0].five_hour_used) >= 0.09);
@@ -149,10 +149,8 @@ test("monthly safety cap counts earlier costs and included Pro Argon Lite chat",
 test("only server service role can query raw cost limits and budget ledger", async () => {
   const db = await fixture();
   try {
-    const first = await db.query(
-      "select * from public.kova_plan_cost_progress($1,'plus')",
-      [owner],
-    );
+    const costQuery = "select * from public.kova_plan_cost_progress($1,'plus')";
+    const first = await db.query(costQuery, [owner]);
     assert.equal(Number(first.rows[0].monthly_allowance), 60);
     assert.equal(first.rows[0].five_hour_allowance !== null, true);
     const pro = await db.query("select * from public.kova_plan_cost_progress($1,'pro')", [owner]);
