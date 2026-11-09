@@ -67,6 +67,14 @@ export const CONNECTION_FLOWS = {
     label: "Slack",
     description: "Search Slack messages visible to your connected user.",
   },
+  calendly: {
+    provider: "calendly",
+    scopes: ["users:read", "scheduled_events:read"],
+    tool: "calendly_search",
+    label: "Calendly",
+    description:
+      "Find your scheduled Calendly meetings by name among the latest 100 events. Read-only; invitee details are not returned.",
+  },
   dropbox: {
     provider: "dropbox",
     scopes: ["files.metadata.read"],
@@ -135,6 +143,7 @@ export function connectionAuthorizationUrl(provider, value) {
     salesforce: "https://login.salesforce.com/services/oauth2/authorize",
     dropbox: "https://www.dropbox.com/oauth2/authorize",
     box: "https://account.box.com/api/oauth2/authorize",
+    calendly: "https://auth.calendly.com/oauth/authorize",
   };
   try {
     const url = new URL(value),
