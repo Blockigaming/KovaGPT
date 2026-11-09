@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
-import { functionNames } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
 import {
   PUBLIC_WEBSITE_PAGES,
@@ -168,7 +167,10 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await page.screenshot({ path: `${evidence}/authentication.png` });
   await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await expect(page).toHaveURL(/\/auth\?email=public-preview%40example\.invalid/);
-  await expect(page.getest("selecting Plus opens a mocked hosted checkout without a real payment request", async ({
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+});
+
+test("selecting Plus opens a mocked hosted checkout without a real payment request", async ({
   page,
 }, testInfo) => {
   const evidence = evidenceDirectory(testInfo.project.name);
