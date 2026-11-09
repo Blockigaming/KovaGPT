@@ -131,6 +131,20 @@ export default function ChatImageViewer({
             className="relative flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden"
             ref={canvasRef}
             data-image-viewer-canvas=""
+            onWheel={(event) => {
+              // Keep ordinary page and trackpad scrolling outside the image unchanged.
+              // Ctrl/Meta-wheel is the browser's pinch gesture; zoom the image in this viewer.
+              if (!event.ctrlKey && !event.metaKey) return;
+              event.preventDefault();
+              zoom(event.deltaY < 0 ? 0.25 : -0.25);
+            }}
+            onDoubleClick={() => {
+              setView((current) =>
+                current.scale > 1
+                  ? { scale: 1, x: 0, y: 0 }
+                  : bounded({ ...current, scale: 2 }),
+              );
+            }}
             onPointerDown={(event) => {
               if (event.pointerType === "mouse" && event.button !== 0) return;
               event.currentTarget.setPointerCapture(event.pointerId);
