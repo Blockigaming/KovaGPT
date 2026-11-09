@@ -8,6 +8,7 @@ export type ConnectionFlow = {
 export type ConnectedAccount = {
   id: string;
   provider_id: string;
+  provider_account_id?: string;
   account_label: string | null;
   status: string;
   granted_scopes: string[];
