@@ -10,6 +10,7 @@ function fixture({ origin = "https://kovagpt.com", subframe = false } = {}) {
   let observed;
   let pagehide;
   let phase = null;
+  let failed = false;
   const window = {
     webkit: {
       messageHandlers: {
@@ -25,7 +26,12 @@ function fixture({ origin = "https://kovagpt.com", subframe = false } = {}) {
     documentElement: {},
     querySelector(selector) {
       assert.equal(selector, '.kova-voice-dialog[data-voice-mode="voice"]');
-      return phase === null ? null : { getClientRects: () => [1], getAttribute: () => phase };
+      return phase === null
+        ? null
+        : {
+            getClientRects: () => [1],
+            getAttribute: (name) => (name === "data-voice-error" ? String(failed) : phase),
+          };
     },
   };
   class MutationObserver {
@@ -39,6 +45,10 @@ function fixture({ origin = "https://kovagpt.com", subframe = false } = {}) {
     sent,
     phase(value) {
       phase = value;
+      observed();
+    },
+    error(value) {
+      failed = value;
       observed();
     },
     hide() {
@@ -69,4 +79,11 @@ test("voice activity cannot publish from a subframe or another website", () => {
   assert.deepEqual(fixture({ subframe: true }).sent, []);
   assert.deepEqual(fixture({ origin: "https://kovagpt.com.attacker.invalid" }).sent, []);
   assert.deepEqual(fixture({ origin: "http://kovagpt.com" }).sent, []);
+});
+
+test("a real Voice error ends native activity metadata instead of displaying a ready microphone", () => {
+  const f = fixture();
+  f.phase("recording");
+  f.error(true);
+  assert.deepEqual(f.sent.at(-1), { phase: "inactive" });
 });

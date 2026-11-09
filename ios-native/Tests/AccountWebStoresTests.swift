@@ -21,7 +21,6 @@ final class AccountWebStoresTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         let first = AccountWebStores.store(for: 1, defaults: defaults)!
         let second = AccountWebStores.store(for: 2, defaults: defaults)!
-        let identifier = second.identifier!
         let name = "kova-isolation-\(UUID().uuidString)"
         XCTAssertTrue(first.isPersistent)
         XCTAssertTrue(second.isPersistent)
@@ -35,6 +34,8 @@ final class AccountWebStoresTests: XCTestCase {
         XCTAssertTrue(secondCookies.contains(where: { $0.name == name && $0.value == "account-two" }))
         await second.httpCookieStore.deleteCookie(cookie)
         defaults.removePersistentDomain(forName: suite)
-        try await WKWebsiteDataStore.remove(forIdentifier: identifier)
+        // WebKit keeps a network-process reference while the test is running.
+        // The synthetic cookie is removed above; the empty UUID store is discarded
+        // with the isolated simulator job rather than deleting an in-use store.
     }
 }

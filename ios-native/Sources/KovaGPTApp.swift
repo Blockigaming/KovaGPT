@@ -112,12 +112,12 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
           let previous = '';
           const publish = () => {
             const node = document.querySelector('.kova-voice-dialog[data-voice-mode="voice"]');
-            const phase = node && node.getClientRects().length ? node.getAttribute('data-voice-phase') : 'inactive';
+            const phase = node && node.getClientRects().length && node.getAttribute('data-voice-error') !== 'true' ? node.getAttribute('data-voice-phase') : 'inactive';
             if (phase === previous) return;
             previous = phase;
             window.webkit.messageHandlers.kovaVoiceActivity.postMessage({phase});
           };
-          new MutationObserver(publish).observe(document.documentElement, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-voice-phase', 'data-state', 'data-voice-mode']});
+          new MutationObserver(publish).observe(document.documentElement, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-voice-phase', 'data-state', 'data-voice-mode', 'data-voice-error']});
           publish();
           window.addEventListener('pagehide', () => window.webkit.messageHandlers.kovaVoiceActivity.postMessage({phase:'inactive'}));
         })();
