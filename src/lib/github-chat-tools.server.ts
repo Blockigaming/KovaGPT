@@ -3,8 +3,9 @@ import { assertLockdownAllows } from "./lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "./distributed-rate-limit.server";
 import { decryptSecret } from "./github-oauth.server";
 import { createGitHubChatTools } from "./github-chat-read.server.mjs";
+import { refreshExpiringGitHubOwnerAccounts } from "./github-token-rotation.server";
 
-export const githubChatTools = createGitHubChatTools({
+const verifiedGitHubChatTools = createGitHubChatTools({
   db: supabaseAdmin,
   guard: (ownerId) => assertLockdownAllows(supabaseAdmin, ownerId, "connector_read"),
   rate: async (ownerId) => {
@@ -25,3 +26,11 @@ export const githubChatTools = createGitHubChatTools({
       Buffer.from(process.env.CONNECTOR_ENCRYPTION_KEY, "base64").length === 32,
     ),
 });
+
+export const githubChatTools = {
+  ...verifiedGitHubChatTools,
+  getContext: async (ownerId: string) => {
+    await refreshExpiringGitHubOwnerAccounts(ownerId);
+    return verifiedGitHubChatTools.getContext(ownerId);
+  },
+};
