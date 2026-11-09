@@ -248,9 +248,34 @@ public final class MainActivity extends Activity {
         web.saveState(out);
         super.onSaveInstanceState(out);
     }
-    @Override public void onBackPressed() {
+    /** Ask the trusted Kova page to dismiss its topmost modal before leaving a route.
+     * The evaluated script is a fixed constant and cannot accept web-supplied commands. */
+    private static final String DISMISS_OPEN_OVERLAY =
+        "(function(){"
+        + "const drawer=document.querySelector('.kova-sidebar[role=dialog][data-state=open]');"
+        + "if(drawer){const close=drawer.querySelector('button[aria-label=\\\"Close sidebar\\\"]');"
+        + "if(close){close.click();return true;}}"
+        + "const overlay=document.querySelector('[role=alertdialog],"
+        + "[role=dialog][aria-modal=true], [role=menu][data-state=open], dialog[open]');"
+        + "if(!overlay)return false;"
+        + "document.dispatchEvent(new KeyboardEvent('keydown',"
+        + "{key:'Escape',code:'Escape',bubbles:true,cancelable:true}));return true;"
+        + "})()";
+
+    private void finishBackNavigation() {
         if (web != null && web.canGoBack()) web.goBack();
         else super.onBackPressed();
+    }
+
+    @Override public void onBackPressed() {
+        if (web == null || web.getUrl() == null || !trusted(Uri.parse(web.getUrl()))) {
+            finishBackNavigation();
+            return;
+        }
+        // JavaScript is evaluated only in the exact first-party HTTPS WebView.
+        web.evaluateJavascript(DISMISS_OPEN_OVERLAY, handled -> {
+            if (!"true".equals(handled)) finishBackNavigation();
+        });
     }
     @Override protected void onDestroy() {
         denyPendingMedia();
