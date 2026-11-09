@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { AudioLines, Info, Loader2, X } from "lucide-react";
+import { AudioLines, Captions, Info, Loader2, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -74,15 +75,20 @@ export function ComposerVoiceDialogView({
   useTranscriptControl,
   availabilityRetry,
 }: ComposerVoiceDialogViewProps) {
+  const [captionsOpen, setCaptionsOpen] = useState(false);
+  useEffect(() => {
+    if (!open) setCaptionsOpen(false);
+  }, [open]);
   const ready = availability === "ready";
   const processing = ready && phase !== "idle" && phase !== "recording";
   const hasError = Boolean(error);
   const contentFirst =
-    hasTranscript ||
-    Boolean(audioPlayer) ||
-    Boolean(voiceReply) ||
-    phase === "speaking" ||
-    hasError;
+    (mode === "dictate" || captionsOpen) &&
+    (hasTranscript ||
+      Boolean(audioPlayer) ||
+      Boolean(voiceReply) ||
+      phase === "speaking" ||
+      hasError);
   const compact = !ready || (hasError && !hasTranscript && !audioPlayer && !voiceReply);
   const title = hasError
     ? "Voice needs attention"
@@ -179,6 +185,8 @@ export function ComposerVoiceDialogView({
         className="kova-voice-dialog"
         data-ui-reference="chatgpt-separate-voice"
         data-voice-availability={availability}
+        data-voice-mode={mode}
+        data-voice-captions={captionsOpen ? "open" : "closed"}
         data-voice-phase={phase}
         data-voice-review={hasTranscript || Boolean(audioPlayer) ? "true" : "false"}
         data-voice-content-first={contentFirst ? "true" : "false"}
@@ -196,12 +204,10 @@ export function ComposerVoiceDialogView({
         <div className="kova-voice-body">
           <div className="kova-voice-canvas">
             {ready && !contentFirst && (
-              <svg
-                className="kova-voice-mark"
-                viewBox="0 0 200 200"
-                aria-hidden="true"
-                focusable="false"
-              />
+              <div className="kova-voice-orb-shell" aria-hidden="true">
+                <div className="kova-voice-orb-glow" />
+                <div className="kova-voice-mark" />
+              </div>
             )}
             <h2 className="kova-voice-heading">{title}</h2>
             <DialogDescription
@@ -231,13 +237,13 @@ export function ComposerVoiceDialogView({
             )}
           </div>
 
-          {ready && voiceReply && (
+          {ready && voiceReply && (mode !== "voice" || captionsOpen) && (
             <div className="kova-voice-transcript">
               <h3>Latest saved reply</h3>
               <p className="whitespace-pre-wrap break-words">{voiceReply}</p>
             </div>
           )}
-          {ready && transcriptReview && (
+          {ready && transcriptReview && (mode !== "voice" || captionsOpen) && (
             <div className="kova-voice-transcript">{transcriptReview}</div>
           )}
           {availabilityRetry && <div className="kova-voice-retry">{availabilityRetry}</div>}
@@ -296,6 +302,18 @@ export function ComposerVoiceDialogView({
                 )}
               </div>
               <div className="kova-voice-secondary-control">
+                {mode === "voice" && (
+                  <button
+                    type="button"
+                    className="kova-voice-captions-toggle"
+                    aria-label={captionsOpen ? "Hide voice captions" : "Show voice captions"}
+                    aria-pressed={captionsOpen}
+                    title={captionsOpen ? "Hide captions" : "Show captions"}
+                    onClick={() => setCaptionsOpen((value) => !value)}
+                  >
+                    <Captions aria-hidden="true" />
+                  </button>
+                )}
                 {ready && (
                   <Popover>
                     <PopoverTrigger asChild>
