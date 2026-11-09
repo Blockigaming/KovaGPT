@@ -37,6 +37,19 @@ export function createConsumerModelChoice(
   conversationId: string | null,
 ): ConsumerModelChoice | null;
 
+export function resolveOneShotConsumerModel(input: {
+  defaultModel?: ConsumerModelId;
+  queuedModel?: ConsumerModelId;
+  queuedOneShotModel?: ConsumerModelId;
+  oneShotModel?: ConsumerModelId;
+  tier: string;
+  nativeKova?: boolean;
+}): {
+  requestModel?: ConsumerModelId;
+  savedModel?: ConsumerModelId;
+  oneShotModel?: ConsumerModelId;
+};
+
 export function latestCompletedModelReply<
   T extends { role: string; generationStatus?: unknown; pendingImage?: unknown },
 >(messages?: readonly T[]): T | undefined;
