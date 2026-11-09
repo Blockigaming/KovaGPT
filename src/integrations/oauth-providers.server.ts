@@ -177,8 +177,9 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     revocationEndpoint: "https://api.dropboxapi.com/2/auth/token/revoke",
     clientIdEnv: "DROPBOX_OAUTH_CLIENT_ID",
     clientSecretEnv: "DROPBOX_OAUTH_CLIENT_SECRET",
-    requiredScopes: ["account_info.read", "files.metadata.read", "files.content.read"],
-    optionalScopes: ["files.content.write"],
+    // Metadata search needs account identity and file names, not file bodies.
+    requiredScopes: ["account_info.read", "files.metadata.read"],
+    optionalScopes: ["files.content.read", "files.content.write"],
     usesPkce: true,
     profileEndpoint: "https://api.dropboxapi.com/2/users/get_current_account",
     profileId: (v) => text(v.account_id),
