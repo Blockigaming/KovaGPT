@@ -7,5 +7,13 @@
   <key>CFBundleVersion</key><string>1</string>
   <key>NSCameraUsageDescription</key>
   <string>Scan documents only after you tap Scan.</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>com.kovagpt.ios.shortcuts</string>
+      <key>CFBundleURLSchemes</key>
+      <array><string>kovagpt</string></array>
+    </dict>
+  </array>
   <key>UIRequiresFullScreen</key><false/>
 </dict></plist>
