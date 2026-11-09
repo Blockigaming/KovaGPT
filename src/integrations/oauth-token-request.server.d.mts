@@ -10,6 +10,7 @@ export function selectOAuthTokens(
   providerId: string,
   payload: unknown,
 ): { access_token: string; refresh_token?: string; expires_in?: number; scope?: string };
+export function oauthRefreshEndpoint(providerId: string, tokenEndpoint: string): string;
 export function oauthRefreshRequest(input: {
   providerId: string;
   clientId: string | undefined;
