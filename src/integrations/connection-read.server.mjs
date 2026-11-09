@@ -56,6 +56,11 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("user", uri);
     url.searchParams.set("count", "100");
     url.searchParams.set("sort", "start_time:desc");
+  } else if (id === "canva") {
+    if (query.length > 255) throw new Error("invalid_connection_query");
+    url = new URL("https://api.canva.com/rest/v1/designs");
+    url.searchParams.set("query", query);
+    url.searchParams.set("limit", "10");
   } else if (id === "dropbox") {
     url = new URL("https://api.dropboxapi.com/2/files/search_v2");
     body = JSON.stringify({ query, options: { max_results: 10 } });
@@ -153,6 +158,8 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     rows = data.matches;
   } else if (id === "box") {
     rows = data.entries;
+  } else if (id === "canva") {
+    rows = data.items;
   }
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
   if (id === "ms-teams" || id === "calendly")
@@ -169,7 +176,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     if (!row || typeof row !== "object") continue;
     const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
     const safeUrl =
-      id === "calendly" || typeof url !== "string" || url.length > 2048
+      ["calendly", "canva"].includes(id) || typeof url !== "string" || url.length > 2048
         ? null
         : safeConnectionLink(url);
     let snippet = str(row.bodyPreview ?? row.description ?? row.text);
@@ -190,6 +197,10 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
         .join("; ");
     } else if (id === "dropbox") {
       snippet = str(row.path_display);
+    } else if (id === "canva") {
+      snippet = Array.isArray(row.design_types)
+        ? row.design_types.filter((item) => typeof item === "string").slice(0, 3).join(", ")
+        : "";
     }
     const item = {
       id: str(row.id ?? row.ts ?? (id === "calendly" ? row.uri : ""), 300),
