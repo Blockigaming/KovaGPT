@@ -105,11 +105,24 @@ async function fixture() {
           },
         }),
       },
-      Menu: { setApplicationMenu: (value) => menus.push(value), buildFromTemplate: (value) => value },
+      Menu: {
+        setApplicationMenu: (value) => menus.push(value),
+        buildFromTemplate: (value) => value,
+      },
     },
   });
   await new Promise(setImmediate);
-  return { window: windows[0], permissions, checks, external, prompts, app, windows, menus, copiedImages };
+  return {
+    window: windows[0],
+    permissions,
+    checks,
+    external,
+    prompts,
+    app,
+    windows,
+    menus,
+    copiedImages,
+  };
 }
 
 test("native startup loads the real site into one sandboxed window", async () => {
