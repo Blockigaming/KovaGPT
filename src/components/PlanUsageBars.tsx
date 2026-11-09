@@ -7,23 +7,28 @@ const resetFormat = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
   timeZoneName: "short",
 });
-const count = new Intl.NumberFormat("en-US");
+
+const boundedPercent = (used: number, limit: number) =>
+  limit > 0 ? Math.min(100, Math.max(0, Math.round((used / limit) * 100))) : 100;
 
 export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
   const { tier, windows, images, uploads } = usage;
   const base = DAILY_PLAN_ALLOWANCES[tier];
   const multiplier = usage.usageMultiplier ?? 1;
-  const limits = { images: base.images * multiplier, uploads: base.uploads * multiplier };
+
   return (
     <div className="kova-plan-usage">
-      {windows.map(({ id, resetsAt, regularUsed, regularLimit, thinkingUsed, thinkingLimit }) => {
-        const percent = Math.min(
-          100,
-          Math.floor(Math.max(regularUsed / regularLimit, thinkingUsed / thinkingLimit) * 100),
+      {windows.map((window) => {
+        const percent = Math.max(
+          boundedPercent(window.regularUsed, window.regularLimit),
+          boundedPercent(window.thinkingUsed, window.thinkingLimit),
+          window.costPercentUsed ?? 0,
         );
-        const label = `${CHAT_USAGE_WINDOWS[id]} chat usage`;
+        const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
+        const resetLabel =
+          window.id === "five_hour" ? "Rolling activity · Next hourly refresh" : "Weekly reset";
         return (
-          <div key={id} className="kova-plan-usage-row">
+          <div key={window.id} className="kova-plan-usage-row">
             <div>
               <span>{label}</span>
               <strong>{percent}% used</strong>
@@ -39,17 +44,17 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
               <span style={{ width: `${percent}%` }} />
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              {count.format(regularUsed)} / {count.format(regularLimit)} regular ·{" "}
-              {count.format(thinkingUsed)} / {count.format(thinkingLimit)} Thinking
-              {" · Resets "}
-              {resetFormat.format(new Date(resetsAt))}
+              {resetLabel} {resetFormat.format(new Date(window.resetsAt))}
             </p>
           </div>
         );
       })}
       <p className="text-xs leading-5 text-muted-foreground">
-        Today · {images} / {limits.images} images · {uploads} / {limits.uploads} uploads. Image and
-        file limits reset at midnight UTC.
+        Today's images {boundedPercent(images, base.images * multiplier)}% used · uploads{" "}
+        {boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.
+      </p>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Usage percentages are estimates. Additional safety and plan protections may apply.
       </p>
     </div>
   );

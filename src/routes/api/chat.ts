@@ -1917,6 +1917,9 @@ export const Route = createFileRoute("/api/chat")({
                 const quota = [
                   "daily_tokens",
                   "monthly_tokens",
+                  "monthly_cost",
+                  "weekly_cost",
+                  "five_hour_cost",
                   "premium_period",
                   "premium_quota",
                   "guest_daily",

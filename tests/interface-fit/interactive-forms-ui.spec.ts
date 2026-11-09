@@ -248,7 +248,21 @@ for (const theme of ["dark", "light"] as const) {
       sections.flatMap((section) =>
         [...section.querySelectorAll("button, input, textarea")].flatMap((control) => {
           const box = control.getBoundingClientRect();
-          if (!box.width || !box.height) return [];
+          const computed = window.getComputedStyle(control);
+          // Native hidden form inputs are not interactive visual targets.
+          if (
+            !box.width ||
+            !box.height ||
+            computed.display === "none" ||
+            computed.visibility === "hidden" ||
+            Number(computed.opacity) === 0 ||
+            control.closest('[aria-hidden="true"]')
+          ) {
+            return [];
+          }
+          // Offscreen cells inside a scrollable table are reachable by scrolling.
+          const scroller = control.closest('[role="region"][tabindex="0"]');
+          if (scroller && scroller.scrollWidth > scroller.clientWidth) return [];
           return box.left < -1 || box.right > document.documentElement.clientWidth + 1
             ? [
                 {

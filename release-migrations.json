@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 217,
-  "latest": "20261108034500_team_email_invitations.sql",
+  "count": 218,
+  "latest": "20261109145000_kova_hourly_windows_monthly_cost_safety.sql",
   "migrations": [
     {
       "order": 1,
@@ -4615,6 +4615,20 @@
         "team_email_invitation_billing",
         "team_email_invitation_recipient_lookup"
       ]
+    },
+    {
+      "order": 218,
+      "filename": "20261109145000_kova_hourly_windows_monthly_cost_safety.sql",
+      "timestamp": "20261109145000",
+      "sha256": "df24db3fc1a3d8fc0c6666e8b9428b5a90be2ad430cf596636962d47c31fa36a",
+      "tables": ["message_usage_hourly"],
+      "functions": ["try_consume_paid_message", "kova_plan_cost_progress", "acquire_ai_generation"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["message_usage_hourly"],
+      "policies": [],
+      "indexes": []
     }
   ]
 }
