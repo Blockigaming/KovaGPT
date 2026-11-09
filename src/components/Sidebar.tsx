@@ -476,7 +476,7 @@ export function Sidebar({
         }
         aria-label="Search chats"
         aria-haspopup="dialog"
-        aria-expanded={searchOpen}
+        aria-expanded={workspaceSearchOpen}
         onClick={openChatSearch}
       >
         <SearchGlyph aria-hidden="true" />
