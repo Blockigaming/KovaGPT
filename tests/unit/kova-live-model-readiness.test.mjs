@@ -1,24 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { auditKovaModelConfiguration, REQUIRED_MODEL_BINDINGS } from "../../src/lib/ai/kova-live-model-readiness.mjs";
+import {
+  auditKovaModelConfiguration,
+  REQUIRED_MODEL_BINDINGS,
+} from "../../src/lib/ai/kova-live-model-readiness.mjs";
 
 const app = (changes = {}) => ({
   id: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-kovagpt-prod/providers/Microsoft.App/containerApps/kovagpt-prod-web",
   name: "kovagpt-prod-web",
   properties: {
     template: {
-      containers: [{
-        name: "web",
-        env: [
-          ...Object.entries(REQUIRED_MODEL_BINDINGS).map(([name, value]) => ({ name, value })),
-          { name: "KOVA_HOSTED_INFERENCE_ENABLED", value: "true" },
-          { name: "KOVA_GENERATION_DISABLED", value: "false" },
-          { name: "KOVA_REQUEST_CAPTURE_ENABLED", value: "false" },
-          { name: "KOVA_GENERATION_ACCEPTANCE_ENABLED", value: "false" },
-          { name: "OPENAI_API_KEY", secretRef: "openai-key" },
-          { name: "KOVA_IP_HASH_SECRET", secretRef: "ip-hash-key" },
-        ],
-      }],
+      containers: [
+        {
+          name: "web",
+          env: [
+            ...Object.entries(REQUIRED_MODEL_BINDINGS).map(([name, value]) => ({ name, value })),
+            { name: "KOVA_HOSTED_INFERENCE_ENABLED", value: "true" },
+            { name: "KOVA_GENERATION_DISABLED", value: "false" },
+            { name: "KOVA_REQUEST_CAPTURE_ENABLED", value: "false" },
+            { name: "KOVA_GENERATION_ACCEPTANCE_ENABLED", value: "false" },
+            { name: "OPENAI_API_KEY", secretRef: "openai-key" },
+            { name: "KOVA_IP_HASH_SECRET", secretRef: "ip-hash-key" },
+          ],
+        },
+      ],
     },
     configuration: { secrets: [{ name: "openai-key" }, { name: "ip-hash-key" }] },
   },
@@ -38,8 +43,9 @@ test("hosted inference must be explicitly enabled; missing role bindings block",
   const source = app();
   source.properties.template.containers[0].env = source.properties.template.containers[0].env
     .filter((item) => item.name !== "KOVA_MODEL_DEFAULT_CHAT")
-    .map((item) => item.name === "KOVA_HOSTED_INFERENCE_ENABLED"
-      ? { ...item, value: "false" } : item);
+    .map((item) =>
+      item.name === "KOVA_HOSTED_INFERENCE_ENABLED" ? { ...item, value: "false" } : item,
+    );
   const result = auditKovaModelConfiguration(source);
   assert.equal(result.configurationReady, false);
   assert(result.blockers.includes("hosted_inference_not_enabled"));
@@ -48,9 +54,12 @@ test("hosted inference must be explicitly enabled; missing role bindings block",
 
 test("directly set API keys are rejected without echoing values", () => {
   const source = app();
-  source.properties.template.containers[0].env = source.properties.template.containers[0].env
-    .map((item) => item.name === "OPENAI_API_KEY"
-      ? { name: "OPENAI_API_KEY", value: "sk-proj-secret-marker-not-to-print" } : item);
+  source.properties.template.containers[0].env = source.properties.template.containers[0].env.map(
+    (item) =>
+      item.name === "OPENAI_API_KEY"
+        ? { name: "OPENAI_API_KEY", value: "sk-proj-secret-marker-not-to-print" }
+        : item,
+  );
   const result = auditKovaModelConfiguration(source);
   assert.equal(result.configurationReady, false);
   assert(result.blockers.includes("openai_api_key_secret_reference_missing"));
@@ -59,10 +68,14 @@ test("directly set API keys are rejected without echoing values", () => {
 
 test("kill switch, request capture and acceptance flags cannot be bypassed", () => {
   const source = app();
-  source.properties.template.containers[0].env = source.properties.template.containers[0].env
-    .map((item) => ["KOVA_GENERATION_DISABLED", "KOVA_REQUEST_CAPTURE_ENABLED",
-      "KOVA_GENERATION_ACCEPTANCE_ENABLED"].includes(item.name)
-      ? { ...item, value: "true" } : item);
+  const disabled = [
+    "KOVA_GENERATION_DISABLED",
+    "KOVA_REQUEST_CAPTURE_ENABLED",
+    "KOVA_GENERATION_ACCEPTANCE_ENABLED",
+  ];
+  source.properties.template.containers[0].env = source.properties.template.containers[0].env.map(
+    (item) => (disabled.includes(item.name) ? { ...item, value: "true" } : item),
+  );
   const result = auditKovaModelConfiguration(source);
   assert.equal(result.configurationReady, false);
   assert(result.blockers.includes("generation_kill_switch_enabled"));
@@ -82,7 +95,8 @@ test("a wrong Azure app or unresolved secret fails closed", () => {
 test("cost reservation warnings never falsely prove live traffic", () => {
   const source = app();
   source.properties.template.containers[0].env.push({
-    name: "KOVA_MAX_COST_USD_PER_REQUEST", value: "0.2",
+    name: "KOVA_MAX_COST_USD_PER_REQUEST",
+    value: "0.2",
   });
   const result = auditKovaModelConfiguration(source);
   assert(result.warnings.includes("request_reservation_ceiling_may_block_astra_ultra"));
