@@ -1776,11 +1776,7 @@ export function Sidebar({
                 </div>
               ) : null}
               {filtered.length > 0 ? (
-                <button
-                  className="kova-nav-row"
-                  type="button"
-                  onClick={openChatSearch}
-                >
+                <button className="kova-nav-row" type="button" onClick={openChatSearch}>
                   View all chats
                 </button>
               ) : null}
