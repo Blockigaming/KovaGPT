@@ -139,6 +139,12 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "data_analysis", label: "Analyze data", icon: Brain },
   { id: "file_analysis", label: "Analyze files", icon: FileText },
 ];
+const COMPOSER_TOOL_MENTIONS: Readonly<Record<ComposerToolId, readonly string[]>> = {
+  web_search: ["search", "web"],
+  image: ["image", "picture"],
+  data_analysis: ["data", "analyze"],
+  file_analysis: ["files", "document"],
+};
 
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
@@ -424,6 +430,30 @@ export function ChatInput({
     onChange(value.slice(0, sketchAt));
     setDismissedSketchText(null);
     setDrawingOpen(true);
+  };
+  const toolMentionMatch = /(?:^|\\s)@([a-z]*)$/i.exec(value);
+  const toolMentionQuery = toolMentionMatch?.[1]?.toLowerCase() ?? "";
+  const toolMentionAt = toolMentionMatch ? value.length - toolMentionQuery.length - 1 : -1;
+  const matchingToolMentions = COMPOSER_TOOLS.filter((tool) =>
+    COMPOSER_TOOL_MENTIONS[tool.id].some((alias) => alias.startsWith(toolMentionQuery)),
+  );
+  const showToolMentions =
+    isMobileLayout &&
+    toolMentionAt >= 0 &&
+    value !== dismissedSketchText &&
+    matchingToolMentions.length > 0 &&
+    Boolean(onToolSelect) &&
+    isLoaded &&
+    Boolean(user) &&
+    !disabled &&
+    !isStreaming;
+  const acceptToolMention = (tool: ComposerAction) => {
+    if (!showToolMentions) return;
+    onChange(value.slice(0, toolMentionAt));
+    selectedToolRef.current = tool.id;
+    onToolSelect?.(tool.id);
+    setUploadAnnouncement(`${tool.label} selected`);
+    setDismissedSketchText(null);
   };
   const online = useSyncExternalStore(
     subscribeToOnlineStatus,
@@ -1742,10 +1772,11 @@ export function ChatInput({
             onChange={(event) => onChange(event.target.value)}
             disabled={disabled}
             onKeyDown={(event) => {
-              if (showSketchMention && !composingRef.current) {
+              if ((showSketchMention || showToolMentions) && !composingRef.current) {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  acceptSketchMention();
+                  if (showSketchMention) acceptSketchMention();
+                  else if (matchingToolMentions[0]) acceptToolMention(matchingToolMentions[0]);
                   return;
                 }
                 if (event.key === "Escape") {
@@ -1773,8 +1804,10 @@ export function ChatInput({
             }
             className="spec400-composer-input"
             aria-label="Message KovaGPT"
-            aria-expanded={showSketchMention}
-            aria-controls={showSketchMention ? "kova-sketch-mention-suggestion" : undefined}
+            aria-expanded={showSketchMention || showToolMentions}
+            aria-controls={
+              showSketchMention || showToolMentions ? "kova-mention-suggestions" : undefined
+            }
             aria-keyshortcuts={
               isMobileLayout
                 ? undefined
@@ -1795,23 +1828,42 @@ export function ChatInput({
             <ExpandViewIcon />
           </button>
         </div>
-        {showSketchMention ? (
+        {showSketchMention || showToolMentions ? (
           <div
-            id="kova-sketch-mention-suggestion"
+            id="kova-mention-suggestions"
             role="group"
             aria-label="Mention suggestions"
-            className="px-3 pb-2"
+            className="space-y-1 px-3 pb-2"
           >
-            <button
-              type="button"
-              className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
-              onPointerDown={(event) => event.preventDefault()}
-              onClick={acceptSketchMention}
-            >
-              <Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="font-medium">Sketch</span>
-              <span className="text-muted-foreground">Draw an idea</span>
-            </button>
+            {showSketchMention ? (
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={acceptSketchMention}
+              >
+                <Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="font-medium">Sketch</span>
+                <span className="text-muted-foreground">Draw an idea</span>
+              </button>
+            ) : null}
+            {showToolMentions
+              ? matchingToolMentions.map((tool) => {
+                  const ToolIcon = tool.icon;
+                  return (
+                    <button
+                      key={tool.id}
+                      type="button"
+                      className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
+                      onPointerDown={(event) => event.preventDefault()}
+                      onClick={() => acceptToolMention(tool)}
+                    >
+                      <ToolIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="font-medium">{tool.label}</span>
+                    </button>
+                  );
+                })
+              : null}
           </div>
         ) : null}
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
