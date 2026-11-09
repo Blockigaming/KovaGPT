@@ -313,12 +313,14 @@ test("failed audit or in-flight disconnect cannot establish successful provider 
     const f = fixture();
     const context = await f.getConnectedToolContext("owner-a");
     if (failure === "audit") f.state.auditError = { message: "audit unavailable" };
-    if (failure === "disconnect") f.state.onAudit = () => {
-      f.state.row.status = "revoked";
-    };
-    if (failure === "provider") f.state.onRead = () => {
-      throw new Error("provider_read_failed");
-    };
+    if (failure === "disconnect")
+      f.state.onAudit = () => {
+        f.state.row.status = "revoked";
+      };
+    if (failure === "provider")
+      f.state.onRead = () => {
+        throw new Error("provider_read_failed");
+      };
     await assert.rejects(
       f.runConnectedTool(
         "owner-a",
