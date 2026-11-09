@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { functionNames } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
 import {
   PUBLIC_WEBSITE_PAGES,
@@ -167,37 +168,45 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await page.screenshot({ path: `${evidence}/authentication.png` });
   await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await expect(page).toHaveURL(/\/auth\?email=public-preview%40example\.invalid/);
-  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
-});
-
-test("hosted checkout waits for explicit payment action without contacting Stripe", async ({
+  await expect(page.getest("selecting Plus opens a mocked hosted checkout without a real payment request", async ({
   page,
 }, testInfo) => {
   const evidence = evidenceDirectory(testInfo.project.name);
-  // This workflow deliberately builds without payment credentials. The fixture
-  // owns authentication only; this is not real Stripe acceptance evidence.
+  // The application initiates hosted checkout directly. Intercept the complete
+  // handoff: no real Stripe session, external page, or payment is created.
   await installAuthenticatedFixture(page);
-  const stripeRequests: string[] = [];
-  page.on("request", (request) => {
-    if (/(?:^|\.)stripe\.(?:com|network)$/u.test(new URL(request.url()).hostname))
-      stripeRequests.push(request.method());
+  let checkoutCreates = 0;
+  let interceptedStripeNavigations = 0;
+  await page.route("**/_serverFn/**", (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    if (!functionNames.get(id)?.startsWith("createCheckoutSession_")) return route.fallback();
+    checkoutCreates++;
+    return route.fulfill({
+      json: {
+        result: { url: "https://checkout.stripe.com/c/pay/cs_test_fixture" },
+        context: {},
+      },
+    });
+  });
+  await page.context().route("https://checkout.stripe.com/**", (route) => {
+    interceptedStripeNavigations++;
+    return route.fulfill({
+      contentType: "text/html",
+      body: "<!doctype html><title>Checkout test fixture</title><h1>Secure checkout fixture</h1>",
+    });
   });
   await page.goto("/pricing");
   await waitForKovaHydration(page);
-  const start = page.getByRole("button", { name: "Start Plus", exact: true });
-  await start.click();
-  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
-  const dialog = page.getByRole("main");
-  await expect(dialog.locator('[data-checkout-state="ready"]')).toBeVisible();
-  await expect(
-    dialog.getByRole("button", { name: "Continue to payment", exact: true }),
-  ).toBeEnabled();
-  await expect(dialog.locator("iframe")).toHaveCount(0);
-  await expect(dialog).toContainText("Payment opens full-screen in Stripe.");
-  await page.screenshot({ path: `${evidence}/checkout-ready.png` });
-  await page.getByRole("link", { name: "Back to plans", exact: true }).click();
-  await expect(page).toHaveURL(/\/pricing/);
   await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
+  expect(checkoutCreates).toBe(0);
+  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
+  await expect(page).toHaveURL("https://checkout.stripe.com/c/pay/cs_test_fixture");
+  await expect(page.getByRole("heading", { name: "Secure checkout fixture" })).toBeVisible();
+  expect(checkoutCreates).toBe(1);
+  expect(interceptedStripeNavigations).toBe(1);
+  await page.screenshot({ path: `${evidence}/checkout-handoff-mocked.png` });
+});
+).toBeVisible();
   expect(stripeRequests).toEqual([]);
 });
 
