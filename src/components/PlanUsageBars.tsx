@@ -25,29 +25,29 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
             boundedPercent(thinkingUsed, thinkingLimit),
             costPercentUsed,
           );
-        const label = `${CHAT_USAGE_WINDOWS[id]} chat usage`;
-        return (
-          <div key={id} className="kova-plan-usage-row">
-            <div>
-              <span>{label}</span>
-              <strong>{percent}% used</strong>
+          const label = `${CHAT_USAGE_WINDOWS[id]} chat usage`;
+          return (
+            <div key={id} className="kova-plan-usage-row">
+              <div>
+                <span>{label}</span>
+                <strong>{percent}% used</strong>
+              </div>
+              <div
+                className="kova-usage-track"
+                role="progressbar"
+                aria-label={label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percent}
+              >
+                <span style={{ width: `${percent}%` }} />
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {id === "five_hour" ? "Rolling activity · Next hourly refresh " : "Weekly reset "}
+                {resetFormat.format(new Date(resetsAt))}
+              </p>
             </div>
-            <div
-              className="kova-usage-track"
-              role="progressbar"
-              aria-label={label}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={percent}
-            >
-              <span style={{ width: `${percent}%` }} />
-            </div>
-            <p className="text-xs leading-5 text-muted-foreground">
-              {id === "five_hour" ? "Rolling activity · Next hourly refresh " : "Weekly reset "}
-              {resetFormat.format(new Date(resetsAt))}
-            </p>
-          </div>
-        );
+          );
         },
       )}
       <p className="text-xs leading-5 text-muted-foreground">
