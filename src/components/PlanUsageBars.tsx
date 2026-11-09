@@ -23,7 +23,7 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
           const percent = Math.max(
             boundedPercent(regularUsed, regularLimit),
             boundedPercent(thinkingUsed, thinkingLimit),
-            costPercentUsed,
+            costPercentUsed ?? 0,
           );
           const label = `${CHAT_USAGE_WINDOWS[id]} chat usage`;
           return (
