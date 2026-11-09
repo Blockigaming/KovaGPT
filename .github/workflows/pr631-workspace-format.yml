@@ -1,0 +1,51 @@
+name: Format PR 631 local coding workspace
+on:
+  push:
+    branches: [fix/mobile-control-containment]
+    paths:
+      - desktop/workspace-files.mjs
+      - desktop/workspace-host.mjs
+      - desktop/workspace-ui.js
+      - desktop/workspace.html
+      - desktop/tests/workspace-files.test.mjs
+      - desktop/tests/workspace-host.test.mjs
+      - docs/mobile-desktop-acceptance-ledger.md
+      - .github/workflows/pr631-workspace-format.yml
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.repository == 'Blockigaming/KovaGPT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          ref: fix/mobile-control-containment
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format only the workspace source and acceptance ledger
+        run: |
+          npx prettier --write \
+            desktop/workspace-files.mjs \
+            desktop/workspace-host.mjs \
+            desktop/workspace-ui.js \
+            desktop/workspace.html \
+            desktop/tests/workspace-files.test.mjs \
+            desktop/tests/workspace-host.test.mjs \
+            docs/mobile-desktop-acceptance-ledger.md
+      - name: Commit style corrections if needed
+        run: |
+          git add desktop/workspace-files.mjs desktop/workspace-host.mjs \
+            desktop/workspace-ui.js desktop/workspace.html \
+            desktop/tests/workspace-files.test.mjs desktop/tests/workspace-host.test.mjs \
+            docs/mobile-desktop-acceptance-ledger.md
+          if ! git diff --cached --quiet; then
+            git -c user.name='KovaGPT CI' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Normalize desktop workspace formatting with pinned Prettier'
+            git push origin HEAD:refs/heads/fix/mobile-control-containment
+          fi
