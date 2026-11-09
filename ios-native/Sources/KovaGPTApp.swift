@@ -116,7 +116,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         // The web dialog still requires an explicit user Start for microphone use.
         let script = """
             (function() {
-              const button = document.querySelector('button[data-testid="\\(testID)"]');
+              const button = document.querySelector('button[data-testid="\(testID)"]');
               if (!button || button.disabled || button.hidden ||
                   button.getClientRects().length === 0) return false;
               button.click();
