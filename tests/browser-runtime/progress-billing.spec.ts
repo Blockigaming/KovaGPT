@@ -127,7 +127,8 @@ for (const width of [390, 1440])
     expect(box!.x).toBe(0);
     expect(box!.y).toBe(0);
     expect(box!.width).toBe(width);
-    expect(box!.height).toBe(844);
+    // WebKit may round the 844px viewport to 843.984375 CSS pixels.
+    expect(box!.height).toBeCloseTo(844, 1);
     expect(await page.evaluate(() => (window as PreviewWindow).fixture.checks)).toBe(1);
     await expect(dialog.getByTitle("Secure checkout form")).toBeVisible();
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
