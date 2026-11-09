@@ -191,9 +191,9 @@ test("selected plan starts hosted checkout without an intermediate payment step"
   await expect(
     main.locator('[data-stripe-experience="kova-stripe-checkout:hosted-v1"]'),
   ).toBeVisible();
-  await expect(
-    main.getByRole("button", { name: "Continue to payment", exact: true }),
-  ).toHaveCount(0);
+  await expect(main.getByRole("button", { name: "Continue to payment", exact: true })).toHaveCount(
+    0,
+  );
   await expect(main.locator("iframe")).toHaveCount(0);
   await page.screenshot({ path: `${evidence}/checkout-auto-start.png` });
   await page.getByRole("link", { name: "Back to plans", exact: true }).click();
