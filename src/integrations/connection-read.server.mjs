@@ -199,7 +199,10 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
       snippet = str(row.path_display);
     } else if (id === "canva") {
       snippet = Array.isArray(row.design_types)
-        ? row.design_types.filter((item) => typeof item === "string").slice(0, 3).join(", ")
+        ? row.design_types
+            .filter((item) => typeof item === "string")
+            .slice(0, 3)
+            .join(", ")
         : "";
     }
     const item = {
