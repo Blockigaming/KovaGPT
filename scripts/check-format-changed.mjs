@@ -31,4 +31,19 @@ if (files.length === 0) {
 }
 
 const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
+if (result.status !== 0 && process.env.CI) {
+  // Print a bounded, actionable formatting diff without changing committed source.
+  const different = run("npx", ["prettier", "--list-different", ...files]);
+  const targets = different.status === 1 ? different.stdout.trim().split(/\r?\n/).filter(Boolean) : [];
+  if (targets.length > 0) {
+    const formatted = run("npx", ["prettier", "--write", ...targets]);
+    if (formatted.status === 0) {
+      const diff = run("git", ["diff", "--", ...targets]);
+      if (diff.status === 0 && diff.stdout) {
+        console.error("Formatting changes needed (first 16 KiB):");
+        console.error(diff.stdout.slice(0, 16 * 1024));
+      }
+    }
+  }
+}
 process.exit(result.status ?? 1);
