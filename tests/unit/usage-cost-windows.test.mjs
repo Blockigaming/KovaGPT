@@ -57,12 +57,18 @@ test("Free/Plus have hourly-refreshed five-hour and weekly bars; Pro only weekly
   const at = new Date("2026-11-09T15:37:00Z");
   for (const tier of ["free", "plus"]) {
     const windows = chatUsageWindows(tier, at);
-    assert.deepEqual(windows.map((window) => window.id), ["five_hour", "weekly"]);
+    assert.deepEqual(
+      windows.map((window) => window.id),
+      ["five_hour", "weekly"],
+    );
     assert.equal(windows[0].start, "2026-11-09T11:00:00.000Z");
     assert.equal(windows[0].resetsAt, "2026-11-09T16:00:00.000Z");
     assert.equal(windows[1].resetsAt, "2026-11-16T00:00:00.000Z");
   }
-  assert.deepEqual(chatUsageWindows("pro", at).map((window) => window.id), ["weekly"]);
+  assert.deepEqual(
+    chatUsageWindows("pro", at).map((window) => window.id),
+    ["weekly"],
+  );
 });
 
 test("hourly quota rollover preserves weekly usage", async () => {
