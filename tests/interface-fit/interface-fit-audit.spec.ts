@@ -215,7 +215,7 @@ if (scope === "public") {
     await page.screenshot({ path: info.outputPath("sync-recovery.png") });
   });
 
-  test("sync retries keep recovery controls stable", async ({ page }) => {
+  test("transient sync retries stay unobtrusive and do not move the composer", async ({ page }) => {
     await coreFixture(page, "dark", "plus");
     let hold = false;
     let heldRequests = 0;
@@ -236,46 +236,22 @@ if (scope === "public") {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await page.evaluate(() => document.fonts.ready);
-    const notice = page.getByLabel("Chat history synchronization", {
-      exact: true,
-    });
-    await expect(
-      notice.getByRole("button", { name: "Retry chat sync", exact: true }),
-    ).toBeVisible();
-    await expect(notice).not.toHaveAttribute("aria-busy", "true");
-    const measure = () =>
-      page.evaluate(() => {
-        const notice = document.querySelector<HTMLElement>(
-          '[aria-label="Chat history synchronization"]',
-        )!;
-        return {
-          height: notice.getBoundingClientRect().height,
-          status: notice.querySelector('[role="status"]')?.textContent,
-          composerTop: document.querySelector(".spec400-composer")!.getBoundingClientRect().top,
-          buttons: Array.from(notice.querySelectorAll("button")).map((button) => ({
-            name: button.textContent?.trim(),
-            width: button.getBoundingClientRect().width,
-            height: button.getBoundingClientRect().height,
-          })),
-        };
-      });
-    const before = await measure();
+    const notice = page.getByLabel("Chat history synchronization", { exact: true });
+    const composer = page.locator(".spec400-composer");
+    await expect(composer).toBeVisible();
+    await expect(notice).toHaveCount(0);
+    const beforeTop = (await composer.boundingBox())!.top;
     hold = true;
     try {
       await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
-      await expect(notice).toHaveAttribute("aria-busy", "true");
-      const during = await measure();
-      expect(during.status).toBe(before.status);
-      expect(during.buttons).toEqual(before.buttons);
-      expect(Math.abs(during.height - before.height)).toBeLessThanOrEqual(1);
-      expect(Math.abs(during.composerTop - before.composerTop)).toBeLessThanOrEqual(1);
+      await expect(notice).toHaveCount(0);
+      const duringTop = (await composer.boundingBox())!.top;
+      expect(Math.abs(duringTop - beforeTop)).toBeLessThanOrEqual(1);
     } finally {
       release();
     }
-    await expect(notice).not.toHaveAttribute("aria-busy", "true");
-    const after = await measure();
-    expect(after.buttons).toEqual(before.buttons);
-    expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1);
+    await expect(notice).toHaveCount(0);
+    expect(Math.abs((await composer.boundingBox())!.top - beforeTop)).toBeLessThanOrEqual(1);
   });
 
   test("conversation loading keeps composer at the bottom", async ({ page }, info) => {
