@@ -73,7 +73,8 @@ export default function ChatImageViewer({
       if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
       setView((current) => {
-        const scale = Math.min(5, Math.max(1, current.scale + (event.deltaY < 0 ? 0.25 : -0.25)));
+        const delta = event.deltaY < 0 ? 0.25 : -0.25;
+        const scale = Math.min(5, Math.max(1, current.scale + delta));
         const image = imageRef.current;
         if (!image) return { ...current, scale };
         return clampImageView(
