@@ -81,6 +81,37 @@ The file is never uploaded, submitted, or copied to the web renderer
 automatically. Kova's remote website still has no Node, local filesystem,
 shell or IPC bridge.
 
-This is limited local-file integration, **not** a repository explorer, coding
-workspace, local terminal or computer-control agent. It still needs native OS
-acceptance testing.
+This separate clipboard action is intentionally limited. The dedicated offline
+coding workspace described below handles folder browsing and text editing.
+Neither surface provides a terminal or computer-control agent.
+
+## Local coding workspace — private repository editor
+
+**File → Open Local Coding Workspace** (Command/Ctrl+Shift+E) opens a separate
+offline Electron window with a repository tree, source-code editor, change
+preview, and explicit local save. The user must select a folder in a **native
+folder chooser**. Nothing is indexed or read before this approval.
+
+- The local renderer loads only `kova-local://workspace/index.html` and its
+  packaged script. It has a restrictive Content Security Policy, no network
+  connections, an independent Electron session, disabled permission grants,
+  sandboxing, context isolation and no Node integration. It cannot navigate
+  to `https://kovagpt.com` or open arbitrary windows.
+- The limited preload API is attached **only** to this local window. Every
+  privileged call requires the exact local main frame and originating
+  webContents. No remote website window has this preload or IPC access.
+- File browsing is restricted to the chosen canonical directory. Traversal,
+  hidden paths, symbolic links, binaries, unsupported extensions, and files
+  exceeding 512 KiB are rejected. Directory lists are bounded.
+- A source file must be explicitly opened before it can be edited. A change
+  preview shows its modified lines. **Saving requires a second native
+  confirmation** and refuses to overwrite any file changed since opening.
+  Files are replaced atomically; nothing is executed or sent to any provider.
+- Closing the workspace or folder clears the selected path and in-memory
+  authorization; authorization is not synchronized to the website.
+
+This adds a functional **local text repository explorer/editor and change
+preview**, not a Git branch/commit interface, local terminal, browser extension
+tab context, or computer-control system. Real multi-platform installation,
+keyboard accessibility, file locking, and signing/notarization acceptance remain
+outstanding before public release. The remote web app remains unchanged.
