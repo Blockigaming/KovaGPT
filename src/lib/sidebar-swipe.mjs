@@ -23,6 +23,9 @@ export function shouldSettleSidebarSwipe({ open, dx, dy, width, elapsedMs }) {
   );
 }
 
+// Tracks the pending release animation across React effect reinstalls.
+const sidebarSettleTimers = new WeakMap();
+
 /** The mobile drawer follows the finger without hijacking native scroll or text selection. */
 export function installInteractiveSidebarSwipe({
   open,
@@ -66,12 +69,23 @@ export function installInteractiveSidebarSwipe({
     drawer.style.setProperty("--kova-swipe-distance", translation);
     scrim.style.setProperty("--kova-swipe-progress", finalOpen ? "1" : "0");
     if (change) toggle();
-    // Keep the release animation alive across the React open-state render.
-    setTimeout(clearVisual, 280);
+    // Keep the release animation alive across the React open-state render,
+    // but let a fresh touch interrupt it instead of being dropped.
+    const timer = setTimeout(() => {
+      if (sidebarSettleTimers.get(drawer) !== timer) return;
+      sidebarSettleTimers.delete(drawer);
+      clearVisual();
+    }, 280);
+    sidebarSettleTimers.set(drawer, timer);
   };
   const start = (event) => {
     if (!isMobile() || event.touches.length !== 1 || !canStart(event)) return;
-    if (drawer.dataset.swipeDragging?.startsWith("settling")) return;
+    const pendingTimer = sidebarSettleTimers.get(drawer);
+    if (pendingTimer !== undefined) {
+      clearTimeout(pendingTimer);
+      sidebarSettleTimers.delete(drawer);
+      clearVisual();
+    }
     const finger = event.touches[0];
     if (!open && finger.clientX > 24) return;
     gesture = {
