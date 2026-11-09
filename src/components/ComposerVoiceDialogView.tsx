@@ -1,4 +1,3 @@
-import { useLayoutEffect, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { AudioLines, Captions, Info, Loader2, Mic, MicOff, X } from "lucide-react";
 
@@ -43,6 +42,8 @@ export interface ComposerVoiceDialogViewProps {
   recordingControl?: ReactNode;
   microphoneMuted?: boolean;
   onToggleMicrophoneMuted?: () => void;
+  captionsOpen?: boolean;
+  onCaptionsChange?: (open: boolean) => void;
   retryControl?: ReactNode;
   cancelControl?: ReactNode;
   transcriptReview?: ReactNode;
@@ -71,6 +72,8 @@ export function ComposerVoiceDialogView({
   recordingControl,
   microphoneMuted = false,
   onToggleMicrophoneMuted,
+  captionsOpen = false,
+  onCaptionsChange,
   retryControl,
   cancelControl,
   transcriptReview,
@@ -79,10 +82,6 @@ export function ComposerVoiceDialogView({
   useTranscriptControl,
   availabilityRetry,
 }: ComposerVoiceDialogViewProps) {
-  const [captionsOpen, setCaptionsOpen] = useState(false);
-  useLayoutEffect(() => {
-    if (!open) setCaptionsOpen(false);
-  }, [open]);
   const ready = availability === "ready";
   const processing = ready && phase !== "idle" && phase !== "recording";
   const hasError = Boolean(error);
@@ -210,7 +209,12 @@ export function ComposerVoiceDialogView({
             {ready && !contentFirst && (
               <div className="kova-voice-orb-shell" aria-hidden="true">
                 <div className="kova-voice-orb-glow" />
-                <div className="kova-voice-mark" />
+                <svg
+                  className="kova-voice-mark"
+                  viewBox="0 0 200 200"
+                  aria-hidden="true"
+                  focusable="false"
+                />
               </div>
             )}
             <h2 className="kova-voice-heading">{title}</h2>
@@ -325,7 +329,7 @@ export function ComposerVoiceDialogView({
                     aria-label={captionsOpen ? "Hide voice captions" : "Show voice captions"}
                     aria-pressed={captionsOpen}
                     title={captionsOpen ? "Hide captions" : "Show captions"}
-                    onClick={() => setCaptionsOpen((value) => !value)}
+                    onClick={() => onCaptionsChange?.(!captionsOpen)}
                   >
                     <Captions aria-hidden="true" />
                   </button>
