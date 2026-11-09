@@ -19,7 +19,7 @@ export function registerWorkspaceScheme(protocol) {
  * The local coding workspace has its own offline renderer, profile and allowlisted
  * IPC. No Kova website renderer receives this preload, filesystem access or IPC.
  */
-export function installLocalWorkspace({ BrowserWindow, ipcMain, session, dialog, assetsPath }) {
+export function installLocalWorkspace({ BrowserWindow, ipcMain, session, dialog, assetsPath, iconPath }) {
   const localSession = session.fromPartition("persist:kova-local-workspace");
   const filesystem = createLocalWorkspace();
   let window = null;
@@ -106,7 +106,7 @@ export function installLocalWorkspace({ BrowserWindow, ipcMain, session, dialog,
       minWidth: 720,
       minHeight: 520,
       backgroundColor: "#11131b",
-      icon: join(assetsPath, "kova-logo.png"),
+      icon: iconPath,
       webPreferences: {
         sandbox: true,
         contextIsolation: true,
