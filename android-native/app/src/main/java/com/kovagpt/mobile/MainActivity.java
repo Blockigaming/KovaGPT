@@ -12,6 +12,7 @@ import android.net.http.SslError;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.HapticFeedbackConstants;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -175,13 +176,35 @@ public final class MainActivity extends Activity {
         else web.loadUrl(HOME);
     }
 
+    private boolean nativeHapticsEnabled() {
+        return getSharedPreferences("kova-native-settings", MODE_PRIVATE)
+            .getBoolean("haptic-feedback", false);
+    }
+
+    private void confirmNativeAction() {
+        // View-owned haptics defer to the user's system touch-feedback preference.
+        if (nativeHapticsEnabled() && web != null)
+            web.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+    }
+
     @Override public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, 1, 0, "Share current page");
         menu.add(0, 2, 1, "About KovaGPT");
+        menu.add(0, 3, 2, "Haptic feedback")
+            .setCheckable(true).setChecked(nativeHapticsEnabled());
         return true;
     }
     @Override public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == 3) {
+            boolean enabled = !nativeHapticsEnabled();
+            getSharedPreferences("kova-native-settings", MODE_PRIVATE).edit()
+                .putBoolean("haptic-feedback", enabled).apply();
+            item.setChecked(enabled);
+            confirmNativeAction();
+            return true;
+        }
         if (item.getItemId() == 2) {
+            confirmNativeAction();
             String version;
             try {
                 version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
@@ -196,6 +219,7 @@ public final class MainActivity extends Activity {
             return true;
         }
         if (item.getItemId() != 1) return super.onOptionsItemSelected(item);
+        confirmNativeAction();
         Uri uri = Uri.parse(web.getUrl() == null ? HOME : web.getUrl());
         if (trusted(uri)) {
             Intent send = new Intent(Intent.ACTION_SEND);

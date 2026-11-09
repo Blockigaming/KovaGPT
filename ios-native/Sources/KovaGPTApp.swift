@@ -95,11 +95,14 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
     }
 
     @objc private func goBack() {
-        if browser.canGoBack { browser.goBack() }
+        guard browser.canGoBack else { return }
+        confirmNativeAction()
+        browser.goBack()
     }
 
     @objc private func sharePage() {
         guard let url = browser.url, isKova(url) else { return }
+        confirmNativeAction()
         share([url])
     }
 
@@ -112,15 +115,38 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         present(controller, animated: true)
     }
 
+    private let hapticsKey = "KovaGPTNativeHapticsEnabled"
+
+    private func confirmNativeAction() {
+        // Only native user actions use feedback. No browser script can trigger it.
+        guard UserDefaults.standard.bool(forKey: hapticsKey) else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
     @objc private func showAbout() {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
             as? String ?? "Unavailable"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion")
             as? String ?? "Unavailable"
-        showMessage("Version \(version) (build \(build))")
+        let enabled = UserDefaults.standard.bool(forKey: hapticsKey)
+        let alert = UIAlertController(
+            title: "About KovaGPT",
+            message: "Version \(version) (build \(build))",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(
+            title: enabled ? "Turn haptics off" : "Turn haptics on",
+            style: .default
+        ) { _ in
+            UserDefaults.standard.set(!enabled, forKey: self.hapticsKey)
+            if !enabled { self.confirmNativeAction() }
+        })
+        alert.addAction(UIAlertAction(title: "Close", style: .cancel))
+        present(alert, animated: true)
     }
 
     @objc private func scanDocument() {
+        confirmNativeAction()
         guard VNDocumentCameraViewController.isSupported else {
             showMessage("Document scanning is not supported on this device.")
             return
