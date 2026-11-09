@@ -127,7 +127,9 @@ test("chat keeps its draft without mounting the retired floating Work launcher",
   await expect(
     page.getByRole("button", { name: "Prepare or manage Work", exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "Work from this chat", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: "Work from this chat", exact: true }),
+  ).toHaveCount(0);
   await expect(composer).toHaveValue("Review this synthetic launch request");
   expect(commands).toEqual([]);
 });
