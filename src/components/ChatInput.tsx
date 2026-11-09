@@ -78,7 +78,7 @@ import {
 } from "@/components/ui/dialog";
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
-import { sketchMentionStart } from "@/lib/composer-sketch-mention.mjs";
+import { sketchMentionStart, trailingComposerMention } from "@/lib/composer-sketch-mention.mjs";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
@@ -432,9 +432,9 @@ export function ChatInput({
     setDismissedSketchText(null);
     setDrawingOpen(true);
   };
-  const toolMentionMatch = /(?:^|\s)@([a-z]*)$/i.exec(value);
-  const toolMentionQuery = toolMentionMatch?.[1]?.toLowerCase() ?? "";
-  const toolMentionAt = toolMentionMatch ? value.length - toolMentionQuery.length - 1 : -1;
+  const toolMention = trailingComposerMention(value);
+  const toolMentionQuery = toolMention?.query ?? "";
+  const toolMentionAt = toolMention?.start ?? -1;
   const matchingToolMentions = COMPOSER_TOOLS.filter((tool) =>
     COMPOSER_TOOL_MENTIONS[tool.id].some((alias) => alias.startsWith(toolMentionQuery)),
   );
