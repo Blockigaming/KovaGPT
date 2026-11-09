@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { stripTypeScriptTypes } from "node:module";
-async function fixture(save = async () => true) {
+async function fixture(save = async () => true, ready = true) {
   const events = [],
     chat = { id: "chat-a", messages: [], title: "A" },
     key = crypto.randomUUID();
   const mocks = {
+    canSendChatHistory: () => ready,
     toast: {
       success: (...v) => events.push(["success", ...v]),
       error: (...v) => events.push(["error", ...v]),
@@ -63,6 +64,12 @@ test("an action delayed across account clear cannot persist or change the new vi
   f.clear();
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(f.events, []);
+});
+test("deleting before the history writer is ready gives feedback and preserves the chat", async () => {
+  const f = await fixture(async () => true, false);
+  await f.module.removeHomeChat(f.context, f.chat.id);
+  assert.deepEqual(f.events.map((row) => row[0]), ["error"]);
+  assert.match(f.events[0][1], /Chat history is still loading/);
 });
 test("deletion clears the active view before the grace period and removes it only after a committed delete", async () => {
   const f = await fixture();
