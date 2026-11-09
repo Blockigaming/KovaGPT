@@ -206,9 +206,6 @@ test("email entry uses the existing auth route and does not submit a real accoun
   expect(interceptedStripeNavigations).toBe(1);
   await page.screenshot({ path: `${evidence}/checkout-handoff-mocked.png` });
 });
-).toBeVisible();
-  expect(stripeRequests).toEqual([]);
-});
 
 // These are raw browser captures used to review and update the intentional
 // signed-out design change. The normal visual suite still compares committed baselines.
