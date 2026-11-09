@@ -72,7 +72,8 @@ export const CONNECTION_FLOWS = {
     scopes: ["design:meta:read"],
     tool: "canva_search",
     label: "Canva",
-    description: "Search titles of designs available to your authorized Canva account. Metadata only; no design contents or access links.",
+    description:
+      "Search titles of designs available to your authorized Canva account. Metadata only; no design contents or access links.",
   },
   calendly: {
     provider: "calendly",
