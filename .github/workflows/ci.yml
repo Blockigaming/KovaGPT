@@ -141,9 +141,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Avoid apt-mirror hangs; keep all three engines and fail on any
-          # missing native runtime library when the browser suites launch.
-          npx --no-install playwright install chromium firefox webkit
+          # WebKit, Firefox and Chromium require native Linux packages as well
+          # as browser binaries. A binaries-only install fails 42 smoke checks.
+          # Avoid Azure-hosted apt mirrors and fail boundedly on network errors.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\\tpriority:1\\nhttps://security.ubuntu.com/ubuntu/\\tpriority:2\\n' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
+          printf 'Acquire::Retries "2"; Acquire::http::Timeout "25"; Acquire::https::Timeout "25";\\n' | sudo tee /etc/apt/apt.conf.d/99-playwright-timeouts >/dev/null
+          timeout --signal=TERM --kill-after=10s 360s npx --no-install playwright install --with-deps chromium firefox webkit
 
       - name: Integration tests
         id: integration
