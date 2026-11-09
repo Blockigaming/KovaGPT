@@ -23,3 +23,23 @@ Remote renderers have sandboxing, context isolation and web security enabled, wi
 Before public distribution, install the artifacts on each target OS and verify password sign-in, window persistence, `kovagpt://open`, attachment selection, drawing, voice permissions and sign-out. Google sign-in through a system browser needs a separately reviewed session handoff; embedded Google login is not certified. macOS needs Developer ID signing and notarization, Windows needs a trusted signing certificate, and the public download page should link only to a verified release. There is no native background execution or native auto-updater in this preview. Updating the website updates its rendered UI; Electron security updates require a new package.
 
 Official references: [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [packaging](https://www.electronjs.org/docs/latest/tutorial/application-distribution), [protocol lifecycle](https://www.electronjs.org/docs/latest/api/app#event-open-url-macos), [electron-builder configuration](https://www.electron.build/configuration/).
+
+## Companion window and installed-app settings
+
+The **Companion → Open Companion Window** menu opens a separate floating,
+resizable Electron window. The global shortcut defaults to Option+Space on
+macOS and Alt+Space on Windows, with a safer Control+Shift+Space default on
+Linux. If the OS reserves a combination, the app tries a fallback and lets the
+user choose a reviewed alternative or disable the global shortcut in
+**Companion → Keyboard shortcut**. Preferences contain only the shortcut
+choice and are saved in the native app's user-data directory.
+
+The companion uses the same isolated session and the same sandboxed remote
+renderer. It has no preload, Node integration, OS shell command bridge or
+privileged filesystem access. Kova-only navigation rules apply to both windows.
+
+Packaged macOS and Windows apps include **Companion → Launch at login**.
+It invokes the operating system's login-item API and verifies the result.
+Unsigned/unpackaged previews and Linux do not claim automatic startup.
+Installation tests must confirm the actual OS shortcut, window focus,
+permission prompts and launch-item persistence before public distribution.
