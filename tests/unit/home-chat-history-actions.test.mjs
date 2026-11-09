@@ -68,7 +68,10 @@ test("an action delayed across account clear cannot persist or change the new vi
 test("early chat deletion gives feedback without removing history", async () => {
   const f = await fixture(async () => true, false);
   await f.module.removeHomeChat(f.context, f.chat.id);
-  assert.deepEqual(f.events.map((row) => row[0]), ["error"]);
+  assert.deepEqual(
+    f.events.map((row) => row[0]),
+    ["error"],
+  );
   assert.match(f.events[0][1], /Chat history is still loading/);
 });
 test("deletion clears the active view before the grace period and removes it only after a committed delete", async () => {
