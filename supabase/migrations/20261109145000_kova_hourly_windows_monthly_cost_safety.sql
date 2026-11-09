@@ -77,7 +77,7 @@ grant execute on function public.try_consume_paid_message(uuid,boolean,integer,i
   to service_role;
 
 -- Single server-owned source for cost-weighted quota progress and admission.
--- Costs are conservative: the greater of actual and reserved estimated spend.
+-- Pending requests charge reserved estimates; finalized receipts use actual cost.
 -- User-supplied amounts and client percentages cannot influence this query.
 create or replace function public.kova_plan_cost_progress(
   _user_id uuid, _plan text, _asof timestamptz default statement_timestamp()
@@ -109,10 +109,10 @@ begin
   end;
   five_start := greatest(month_start,hourly_start-interval '4 hours');
   select
-    coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0))),0),
-    coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0)))
+    coalesce(sum(coalesce(actual_cost_usd,estimated_cost_usd)),0),
+    coalesce(sum(coalesce(actual_cost_usd,estimated_cost_usd))
       filter (where created_at>=greatest(month_start,week_start)),0),
-    coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0)))
+    coalesce(sum(coalesce(actual_cost_usd,estimated_cost_usd))
       filter (where created_at>=five_start),0)
   into month_used,weekly_used,five_hour_used
   from public.ai_usage_events
