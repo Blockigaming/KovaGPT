@@ -36,6 +36,9 @@ begin
   end if;
 
   perform pg_advisory_xact_lock(hashtextextended(_user_id::text, 20261104223000));
+  -- Discard expired per-user hourly buckets so storage never grows unbounded.
+  delete from public.message_usage_hourly
+    where user_id=_user_id and window_start<five_hour_start;
 
   select coalesce(sum(case when _thinking then thinking_chats else chats - thinking_chats end), 0)
     into weekly_count from public.daily_usage
