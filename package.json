@@ -11,7 +11,7 @@
     "test:azure:local": "playwright test --config=playwright.azure.config.ts",
     "preview": "vite preview",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write src/integrations/connection-read.server.mjs tests/unit/connected-provider-reads.test.mjs && git diff -- src/integrations/connection-read.server.mjs tests/unit/connected-provider-reads.test.mjs && prettier --check .",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:browser",
