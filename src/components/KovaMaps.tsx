@@ -19,6 +19,8 @@ import { MAPS_RELEASE_APPROVED, MAPS_RELEASE_UNAVAILABLE_MESSAGE } from "@/lib/m
 import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
 
 const VECTOR_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const STARTUP_TIMEOUT_MESSAGE =
+  "Map data is taking too long to load. Check your connection and try again.";
 const SATELLITE_STYLE = {
   version: 8 as const,
   sources: {
@@ -287,7 +289,7 @@ export function KovaMaps() {
         loadTimeout = window.setTimeout(() => {
           if (!isCurrentMap()) return;
           setLoading(false);
-          setError("Map data is taking too long to load. Check your connection and try again.");
+          setError((current) => current ?? STARTUP_TIMEOUT_MESSAGE);
         }, 12_000);
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
         map.addControl(new maplibregl.FullscreenControl(), "top-right");
@@ -314,7 +316,8 @@ export function KovaMaps() {
           addMapEnhancements(map, threeDRef.current);
           mapReadyRef.current = true;
           setMapReady(true);
-          setError(null);
+          // A late load resolves the startup timeout, not provider/resource failures.
+          setError((current) => (current === STARTUP_TIMEOUT_MESSAGE ? null : current));
           setLoading(false);
           updateView();
         });
