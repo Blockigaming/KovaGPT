@@ -54,7 +54,10 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
             .select("regular_messages, thinking_messages")
             .eq("user_id", context.userId)
             .gte("window_start", short.start)
-            .lte("window_start", new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000).toISOString())
+            .lte(
+              "window_start",
+              new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000).toISOString(),
+            )
             .abortSignal(AbortSignal.timeout(10_000))
         : null,
       loose(supabaseAdmin)
@@ -87,17 +90,23 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
     );
     const costState = costProgress.data?.[0] as
       | {
-          weekly_used: number;
-          weekly_allowance: number;
-          five_hour_used: number;
-          five_hour_allowance: number | null;
+          weekly_used: number | string;
+          weekly_allowance: number | string;
+          five_hour_used: number | string;
+          five_hour_allowance: number | string | null;
         }
       | undefined;
     if (!costState) throw new Error("Usage data is temporarily unavailable.");
-    const asPercent = (used: number, allowance: number | null) =>
-      allowance !== null && Number.isFinite(used) && Number.isFinite(allowance) && allowance > 0
-        ? Math.min(100, Math.max(0, Math.ceil((100 * used) / allowance)))
+    const asPercent = (used: number | string, allowance: number | string | null) => {
+      const consumed = Number(used);
+      const capacity = Number(allowance);
+      return allowance !== null &&
+        Number.isFinite(consumed) &&
+        Number.isFinite(capacity) &&
+        capacity > 0
+        ? Math.min(100, Math.max(0, Math.ceil((100 * consumed) / capacity)))
         : 0;
+    };
     return {
       tier,
       usageMultiplier,
