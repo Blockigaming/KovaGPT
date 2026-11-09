@@ -500,12 +500,12 @@ button.kova-sidebar-scrim {
     visibility: visible !important;
     pointer-events: none;
   }
-  .kova-sidebar[data-swipe-dragging="opening"],
-  .kova-sidebar[data-swipe-dragging="settling-opening"] {
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="opening"],
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="settling-opening"] {
     transform: translateX(calc(-100% + var(--kova-swipe-distance, 0px)));
   }
-  .kova-sidebar[data-swipe-dragging="closing"],
-  .kova-sidebar[data-swipe-dragging="settling-closing"] {
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="closing"],
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="settling-closing"] {
     transform: translateX(var(--kova-swipe-distance, 0px));
   }
   .kova-sidebar[data-swipe-dragging="opening"],
