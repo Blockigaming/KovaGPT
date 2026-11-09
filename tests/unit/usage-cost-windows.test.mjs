@@ -36,6 +36,9 @@ async function fixture() {
   );
   await db.exec(baseline);
   await db.exec(readFileSync(sqlPath, "utf8"));
+  // The synthetic fixture creates daily_usage without historical production
+  // grants. Give the same table access to the server role as production.
+  await db.exec("grant select, insert, update on public.daily_usage to service_role");
   await db.exec("set role service_role");
   return db;
 }
