@@ -8,15 +8,15 @@ in merged PR #627.
 
 ## Exact model foundations
 
-| Kova consumer model | OpenAI Responses foundation | Tiers |
-| --- | --- | --- |
-| Argon 4.6 | gpt-6-luna | Free, Plus, Pro |
-| Neon 4.6 | gpt-6.1-terra | Plus, Pro |
-| Xenon 5 | gpt-6.1-sol | Plus, Pro |
-| Argon 4.5 | gpt-5.6-luna | Plus, Pro |
-| Neon 4.5 | gpt-5.6-terra | Plus, Pro |
-| Xenon 4.6 | gpt-6-sol | Plus, Pro |
-| Xenon 6.1 | gpt-6-astra | Plus, Pro |
+| Kova consumer model | OpenAI Responses foundation | Tiers           |
+| ------------------- | --------------------------- | --------------- |
+| Argon 4.6           | gpt-6-luna                  | Free, Plus, Pro |
+| Neon 4.6            | gpt-6.1-terra               | Plus, Pro       |
+| Xenon 5             | gpt-6.1-sol                 | Plus, Pro       |
+| Argon 4.5           | gpt-5.6-luna                | Plus, Pro       |
+| Neon 4.5            | gpt-5.6-terra               | Plus, Pro       |
+| Xenon 4.6           | gpt-6-sol                   | Plus, Pro       |
+| Xenon 6.1           | gpt-6-astra                 | Plus, Pro       |
 
 Kova owns product identities; OpenAI develops the foundations. The seven
 aliases route through Kova's fixed, server-side OpenAI Responses transport,
