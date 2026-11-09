@@ -17,6 +17,7 @@ async function fixture() {
     setAsDefaultProtocolClient() {},
     quit() {},
     isPackaged: true,
+    getPath: () => "/tmp/kovagpt-tests",
   });
   const windows = [],
     external = [],
@@ -53,12 +54,16 @@ async function fixture() {
   const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8")
     .replace(
       /^import .* from "electron";$/m,
-      "const { app, BrowserWindow, dialog, Menu, session, shell } = electron;",
+      "const { app, BrowserWindow, dialog, globalShortcut, Menu, session, shell } = electron;",
     )
     .replace(/^import .* from "node:path";$/m, "const join = (...parts) => parts.join('/');")
     .replace(
+      /^import .* from "node:fs";$/m,
+      "const readFileSync = () => { throw new Error('No saved preferences'); }; const writeFileSync = () => {};",
+    )
+    .replace(
       /^import [\s\S]*?from "\.\/policy\.mjs";$/m,
-      "const { KOVA_URL, isKovaUrl, isOpenAppLink, externalUrl, WEB_PREFERENCES } = policy;",
+      "const { KOVA_URL, isKovaUrl, isOpenAppLink, externalUrl, WEB_PREFERENCES, COMPANION_SHORTCUTS, defaultCompanionShortcut, validatedCompanionShortcut } = policy;",
     );
   vm.runInNewContext(source, {
     policy,
@@ -67,6 +72,11 @@ async function fixture() {
     electron: {
       app,
       BrowserWindow: Window,
+      globalShortcut: {
+        register: () => true,
+        unregister() {},
+        unregisterAll() {},
+      },
       dialog: {
         showMessageBox: async (_window, options) => {
           prompts.push(options);
