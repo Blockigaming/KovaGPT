@@ -5,7 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 
 const owner = "11111111-1111-4111-8111-111111111111";
-const migrationFile = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
+const sqlPath = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
 
 async function fixture() {
   const db = new PGlite();
@@ -30,9 +30,12 @@ async function fixture() {
           thinking_chats=daily_usage.thinking_chats+case when $2 then 1 else 0 end;
         return true;
       end$$;`);
-  const baseline = readFileSync("supabase/migrations/20260803130000_ai_usage_accounting.sql", "utf8");
+  const baseline = readFileSync(
+    "supabase/migrations/20260803130000_ai_usage_accounting.sql",
+    "utf8",
+  );
   await db.exec(baseline);
-  await db.exec(readFileSync(migrationFile, "utf8"));
+  await db.exec(readFileSync(sqlPath, "utf8"));
   await db.exec("set role service_role");
   return db;
 }
