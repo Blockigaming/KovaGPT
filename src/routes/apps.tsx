@@ -1224,6 +1224,57 @@ function AppsPage() {
     return false;
   };
 
+  // A granted OAuth scope only establishes account authorization. This
+  // explicit, owner-bound probe performs one real read against the selected
+  // provider API. Empty results are valid; malformed or denied reads are not.
+  const verifyGoogleApi = async (id: string) => {
+    if (
+      !["gmail", "google-calendar", "google-drive"].includes(id) ||
+      !activityReady ||
+      !principal ||
+      !userKey ||
+      googleBusyRef.current ||
+      googleLoading ||
+      !isGoogleConnected(id) ||
+      !visibleGoogleStatus?.selectedConnectionId
+    )
+      return;
+    const connectionId = visibleGoogleStatus.selectedConnectionId;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
+    const current = () =>
+      generation === generationRef.current && principalRef.current === requestPrincipal;
+    const label = id === "gmail" ? "Gmail" : id === "google-calendar" ? "Google Calendar" : "Google Drive";
+    googleBusyRef.current = true;
+    setGoogleBusy(true);
+    setGoogleApiCheck(id);
+    try {
+      if (id === "gmail") {
+        const response = await gmailSearch("in:anywhere", 1, connectionId);
+        if (!Array.isArray(response.messages)) throw new Error("invalid_gmail_verification");
+      } else if (id === "google-calendar") {
+        const response = await calendarList({ maxResults: 1, connectionId });
+        if (!Array.isArray(response.events)) throw new Error("invalid_calendar_verification");
+      } else {
+        const response = await driveSearch("Kova connection verification", 1, connectionId);
+        if (!Array.isArray(response.files)) throw new Error("invalid_drive_verification");
+      }
+      if (current()) {
+        recordActivity(label, "Authorized API read succeeded");
+        toast.success(`${label} API read verified for the selected account.`);
+        await refreshGoogle();
+      }
+    } catch {
+      if (current()) toast.error(`${label} API read failed. Review permissions or reconnect.`);
+    } finally {
+      if (current()) {
+        setGoogleApiCheck(null);
+        googleBusyRef.current = false;
+        setGoogleBusy(false);
+      }
+    }
+  };
+
   const refreshGitHub = useCallback(
     async (showError = true): Promise<boolean> => {
       if (!isLoaded || !principal || !userKey) return false;
@@ -1674,6 +1725,24 @@ function AppsPage() {
                             ? "Connect another account"
                             : "Connect"}
                       </Button>
+                      {["gmail", "google-calendar", "google-drive"].includes(
+                        visibleSelectedApp.id,
+                      ) && (
+                        <Button
+                          variant="outline"
+                          disabled={
+                            googleBusy ||
+                            visibleGoogleLoading ||
+                            stateOf(visibleSelectedApp.id) !== "connected" ||
+                            !visibleGoogleStatus?.selectedConnectionId
+                          }
+                          onClick={() => void verifyGoogleApi(visibleSelectedApp.id)}
+                        >
+                          {googleApiCheck === visibleSelectedApp.id
+                            ? "Checking actual API read…"
+                            : "Verify API read"}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         disabled={googleBusy || visibleGoogleLoading}
