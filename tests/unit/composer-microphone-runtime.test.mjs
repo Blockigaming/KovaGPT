@@ -1,4 +1,5 @@
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
@@ -123,6 +124,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
     "@/lib/composer-keyboard-inset.mjs": keyboardInset,
+    "@/lib/consumer-model-selection.mjs": consumerModelSelection,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
       tryUseUpload: () => {
