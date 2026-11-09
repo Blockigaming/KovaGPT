@@ -26,6 +26,7 @@ async function fixture(platform = "linux") {
     prompts = [],
     menus = [],
     copiedImages = [],
+    copiedTexts = [],
     trays = [],
     dockEvents = [];
   app.dock = {
@@ -83,10 +84,13 @@ async function fixture(platform = "linux") {
       /^import \{[\s\S]*?\} from "electron";$/m,
       "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
     )
-    .replace(/^import .* from "node:path";$/m, "const join = (...parts) => parts.join('/');")
+    .replace(
+      /^import .* from "node:path";$/m,
+      "const join = (...parts) => parts.join('/'); const basename = (path) => path.split('/').pop();",
+    )
     .replace(
       /^import .* from "node:fs";$/m,
-      "const readFileSync = () => { throw new Error('No saved preferences'); }; const writeFileSync = () => {};",
+      "const readFileSync = (path) => { if (path === '/tmp/example.ts') return 'export const test = 42;'; throw new Error('No saved preferences'); }; const statSync = (path) => ({ isFile: () => path === '/tmp/example.ts', size: 23 }); const writeFileSync = () => {};",
     )
     .replace(
       /^import [\s\S]*?from "\.\/policy\.mjs";$/m,
@@ -109,7 +113,10 @@ async function fixture(platform = "linux") {
           setTemplateImage() {},
         }),
       },
-      clipboard: { writeImage: (image) => copiedImages.push(image) },
+      clipboard: {
+        writeImage: (image) => copiedImages.push(image),
+        writeText: (value) => copiedTexts.push(value),
+      },
       desktopCapturer: {
         getSources: async () => [{ thumbnail: { isEmpty: () => false } }],
       },
@@ -120,6 +127,7 @@ async function fixture(platform = "linux") {
         unregisterAll() {},
       },
       dialog: {
+        showOpenDialog: async () => ({ canceled: false, filePaths: ["/tmp/example.ts"] }),
         showMessageBox: async (_window, options) => {
           prompts.push(options);
           return { response: 1 };
@@ -161,6 +169,7 @@ async function fixture(platform = "linux") {
     windows,
     menus,
     copiedImages,
+    copiedTexts,
     trays,
     dockEvents,
   };
@@ -324,4 +333,19 @@ test("additional native windows still reject local protocols and confirm offsite
   await new Promise(setImmediate);
   assert.deepEqual(f.external, ["https://example.com/help"]);
   assert.equal(f.prompts.at(-1).title, "Open in your browser?");
+});
+
+test("local-source import requires a chosen file and a second native clipboard choice", async () => {
+  const f = await fixture();
+  const file = f.menus[0].find((item) => item.label === "File");
+  const copy = file.submenu.find((item) => item.label === "Copy local source file...");
+  assert.ok(copy);
+  assert.equal(f.copiedTexts.length, 0);
+  copy.click();
+  await new Promise(setImmediate);
+  assert.equal(f.prompts.at(-1).title, "Copy this local file?");
+  assert.equal(f.copiedTexts.length, 1);
+  assert.equal(f.copiedTexts[0], "export const test = 42;");
+  assert.equal(f.window.options.webPreferences.preload, undefined);
+  assert.equal(f.window.options.webPreferences.nodeIntegration, false);
 });
