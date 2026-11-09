@@ -6,6 +6,9 @@ export type OAuthProviderId =
   | "linear"
   | "dropbox"
   | "box"
+  | "calendly"
+  | "figma"
+  | "canva"
   | "oura"
   | "whoop"
   | "salesforce";
@@ -27,6 +30,60 @@ export type OAuthProviderAdapter = {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  canva: {
+    id: "canva",
+    name: "Canva",
+    authorizationEndpoint: "https://www.canva.com/api/oauth/authorize",
+    tokenEndpoint: "https://api.canva.com/rest/v1/oauth/token",
+    clientIdEnv: "CANVA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CANVA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["design:meta:read"],
+    optionalScopes: ["profile:read"],
+    usesPkce: true,
+    profileEndpoint: "https://api.canva.com/rest/v1/users/me",
+    profileId: (v) => {
+      const user = v.team_user as Record<string, unknown> | undefined;
+      const id = text(user?.user_id);
+      const teamId = text(user?.team_id);
+      return id && teamId ? `${teamId}:${id}` : "";
+    },
+    profileLabel: () => "Canva account",
+  },
+  figma: {
+    id: "figma",
+    name: "Figma",
+    authorizationEndpoint: "https://www.figma.com/oauth",
+    tokenEndpoint: "https://api.figma.com/v1/oauth/token",
+    clientIdEnv: "FIGMA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "FIGMA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["current_user:read", "file_metadata:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.figma.com/v1/me",
+    profileId: (v) => text(v.id),
+    profileLabel: (v) => text(v.handle) || "Figma account",
+  },
+  calendly: {
+    id: "calendly",
+    name: "Calendly",
+    authorizationEndpoint: "https://auth.calendly.com/oauth/authorize",
+    tokenEndpoint: "https://auth.calendly.com/oauth/token",
+    clientIdEnv: "CALENDLY_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CALENDLY_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["users:read", "scheduled_events:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.calendly.com/users/me",
+    profileId: (v) => {
+      const resource = v.resource as Record<string, unknown> | undefined;
+      const uri = text(resource?.uri);
+      return /^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]+$/u.test(uri) ? uri : "";
+    },
+    profileLabel: (v) => {
+      const resource = v.resource as Record<string, unknown> | undefined;
+      return text(resource?.name) || text(resource?.email) || "Calendly account";
+    },
+  },
   salesforce: {
     id: "salesforce",
     name: "Salesforce",
@@ -177,8 +234,9 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     revocationEndpoint: "https://api.dropboxapi.com/2/auth/token/revoke",
     clientIdEnv: "DROPBOX_OAUTH_CLIENT_ID",
     clientSecretEnv: "DROPBOX_OAUTH_CLIENT_SECRET",
-    requiredScopes: ["account_info.read", "files.metadata.read", "files.content.read"],
-    optionalScopes: ["files.content.write"],
+    // Metadata search needs account identity and file names, not file bodies.
+    requiredScopes: ["account_info.read", "files.metadata.read"],
+    optionalScopes: ["files.content.read", "files.content.write"],
     usesPkce: true,
     profileEndpoint: "https://api.dropboxapi.com/2/users/get_current_account",
     profileId: (v) => text(v.account_id),
@@ -194,7 +252,9 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientSecretEnv: "BOX_OAUTH_CLIENT_SECRET",
     requiredScopes: ["root_readonly"],
     optionalScopes: ["root_readwrite"],
-    usesPkce: true,
+    // Box's classic confidential-client OAuth flow does not support PKCE.
+    // Keep browser-bound, single-use state and server-side client authentication.
+    usesPkce: false,
     profileEndpoint: "https://api.box.com/2.0/users/me",
     profileId: (v) => text(v.id),
     profileLabel: (v) => text(v.login) || text(v.name),

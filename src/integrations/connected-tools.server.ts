@@ -11,7 +11,11 @@ import {
 } from "./oauth-providers.server";
 import { decryptCredential, encryptCredential } from "./credential-vault.server";
 import { readConnection } from "./connection-read.server.mjs";
-import { oauthRefreshRequest, selectRefreshTokens } from "./oauth-token-request.server.mjs";
+import {
+  oauthRefreshEndpoint,
+  oauthRefreshRequest,
+  selectRefreshTokens,
+} from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
 import type { GitHubChatContext } from "@/lib/github-chat-read.server.mjs";
@@ -28,7 +32,7 @@ export type ConnectedToolContext = {
   github?: GitHubChatContext;
 };
 const accountColumns =
-  "id,provider_id,account_label,status,granted_scopes,token_expires_at,updated_at";
+  "id,provider_id,provider_account_id,account_label,status,granted_scopes,token_expires_at,updated_at";
 // Narrow types for the existing connector tables, which are absent from the
 // generated application Database type. No schema change is required.
 type AccountRow = BoundAccount & {
@@ -98,9 +102,20 @@ export async function refreshExpiringConnection(
     (!(forceRejectedRead && ["salesforce", "notion"].includes(row.provider_id)) &&
       (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
     !row.refresh_token_ciphertext ||
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion"].includes(
-      row.provider_id,
-    )
+    ![
+      "microsoft",
+      "linear",
+      "slack",
+      "oura",
+      "whoop",
+      "salesforce",
+      "notion",
+      "dropbox",
+      "box",
+      "calendly",
+      "figma",
+      "canva",
+    ].includes(row.provider_id)
   )
     return null;
   const provider = OAUTH_PROVIDERS[row.provider_id as OAuthProviderId];
@@ -150,7 +165,7 @@ export async function refreshExpiringConnection(
     const response = await fetch(
       oldSalesforceCredential
         ? salesforceOAuthEndpoint(oldSalesforceCredential, "token")
-        : provider.tokenEndpoint,
+        : oauthRefreshEndpoint(provider.id, provider.tokenEndpoint),
       oauthRefreshRequest({
         providerId: provider.id,
         clientId: process.env[provider.clientIdEnv],
@@ -353,7 +368,11 @@ export async function runConnectionAccountSearch(
   let token = await decryptCredential(account.access_token_ciphertext);
   await ensureCurrentBinding();
   const options =
-    id === "salesforce" ? { recordType: args.record_type as SalesforceRecordType | undefined } : {};
+    id === "salesforce"
+      ? { recordType: args.record_type as SalesforceRecordType | undefined }
+      : id === "calendly"
+        ? { calendlyExpectedUserUri: account.provider_account_id }
+        : {};
   let result;
   try {
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
@@ -403,6 +422,29 @@ export async function runConnectionAccountSearch(
     safe_summary: `Read ${flow.label} search results`,
   });
   if (auditError) throw new Error("connection_audit_unavailable");
+  await ensureCurrentBinding();
+  // Only an actual authorized provider API read can establish operational
+  // success. Bind this write to the same owner, grant version and encrypted
+  // credential so a concurrent disconnect or reconnect cannot inherit it.
+  const verifiedAt = new Date().toISOString();
+  const { data: verified, error: verificationError } = await db
+    .from("integration_linked_accounts")
+    .update({
+      health_checked_at: verifiedAt,
+      last_success_at: verifiedAt,
+      last_error_code: null,
+    })
+    .eq("id", account.id)
+    .eq("owner_id", ownerId)
+    .eq("provider_id", flow.provider)
+    .eq("status", "connected")
+    .eq("updated_at", account.updated_at)
+    .eq("access_token_ciphertext", account.access_token_ciphertext)
+    .is("workspace_id", null)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+  if (verificationError || !verified) throw new Error("connection_verification_store_failed");
   await ensureCurrentBinding();
   return result;
 }

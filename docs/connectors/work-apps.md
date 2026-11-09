@@ -1,6 +1,6 @@
 # Work app connections
 
-The Connections page lists twelve work apps. Implemented operations are enabled only when the server configuration and the current user's provider consent are valid. Provider registration, credentials, owner consent and a successful real read must all be verified before describing a connection as live.
+The Connections page lists supported work and storage integrations alongside planned providers. Implemented operations are enabled only when the server configuration and the current user's provider consent are valid. Provider registration, credentials, owner consent and a successful real read must all be verified before describing a connection as live.
 
 Google and GitHub use their dedicated connection flows. Microsoft covers Outlook, OneDrive, SharePoint and Teams. Notion, Linear, Slack and Salesforce use the shared OAuth account lifecycle. Credentials belong in the deployment's server secret manager.
 
@@ -11,6 +11,9 @@ Google and GitHub use their dedicated connection flows. Microsoft covers Outlook
 | Linear     | `https://kovagpt.com/api/integrations/oauth/callback/linear`     | `LINEAR_OAUTH_CLIENT_ID`, `LINEAR_OAUTH_CLIENT_SECRET`         | Issue title search with the `read` scope                                                             |
 | Slack      | `https://kovagpt.com/api/integrations/oauth/callback/slack`      | `SLACK_OAUTH_CLIENT_ID`, `SLACK_OAUTH_CLIENT_SECRET`           | Message search with the user's `search:read` token                                                   |
 | Salesforce | `https://kovagpt.com/api/integrations/oauth/callback/salesforce` | `SALESFORCE_OAUTH_CLIENT_ID`, `SALESFORCE_OAUTH_CLIENT_SECRET` | Name search over an explicitly selected Account, Contact or Opportunity record type                  |
+| Dropbox    | `https://kovagpt.com/api/integrations/oauth/callback/dropbox`    | `DROPBOX_OAUTH_CLIENT_ID`, `DROPBOX_OAUTH_CLIENT_SECRET`       | Bounded file/folder metadata search with `files.metadata.read`; refresh needs offline authorization  |
+| Box        | `https://kovagpt.com/api/integrations/oauth/callback/box`        | `BOX_OAUTH_CLIENT_ID`, `BOX_OAUTH_CLIENT_SECRET`               | Bounded file search; access is controlled by the Box app's read scope and account permissions        |
+| Calendly   | `https://kovagpt.com/api/integrations/oauth/callback/calendly`   | `CALENDLY_OAUTH_CLIENT_ID`, `CALENDLY_OAUTH_CLIENT_SECRET`     | Read-only name matching among the latest 100 scheduled events, up to 10 results                      |
 
 Provider settings can require administrator consent, workspace installation, public distribution approval, verification or account eligibility. Configuring an app for one workspace does not prove it can be installed by other workspaces.
 
@@ -25,6 +28,18 @@ The OAuth callback verifies UserInfo before storing the credential. The access t
 Salesforce session expiration is controlled by the organization. Kova does not invent an expiry when `expires_in` is absent. A rejected API read can claim a refresh once, verify the same organization and user again, persist the renewed encrypted credential, and retry that read once. Disconnect, reconnect, owner changes, workspace changes, configuration removal and Lockdown invalidate an in-flight operation. A failed or uncertain refresh requires reconnecting; it is not replayed.
 
 Disconnection attempts Salesforce's token-revocation endpoint on the validated Salesforce origin. The UI distinguishes confirmed remote revocation from removal of Kova's local credential.
+
+## Dropbox and Box operational checks
+
+The shared encrypted-token lifecycle requires `CONNECTOR_TOKEN_ENCRYPTION_KEY` plus each provider's OAuth client credentials. Register the exact callback URI above with the provider, and store credentials as server secrets. Dropbox's `token_access_type=offline` permits refresh tokens. Box's classic confidential-client OAuth flow does not use PKCE; its read access is configured in the Box developer application. Box may require administrator approval.
+
+A successful OAuth profile request records the linked identity but **does not** mark an API read verified. Kova records `last_success_at` and `health_checked_at` only after a successful authorized, audited API read of that same account/grant. For multi-service providers, this timestamp proves that some provider API operation succeeded, not that every service permission works.
+
+## Calendly operational checks
+
+Calendly requires an OAuth app registered in its production environment with the exact HTTPS callback in the table, `users:read` and `scheduled_events:read` scopes, and mandatory PKCE S256. The server exchanges and refreshes tokens using HTTP Basic client authentication. A read first checks the authenticated `/users/me` identity matches the linked owner URI, then lists up to 100 of that user's most recent scheduled events, filters names locally, and returns at most 10 event names and times. Invitee details and unauthenticated API links are not surfaced. A confirmed authorized read—not the OAuth handshake—is required for verification.
+
+An eligible Calendly developer account, server-side client credentials and each user's OAuth consent remain required before production testing.
 
 ## Acceptance
 

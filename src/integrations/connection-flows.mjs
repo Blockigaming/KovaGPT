@@ -67,6 +67,46 @@ export const CONNECTION_FLOWS = {
     label: "Slack",
     description: "Search Slack messages visible to your connected user.",
   },
+  canva: {
+    provider: "canva",
+    scopes: ["design:meta:read"],
+    tool: "canva_search",
+    label: "Canva",
+    description:
+      "Search titles of designs available to your authorized Canva account. Metadata only; no design contents or access links.",
+  },
+  figma: {
+    provider: "figma",
+    scopes: ["file_metadata:read"],
+    tool: "figma_file_lookup",
+    label: "Figma",
+    description:
+      "Read metadata for a Figma file by its exact file URL or key. This is not a search of all Figma files.",
+  },
+  calendly: {
+    provider: "calendly",
+    scopes: ["users:read", "scheduled_events:read"],
+    tool: "calendly_search",
+    label: "Calendly",
+    description:
+      "Find your scheduled Calendly meetings by name among the latest 100 events. Read-only; invitee details are not returned.",
+  },
+  dropbox: {
+    provider: "dropbox",
+    scopes: ["files.metadata.read"],
+    tool: "dropbox_search",
+    label: "Dropbox",
+    description: "Search file and folder names in your authorized Dropbox account. Read-only.",
+  },
+  box: {
+    provider: "box",
+    // Box app read access is configured in its developer console, not a
+    // dependable per-token scope claim. Every operation is still checked by Box.
+    scopes: [],
+    tool: "box_search",
+    label: "Box",
+    description: "Search files available to your Box account. Read-only.",
+  },
 };
 
 export function hasConnectionScopes(scopes, required) {
@@ -117,6 +157,11 @@ export function connectionAuthorizationUrl(provider, value) {
     oura: "https://cloud.ouraring.com/oauth/authorize",
     whoop: "https://api.prod.whoop.com/oauth/oauth2/auth",
     salesforce: "https://login.salesforce.com/services/oauth2/authorize",
+    dropbox: "https://www.dropbox.com/oauth2/authorize",
+    box: "https://account.box.com/api/oauth2/authorize",
+    calendly: "https://auth.calendly.com/oauth/authorize",
+    figma: "https://www.figma.com/oauth",
+    canva: "https://www.canva.com/api/oauth/authorize",
   };
   try {
     const url = new URL(value),

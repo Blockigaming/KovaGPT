@@ -7,7 +7,11 @@ export function connectionReadRequest(
   id: string,
   query: string,
   token: string,
-  options?: { recordType?: "accounts" | "contacts" | "opportunities" },
+  options?: {
+    recordType?: "accounts" | "contacts" | "opportunities";
+    calendlyUserUri?: string;
+    calendlyExpectedUserUri?: string;
+  },
 ): { url: string; init: RequestInit };
 export function readConnection(
   id: string,

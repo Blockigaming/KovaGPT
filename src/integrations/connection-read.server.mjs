@@ -13,6 +13,27 @@ const title = (page) => {
   );
 };
 
+function figmaFileKey(query) {
+  if (/^[a-zA-Z0-9_-]{6,128}$/u.test(query)) return query;
+  try {
+    const url = new URL(query);
+    if (
+      url.protocol !== "https:" ||
+      !["figma.com", "www.figma.com"].includes(url.hostname) ||
+      url.username ||
+      url.password
+    )
+      return null;
+    const match =
+      /^\/(?:file|design|board|proto|slides|buzz|make)\/([a-zA-Z0-9_-]{6,128})(?:\/|$)/u.exec(
+        url.pathname,
+      );
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function connectionReadRequest(id, query, token, options = {}) {
   if (!Object.hasOwn(CONNECTION_FLOWS, id)) throw new Error("unsupported_connection");
   if (id === "salesforce") return salesforceReadRequest(query, token, options.recordType);
@@ -45,6 +66,34 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("$top", "10");
   } else if (id === "ms-teams") {
     url = new URL("https://graph.microsoft.com/v1.0/me/joinedTeams");
+  } else if (id === "figma") {
+    const key = figmaFileKey(query);
+    if (!key) throw new Error("invalid_figma_file_key");
+    url = new URL(`https://api.figma.com/v1/files/${key}/meta`);
+  } else if (id === "calendly") {
+    const uri = options.calendlyUserUri;
+    if (
+      typeof uri !== "string" ||
+      !/^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]+$/u.test(uri)
+    )
+      throw new Error("calendly_identity_unavailable");
+    url = new URL("https://api.calendly.com/scheduled_events");
+    url.searchParams.set("user", uri);
+    url.searchParams.set("count", "100");
+    url.searchParams.set("sort", "start_time:desc");
+  } else if (id === "canva") {
+    if (query.length > 255) throw new Error("invalid_connection_query");
+    url = new URL("https://api.canva.com/rest/v1/designs");
+    url.searchParams.set("query", query);
+    url.searchParams.set("limit", "10");
+  } else if (id === "dropbox") {
+    url = new URL("https://api.dropboxapi.com/2/files/search_v2");
+    body = JSON.stringify({ query, options: { max_results: 10 } });
+  } else if (id === "box") {
+    url = new URL("https://api.box.com/2.0/search");
+    url.searchParams.set("query", query);
+    url.searchParams.set("limit", "10");
+    url.searchParams.set("type", "file");
   } else if (id === "notion") {
     url = new URL("https://api.notion.com/v1/search");
     headers["Notion-Version"] = "2022-06-28";
@@ -75,6 +124,34 @@ export function connectionReadRequest(id, query, token, options = {}) {
 }
 
 export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
+  if (id === "calendly") {
+    // Resolve the owner through the authenticated API, never from a user query.
+    const profileResponse = await fetchImpl("https://api.calendly.com/users/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!profileResponse.ok) {
+      await profileResponse.body?.cancel();
+      throw new Error(
+        profileResponse.status === 401
+          ? "connection_reauthorization_required"
+          : profileResponse.status === 403
+            ? "connection_permission_required"
+            : "connection_read_failed",
+      );
+    }
+    const profile = await readProviderJsonObject(profileResponse, 64_000);
+    const uri = profile.resource?.uri;
+    if (
+      typeof uri !== "string" ||
+      uri !== options.calendlyExpectedUserUri ||
+      !/^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]+$/u.test(uri)
+    )
+      throw new Error("calendly_identity_changed");
+    options = { ...options, calendlyUserUri: uri };
+  }
   const request = connectionReadRequest(id, query, token, options);
   const response = await fetchImpl(request.url, request.init);
   if (!response.ok) {
@@ -91,43 +168,97 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   }
   const data = await readProviderJsonObject(response, 512_000);
   if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
+  if (id === "figma") {
+    const file = data.file;
+    if (!file || typeof file !== "object" || typeof file.name !== "string" || !file.name)
+      throw new Error("invalid_connection_response");
+    const key = figmaFileKey(query);
+    if (!key) throw new Error("invalid_figma_file_key");
+    const link = safeConnectionLink(file.url);
+    const origin = link ? new URL(link).hostname : null;
+    return {
+      service: "Figma",
+      results: [
+        {
+          id: key,
+          title: str(file.name, 300),
+          url: origin === "www.figma.com" || origin === "figma.com" ? link : null,
+          snippet: str(file.last_touched_at, 80),
+        },
+      ],
+      limited: true,
+    };
+  }
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
-  let rows =
-    id === "notion"
-      ? data.results
-      : id === "linear"
-        ? data.data?.issues?.nodes
-        : id === "slack"
-          ? data.messages?.matches
-          : data.value;
+  let rows = data.value;
+  if (id === "calendly") {
+    rows = data.collection;
+  } else if (id === "notion") {
+    rows = data.results;
+  } else if (id === "linear") {
+    rows = data.data?.issues?.nodes;
+  } else if (id === "slack") {
+    rows = data.messages?.matches;
+  } else if (id === "dropbox") {
+    rows = data.matches;
+  } else if (id === "box") {
+    rows = data.entries;
+  } else if (id === "canva") {
+    rows = data.items;
+  }
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
-  if (id === "ms-teams")
+  if (id === "ms-teams" || id === "calendly")
     rows = rows.filter((row) =>
-      str(row.displayName).toLowerCase().includes(query.trim().toLowerCase()),
+      str(id === "calendly" ? row.name : row.displayName)
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
     );
   const result = { service: CONNECTION_FLOWS[id].label, results: [], limited: true };
   const encoder = new TextEncoder();
-  for (const row of rows.slice(0, 10)) {
-    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink;
+  for (const match of rows.slice(0, 10)) {
+    // Dropbox search matches wrap the actual file/folder metadata twice.
+    const row = id === "dropbox" ? match?.metadata?.metadata : match;
+    if (!row || typeof row !== "object") continue;
+    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
+    const safeUrl =
+      ["calendly", "canva"].includes(id) || typeof url !== "string" || url.length > 2048
+        ? null
+        : safeConnectionLink(url);
+    let snippet = str(row.bodyPreview ?? row.description ?? row.text);
+    if (id === "outlook-calendar") {
+      snippet = [
+        row.start?.dateTime &&
+          `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
+        row.end?.dateTime && `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
+      ]
+        .filter(Boolean)
+        .join("; ");
+    } else if (id === "calendly") {
+      snippet = [
+        row.start_time && `Start: ${str(row.start_time, 60)}`,
+        row.end_time && `End: ${str(row.end_time, 60)}`,
+      ]
+        .filter(Boolean)
+        .join("; ");
+    } else if (id === "dropbox") {
+      snippet = str(row.path_display);
+    } else if (id === "canva") {
+      snippet = Array.isArray(row.design_types)
+        ? row.design_types
+            .filter((item) => typeof item === "string")
+            .slice(0, 3)
+            .join(", ")
+        : "";
+    }
     const item = {
-      id: str(row.id ?? row.ts, 300),
+      id: str(row.id ?? row.ts ?? (id === "calendly" ? row.uri : ""), 300),
       title:
         id === "notion"
           ? title(row)
           : str(row.subject ?? row.name ?? row.displayName ?? row.title ?? row.text, 300),
-      url: typeof url === "string" && url.length <= 2048 ? safeConnectionLink(url) : null,
-      snippet:
-        id === "outlook-calendar"
-          ? [
-              row.start?.dateTime &&
-                `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
-              row.end?.dateTime &&
-                `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
-            ]
-              .filter(Boolean)
-              .join("; ")
-          : str(row.bodyPreview ?? row.description ?? row.text),
+      url: safeUrl,
+      snippet,
     };
     // Measure the serialized UTF-8 result, including JSON escaping. A provider
     // can return control characters or very large URLs; never cut serialized

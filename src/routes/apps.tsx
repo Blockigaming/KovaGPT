@@ -33,6 +33,7 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { verifyGoogleServiceRead } from "@/lib/google-connection-verification.mjs";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
 import { BankConnectionsPanel } from "@/components/BankConnectionsPanel";
 import { HealthConnectionsPanel } from "@/components/HealthConnectionsPanel";
@@ -78,6 +79,9 @@ import {
   disconnectGoogleAccount,
   selectGoogleAccount,
   type GoogleStatus,
+  gmailSearch,
+  calendarList,
+  driveSearch,
 } from "@/lib/google-client";
 import {
   browserStoragePrincipal,
@@ -867,6 +871,7 @@ function AppsPage() {
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleApiCheck, setGoogleApiCheck] = useState<string | null>(null);
   const [verificationBusy, setVerificationBusy] = useState(false);
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
@@ -925,6 +930,7 @@ function AppsPage() {
     googleRequestRef.current += 1;
     googleBusyRef.current = false;
     setGoogleBusy(false);
+    setGoogleApiCheck(null);
     setGithubData(null);
     setGithubLoading(true);
     setGithubLoadError(false);
@@ -1046,8 +1052,8 @@ function AppsPage() {
       void refreshGoogle().then((status) => {
         if (!status) return;
         if (status.connected && status.state === "connected") {
-          toast.success("Google connection verified");
-          recordActivity("Google", "Connection verified");
+          toast.success("Google account authorized. Verify each service's API access below.");
+          recordActivity("Google", "Account authorized; API access not yet verified");
         } else {
           toast.warning(
             "Google authorization returned. Review the account status before using this connection.",
@@ -1217,6 +1223,53 @@ function AppsPage() {
     if (id === "google-calendar") return !!visibleGoogleStatus.has?.calendar;
     if (id === "google-drive") return !!visibleGoogleStatus.has?.drive;
     return false;
+  };
+
+  // A granted OAuth scope only establishes account authorization. This
+  // explicit, owner-bound probe performs one real read against the selected
+  // provider API. Empty results are valid; malformed or denied reads are not.
+  const verifyGoogleApi = async (id: string) => {
+    if (
+      !["gmail", "google-calendar", "google-drive"].includes(id) ||
+      !activityReady ||
+      !principal ||
+      !userKey ||
+      googleBusyRef.current ||
+      googleLoading ||
+      !isGoogleConnected(id) ||
+      !visibleGoogleStatus?.selectedConnectionId
+    )
+      return;
+    const connectionId = visibleGoogleStatus.selectedConnectionId;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
+    const current = () =>
+      generation === generationRef.current && principalRef.current === requestPrincipal;
+    const label =
+      id === "gmail" ? "Gmail" : id === "google-calendar" ? "Google Calendar" : "Google Drive";
+    googleBusyRef.current = true;
+    setGoogleBusy(true);
+    setGoogleApiCheck(id);
+    try {
+      await verifyGoogleServiceRead(id, connectionId, {
+        gmailSearch,
+        calendarList,
+        driveSearch,
+      });
+      if (current()) {
+        recordActivity(label, "Authorized API read succeeded");
+        toast.success(`${label} API read verified for the selected account.`);
+        await refreshGoogle();
+      }
+    } catch {
+      if (current()) toast.error(`${label} API read failed. Review permissions or reconnect.`);
+    } finally {
+      if (current()) {
+        setGoogleApiCheck(null);
+        googleBusyRef.current = false;
+        setGoogleBusy(false);
+      }
+    }
   };
 
   const refreshGitHub = useCallback(
@@ -1669,6 +1722,24 @@ function AppsPage() {
                             ? "Connect another account"
                             : "Connect"}
                       </Button>
+                      {["gmail", "google-calendar", "google-drive"].includes(
+                        visibleSelectedApp.id,
+                      ) && (
+                        <Button
+                          variant="outline"
+                          disabled={
+                            googleBusy ||
+                            visibleGoogleLoading ||
+                            stateOf(visibleSelectedApp.id) !== "connected" ||
+                            !visibleGoogleStatus?.selectedConnectionId
+                          }
+                          onClick={() => void verifyGoogleApi(visibleSelectedApp.id)}
+                        >
+                          {googleApiCheck === visibleSelectedApp.id
+                            ? "Checking actual API read…"
+                            : "Verify API read"}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         disabled={googleBusy || visibleGoogleLoading}

@@ -17,7 +17,7 @@ test("context menus retain bounded widths and compact SDK rows with coarse targe
     menu.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
   );
   assert.equal(values.width, "236px");
-  assert.match(values["max-width"], /--radix-dropdown-menu-content-available-width/);
+  // The menu is viewport-capped; Radix can shift it without shrinking action rows.
   assert.match(values["max-width"], /calc\(100vw - 24px\)/);
   assert.ok(
     !values["min-height"] && !values["padding-block"],

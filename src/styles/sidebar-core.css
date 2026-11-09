@@ -428,7 +428,8 @@
   width: 236px;
   padding: 8px;
   border-radius: 22px;
-  max-width: min(var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 24px));
+  /* Allow Radix to shift the menu instead of shrinking project actions below 160px. */
+  max-width: calc(100vw - 24px);
 }
 .kova-sidebar :is(button, input, summary, a):focus-visible,
 .kova-sidebar-rail :is(button, a):focus-visible {

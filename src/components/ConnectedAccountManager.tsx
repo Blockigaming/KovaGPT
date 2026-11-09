@@ -82,8 +82,10 @@ export function ConnectedAccountManager({
       if (active.current) setBusy(false);
     }
   };
-  const search = async (accountId: string) => {
-    if (busy || !query.trim()) return;
+  const search = async (accountId: string, verifyRead = false) => {
+    const requestedQuery =
+      verifyRead && id !== "figma" ? "Kova connection verification" : query.trim();
+    if (busy || !requestedQuery) return;
     setBusy(true);
     setResult(null);
     try {
@@ -91,13 +93,23 @@ export function ConnectedAccountManager({
         data: {
           connectionId: id,
           accountId,
-          query,
+          query: requestedQuery,
           ...(id === "salesforce" ? { recordType } : {}),
         },
       });
       if (active.current) {
-        if ("error" in next) toast.error(next.error);
-        else setResult(next);
+        if ("error" in next) {
+          toast.error(next.error);
+        } else {
+          if (verifyRead) {
+            setResult(null);
+            toast.success("Authorized read succeeded. Other service permissions are not verified.");
+          } else {
+            setResult(next);
+          }
+          // Fetch server-recorded API success instead of showing stale OAuth-only status.
+          await reload();
+        }
       }
     } catch {
       if (active.current) toast.error("The connected service could not be read. Try again later.");
@@ -201,7 +213,7 @@ export function ConnectedAccountManager({
             </div>
           )}
           <label className="block mt-4">
-            Search {flow.label}
+            {id === "figma" ? "Figma file URL or key" : `Search ${flow.label}`}
             <Input
               value={query}
               maxLength={300}
@@ -209,7 +221,7 @@ export function ConnectedAccountManager({
                 setQuery(event.target.value);
                 setResult(null);
               }}
-              placeholder="Enter a search"
+              placeholder={id === "figma" ? "Paste a Figma file URL or key" : "Enter a search"}
             />
           </label>
           <ul className="space-y-3 mt-3">
@@ -218,9 +230,25 @@ export function ConnectedAccountManager({
                 <p>{account.account_label ?? flow.label}</p>
                 <p className="text-sm text-muted-foreground">
                   {canReadConnection(account, id)
-                    ? "Account authorized. Search to verify access."
+                    ? id === "figma"
+                      ? "Account authorized. Look up a file to verify access."
+                      : "Account authorized. Search to verify access."
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
+                {data?.verificationAvailable === false ? (
+                  <p className="text-xs text-muted-foreground mt-1" role="status">
+                    Verification history is temporarily unavailable.
+                  </p>
+                ) : account.verified_reads?.[id] ? (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {flow.label} read verified on {account.verified_reads[id].slice(0, 10)} (UTC).
+                    Other permissions have not been verified.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Read access has not been verified for this service on the current grant.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Button
                     variant="outline"
@@ -240,7 +268,22 @@ export function ConnectedAccountManager({
                       void search(account.id);
                     }}
                   >
-                    Search this account
+                    {id === "figma" ? "Look up file" : "Search this account"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={
+                      busy ||
+                      loading ||
+                      error ||
+                      !canReadConnection(account, id) ||
+                      (id === "figma" && !query.trim())
+                    }
+                    onClick={() => {
+                      void search(account.id, true);
+                    }}
+                  >
+                    {id === "figma" ? "Verify file access" : "Verify read access"}
                   </Button>
                   <Button
                     variant="ghost"

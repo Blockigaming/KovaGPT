@@ -170,12 +170,12 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });
 
-test("hosted checkout waits for explicit payment action without contacting Stripe", async ({
+test("selected plan starts hosted checkout without an intermediate payment step", async ({
   page,
 }, testInfo) => {
   const evidence = evidenceDirectory(testInfo.project.name);
-  // This workflow deliberately builds without payment credentials. The fixture
-  // owns authentication only; this is not real Stripe acceptance evidence.
+  // CI deliberately has no live payment credentials. The test checks route
+  // behavior without pretending to verify a real Stripe checkout session.
   await installAuthenticatedFixture(page);
   const stripeRequests: string[] = [];
   page.on("request", (request) => {
@@ -184,17 +184,18 @@ test("hosted checkout waits for explicit payment action without contacting Strip
   });
   await page.goto("/pricing");
   await waitForKovaHydration(page);
-  const start = page.getByRole("button", { name: "Start Plus", exact: true });
-  await start.click();
+  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
-  const dialog = page.getByRole("main");
-  await expect(dialog.locator('[data-checkout-state="ready"]')).toBeVisible();
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Opening checkout…", exact: true })).toBeVisible();
   await expect(
-    dialog.getByRole("button", { name: "Continue to payment", exact: true }),
-  ).toBeEnabled();
-  await expect(dialog.locator("iframe")).toHaveCount(0);
-  await expect(dialog).toContainText("Payment opens full-screen in Stripe.");
-  await page.screenshot({ path: `${evidence}/checkout-ready.png` });
+    main.locator('[data-stripe-experience="kova-stripe-checkout:hosted-v1"]'),
+  ).toBeVisible();
+  await expect(main.getByRole("button", { name: "Continue to payment", exact: true })).toHaveCount(
+    0,
+  );
+  await expect(main.locator("iframe")).toHaveCount(0);
+  await page.screenshot({ path: `${evidence}/checkout-auto-start.png` });
   await page.getByRole("link", { name: "Back to plans", exact: true }).click();
   await expect(page).toHaveURL(/\/pricing/);
   await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();

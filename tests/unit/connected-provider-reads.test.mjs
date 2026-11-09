@@ -13,6 +13,7 @@ import {
 import { packSalesforceCredential } from "../../src/integrations/salesforce-credential.server.mjs";
 import {
   selectOAuthTokens,
+  oauthTokenRequest,
   oauthRefreshRequest,
   selectRefreshTokens,
 } from "../../src/integrations/oauth-token-request.server.mjs";
@@ -130,6 +131,11 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "api.linear.app",
     "slack.com",
     "fixture.my.salesforce.com",
+    "api.dropboxapi.com",
+    "api.box.com",
+    "api.calendly.com",
+    "api.figma.com",
+    "api.canva.com",
   ]);
   const salesforceToken = packSalesforceCredential("fake-token", {
     active: true,
@@ -140,8 +146,9 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
   for (const id of Object.keys(CONNECTION_FLOWS)) {
     const req = connectionReadRequest(
       id,
-      "a&?$top=999' https://evil.example",
+      id === "figma" ? "MyFigmaFileKey123" : "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : "fake-token",
+      id === "calendly" ? { calendlyUserUri: "https://api.calendly.com/users/KNOWN_USER" } : {},
     );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
@@ -369,4 +376,229 @@ test("multibyte provider text stays within the UTF8 tool budget with complete JS
   assert.ok(new TextEncoder().encode(JSON.stringify(result)).byteLength <= 24000);
   assert.ok(result.results.length > 0 && result.results.length < 10);
   assert.ok(result.results.every((row) => row.id && row.title && row.snippet));
+});
+
+test("Dropbox and Box authorization URLs are pinned to official hosts", () => {
+  for (const [provider, url] of [
+    ["dropbox", "https://www.dropbox.com/oauth2/authorize?state=fixture"],
+    ["box", "https://account.box.com/api/oauth2/authorize?state=fixture"],
+  ]) {
+    assert.equal(connectionAuthorizationUrl(provider, url), url);
+    assert.equal(
+      connectionAuthorizationUrl(provider, "https://evil.example/oauth2/authorize"),
+      null,
+    );
+    assert.equal(connectionAuthorizationUrl(provider, url.replace("https://", "http://")), null);
+  }
+});
+
+test("Dropbox and Box searches are bounded, read-only and correctly encoded", () => {
+  const query = "report ' & https://evil.example";
+  const dropbox = connectionReadRequest("dropbox", query, "fake-token");
+  assert.equal(dropbox.url, "https://api.dropboxapi.com/2/files/search_v2");
+  assert.equal(dropbox.init.method, "POST");
+  assert.deepEqual(JSON.parse(dropbox.init.body), {
+    query,
+    options: { max_results: 10 },
+  });
+  const box = connectionReadRequest("box", query, "fake-token");
+  assert.equal(
+    new URL(box.url).origin + new URL(box.url).pathname,
+    "https://api.box.com/2.0/search",
+  );
+  assert.equal(new URL(box.url).searchParams.get("query"), query);
+  assert.equal(new URL(box.url).searchParams.get("limit"), "10");
+  assert.equal(new URL(box.url).searchParams.get("type"), "file");
+  assert.equal(box.init.method, "GET");
+  for (const req of [dropbox, box]) {
+    assert.equal(req.init.redirect, "error");
+    assert.ok(req.init.signal instanceof AbortSignal);
+  }
+});
+
+test("Dropbox and Box search results expose only safe metadata and at most ten items", async () => {
+  const dropbox = await readConnection("dropbox", "report", "fake-token", async () =>
+    Response.json({
+      matches: Array.from({ length: 16 }, (_, i) => ({
+        metadata: {
+          ".tag": "metadata",
+          metadata: {
+            id: "id:" + i,
+            name: "Report " + i,
+            path_display: "/Projects/Report " + i,
+            access_token: "must-not-leak",
+          },
+        },
+      })),
+      cursor: "must-not-leak",
+    }),
+  );
+  assert.equal(dropbox.results.length, 10);
+  assert.equal(dropbox.results[0].title, "Report 0");
+  assert.equal(dropbox.results[0].snippet, "/Projects/Report 0");
+  assert.equal(dropbox.results[0].url, null);
+  const box = await readConnection("box", "budget", "fake-token", async () =>
+    Response.json({
+      entries: [
+        {
+          id: "one",
+          name: "Budget",
+          description: "File",
+          shared_link: { url: "javascript:alert(1)" },
+          access_token: "must-not-leak",
+        },
+      ],
+    }),
+  );
+  assert.equal(box.results.length, 1);
+  assert.equal(box.results[0].title, "Budget");
+  assert.equal(box.results[0].url, null);
+  assert.doesNotMatch(JSON.stringify({ dropbox, box }), /must-not-leak|fake-token|javascript:/);
+});
+
+test("Dropbox and Box token refresh requests use the confidential-client grant", () => {
+  for (const providerId of ["dropbox", "box"]) {
+    const refresh = oauthRefreshRequest({
+      providerId,
+      clientId: "client",
+      clientSecret: "secret",
+      refreshToken: "rotating-token",
+    });
+    assert.equal(refresh.method, "POST");
+    assert.equal(refresh.body.get("grant_type"), "refresh_token");
+    assert.equal(refresh.body.get("refresh_token"), "rotating-token");
+  }
+});
+
+test("Calendly requires explicit read scopes and a fixed account-scoped event route", () => {
+  const id = "https://api.calendly.com/users/KNOWN_USER";
+  const account = {
+    provider_id: "calendly",
+    status: "connected",
+    token_expires_at: null,
+    granted_scopes: ["users:read", "scheduled_events:read"],
+  };
+  assert.equal(canReadConnection(account, "calendly"), true);
+  assert.equal(
+    canReadConnection({ ...account, granted_scopes: ["users:read"] }, "calendly"),
+    false,
+  );
+  assert.equal(canReadConnection({ ...account, status: "expired" }, "calendly"), false);
+  assert.equal(
+    connectionAuthorizationUrl(
+      "calendly",
+      "https://auth.calendly.com/oauth/authorize?state=fixture",
+    ),
+    "https://auth.calendly.com/oauth/authorize?state=fixture",
+  );
+  assert.equal(
+    connectionAuthorizationUrl("calendly", "https://evil.example/oauth/authorize"),
+    null,
+  );
+  assert.throws(
+    () => connectionReadRequest("calendly", "meeting", "token"),
+    /calendly_identity_unavailable/,
+  );
+  assert.throws(
+    () =>
+      connectionReadRequest("calendly", "meeting", "token", {
+        calendlyUserUri: "https://evil.example/users/KNOWN_USER",
+      }),
+    /calendly_identity_unavailable/,
+  );
+  const request = connectionReadRequest("calendly", "meeting", "token", {
+    calendlyUserUri: id,
+  });
+  const url = new URL(request.url);
+  assert.equal(url.href.startsWith("https://api.calendly.com/scheduled_events?"), true);
+  assert.equal(url.searchParams.get("user"), id);
+  assert.equal(url.searchParams.get("count"), "100");
+  assert.equal(url.searchParams.get("sort"), "start_time:desc");
+  assert.equal(request.init.method, "GET");
+  assert.equal(request.init.redirect, "error");
+});
+
+test("Calendly event reads verify their owner and bounded metadata", async () => {
+  const userUri = "https://api.calendly.com/users/KNOWN_USER";
+  const calls = [];
+  const result = await readConnection(
+    "calendly",
+    "Review",
+    "fake-token",
+    async (url, init) => {
+      calls.push([url, init]);
+      if (url === "https://api.calendly.com/users/me")
+        return Response.json({ resource: { uri: userUri } });
+      return Response.json({
+        collection: Array.from({ length: 30 }, (_, i) => ({
+          uri: "https://api.calendly.com/scheduled_events/" + i,
+          name: i < 15 ? "Review " + i : "Unrelated " + i,
+          start_time: "2026-11-09T10:00:00Z",
+          end_time: "2026-11-09T11:00:00Z",
+          invitees: ["must-not-leak"],
+          access_token: "must-not-leak",
+        })),
+      });
+    },
+    { calendlyExpectedUserUri: userUri },
+  );
+  assert.equal(calls.length, 2);
+  assert.equal(new URL(calls[1][0]).searchParams.get("user"), userUri);
+  assert.equal(result.results.length, 10);
+  assert.equal(result.results[0].title, "Review 0");
+  assert.equal(result.results[0].url, null);
+  assert.match(result.results[0].snippet, /Start: 2026-11-09T10:00:00Z/);
+  assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|Unrelated/);
+});
+
+test("Calendly rejects a changed user identity before listing events", async () => {
+  const calls = [];
+  await assert.rejects(
+    readConnection(
+      "calendly",
+      "Meeting",
+      "fake-token",
+      async (url) => {
+        calls.push(url);
+        return Response.json({
+          resource: { uri: "https://api.calendly.com/users/OTHER_USER" },
+        });
+      },
+      { calendlyExpectedUserUri: "https://api.calendly.com/users/KNOWN_USER" },
+    ),
+    /calendly_identity_changed/,
+  );
+  assert.deepEqual(calls, ["https://api.calendly.com/users/me"]);
+});
+
+test("Calendly requires PKCE and Basic client authentication for tokens", () => {
+  const args = {
+    providerId: "calendly",
+    clientId: "client",
+    clientSecret: "secret",
+    code: "one-time-code",
+    redirectUri: "https://kovagpt.com/api/integrations/oauth/callback/calendly",
+    verifier: "random-verifier",
+  };
+  const initial = oauthTokenRequest(args);
+  assert.equal(initial.method, "POST");
+  assert.equal(
+    initial.headers.Authorization,
+    "Basic " + Buffer.from("client:secret").toString("base64"),
+  );
+  assert.equal(initial.body.get("code_verifier"), "random-verifier");
+  assert.equal(initial.body.get("client_secret"), null);
+  assert.throws(
+    () => oauthTokenRequest({ ...args, verifier: undefined }),
+    /oauth_pkce_verifier_missing/,
+  );
+  const refresh = oauthRefreshRequest({
+    providerId: "calendly",
+    clientId: "client",
+    clientSecret: "secret",
+    refreshToken: "rotated",
+  });
+  assert.equal(refresh.method, "POST");
+  assert.equal(refresh.body.get("refresh_token"), "rotated");
+  assert.equal(refresh.headers.Authorization, initial.headers.Authorization);
 });

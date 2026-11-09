@@ -55,9 +55,8 @@ async function workFixture(
 }
 
 for (const legacy of [true, false]) {
-  test(`sidebar excludes Work ${legacy ? "even in saved legacy shortcuts" : "from the default navigation"}`, async ({
-    page,
-  }) => {
+  const caseName = legacy ? "even in saved legacy shortcuts" : "from the default navigation";
+  test(`sidebar excludes Work ${caseName}`, async ({ page }) => {
     const commands = await workFixture(page, "free", true);
     await page.goto("/");
     await waitForKovaHydration(page);
@@ -115,23 +114,18 @@ for (const tier of ["free", "plus", "pro"] as const) {
   });
 }
 
-test("chat opens a Work review without sending or clearing its composer draft", async ({
-  page,
-}) => {
+test("chat draft remains intact without the retired floating Work launcher", async ({ page }) => {
   const commands = await workFixture(page, "plus", false, true);
   await page.goto("/");
   await waitForKovaHydration(page);
   await expect(page.locator("[data-chat-transcript]")).toBeVisible();
   const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await composer.fill("Review this synthetic launch request");
-  await page.getByRole("button", { name: "Prepare or manage Work", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Work from this chat", exact: true });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("textbox", { name: "Objective", exact: true })).toHaveValue(
-    "Review this synthetic launch request",
-  );
-  await page.keyboard.press("Escape");
-  await expect(dialog).not.toBeVisible();
+  // Chat has no floating Work launcher. Opening Work is a separate deliberate
+  // navigation and must not dispatch or consume the in-progress chat draft.
+  await expect(
+    page.getByRole("button", { name: "Prepare or manage Work", exact: true }),
+  ).toHaveCount(0);
   await expect(composer).toHaveValue("Review this synthetic launch request");
   expect(commands).toEqual([]);
 });

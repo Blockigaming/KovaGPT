@@ -274,9 +274,10 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "dropbox",
     label: "Dropbox",
-    description: "Reference files from Dropbox.",
+    description:
+      "Search files and folders in Dropbox. Requires account permission and provider setup.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "dropbox.com",
   },
   {
@@ -290,9 +291,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "box",
     label: "Box",
-    description: "Reference files from Box.",
+    description: "Search files in Box. Requires account permission and provider setup.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "box.com",
   },
   {
@@ -1458,9 +1459,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "figma",
     label: "Figma",
-    description: "Reference design files, comments, and prototypes.",
+    description: "Look up file metadata using an exact Figma URL or file key.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "figma.com",
   },
   {
@@ -1474,9 +1475,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "canva",
     label: "Canva",
-    description: "Reference designs, brand assets, and presentations.",
+    description: "Search design titles and metadata; requires OAuth setup and user consent.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "canva.com",
   },
   {
@@ -1698,9 +1699,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "calendly",
     label: "Calendly",
-    description: "Reference scheduled meetings and event links.",
+    description: "Find your scheduled meetings by name. Requires OAuth setup and consent.",
     category: "Calendar",
-    status: "planned",
+    status: "setup_required",
     domain: "calendly.com",
   },
   {

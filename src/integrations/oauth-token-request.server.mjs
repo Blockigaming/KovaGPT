@@ -23,6 +23,22 @@ export function oauthTokenRequest({
       body: JSON.stringify(fields),
     };
   }
+  if (providerId === "calendly" || providerId === "figma" || providerId === "canva") {
+    if (!verifier) throw new Error("oauth_pkce_verifier_missing");
+    return {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({
+        ...fields,
+        ...(providerId === "figma" ? {} : { client_id: clientId }),
+        code_verifier: verifier,
+      }),
+    };
+  }
   const body = new URLSearchParams({ ...fields, client_id: clientId, client_secret: clientSecret });
   if (verifier) body.set("code_verifier", verifier);
   return {
@@ -59,9 +75,26 @@ export function selectOAuthTokens(providerId, payload) {
   };
 }
 
+export function oauthRefreshEndpoint(providerId, tokenEndpoint) {
+  return providerId === "figma" ? "https://api.figma.com/v1/oauth/refresh" : tokenEndpoint;
+}
+
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
   if (
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion"].includes(providerId)
+    ![
+      "microsoft",
+      "linear",
+      "slack",
+      "oura",
+      "whoop",
+      "salesforce",
+      "notion",
+      "dropbox",
+      "box",
+      "calendly",
+      "figma",
+      "canva",
+    ].includes(providerId)
   )
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
@@ -75,6 +108,21 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
         Authorization: "Basic " + Buffer.from(clientId + ":" + clientSecret).toString("base64"),
       },
       body: JSON.stringify({ grant_type: "refresh_token", refresh_token: refreshToken }),
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    };
+  if (providerId === "calendly" || providerId === "figma" || providerId === "canva")
+    return {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({
+        ...(providerId === "figma" ? {} : { grant_type: "refresh_token", client_id: clientId }),
+        refresh_token: refreshToken,
+      }),
       redirect: "error",
       signal: AbortSignal.timeout(15_000),
     };

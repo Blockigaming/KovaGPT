@@ -292,6 +292,48 @@ test("tool planning offers only actually granted service reads and pins account 
   assert.ok(f.calls.some((call) => call[0] === "integration_audit_events" && call[1] === "insert"));
 });
 
+test("successful authorized provider reads record operational verification, not OAuth alone", async () => {
+  const f = fixture();
+  assert.equal(f.state.row.last_success_at, undefined);
+  const context = await f.getConnectedToolContext("owner-a");
+  await f.runConnectedTool(
+    "owner-a",
+    "outlook_search",
+    { account_id: f.state.row.id, query: "hello" },
+    context,
+  );
+  assert.ok(Number.isFinite(Date.parse(f.state.row.last_success_at)));
+  assert.equal(f.state.row.health_checked_at, f.state.row.last_success_at);
+  assert.equal(f.state.row.last_error_code, null);
+  assert.equal(f.state.row.updated_at, "2026-10-30T00:00:00Z");
+});
+
+test("failed audit or in-flight disconnect cannot establish successful provider verification", async () => {
+  for (const failure of ["audit", "disconnect", "provider"]) {
+    const f = fixture();
+    const context = await f.getConnectedToolContext("owner-a");
+    if (failure === "audit") f.state.auditError = { message: "audit unavailable" };
+    if (failure === "disconnect")
+      f.state.onAudit = () => {
+        f.state.row.status = "revoked";
+      };
+    if (failure === "provider")
+      f.state.onRead = () => {
+        throw new Error("provider_read_failed");
+      };
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "outlook_search",
+        { account_id: f.state.row.id, query: "hello" },
+        context,
+      ),
+    );
+    assert.equal(f.state.row.last_success_at, undefined);
+    assert.equal(f.state.row.health_checked_at, undefined);
+  }
+});
+
 test("another owner or an arbitrary model-selected account never reaches credentials", async () => {
   for (const change of ["owner", "account", "tool"]) {
     const f = fixture(),
