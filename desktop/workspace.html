@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>KovaGPT — Local Coding Workspace</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:#101217;color:#e7eaf0;font-size:14px}
+    *{box-sizing:border-box} body{margin:0;height:100vh;display:flex;flex-direction:column}
+    button{font:inherit;cursor:pointer;border:1px solid #3a4050;background:#262b38;color:inherit;
+      border-radius:11px;padding:9px 14px;min-height:40px}button:hover{background:#333b4c}
+    button:focus-visible,textarea:focus-visible{outline:2px solid #98b2ff;outline-offset:2px}
+    button:disabled{cursor:not-allowed;opacity:.5}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 22px;
+      border-bottom:1px solid #2b303b;flex-wrap:wrap}
+    .brand{font-weight:700;font-size:16px}.sub{font-size:12px;color:#9da6bb;margin-top:4px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .layout{display:grid;grid-template-columns:minmax(195px,270px) minmax(0,1fr);min-height:0;flex:1}
+    aside{border-right:1px solid #2b303b;overflow:auto;padding:14px}
+    .side-title{text-transform:uppercase;letter-spacing:.09em;color:#8d98b0;font-size:11px;font-weight:700;padding:5px 8px 12px}
+    #tree{display:flex;flex-direction:column;gap:3px} .node{width:100%;border:0;min-height:36px;padding:7px 10px;
+      text-align:left;background:transparent;display:flex;gap:8px;align-items:center;border-radius:8px}
+    .node:hover,.node[aria-current="true"]{background:#30384b}
+    .tree-children{padding-left:13px;border-left:1px solid #303544;margin-left:10px}
+    main{display:flex;flex-direction:column;min-width:0;min-height:0}
+    .tabbar{border-bottom:1px solid #2b303b;display:flex;align-items:center;justify-content:space-between;
+      min-height:52px;padding:8px 16px;gap:12px}
+    #filename{font-size:13px;color:#c5cede;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #editor{flex:1;min-width:0;min-height:100px;resize:none;padding:20px 22px;border:0;outline:0;
+      background:#12151c;color:#ecf0f5;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+      line-height:1.6;font-size:13px;tab-size:2;white-space:pre;overflow:auto}
+    #editor:disabled{opacity:.6}#diff{display:none;max-height:36vh;overflow:auto;
+      margin:0;padding:14px 20px;border-top:1px solid #3a4050;white-space:pre-wrap;
+      font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;color:#dbe3f9}
+    #diff[data-show="true"]{display:block}
+    #status{border-top:1px solid #2b303b;color:#acb7cb;font-size:12px;padding:9px 18px;min-height:37px}
+    #status[data-error="true"]{color:#ff9b9b}
+    .policy{font-size:11px;color:#9aa7ba;padding:10px 14px;line-height:1.5}
+    @media (max-width:720px){.layout{grid-template-columns:175px minmax(0,1fr)}
+      header{padding:12px}.actions button{padding:8px}#editor{padding:12px}}
+  </style>
+  <script defer src="/workspace-ui.js"></script>
+</head>
+<body>
+  <header>
+    <div><div class="brand">KovaGPT Local Coding Workspace</div>
+      <div class="sub">Private to your computer · No automatic uploads or commands</div></div>
+    <div class="actions">
+      <button id="choose">Open folder…</button>
+      <button id="closeFolder" disabled>Close folder</button>
+    </div>
+  </header>
+  <div class="layout">
+    <aside aria-label="Repository files">
+      <div class="side-title" id="folderName">No folder selected</div>
+      <nav id="tree" aria-label="Source tree"></nav>
+      <p class="policy">Only files in the folder you select are accessible. Hidden files, symlinks, binaries,
+      and files larger than 512 KiB are excluded.</p>
+    </aside>
+    <main>
+      <div class="tabbar">
+        <span id="filename">Choose a repository folder to begin.</span>
+        <div class="actions">
+          <button id="preview" disabled>Review changes</button>
+          <button id="save" disabled>Save to disk…</button>
+        </div>
+      </div>
+      <textarea id="editor" aria-label="Source file editor" spellcheck="false" disabled
+        placeholder="Choose a text or source file from the left navigation."></textarea>
+      <pre id="diff" role="region" aria-label="Changes preview"></pre>
+    </main>
+  </div>
+  <div id="status" role="status" aria-live="polite">No folder has been opened. Only explicit local file actions are available.</div>
+</body>
+</html>
