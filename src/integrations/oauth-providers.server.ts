@@ -7,6 +7,7 @@ export type OAuthProviderId =
   | "dropbox"
   | "box"
   | "calendly"
+  | "canva"
   | "oura"
   | "whoop"
   | "salesforce";
@@ -28,6 +29,25 @@ export type OAuthProviderAdapter = {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  canva: {
+    id: "canva",
+    name: "Canva",
+    authorizationEndpoint: "https://www.canva.com/api/oauth/authorize",
+    tokenEndpoint: "https://api.canva.com/rest/v1/oauth/token",
+    clientIdEnv: "CANVA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CANVA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["design:meta:read"],
+    optionalScopes: ["profile:read"],
+    usesPkce: true,
+    profileEndpoint: "https://api.canva.com/rest/v1/users/me",
+    profileId: (v) => {
+      const user = v.team_user as Record<string, unknown> | undefined;
+      const id = text(user?.user_id);
+      const teamId = text(user?.team_id);
+      return id && teamId ? `${teamId}:${id}` : "";
+    },
+    profileLabel: () => "Canva account",
+  },
   calendly: {
     id: "calendly",
     name: "Calendly",
