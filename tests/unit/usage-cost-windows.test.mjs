@@ -104,6 +104,26 @@ test("Free cost-window limit prices every reserved request, not message count al
   }
 });
 
+test("settled actual cost returns unused estimated allowance", async () => {
+  const db = await fixture();
+  try {
+    const first = await request(db, "free", 0.09);
+    assert.equal(first.decision, "acquired");
+    const settle = await db.query(
+      "select public.finalize_ai_generation($1,'completed',10,0,5,0,0.01,25,'{}',null) ok",
+      [first.event_id],
+    );
+    assert.equal(settle.rows[0].ok, true);
+    assert.equal((await request(db, "free", 0.08)).decision, "acquired");
+    const progress = await db.query("select month_used from public.kova_plan_cost_progress($1,'free')", [
+      owner,
+    ]);
+    assert.ok(Number(progress.rows[0].month_used) < 0.1);
+  } finally {
+    await db.close();
+  }
+});
+
 test("monthly safety cap counts earlier costs and included Pro Argon Lite chat", async () => {
   for (const [tier, previous, next] of [
     ["free", 2.99, 0.02],
