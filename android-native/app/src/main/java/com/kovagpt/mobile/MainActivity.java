@@ -177,9 +177,24 @@ public final class MainActivity extends Activity {
 
     @Override public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, 1, 0, "Share current page");
+        menu.add(0, 2, 1, "About KovaGPT");
         return true;
     }
     @Override public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == 2) {
+            String version;
+            try {
+                version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (PackageManager.NameNotFoundException e) {
+                version = "Unavailable";
+            }
+            new AlertDialog.Builder(this)
+                .setTitle("About KovaGPT")
+                .setMessage("App version: " + version)
+                .setPositiveButton("OK", null)
+                .show();
+            return true;
+        }
         if (item.getItemId() != 1) return super.onOptionsItemSelected(item);
         Uri uri = Uri.parse(web.getUrl() == null ? HOME : web.getUrl());
         if (trusted(uri)) {
