@@ -2,6 +2,7 @@ import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
   createConsumerModelChoice,
+  consumerModel,
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
@@ -1835,6 +1836,7 @@ function KovaGPT() {
       voiceRequest?: { signal: AbortSignal },
       quickAnswer = false,
       requestWebSearch?: boolean,
+      oneShotHostedModel?: ConsumerModelId,
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1910,9 +1912,20 @@ function KovaGPT() {
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
-      const requestHostedModel = existingConversation?.kova
+      const requestedOneShot = existingConversation?.kova
         ? undefined
-        : (queuedSend?.hostedModel ?? hostedModel);
+        : (oneShotHostedModel ?? queuedSend?.oneShotHostedModel);
+      const approvedOneShot =
+        requestedOneShot && consumerModel(requestedOneShot)?.tiers.includes(tier)
+          ? requestedOneShot
+          : undefined;
+      // The selected default is never overwritten by a one-message override.
+      const conversationHostedModel = existingConversation?.kova
+        ? undefined
+        : queuedSend?.oneShotHostedModel
+          ? hostedModel
+          : (queuedSend?.hostedModel ?? hostedModel);
+      const requestHostedModel = approvedOneShot ?? conversationHostedModel;
       const isNewConversation = !retryConversationId && !existingConversation;
       const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 
@@ -1943,6 +1956,7 @@ function KovaGPT() {
         tool: retryTool ?? null,
         mode: requestMode,
         hostedModel: requestHostedModel,
+        ...(approvedOneShot ? { oneShotHostedModel: approvedOneShot } : {}),
         status: "held",
       };
       let clearedComposerRevision: number | null = null;
@@ -1967,7 +1981,7 @@ function KovaGPT() {
             title: "New chat",
             messages: [userMsg, assistantMsg],
             mode: requestMode,
-            hostedModel: requestHostedModel,
+            hostedModel: conversationHostedModel,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             temporary: tempChat,
@@ -1981,7 +1995,7 @@ function KovaGPT() {
           c.id === nextConvId
             ? {
                 ...c,
-                hostedModel: requestHostedModel,
+                hostedModel: conversationHostedModel,
                 messages: [...priorMessages, userMsg, assistantMsg],
                 memoryStartIndex:
                   typeof c.memoryStartIndex === "number"
@@ -2032,6 +2046,8 @@ function KovaGPT() {
                 undefined,
                 undefined,
                 true,
+                undefined,
+                approvedOneShot,
               );
             };
 
@@ -3473,7 +3489,22 @@ function KovaGPT() {
                   <ChatInput
                     value={principalReady ? input : ""}
                     onChange={setInput}
-                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onSubmit={(tool, oneShotModel) =>
+                      send(
+                        input,
+                        attachments,
+                        tool,
+                        0,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        false,
+                        undefined,
+                        oneShotModel,
+                      )
+                    }
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
@@ -3612,7 +3643,22 @@ function KovaGPT() {
                   <ChatInput
                     value={principalReady ? input : ""}
                     onChange={setInput}
-                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onSubmit={(tool, oneShotModel) =>
+                      send(
+                        input,
+                        attachments,
+                        tool,
+                        0,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        false,
+                        undefined,
+                        oneShotModel,
+                      )
+                    }
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
