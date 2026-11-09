@@ -30,6 +30,7 @@ const STOP_WORDS = new Set([
   "what", "which", "please", "find", "show", "settings", "setting", "option",
   "options", "change", "edit", "update", "make", "get", "see", "want", "need",
   "turn", "off", "set", "up", "go", "it", "this", "that", "and", "or", "be",
+  "something", "things", "stuff",
 ]);
 
 export function normalizeSettingsSearch(value) {
