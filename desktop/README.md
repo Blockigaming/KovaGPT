@@ -70,3 +70,17 @@ This is real desktop multi-window behavior for the existing chat application,
 not yet a local coding workspace, OS automation environment, or local
 repository access feature. Native preview build and physical installation
 acceptance are still required.
+
+## Local file import (user-authorized)
+
+**File → Copy local source file...** opens the operating system's file chooser.
+Only a single selected nonempty text source file up to 256 KiB can be read.
+A second native confirmation is required before the text is copied to the
+system clipboard. Clipboard contents may be visible to other installed apps.
+The file is never uploaded, submitted, or copied to the web renderer
+automatically. Kova's remote website still has no Node, local filesystem,
+shell or IPC bridge.
+
+This is limited local-file integration, **not** a repository explorer, coding
+workspace, local terminal or computer-control agent. It still needs native OS
+acceptance testing.
