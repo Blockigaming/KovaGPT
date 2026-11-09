@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { installInteractiveSidebarSwipe } from "../../src/lib/sidebar-swipe.mjs";
 
-assert.match(readFileSync("src/components/Sidebar.tsx", "utf8"), /installInteractiveSidebarSwipe\(/);
+assert.match(
+  readFileSync("src/components/Sidebar.tsx", "utf8"),
+  /installInteractiveSidebarSwipe\(/,
+);
 
 function surface() {
   const listeners = new Map();
