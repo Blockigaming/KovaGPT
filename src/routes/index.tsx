@@ -2,7 +2,7 @@ import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
   createConsumerModelChoice,
-  consumerModel,
+  resolveOneShotConsumerModel,
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
@@ -1912,20 +1912,19 @@ function KovaGPT() {
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
-      const requestedOneShot = existingConversation?.kova
-        ? undefined
-        : (oneShotHostedModel ?? queuedSend?.oneShotHostedModel);
-      const approvedOneShot =
-        requestedOneShot && consumerModel(requestedOneShot)?.tiers.includes(tier)
-          ? requestedOneShot
-          : undefined;
-      // The selected default is never overwritten by a one-message override.
-      const conversationHostedModel = existingConversation?.kova
-        ? undefined
-        : queuedSend?.oneShotHostedModel
-          ? hostedModel
-          : (queuedSend?.hostedModel ?? hostedModel);
-      const requestHostedModel = approvedOneShot ?? conversationHostedModel;
+      // Request-only model selection is validated by tier and never written
+      // as the conversation default, including held drafts and retries.
+      const resolvedModel = resolveOneShotConsumerModel({
+        defaultModel: hostedModel,
+        queuedModel: queuedSend?.hostedModel,
+        queuedOneShotModel: queuedSend?.oneShotHostedModel,
+        oneShotModel: oneShotHostedModel,
+        tier,
+        nativeKova: Boolean(existingConversation?.kova),
+      });
+      const requestHostedModel = resolvedModel.requestModel;
+      const conversationHostedModel = resolvedModel.savedModel;
+      const approvedOneShot = resolvedModel.oneShotModel;
       const isNewConversation = !retryConversationId && !existingConversation;
       const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 
