@@ -185,7 +185,7 @@ export function ComposerVoiceDialogView({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-voice-dialog"
+        className={mode === "voice" && ready ? "kova-voice-dialog kova-voice-immersive" : "kova-voice-dialog"}
         data-ui-reference="chatgpt-separate-voice"
         data-voice-availability={availability}
         data-voice-mode={mode}
