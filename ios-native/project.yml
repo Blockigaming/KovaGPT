@@ -1,0 +1,71 @@
+name: KovaGPT
+options:
+  bundleIdPrefix: com.kovagpt
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  KovaGPT:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Shared
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: KovaGPT
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        NSCameraUsageDescription: "Use the camera only after you choose Scan or Camera."
+        NSMicrophoneUsageDescription: "Use your microphone only after you start Voice or Dictation."
+        UIRequiresFullScreen: false
+        NSSupportsLiveActivities: true
+    dependencies:
+      - target: KovaGPTShortcuts
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGNING_ALLOWED: NO
+
+  KovaGPTShortcuts:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: Shared
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: KovaGPT Shortcuts
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios.shortcuts
+        SWIFT_VERSION: "5.9"
+        CODE_SIGNING_ALLOWED: NO
+
+  KovaGPTTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: KovaGPT
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios.tests
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+schemes:
+  KovaGPT:
+    build:
+      targets:
+        KovaGPT: all
+        KovaGPTTests: [test]
+    test:
+      targets:
+        - KovaGPTTests

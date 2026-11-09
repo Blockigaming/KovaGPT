@@ -1,4 +1,6 @@
+import * as sketchMention from "../../src/lib/composer-sketch-mention.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as consumerModelSelection from "../../src/lib/consumer-model-selection.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import assert from "node:assert/strict";
@@ -104,6 +106,7 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/lib/composer-sketch-mention.mjs": sketchMention,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
         reads.push("document reader");
@@ -127,6 +130,7 @@ function fixture(
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
     "@/lib/composer-keyboard-inset.mjs": keyboardInset,
+    "@/lib/consumer-model-selection.mjs": consumerModelSelection,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
       tryUseUpload: (limit) => {

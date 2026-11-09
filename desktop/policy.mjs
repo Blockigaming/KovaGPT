@@ -44,3 +44,21 @@ export const WEB_PREFERENCES = Object.freeze({
   navigateOnDragDrop: false,
   partition: "persist:kovagpt",
 });
+
+/** Only fixed, reviewed global accelerators can be saved. */
+export const COMPANION_SHORTCUTS = Object.freeze([
+  "Alt+Space",
+  "CommandOrControl+Shift+Space",
+  "CommandOrControl+Shift+K",
+  "Disabled",
+]);
+export function defaultCompanionShortcut(platform) {
+  return platform === "darwin" || platform === "win32"
+    ? "Alt+Space"
+    : "CommandOrControl+Shift+Space";
+}
+export function validatedCompanionShortcut(value, platform) {
+  return typeof value === "string" && COMPANION_SHORTCUTS.includes(value)
+    ? value
+    : defaultCompanionShortcut(platform);
+}

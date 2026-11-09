@@ -369,7 +369,9 @@ function FieldControl({
           <Label htmlFor={id} id={`${id}-label`} className="text-sm font-medium">
             {label}
           </Label>
-          <Switch {...common} checked={value === true} onCheckedChange={(c) => onChange(c)} />
+          <span className="relative inline-flex shrink-0">
+            <Switch {...common} checked={value === true} onCheckedChange={(c) => onChange(c)} />
+          </span>
         </div>
       );
     case "radio":

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Copy, Download, ExternalLink, EyeOff, ImagePlus } from "lucide-react";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -22,6 +22,8 @@ import {
   principalScopedStorageKey,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+
+const ChatImageViewer = lazy(() => import("./ChatImageViewer"));
 
 export type ChatImageActions = {
   ownerId: string | null;
@@ -71,11 +73,14 @@ export function ChatImage({
       : null;
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
+  const [viewerMarker, setViewerMarker] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ marker, text: "" });
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const copyOnly = isMobile || touchMenu;
   const imageRef = useRef<HTMLImageElement>(null);
   const showRef = useRef<HTMLButtonElement>(null);
+  const viewerToComposer = useRef(false);
   const lifetime = useRef({ marker, generation: 0, mounted: true });
   if (lifetime.current.marker !== marker) {
     lifetime.current.marker = marker;
@@ -95,9 +100,13 @@ export function ChatImage({
     };
     setVisibility({ marker, hidden: hiddenMarkers(key).includes(marker) });
     setBusy(false);
+    setViewerMarker(null);
+    setEditDraft({ marker, text: "" });
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, actions?.ownerId ?? null)) return;
       lifetime.current.generation++;
+      setViewerMarker(null);
+      setEditDraft({ marker, text: "" });
       setVisibility({ marker, hidden: false });
       setBusy(false);
     };
@@ -188,11 +197,21 @@ export function ChatImage({
             decoding="async"
             referrerPolicy="no-referrer"
             tabIndex={0}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
+            onClick={() => {
+              viewerToComposer.current = false;
+              setViewerMarker(marker);
+            }}
             style={{ WebkitTouchCallout: "none" }}
             className={imageClassName}
             onPointerDown={(event) => setTouchMenu(event.pointerType !== "mouse")}
             onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                viewerToComposer.current = false;
+                setViewerMarker(marker);
+                return;
+              }
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
               const box = event.currentTarget.getBoundingClientRect();
@@ -208,6 +227,64 @@ export function ChatImage({
           />
         </ContextMenuTrigger>
         {children}
+        {viewerMarker === marker && (
+          <Suspense fallback={null}>
+            <ChatImageViewer
+              key={marker}
+              src={src}
+              alt={alt}
+              onClose={() => setViewerMarker(null)}
+              onReturnFocus={() => {
+                if (lifetime.current.mounted && lifetime.current.marker === marker)
+                  (viewerToComposer.current
+                    ? document.querySelector<HTMLTextAreaElement>(
+                        'textarea[aria-label="Message KovaGPT"]',
+                      )
+                    : imageRef.current
+                  )?.focus({ preventScroll: true });
+              }}
+              instructions={editDraft.marker === marker ? editDraft.text : ""}
+              onInstructionsChange={(text) => setEditDraft({ marker, text })}
+              busy={busy}
+              onPrepareEdit={
+                actions
+                  ? (instructions) =>
+                      void run(async (allowed) => {
+                        const add = actions.prepareAdd();
+                        const file = await chatImageFile(src, allowed);
+                        if (!allowed()) return;
+                        await add(file, allowed, instructions);
+                        if (allowed()) {
+                          viewerToComposer.current = true;
+                          setEditDraft({ marker, text: "" });
+                          setViewerMarker(null);
+                        }
+                      })
+                  : undefined
+              }
+              onDownload={() => void run((allowed) => downloadChatImage(src, allowed))}
+              onShare={
+                typeof navigator !== "undefined" && typeof navigator.share === "function"
+                  ? () =>
+                      void run(async (allowed) => {
+                        const file = await chatImageFile(src, allowed);
+                        if (!allowed()) return;
+                        if (!navigator.canShare?.({ files: [file] }))
+                          throw new Error(
+                            "Image sharing is unavailable here. Use Save image instead.",
+                          );
+                        try {
+                          await navigator.share({ files: [file], title: alt.slice(0, 120) });
+                        } catch (error) {
+                          if (!(error instanceof DOMException && error.name === "AbortError"))
+                            throw error;
+                        }
+                      })
+                  : undefined
+              }
+            />
+          </Suspense>
+        )}
       </span>
       <ContextMenuContent className="w-60" aria-label="Image actions">
         {!copyOnly ? (

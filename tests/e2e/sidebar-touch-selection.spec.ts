@@ -21,7 +21,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
       clientX,
       clientY: rect.top + 10,
     });
-    const start = touch(rect.right - 10);
+    const start = touch(12);
     paragraph.dispatchEvent(
       Object.assign(new Event("touchstart", { bubbles: true }), { touches: [start] }),
     );
@@ -30,7 +30,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     range.selectNodeContents(paragraph);
     selection.removeAllRanges();
     selection.addRange(range);
-    const end = touch(rect.right - 120);
+    const end = touch(122);
     paragraph.dispatchEvent(
       Object.assign(new Event("touchmove", { bubbles: true }), { touches: [end] }),
     );
@@ -47,7 +47,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     const touch = {
       identifier: 1,
       target: paragraph,
-      clientX: rect.right - 130,
+      clientX: 132,
       clientY: rect.top + 10,
     };
     paragraph.dispatchEvent(
@@ -63,8 +63,8 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     const paragraph = element.querySelector("p")!;
     const rect = paragraph.getBoundingClientRect();
     for (const [name, x] of [
-      ["touchstart", rect.right - 10],
-      ["touchmove", rect.right - 120],
+      ["touchstart", 12],
+      ["touchmove", 122],
     ] as const) {
       const touch = {
         identifier: 2,
@@ -87,8 +87,8 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     await expect(drawer.getByRole("button", { name: "Close sidebar", exact: true })).toBeVisible();
     await drawer.evaluate((element) => {
       for (const [name, x] of [
-        ["touchstart", 40],
-        ["touchmove", 160],
+        ["touchstart", 160],
+        ["touchmove", 40],
       ] as const) {
         const touch = { identifier: 3, target: element, clientX: x, clientY: 100 };
         element.dispatchEvent(
@@ -109,7 +109,7 @@ test("workspace search cancels an in-progress drawer closing swipe", async ({ pa
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
   await sidebar.evaluate((element) => {
-    const touch = { identifier: 1, target: element, clientX: 40, clientY: 100 };
+    const touch = { identifier: 1, target: element, clientX: 160, clientY: 100 };
     element.dispatchEvent(
       Object.assign(new Event("touchstart", { bubbles: true }), { touches: [touch] }),
     );
@@ -124,7 +124,7 @@ test("workspace search cancels an in-progress drawer closing swipe", async ({ pa
   const inactiveSidebar = page.locator(".kova-sidebar[data-kova-core-sidebar]");
   await expect(inactiveSidebar).toHaveJSProperty("inert", true);
   await inactiveSidebar.evaluate((element) => {
-    const touch = { identifier: 1, target: element, clientX: 160, clientY: 100 };
+    const touch = { identifier: 1, target: element, clientX: 40, clientY: 100 };
     element.dispatchEvent(
       Object.assign(new Event("touchmove", { bubbles: true }), { touches: [touch] }),
     );
@@ -268,3 +268,38 @@ for (const theme of ["dark", "light"] as const) {
     });
   }
 }
+
+test("touch hold opens chat actions without navigating and scrolling cancels it", async ({
+  page,
+}) => {
+  await coreFixture(page, "dark");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const sidebar = await revealSidebar(page);
+  const destinations = sidebar.locator(".kova-sidebar-destinations");
+  await expect(destinations).toHaveCSS(
+    "display",
+    page.viewportSize()!.width < 1024 ? "flex" : "contents",
+  );
+  const row = sidebar.locator(".kova-chat-row-main").first();
+  const pointer = {
+    pointerId: 99,
+    pointerType: "touch",
+    isPrimary: true,
+    clientX: 100,
+    clientY: 180,
+  };
+  await row.dispatchEvent("pointerdown", pointer);
+  await expect(page.locator(".kova-sidebar-chat-menu")).toBeVisible();
+  await row.dispatchEvent("pointerup", pointer);
+  await row.dispatchEvent("click", { detail: 1 });
+  await expect(sidebar).toHaveAttribute("data-state", "open");
+  await expect(page.locator(".kova-sidebar-chat-menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".kova-sidebar-chat-menu")).toBeHidden();
+  await row.dispatchEvent("pointerdown", pointer);
+  await row.dispatchEvent("pointermove", { ...pointer, clientY: 220 });
+  await page.waitForTimeout(600);
+  await expect(page.locator(".kova-sidebar-chat-menu")).toBeHidden();
+  await row.dispatchEvent("pointercancel", pointer);
+});

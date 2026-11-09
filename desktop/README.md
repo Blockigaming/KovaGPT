@@ -20,6 +20,166 @@ Remote renderers have sandboxing, context isolation and web security enabled, wi
 
 ## Release acceptance
 
-Before public distribution, install the artifacts on each target OS and verify password sign-in, window persistence, `kovagpt://open`, attachment selection, drawing, voice permissions and sign-out. Google sign-in through a system browser needs a separately reviewed session handoff; embedded Google login is not certified. macOS needs Developer ID signing and notarization, Windows needs a trusted signing certificate, and the public download page should link only to a verified release. There is no native background execution or native auto-updater in this preview. Updating the website updates its rendered UI; Electron security updates require a new package.
+Before public distribution, install the artifacts on each target OS and verify password sign-in, window persistence, `kovagpt://open`, attachment selection, drawing, voice permissions and sign-out. Google sign-in through a system browser needs a separately reviewed session handoff; embedded Google login is not certified. macOS needs Developer ID signing and notarization, Windows needs a trusted signing certificate, and the public download page should link only to a verified release. The local command runner executes only explicit, individually confirmed commands while its workspace is open. There is no scheduled background agent or native auto-updater in this preview. Updating the website updates its rendered UI; Electron security updates require a new package.
 
 Official references: [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [packaging](https://www.electronjs.org/docs/latest/tutorial/application-distribution), [protocol lifecycle](https://www.electronjs.org/docs/latest/api/app#event-open-url-macos), [electron-builder configuration](https://www.electron.build/configuration/).
+
+## Companion window and installed-app settings
+
+The **Companion → Open Companion Window** menu opens a separate floating,
+resizable Electron window. The global shortcut defaults to Option+Space on
+macOS and Alt+Space on Windows, with a safer Control+Shift+Space default on
+Linux. If the OS reserves a combination, the app tries a fallback and lets the
+user choose a reviewed alternative or disable the global shortcut in
+**Companion → Keyboard shortcut**. Preferences contain only the shortcut
+choice and are saved in the native app's user-data directory.
+
+The companion uses the same isolated session and the same sandboxed remote
+renderer. It has no preload, Node integration, OS shell command bridge or
+privileged filesystem access. Kova-only navigation rules apply to both windows.
+
+Packaged macOS and Windows apps include **Companion → Launch at login**.
+It invokes the operating system's login-item API and verifies the result.
+Unsigned/unpackaged previews and Linux do not claim automatic startup.
+Installation tests must confirm the actual OS shortcut, window focus,
+permission prompts and launch-item persistence before public distribution.
+
+## macOS menu bar and Dock preferences
+
+On macOS, **Companion → Show menu bar icon** creates a native Tray icon
+with actions to open the main app, open the companion, or quit. The icon is
+loaded from the packaged local Kova asset, never supplied by a web page.
+**Companion → Show Dock icon** controls the system Dock appearance. The app
+refuses to hide the Dock icon unless the menu bar icon is active, so both
+entry points cannot be hidden simultaneously. The toggles are stored in
+local preferences with the approved shortcut. The tray is destroyed on quit.
+Physical Mac installation and menu bar/Dock verification remain required.
+
+## Separate desktop chat windows
+
+**File → New Window** (Command/Ctrl+N) creates another independently
+resizable and closable native conversation window. Each window uses the same
+signed-in Kova session but has its own renderer. Every window enforces the
+exact Kova HTTPS navigation policy and sandbox / context isolation. External
+HTTPS navigation is confirmed from the window that initiated it; file,
+JavaScript and other dangerous protocols remain blocked. Camera, microphone
+and notification choices are bound to the requesting native window. Closing
+an additional window removes it from the permission allowlist.
+
+Native preview build and physical installation acceptance are still required.
+
+## Local file import (user-authorized)
+
+**File → Copy local source file...** opens the operating system's file chooser.
+Only a single selected nonempty text source file up to 256 KiB can be read.
+A second native confirmation is required before the text is copied to the
+system clipboard. Clipboard contents may be visible to other installed apps.
+The file is never uploaded, submitted, or copied to the web renderer
+automatically. Kova's remote website still has no Node, local filesystem,
+shell or IPC bridge.
+
+This separate clipboard action is intentionally limited. The dedicated offline
+coding workspace described below handles folder browsing and text editing.
+The workspace also includes the separately authorized terminal described below; neither surface provides a computer-control agent.
+
+## Local coding workspace — private repository editor
+
+**File → Open Local Coding Workspace** (Command/Ctrl+Shift+E) opens a separate
+offline Electron window with a repository tree, source-code editor, change
+preview, and explicit local save. The user must select a folder in a **native
+folder chooser**. Nothing is indexed or read before this approval.
+
+- The local renderer loads only `kova-local://workspace/index.html` and its
+  packaged script. It has a restrictive Content Security Policy, no network
+  connections, an independent Electron session, disabled permission grants,
+  sandboxing, context isolation and no Node integration. It cannot navigate
+  to `https://kovagpt.com` or open arbitrary windows.
+- The limited preload API is attached **only** to this local window. Every
+  privileged call requires the exact local main frame and originating
+  webContents. No remote website window has this preload or IPC access.
+- File browsing is restricted to the chosen canonical directory. Traversal,
+  hidden paths, symbolic links, binaries, unsupported extensions, and files
+  exceeding 512 KiB are rejected. Directory lists are bounded.
+- A source file must be explicitly opened before it can be edited. A change
+  preview shows its modified lines. **Saving requires a second native
+  confirmation** and refuses to overwrite any file changed since opening.
+  Files are replaced atomically; saving alone never executes or uploads them.
+- Closing the workspace or folder clears the selected path and in-memory
+  authorization; authorization is not synchronized to the website.
+
+This includes a functional **local text repository explorer/editor, Git inspection and local command runner**. Real multi-platform installation,
+keyboard accessibility, file locking, and signing/notarization acceptance remain
+outstanding before public release. The remote web app remains unchanged.
+
+## Local commands and source control
+
+Within **File → Open Local Coding Workspace**, open a folder and expand **Local terminal**.
+Enter a command and choose **Review and run…**. A native confirmation displays the exact
+command and full working directory. Cancelling does not start a process. Commands run
+under the installed user's OS permissions; the selected directory is a working directory,
+not a sandbox. Commands can read or modify files outside it or access the network.
+The remote site has no IPC channel to start commands, approve them, or read output.
+
+- POSIX uses `/bin/sh -c`; Windows uses the system `cmd.exe /d /s /c`.
+- Both output streams are displayed live, with exit code, failure, cancellation and timeout states.
+- **Stop** terminates the process group on POSIX or process tree on Windows. Closing the
+  workspace also stops its running command. Programs that detach from the process tree
+  can outlive it; this is a local tool, not an OS containment boundary.
+- Each command has a two-minute limit and a 256 KiB output limit. Input is closed;
+  interactive prompts, PTY programs and persistent shell sessions are not supported.
+- Runs and output stay in memory, limited to 30 entries. Clear history, close the folder,
+  or close the window to discard them. No background schedule or cloud synchronization exists.
+- Environment inheritance is restricted to OS execution, home and temporary-directory
+  variables; application API credentials, Node injection flags and Git override variables
+  are not passed to children. The user's own tools can still load their normal local config.
+- Folder switching is blocked while a command is awaiting confirmation or running.
+  Confirmation cannot be reused after navigation or a workspace identity change.
+
+**Source control** shows actual Git status, working diff, staged diff and the last 20 commits.
+Git must be installed and the selected folder must contain `.git`. These views use fixed,
+read-only argument lists, disable external diff/textconv/fsmonitor, and enforce time/output
+limits. Stage, commit, branch and other changes can be entered as individually confirmed
+terminal commands. This is not an autonomous coding agent or browser-tab integration.
+
+Validation includes actual temporary Git repositories and local processes, permission
+rejection, cancellation, bounds, and renderer interaction tests. Signed OS installation,
+Windows process-tree behavior and real-device acceptance remain release gates.
+
+## Built-in browser workspace
+
+**File → Open Browser Workspace** (Command/Ctrl+Shift+B) opens a native tabbed browser
+with an address bar, back/forward, reload, up to eight tabs and persistent browsing sessions.
+Only full HTTPS addresses without embedded credentials can be opened. New-window requests
+require native confirmation. Automatic downloads and permission requests are denied in this
+initial browser workspace.
+
+The toolbar is a packaged local renderer with its own allowlisted IPC. Remote pages run in
+separate sandboxed `WebContentsView` instances, with **no preload, Node access, command API,
+filesystem API or access to the local toolbar's IPC**. The browser profile is separate from
+the Kova chat window and the coding workspace; sign in inside the browser as needed.
+
+**Copy context…** requires native review before copying the active tab's title/address.
+A separate choice can include up to 16,000 characters explicitly selected on the page.
+Switching tabs, navigating or closing the browser invalidates a pending copy. Nothing is
+sent to chat automatically; paste the reviewed clipboard content into your conversation.
+Other installed apps may read the system clipboard. This does not install an extension in
+Chrome/Safari or grant access to tabs outside Kova's own browser.
+
+Unit tests cover tab lifecycle, permissions, remote isolation, navigation, downloads,
+clipboard consent and stale approvals. Browser tests check toolbar geometry/interactions.
+The Linux native CI runner also launches Electron itself against wholly intercepted local
+website fixtures, exercises real preloads, browser views and a confirmed local command,
+and checks that remote content has no native bridge. Signed OS installation and actual
+third-party website sign-in remain acceptance gates.
+
+## Multiple displays and external tab context
+
+**Displays → Move window to …** moves the focused Kova window to the selected physical
+display's available work area. This works for chat, companion, coding and built-in browser
+windows. Native menu options refresh when displays connect, disconnect or change geometry.
+This adds manual display placement; it does not authorize control of other applications.
+
+The separate [Tab Context extension](../browser-extension/README.md) can prepare reviewed
+context from an active HTTPS tab in desktop Chrome/Edge. It is optional and must be installed
+explicitly. It reads no pages on popup opening, has no permanent host permissions, and copies
+only the preview the user reviews. The Linux preview artifact includes its unpacked ZIP.

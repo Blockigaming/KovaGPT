@@ -133,6 +133,9 @@ test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attac
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       ),
   );
+  // Mobile touch events use viewport coordinates; the canvas can start below
+  // the toolbar and outside a narrow phone's visible area.
+  await canvas.scrollIntoViewIfNeeded();
   const box = (await canvas.boundingBox())!;
   const png = () => canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL());
   const blank = await png();

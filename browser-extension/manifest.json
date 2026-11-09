@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "KovaGPT Tab Context",
+  "version": "0.1.0",
+  "description": "Review and copy the active tab's address and selected text for KovaGPT.",
+  "permissions": ["activeTab", "scripting", "clipboardWrite"],
+  "action": {
+    "default_title": "Review tab context for KovaGPT",
+    "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'"
+  }
+}

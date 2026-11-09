@@ -2,6 +2,7 @@ import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
   createConsumerModelChoice,
+  resolveOneShotConsumerModel,
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
@@ -1835,6 +1836,7 @@ function KovaGPT() {
       voiceRequest?: { signal: AbortSignal },
       quickAnswer = false,
       requestWebSearch?: boolean,
+      oneShotHostedModel?: ConsumerModelId,
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1910,9 +1912,19 @@ function KovaGPT() {
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
-      const requestHostedModel = existingConversation?.kova
-        ? undefined
-        : (queuedSend?.hostedModel ?? hostedModel);
+      // Request-only model selection is validated by tier and never written
+      // as the conversation default, including held drafts and retries.
+      const resolvedModel = resolveOneShotConsumerModel({
+        defaultModel: hostedModel,
+        queuedModel: queuedSend?.hostedModel,
+        queuedOneShotModel: queuedSend?.oneShotHostedModel,
+        oneShotModel: oneShotHostedModel,
+        tier,
+        nativeKova: Boolean(existingConversation?.kova),
+      });
+      const requestHostedModel = resolvedModel.requestModel;
+      const conversationHostedModel = resolvedModel.savedModel;
+      const approvedOneShot = resolvedModel.oneShotModel;
       const isNewConversation = !retryConversationId && !existingConversation;
       const selectedWorkflowSkill = existingConversation?.skill ?? pendingWorkflowSkill;
 
@@ -1943,6 +1955,7 @@ function KovaGPT() {
         tool: retryTool ?? null,
         mode: requestMode,
         hostedModel: requestHostedModel,
+        ...(approvedOneShot ? { oneShotHostedModel: approvedOneShot } : {}),
         status: "held",
       };
       let clearedComposerRevision: number | null = null;
@@ -1967,7 +1980,7 @@ function KovaGPT() {
             title: "New chat",
             messages: [userMsg, assistantMsg],
             mode: requestMode,
-            hostedModel: requestHostedModel,
+            hostedModel: conversationHostedModel,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             temporary: tempChat,
@@ -1981,7 +1994,7 @@ function KovaGPT() {
           c.id === nextConvId
             ? {
                 ...c,
-                hostedModel: requestHostedModel,
+                hostedModel: conversationHostedModel,
                 messages: [...priorMessages, userMsg, assistantMsg],
                 memoryStartIndex:
                   typeof c.memoryStartIndex === "number"
@@ -2032,6 +2045,8 @@ function KovaGPT() {
                 undefined,
                 undefined,
                 true,
+                undefined,
+                approvedOneShot,
               );
             };
 
@@ -2443,7 +2458,20 @@ function KovaGPT() {
                       retryTimerRef.current = window.setTimeout(() => {
                         if (!isCurrentRetryScope() || activeIdRef.current !== nextConvId) return;
                         retryTimerRef.current = null;
-                        send(text, atts, retryTool, 0, nextConvId, priorMessages, userMsg.id);
+                        send(
+                          text,
+                          atts,
+                          retryTool,
+                          0,
+                          nextConvId,
+                          priorMessages,
+                          userMsg.id,
+                          undefined,
+                          undefined,
+                          false,
+                          undefined,
+                          approvedOneShot,
+                        );
                       }, 100);
                     },
                   }
@@ -3473,7 +3501,22 @@ function KovaGPT() {
                   <ChatInput
                     value={principalReady ? input : ""}
                     onChange={setInput}
-                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onSubmit={(tool, oneShotModel) =>
+                      send(
+                        input,
+                        attachments,
+                        tool,
+                        0,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        false,
+                        undefined,
+                        oneShotModel,
+                      )
+                    }
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
@@ -3612,7 +3655,22 @@ function KovaGPT() {
                   <ChatInput
                     value={principalReady ? input : ""}
                     onChange={setInput}
-                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onSubmit={(tool, oneShotModel) =>
+                      send(
+                        input,
+                        attachments,
+                        tool,
+                        0,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        false,
+                        undefined,
+                        oneShotModel,
+                      )
+                    }
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}

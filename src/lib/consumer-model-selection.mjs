@@ -79,6 +79,31 @@ export function createConsumerModelChoice(id, tier, available, principal, conver
     : null;
 }
 
+/** Resolve an eligible single-send override without mutating the conversation's model. */
+export function resolveOneShotConsumerModel({
+  defaultModel,
+  queuedModel,
+  queuedOneShotModel,
+  oneShotModel,
+  tier,
+  nativeKova = false,
+}) {
+  if (nativeKova) {
+    return { requestModel: undefined, savedModel: undefined, oneShotModel: undefined };
+  }
+  const savedModel = queuedOneShotModel ? defaultModel : (queuedModel ?? defaultModel);
+  const requestedModel = oneShotModel ?? queuedOneShotModel;
+  const approvedOneShot =
+    requestedModel && consumerModel(requestedModel)?.tiers.includes(tier)
+      ? requestedModel
+      : undefined;
+  return {
+    requestModel: approvedOneShot ?? savedModel,
+    savedModel,
+    oneShotModel: approvedOneShot,
+  };
+}
+
 /** Shared model-bound UI lookup; unfinished replies are never playback candidates. */
 export function latestCompletedModelReply(messages) {
   return messages

@@ -115,18 +115,21 @@ for (const tier of ["free", "plus", "pro"] as const) {
   });
 }
 
-test("chat keeps its draft when Work control is absent", async ({ page }) => {
+test("chat omits the retired Work launcher and preserves an unsent composer draft", async ({
+  page,
+}) => {
   const commands = await workFixture(page, "plus", false, true);
   await page.goto("/");
   await waitForKovaHydration(page);
-  const transcript = page.locator("[data-chat-transcript]");
-  await expect(transcript).toBeVisible();
-  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(page.locator("[data-chat-transcript]")).toBeVisible();
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await composer.fill("Review this synthetic launch request");
-  const launch = page.getByRole("button", { name: "Prepare or manage Work" });
-  await expect(launch).toHaveCount(0);
-  const dialog = page.getByRole("dialog", { name: "Work from this chat" });
-  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Prepare or manage Work", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Work from this chat", exact: true })).toHaveCount(
+    0,
+  );
   await expect(composer).toHaveValue("Review this synthetic launch request");
   expect(commands).toEqual([]);
 });

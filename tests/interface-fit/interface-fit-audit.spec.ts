@@ -159,11 +159,12 @@ if (scope === "public") {
     });
   });
 
-  test("critical chat sync recovery controls stay inside their notice", async ({ page }, info) => {
+  test("actionable chat sync recovery controls stay inside their notice", async ({
+    page,
+  }, info) => {
     await coreFixture(page, "dark", "plus");
-    // Authentication failures require visible recovery; ordinary 503 retries remain unobtrusive.
     await page.route("**/api/chat/history**", (route) =>
-      route.fulfill({ status: 401, json: { error: "Synthetic expired session" } }),
+      route.fulfill({ status: 401, json: { error: "Authentication required" } }),
     );
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
@@ -219,8 +220,9 @@ if (scope === "public") {
     await page.screenshot({ path: info.outputPath("sync-recovery.png") });
   });
 
-  test("transient sync retries stay unobtrusive and do not move the composer", async ({ page }) => {
+  test("transient sync retries stay silent and do not move the composer", async ({ page }) => {
     await coreFixture(page, "dark", "plus");
+    let calls = 0;
     let hold = false;
     let heldRequests = 0;
     let release!: () => void;
@@ -228,34 +230,40 @@ if (scope === "public") {
       release = resolve;
     });
     await page.route("**/api/chat/history**", async (route) => {
+      calls++;
       if (hold) {
         heldRequests++;
         await pending;
       }
-      await route.fulfill({
-        status: 503,
-        json: { error: "Synthetic offline history" },
-      });
+      await route.fulfill({ status: 503, json: { error: "Synthetic offline history" } });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => calls).toBeGreaterThan(0);
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
-    const composer = page.locator(".spec400-composer");
-    await expect(composer).toBeVisible();
     await expect(notice).toHaveCount(0);
-    const beforeTop = (await composer.boundingBox())!.y;
+    const composer = page.locator(".spec400-composer");
+    const before = (await composer.boundingBox())!;
     hold = true;
     try {
       await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
       await expect(notice).toHaveCount(0);
-      const duringTop = (await composer.boundingBox())!.y;
-      expect(Math.abs(duringTop - beforeTop)).toBeLessThanOrEqual(1);
+      const during = (await composer.boundingBox())!;
+      expect(Math.abs(during.y - before.y)).toBeLessThanOrEqual(1);
+      await expect(page.getByRole("button", { name: "Retry chat sync", exact: true })).toHaveCount(
+        0,
+      );
     } finally {
       release();
     }
+    await expect.poll(() => calls).toBeGreaterThan(1);
     await expect(notice).toHaveCount(0);
-    expect(Math.abs((await composer.boundingBox())!.y - beforeTop)).toBeLessThanOrEqual(1);
+    const after = (await composer.boundingBox())!;
+    expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+    await expect(
+      page.getByRole("article", { name: "KovaGPT response", exact: true }),
+    ).toBeVisible();
   });
 
   test("conversation loading keeps composer at the bottom", async ({ page }, info) => {

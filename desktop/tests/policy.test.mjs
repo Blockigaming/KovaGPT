@@ -1,6 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isKovaUrl, isOpenAppLink, externalUrl, WEB_PREFERENCES } from "../policy.mjs";
+import { readFileSync } from "node:fs";
+import {
+  isKovaUrl,
+  isOpenAppLink,
+  externalUrl,
+  WEB_PREFERENCES,
+  COMPANION_SHORTCUTS,
+  defaultCompanionShortcut,
+  validatedCompanionShortcut,
+} from "../policy.mjs";
 test("only the exact HTTPS Kova origin may navigate inside the window", () => {
   for (const url of [
     "https://kovagpt.com/",
@@ -58,4 +67,28 @@ test("remote web content has no desktop privileges", () => {
   assert.equal(WEB_PREFERENCES.webSecurity, true);
   assert.equal(WEB_PREFERENCES.allowRunningInsecureContent, false);
   assert.equal(WEB_PREFERENCES.navigateOnDragDrop, false);
+});
+
+test("desktop companion accelerators are limited to reviewed choices", () => {
+  assert.deepEqual(COMPANION_SHORTCUTS, [
+    "Alt+Space",
+    "CommandOrControl+Shift+Space",
+    "CommandOrControl+Shift+K",
+    "Disabled",
+  ]);
+  assert.equal(defaultCompanionShortcut("darwin"), "Alt+Space");
+  assert.equal(defaultCompanionShortcut("win32"), "Alt+Space");
+  assert.equal(defaultCompanionShortcut("linux"), "CommandOrControl+Shift+Space");
+  for (const value of ["Control+Alt+Delete", "javascript:alert(1)", "", null])
+    assert.equal(validatedCompanionShortcut(value, "darwin"), "Alt+Space");
+  assert.equal(validatedCompanionShortcut("Disabled", "win32"), "Disabled");
+});
+
+test("desktop companion window retains the hardened renderer and OS controls", () => {
+  const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8");
+  assert.ok(source.includes("alwaysOnTop: companion"));
+  assert.ok(source.includes("webPreferences: { ...WEB_PREFERENCES }"));
+  assert.ok(source.includes("globalShortcut.register(shortcut, openCompanion)"));
+  assert.ok(source.includes('label: "Launch at login"'));
+  assert.ok(source.includes("globalShortcut.unregisterAll()"));
 });

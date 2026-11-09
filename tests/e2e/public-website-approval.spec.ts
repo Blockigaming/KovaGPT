@@ -1,3 +1,4 @@
+import { hostedCheckoutFixture } from "./hosted-checkout-fixture";
 import { test, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
@@ -170,35 +171,21 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });
 
-test("hosted checkout waits for explicit payment action without contacting Stripe", async ({
+test("pricing opens hosted checkout directly without a review interstitial or real payment", async ({
   page,
 }, testInfo) => {
   const evidence = evidenceDirectory(testInfo.project.name);
-  // This workflow deliberately builds without payment credentials. The fixture
-  // owns authentication only; this is not real Stripe acceptance evidence.
   await installAuthenticatedFixture(page);
-  const stripeRequests: string[] = [];
-  page.on("request", (request) => {
-    if (/(?:^|\.)stripe\.(?:com|network)$/u.test(new URL(request.url()).hostname))
-      stripeRequests.push(request.method());
-  });
+  const checkout = await hostedCheckoutFixture(page);
   await page.goto("/pricing");
   await waitForKovaHydration(page);
-  const start = page.getByRole("button", { name: "Start Plus", exact: true });
-  await start.click();
-  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
-  const dialog = page.getByRole("main");
-  await expect(dialog.locator('[data-checkout-state="ready"]')).toBeVisible();
-  await expect(
-    dialog.getByRole("button", { name: "Continue to payment", exact: true }),
-  ).toBeEnabled();
-  await expect(dialog.locator("iframe")).toHaveCount(0);
-  await expect(dialog).toContainText("Payment opens full-screen in Stripe.");
-  await page.screenshot({ path: `${evidence}/checkout-ready.png` });
-  await page.getByRole("link", { name: "Back to plans", exact: true }).click();
-  await expect(page).toHaveURL(/\/pricing/);
-  await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
-  expect(stripeRequests).toEqual([]);
+  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
+  await expect(page).toHaveURL(checkout.url);
+  await expect(page.getByRole("heading", { name: "Checkout fixture", exact: true })).toBeVisible();
+  await expect(page.locator("iframe")).toHaveCount(0);
+  expect(checkout.result.creates).toBe(1);
+  expect(checkout.result.interceptedNavigations).toBe(1);
+  await page.screenshot({ path: `${evidence}/checkout-redirect.png` });
 });
 
 // These are raw browser captures used to review and update the intentional

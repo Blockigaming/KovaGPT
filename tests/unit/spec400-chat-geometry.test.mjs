@@ -113,7 +113,21 @@ test("spec400 failures retry only through a guarded explicit action using the or
   const retry = retries[0];
   assert.deepEqual(
     retry.arguments.map((argument) => argument.getText(ast)),
-    ["text", "atts", "retryTool", "0", "nextConvId", "priorMessages", "userMsg.id"],
+    [
+      "text",
+      "atts",
+      "retryTool",
+      "0",
+      "nextConvId",
+      "priorMessages",
+      "userMsg.id",
+      "undefined",
+      "undefined",
+      "false",
+      "undefined",
+      "approvedOneShot",
+    ],
+    "Explicit retry reuses the original idempotency identity and preserves its eligible one-shot model",
   );
   let click = retry.parent;
   while (click && !(ts.isPropertyAssignment(click) && click.name.getText(ast) === "onClick"))

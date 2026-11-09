@@ -19,6 +19,8 @@ export type NextPrompt = {
   tool: ComposerToolId | null;
   mode: ModeId;
   hostedModel?: ConsumerModelId;
+  /** The model for this request only; never persists as the conversation default. */
+  oneShotHostedModel?: ConsumerModelId;
   status: "queued" | "ready" | "held";
   reason?: string;
 };

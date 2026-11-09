@@ -1,147 +1,174 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import ts from "typescript";
-import { isClearSidebarSwipe } from "../../src/lib/sidebar-swipe.mjs";
+import { installInteractiveSidebarSwipe } from "../../src/lib/sidebar-swipe.mjs";
 
-const source = readFileSync("src/components/Sidebar.tsx", "utf8");
-const file = ts.createSourceFile(
-  "Sidebar.tsx",
-  source,
-  ts.ScriptTarget.Latest,
-  true,
-  ts.ScriptKind.TSX,
+assert.match(
+  readFileSync("src/components/Sidebar.tsx", "utf8"),
+  /installInteractiveSidebarSwipe\(/,
 );
-let effect;
-function visit(node) {
-  if (
-    ts.isCallExpression(node) &&
-    node.expression.getText(file) === "useEffect" &&
-    node.arguments[0]?.getText(file).includes('document.addEventListener("touchstart", start')
-  )
-    effect = node.arguments[0].getText(file);
-  ts.forEachChild(node, visit);
-}
-visit(file);
-assert.ok(effect, "Run the actual drawer opening gesture effect");
-const compiled = ts.transpileModule(`return (${effect})();`, {
-  compilerOptions: { target: ts.ScriptTarget.ES2022 },
-}).outputText;
 
-function fixture() {
+function surface() {
   const listeners = new Map();
-  let toggles = 0,
-    selected = false,
-    modal = false;
-  class Element {
-    parentElement = null;
-    scrollWidth = 100;
-    clientWidth = 100;
-    overflowX = "visible";
-    editable = false;
-    closest(selector) {
-      return selector === ".kova-assistant, .kova-app-shell" || this.editable ? this : null;
-    }
-  }
-  const target = new Element();
-  const cleanup = new Function(
-    "open",
-    "document",
-    "window",
-    "Element",
-    "isMobileViewport",
-    "getComputedStyle",
-    "swipeToggleRef",
-    "isClearSidebarSwipe",
-    compiled,
-  )(
-    false,
-    {
-      querySelector: () => (modal ? target : null),
-      addEventListener(name, callback, options) {
-        if (name === "touchstart" || name === "touchmove") assert.equal(options.passive, true);
-        listeners.set(name, callback);
-      },
-      removeEventListener(name, callback) {
-        if (listeners.get(name) === callback) listeners.delete(name);
-      },
-    },
-    { getSelection: () => ({ isCollapsed: !selected }) },
-    Element,
-    () => true,
-    (el) => ({ overflowX: el.overflowX }),
-    { current: () => toggles++ },
-    isClearSidebarSwipe,
-  );
   return {
-    target,
-    cleanup,
     listeners,
-    toggles: () => toggles,
-    select: (value) => {
-      selected = value;
+    addEventListener(name, listener, options) {
+      assert.equal(options.passive, name !== "touchmove");
+      listeners.set(name, listener);
     },
-    showModal: (value) => {
-      modal = value;
-    },
-    dispatch(name, { x = 250, y = 100, time = 0, count = 1 } = {}) {
-      listeners.get(name)?.({
-        target,
-        timeStamp: time,
-        touches: Array.from({ length: count }, (_, identifier) => ({
-          identifier,
-          clientX: x,
-          clientY: y,
-        })),
-      });
+    removeEventListener(name, listener) {
+      if (listeners.get(name) === listener) listeners.delete(name);
     },
   };
 }
 
-test("deliberate opening swipe toggles once and cleans up passive listeners", () => {
-  const f = fixture();
-  f.dispatch("touchstart");
-  f.dispatch("touchmove", { x: 140, time: 100 });
-  f.dispatch("touchmove", { x: 130, time: 120 });
+function target() {
+  const properties = new Map();
+  return {
+    dataset: {},
+    offsetWidth: 320,
+    style: {
+      setProperty(name, value) {
+        properties.set(name, value);
+      },
+      getPropertyValue(name) {
+        return properties.get(name) || "";
+      },
+      removeProperty(name) {
+        properties.delete(name);
+      },
+    },
+    getBoundingClientRect: () => ({ width: 320 }),
+  };
+}
+
+function fixture(open, shared = {}) {
+  const events = surface();
+  const drawer = shared.drawer ?? target();
+  const scrim = shared.scrim ?? target();
+  let toggles = 0;
+  let allowed = true;
+  let selected = false;
+  let mobile = true;
+  const cleanup = installInteractiveSidebarSwipe({
+    open,
+    target: events,
+    drawer,
+    scrim,
+    isMobile: () => mobile,
+    canStart: () => allowed && !selected,
+    canContinue: () => allowed && !selected,
+    toggle: () => toggles++,
+  });
+  function dispatch(name, x, y = 100, time = 0, count = 1) {
+    const finger = (identifier) => ({ identifier, clientX: x, clientY: y });
+    const fingers = Array.from({ length: count }, (_, id) => finger(id));
+    events.listeners.get(name)?.({
+      timeStamp: time,
+      cancelable: true,
+      preventDefault() {},
+      touches: name === "touchend" || name === "touchcancel" ? [] : fingers,
+      changedTouches: [finger(0)],
+    });
+  }
+  return {
+    drawer,
+    scrim,
+    dispatch,
+    cleanup,
+    events,
+    toggles: () => toggles,
+    block: () => {
+      allowed = false;
+    },
+    select: () => {
+      selected = true;
+    },
+    desktop: () => {
+      mobile = false;
+    },
+  };
+}
+
+test("opening follows the finger and settles only on release", () => {
+  const f = fixture(false);
+  f.dispatch("touchstart", 12);
+  f.dispatch("touchmove", 92, 100, 100);
+  assert.equal(f.drawer.style.getPropertyValue("--kova-swipe-distance"), "80px");
+  assert.equal(f.scrim.style.getPropertyValue("--kova-swipe-progress"), "0.25");
+  assert.equal(f.toggles(), 0);
+  f.dispatch("touchmove", 122, 100, 150);
+  f.dispatch("touchend", 122, 100, 170);
   assert.equal(f.toggles(), 1);
+  assert.equal(f.drawer.dataset.swipeDragging, "settling-opening");
   f.cleanup();
-  assert.equal(f.listeners.size, 0);
+  assert.equal(f.events.listeners.size, 0);
 });
 
-for (const interruption of ["selection", "modal"]) {
-  test(`opening swipe cancels when ${interruption} starts during the gesture`, () => {
-    const f = fixture();
-    f.dispatch("touchstart");
-    const interrupt = interruption === "selection" ? f.select : f.showModal;
-    interrupt(true);
-    f.dispatch("touchmove", { x: 140, time: 100 });
-    interrupt(false);
-    f.dispatch("touchmove", { x: 120, time: 150 });
-    assert.equal(f.toggles(), 0);
-    f.cleanup();
-  });
-}
+test("reversing a partial opening moves the backdrop back and does not toggle", () => {
+  const f = fixture(false);
+  f.dispatch("touchstart", 12);
+  f.dispatch("touchmove", 82, 100, 100);
+  f.dispatch("touchmove", 20, 100, 220);
+  assert.equal(f.drawer.style.getPropertyValue("--kova-swipe-distance"), "8px");
+  assert.equal(f.scrim.style.getPropertyValue("--kova-swipe-progress"), "0.025");
+  f.dispatch("touchend", 20, 100, 240);
+  assert.equal(f.toggles(), 0);
+  f.cleanup();
+});
 
-for (const interruption of [
-  "vertical scroll",
-  "horizontal scroll",
-  "editable",
-  "multiple touches",
-  "cancelled",
-]) {
-  test(`opening swipe leaves ${interruption} alone`, () => {
-    const f = fixture();
-    if (interruption === "horizontal scroll") {
-      f.target.scrollWidth = 500;
-      f.target.overflowX = "auto";
-    }
-    if (interruption === "editable") f.target.editable = true;
-    f.dispatch("touchstart");
-    if (interruption === "vertical scroll") f.dispatch("touchmove", { x: 245, y: 160, time: 30 });
-    if (interruption === "multiple touches") f.dispatch("touchmove", { count: 2, time: 30 });
-    if (interruption === "cancelled") f.dispatch("touchcancel");
-    f.dispatch("touchmove", { x: 140, time: 100 });
-    assert.equal(f.toggles(), 0);
+test("short fast flick opens; slow short drag does not", () => {
+  const fast = fixture(false);
+  fast.dispatch("touchstart", 12);
+  fast.dispatch("touchmove", 42, 100, 40);
+  fast.dispatch("touchend", 42, 100, 45);
+  assert.equal(fast.toggles(), 1);
+  fast.cleanup();
+  const slow = fixture(false);
+  slow.dispatch("touchstart", 12);
+  slow.dispatch("touchmove", 42, 100, 300);
+  slow.dispatch("touchend", 42, 100, 500);
+  assert.equal(slow.toggles(), 0);
+  slow.cleanup();
+});
+
+test("edge, vertical motion, selection, modal and multitouch guards are retained", () => {
+  const offEdge = fixture(false);
+  offEdge.dispatch("touchstart", 70);
+  offEdge.dispatch("touchmove", 220, 100, 100);
+  offEdge.dispatch("touchend", 220, 100, 110);
+  assert.equal(offEdge.toggles(), 0);
+  offEdge.cleanup();
+
+  for (const interrupt of ["vertical", "selection", "blocked", "multitouch", "cancel"]) {
+    const f = fixture(false);
+    f.dispatch("touchstart", 12);
+    if (interrupt === "selection") f.select();
+    if (interrupt === "blocked") f.block();
+    if (interrupt === "vertical") f.dispatch("touchmove", 17, 165, 40);
+    if (interrupt === "multitouch") f.dispatch("touchmove", 70, 100, 40, 2);
+    if (interrupt === "cancel") f.dispatch("touchcancel", 12);
+    f.dispatch("touchmove", 122, 100, 100);
+    f.dispatch("touchend", 122, 100, 110);
+    assert.equal(f.toggles(), 0, interrupt);
     f.cleanup();
-  });
-}
+  }
+});
+
+test("new closing gesture interrupts pending opening settle animation", () => {
+  const opening = fixture(false);
+  opening.dispatch("touchstart", 12);
+  opening.dispatch("touchmove", 142, 100, 100);
+  opening.dispatch("touchend", 142, 100, 120);
+  assert.equal(opening.toggles(), 1);
+  assert.equal(opening.drawer.dataset.swipeDragging, "settling-opening");
+  opening.cleanup();
+
+  const closing = fixture(true, { drawer: opening.drawer, scrim: opening.scrim });
+  closing.dispatch("touchstart", 200, 100, 140);
+  closing.dispatch("touchmove", 70, 100, 180);
+  assert.equal(closing.drawer.style.getPropertyValue("--kova-swipe-distance"), "-130px");
+  closing.dispatch("touchend", 70, 100, 200);
+  assert.equal(closing.toggles(), 1);
+  closing.cleanup();
+});

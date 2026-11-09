@@ -1,4 +1,5 @@
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
+import { CONSUMER_MODELS } from "@/lib/consumer-model-selection.mjs";
 import type { ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import {
   ArrowUp,
@@ -77,6 +78,7 @@ import {
 } from "@/components/ui/dialog";
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
+import { sketchMentionStart, trailingComposerMention } from "@/lib/composer-sketch-mention.mjs";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
@@ -137,6 +139,13 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "data_analysis", label: "Analyze data", icon: Brain },
   { id: "file_analysis", label: "Analyze files", icon: FileText },
 ];
+const COMPOSER_TOOL_MENTIONS: Readonly<Record<ComposerToolId, readonly string[]>> = {
+  web_search: ["search", "web"],
+  image: ["image", "picture"],
+  study: ["study", "learn"],
+  data_analysis: ["data", "analyze"],
+  file_analysis: ["files", "document"],
+};
 
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
@@ -203,7 +212,10 @@ export function ChatInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
+  onSubmit: (
+    tool?: ComposerToolId | null,
+    oneShotModel?: ConsumerModelId,
+  ) => void | Promise<unknown>;
   onStop: () => void;
   /** Explicitly snapshot one next message; ordinary typing and Enter never enqueue. */
   onSendNext?: (tool?: ComposerToolId | null, trigger?: HTMLButtonElement | null) => boolean;
@@ -329,6 +341,9 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
+  const plusPressRef = useRef<{ id: number; x: number; y: number; startedAt: number } | null>(null);
+  const plusLongPressRef = useRef(false);
+  const plusContextHandledRef = useRef(false);
   const [expanded, setExpanded] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<PendingAttachment | null>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
@@ -376,6 +391,71 @@ export function ChatInput({
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
   const [drawingOpen, setDrawingOpen] = useState(false);
+  const [oneShotModelOpen, setOneShotModelOpen] = useState(false);
+  const oneShotTimerRef = useRef<number | null>(null);
+  const oneShotPressRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  const suppressLongPressClickRef = useRef(false);
+  const canOfferOneShotModel =
+    isMobileLayout &&
+    userTier !== "free" &&
+    canChangeAgent &&
+    Boolean(hostedModel) &&
+    isLoaded &&
+    Boolean(user) &&
+    !disabled &&
+    !sendDisabled &&
+    !isStreaming;
+  const cancelOneShotTimer = () => {
+    if (oneShotTimerRef.current !== null) window.clearTimeout(oneShotTimerRef.current);
+    oneShotTimerRef.current = null;
+    oneShotPressRef.current = null;
+  };
+  useEffect(() => {
+    return () => {
+      if (oneShotTimerRef.current !== null) window.clearTimeout(oneShotTimerRef.current);
+    };
+  }, []);
+  const [dismissedSketchText, setDismissedSketchText] = useState<string | null>(null);
+  const sketchAt = sketchMentionStart(value);
+  const showSketchMention =
+    isMobileLayout &&
+    sketchAt >= 0 &&
+    value !== dismissedSketchText &&
+    isLoaded &&
+    Boolean(user) &&
+    !disabled &&
+    !isStreaming &&
+    !drawingOpen;
+  const acceptSketchMention = () => {
+    if (!showSketchMention) return;
+    onChange(value.slice(0, sketchAt));
+    setDismissedSketchText(null);
+    setDrawingOpen(true);
+  };
+  const toolMention = trailingComposerMention(value);
+  const toolMentionQuery = toolMention?.query ?? "";
+  const toolMentionAt = toolMention?.start ?? -1;
+  const matchingToolMentions = COMPOSER_TOOLS.filter((tool) =>
+    COMPOSER_TOOL_MENTIONS[tool.id].some((alias) => alias.startsWith(toolMentionQuery)),
+  );
+  const showToolMentions =
+    isMobileLayout &&
+    toolMentionAt >= 0 &&
+    value !== dismissedSketchText &&
+    matchingToolMentions.length > 0 &&
+    Boolean(onToolSelect) &&
+    isLoaded &&
+    Boolean(user) &&
+    !disabled &&
+    !isStreaming;
+  const acceptToolMention = (tool: ComposerAction) => {
+    if (!showToolMentions) return;
+    onChange(value.slice(0, toolMentionAt));
+    selectedToolRef.current = tool.id;
+    onToolSelect?.(tool.id);
+    setUploadAnnouncement(`${tool.label} selected`);
+    setDismissedSketchText(null);
+  };
   const online = useSyncExternalStore(
     subscribeToOnlineStatus,
     getOnlineStatusSnapshot,
@@ -714,7 +794,7 @@ export function ChatInput({
     return true;
   };
 
-  const triggerSubmit = () => {
+  const triggerSubmit = (oneShotModel?: ConsumerModelId) => {
     if (disabled || sendDisabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
     if (!value.trim() && !validAttachmentInstruction) return;
@@ -729,7 +809,7 @@ export function ChatInput({
     submittingRef.current = true;
     setUploadAnnouncement("Sending message…");
     try {
-      const result = onSubmit(selectedToolRef.current);
+      const result = onSubmit(selectedToolRef.current, oneShotModel);
       if (result && typeof result.then === "function")
         void result.then(
           () => {
@@ -1031,6 +1111,8 @@ export function ChatInput({
     }
   }
 
+  const externalImageChange = useRef(onChange);
+  externalImageChange.current = onChange;
   const externalImageFiles = useRef(addFiles);
   externalImageFiles.current = addFiles;
   useEffect(() => {
@@ -1043,7 +1125,7 @@ export function ChatInput({
       if (!detail || typeof detail.accept !== "function") return;
       const context = attachmentContextRef.current;
       const scope = attachmentScopeRef.current;
-      detail.accept(async (file, isCurrent) => {
+      detail.accept(async (file, isCurrent, instructions) => {
         const current = () =>
           mounted &&
           isCurrent() &&
@@ -1051,7 +1133,18 @@ export function ChatInput({
           scope === attachmentScopeRef.current;
         if (!current()) throw new DOMException("The image action was cancelled.", "AbortError");
         const attached = await externalImageFiles.current([file]);
-        if (!current() || !attached) return;
+        if (!current()) throw new DOMException("The image action was cancelled.", "AbortError");
+        if (!attached)
+          throw new Error(
+            "The image could not be added. Check the draft attachments and try again.",
+          );
+        const text = typeof instructions === "string" ? instructions.trim().slice(0, 4000) : "";
+        if (text) {
+          const draft = composerStateRef.current.value;
+          const next = draft ? `${draft}${draft.endsWith("\n") ? "" : "\n"}${text}` : text;
+          composerStateRef.current.value = next;
+          externalImageChange.current(next);
+        }
         toast.success("Image added to your message");
         const focused = document.activeElement;
         if (focused === document.body || focused?.closest('[data-chat-image], [role="menuitem"]'))
@@ -1679,7 +1772,22 @@ export function ChatInput({
             value={value}
             onChange={(event) => onChange(event.target.value)}
             disabled={disabled}
-            onKeyDown={handleKey}
+            onKeyDown={(event) => {
+              if ((showSketchMention || showToolMentions) && !composingRef.current) {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  if (showSketchMention) acceptSketchMention();
+                  else if (matchingToolMentions[0]) acceptToolMention(matchingToolMentions[0]);
+                  return;
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setDismissedSketchText(value);
+                  return;
+                }
+              }
+              handleKey(event);
+            }}
             onCompositionStart={() => {
               composingRef.current = true;
             }}
@@ -1697,6 +1805,10 @@ export function ChatInput({
             }
             className="spec400-composer-input"
             aria-label="Message KovaGPT"
+            aria-expanded={showSketchMention || showToolMentions}
+            aria-controls={
+              showSketchMention || showToolMentions ? "kova-mention-suggestions" : undefined
+            }
             aria-keyshortcuts={
               isMobileLayout
                 ? undefined
@@ -1717,6 +1829,44 @@ export function ChatInput({
             <ExpandViewIcon />
           </button>
         </div>
+        {showSketchMention || showToolMentions ? (
+          <div
+            id="kova-mention-suggestions"
+            role="group"
+            aria-label="Mention suggestions"
+            className="space-y-1 px-3 pb-2"
+          >
+            {showSketchMention ? (
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={acceptSketchMention}
+              >
+                <Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="font-medium">Sketch</span>
+                <span className="text-muted-foreground">Draw an idea</span>
+              </button>
+            ) : null}
+            {showToolMentions
+              ? matchingToolMentions.map((tool) => {
+                  const ToolIcon = tool.icon;
+                  return (
+                    <button
+                      key={tool.id}
+                      type="button"
+                      className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
+                      onPointerDown={(event) => event.preventDefault()}
+                      onClick={() => acceptToolMention(tool)}
+                    >
+                      <ToolIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="font-medium">{tool.label}</span>
+                    </button>
+                  );
+                })
+              : null}
+          </div>
+        ) : null}
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
           <button
             type="button"
@@ -1774,10 +1924,74 @@ export function ChatInput({
                     disabled={disabled || isStreaming}
                     className="spec400-toolbar-button spec400-toolbar-icon"
                     aria-label="Attach"
-                    title="Add files and tools"
+                    title={
+                      isMobileLayout
+                        ? "Add files and tools; hold for photos"
+                        : "Add files and tools"
+                    }
                     aria-haspopup="dialog"
                     aria-expanded={plusOpen}
-                    onClick={isMobileLayout ? () => setPlusOpen(true) : undefined}
+                    onPointerDown={(event) => {
+                      if (!isMobileLayout || event.pointerType !== "touch") return;
+                      plusPressRef.current = {
+                        id: event.pointerId,
+                        x: event.clientX,
+                        y: event.clientY,
+                        startedAt: event.timeStamp,
+                      };
+                    }}
+                    onPointerMove={(event) => {
+                      const press = plusPressRef.current;
+                      if (
+                        press?.id === event.pointerId &&
+                        Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12
+                      )
+                        plusPressRef.current = null;
+                    }}
+                    onPointerUp={(event) => {
+                      const press = plusPressRef.current;
+                      plusLongPressRef.current = Boolean(
+                        press?.id === event.pointerId && event.timeStamp - press.startedAt >= 500,
+                      );
+                      plusPressRef.current = null;
+                    }}
+                    onPointerCancel={() => {
+                      plusPressRef.current = null;
+                      plusLongPressRef.current = false;
+                    }}
+                    onPointerLeave={() => {
+                      plusPressRef.current = null;
+                    }}
+                    onContextMenu={(event) => {
+                      if (!isMobileLayout || !isLoaded || !user || disabled || isStreaming) return;
+                      event.preventDefault();
+                      plusPressRef.current = null;
+                      plusLongPressRef.current = false;
+                      plusContextHandledRef.current = true;
+                      setPlusOpen(false);
+                      photoRef.current?.click();
+                      window.setTimeout(() => {
+                        plusContextHandledRef.current = false;
+                      }, 0);
+                    }}
+                    onClick={
+                      isMobileLayout
+                        ? (event) => {
+                            if (plusContextHandledRef.current) {
+                              plusContextHandledRef.current = false;
+                              return;
+                            }
+                            if (plusLongPressRef.current) {
+                              plusLongPressRef.current = false;
+                              setPlusOpen(false);
+                              if (!requireFileAccount(event.currentTarget)) return;
+                              photoRef.current?.click();
+                              return;
+                            }
+                            setPlusOpen(true);
+                          }
+                        : undefined
+                    }
                   >
                     <Plus aria-hidden="true" />
                     <span className="sr-only">Attach</span>
@@ -1885,9 +2099,44 @@ export function ChatInput({
                 type="button"
                 onPointerDown={(event) => {
                   if (event.button === 0) event.preventDefault();
+                  if (!canOfferOneShotModel || !canSubmit || event.pointerType !== "touch") return;
+                  cancelOneShotTimer();
+                  oneShotPressRef.current = {
+                    id: event.pointerId,
+                    x: event.clientX,
+                    y: event.clientY,
+                  };
+                  oneShotTimerRef.current = window.setTimeout(() => {
+                    if (oneShotPressRef.current?.id !== event.pointerId) return;
+                    oneShotTimerRef.current = null;
+                    suppressLongPressClickRef.current = true;
+                    setOneShotModelOpen(true);
+                  }, 500);
                 }}
+                onPointerMove={(event) => {
+                  const press = oneShotPressRef.current;
+                  if (
+                    press?.id === event.pointerId &&
+                    Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12
+                  )
+                    cancelOneShotTimer();
+                }}
+                onPointerUp={() => {
+                  cancelOneShotTimer();
+                  window.setTimeout(() => {
+                    suppressLongPressClickRef.current = false;
+                  }, 0);
+                }}
+                onPointerCancel={cancelOneShotTimer}
+                onPointerLeave={cancelOneShotTimer}
                 disabled={!canSubmit}
-                onClick={triggerSubmit}
+                onClick={() => {
+                  if (suppressLongPressClickRef.current || oneShotModelOpen) {
+                    suppressLongPressClickRef.current = false;
+                    return;
+                  }
+                  triggerSubmit();
+                }}
                 className="spec400-send-button"
                 hidden={!hasDraft}
                 aria-label="Send message"
@@ -2368,6 +2617,35 @@ export function ChatInput({
           </button>
         </DialogContent>
       </Dialog>
+      <MobileBottomSheet
+        open={oneShotModelOpen && canOfferOneShotModel && canSubmit}
+        onOpenChange={(open) => {
+          if (!open) setOneShotModelOpen(false);
+        }}
+        title="Send this message with"
+        ariaLabel="Choose a model for one message"
+      >
+        <div className="flex flex-col gap-1 p-2">
+          <p className="px-2 pb-1 text-sm text-muted-foreground">
+            Applies to this message only. Your default model stays unchanged.
+          </p>
+          {CONSUMER_MODELS.filter((model) => model.tiers.includes(userTier)).map((model) => (
+            <button
+              key={model.id}
+              type="button"
+              className="flex min-h-11 w-full flex-col rounded-xl px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => {
+                setOneShotModelOpen(false);
+                suppressLongPressClickRef.current = false;
+                triggerSubmit(model.id);
+              }}
+            >
+              <span className="text-sm font-medium">{model.label}</span>
+              <span className="text-xs text-muted-foreground">{model.description}</span>
+            </button>
+          ))}
+        </div>
+      </MobileBottomSheet>
       <ComposerDrawingDialog
         open={drawingOpen}
         onOpenChange={setDrawingOpen}

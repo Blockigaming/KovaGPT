@@ -1,0 +1,34 @@
+name: iOS native preview
+on:
+  pull_request:
+    paths: ["ios-native/**", ".github/workflows/ios-native-preview.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: ios-native
+      - run: |
+          xcodebuild -project KovaGPT.xcodeproj -scheme KovaGPT \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+        working-directory: ios-native
+      - name: Verify native account container isolation
+        timeout-minutes: 10
+        run: |
+          KOVA_TEST_DEVICE=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k for v in vs if v["name"].startswith("iPhone")))')
+          xcrun simctl bootstatus "$KOVA_TEST_DEVICE" -b
+          xcodebuild -project KovaGPT.xcodeproj -scheme KovaGPT \
+            -parallel-testing-enabled NO \
+            -destination "platform=iOS Simulator,id=$KOVA_TEST_DEVICE" \
+            CODE_SIGNING_ALLOWED=NO test
+        working-directory: ios-native

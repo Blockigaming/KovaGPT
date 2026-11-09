@@ -1,5 +1,5 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { AudioLines, Info, Loader2, X } from "lucide-react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
+import { AudioLines, Info, Loader2, Mic, TextSelect, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,12 +34,17 @@ export interface ComposerVoiceDialogViewProps {
   availability: ComposerVoiceAvailability;
   hasTranscript: boolean;
   handsFreeListening?: boolean;
+  inputLevel?: number;
   microphoneAvailable?: boolean;
   replyAvailable?: boolean;
   error?: string;
   voicePicker?: ReactNode;
   conversationModelControl?: ReactNode;
   recordingControl?: ReactNode;
+  microphoneMuted?: boolean;
+  onToggleMicrophoneMuted?: () => void;
+  captionsOpen?: boolean;
+  onCaptionsChange?: (open: boolean) => void;
   retryControl?: ReactNode;
   cancelControl?: ReactNode;
   transcriptReview?: ReactNode;
@@ -60,12 +65,17 @@ export function ComposerVoiceDialogView({
   availability,
   hasTranscript,
   handsFreeListening = false,
+  inputLevel = 0,
   microphoneAvailable = true,
   replyAvailable = true,
   error,
   voicePicker,
   conversationModelControl,
   recordingControl,
+  microphoneMuted = false,
+  onToggleMicrophoneMuted,
+  captionsOpen = false,
+  onCaptionsChange,
   retryControl,
   cancelControl,
   transcriptReview,
@@ -78,11 +88,12 @@ export function ComposerVoiceDialogView({
   const processing = ready && phase !== "idle" && phase !== "recording";
   const hasError = Boolean(error);
   const contentFirst =
-    hasTranscript ||
-    Boolean(audioPlayer) ||
-    Boolean(voiceReply) ||
-    phase === "speaking" ||
-    hasError;
+    (mode === "dictate" || captionsOpen) &&
+    (hasTranscript ||
+      Boolean(audioPlayer) ||
+      Boolean(voiceReply) ||
+      phase === "speaking" ||
+      hasError);
   const compact = !ready || (hasError && !hasTranscript && !audioPlayer && !voiceReply);
   const title = hasError
     ? "Voice needs attention"
@@ -176,9 +187,13 @@ export function ComposerVoiceDialogView({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-voice-dialog"
+        className={
+          mode === "voice" && ready ? "kova-voice-dialog kova-voice-immersive" : "kova-voice-dialog"
+        }
         data-ui-reference="chatgpt-separate-voice"
         data-voice-availability={availability}
+        data-voice-mode={mode}
+        data-voice-captions={captionsOpen ? "open" : "closed"}
         data-voice-phase={phase}
         data-voice-review={hasTranscript || Boolean(audioPlayer) ? "true" : "false"}
         data-voice-content-first={contentFirst ? "true" : "false"}
@@ -196,12 +211,25 @@ export function ComposerVoiceDialogView({
         <div className="kova-voice-body">
           <div className="kova-voice-canvas">
             {ready && !contentFirst && (
-              <svg
-                className="kova-voice-mark"
-                viewBox="0 0 200 200"
+              <div
+                className="kova-voice-orb-shell"
                 aria-hidden="true"
-                focusable="false"
-              />
+                style={
+                  {
+                    "--kova-voice-orb-scale": String(
+                      1 + Math.max(0, Math.min(1, inputLevel)) * 0.18,
+                    ),
+                  } as CSSProperties
+                }
+              >
+                <div className="kova-voice-orb-glow" />
+                <svg
+                  className="kova-voice-mark"
+                  viewBox="0 0 200 200"
+                  aria-hidden="true"
+                  focusable="false"
+                />
+              </div>
             )}
             <h2 className="kova-voice-heading">{title}</h2>
             <DialogDescription
@@ -231,13 +259,13 @@ export function ComposerVoiceDialogView({
             )}
           </div>
 
-          {ready && voiceReply && (
+          {ready && voiceReply && (mode !== "voice" || captionsOpen) && (
             <div className="kova-voice-transcript">
               <h3>Latest saved reply</h3>
               <p className="whitespace-pre-wrap break-words">{voiceReply}</p>
             </div>
           )}
-          {ready && transcriptReview && (
+          {ready && transcriptReview && (mode !== "voice" || captionsOpen) && (
             <div className="kova-voice-transcript">{transcriptReview}</div>
           )}
           {availabilityRetry && <div className="kova-voice-retry">{availabilityRetry}</div>}
@@ -256,6 +284,21 @@ export function ComposerVoiceDialogView({
             <div className="kova-voice-use-transcript">{useTranscriptControl}</div>
           )}
           <div className="kova-voice-dock">
+            {ready && mode === "voice" && phase === "recording" && onToggleMicrophoneMuted && (
+              <button
+                type="button"
+                className="kova-voice-microphone-toggle"
+                aria-label={microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+                title={microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+                aria-pressed={microphoneMuted}
+                onClick={onToggleMicrophoneMuted}
+              >
+                <Mic
+                  aria-hidden="true"
+                  className={microphoneMuted ? "kova-voice-muted-icon" : undefined}
+                />
+              </button>
+            )}
             {ready && recordingControl && (
               <div className="kova-voice-record-control">{recordingControl}</div>
             )}
@@ -296,6 +339,18 @@ export function ComposerVoiceDialogView({
                 )}
               </div>
               <div className="kova-voice-secondary-control">
+                {mode === "voice" && (
+                  <button
+                    type="button"
+                    className="kova-voice-captions-toggle"
+                    aria-label={captionsOpen ? "Hide voice captions" : "Show voice captions"}
+                    aria-pressed={captionsOpen}
+                    title={captionsOpen ? "Hide captions" : "Show captions"}
+                    onClick={() => onCaptionsChange?.(!captionsOpen)}
+                  >
+                    <TextSelect aria-hidden="true" />
+                  </button>
+                )}
                 {ready && (
                   <Popover>
                     <PopoverTrigger asChild>
@@ -316,7 +371,7 @@ export function ComposerVoiceDialogView({
                       </p>
                       <p>
                         {mode === "voice"
-                          ? "Your draft stays separate from spoken turns. Reply speech uses your selected voice, or the configured default when no choices are listed."
+                          ? "Your draft stays separate from spoken turns. Reply speech uses your selected voice or the configured default. Captions show completed turns rather than synchronized live subtitles."
                           : "You review the transcript before adding it to your chat draft."}
                       </p>
                     </PopoverContent>

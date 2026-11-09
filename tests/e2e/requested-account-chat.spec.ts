@@ -1,3 +1,4 @@
+import { hostedCheckoutFixture } from "./hosted-checkout-fixture";
 import { test, expect } from "@playwright/test";
 import { fixture, owner, chatA } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
@@ -106,15 +107,18 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   await expect(settings).toBeHidden();
 });
 
-test("requested: account Upgrade goes directly to the plan selector", async ({ page }) => {
+test("requested: account Upgrade opens full-page checkout directly", async ({ page }) => {
   await fixture(page, "dark", true);
+  const checkout = await hostedCheckoutFixture(page);
   await page.goto("/");
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
   await sidebar.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Upgrade plan", exact: true }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByRole("heading", { name: "Upgrade your plan", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(checkout.url);
+  await expect(page.getByRole("heading", { name: "Checkout fixture", exact: true })).toBeVisible();
+  expect(checkout.result.creates).toBe(1);
+  expect(checkout.result.interceptedNavigations).toBe(1);
   await expect(page.locator(".kova-settings-dialog")).toHaveCount(0);
 });
 

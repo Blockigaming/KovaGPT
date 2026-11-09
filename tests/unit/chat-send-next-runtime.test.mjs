@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { resolveOneShotConsumerModel } from "../../src/lib/consumer-model-selection.mjs";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
@@ -140,6 +141,7 @@ function fixture() {
   let sequence = 0;
   const context = {
     ...helpers,
+    resolveOneShotConsumerModel,
     React,
     Button,
     Suspense: React.Suspense,

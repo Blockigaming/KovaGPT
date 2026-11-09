@@ -495,6 +495,36 @@ button.kova-sidebar-scrim {
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
     transform: translateX(-100%);
   }
+  /* The drawer and scrim track the same finger fraction during touch drag. */
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging] {
+    visibility: visible;
+    pointer-events: none;
+  }
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="opening"],
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="settling-opening"] {
+    transform: translateX(calc(-100% + var(--kova-swipe-distance, 0px)));
+  }
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="closing"],
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging="settling-closing"] {
+    transform: translateX(var(--kova-swipe-distance, 0px));
+  }
+  .kova-sidebar[data-swipe-dragging="opening"],
+  .kova-sidebar[data-swipe-dragging="closing"],
+  button.kova-sidebar-scrim[data-swipe-dragging="opening"],
+  button.kova-sidebar-scrim[data-swipe-dragging="closing"] {
+    transition: none;
+  }
+  .kova-sidebar[data-swipe-dragging^="settling"] {
+    transition: transform var(--kova-motion-standard) var(--kova-ease);
+  }
+  button.kova-sidebar-scrim[data-swipe-dragging] {
+    visibility: visible;
+    opacity: var(--kova-swipe-progress, 0);
+    pointer-events: none;
+  }
+  button.kova-sidebar-scrim[data-swipe-dragging^="settling"] {
+    transition: opacity var(--kova-motion-standard) var(--kova-ease);
+  }
   .kova-sidebar-inner {
     width: 100%;
     min-width: 0;
@@ -570,6 +600,10 @@ button.kova-sidebar-scrim {
     transition: none;
     animation: none;
   }
+  .kova-sidebar[data-swipe-dragging],
+  button.kova-sidebar-scrim[data-swipe-dragging] {
+    transition: none;
+  }
 }
 
 /* Grok public header: outlined sign-in and black sign-up, equal 40px geometry. */
@@ -617,6 +651,16 @@ button.kova-auth-sign-up:hover {
   }
 }
 
+.kova-sidebar-chat-menu {
+  width: 240px;
+}
+/* Radix's anchor-based available-width variable can shrink phone menus to
+   148px-wide actions. Let collision positioning keep the 240px menu on screen. */
+@media (max-width: 767px) {
+  .kova-sidebar-chat-menu {
+    max-width: calc(100vw - 24px);
+  }
+}
 .kova-sidebar-chat-menu [role="menuitem"] {
   min-height: 40px;
   border-radius: 12px;
@@ -680,7 +724,7 @@ button.kova-auth-sign-up:hover {
   }
   .kova-assistant:has(.kova-sidebar[data-state="open"]) > .kova-chat-main,
   .kova-app-content[data-sidebar="open"] {
-    transform: translateX(min(360px, calc(100vw - 80px)));
+    transform: none;
     /* The sidebar, not the conversation pane, owns the rounded corners. */
   }
 }
@@ -783,4 +827,41 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
 .kova-profile-menu .kova-profile-menu-account {
   color: var(--foreground);
   opacity: 1;
+}
+
+/* Destination shortcuts form a touch strip; desktop keeps its vertical list. */
+.kova-sidebar-destinations {
+  display: contents;
+}
+@media (max-width: 1023px) {
+  .kova-sidebar-destinations {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding: 4px 2px 8px;
+  }
+  .kova-sidebar-destinations > .kova-nav-row {
+    flex: 0 0 auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    width: 96px;
+    min-height: 76px;
+    padding: 10px 6px;
+    border-radius: 16px;
+    scroll-snap-align: start;
+    text-align: center;
+    font-size: 13px;
+    line-height: 18px;
+    background: var(--sidebar-active);
+  }
+  .kova-sidebar-destinations .kova-sidebar-label {
+    white-space: normal;
+    overflow: visible;
+  }
 }

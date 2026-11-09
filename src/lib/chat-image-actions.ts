@@ -4,7 +4,11 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
-export type ChatImageAttachmentHandler = (file: File, isCurrent: () => boolean) => Promise<void>;
+export type ChatImageAttachmentHandler = (
+  file: File,
+  isCurrent: () => boolean,
+  instructions?: string,
+) => Promise<void>;
 export type ChatImageAttachmentRequest = { accept: (handler: ChatImageAttachmentHandler) => void };
 
 /** Capture the current composer's own guarded file handler before any image read. */

@@ -260,6 +260,10 @@ export function ComposerVoiceDialog({
     gate: ReturnType<typeof createVoiceSilenceGate>;
   } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
+  const [inputLevel, setInputLevel] = useState(0);
+  const [microphoneMuted, setMicrophoneMuted] = useState(false);
+  const [captionsOpen, setCaptionsOpen] = useState(false);
+  const microphoneMutedRef = useRef(false);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
   const objectUrl = useRef("");
@@ -278,6 +282,7 @@ export function ComposerVoiceDialog({
   const updatePhase = useCallback((next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
+    if (next !== "recording") setInputLevel(0);
   }, []);
 
   const clearRecordingTimers = useCallback(() => {
@@ -333,6 +338,7 @@ export function ComposerVoiceDialog({
     }
     stopTracks(stream.current);
     stream.current = null;
+    microphoneMutedRef.current = false;
     chunks.current = [];
     audioBytes.current = 0;
     retainedRecording.current = null;
@@ -767,11 +773,21 @@ export function ComposerVoiceDialog({
     void transcribeRecording(scope, retainedRecording.current);
   };
 
+  const toggleMicrophoneMuted = () => {
+    if (mode !== "voice" || phaseRef.current !== "recording" || !stream.current) return;
+    const muted = !microphoneMutedRef.current;
+    microphoneMutedRef.current = muted;
+    for (const track of stream.current.getAudioTracks()) track.enabled = !muted;
+    setMicrophoneMuted(muted);
+  };
+
   const stopRecording = () => {
     if (phaseRef.current !== "recording" || recorder.current?.state !== "recording") return;
     updatePhase("stopping");
     clearRecordingTimers();
     setHandsFreeListening(false);
+    microphoneMutedRef.current = false;
+    setMicrophoneMuted(false);
     recorder.current.stop();
     stopTracks(stream.current);
     stream.current = null;
@@ -808,6 +824,8 @@ export function ComposerVoiceDialog({
     setAudioUrl("");
     setError("");
     setElapsed(0);
+    microphoneMutedRef.current = false;
+    setMicrophoneMuted(false);
     updatePhase("requesting");
     let acquired: MediaStream | null = null;
     try {
@@ -873,11 +891,14 @@ export function ComposerVoiceDialog({
           const samples = new Float32Array(analyser.fftSize);
           const gate = createVoiceSilenceGate();
           const interval = setInterval(() => {
-            if (!isCurrent(scope) || phaseRef.current !== "recording") return;
+            if (!isCurrent(scope) || phaseRef.current !== "recording" || microphoneMutedRef.current)
+              return;
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
-            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+            const amplitude = Math.sqrt(total / samples.length);
+            setInputLevel(Math.min(1, amplitude * 8));
+            if (gate.sample(amplitude, Date.now())) stopRecording();
           }, 100);
           silenceMonitor.current = { context, source, interval, gate };
           setHandsFreeListening(true);
@@ -1144,6 +1165,10 @@ export function ComposerVoiceDialog({
     void resumeRecording.current?.();
   }, [open, autoStartVoice, mode, ready, onVoiceSubmit, userId, contextKey]);
 
+  useLayoutEffect(() => {
+    if (!open) setCaptionsOpen(false);
+  }, [open]);
+
   const VoiceView =
     inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
 
@@ -1156,6 +1181,7 @@ export function ComposerVoiceDialog({
       mode={mode}
       status={status}
       handsFreeListening={mode === "voice" && handsFreeListening}
+      inputLevel={mode === "voice" && phase === "recording" && !microphoneMuted ? inputLevel : 0}
       availability={
         !userId
           ? "guest"
@@ -1230,6 +1256,10 @@ export function ComposerVoiceDialog({
           </>
         ) : undefined
       }
+      microphoneMuted={microphoneMuted}
+      onToggleMicrophoneMuted={toggleMicrophoneMuted}
+      captionsOpen={captionsOpen}
+      onCaptionsChange={setCaptionsOpen}
       recordingControl={
         ready ? (
           phase === "recording" ? (

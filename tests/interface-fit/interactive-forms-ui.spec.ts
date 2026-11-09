@@ -249,8 +249,7 @@ for (const theme of ["dark", "light"] as const) {
         [...section.querySelectorAll("button, input, textarea")].flatMap((control) => {
           const box = control.getBoundingClientRect();
           const computed = window.getComputedStyle(control);
-          // Radix renders non-visible native form inputs for event propagation.
-          // These are not interactive visual targets, so do not report them as clipped.
+          // Native hidden form inputs are not interactive visual targets.
           if (
             !box.width ||
             !box.height ||
@@ -261,12 +260,21 @@ for (const theme of ["dark", "light"] as const) {
           ) {
             return [];
           }
-          // A scrollable comparison table can intentionally hold offscreen cells.
-          // Its scrollability and selection reachability are checked separately.
+          // Offscreen cells inside a scrollable table are reachable by scrolling.
           const scroller = control.closest('[role="region"][tabindex="0"]');
           if (scroller && scroller.scrollWidth > scroller.clientWidth) return [];
           return box.left < -1 || box.right > document.documentElement.clientWidth + 1
-            ? [control.getAttribute("aria-label") || control.textContent || control.tagName]
+            ? [
+                {
+                  tag: control.tagName,
+                  type: control.getAttribute("type"),
+                  id: control.id,
+                  left: box.left,
+                  right: box.right,
+                  position: getComputedStyle(control).position,
+                  parent: control.parentElement?.outerHTML.slice(0, 300),
+                },
+              ]
             : [];
         }),
       ),
