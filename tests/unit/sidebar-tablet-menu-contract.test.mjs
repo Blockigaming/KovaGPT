@@ -128,7 +128,8 @@ for (const [width, mobileViewport, open] of [
       swipeToggleRef: { current: toggle },
       cancelPendingSelection: () => events.push("cancel-pending-selection"),
       onOpenWorkspaceSearch: () => events.push("workspace-search"),
-      setSearchOpen: (update) => events.push(update(false) ? "chat-dialog-open" : "chat-dialog-close"),
+      setSearchOpen: (update) =>
+        events.push(update(false) ? "chat-dialog-open" : "chat-dialog-close"),
     });
     activate();
     assert.deepEqual(

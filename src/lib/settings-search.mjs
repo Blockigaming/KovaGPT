@@ -1,23 +1,162 @@
 // A local, deterministic settings index. No user settings or search terms leave the device.
 const SYNONYMS = Object.freeze({
-  general: ["response", "answers", "writing", "reply", "chat behavior", "send", "enter key", "language", "preferences", "default"],
-  appearance: ["theme", "dark mode", "light mode", "dark", "light", "color", "colour", "accent", "font", "text", "size", "display", "layout", "screen", "interface", "bright", "brightness", "look"],
+  general: [
+    "response",
+    "answers",
+    "writing",
+    "reply",
+    "chat behavior",
+    "send",
+    "enter key",
+    "language",
+    "preferences",
+    "default",
+  ],
+  appearance: [
+    "theme",
+    "dark mode",
+    "light mode",
+    "dark",
+    "light",
+    "color",
+    "colour",
+    "accent",
+    "font",
+    "text",
+    "size",
+    "display",
+    "layout",
+    "screen",
+    "interface",
+    "bright",
+    "brightness",
+    "look",
+  ],
   notifications: ["alerts", "notify", "reminders", "push", "popup", "messages", "updates", "sound"],
-  personalization: ["profile", "name", "display name", "nickname", "custom instructions", "about me", "account details"],
-  security: ["password", "reset password", "passkey", "two factor", "2fa", "mfa", "authenticator", "login", "sign in", "authentication", "sessions", "security", "protect"],
+  personalization: [
+    "profile",
+    "name",
+    "display name",
+    "nickname",
+    "custom instructions",
+    "about me",
+    "account details",
+  ],
+  security: [
+    "password",
+    "reset password",
+    "passkey",
+    "two factor",
+    "2fa",
+    "mfa",
+    "authenticator",
+    "login",
+    "sign in",
+    "authentication",
+    "sessions",
+    "security",
+    "protect",
+  ],
   email: ["email address", "change email", "account email", "phone", "contact"],
-  parental: ["parent", "parents", "child", "children", "teen", "family safety", "restrictions", "guardian"],
-  voice: ["speak", "speech", "talk", "dictation", "microphone", "audio", "read aloud", "sound", "voice"],
+  parental: [
+    "parent",
+    "parents",
+    "child",
+    "children",
+    "teen",
+    "family safety",
+    "restrictions",
+    "guardian",
+  ],
+  voice: [
+    "speak",
+    "speech",
+    "talk",
+    "dictation",
+    "microphone",
+    "audio",
+    "read aloud",
+    "sound",
+    "voice",
+  ],
   storage: ["disk", "space", "cache", "device", "saved files", "storage"],
-  data: ["privacy", "export", "download data", "delete account", "remove", "erase", "chat history", "personal data", "information", "data controls"],
-  memory: ["remember", "remembered", "memories", "forget", "forgotten", "personalized", "saved facts", "memory"],
+  data: [
+    "privacy",
+    "export",
+    "download data",
+    "delete account",
+    "remove",
+    "erase",
+    "chat history",
+    "personal data",
+    "information",
+    "data controls",
+  ],
+  memory: [
+    "remember",
+    "remembered",
+    "memories",
+    "forget",
+    "forgotten",
+    "personalized",
+    "saved facts",
+    "memory",
+  ],
   shortcuts: ["key", "keys", "hotkey", "hotkeys", "shortcut", "keyboard", "cmd", "control"],
-  usage: ["limit", "limits", "remaining", "quota", "credits", "meter", "usage", "reset time", "allowance"],
-  linked: ["integrations", "plugin", "plugins", "connect", "connectors", "apps", "oauth", "linked accounts", "gmail", "google drive", "calendar"],
-  "cloud-browser": ["browser", "website", "websites", "web access", "agent", "online", "permissions", "site sign in"],
+  usage: [
+    "limit",
+    "limits",
+    "remaining",
+    "quota",
+    "credits",
+    "meter",
+    "usage",
+    "reset time",
+    "allowance",
+  ],
+  linked: [
+    "integrations",
+    "plugin",
+    "plugins",
+    "connect",
+    "connectors",
+    "apps",
+    "oauth",
+    "linked accounts",
+    "gmail",
+    "google drive",
+    "calendar",
+  ],
+  "cloud-browser": [
+    "browser",
+    "website",
+    "websites",
+    "web access",
+    "agent",
+    "online",
+    "permissions",
+    "site sign in",
+  ],
   family: ["family", "household", "member", "members", "kids", "invites"],
   location: ["where", "location", "geolocation", "city", "region", "gps"],
-  billing: ["bill", "billing", "pay", "payment", "price", "pricing", "plan", "upgrade", "downgrade", "checkout", "credit card", "subscription", "invoice", "receipt", "cancel", "refund"],
+  billing: [
+    "bill",
+    "billing",
+    "pay",
+    "payment",
+    "price",
+    "pricing",
+    "plan",
+    "upgrade",
+    "downgrade",
+    "checkout",
+    "credit card",
+    "subscription",
+    "invoice",
+    "receipt",
+    "cancel",
+    "refund",
+  ],
   report: ["bug", "problem", "error", "feedback", "issue", "broken", "contact support"],
   help: ["support", "help", "questions", "faq", "troubleshoot", "guide"],
   about: ["version", "about", "information", "license"],
@@ -25,12 +164,60 @@ const SYNONYMS = Object.freeze({
 });
 
 const STOP_WORDS = new Set([
-  "a", "an", "the", "i", "me", "my", "mine", "you", "your", "to", "for", "from",
-  "of", "in", "on", "with", "is", "are", "can", "how", "do", "does", "where",
-  "what", "which", "please", "find", "show", "settings", "setting", "option",
-  "options", "change", "edit", "update", "make", "get", "see", "want", "need",
-  "turn", "off", "set", "up", "go", "it", "this", "that", "and", "or", "be",
-  "something", "things", "stuff",
+  "a",
+  "an",
+  "the",
+  "i",
+  "me",
+  "my",
+  "mine",
+  "you",
+  "your",
+  "to",
+  "for",
+  "from",
+  "of",
+  "in",
+  "on",
+  "with",
+  "is",
+  "are",
+  "can",
+  "how",
+  "do",
+  "does",
+  "where",
+  "what",
+  "which",
+  "please",
+  "find",
+  "show",
+  "settings",
+  "setting",
+  "option",
+  "options",
+  "change",
+  "edit",
+  "update",
+  "make",
+  "get",
+  "see",
+  "want",
+  "need",
+  "turn",
+  "off",
+  "set",
+  "up",
+  "go",
+  "it",
+  "this",
+  "that",
+  "and",
+  "or",
+  "be",
+  "something",
+  "things",
+  "stuff",
 ]);
 
 export function normalizeSettingsSearch(value) {
@@ -51,18 +238,26 @@ function nearWord(queryWord, indexedWord) {
   if (queryWord.length < 4 || indexedWord.length < 4) return false;
   if (Math.abs(queryWord.length - indexedWord.length) > 1) return false;
   let prefix = 0;
-  while (prefix < Math.min(queryWord.length, indexedWord.length) &&
-    queryWord[prefix] === indexedWord[prefix]) prefix++;
+  while (
+    prefix < Math.min(queryWord.length, indexedWord.length) &&
+    queryWord[prefix] === indexedWord[prefix]
+  )
+    prefix++;
   if (prefix === queryWord.length || prefix === indexedWord.length) return true;
-  if (queryWord.length === indexedWord.length &&
-      queryWord[prefix] === indexedWord[prefix + 1] &&
-      queryWord[prefix + 1] === indexedWord[prefix] &&
-      queryWord.slice(prefix + 2) === indexedWord.slice(prefix + 2)) return true;
+  if (
+    queryWord.length === indexedWord.length &&
+    queryWord[prefix] === indexedWord[prefix + 1] &&
+    queryWord[prefix + 1] === indexedWord[prefix] &&
+    queryWord.slice(prefix + 2) === indexedWord.slice(prefix + 2)
+  )
+    return true;
   const remainingQuery = queryWord.slice(prefix);
   const remainingIndex = indexedWord.slice(prefix);
-  return remainingQuery.slice(1) === remainingIndex.slice(1) ||
+  return (
+    remainingQuery.slice(1) === remainingIndex.slice(1) ||
     remainingQuery.slice(1) === remainingIndex ||
-    remainingQuery === remainingIndex.slice(1);
+    remainingQuery === remainingIndex.slice(1)
+  );
 }
 
 /**
@@ -76,9 +271,9 @@ export function matchesSettingsSearch(
 ) {
   const normalizedQuery = normalizeSettingsSearch(query);
   if (!normalizedQuery) return true;
-  const text = normalizeSettingsSearch([
-    id, label, ...keywords, description, ...groups, ...(SYNONYMS[id] ?? []),
-  ].join(" "));
+  const text = normalizeSettingsSearch(
+    [id, label, ...keywords, description, ...groups, ...(SYNONYMS[id] ?? [])].join(" "),
+  );
   if (text.includes(normalizedQuery)) return true;
   const tokens = [...new Set(normalizedQuery.split(" ").filter((word) => !STOP_WORDS.has(word)))];
   if (!tokens.length) return true;

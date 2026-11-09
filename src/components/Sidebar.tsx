@@ -1738,11 +1738,7 @@ export function Sidebar({
                 </div>
               ) : null}
               {filtered.length > 0 ? (
-                <button
-                  className="kova-nav-row"
-                  type="button"
-                  onClick={openChatSearch}
-                >
+                <button className="kova-nav-row" type="button" onClick={openChatSearch}>
                   View all chats
                 </button>
               ) : null}
@@ -1932,9 +1928,7 @@ export function Sidebar({
               return;
             }
             rows[
-              event.key === "ArrowDown"
-                ? Math.min(index + 1, rows.length - 1)
-                : index - 1
+              event.key === "ArrowDown" ? Math.min(index + 1, rows.length - 1) : index - 1
             ]?.focus({ preventScroll: true });
           }}
           onCancel={(event) => {
@@ -1997,7 +1991,10 @@ export function Sidebar({
                   {query ? "No chats found." : "No recent chats yet."}
                 </p>
               ) : (
-                <ul aria-label={query ? "Chat search results" : "Recent chats"} className="space-y-0.5">
+                <ul
+                  aria-label={query ? "Chat search results" : "Recent chats"}
+                  className="space-y-0.5"
+                >
                   {searchResults.map((conversation) => (
                     <li key={conversation.id}>
                       <button
@@ -2012,7 +2009,10 @@ export function Sidebar({
                           onSelect(conversation.id);
                         }}
                       >
-                        <MessageCircle className="h-[18px] w-[18px] shrink-0 stroke-[1.6]" aria-hidden="true" />
+                        <MessageCircle
+                          className="h-[18px] w-[18px] shrink-0 stroke-[1.6]"
+                          aria-hidden="true"
+                        />
                         <span className="min-w-0 truncate">{conversation.title}</span>
                       </button>
                     </li>

@@ -15,10 +15,19 @@ test("settings search understands topics instead of requiring the displayed tab 
 });
 
 test("search accepts grouped labels, underlying descriptions, prefixes and a typo", () => {
-  assert.ok(matches(setting("linked", "Connections", { groups: ["Privacy & workspace"] }), "workspace"));
+  assert.ok(
+    matches(setting("linked", "Connections", { groups: ["Privacy & workspace"] }), "workspace"),
+  );
   assert.ok(matches(setting("appearance", "Appearance"), "apperance"));
   assert.ok(matches(setting("billing", "Subscriptions"), "subscript"));
-  assert.ok(matches(setting("general", "General", { description: "Change language and default response options" }), "language"));
+  assert.ok(
+    matches(
+      setting("general", "General", {
+        description: "Change language and default response options",
+      }),
+      "language",
+    ),
+  );
   assert.ok(matches(setting("billing", "Subscriptions"), "upgrade payment"));
 });
 

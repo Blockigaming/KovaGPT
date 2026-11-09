@@ -154,9 +154,7 @@ export default function ChatImageViewer({
             data-image-viewer-canvas=""
             onDoubleClick={() => {
               setView((current) =>
-                current.scale > 1
-                  ? { scale: 1, x: 0, y: 0 }
-                  : bounded({ ...current, scale: 2 }),
+                current.scale > 1 ? { scale: 1, x: 0, y: 0 } : bounded({ ...current, scale: 2 }),
               );
             }}
             onPointerDown={(event) => {

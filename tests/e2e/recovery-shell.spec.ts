@@ -48,8 +48,7 @@ test("workspace search preserves the sidebar and restores its active dialog", as
     rows.flatMap((row) => {
       const rowBounds = row.getBoundingClientRect();
       const dialogBounds = row.closest("dialog")!.getBoundingClientRect();
-      return rowBounds.left < dialogBounds.left - 1 ||
-        rowBounds.right > dialogBounds.right + 1
+      return rowBounds.left < dialogBounds.left - 1 || rowBounds.right > dialogBounds.right + 1
         ? [row.textContent]
         : [];
     }),
