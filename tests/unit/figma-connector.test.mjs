@@ -11,6 +11,7 @@ import {
 } from "../../src/integrations/connection-read.server.mjs";
 import {
   oauthTokenRequest,
+  oauthRefreshEndpoint,
   oauthRefreshRequest,
 } from "../../src/integrations/oauth-token-request.server.mjs";
 
@@ -115,7 +116,15 @@ test("Figma token and refresh exchanges use server-side Basic auth with PKCE", (
     clientSecret: "secret",
     refreshToken: "rotating",
   });
-  assert.equal(refreshed.body.get("grant_type"), "refresh_token");
+  assert.equal(refreshed.body.get("grant_type"), null);
+  assert.equal(
+    oauthRefreshEndpoint("figma", "https://api.figma.com/v1/oauth/token"),
+    "https://api.figma.com/v1/oauth/refresh",
+  );
+  assert.equal(
+    oauthRefreshEndpoint("calendly", "https://auth.calendly.com/oauth/token"),
+    "https://auth.calendly.com/oauth/token",
+  );
   assert.equal(refreshed.body.get("refresh_token"), "rotating");
   assert.equal(refreshed.body.get("client_id"), null);
   assert.equal(refreshed.headers.Authorization, req.headers.Authorization);
