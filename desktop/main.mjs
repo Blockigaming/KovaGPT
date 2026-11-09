@@ -107,44 +107,48 @@ function updateCompanionShortcut(shortcut) {
 }
 function installAppMenu() {
   const shortcutItems = COMPANION_SHORTCUTS.map((value) => ({
-    label:
-      value === "Alt+Space" && process.platform === "darwin" ? "Option+Space" : value,
+    label: value === "Alt+Space" && process.platform === "darwin" ? "Option+Space" : value,
     type: "radio",
     checked: selectedCompanionShortcut === value,
     click: () => updateCompanionShortcut(value),
   }));
   const launchSetting =
     process.platform === "darwin" || process.platform === "win32"
-      ? [{
-          label: "Launch at login",
-          type: "checkbox",
-          enabled: app.isPackaged,
-          checked: app.isPackaged && app.getLoginItemSettings().openAtLogin,
-          click: (item) => {
-            try {
-              app.setLoginItemSettings({ openAtLogin: item.checked });
-              if (app.getLoginItemSettings().openAtLogin !== item.checked)
-                throw new Error("OS refused preference");
-            } catch {
-              item.checked = !item.checked;
-              dialog.showMessageBoxSync({
-                type: "warning",
-                title: "Launch preference unchanged",
-                message: "This system did not allow the launch-at-login change.",
-                buttons: ["OK"],
-              });
-            }
+      ? [
+          {
+            label: "Launch at login",
+            type: "checkbox",
+            enabled: app.isPackaged,
+            checked: app.isPackaged && app.getLoginItemSettings().openAtLogin,
+            click: (item) => {
+              try {
+                app.setLoginItemSettings({ openAtLogin: item.checked });
+                if (app.getLoginItemSettings().openAtLogin !== item.checked)
+                  throw new Error("OS refused preference");
+              } catch {
+                item.checked = !item.checked;
+                dialog.showMessageBoxSync({
+                  type: "warning",
+                  title: "Launch preference unchanged",
+                  message: "This system did not allow the launch-at-login change.",
+                  buttons: ["OK"],
+                });
+              }
+            },
           },
-        }]
+        ]
       : [];
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
-      { label: "Companion", submenu: [
-        { label: "Open Companion Window", click: openCompanion },
-        { label: "Keyboard shortcut", submenu: shortcutItems },
-        ...launchSetting,
-      ] },
+      {
+        label: "Companion",
+        submenu: [
+          { label: "Open Companion Window", click: openCompanion },
+          { label: "Keyboard shortcut", submenu: shortcutItems },
+          ...launchSetting,
+        ],
+      },
       { role: "editMenu" },
       { role: "viewMenu" },
       { role: "windowMenu" },
@@ -231,15 +235,13 @@ else {
     // Requests must come from Kova's main frame and still require a user choice.
     appSession.setPermissionCheckHandler(
       (contents, permission, origin) =>
-        (contents === mainWindow?.webContents ||
-          contents === companionWindow?.webContents) &&
+        (contents === mainWindow?.webContents || contents === companionWindow?.webContents) &&
         isKovaUrl(origin) &&
         ["media", "notifications"].includes(permission),
     );
     appSession.setPermissionRequestHandler(async (contents, permission, callback, details) => {
       if (
-        (contents !== mainWindow?.webContents &&
-          contents !== companionWindow?.webContents) ||
+        (contents !== mainWindow?.webContents && contents !== companionWindow?.webContents) ||
         !isKovaUrl(contents.getURL()) ||
         !isKovaUrl(details.requestingUrl) ||
         details.isMainFrame !== true ||
@@ -266,8 +268,10 @@ else {
       );
     });
     selectedCompanionShortcut = loadCompanionShortcut();
-    if (!registerCompanionShortcut(selectedCompanionShortcut) &&
-        !registerCompanionShortcut("CommandOrControl+Shift+Space"))
+    if (
+      !registerCompanionShortcut(selectedCompanionShortcut) &&
+      !registerCompanionShortcut("CommandOrControl+Shift+Space")
+    )
       registerCompanionShortcut("Disabled");
     installAppMenu();
     createWindow();
