@@ -115,9 +115,8 @@ test("settled actual cost returns unused estimated allowance", async () => {
     );
     assert.equal(settle.rows[0].ok, true);
     assert.equal((await request(db, "free", 0.08)).decision, "acquired");
-    const progress = await db.query("select month_used from public.kova_plan_cost_progress($1,'free')", [
-      owner,
-    ]);
+    const costQuery = "select month_used from public.kova_plan_cost_progress($1,'free')";
+    const progress = await db.query(costQuery, [owner]);
     assert.ok(Number(progress.rows[0].month_used) < 0.1);
   } finally {
     await db.close();
