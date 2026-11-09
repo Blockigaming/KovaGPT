@@ -87,7 +87,7 @@ create or replace function public.kova_plan_cost_progress(
   five_hour_used numeric, five_hour_allowance numeric
 )
 language plpgsql stable security definer
-set search_path=public,pg_temp as $
+set search_path=public,pg_temp as $$
 declare
   month_start timestamptz := date_trunc('month', _asof at time zone 'UTC') at time zone 'UTC';
   month_end timestamptz := date_trunc('month', _asof at time zone 'UTC') at time zone 'UTC' + interval '1 month';
@@ -134,7 +134,7 @@ begin
   end;
   return next;
 end
-$;
+$$;
 revoke all on function public.kova_plan_cost_progress(uuid,text,timestamptz)
   from public,anon,authenticated;
 grant execute on function public.kova_plan_cost_progress(uuid,text,timestamptz)
