@@ -529,8 +529,7 @@ export function SettingsDialog({
   // An already-open Usage/Billing screen must refresh exactly when its current
   // window expires. The server remains authoritative for the next percentage.
   useEffect(() => {
-    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn || !userKey || !usage)
-      return;
+    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn || !userKey || !usage) return;
     const resets = usage.windows.map(({ resetsAt }) => Date.parse(resetsAt));
     if (resets.length === 0 || resets.some((time) => !Number.isFinite(time))) return;
     const nextReset = Math.min(...resets);
