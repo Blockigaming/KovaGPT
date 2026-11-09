@@ -6,6 +6,7 @@ import { decryptSecret } from "@/lib/github-oauth.server";
 import { discoverGitHubUserRepositories } from "@/lib/github-user-access.server.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
+import { refreshExpiringGitHubOwnerAccounts } from "@/lib/github-token-rotation.server";
 
 // Report the same owner-bound read capability offered to chat. Return no
 // repository context, credentials, or write capability to the composer.
@@ -69,7 +70,12 @@ export const getGitHubManagement = createServerFn({ method: "GET" })
         (item: any) => item.status === "reauthorization_required" || item.status === "revoked",
       )
         ? "reconnect_required"
-        : rows.some((item: any) => item.status === "degraded")
+        : rows.some(
+              (item: any) =>
+                item.status === "degraded" ||
+                (item.token_expires_at &&
+                  Date.parse(item.token_expires_at) <= Date.now() + 30_000),
+            )
           ? "degraded"
           : "healthy";
     return {
@@ -84,6 +90,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertLockdownAllows(supabaseAdmin, context.userId, "connector_read");
+    await refreshExpiringGitHubOwnerAccounts(context.userId);
     const accounts = await (supabaseAdmin as any)
       .from("github_accounts")
       .select("id,github_user_id,token_ciphertext,token_expires_at")
