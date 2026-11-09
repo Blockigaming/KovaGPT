@@ -331,6 +331,11 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
+  const plusPressRef = useRef<{ id: number; x: number; y: number; startedAt: number } | null>(
+    null,
+  );
+  const plusLongPressRef = useRef(false);
+  const plusContextHandledRef = useRef(false);
   const [expanded, setExpanded] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<PendingAttachment | null>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
@@ -1865,10 +1870,70 @@ export function ChatInput({
                     disabled={disabled || isStreaming}
                     className="spec400-toolbar-button spec400-toolbar-icon"
                     aria-label="Attach"
-                    title="Add files and tools"
+                    title={isMobileLayout ? "Add files and tools; hold for photos" : "Add files and tools"}
                     aria-haspopup="dialog"
                     aria-expanded={plusOpen}
-                    onClick={isMobileLayout ? () => setPlusOpen(true) : undefined}
+                    onPointerDown={(event) => {
+                      if (!isMobileLayout || event.pointerType !== "touch") return;
+                      plusPressRef.current = {
+                        id: event.pointerId,
+                        x: event.clientX,
+                        y: event.clientY,
+                        startedAt: event.timeStamp,
+                      };
+                    }}
+                    onPointerMove={(event) => {
+                      const press = plusPressRef.current;
+                      if (
+                        press?.id === event.pointerId &&
+                        Math.hypot(event.clientX - press.x, event.clientY - press.y) > 12
+                      )
+                        plusPressRef.current = null;
+                    }}
+                    onPointerUp={(event) => {
+                      const press = plusPressRef.current;
+                      plusLongPressRef.current = Boolean(
+                        press?.id === event.pointerId && event.timeStamp - press.startedAt >= 500,
+                      );
+                      plusPressRef.current = null;
+                    }}
+                    onPointerCancel={() => {
+                      plusPressRef.current = null;
+                      plusLongPressRef.current = false;
+                    }}
+                    onPointerLeave={() => {
+                      plusPressRef.current = null;
+                    }}
+                    onContextMenu={(event) => {
+                      if (!isMobileLayout || !isLoaded || !user || disabled || isStreaming) return;
+                      event.preventDefault();
+                      plusPressRef.current = null;
+                      plusLongPressRef.current = false;
+                      plusContextHandledRef.current = true;
+                      setPlusOpen(false);
+                      photoRef.current?.click();
+                      window.setTimeout(() => {
+                        plusContextHandledRef.current = false;
+                      }, 0);
+                    }}
+                    onClick={
+                      isMobileLayout
+                        ? (event) => {
+                            if (plusContextHandledRef.current) {
+                              plusContextHandledRef.current = false;
+                              return;
+                            }
+                            if (plusLongPressRef.current) {
+                              plusLongPressRef.current = false;
+                              setPlusOpen(false);
+                              if (!requireFileAccount(event.currentTarget)) return;
+                              photoRef.current?.click();
+                              return;
+                            }
+                            setPlusOpen(true);
+                          }
+                        : undefined
+                    }
                   >
                     <Plus aria-hidden="true" />
                     <span className="sr-only">Attach</span>
