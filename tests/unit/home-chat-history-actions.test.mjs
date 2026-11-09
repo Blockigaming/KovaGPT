@@ -65,7 +65,7 @@ test("an action delayed across account clear cannot persist or change the new vi
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(f.events, []);
 });
-test("deleting before the history writer is ready gives feedback and preserves the chat", async () => {
+test("early chat deletion gives feedback without removing history", async () => {
   const f = await fixture(async () => true, false);
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(f.events.map((row) => row[0]), ["error"]);
