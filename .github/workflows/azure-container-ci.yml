@@ -61,28 +61,6 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: npm run format:check:changed
 
-      - name: Show exact formatting corrections when validation fails
-        if: failure() && steps.scope.outputs.run == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx prettier --write \
-            docs/mobile-desktop-acceptance-ledger.md \
-            src/components/ChatImageViewer.tsx \
-            src/components/Sidebar.tsx \
-            src/lib/settings-search.mjs \
-            tests/e2e/recovery-shell.spec.ts \
-            tests/unit/settings-semantic-search.test.mjs \
-            tests/unit/sidebar-tablet-menu-contract.test.mjs >/dev/null
-          git diff -- \
-            docs/mobile-desktop-acceptance-ledger.md \
-            src/components/ChatImageViewer.tsx \
-            src/components/Sidebar.tsx \
-            src/lib/settings-search.mjs \
-            tests/e2e/recovery-shell.spec.ts \
-            tests/unit/settings-semantic-search.test.mjs \
-            tests/unit/sidebar-tablet-menu-contract.test.mjs
-
       - name: Legacy repository formatting audit
         if: steps.scope.outputs.run == 'true'
         continue-on-error: true
