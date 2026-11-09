@@ -54,3 +54,19 @@ refuses to hide the Dock icon unless the menu bar icon is active, so both
 entry points cannot be hidden simultaneously. The toggles are stored in
 local preferences with the approved shortcut. The tray is destroyed on quit.
 Physical Mac installation and menu bar/Dock verification remain required.
+
+## Separate desktop chat windows
+
+**File → New Window** (Command/Ctrl+N) creates another independently
+resizable and closable native conversation window. Each window uses the same
+signed-in Kova session but has its own renderer. Every window enforces the
+exact Kova HTTPS navigation policy and sandbox / context isolation. External
+HTTPS navigation is confirmed from the window that initiated it; file,
+JavaScript and other dangerous protocols remain blocked. Camera, microphone
+and notification choices are bound to the requesting native window. Closing
+an additional window removes it from the permission allowlist.
+
+This is real desktop multi-window behavior for the existing chat application,
+not yet a local coding workspace, OS automation environment, or local
+repository access feature. Native preview build and physical installation
+acceptance are still required.
