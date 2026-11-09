@@ -258,7 +258,9 @@ for (const theme of ["dark", "light"] as const) {
             computed.visibility === "hidden" ||
             Number(computed.opacity) === 0 ||
             control.closest('[aria-hidden="true"]')
-          ) return [];
+          ) {
+            return [];
+          }
           // A scrollable comparison table can intentionally hold offscreen cells.
           // Its scrollability and selection reachability are checked separately.
           const scroller = control.closest('[role="region"][tabindex="0"]');
