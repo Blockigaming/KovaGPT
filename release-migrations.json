@@ -4622,11 +4622,7 @@
       "timestamp": "20261109145000",
       "sha256": "aada7a29adc717d52dde77dfef277f27608c9e33bad42e5adf802b07d3f67773",
       "tables": ["message_usage_hourly"],
-      "functions": [
-        "try_consume_paid_message",
-        "kova_plan_cost_progress",
-        "acquire_ai_generation"
-      ],
+      "functions": ["try_consume_paid_message", "kova_plan_cost_progress", "acquire_ai_generation"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
