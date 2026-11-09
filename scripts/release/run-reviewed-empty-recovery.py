@@ -385,6 +385,12 @@ class Coordinator:
                     or (failure.get("stage")=="private-client-input"
                         and failure.get("code")=="client_input_or_runtime_unqualified")):
                     self.client_failure={"stage":failure["stage"],"code":failure["code"]}
+                    if type(failure.get("command")) is str and failure["command"] in recovery.PUBLIC_COMMANDS:
+                        self.client_failure["command"]=failure["command"]
+                    if type(failure.get("commandStatus")) is str and failure["commandStatus"] in recovery.PUBLIC_COMMAND_STATUSES:
+                        self.client_failure["commandStatus"]=failure["commandStatus"]
+                    if type(failure.get("sqlstate")) is str and failure["sqlstate"] in recovery.PUBLIC_SQLSTATES:
+                        self.client_failure["sqlstate"]=failure["sqlstate"]
             except Exception:pass
             raise Stopped("private_client_restore_failed")
         _,raw=p.docker(["exec",p.names["client"],p.client_tools["python3"],"-c",
