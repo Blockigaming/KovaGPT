@@ -783,7 +783,7 @@
 /* Immersive Kova Voice. Dictation remains the compact inline workspace.
    The visualizer responds only to real controller phases: no synthetic
    recording indication, no fake transcript, no microphone started by CSS. */
-[role="dialog"].kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] {
+[role="dialog"].kova-voice-dialog.kova-voice-immersive {
   --voice-ink: #f5f7fc;
   --voice-soft: #272c39;
   --voice-muted: #bdc5d8;
@@ -796,28 +796,28 @@
   background: #10131b;
   color: var(--voice-ink);
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-topbar {
+.kova-voice-immersive .kova-voice-topbar {
   padding: 22px 32px 14px;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-title {
+.kova-voice-immersive .kova-voice-title {
   color: #f5f7fc;
   font-size: 15px;
   font-weight: 550;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-picker-trigger {
+.kova-voice-immersive .kova-voice-picker-trigger {
   border: 1px solid #3d4555;
   background: #242a36;
   color: #f5f7fc;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-body {
+.kova-voice-immersive .kova-voice-body {
   padding: 12px 32px 0;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-canvas {
+.kova-voice-immersive .kova-voice-canvas {
   min-height: 255px;
   padding: 0 0 10px;
   flex: 1 0 auto;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-shell {
+.kova-voice-immersive .kova-voice-orb-shell {
   position: relative;
   display: grid;
   place-items: center;
@@ -827,7 +827,7 @@
   isolation: isolate;
   flex: 0 0 auto;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-glow {
+.kova-voice-immersive .kova-voice-orb-glow {
   position: absolute;
   inset: 3%;
   z-index: -1;
@@ -837,7 +837,7 @@
   opacity: 0.68;
   transform: scale(1.2);
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-mark {
+.kova-voice-immersive .kova-voice-mark {
   width: 86%;
   height: 86%;
   margin: 0;
@@ -855,61 +855,77 @@
     0 9px 40px #677ce65c;
   animation: kova-voice-idle-orb 6.8s ease-in-out infinite alternate;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-phase="recording"] .kova-voice-mark {
+.kova-voice-immersive[data-voice-phase="recording"] .kova-voice-mark {
   animation: kova-voice-active-orb 2s ease-in-out infinite alternate;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-phase="speaking"] .kova-voice-mark {
+.kova-voice-immersive[data-voice-phase="speaking"] .kova-voice-mark {
   animation: kova-voice-speaking-orb 1.6s ease-in-out infinite alternate;
 }
 @keyframes kova-voice-idle-orb {
-  from { transform: scale(0.98) rotate(-5deg); }
-  to { transform: scale(1.02) rotate(5deg); }
+    from {
+    transform: scale(0.98) rotate(-5deg);
+  }
+    to {
+    transform: scale(1.02) rotate(5deg);
+  }
 }
 @keyframes kova-voice-active-orb {
-  from { transform: scale(0.95) rotate(-7deg); filter: saturate(0.93); }
-  to { transform: scale(1.06) rotate(7deg); filter: saturate(1.2); }
+    from {
+    transform: scale(0.95) rotate(-7deg);
+    filter: saturate(0.93);
+  }
+    to {
+    transform: scale(1.06) rotate(7deg);
+    filter: saturate(1.2);
+  }
 }
 @keyframes kova-voice-speaking-orb {
-  from { transform: scale(0.96) rotate(4deg); filter: brightness(0.98); }
-  to { transform: scale(1.075) rotate(-6deg); filter: brightness(1.17); }
+    from {
+    transform: scale(0.96) rotate(4deg);
+    filter: brightness(0.98);
+  }
+    to {
+    transform: scale(1.075) rotate(-6deg);
+    filter: brightness(1.17);
+  }
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-heading {
+.kova-voice-immersive .kova-voice-heading {
   color: #f6f8ff;
   font-size: clamp(24px, 3vw, 30px);
   letter-spacing: -0.035em;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-description,
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-status,
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-limit {
+.kova-voice-immersive .kova-voice-description,
+.kova-voice-immersive .kova-voice-status,
+.kova-voice-immersive .kova-voice-limit {
   color: var(--voice-muted);
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-description {
+.kova-voice-immersive .kova-voice-description {
   max-width: 420px;
   font-size: 13px;
   line-height: 1.55;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-dock {
+.kova-voice-immersive .kova-voice-dock {
   gap: 22px;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-record-control button,
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close {
+.kova-voice-immersive .kova-voice-record-control button,
+.kova-voice-immersive .kova-voice-close {
   width: 64px;
   min-height: 64px;
   height: 64px;
   border-radius: 50%;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-record-control button {
+.kova-voice-immersive .kova-voice-record-control button {
   background: #f3f6ff;
   color: #171b26;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close {
+.kova-voice-immersive .kova-voice-close {
   background: #ad454b;
   color: #fff;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close:hover {
+.kova-voice-immersive .kova-voice-close:hover {
   background: #c64e55;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle {
+.kova-voice-immersive .kova-voice-microphone-toggle {
   display: grid;
   place-items: center;
   width: 64px;
@@ -919,25 +935,25 @@
   background: #2e3543;
   color: #f2f5fc;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle[aria-pressed="true"] {
+.kova-voice-immersive .kova-voice-microphone-toggle[aria-pressed="true"] {
   background: #f1f4fc;
   color: #1b2431;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle svg {
+.kova-voice-immersive .kova-voice-microphone-toggle svg {
   width: 24px;
   height: 24px;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle:hover {
+.kova-voice-immersive .kova-voice-microphone-toggle:hover {
   filter: brightness(1.12);
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-footnote {
+.kova-voice-immersive .kova-voice-footnote {
   color: #dae0ec;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-secondary-control {
+.kova-voice-immersive .kova-voice-secondary-control {
   align-items: center;
   gap: 8px;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle {
+.kova-voice-immersive .kova-voice-captions-toggle {
   display: grid;
   width: 44px;
   height: 44px;
@@ -945,23 +961,23 @@
   border-radius: 12px;
   color: #bec7d9;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle[aria-pressed="true"] {
+.kova-voice-immersive .kova-voice-captions-toggle[aria-pressed="true"] {
   color: #fff;
   background: #34415a;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle svg {
+.kova-voice-immersive .kova-voice-captions-toggle svg {
   width: 20px;
   height: 20px;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-detail-button {
+.kova-voice-immersive .kova-voice-detail-button {
   color: #bec7d9;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-detail-button:hover,
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-captions-toggle:hover {
+.kova-voice-immersive .kova-voice-detail-button:hover,
+.kova-voice-immersive .kova-voice-captions-toggle:hover {
   background: #303a4e;
   color: #fff;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-transcript {
+.kova-voice-immersive .kova-voice-transcript {
   max-width: 640px;
   width: 100%;
   margin: 0 auto 8px;
@@ -971,15 +987,15 @@
   color: #f2f5fc;
   background: #202735;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-transcript textarea {
+.kova-voice-immersive .kova-voice-transcript textarea {
   color: #f2f5fc;
   background: #161c29;
 }
-.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"][data-voice-content-first="true"] .kova-voice-canvas {
+.kova-voice-immersive[data-voice-content-first="true"] .kova-voice-canvas {
   min-height: 120px;
 }
 @media (max-width: 639px) {
-  [role="dialog"].kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] {
+  [role="dialog"].kova-voice-dialog.kova-voice-immersive {
     width: 100%;
     max-width: 100% !important;
     height: 100dvh;
@@ -988,38 +1004,38 @@
     border: 0;
     border-radius: 0;
   }
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-topbar {
+  .kova-voice-immersive .kova-voice-topbar {
     padding: max(18px, env(safe-area-inset-top)) 20px 10px;
     min-height: 74px;
   }
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-body {
+  .kova-voice-immersive .kova-voice-body {
     padding: 0 18px;
   }
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-bottom {
+  .kova-voice-immersive .kova-voice-bottom {
     padding: 4px 18px max(14px, env(safe-area-inset-bottom));
   }
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-shell {
+  .kova-voice-immersive .kova-voice-orb-shell {
     width: min(61vw, 250px);
     height: min(61vw, 250px);
     margin-bottom: 18px;
   }
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-description {
+  .kova-voice-immersive .kova-voice-description {
     max-width: 315px;
     font-size: 12px;
   }
 }
 @media (max-height: 580px) {
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-orb-shell {
+  .kova-voice-immersive .kova-voice-orb-shell {
     width: 130px;
     height: 130px;
     margin-bottom: 8px;
   }
-  .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-canvas {
+  .kova-voice-immersive .kova-voice-canvas {
     min-height: 140px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kova-voice-dialog[data-voice-mode="voice"] .kova-voice-mark {
+  .kova-voice-immersive .kova-voice-mark {
     animation: none;
   }
 }
