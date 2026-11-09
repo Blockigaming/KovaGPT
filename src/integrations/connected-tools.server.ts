@@ -108,6 +108,7 @@ export async function refreshExpiringConnection(
       "notion",
       "dropbox",
       "box",
+      "calendly",
     ].includes(row.provider_id)
   )
     return null;
