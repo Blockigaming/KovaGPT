@@ -15,6 +15,8 @@ async function fixture(platform = "linux") {
     whenReady: () => Promise.resolve(),
     setAppUserModelId() {},
     setAsDefaultProtocolClient() {},
+    getLoginItemSettings: () => ({ openAtLogin: false }),
+    setLoginItemSettings() {},
     quit() {},
     isPackaged: true,
     getPath: () => "/tmp/kovagpt-tests",
