@@ -20,6 +20,7 @@ import {
   PanelLeft,
   ArrowLeft,
   MessageSquare,
+  MessageCircle,
   ChevronDown,
   LogOut,
   Map,
@@ -227,7 +228,7 @@ export function Sidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const localSearchOpen = searchOpen && !onOpenWorkspaceSearch;
+  const localSearchOpen = searchOpen;
   const workspaceSearchOpen = externalWorkspaceSearchOpen || localSearchOpen;
   const searchDialogRef = useRef<HTMLDialogElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -447,13 +448,11 @@ export function Sidebar({
   const changeRailShortcuts = (shortcuts: readonly SidebarShortcutId[]) =>
     changeLayout({ shortcuts: [...shortcuts] });
   const openChatSearch = (event?: { currentTarget: HTMLElement }) => {
-    if (onOpenWorkspaceSearch) {
-      cancelPendingSelection();
-      onOpenWorkspaceSearch();
-    } else {
-      if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
-      setSearchOpen((value) => !value);
-    }
+    // The sidebar Search control is always chat history; Ctrl/Cmd+K keeps the
+    // broader workspace command palette independently.
+    if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
+    cancelPendingSelection();
+    setSearchOpen((value) => !value);
   };
   const searchButton = (rail = false) => {
     const button = (
@@ -464,7 +463,7 @@ export function Sidebar({
         }
         aria-label="Search chats"
         aria-haspopup="dialog"
-        aria-expanded={onOpenWorkspaceSearch ? workspaceSearchOpen : searchOpen}
+        aria-expanded={searchOpen}
         onClick={openChatSearch}
       >
         <SearchGlyph aria-hidden="true" />
@@ -915,9 +914,11 @@ export function Sidebar({
   const savedConversations = signedIn
     ? conversations.filter((chat) => !pendingDeleteIds.has(chat.id))
     : [];
-  const filtered = query
+  // Keep the sidebar history stable while its search overlay is open.
+  const filtered = savedConversations;
+  const searchResults = query
     ? searchConversations(savedConversations, query).map((result) => result.conversation)
-    : savedConversations;
+    : [...savedConversations].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6);
   const pinned = filtered
     .filter((conversation) => conversation.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
@@ -1709,16 +1710,8 @@ export function Sidebar({
                   className="kova-nav-row"
                   aria-label="Search chats"
                   aria-haspopup="dialog"
-                  aria-expanded={workspaceSearchOpen}
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) {
-                      cancelPendingSelection();
-                      onOpenWorkspaceSearch();
-                    } else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen((value) => !value);
-                    }
-                  }}
+                  aria-expanded={searchOpen}
+                  onClick={openChatSearch}
                 >
                   <span className="kova-sidebar-icon" aria-hidden="true">
                     <SearchGlyph />
@@ -1786,13 +1779,7 @@ export function Sidebar({
                 <button
                   className="kova-nav-row"
                   type="button"
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();
-                    else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen(true);
-                    }
-                  }}
+                  onClick={openChatSearch}
                 >
                   View all chats
                 </button>
@@ -1955,17 +1942,36 @@ export function Sidebar({
           aria-label="Search chats"
           aria-modal="true"
           aria-describedby="sidebar-chat-search-description"
-          className="pointer-events-auto m-auto overflow-hidden rounded-[var(--kova-radius-panel)] border-0 bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/45"
+          className="pointer-events-auto left-0 right-0 m-0 mx-auto overflow-hidden rounded-2xl border-0 bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/65 dark:bg-[#212121] dark:text-[#f1f1f1] dark:backdrop:bg-black/75"
           style={{
-            width: "min(36rem, calc(100vw - 2rem))",
-            maxHeight:
-              "min(80dvh, calc(100dvh - max(1rem, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
+            top: "max(20px, env(safe-area-inset-top))",
+            width: "min(720px, calc(100vw - 20px))",
+            height: "min(460px, calc(100dvh - 40px - env(safe-area-inset-bottom)))",
+            maxHeight: "calc(100dvh - 40px - env(safe-area-inset-bottom))",
           }}
           onKeyDownCapture={(event) => {
-            if (event.key !== "Escape") return;
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              closeChatSearch();
+              return;
+            }
+            if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+            const rows = Array.from(
+              searchDialogRef.current?.querySelectorAll<HTMLButtonElement>(
+                "[data-chat-search-result]",
+              ) ?? [],
+            );
+            const index = rows.indexOf(event.target as HTMLButtonElement);
+            if (index === -1 && event.target !== searchInputRef.current) return;
             event.preventDefault();
-            event.stopPropagation();
-            closeChatSearch();
+            if (event.key === "ArrowUp" && index <= 0) {
+              searchInputRef.current?.focus({ preventScroll: true });
+              return;
+            }
+            rows[
+              event.key === "ArrowDown" ? Math.min(index + 1, rows.length - 1) : index - 1
+            ]?.focus({ preventScroll: true });
           }}
           onCancel={(event) => {
             event.preventDefault();
@@ -1984,39 +1990,36 @@ export function Sidebar({
               closeChatSearch();
           }}
         >
-          <div className="flex min-h-0 max-h-[inherit] flex-col p-5">
-            <div className="flex shrink-0 items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Search chats</h2>
+          <div className="flex h-full min-h-0 flex-col px-3 pb-3 pt-2">
+            <div className="flex h-12 shrink-0 items-center gap-2 px-3">
+              <label className="sr-only" htmlFor="sidebar-chat-search">
+                Search chats
+              </label>
+              <input
+                id="sidebar-chat-search"
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search..."
+                autoComplete="off"
+                className="h-11 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-inherit outline-none placeholder:text-muted-foreground focus-visible:outline-none dark:placeholder:text-[#aaa]"
+              />
               <button
                 type="button"
                 aria-label="Close chat search"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-accent"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dark:text-[#bbb] dark:hover:bg-[#343434] dark:hover:text-white"
                 onClick={closeChatSearch}
               >
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            <p
-              id="sidebar-chat-search-description"
-              className="shrink-0 text-sm text-muted-foreground"
-            >
-              Find a saved chat by title or message.
+            <p id="sidebar-chat-search-description" className="sr-only">
+              Search saved chat titles and message contents. Use arrow keys to navigate results.
             </p>
-            <label className="sr-only" htmlFor="sidebar-chat-search">
-              Search chats
-            </label>
-            <input
-              id="sidebar-chat-search"
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search chats"
-              className="kova-sidebar-search my-4 w-full shrink-0"
-            />
-            <div
-              className="min-h-0 overflow-y-auto overscroll-contain"
-              style={{ maxHeight: "min(24rem, 50dvh)" }}
-            >
+            <h2 className="shrink-0 px-3 pb-2 pt-5 text-sm font-normal text-muted-foreground dark:text-[#d1d1d1]">
+              {query ? "Search results" : "Recent chats"}
+            </h2>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {!isLoaded ? (
                 <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
                   Loading chat history…
@@ -2025,25 +2028,35 @@ export function Sidebar({
                 <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
                   Log in to search saved chats.
                 </p>
-              ) : filtered.length === 0 ? (
+              ) : searchResults.length === 0 ? (
                 <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
-                  No chats found.
+                  {query ? "No chats found." : "No recent chats yet."}
                 </p>
               ) : (
-                <ul aria-label="Chat search results" className="space-y-1">
-                  {filtered.map((conversation) => (
+                <ul
+                  aria-label={query ? "Chat search results" : "Recent chats"}
+                  className="space-y-0.5"
+                >
+                  {searchResults.map((conversation) => (
                     <li key={conversation.id}>
                       <button
+                        data-chat-search-result=""
                         type="button"
                         aria-label={`Open chat ${conversation.title}`}
-                        className="min-h-11 w-full break-words rounded-xl px-3 py-2 text-left text-sm hover:bg-accent"
+                        className="flex min-h-12 w-full items-center gap-5 rounded-xl px-5 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring dark:hover:bg-[#343434] dark:focus-visible:bg-[#343434]"
                         onClick={() => {
                           closeChatSearch();
                           cancelPendingSelection();
+                          // Search results preserve the drawer state chosen before the
+                          // dialog opened; ordinary sidebar navigation still closes it.
                           onSelect(conversation.id);
                         }}
                       >
-                        {conversation.title}
+                        <MessageCircle
+                          className="h-[18px] w-[18px] shrink-0 stroke-[1.6]"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 truncate">{conversation.title}</span>
                       </button>
                     </li>
                   ))}

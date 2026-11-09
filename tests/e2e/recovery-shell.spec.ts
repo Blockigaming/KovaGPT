@@ -40,37 +40,21 @@ test("workspace search preserves the sidebar and restores its active dialog", as
   await expect(account).toContainText("Shell Parity");
   await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
 
-  const search = page.getByRole("dialog", {
-    name: "Search workspace, chats, and actions",
-    exact: true,
-  });
+  const search = page.getByRole("dialog", { name: "Search chats", exact: true });
   await expect(search).toBeVisible();
   await expect(search).toHaveAttribute("aria-modal", "true");
-  const clippedLabels = await search.getByRole("option").evaluateAll((options) =>
-    options.flatMap((option) => {
-      const bounds = option.getBoundingClientRect();
-      return [...option.querySelectorAll(":scope > span")].flatMap((label) => {
-        // Chat/workspace titles deliberately use ellipses; command labels and
-        // explanations must remain readable within their own result rows.
-        if (getComputedStyle(label).textOverflow === "ellipsis") return [];
-        const range = document.createRange();
-        range.selectNodeContents(label);
-        return [...range.getClientRects()].some(
-          (text) =>
-            text.left < bounds.left - 1 ||
-            text.right > bounds.right + 1 ||
-            text.top < bounds.top - 1 ||
-            text.bottom > bounds.bottom + 1,
-        )
-          ? [label.textContent]
-          : [];
-      });
+  await expect(search.getByText("Recent chats", { exact: true })).toBeVisible();
+  const outsideRows = await search.locator("[data-chat-search-result]").evaluateAll((rows) =>
+    rows.flatMap((row) => {
+      const rowBounds = row.getBoundingClientRect();
+      const dialogBounds = row.closest("dialog")!.getBoundingClientRect();
+      return rowBounds.left < dialogBounds.left - 1 || rowBounds.right > dialogBounds.right + 1
+        ? [row.textContent]
+        : [];
     }),
   );
-  expect(clippedLabels, "Command labels and disabled reasons must fit their rows").toEqual([]);
-  await expect(
-    search.getByRole("combobox", { name: "Search workspace, commands, and chats", exact: true }),
-  ).toBeFocused();
+  expect(outsideRows, "Chat search rows must fit within the dialog").toEqual([]);
+  await expect(search.getByRole("textbox", { name: "Search chats", exact: true })).toBeFocused();
   if (mobile) {
     await expect(sidebar).toHaveAttribute("data-state", "open");
     await expect(sidebar).toHaveAttribute("aria-hidden", "true");
@@ -78,7 +62,7 @@ test("workspace search preserves the sidebar and restores its active dialog", as
     await expect(sidebar).not.toHaveAttribute("aria-modal", "true");
   }
   await expect(page.locator('[aria-modal="true"]')).toHaveCount(1);
-  await page.screenshot({ path: info.outputPath("workspace-search.png"), animations: "disabled" });
+  await page.screenshot({ path: info.outputPath("chat-search.png"), animations: "disabled" });
 
   await page.keyboard.press("Escape");
   await expect(search).toBeHidden();
