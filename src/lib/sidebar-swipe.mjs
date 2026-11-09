@@ -109,10 +109,7 @@ export function installInteractiveSidebarSwipe({
     gesture.dy = dy;
     const progress = distance / width();
     drawer.dataset.swipeDragging = open ? "closing" : "opening";
-    drawer.style.setProperty(
-      "--kova-swipe-distance",
-      String(open ? -distance : distance) + "px",
-    );
+    drawer.style.setProperty("--kova-swipe-distance", String(open ? -distance : distance) + "px");
     scrim.dataset.swipeDragging = drawer.dataset.swipeDragging;
     const opacity = String(open ? 1 - progress : progress);
     scrim.style.setProperty("--kova-swipe-progress", opacity);
