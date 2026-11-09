@@ -112,7 +112,7 @@ for (const [width, mobileViewport, open] of [
   [1440, false, true],
   [390, false, false],
 ]) {
-  test(`workspace Search uses the actual ${width}px viewport with stale mobile=${mobileViewport}, open=${open}`, () => {
+  test(`chat Search opens one dialog at ${width}px with stale mobile=${mobileViewport}, open=${open}`, () => {
     const events = [];
     const toggle = () => events.push("close");
     const activate = workspaceSearchCallback({
@@ -127,12 +127,13 @@ for (const [width, mobileViewport, open] of [
       onToggle: toggle,
       swipeToggleRef: { current: toggle },
       cancelPendingSelection: () => events.push("cancel-pending-selection"),
-      onOpenWorkspaceSearch: () => events.push("search"),
+      onOpenWorkspaceSearch: () => events.push("workspace-search"),
+      setSearchOpen: (update) => events.push(update(false) ? "chat-dialog-open" : "chat-dialog-close"),
     });
     activate();
     assert.deepEqual(
       events,
-      ["cancel-pending-selection", "search"],
+      ["cancel-pending-selection", "chat-dialog-open"],
       "Search preserves the chosen sidebar state at every breakpoint",
     );
   });
