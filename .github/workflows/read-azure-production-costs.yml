@@ -1,0 +1,78 @@
+name: Read-only Azure production cost audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type READ_ONLY to inspect costs without changing Azure
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-production-cost-readonly
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'READ_ONLY'
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Test read-only audit without Azure credentials
+        run: node --test tests/unit/azure-cost-readonly.test.mjs
+      - name: Use existing protected production Azure identity
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Read cost and safe runtime metadata
+        shell: bash
+        env:
+          KOVA_EXPECTED_SUBSCRIPTION_ID: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/azure-cost-audit"
+          node scripts/azure/read-production-costs.mjs > "$RUNNER_TEMP/azure-cost-audit/report.json"
+          node - "$RUNNER_TEMP/azure-cost-audit/report.json" <<'NODE'
+          const fs = require("node:fs");
+          const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const top = report.costByService?.rows?.slice(0, 5) ?? [];
+          const lines = [
+            "## Read-only Azure cost audit",
+            "No Azure resources, models, tasks, traffic, or secrets were modified.",
+            "",
+            "### Top month-to-date services",
+            ...top.map((entry) =>
+              "- " + entry.name.replace(/[<>|\r\n]/g, "") + ": " +
+              entry.amount.toFixed(2) + " " + report.costByService.currency),
+            "",
+            ...(report.warnings.length
+              ? ["### Unavailable reads", ...report.warnings.map((item) => "- " + item)]
+              : []),
+            "Detailed costs and resource metadata are in the restricted artifact.",
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+          NODE
+      - name: Retain account-scoped audit receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: azure-cost-readonly-${{ github.run_id }}
+          path: ${{ runner.temp }}/azure-cost-audit/report.json
+          if-no-files-found: warn
+          retention-days: 7
