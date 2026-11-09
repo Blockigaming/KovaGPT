@@ -1,3 +1,4 @@
+import { matchesSettingsSearch } from "@/lib/settings-search.mjs";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
@@ -1152,10 +1153,22 @@ export function SettingsDialog({
     allTabs.find((item) => item.v === tab) ??
     destinations.find((item) => item.v === tab) ??
     allTabs[0];
-  const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
+  const normalizedQuery = settingsQuery.trim();
   const matchesSettingsQuery = (item: TabDef) =>
-    [item.label, ...(item.keywords ?? [])].some((term) =>
-      term.toLocaleLowerCase().includes(normalizedQuery),
+    matchesSettingsSearch(
+      {
+        id: item.v,
+        label: item.label,
+        keywords: item.keywords ?? [],
+        description: SETTINGS_DESCRIPTIONS[item.v] ?? "",
+        groups: [
+          ...groups.filter((group) => group.tabs.some((tab) => tab.v === item.v)).map((group) => group.title),
+          ...destinationGroups
+            .filter((group) => group.tabs.some((tab) => tab.v === item.v))
+            .map((group) => group.title),
+        ],
+      },
+      normalizedQuery,
     );
   const matchingSecondaryTabs = normalizedQuery
     ? destinations.filter(
@@ -1173,7 +1186,7 @@ export function SettingsDialog({
     ? [
         ...groups.map((group) => ({
           ...group,
-          tabs: group.tabs.filter((item) => item.v === tab || matchesSettingsQuery(item)),
+          tabs: group.tabs.filter(matchesSettingsQuery),
         })),
         { title: "Related settings", tabs: matchingSecondaryTabs },
       ].filter((group) => group.tabs.length > 0)
