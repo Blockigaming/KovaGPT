@@ -2007,10 +2007,10 @@ export function SettingsDialog({
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
                   <p className="text-sm text-muted-foreground">
-                    Free and Plus have rolling 5-hour and weekly chat usage meters. The 5-hour
-                    meter refreshes hourly as older activity expires. Pro has one weekly chat
-                    meter. Percentages reflect regular, Thinking, and cost-weighted usage, with
-                    additional token safety limits for longer conversations.
+                    Free and Plus have rolling 5-hour and weekly chat usage meters. The 5-hour meter
+                    refreshes hourly as older activity expires. Pro has one weekly chat meter.
+                    Percentages reflect regular, Thinking, and cost-weighted usage, with additional
+                    token safety limits for longer conversations.
                   </p>
                   <Link
                     to="/pricing"
