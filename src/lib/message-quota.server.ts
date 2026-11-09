@@ -29,7 +29,7 @@ export async function enforceDailyMessageQuota(
   const { data, error } = await (signal ? query.abortSignal(signal) : query);
   const outcome: unknown = data;
   const exhausted =
-    outcome === "weekly" || (short && outcome === "five_hour") ? outcome : null;
+    outcome === "weekly" ? "weekly" : short && outcome === "five_hour" ? "five_hour" : null;
   const allowed = outcome === "allowed";
   if (error || (!allowed && !exhausted))
     return Response.json(
@@ -43,7 +43,7 @@ export async function enforceDailyMessageQuota(
     return Response.json(
       {
         error: `Your ${CHAT_USAGE_WINDOWS[exhausted].toLowerCase()} ${thinking ? "Thinking" : "regular message"} allowance is used.`,
-        code: exhausted === "daily" ? "daily_message_limit" : "message_window_limit",
+        code: "message_window_limit",
         resetsAt: windows.find(({ id }) => id === exhausted)?.resetsAt,
         category: "quota_exceeded",
         retryable: false,
