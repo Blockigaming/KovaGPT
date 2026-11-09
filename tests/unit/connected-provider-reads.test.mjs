@@ -379,7 +379,10 @@ test("Dropbox and Box authorization URLs are pinned to official hosts", () => {
     ["box", "https://account.box.com/api/oauth2/authorize?state=fixture"],
   ]) {
     assert.equal(connectionAuthorizationUrl(provider, url), url);
-    assert.equal(connectionAuthorizationUrl(provider, "https://evil.example/oauth2/authorize"), null);
+    assert.equal(
+      connectionAuthorizationUrl(provider, "https://evil.example/oauth2/authorize"),
+      null,
+    );
     assert.equal(connectionAuthorizationUrl(provider, url.replace("https://", "http://")), null);
   }
 });
@@ -394,7 +397,10 @@ test("Dropbox and Box searches are bounded, read-only and correctly encoded", ()
     options: { max_results: 10 },
   });
   const box = connectionReadRequest("box", query, "fake-token");
-  assert.equal(new URL(box.url).origin + new URL(box.url).pathname, "https://api.box.com/2.0/search");
+  assert.equal(
+    new URL(box.url).origin + new URL(box.url).pathname,
+    "https://api.box.com/2.0/search",
+  );
   assert.equal(new URL(box.url).searchParams.get("query"), query);
   assert.equal(new URL(box.url).searchParams.get("limit"), "10");
   assert.equal(new URL(box.url).searchParams.get("type"), "file");
@@ -409,12 +415,15 @@ test("Dropbox and Box search results expose only safe metadata and at most ten i
   const dropbox = await readConnection("dropbox", "report", "fake-token", async () =>
     Response.json({
       matches: Array.from({ length: 16 }, (_, i) => ({
-        metadata: { ".tag": "metadata", metadata: {
-          id: "id:" + i,
-          name: "Report " + i,
-          path_display: "/Projects/Report " + i,
-          access_token: "must-not-leak",
-        } },
+        metadata: {
+          ".tag": "metadata",
+          metadata: {
+            id: "id:" + i,
+            name: "Report " + i,
+            path_display: "/Projects/Report " + i,
+            access_token: "must-not-leak",
+          },
+        },
       })),
       cursor: "must-not-leak",
     }),
@@ -424,11 +433,17 @@ test("Dropbox and Box search results expose only safe metadata and at most ten i
   assert.equal(dropbox.results[0].snippet, "/Projects/Report 0");
   assert.equal(dropbox.results[0].url, null);
   const box = await readConnection("box", "budget", "fake-token", async () =>
-    Response.json({ entries: [{
-      id: "one", name: "Budget", description: "File",
-      shared_link: { url: "javascript:alert(1)" },
-      access_token: "must-not-leak",
-    }] }),
+    Response.json({
+      entries: [
+        {
+          id: "one",
+          name: "Budget",
+          description: "File",
+          shared_link: { url: "javascript:alert(1)" },
+          access_token: "must-not-leak",
+        },
+      ],
+    }),
   );
   assert.equal(box.results.length, 1);
   assert.equal(box.results[0].title, "Budget");
