@@ -269,9 +269,7 @@ export function ConnectedAccountManager({
                   </Button>
                   <Button
                     variant="outline"
-                    disabled={
-                      busy || loading || error || !canReadConnection(account, id)
-                    }
+                    disabled={busy || loading || error || !canReadConnection(account, id)}
                     onClick={() => {
                       void search(account.id, true);
                     }}
