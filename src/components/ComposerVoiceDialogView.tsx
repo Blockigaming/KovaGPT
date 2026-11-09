@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { AudioLines, Captions, Info, Loader2, Mic, MicOff, X } from "lucide-react";
+import { AudioLines, Captions, Info, Loader2, Mic, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -281,7 +281,7 @@ export function ComposerVoiceDialogView({
                 aria-pressed={microphoneMuted}
                 onClick={onToggleMicrophoneMuted}
               >
-                {microphoneMuted ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
+                <Mic aria-hidden="true" className={microphoneMuted ? "kova-voice-muted-icon" : undefined} />
               </button>
             )}
             {ready && recordingControl && (
