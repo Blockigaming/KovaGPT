@@ -837,6 +837,17 @@
   opacity: 0.68;
   transform: scale(1.2);
 }
+.kova-voice-immersive[data-voice-phase="recording"] .kova-voice-orb-glow {
+  transform: scale(var(--kova-voice-orb-scale, 1));
+  transition: transform 90ms ease-out;
+}
+.kova-voice-immersive[data-voice-phase="recording"] .kova-voice-mark {
+  box-shadow:
+    inset -10px -14px 30px #4459b640,
+    inset 12px 18px 32px #ffffff7a,
+    0 9px 40px #677ce65c;
+}
+
 .kova-voice-immersive .kova-voice-mark {
   width: 86%;
   height: 86%;
