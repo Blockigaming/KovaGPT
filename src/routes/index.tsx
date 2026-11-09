@@ -2459,7 +2459,20 @@ function KovaGPT() {
                       retryTimerRef.current = window.setTimeout(() => {
                         if (!isCurrentRetryScope() || activeIdRef.current !== nextConvId) return;
                         retryTimerRef.current = null;
-                        send(text, atts, retryTool, 0, nextConvId, priorMessages, userMsg.id);
+                        send(
+                          text,
+                          atts,
+                          retryTool,
+                          0,
+                          nextConvId,
+                          priorMessages,
+                          userMsg.id,
+                          undefined,
+                          undefined,
+                          false,
+                          undefined,
+                          approvedOneShot,
+                        );
                       }, 100);
                     },
                   }
