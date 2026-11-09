@@ -13,6 +13,7 @@ import {
 import { packSalesforceCredential } from "../../src/integrations/salesforce-credential.server.mjs";
 import {
   selectOAuthTokens,
+  oauthTokenRequest,
   oauthRefreshRequest,
   selectRefreshTokens,
 } from "../../src/integrations/oauth-token-request.server.mjs";
@@ -132,6 +133,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "fixture.my.salesforce.com",
     "api.dropboxapi.com",
     "api.box.com",
+    "api.calendly.com",
   ]);
   const salesforceToken = packSalesforceCredential("fake-token", {
     active: true,
@@ -144,6 +146,9 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
       id,
       "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : "fake-token",
+      id === "calendly"
+        ? { calendlyUserUri: "https://api.calendly.com/users/KNOWN_USER" }
+        : {},
     );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
@@ -463,4 +468,128 @@ test("Dropbox and Box token refresh requests use the confidential-client grant",
     assert.equal(refresh.body.get("grant_type"), "refresh_token");
     assert.equal(refresh.body.get("refresh_token"), "rotating-token");
   }
+});
+
+test("Calendly requires explicit read scopes and a fixed account-scoped event route", () => {
+  const id = "https://api.calendly.com/users/KNOWN_USER";
+  const account = {
+    provider_id: "calendly",
+    status: "connected",
+    token_expires_at: null,
+    granted_scopes: ["users:read", "scheduled_events:read"],
+  };
+  assert.equal(canReadConnection(account, "calendly"), true);
+  assert.equal(canReadConnection({ ...account, granted_scopes: ["users:read"] }, "calendly"), false);
+  assert.equal(canReadConnection({ ...account, status: "expired" }, "calendly"), false);
+  assert.equal(
+    connectionAuthorizationUrl(
+      "calendly",
+      "https://auth.calendly.com/oauth/authorize?state=fixture",
+    ),
+    "https://auth.calendly.com/oauth/authorize?state=fixture",
+  );
+  assert.equal(
+    connectionAuthorizationUrl("calendly", "https://evil.example/oauth/authorize"),
+    null,
+  );
+  assert.throws(
+    () => connectionReadRequest("calendly", "meeting", "token"),
+    /calendly_identity_unavailable/,
+  );
+  assert.throws(
+    () =>
+      connectionReadRequest("calendly", "meeting", "token", {
+        calendlyUserUri: "https://evil.example/users/KNOWN_USER",
+      }),
+    /calendly_identity_unavailable/,
+  );
+  const request = connectionReadRequest("calendly", "meeting", "token", {
+    calendlyUserUri: id,
+  });
+  const url = new URL(request.url);
+  assert.equal(url.href.startsWith("https://api.calendly.com/scheduled_events?"), true);
+  assert.equal(url.searchParams.get("user"), id);
+  assert.equal(url.searchParams.get("count"), "100");
+  assert.equal(url.searchParams.get("sort"), "start_time:desc");
+  assert.equal(request.init.method, "GET");
+  assert.equal(request.init.redirect, "error");
+});
+
+test("Calendly scheduled-event reads verify their owner before retrieving bounded metadata", async () => {
+  const userUri = "https://api.calendly.com/users/KNOWN_USER";
+  const calls = [];
+  const result = await readConnection(
+    "calendly",
+    "Review",
+    "fake-token",
+    async (url, init) => {
+      calls.push([url, init]);
+      if (url === "https://api.calendly.com/users/me")
+        return Response.json({ resource: { uri: userUri } });
+      return Response.json({
+        collection: Array.from({ length: 30 }, (_, i) => ({
+          uri: "https://api.calendly.com/scheduled_events/" + i,
+          name: i < 15 ? "Review " + i : "Unrelated " + i,
+          start_time: "2026-11-09T10:00:00Z",
+          end_time: "2026-11-09T11:00:00Z",
+          invitees: ["must-not-leak"],
+          access_token: "must-not-leak",
+        })),
+      });
+    },
+    { calendlyExpectedUserUri: userUri },
+  );
+  assert.equal(calls.length, 2);
+  assert.equal(new URL(calls[1][0]).searchParams.get("user"), userUri);
+  assert.equal(result.results.length, 10);
+  assert.equal(result.results[0].title, "Review 0");
+  assert.equal(result.results[0].url, null);
+  assert.match(result.results[0].snippet, /Start: 2026-11-09T10:00:00Z/);
+  assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|Unrelated/);
+});
+
+test("Calendly rejects a changed user identity before listing events", async () => {
+  const calls = [];
+  await assert.rejects(
+    readConnection(
+      "calendly",
+      "Meeting",
+      "fake-token",
+      async (url) => {
+        calls.push(url);
+        return Response.json({
+          resource: { uri: "https://api.calendly.com/users/OTHER_USER" },
+        });
+      },
+      { calendlyExpectedUserUri: "https://api.calendly.com/users/KNOWN_USER" },
+    ),
+    /calendly_identity_changed/,
+  );
+  assert.deepEqual(calls, ["https://api.calendly.com/users/me"]);
+});
+
+test("Calendly requires PKCE and Basic client authentication for tokens", () => {
+  const args = {
+    providerId: "calendly",
+    clientId: "client",
+    clientSecret: "secret",
+    code: "one-time-code",
+    redirectUri: "https://kovagpt.com/api/integrations/oauth/callback/calendly",
+    verifier: "random-verifier",
+  };
+  const initial = oauthTokenRequest(args);
+  assert.equal(initial.method, "POST");
+  assert.equal(initial.headers.Authorization, "Basic " + Buffer.from("client:secret").toString("base64"));
+  assert.equal(initial.body.get("code_verifier"), "random-verifier");
+  assert.equal(initial.body.get("client_secret"), null);
+  assert.throws(() => oauthTokenRequest({ ...args, verifier: undefined }), /oauth_pkce_verifier_missing/);
+  const refresh = oauthRefreshRequest({
+    providerId: "calendly",
+    clientId: "client",
+    clientSecret: "secret",
+    refreshToken: "rotated",
+  });
+  assert.equal(refresh.method, "POST");
+  assert.equal(refresh.body.get("refresh_token"), "rotated");
+  assert.equal(refresh.headers.Authorization, initial.headers.Authorization);
 });
