@@ -28,7 +28,7 @@ export type ConnectedToolContext = {
   github?: GitHubChatContext;
 };
 const accountColumns =
-  "id,provider_id,account_label,status,granted_scopes,token_expires_at,updated_at";
+  "id,provider_id,provider_account_id,account_label,status,granted_scopes,token_expires_at,updated_at";
 // Narrow types for the existing connector tables, which are absent from the
 // generated application Database type. No schema change is required.
 type AccountRow = BoundAccount & {
