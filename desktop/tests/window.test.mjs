@@ -124,6 +124,10 @@ async function fixture(platform = "linux") {
           prompts.push(options);
           return { response: 1 };
         },
+        showMessageBoxSync: (options) => {
+          prompts.push(options);
+          return 0;
+        },
       },
       shell: {
         openExternal: async (url) => {
