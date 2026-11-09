@@ -1,0 +1,27 @@
+name: Temporary search format diagnostic
+
+on:
+  push:
+    branches:
+      - release/chat-settings-search-20261109
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Print exact Sidebar Prettier correction
+        run: |
+          npx --no-install prettier --write src/components/Sidebar.tsx
+          git --no-pager diff -- src/components/Sidebar.tsx
