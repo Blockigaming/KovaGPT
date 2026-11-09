@@ -15,5 +15,7 @@
       <array><string>kovagpt</string></array>
     </dict>
   </array>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Use your microphone only after you start Voice or Dictation.</string>
   <key>UIRequiresFullScreen</key><false/>
 </dict></plist>
