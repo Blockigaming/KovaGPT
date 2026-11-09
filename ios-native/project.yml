@@ -16,6 +16,7 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         NSCameraUsageDescription: "Use the camera only after you choose Scan or Camera."
+        NSMicrophoneUsageDescription: "Use your microphone only after you start Voice or Dictation."
         UIRequiresFullScreen: false
     dependencies:
       - target: KovaGPTShortcuts
