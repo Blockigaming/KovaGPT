@@ -145,15 +145,15 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
       ? data.collection
       : id === "notion"
         ? data.results
-      : id === "linear"
-        ? data.data?.issues?.nodes
-        : id === "slack"
-          ? data.messages?.matches
-          : id === "dropbox"
-            ? data.matches
-            : id === "box"
-              ? data.entries
-              : data.value;
+        : id === "linear"
+          ? data.data?.issues?.nodes
+          : id === "slack"
+            ? data.messages?.matches
+            : id === "dropbox"
+              ? data.matches
+              : id === "box"
+                ? data.entries
+                : data.value;
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
   if (id === "ms-teams" || id === "calendly")
     rows = rows.filter((row) =>
@@ -170,7 +170,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     const url =
       id === "calendly"
         ? null
-        : (row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url);
+        : row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
     const item = {
       id: str(row.id ?? row.ts ?? (id === "calendly" ? row.uri : ""), 300),
       title:
@@ -197,7 +197,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
                 .join("; ")
             : id === "dropbox"
               ? str(row.path_display)
-            : str(row.bodyPreview ?? row.description ?? row.text),
+              : str(row.bodyPreview ?? row.description ?? row.text),
     };
     // Measure the serialized UTF-8 result, including JSON escaping. A provider
     // can return control characters or very large URLs; never cut serialized
