@@ -862,29 +862,29 @@
   animation: kova-voice-speaking-orb 1.6s ease-in-out infinite alternate;
 }
 @keyframes kova-voice-idle-orb {
-    from {
+  from {
     transform: scale(0.98) rotate(-5deg);
   }
-    to {
+  to {
     transform: scale(1.02) rotate(5deg);
   }
 }
 @keyframes kova-voice-active-orb {
-    from {
+  from {
     transform: scale(0.95) rotate(-7deg);
     filter: saturate(0.93);
   }
-    to {
+  to {
     transform: scale(1.06) rotate(7deg);
     filter: saturate(1.2);
   }
 }
 @keyframes kova-voice-speaking-orb {
-    from {
+  from {
     transform: scale(0.96) rotate(4deg);
     filter: brightness(0.98);
   }
-    to {
+  to {
     transform: scale(1.075) rotate(-6deg);
     filter: brightness(1.17);
   }
