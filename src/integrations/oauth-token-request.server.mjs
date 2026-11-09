@@ -61,7 +61,17 @@ export function selectOAuthTokens(providerId, payload) {
 
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
   if (
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion", "dropbox", "box"].includes(providerId)
+    ![
+      "microsoft",
+      "linear",
+      "slack",
+      "oura",
+      "whoop",
+      "salesforce",
+      "notion",
+      "dropbox",
+      "box",
+    ].includes(providerId)
   )
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
