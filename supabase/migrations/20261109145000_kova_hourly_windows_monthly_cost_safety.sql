@@ -73,6 +73,70 @@ revoke all on function public.try_consume_paid_message(uuid,boolean,integer,inte
 grant execute on function public.try_consume_paid_message(uuid,boolean,integer,integer)
   to service_role;
 
+-- Single server-owned source for cost-weighted quota progress and admission.
+-- Costs are conservative: the greater of actual and reserved estimated spend.
+-- User-supplied amounts and client percentages cannot influence this query.
+create or replace function public.kova_plan_cost_progress(
+  _user_id uuid, _plan text, _asof timestamptz default statement_timestamp()
+) returns table(
+  month_used numeric, monthly_allowance numeric,
+  weekly_used numeric, weekly_allowance numeric,
+  five_hour_used numeric, five_hour_allowance numeric
+)
+language plpgsql stable security definer
+set search_path=public,pg_temp as $
+declare
+  month_start timestamptz := date_trunc('month', _asof at time zone 'UTC') at time zone 'UTC';
+  month_end timestamptz := date_trunc('month', _asof at time zone 'UTC') at time zone 'UTC' + interval '1 month';
+  week_start timestamptz := date_trunc('week', _asof at time zone 'UTC') at time zone 'UTC';
+  hourly_start timestamptz := date_trunc('hour', _asof at time zone 'UTC') at time zone 'UTC';
+  five_start timestamptz;
+  other_week numeric;
+  other_five numeric;
+  weekly_slots numeric;
+  five_slots numeric;
+begin
+  if _user_id is null or _plan not in ('free','plus','pro') then
+    raise exception 'invalid_kova_cost_progress';
+  end if;
+  monthly_allowance := case _plan
+    when 'free' then 3::numeric
+    when 'plus' then 60::numeric
+    else 300::numeric
+  end;
+  five_start := greatest(month_start,hourly_start-interval '4 hours');
+  select
+    coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0))),0),
+    coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0)))
+      filter (where created_at>=greatest(month_start,week_start)),0),
+    coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0)))
+      filter (where created_at>=five_start),0)
+  into month_used,weekly_used,five_hour_used
+  from public.ai_usage_events
+  where user_id=_user_id and created_at>=month_start and created_at<month_end
+    and status<>'quota_rejected';
+  other_week := month_used-weekly_used;
+  other_five := month_used-five_hour_used;
+  weekly_slots := greatest(1,ceil(extract(epoch from (month_end-greatest(month_start,week_start)))/604800));
+  five_slots := greatest(1,ceil(extract(epoch from (month_end-five_start))/18000));
+  weekly_allowance := greatest(
+    case _plan when 'free' then 0.5::numeric when 'plus' then 5::numeric else 10::numeric end,
+    greatest(0,monthly_allowance-other_week)/weekly_slots
+  );
+  five_hour_allowance := case when _plan='pro' then null
+    else greatest(
+      case _plan when 'free' then 0.1::numeric else 2::numeric end,
+      greatest(0,monthly_allowance-other_five)/five_slots
+    )
+  end;
+  return next;
+end
+$;
+revoke all on function public.kova_plan_cost_progress(uuid,text,timestamptz)
+  from public,anon,authenticated;
+grant execute on function public.kova_plan_cost_progress(uuid,text,timestamptz)
+  to service_role;
+
 -- Preserve the existing concurrency/idempotency and token restrictions while
 -- adding an atomic cap to the same admission transaction. No new RPC signature.
 create or replace function public.acquire_ai_generation(
@@ -81,7 +145,7 @@ create or replace function public.acquire_ai_generation(
   p_daily_limit bigint,p_monthly_limit bigint,p_premium_limit integer,p_guest_limit integer,p_global_concurrency integer,p_principal_concurrency integer,p_lease_seconds integer,
   p_period_start timestamptz,p_period_end timestamptz)
 returns table(event_id uuid,decision text) language plpgsql security definer set search_path=public,pg_temp as $$
-declare active_global integer; active_principal integer; used_day bigint; used_month bigint; used_premium integer; used_guest integer; new_id uuid; used_month_cost numeric; plan_cost_ceiling numeric;
+declare active_global integer; active_principal integer; used_day bigint; used_month bigint; used_premium integer; used_guest integer; new_id uuid; cost_state record;
 begin
   if p_user_id is not null and public.effective_user_usage_multiplier(p_user_id)=5 then
     p_daily_limit := case when p_daily_limit is null then null else least(p_daily_limit::numeric*5,9223372036854775807)::bigint end;
@@ -99,27 +163,23 @@ begin
   select count(*) into active_principal from ai_usage_events where status in ('reserved','started','streaming') and lease_expires_at>=now() and ((p_user_id is not null and user_id=p_user_id) or (p_guest_ip_hash is not null and guest_ip_hash=p_guest_ip_hash));
   if active_principal>=p_principal_concurrency then return query select null::uuid,'principal_concurrency'; return; end if;
   if p_user_id is not null then
-    -- Atomic calendar-month provider cost ceiling. Include all models, including
-    -- included Pro Argon Lite, regardless of token allowance or plan upgrades.
-    -- Reserve the upper bound of every in-flight request before the provider call.
-    plan_cost_ceiling := case p_plan
-      when 'free' then 3::numeric
-      when 'plus' then 60::numeric
-      when 'pro' then 300::numeric
-      else null
-    end;
-    if plan_cost_ceiling is null or p_estimated_cost is null
-       or p_estimated_cost < 0 or p_estimated_cost > plan_cost_ceiling then
+    -- The global lock also serializes this spend reservation with every other
+    -- in-flight model request. Pro basic chat bypasses token count, never cost.
+    if p_plan not in ('free','plus','pro') or p_estimated_cost is null
+       or p_estimated_cost < 0 then
       return query select null::uuid,'monthly_cost'; return;
     end if;
-    select coalesce(sum(greatest(coalesce(actual_cost_usd,0),coalesce(estimated_cost_usd,0))),0)
-      into used_month_cost from public.ai_usage_events
-      where user_id=p_user_id
-        and created_at>=date_trunc('month',now() at time zone 'utc') at time zone 'utc'
-        and created_at<date_trunc('month',now() at time zone 'utc') at time zone 'utc' + interval '1 month'
-        and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed');
-    if used_month_cost + p_estimated_cost > plan_cost_ceiling then
+    select * into cost_state
+      from public.kova_plan_cost_progress(p_user_id,p_plan,statement_timestamp());
+    if cost_state.month_used + p_estimated_cost > cost_state.monthly_allowance then
       return query select null::uuid,'monthly_cost'; return;
+    end if;
+    if cost_state.weekly_used + p_estimated_cost > cost_state.weekly_allowance then
+      return query select null::uuid,'weekly_cost'; return;
+    end if;
+    if p_plan in ('free','plus') and
+       cost_state.five_hour_used + p_estimated_cost > cost_state.five_hour_allowance then
+      return query select null::uuid,'five_hour_cost'; return;
     end if;
     -- Included Pro Argon Lite chat has no daily/monthly token allowance.
     if not coalesce(p_plan='pro' and p_model='kova-argon-4.6' and p_mode='instant' and p_premium=false,false) then
