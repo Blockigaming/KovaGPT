@@ -10,6 +10,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Bundle;
+import android.os.Build;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.PopupMenu;
+import android.widget.TextView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.HapticFeedbackConstants;
@@ -24,7 +29,7 @@ import android.webkit.WebViewClient;
 import java.util.ArrayList;
 
 /** Native navigation, sharing and file selection without exposing a JavaScript bridge. */
-public final class MainActivity extends Activity {
+public class MainActivity extends Activity {
     private static final String HOME = "https://kovagpt.com/";
     private static final int PICK_FILES = 1031;
     private static final int MEDIA_PERMISSION = 1032;
@@ -32,6 +37,7 @@ public final class MainActivity extends Activity {
     private ValueCallback<Uri[]> files;
     private PermissionRequest pendingMedia;
     private String[] pendingMediaResources;
+    private boolean switchingAccount;
 
     private static boolean trusted(Uri uri) {
         return uri != null && "https".equalsIgnoreCase(uri.getScheme())
@@ -119,6 +125,10 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        if (this instanceof SecondAccountActivity && Build.VERSION.SDK_INT < 28) {
+            finish();
+            return;
+        }
         WebView.setWebContentsDebuggingEnabled(false);
         web = new WebView(this);
         WebSettings settings = web.getSettings();
@@ -171,7 +181,31 @@ public final class MainActivity extends Activity {
                 });
             }
         });
-        setContentView(web);
+        // NoActionBar needs a real visible native menu anchor, including on gesture-only devices.
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        TextView account = new TextView(this);
+        account.setText("KovaGPT · Account " + (this instanceof SecondAccountActivity ? "2" : "1"));
+        account.setTextSize(16);
+        int inset = (int) (16 * getResources().getDisplayMetrics().density);
+        account.setPadding(inset, 0, inset, 0);
+        toolbar.addView(account, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        Button menuButton = new Button(this);
+        menuButton.setText("⋯");
+        menuButton.setContentDescription("App settings and accounts");
+        menuButton.setMinHeight(inset * 3);
+        menuButton.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(this, menuButton);
+            onCreateOptionsMenu(popup.getMenu());
+            popup.setOnMenuItemClickListener(this::onOptionsItemSelected);
+            popup.show();
+        });
+        toolbar.addView(menuButton);
+        layout.addView(toolbar);
+        layout.addView(web, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+        setContentView(layout);
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(HOME);
     }
@@ -190,11 +224,54 @@ public final class MainActivity extends Activity {
     @Override public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, 1, 0, "Share current page");
         menu.add(0, 2, 1, "About KovaGPT");
+        menu.add(0, 4, 3, "Switch to Account " + (this instanceof SecondAccountActivity ? "1" : "2"))
+            .setEnabled(Build.VERSION.SDK_INT >= 28);
+        menu.add(0, 5, 4, "Voice settings");
         menu.add(0, 3, 2, "Haptic feedback")
             .setCheckable(true).setChecked(nativeHapticsEnabled());
         return true;
     }
+    private void switchAccount() {
+        if (Build.VERSION.SDK_INT < 28 || switchingAccount || web == null) return;
+        if (pendingMedia != null || files != null) {
+            showNativeMessage("Finish the permission or file selection before switching accounts.");
+            return;
+        }
+        if (web.getUrl() == null || !trusted(Uri.parse(web.getUrl()))) return;
+        switchingAccount = true;
+        WebView source = web;
+        String script = "Array.from(document.querySelectorAll('.kova-voice-dialog, #kova-inline-dictation')).some(e => e.getClientRects().length > 0)";
+        source.evaluateJavascript(script, blocked -> {
+            switchingAccount = false;
+            if (isFinishing() || isDestroyed() || source != web || source.getUrl() == null
+                    || !trusted(Uri.parse(source.getUrl())) || !"false".equals(blocked)) {
+                if (!isFinishing() && !isDestroyed())
+                    showNativeMessage("Finish Voice or Dictation before switching accounts.");
+                return;
+            }
+            confirmNativeAction();
+            // Explicit internal classes only. No token, URL or chat content crosses processes.
+            Class<?> target = this instanceof SecondAccountActivity ? MainActivity.class : SecondAccountActivity.class;
+            startActivity(new Intent(this, target).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+        });
+    }
+
+    private void showNativeMessage(String message) {
+        new AlertDialog.Builder(this).setTitle("KovaGPT").setMessage(message)
+            .setPositiveButton("OK", null).show();
+    }
+
     @Override public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == 4) { switchAccount(); return true; }
+        if (item.getItemId() == 5) {
+            new AlertDialog.Builder(this).setTitle("Voice settings")
+                .setItems(new String[] { "Voice preferences and connection", "Microphone permissions" }, (dialog, selected) -> {
+                    if (selected == 0) web.loadUrl("https://kovagpt.com/settings/voice");
+                    else startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:" + getPackageName())));
+                }).show();
+            return true;
+        }
         if (item.getItemId() == 3) {
             boolean enabled = !nativeHapticsEnabled();
             getSharedPreferences("kova-native-settings", MODE_PRIVATE).edit()
@@ -245,7 +322,7 @@ public final class MainActivity extends Activity {
         files = null;
     }
     @Override protected void onSaveInstanceState(Bundle out) {
-        web.saveState(out);
+        if (web != null) web.saveState(out);
         super.onSaveInstanceState(out);
     }
     /** Ask the trusted Kova page to dismiss its topmost modal before leaving a route.
@@ -276,6 +353,14 @@ public final class MainActivity extends Activity {
         web.evaluateJavascript(DISMISS_OPEN_OVERLAY, handled -> {
             if (!"true".equals(handled)) finishBackNavigation();
         });
+    }
+    @Override protected void onPause() {
+        if (web != null) web.onPause();
+        super.onPause();
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        if (web != null) web.onResume();
     }
     @Override protected void onDestroy() {
         denyPendingMedia();

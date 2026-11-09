@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +12,7 @@ import {
 } from "../workspace-process.mjs";
 
 function fixture() {
-  const root = mkdtempSync(join(tmpdir(), "kova-command-"));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "kova-command-")));
   const runner = createLocalCommandRunner();
   const command = (script) => {
     const file = join(root, "task.mjs");
@@ -49,7 +49,7 @@ test("local terminal executes in selected folder, captures stdout/stderr and non
     );
     const result = await finished(f.runner);
     assert.equal(result.state, "failed");
-    assert.equal(result.exitCode, 7);
+    assert.equal(result.exitCode, 7, result.output);
     assert.match(result.output, /diagnostic/u);
     assert.ok(result.output.includes(f.root));
     assert.equal(readFileSync(join(f.root, "result.txt"), "utf8"), "local");

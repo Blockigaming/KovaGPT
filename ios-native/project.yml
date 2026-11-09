@@ -43,3 +43,26 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios.shortcuts
         SWIFT_VERSION: "5.9"
         CODE_SIGNING_ALLOWED: NO
+
+  KovaGPTTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: KovaGPT
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.ios.tests
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+schemes:
+  KovaGPT:
+    build:
+      targets:
+        KovaGPT: all
+        KovaGPTTests: [test]
+    test:
+      targets:
+        - KovaGPTTests

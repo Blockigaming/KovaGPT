@@ -65,6 +65,9 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
                                UIImagePickerControllerDelegate,
                                PHPickerViewControllerDelegate {
     private var browser: WKWebView!
+    private var accountBrowsers: [Int: WKWebView] = [:]
+    private var accountSlot = 1
+    private var switchingAccount = false
     private var lastShortcutID: UUID?
     private var pendingShortcut: NativeShortcut?
     private var pendingWebShortcut: (id: UUID, action: NativeShortcut)?
@@ -104,7 +107,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard let token = pendingWebShortcut?.id else { return }
+        guard webView === browser, let token = pendingWebShortcut?.id else { return }
         openPendingWebShortcut(token: token, remainingAttempts: 10)
     }
 
@@ -146,20 +149,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         title = "KovaGPT"
         view.backgroundColor = .systemBackground
 
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = .default()
-        config.preferences.javaScriptCanOpenWindowsAutomatically = false
-        browser = WKWebView(frame: .zero, configuration: config)
-        browser.navigationDelegate = self
-        browser.allowsBackForwardNavigationGestures = true
-        browser.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(browser)
-        NSLayoutConstraint.activate([
-            browser.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            browser.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            browser.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            browser.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-        ])
+        showAccount(1)
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             title: "Back", style: .plain, target: self, action: #selector(goBack)
         )
@@ -168,10 +158,93 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
                             action: #selector(sharePage)),
             UIBarButtonItem(title: "Scan", style: .plain, target: self,
                             action: #selector(scanDocument)),
-            UIBarButtonItem(title: "About", style: .plain, target: self,
-                            action: #selector(showAbout)),
+            UIBarButtonItem(title: "Settings", style: .plain, target: self,
+                            action: #selector(showNativeSettings)),
         ]
-        browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
+    }
+
+    /// Slot one preserves the existing default sign-in. Slot two has its own persistent
+    /// WebKit container; neither cookies nor account tokens are copied between slots.
+    private func showAccount(_ slot: Int) {
+        guard slot == 1 || slot == 2 else { return }
+        if slot == 2 {
+            guard #available(iOS 17.0, *) else { return }
+        }
+        browser?.pauseAllMediaPlayback(completionHandler: nil)
+        browser?.removeFromSuperview()
+        let selected: WKWebView
+        if let retained = accountBrowsers[slot] {
+            selected = retained
+        } else {
+            let config = WKWebViewConfiguration()
+            guard let store = AccountWebStores.store(for: slot) else { return }
+            config.websiteDataStore = store
+            config.preferences.javaScriptCanOpenWindowsAutomatically = false
+            selected = WKWebView(frame: .zero, configuration: config)
+            selected.navigationDelegate = self
+            selected.allowsBackForwardNavigationGestures = true
+            selected.translatesAutoresizingMaskIntoConstraints = false
+            accountBrowsers[slot] = selected
+            selected.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
+        }
+        browser = selected
+        accountSlot = slot
+        pendingShortcut = nil
+        pendingWebShortcut = nil
+        view.addSubview(selected)
+        NSLayoutConstraint.activate([
+            selected.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            selected.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            selected.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            selected.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+        ])
+        title = "KovaGPT · Account \(slot)"
+    }
+
+    private func requestAccountSwitch() {
+        guard #available(iOS 17.0, *) else {
+            showMessage("Switching between two saved accounts requires iOS 17 or later.")
+            return
+        }
+        guard !switchingAccount, let active = browser, let url = active.url, isKova(url) else { return }
+        switchingAccount = true
+        // Voice and dictation must end before another account can be shown. This is
+        // a fixed, read-only check in the first-party page, not a privileged web API.
+        let script = "Array.from(document.querySelectorAll('.kova-voice-dialog, #kova-inline-dictation')).some(e => e.getClientRects().length > 0)"
+        active.evaluateJavaScript(script) { [weak self, weak active] result, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.switchingAccount = false
+                guard let active, active === self.browser, let currentURL = active.url,
+                      self.isKova(currentURL), error == nil,
+                      let blocked = result as? Bool else {
+                    self.showMessage("This account could not be switched. Try again once the page has loaded.")
+                    return
+                }
+                guard !blocked else {
+                    self.showMessage("Finish Voice or Dictation before switching accounts. Your current session stays open.")
+                    return
+                }
+                self.confirmNativeAction()
+                self.showAccount(self.accountSlot == 1 ? 2 : 1)
+            }
+        }
+    }
+
+    @objc private func showNativeSettings() {
+        let controller = NativeSettingsController()
+        controller.accountSlot = accountSlot
+        controller.switchAccount = { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+            self?.requestAccountSwitch()
+        }
+        controller.openVoiceSettings = { [weak self] in
+            guard let self else { return }
+            self.navigationController?.popViewController(animated: true)
+            self.browser.load(URLRequest(url: URL(string: "https://kovagpt.com/settings/voice")!))
+        }
+        controller.showAbout = { [weak self] in self?.showAbout() }
+        navigationController?.pushViewController(controller, animated: true)
     }
 
     private func isKova(_ url: URL) -> Bool {
@@ -196,6 +269,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             return
         }
         decisionHandler(.cancel)
+        guard webView === browser else { return }
         guard url.scheme?.lowercased() == "https",
               url.host != nil, url.user == nil, url.password == nil else { return }
         let alert = UIAlertController(
@@ -258,7 +332,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             if !enabled { self.confirmNativeAction() }
         })
         alert.addAction(UIAlertAction(title: "Close", style: .cancel))
-        present(alert, animated: true)
+        (navigationController?.topViewController ?? self).present(alert, animated: true)
     }
 
     /// Only a user-initiated shortcut can present these native selectors.
@@ -387,5 +461,48 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         let alert = UIAlertController(title: "KovaGPT", message: text, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+}
+
+
+/// Native settings remain separate from provider credentials and server eligibility.
+final class NativeSettingsController: UITableViewController {
+    var accountSlot = 1
+    var switchAccount: (() -> Void)?
+    var openVoiceSettings: (() -> Void)?
+    var showAbout: (() -> Void)?
+
+    init() { super.init(style: .insetGrouped) }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func viewDidLoad() { super.viewDidLoad(); title = "Settings" }
+    override func numberOfSections(in tableView: UITableView) -> Int { 3 }
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        section == 1 ? 2 : 1
+    }
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        ["Accounts", "Voice", "Application"][section]
+    }
+    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+        if section == 0 {
+            return "Account \(accountSlot) is selected. Each account keeps its own sign-in, chats and drafts. Sign in separately the first time you open the other account. Two saved accounts require iOS 17 or later."
+        }
+        if section == 1 { return "Speech uses ElevenLabs through your Kova account. Recording still requires an explicit start and microphone permission." }
+        return nil
+    }
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        if indexPath.section == 0 { cell.textLabel?.text = "Switch to Account \(accountSlot == 1 ? 2 : 1)" }
+        else if indexPath.section == 1 { cell.textLabel?.text = indexPath.row == 0 ? "Voice preferences and connection" : "Microphone permissions" }
+        else { cell.textLabel?.text = "About KovaGPT and haptics" }
+        cell.accessoryType = .disclosureIndicator
+        return cell
+    }
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        if indexPath.section == 0 { switchAccount?() }
+        else if indexPath.section == 1 && indexPath.row == 0 { openVoiceSettings?() }
+        else if indexPath.section == 1 {
+            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+        } else { showAbout?() }
     }
 }

@@ -89,12 +89,13 @@ export function createLocalCommandRunner({
         process.platform === "win32"
           ? spawn(
               join(process.env.SystemRoot || "C:\\Windows", "System32", "cmd.exe"),
-              ["/d", "/s", "/c", command],
+              ["/d", "/s", "/c", `"${command}"`],
               {
                 cwd: root,
                 env: localProcessEnvironment(),
                 shell: false,
                 windowsHide: true,
+                windowsVerbatimArguments: true,
                 stdio: ["ignore", "pipe", "pipe"],
               },
             )

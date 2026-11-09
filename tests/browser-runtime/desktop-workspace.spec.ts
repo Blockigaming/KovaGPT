@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createLocalWorkspace } from "../../desktop/workspace-files.mjs";
@@ -7,7 +7,7 @@ import { createLocalCommandRunner } from "../../desktop/workspace-process.mjs";
 
 for (const width of [720, 1170]) {
   test(`local workspace renders and runs actual local commands at ${width}px`, async ({ page }) => {
-    const root = mkdtempSync(join(tmpdir(), "kova-ui-local-"));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "kova-ui-local-")));
     const files = createLocalWorkspace();
     const commands = createLocalCommandRunner();
     const script = join(root, "task.mjs");

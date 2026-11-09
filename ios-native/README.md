@@ -40,3 +40,29 @@ OAuth may be restricted in WKWebView; production requires secure external
 browser authentication and a verified callback. Dynamic Island, CarPlay,
 background Voice, push, in-app purchases, biometric chat locks, and live-voice widgets are **not** implemented. The native app also needs testing on actual
 iPhone and iPad hardware.
+
+## Two saved accounts and native settings
+
+**Settings → Accounts → Switch to Account 1/2** retains two independent sign-ins on
+iOS 17 and later. Account one keeps the pre-existing default WebKit data store. Account
+two uses a separate persistent `WKWebsiteDataStore(forIdentifier:)`; the native preferences
+contain only that store's UUID. Cookies, local storage and drafts are never copied between
+accounts. Both WebViews remain in memory while switching, preserving open drafts and
+attachments. Sign in separately in each slot. The native title shows the selected slot;
+server authorization and plan eligibility still come from that slot's session.
+
+iOS 16 retains the existing single-account experience and explains the iOS 17 requirement.
+An active Voice or Dictation surface prevents switching, so audio is not silently left in
+another account. The check uses a fixed first-party DOM query and fails closed on errors.
+No web-to-native privileged bridge is introduced.
+
+**Settings → Voice** links to the existing account-scoped voice preferences/connection page
+and iOS's app permission settings. Provider credentials stay server-side. These controls do
+not start recording or grant microphone permission. The About/haptics controls are also in
+the native settings hierarchy.
+
+The iOS preview workflow now runs XCTest coverage on a simulator to verify persistent
+profile identity and actual cookie isolation. Two real signed-in accounts, Keychain/session
+refresh, process restoration, external OAuth and device acceptance remain release gates.
+
+Reference: [WebKit persistent profiles](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/).

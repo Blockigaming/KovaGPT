@@ -22,3 +22,10 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build
         working-directory: ios-native
+      - name: Verify native account container isolation
+        run: |
+          KOVA_TEST_DEVICE=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k for v in vs if v["name"].startswith("iPhone")))')
+          xcodebuild -project KovaGPT.xcodeproj -scheme KovaGPT \
+            -destination "platform=iOS Simulator,id=$KOVA_TEST_DEVICE" \
+            CODE_SIGNING_ALLOWED=NO test
+        working-directory: ios-native
