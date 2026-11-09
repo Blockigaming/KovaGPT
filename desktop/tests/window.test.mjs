@@ -280,3 +280,54 @@ test("desktop debugging is available through an explicit native menu, not a web 
   assert.equal(f.window.options.webPreferences.preload, undefined);
   assert.equal(f.window.options.webPreferences.nodeIntegration, false);
 });
+
+test("desktop File menu opens separate sandboxed Kova windows with scoped permissions", async () => {
+  const f = await fixture();
+  const file = f.menus[0].find((item) => item.label === "File");
+  const newWindow = file?.submenu.find((item) => item.label === "New Window");
+  assert.equal(newWindow?.accelerator, "CommandOrControl+N");
+  assert.equal(f.windows.length, 1);
+  newWindow.click();
+  assert.equal(f.windows.length, 2);
+  const second = f.windows[1];
+  assert.notEqual(second, f.window);
+  assert.equal(second.url, policy.KOVA_URL);
+  assert.equal(second.options.webPreferences.sandbox, true);
+  assert.equal(second.options.webPreferences.preload, undefined);
+  assert.equal(second.options.webPreferences.nodeIntegration, false);
+  assert.equal(f.checks(second.webContents, "media", policy.KOVA_URL), true);
+  let permission;
+  await f.permissions(
+    second.webContents,
+    "media",
+    (value) => {
+      permission = value;
+    },
+    { requestingUrl: policy.KOVA_URL, isMainFrame: true, mediaTypes: ["audio"] },
+  );
+  assert.equal(permission, true);
+  assert.equal(f.prompts.at(-1).title, "KovaGPT permission");
+});
+
+test("additional native windows still reject local protocols and confirm offsite HTTPS", async () => {
+  const f = await fixture();
+  f.menus[0].find((item) => item.label === "File").submenu[0].click();
+  const second = f.windows[1];
+  let prevented = 0;
+  second.webContents.emit(
+    "will-navigate",
+    {
+      preventDefault() {
+        prevented += 1;
+      },
+    },
+    "file:///etc/passwd",
+  );
+  assert.equal(prevented, 1);
+  assert.deepEqual(f.external, []);
+  const answer = second.popup({ url: "https://example.com/help" });
+  assert.equal(answer.action, "deny");
+  await new Promise(setImmediate);
+  assert.deepEqual(f.external, ["https://example.com/help"]);
+  assert.equal(f.prompts.at(-1).title, "Open in your browser?");
+});
