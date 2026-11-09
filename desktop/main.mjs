@@ -168,7 +168,7 @@ async function copyLocalSourceFile() {
     if (!file.isFile() || file.size === 0 || file.size > 256 * 1024)
       throw new Error("File must be a nonempty text file of at most 256 KiB");
     const source = readFileSync(filePath, "utf8");
-    if (source.includes("\\u0000")) throw new Error("Binary files are not supported");
+    if (source.includes("\u0000")) throw new Error("Binary files are not supported");
     const answer = await dialog.showMessageBox(owner, {
       type: "question",
       title: "Copy this local file?",
