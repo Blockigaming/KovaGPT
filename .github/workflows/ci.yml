@@ -141,12 +141,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium firefox webkit
+          # Avoid apt-mirror hangs; keep all three engines and fail on any
+          # missing native runtime library when the browser suites launch.
+          npx --no-install playwright install chromium firefox webkit
 
       - name: Integration tests
         id: integration
