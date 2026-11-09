@@ -98,7 +98,7 @@ async function fixture(platform = "linux") {
       "const { KOVA_URL, isKovaUrl, isOpenAppLink, externalUrl, WEB_PREFERENCES, COMPANION_SHORTCUTS, defaultCompanionShortcut, validatedCompanionShortcut } = policy;",
     )
     .replace(
-      /^import \\{ installLocalWorkspace, registerWorkspaceScheme \\} from "\\.\\/workspace-host\\.mjs";$/m,
+      /^import \{ installLocalWorkspace, registerWorkspaceScheme \} from "\.\/workspace-host\.mjs";$/m,
       "const registerWorkspaceScheme = () => {}; const installLocalWorkspace = () => () => {};",
     );
   vm.runInNewContext(source, {
