@@ -135,8 +135,17 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   page,
 }) => {
   await coreFixture(page, "dark");
+  // Root hydration can precede the account's IndexedDB/history writer lease.
+  // The first GET is issued only once that writer becomes writable.
+  const historyReady = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/chat/history" &&
+      response.request().method() === "GET" &&
+      response.ok(),
+  );
   await page.goto("/");
   await waitForKovaHydration(page);
+  await historyReady;
   const open = page
     .getByRole("button", { name: /^(Open menu|Expand sidebar|Open sidebar)$/ })
     .filter({ visible: true })
