@@ -2005,7 +2005,8 @@ export function Sidebar({
                         onClick={() => {
                           closeChatSearch();
                           cancelPendingSelection();
-                          closeAfterMobileNavigation("/");
+                          // Search results preserve the drawer state chosen before the
+                          // dialog opened; ordinary sidebar navigation still closes it.
                           onSelect(conversation.id);
                         }}
                       >
