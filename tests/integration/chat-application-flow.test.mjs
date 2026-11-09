@@ -126,15 +126,11 @@ function fixture({
     emailVerified: true,
     supabaseAdmin: {
       rpc(name, args) {
-        assert.equal(
-          name,
-          connectedModel ? "try_consume_paid_message" : "try_consume_daily_message",
-        );
+        assert.equal(name, "try_consume_paid_message");
         assert.equal(args._user_id, ownerId);
         const query = {
           abortSignal: () => query,
-          then: (yes, no) =>
-            Promise.resolve({ data: connectedModel ? "allowed" : true, error: null }).then(yes, no),
+          then: (yes, no) => Promise.resolve({ data: "allowed", error: null }).then(yes, no),
         };
         return query;
       },

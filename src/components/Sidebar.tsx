@@ -1000,9 +1000,9 @@ export function Sidebar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          side="right"
-          align="start"
-          sideOffset={12}
+          side={mobileViewport ? "top" : "right"}
+          align={mobileViewport ? "end" : "start"}
+          sideOffset={mobileViewport ? 4 : 12}
           collisionPadding={12}
           className="kova-sidebar-chat-menu"
           onCloseAutoFocus={(event) => {

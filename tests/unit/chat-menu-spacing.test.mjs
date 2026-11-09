@@ -16,9 +16,8 @@ test("context menus retain bounded widths and compact SDK rows with coarse targe
   const values = Object.fromEntries(
     menu.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
   );
-  assert.equal(values.width, "236px");
-  assert.match(values["max-width"], /--radix-dropdown-menu-content-available-width/);
-  assert.match(values["max-width"], /calc\(100vw - 24px\)/);
+  assert.equal(values.width, "min(236px, calc(100vw - 24px))");
+  assert.equal(values["max-width"], "calc(100vw - 24px)");
   assert.ok(
     !values["min-height"] && !values["padding-block"],
     "Sidebar width does not override shared row geometry",

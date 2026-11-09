@@ -19,10 +19,12 @@ export type DailyUsageDto = {
 };
 
 type ChatWindow = ReturnType<typeof chatUsageWindows>[number];
+type ChatCounts = { regularUsed: number; thinkingUsed: number };
+type HourlyRow = { regular_messages: number; thinking_messages: number };
 export type PlanUsageDto = {
   tier: BillingTier;
   usageMultiplier?: 1 | 5;
-  windows: (ChatWindow & { regularUsed: number; thinkingUsed: number })[];
+  windows: (ChatWindow & { regularUsed: number; thinkingUsed: number; costPercentUsed: number })[];
   images: number;
   uploads: number;
 };
@@ -40,7 +42,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
     const windows = chatUsageWindows(tier, now, usageMultiplier);
     const ledgerStart = windows.find(({ id }) => id === "weekly")?.start.slice(0, 10) ?? today;
     const short = windows.find(({ id }) => id === "five_hour");
-    const [ledger, shortWindow] = await Promise.all([
+    const [ledger, shortWindow, costProgress] = await Promise.all([
       loose(context.supabase)
         .from("daily_usage")
         .select("usage_date, chats, thinking_chats, images, uploads")
@@ -50,15 +52,21 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
         .abortSignal(AbortSignal.timeout(10_000)),
       short
         ? loose(supabaseAdmin)
-            .from("message_usage_short_window")
+            .from("message_usage_hourly")
             .select("regular_messages, thinking_messages")
             .eq("user_id", context.userId)
-            .eq("window_start", short.start)
+            .gte("window_start", short.start)
+            .lte(
+              "window_start",
+              new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000).toISOString(),
+            )
             .abortSignal(AbortSignal.timeout(10_000))
-            .maybeSingle()
         : null,
+      loose(supabaseAdmin)
+        .rpc("kova_plan_cost_progress", { _user_id: context.userId, _plan: tier })
+        .abortSignal(AbortSignal.timeout(10_000)),
     ]);
-    if (ledger.error || shortWindow?.error)
+    if (ledger.error || shortWindow?.error || costProgress.error)
       throw new Error("Usage data is temporarily unavailable.");
     const rows: {
       usage_date: string;
@@ -75,17 +83,42 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       }),
       { regularUsed: 0, thinkingUsed: 0 },
     );
+    const shortTotals = (shortWindow?.data ?? []).reduce(
+      (total: ChatCounts, row: HourlyRow) => ({
+        regularUsed: total.regularUsed + row.regular_messages,
+        thinkingUsed: total.thinkingUsed + row.thinking_messages,
+      }),
+      { regularUsed: 0, thinkingUsed: 0 },
+    );
+    const costState = costProgress.data?.[0] as
+      | {
+          weekly_used: number | string;
+          weekly_allowance: number | string;
+          five_hour_used: number | string;
+          five_hour_allowance: number | string | null;
+        }
+      | undefined;
+    if (!costState) throw new Error("Usage data is temporarily unavailable.");
+    const asPercent = (used: number | string, allowance: number | string | null) => {
+      const consumed = Number(used);
+      const capacity = Number(allowance);
+      return allowance !== null &&
+        Number.isFinite(consumed) &&
+        Number.isFinite(capacity) &&
+        capacity > 0
+        ? Math.min(100, Math.max(0, Math.ceil((100 * consumed) / capacity)))
+        : 0;
+    };
     return {
       tier,
       usageMultiplier,
       windows: windows.map((window) => ({
         ...window,
-        ...(window.id === "five_hour"
-          ? {
-              regularUsed: shortWindow?.data?.regular_messages ?? 0,
-              thinkingUsed: shortWindow?.data?.thinking_messages ?? 0,
-            }
-          : total),
+        ...(window.id === "five_hour" ? shortTotals : total),
+        costPercentUsed:
+          window.id === "five_hour"
+            ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
+            : asPercent(costState.weekly_used, costState.weekly_allowance),
       })),
       images: daily?.images ?? 0,
       uploads: daily?.uploads ?? 0,

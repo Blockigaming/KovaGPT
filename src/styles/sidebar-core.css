@@ -425,10 +425,10 @@
   margin-top: 8px;
 }
 .kova-sidebar-chat-menu {
-  width: 236px;
+  width: min(236px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
   padding: 8px;
   border-radius: 22px;
-  max-width: min(var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 24px));
 }
 .kova-sidebar :is(button, input, summary, a):focus-visible,
 .kova-sidebar-rail :is(button, a):focus-visible {

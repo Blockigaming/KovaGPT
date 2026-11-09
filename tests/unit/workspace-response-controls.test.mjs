@@ -139,7 +139,7 @@ test("daily message quota rejects with the popup category while unavailable acco
     userId: "owner",
     supabaseAdmin: { rpc: () => Promise.resolve(result) },
   });
-  const rejected = await enforce(caller({ data: false, error: null }), "free", false);
+  const rejected = await enforce(caller({ data: "five_hour", error: null }), "free", false);
   assert.equal(rejected.status, 429);
   assert.equal((await rejected.json()).category, "quota_exceeded");
   const unavailable = await enforce(
@@ -168,7 +168,7 @@ test("daily message quota rejects with the popup category while unavailable acco
     ["pro", "kova-neon-4.6", "instant"],
     ["pro", "kova-xenon-5", "instant"],
   ]) {
-    const exhausted = caller({ data: tier === "free" ? false : "weekly", error: null });
+    const exhausted = caller({ data: tier === "free" ? "five_hour" : "weekly", error: null });
     assert.equal(
       (await enforce(exhausted, tier, mode !== "instant", undefined, { modelId, mode })).status,
       429,
