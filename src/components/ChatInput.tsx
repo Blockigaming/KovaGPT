@@ -77,6 +77,7 @@ import {
 } from "@/components/ui/dialog";
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
+import { sketchMentionStart } from "@/lib/composer-sketch-mention.mjs";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
@@ -376,6 +377,23 @@ export function ChatInput({
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
   const [drawingOpen, setDrawingOpen] = useState(false);
+  const [dismissedSketchText, setDismissedSketchText] = useState<string | null>(null);
+  const sketchAt = sketchMentionStart(value);
+  const showSketchMention =
+    isMobileLayout &&
+    sketchAt >= 0 &&
+    value !== dismissedSketchText &&
+    isLoaded &&
+    Boolean(user) &&
+    !disabled &&
+    !isStreaming &&
+    !drawingOpen;
+  const acceptSketchMention = () => {
+    if (!showSketchMention) return;
+    onChange(value.slice(0, sketchAt));
+    setDismissedSketchText(null);
+    setDrawingOpen(true);
+  };
   const online = useSyncExternalStore(
     subscribeToOnlineStatus,
     getOnlineStatusSnapshot,
@@ -1692,7 +1710,21 @@ export function ChatInput({
             value={value}
             onChange={(event) => onChange(event.target.value)}
             disabled={disabled}
-            onKeyDown={handleKey}
+            onKeyDown={(event) => {
+              if (showSketchMention && !composingRef.current) {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  acceptSketchMention();
+                  return;
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setDismissedSketchText(value);
+                  return;
+                }
+              }
+              handleKey(event);
+            }}
             onCompositionStart={() => {
               composingRef.current = true;
             }}
@@ -1710,6 +1742,8 @@ export function ChatInput({
             }
             className="spec400-composer-input"
             aria-label="Message KovaGPT"
+            aria-expanded={showSketchMention}
+            aria-controls={showSketchMention ? "kova-sketch-mention-suggestion" : undefined}
             aria-keyshortcuts={
               isMobileLayout
                 ? undefined
@@ -1730,6 +1764,20 @@ export function ChatInput({
             <ExpandViewIcon />
           </button>
         </div>
+        {showSketchMention ? (
+          <div id="kova-sketch-mention-suggestion" role="group" aria-label="Mention suggestions" className="px-3 pb-2">
+            <button
+              type="button"
+              className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={acceptSketchMention}
+            >
+              <Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="font-medium">Sketch</span>
+              <span className="text-muted-foreground">Draw an idea</span>
+            </button>
+          </div>
+        ) : null}
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
           <button
             type="button"
