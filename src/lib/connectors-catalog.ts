@@ -1475,9 +1475,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "canva",
     label: "Canva",
-    description: "Reference designs, brand assets, and presentations.",
+    description: "Search design titles and metadata; requires OAuth setup and user consent.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "canva.com",
   },
   {

@@ -23,7 +23,7 @@ export function oauthTokenRequest({
       body: JSON.stringify(fields),
     };
   }
-  if (providerId === "calendly" || providerId === "figma") {
+  if (providerId === "calendly" || providerId === "figma" || providerId === "canva") {
     if (!verifier) throw new Error("oauth_pkce_verifier_missing");
     return {
       method: "POST",
@@ -93,6 +93,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       "box",
       "calendly",
       "figma",
+      "canva",
     ].includes(providerId)
   )
     throw new Error("refresh_not_supported");
@@ -110,7 +111,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       redirect: "error",
       signal: AbortSignal.timeout(15_000),
     };
-  if (providerId === "calendly" || providerId === "figma")
+  if (providerId === "calendly" || providerId === "figma" || providerId === "canva")
     return {
       method: "POST",
       headers: {

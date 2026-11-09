@@ -135,6 +135,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "api.box.com",
     "api.calendly.com",
     "api.figma.com",
+    "api.canva.com",
   ]);
   const salesforceToken = packSalesforceCredential("fake-token", {
     active: true,
