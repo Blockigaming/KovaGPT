@@ -293,7 +293,10 @@ export function ComposerVoiceDialogView({
                 aria-pressed={microphoneMuted}
                 onClick={onToggleMicrophoneMuted}
               >
-                <Mic aria-hidden="true" className={microphoneMuted ? "kova-voice-muted-icon" : undefined} />
+                <Mic
+                  aria-hidden="true"
+                  className={microphoneMuted ? "kova-voice-muted-icon" : undefined}
+                />
               </button>
             )}
             {ready && recordingControl && (
