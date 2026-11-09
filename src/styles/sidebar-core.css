@@ -495,6 +495,36 @@ button.kova-sidebar-scrim {
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
     transform: translateX(-100%);
   }
+  /* The drawer and scrim track the same finger fraction during touch drag. */
+  .kova-sidebar[data-kova-core-sidebar][data-swipe-dragging] {
+    visibility: visible !important;
+    pointer-events: none;
+  }
+  .kova-sidebar[data-swipe-dragging="opening"],
+  .kova-sidebar[data-swipe-dragging="settling-opening"] {
+    transform: translateX(calc(-100% + var(--kova-swipe-distance, 0px)));
+  }
+  .kova-sidebar[data-swipe-dragging="closing"],
+  .kova-sidebar[data-swipe-dragging="settling-closing"] {
+    transform: translateX(var(--kova-swipe-distance, 0px));
+  }
+  .kova-sidebar[data-swipe-dragging="opening"],
+  .kova-sidebar[data-swipe-dragging="closing"],
+  button.kova-sidebar-scrim[data-swipe-dragging="opening"],
+  button.kova-sidebar-scrim[data-swipe-dragging="closing"] {
+    transition: none !important;
+  }
+  .kova-sidebar[data-swipe-dragging^="settling"] {
+    transition: transform var(--kova-motion-standard) var(--kova-ease) !important;
+  }
+  button.kova-sidebar-scrim[data-swipe-dragging] {
+    visibility: visible !important;
+    opacity: var(--kova-swipe-progress, 0) !important;
+    pointer-events: none !important;
+  }
+  button.kova-sidebar-scrim[data-swipe-dragging^="settling"] {
+    transition: opacity var(--kova-motion-standard) var(--kova-ease) !important;
+  }
   .kova-sidebar-inner {
     width: 100%;
     min-width: 0;
@@ -569,6 +599,10 @@ button.kova-sidebar-scrim {
   .kova-sidebar-more-disclosure > summary .kova-sidebar-icon {
     transition: none;
     animation: none;
+  }
+  .kova-sidebar[data-swipe-dragging],
+  button.kova-sidebar-scrim[data-swipe-dragging] {
+    transition: none !important;
   }
 }
 
