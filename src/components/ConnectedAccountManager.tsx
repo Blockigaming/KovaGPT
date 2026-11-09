@@ -82,8 +82,9 @@ export function ConnectedAccountManager({
       if (active.current) setBusy(false);
     }
   };
-  const search = async (accountId: string) => {
-    if (busy || !query.trim()) return;
+  const search = async (accountId: string, verifyRead = false) => {
+    const requestedQuery = verifyRead ? "Kova connection verification" : query.trim();
+    if (busy || !requestedQuery) return;
     setBusy(true);
     setResult(null);
     try {
@@ -91,7 +92,7 @@ export function ConnectedAccountManager({
         data: {
           connectionId: id,
           accountId,
-          query,
+          query: requestedQuery,
           ...(id === "salesforce" ? { recordType } : {}),
         },
       });
@@ -99,7 +100,12 @@ export function ConnectedAccountManager({
         if ("error" in next) {
           toast.error(next.error);
         } else {
-          setResult(next);
+          if (verifyRead) {
+            setResult(null);
+            toast.success("Authorized read succeeded. Other service permissions are not verified.");
+          } else {
+            setResult(next);
+          }
           // Fetch server-recorded API success instead of showing stale OAuth-only status.
           await reload();
         }
@@ -252,6 +258,17 @@ export function ConnectedAccountManager({
                     }}
                   >
                     Search this account
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={
+                      busy || loading || error || !canReadConnection(account, id)
+                    }
+                    onClick={() => {
+                      void search(account.id, true);
+                    }}
+                  >
+                    Verify read access
                   </Button>
                   <Button
                     variant="ghost"
