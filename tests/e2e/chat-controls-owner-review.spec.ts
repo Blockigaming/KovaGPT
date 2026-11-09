@@ -141,10 +141,14 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
     .getByRole("button", { name: /^(Open menu|Expand sidebar|Open sidebar)$/ })
     .filter({ visible: true })
     .first();
-  if (await open.isVisible()) await open.click();
   const options = page
     .getByRole("button", { name: "Options for Composer review chat", exact: true })
     .filter({ visible: true });
+  // The collapsed navigation may mount after hydration at intermediate widths.
+  // Wait for either valid starting state rather than skipping a late-arriving toggle.
+  await expect(open.or(options).first()).toBeVisible();
+  if (!(await options.isVisible())) await open.click();
+  await expect(options).toBeVisible();
   await options.click();
   if (page.viewportSize()!.width >= 1024) {
     const menu = await page.getByRole("menu").boundingBox();
