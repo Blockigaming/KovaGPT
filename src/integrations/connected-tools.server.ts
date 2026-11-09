@@ -114,6 +114,7 @@ export async function refreshExpiringConnection(
       "box",
       "calendly",
       "figma",
+      "canva",
     ].includes(row.provider_id)
   )
     return null;
