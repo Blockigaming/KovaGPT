@@ -549,7 +549,7 @@ test("Calendly event reads verify their owner and bounded metadata", async () =>
   assert.equal(result.results[0].url, null);
   assert.match(result.results[0].snippet, /Start: 2026-11-09T10:00:00Z/);
   assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|Unrelated/);
- });
+});
 
 test("Calendly rejects a changed user identity before listing events", async () => {
   const calls = [];
