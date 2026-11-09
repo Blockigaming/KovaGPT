@@ -8,7 +8,7 @@ test("Sketch suggestion is available at a trailing @ mention", () => {
     assert.equal(sketchMentionStart(draft), 0, draft);
   }
   assert.equal(sketchMentionStart("Draw an idea @sk"), 13);
-  assert.equal(sketchMentionStart("First line\\n@sketch"), 11);
+  assert.equal(sketchMentionStart("First line\n@sketch"), 11);
 });
 
 test("mentions do not hijack email, ordinary text or unsupported tools", () => {
@@ -28,8 +28,8 @@ test("mentions do not hijack email, ordinary text or unsupported tools", () => {
 
 test("composer offers the real drawing dialog and not a fake attachment", () => {
   const source = readFileSync("src/components/ChatInput.tsx", "utf8");
-  assert.match(source, /sketchMentionStart\\(value\\)/);
-  assert.match(source, /onClick=\\{acceptSketchMention\\}/);
-  assert.match(source, /setDrawingOpen\\(true\\)/);
+  assert.match(source, /sketchMentionStart\(value\)/);
+  assert.match(source, /onClick=\{acceptSketchMention\}/);
+  assert.match(source, /setDrawingOpen\(true\)/);
   assert.match(source, /<ComposerDrawingDialog/);
 });
