@@ -19,6 +19,8 @@ export type DailyUsageDto = {
 };
 
 type ChatWindow = ReturnType<typeof chatUsageWindows>[number];
+type ChatCounts = { regularUsed: number; thinkingUsed: number };
+type HourlyRow = { regular_messages: number; thinking_messages: number };
 export type PlanUsageDto = {
   tier: BillingTier;
   usageMultiplier?: 1 | 5;
@@ -82,7 +84,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       { regularUsed: 0, thinkingUsed: 0 },
     );
     const shortTotals = (shortWindow?.data ?? []).reduce(
-      (total, row: { regular_messages: number; thinking_messages: number }) => ({
+      (total: ChatCounts, row: HourlyRow) => ({
         regularUsed: total.regularUsed + row.regular_messages,
         thinkingUsed: total.thinkingUsed + row.thinking_messages,
       }),
