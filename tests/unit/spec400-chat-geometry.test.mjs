@@ -114,8 +114,18 @@ test("spec400 failures retry only through a guarded explicit action using the or
   assert.deepEqual(
     retry.arguments.map((argument) => argument.getText(ast)),
     [
-      "text", "atts", "retryTool", "0", "nextConvId", "priorMessages", "userMsg.id",
-      "undefined", "undefined", "false", "undefined", "approvedOneShot",
+      "text",
+      "atts",
+      "retryTool",
+      "0",
+      "nextConvId",
+      "priorMessages",
+      "userMsg.id",
+      "undefined",
+      "undefined",
+      "false",
+      "undefined",
+      "approvedOneShot",
     ],
     "Explicit retry reuses the original idempotency identity and preserves its eligible one-shot model",
   );
