@@ -137,7 +137,8 @@ async function copyScreenToClipboard() {
     await dialog.showMessageBox(window, {
       type: "info",
       title: "Screen recording permission required",
-      message: "Allow KovaGPT in System Settings > Privacy & Security > Screen & System Audio Recording.",
+      message:
+        "Allow KovaGPT in System Settings > Privacy & Security > Screen & System Audio Recording.",
       buttons: ["OK"],
     });
     return;
