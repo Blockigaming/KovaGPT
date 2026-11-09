@@ -10,6 +10,236 @@ import {
 } from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
+test.describe("Academy search", () => {
+  const projects = new Set([
+    "phone-320x700",
+    "phone-390x844",
+    "tablet-1024x768",
+    "desktop-1440x900",
+  ]);
+
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(!projects.has(testInfo.project.name));
+    const response = await page.goto("/academy", { waitUntil: "domcontentloaded" });
+    expect(response?.status()).toBe(200);
+    await waitForKovaHydration(page);
+  });
+
+  test("filters the correct guide titles and summaries without losing catalog entries", async ({
+    page,
+  }) => {
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    const results = page.locator("#academy-guide-results");
+    const links = results.getByRole("link");
+    const expected = PUBLIC_SITEMAP_ENTRIES.map(({ path }) => path)
+      .filter((path) => path.startsWith("/academy/"))
+      .sort();
+    await expect(links).toHaveCount(37);
+    expect(
+      await links.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")).sort()),
+    ).toEqual(expected);
+
+    for (const [query, destination] of [
+      ["  BRAINSTORM  ", "/academy/brainstorming"],
+      ["MENTÁL  MODEL", "/academy/ai-fundamentals"],
+      ["MODEL mental", "/academy/ai-fundamentals"],
+      ["multi step", "/academy/chatgpt-work"],
+    ]) {
+      await search.fill(query);
+      await expect(links).toHaveCount(1);
+      await expect(links).toHaveAttribute("href", destination);
+      await expect(page.locator("#academy-result-count")).toHaveText("1 guide found");
+      await expect(search).toBeFocused();
+    }
+    await search.fill("   ");
+    await expect(links).toHaveCount(37);
+  });
+
+  test("shows an empty result state and restores all guides and input focus on clear", async ({
+    page,
+  }) => {
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    const results = page.locator("#academy-guide-results");
+    for (const label of ["Clear search", "Clear Academy search"]) {
+      await search.fill("brainstorm student");
+      await expect(results.getByRole("link")).toHaveCount(0);
+      await expect(results.getByRole("heading", { name: "No guides found" })).toBeVisible();
+      await expect(page.locator("#academy-result-count")).toHaveText("0 guides found");
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await expect(search).toHaveValue("");
+      await expect(search).toBeFocused();
+      await expect(results.getByRole("link")).toHaveCount(37);
+      await expect(results.getByRole("heading", { name: "No guides found" })).toHaveCount(0);
+      await expect(page.locator("#academy-result-count")).toHaveText("37 guides found");
+    }
+  });
+
+  test("Tab and Shift+Tab traverse the input, clear action, and every filtered lesson link", async ({
+    page,
+  }) => {
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    const clear = page.getByRole("button", { name: "Clear Academy search" });
+    await search.fill("coding");
+    const links = page.locator("#academy-guide-results").getByRole("link");
+    const count = await links.count();
+    expect(count).toBeGreaterThan(1);
+    await page.keyboard.press("Tab");
+    await expect(clear).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(search).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(clear).toBeFocused();
+    for (let index = 0; index < count; index++) {
+      await page.keyboard.press("Tab");
+      await expect(links.nth(index)).toBeFocused();
+    }
+    for (let index = count - 2; index >= 0; index--) {
+      await page.keyboard.press("Shift+Tab");
+      await expect(links.nth(index)).toBeFocused();
+    }
+    await page.keyboard.press("Shift+Tab");
+    await expect(clear).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(search).toBeFocused();
+    await search.fill("zzzz-no-guide");
+    await page.keyboard.press("Tab");
+    await expect(clear).toBeFocused();
+    await page.keyboard.press("Tab");
+    const reset = page.getByRole("button", { name: "Clear search", exact: true });
+    await expect(reset).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(search).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#academy-guide-results").getByRole("link").first()).toBeFocused();
+  });
+
+  test("Enter keeps inline search open and Escape clears the filter without blurring", async ({
+    page,
+  }) => {
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    await search.fill("brainstorm");
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/academy$/u);
+    await expect(search).toHaveValue("brainstorm");
+    await expect(search).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    await expect(page.locator("#academy-guide-results").getByRole("link")).toHaveCount(37);
+    await page.keyboard.press("Escape");
+    await expect(search).toBeFocused();
+  });
+
+  test("a filtered nested lesson navigates by keyboard and returns to the Academy catalog", async ({
+    page,
+  }) => {
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    await search.fill("coding assistance data science");
+    const lesson = page.locator("#academy-guide-results").getByRole("link");
+    await expect(lesson).toHaveCount(1);
+    await expect(lesson).toHaveAttribute(
+      "href",
+      "/academy/chatgpt-work/how-data-science-teams-use-codex",
+    );
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(lesson).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/academy\/chatgpt-work\/how-data-science-teams-use-codex$/u);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Coding assistance for data science teams",
+    );
+    await page
+      .getByRole("navigation", { name: "Breadcrumb" })
+      .getByRole("link", { name: "academy", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/academy$/u);
+    await expect(page.locator("#academy-guide-results").getByRole("link")).toHaveCount(37);
+    await expect(search).toHaveValue("");
+  });
+
+  test("exposes labeled search, a live result count, landmarks, and visible keyboard focus @a11y", async ({
+    page,
+  }) => {
+    await expect(page.getByRole("main")).toHaveCount(1);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole("search", { name: "Academy guides", exact: true })).toHaveCount(1);
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    await expect(search).toHaveAttribute("aria-controls", "academy-guide-results");
+    await expect(search).toHaveAccessibleDescription(
+      "Search guide titles and summaries. Press Escape to clear. 37 guides found",
+    );
+    const count = page.locator("#academy-result-count");
+    await expect(count).toHaveAttribute("role", "status");
+    await expect(count).toHaveAttribute("aria-live", "polite");
+    await expect(count).toHaveAttribute("aria-atomic", "true");
+    await page.keyboard.press("Tab");
+    await page.getByRole("link", { name: "Skip to content" }).press("Enter");
+    await expect(page.locator("#main-content")).toBeFocused();
+    await search.focus();
+    await page.keyboard.press("Tab");
+    const first = page.locator("#academy-guide-results").getByRole("link").first();
+    await expect(first).toBeFocused();
+    expect(await first.evaluate((node) => node.matches(":focus-visible"))).toBe(true);
+    // The shared stylesheet intentionally uses an outline instead of a shadow.
+    const focus = await first.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        width: parseFloat(style.outlineWidth),
+        style: style.outlineStyle,
+        color: style.outlineColor,
+      };
+    });
+    expect(focus.width).toBeGreaterThanOrEqual(2);
+    expect(focus.style).toBe("solid");
+    expect(focus.color).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("search and empty states reflow in both themes and at 200% text size", async ({ page }) => {
+    const search = page.getByRole("searchbox", { name: "Search guides", exact: true });
+    const results = page.locator("#academy-guide-results");
+    const width = page.viewportSize()!.width;
+    for (const dark of [false, true]) {
+      await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), dark);
+      for (const enlarged of [false, true]) {
+        await page.evaluate((enlarged) => {
+          document.documentElement.style.fontSize = enlarged ? "200%" : "";
+        }, enlarged);
+        for (const query of ["", "brainstorm", "z".repeat(200)]) {
+          await search.fill(query);
+          const layout = await page.evaluate(() => ({
+            width: document.documentElement.clientWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            columns: getComputedStyle(
+              document.getElementById("academy-guide-results")!,
+            ).gridTemplateColumns.split(/\s+/).length,
+          }));
+          expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width + 1);
+          expect(layout.columns).toBe(width < 768 ? 1 : 2);
+          const controls = page
+            .getByRole("search", { name: "Academy guides", exact: true })
+            .locator("input, button");
+          for (let index = 0; index < (await controls.count()); index++) {
+            const box = (await controls.nth(index).boundingBox())!;
+            expect(box.width).toBeGreaterThanOrEqual(44);
+            expect(box.height).toBeGreaterThanOrEqual(44);
+            expect(box.x).toBeGreaterThanOrEqual(0);
+            expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+          }
+          await expect(results.getByRole("link")).toHaveCount(
+            query.length === 200 ? 0 : query ? 1 : 37,
+          );
+          if (query.length === 200) {
+            const reset = results.getByRole("button", { name: "Clear search", exact: true });
+            await expect(reset).toBeVisible();
+            expect((await reset.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+          }
+        }
+      }
+    }
+  });
+});
+
 const allDetailRoutes = [
   "/features/plugins",
   "/features/study-mode",
