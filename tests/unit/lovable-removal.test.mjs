@@ -198,7 +198,6 @@ test("Kova-owned OAuth consent and suppression routes remain intact", () => {
   assert.match(suppression, /suppressThenConsumeToken/u);
   assert.match(suppression, /suppressed_emails/u);
   assert.match(unsubscribePage, /fetch\(`\/email\/unsubscribe/u);
-
 });
 
 test("active package declarations and package-manager policy contain no Lovable dependency", () => {
