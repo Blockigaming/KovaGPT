@@ -78,6 +78,9 @@ import {
   disconnectGoogleAccount,
   selectGoogleAccount,
   type GoogleStatus,
+  gmailSearch,
+  calendarList,
+  driveSearch,
 } from "@/lib/google-client";
 import {
   browserStoragePrincipal,
@@ -867,6 +870,7 @@ function AppsPage() {
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleApiCheck, setGoogleApiCheck] = useState<string | null>(null);
   const [verificationBusy, setVerificationBusy] = useState(false);
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
@@ -925,6 +929,7 @@ function AppsPage() {
     googleRequestRef.current += 1;
     googleBusyRef.current = false;
     setGoogleBusy(false);
+    setGoogleApiCheck(null);
     setGithubData(null);
     setGithubLoading(true);
     setGithubLoadError(false);
@@ -1046,8 +1051,8 @@ function AppsPage() {
       void refreshGoogle().then((status) => {
         if (!status) return;
         if (status.connected && status.state === "connected") {
-          toast.success("Google connection verified");
-          recordActivity("Google", "Connection verified");
+          toast.success("Google account authorized. Verify each service's API access below.");
+          recordActivity("Google", "Account authorized; API access not yet verified");
         } else {
           toast.warning(
             "Google authorization returned. Review the account status before using this connection.",
