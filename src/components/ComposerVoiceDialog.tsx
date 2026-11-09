@@ -261,6 +261,7 @@ export function ComposerVoiceDialog({
   } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
   const [microphoneMuted, setMicrophoneMuted] = useState(false);
+  const [captionsOpen, setCaptionsOpen] = useState(false);
   const microphoneMutedRef = useRef(false);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
@@ -1160,6 +1161,10 @@ export function ComposerVoiceDialog({
     void resumeRecording.current?.();
   }, [open, autoStartVoice, mode, ready, onVoiceSubmit, userId, contextKey]);
 
+  useLayoutEffect(() => {
+    if (!open) setCaptionsOpen(false);
+  }, [open]);
+
   const VoiceView =
     inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
 
@@ -1248,6 +1253,8 @@ export function ComposerVoiceDialog({
       }
       microphoneMuted={microphoneMuted}
       onToggleMicrophoneMuted={toggleMicrophoneMuted}
+      captionsOpen={captionsOpen}
+      onCaptionsChange={setCaptionsOpen}
       recordingControl={
         ready ? (
           phase === "recording" ? (
