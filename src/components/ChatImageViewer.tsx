@@ -66,6 +66,26 @@ export default function ChatImageViewer({
         )
       : view;
   }
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onPinchWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      setView((current) => {
+        const scale = Math.min(5, Math.max(1, current.scale + (event.deltaY < 0 ? 0.25 : -0.25)));
+        const image = imageRef.current;
+        if (!image) return { ...current, scale };
+        return clampImageView(
+          { ...current, scale },
+          { width: image.clientWidth, height: image.clientHeight },
+          { width: canvas.clientWidth, height: canvas.clientHeight },
+        );
+      });
+    };
+    canvas.addEventListener("wheel", onPinchWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onPinchWheel);
+  }, []);
   const points = useRef(new Map<number, { x: number; y: number }>());
   const previous = useRef<{ x: number; y: number; distance: number } | null>(null);
   function geometry() {
@@ -131,13 +151,6 @@ export default function ChatImageViewer({
             className="relative flex min-h-0 flex-1 touch-none items-center justify-center overflow-hidden"
             ref={canvasRef}
             data-image-viewer-canvas=""
-            onWheel={(event) => {
-              // Keep ordinary page and trackpad scrolling outside the image unchanged.
-              // Ctrl/Meta-wheel is the browser's pinch gesture; zoom the image in this viewer.
-              if (!event.ctrlKey && !event.metaKey) return;
-              event.preventDefault();
-              zoom(event.deltaY < 0 ? 0.25 : -0.25);
-            }}
             onDoubleClick={() => {
               setView((current) =>
                 current.scale > 1
