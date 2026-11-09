@@ -70,7 +70,11 @@ test("master directory contains the 31 requested services and eight retained ser
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     assert.equal(item.connector, original.getConnector(item.connector.id));
     if (!expected.includes(item.connector.id)) {
-      if (["outlook-calendar", "box", "dropbox", "calendly", "figma", "canva"].includes(item.connector.id)) {
+      if (
+        ["outlook-calendar", "box", "dropbox", "calendly", "figma", "canva"].includes(
+          item.connector.id,
+        )
+      ) {
         assert.equal(item.availability, "implemented");
         assert.equal(item.permissions.length, 1);
         assert.equal(item.permissions[0].verification, "source_contract");
