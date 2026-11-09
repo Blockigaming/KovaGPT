@@ -23,6 +23,24 @@ const approvedActions = new Map([
     },
   ],
   [
+    "actions/setup-java",
+    {
+      release: "v6",
+      sha: "b843ebf9b913146b38da2eaa7aeddf76074ae1ad",
+      major: "v6",
+      runtime: "node24",
+    },
+  ],
+  [
+    "gradle/actions/setup-gradle",
+    {
+      release: "v6",
+      sha: "8da46b539cd8fe6ab27ca75128919a18d757604c",
+      major: "v6",
+      runtime: "node24",
+    },
+  ],
+  [
     "actions/upload-artifact",
     {
       release: "v7.0.1",
