@@ -45,6 +45,17 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("$top", "10");
   } else if (id === "ms-teams") {
     url = new URL("https://graph.microsoft.com/v1.0/me/joinedTeams");
+  } else if (id === "calendly") {
+    const uri = options.calendlyUserUri;
+    if (
+      typeof uri !== "string" ||
+      !/^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]+$/u.test(uri)
+    )
+      throw new Error("calendly_identity_unavailable");
+    url = new URL("https://api.calendly.com/scheduled_events");
+    url.searchParams.set("user", uri);
+    url.searchParams.set("count", "100");
+    url.searchParams.set("sort", "start_time:desc");
   } else if (id === "dropbox") {
     url = new URL("https://api.dropboxapi.com/2/files/search_v2");
     body = JSON.stringify({ query, options: { max_results: 10 } });
@@ -83,6 +94,34 @@ export function connectionReadRequest(id, query, token, options = {}) {
 }
 
 export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
+  if (id === "calendly") {
+    // Resolve the owner through the authenticated API, never from a user query.
+    const profileResponse = await fetchImpl("https://api.calendly.com/users/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!profileResponse.ok) {
+      await profileResponse.body?.cancel();
+      throw new Error(
+        profileResponse.status === 401
+          ? "connection_reauthorization_required"
+          : profileResponse.status === 403
+            ? "connection_permission_required"
+            : "connection_read_failed",
+      );
+    }
+    const profile = await readProviderJsonObject(profileResponse, 64_000);
+    const uri = profile.resource?.uri;
+    if (
+      typeof uri !== "string" ||
+      uri !== options.calendlyExpectedUserUri ||
+      !/^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]+$/u.test(uri)
+    )
+      throw new Error("calendly_identity_changed");
+    options = { ...options, calendlyUserUri: uri };
+  }
   const request = connectionReadRequest(id, query, token, options);
   const response = await fetchImpl(request.url, request.init);
   if (!response.ok) {
@@ -102,8 +141,10 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows =
-    id === "notion"
-      ? data.results
+    id === "calendly"
+      ? data.collection
+      : id === "notion"
+        ? data.results
       : id === "linear"
         ? data.data?.issues?.nodes
         : id === "slack"
@@ -114,9 +155,11 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
               ? data.entries
               : data.value;
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
-  if (id === "ms-teams")
+  if (id === "ms-teams" || id === "calendly")
     rows = rows.filter((row) =>
-      str(row.displayName).toLowerCase().includes(query.trim().toLowerCase()),
+      str(id === "calendly" ? row.name : row.displayName)
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
     );
   const result = { service: CONNECTION_FLOWS[id].label, results: [], limited: true };
   const encoder = new TextEncoder();
@@ -124,9 +167,12 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     // Dropbox search matches wrap the actual file/folder metadata twice.
     const row = id === "dropbox" ? match?.metadata?.metadata : match;
     if (!row || typeof row !== "object") continue;
-    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
+    const url =
+      id === "calendly"
+        ? null
+        : (row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url);
     const item = {
-      id: str(row.id ?? row.ts, 300),
+      id: str(row.id ?? row.ts ?? (id === "calendly" ? row.uri : ""), 300),
       title:
         id === "notion"
           ? title(row)
@@ -142,8 +188,15 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
             ]
               .filter(Boolean)
               .join("; ")
-          : id === "dropbox"
-            ? str(row.path_display)
+          : id === "calendly"
+            ? [
+                row.start_time && `Start: ${str(row.start_time, 60)}`,
+                row.end_time && `End: ${str(row.end_time, 60)}`,
+              ]
+                .filter(Boolean)
+                .join("; ")
+            : id === "dropbox"
+              ? str(row.path_display)
             : str(row.bodyPreview ?? row.description ?? row.text),
     };
     // Measure the serialized UTF-8 result, including JSON escaping. A provider
