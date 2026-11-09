@@ -15,13 +15,45 @@ const MAX_TEXT_BYTES = 512 * 1024;
 const MAX_LIST = 200;
 const MAX_DEPTH = 8;
 const SOURCE_SUFFIXES = new Set([
-  ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".json", ".py", ".go",
-  ".rs", ".java", ".kt", ".swift", ".md", ".txt", ".yml", ".yaml",
-  ".html", ".css", ".scss", ".sql", ".xml", ".toml", ".sh",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".json",
+  ".py",
+  ".go",
+  ".rs",
+  ".java",
+  ".kt",
+  ".swift",
+  ".md",
+  ".txt",
+  ".yml",
+  ".yaml",
+  ".html",
+  ".css",
+  ".scss",
+  ".sql",
+  ".xml",
+  ".toml",
+  ".sh",
 ]);
 const SKIP_DIRS = new Set([
-  ".git", ".github", ".vscode", "node_modules", "dist", "build", "target",
-  "coverage", ".next", ".venv", "venv", "__pycache__", ".idea",
+  ".git",
+  ".github",
+  ".vscode",
+  "node_modules",
+  "dist",
+  "build",
+  "target",
+  "coverage",
+  ".next",
+  ".venv",
+  "venv",
+  "__pycache__",
+  ".idea",
 ]);
 
 export const MAX_WORKSPACE_TEXT_BYTES = MAX_TEXT_BYTES;
@@ -39,13 +71,22 @@ function validParts(relativePath, allowRoot = false) {
     relativePath.includes("\u0000") ||
     relativePath.startsWith("/") ||
     relativePath.includes(":")
-  ) throw new Error("Invalid workspace path");
+  )
+    throw new Error("Invalid workspace path");
   const parts = relativePath.split("/");
   if (
     parts.length > MAX_DEPTH ||
-    parts.some((part) => !part || part === "." || part === ".." ||
-      part.startsWith(".") || part.length > 180 || /[\x00-\x1f]/u.test(part))
-  ) throw new Error("Workspace path is not permitted");
+    parts.some(
+      (part) =>
+        !part ||
+        part === "." ||
+        part === ".." ||
+        part.startsWith(".") ||
+        part.length > 180 ||
+        /[\x00-\x1f]/u.test(part),
+    )
+  )
+    throw new Error("Workspace path is not permitted");
   return parts;
 }
 function textContent(bytes) {
@@ -120,8 +161,10 @@ export function createLocalWorkspace() {
       return { path: relativePath, ...file };
     },
     preview(relativePath, proposedContent, expectedHash) {
-      if (typeof proposedContent !== "string" ||
-        Buffer.byteLength(proposedContent, "utf8") > MAX_TEXT_BYTES)
+      if (
+        typeof proposedContent !== "string" ||
+        Buffer.byteLength(proposedContent, "utf8") > MAX_TEXT_BYTES
+      )
         throw new Error("Edited text is too large");
       const original = opened.get(relativePath);
       if (!original || original !== expectedHash)
@@ -135,8 +178,7 @@ export function createLocalWorkspace() {
         first++;
       let oldEnd = before.length;
       let newEnd = after.length;
-      while (oldEnd > first && newEnd > first &&
-        before[oldEnd - 1] === after[newEnd - 1]) {
+      while (oldEnd > first && newEnd > first && before[oldEnd - 1] === after[newEnd - 1]) {
         oldEnd--;
         newEnd--;
       }
@@ -160,7 +202,11 @@ export function createLocalWorkspace() {
           throw new Error("File changed before save");
         renameSync(temporary, actual);
       } finally {
-        try { unlinkSync(temporary); } catch { /* Already moved or never written. */ }
+        try {
+          unlinkSync(temporary);
+        } catch {
+          /* Already moved or never written. */
+        }
       }
       const result = inspectText(relativePath);
       opened.set(relativePath, result.hash);

@@ -1,13 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createLocalWorkspace } from "../workspace-files.mjs";
@@ -37,9 +30,15 @@ test("local coding workspace needs explicit folder authorization", () =>
     assert.throws(() => files.list(), /Choose a repository folder/);
     assert.throws(() => files.open("src/example.ts"), /Choose a repository folder/);
     assert.deepEqual(files.chooseFolder(root), { name: "project", selected: true });
-    assert.deepEqual(files.list().map((entry) => entry.name), ["src"]);
     assert.deepEqual(
-      files.list("src").map((entry) => entry.path).sort(),
+      files.list().map((entry) => entry.name),
+      ["src"],
+    );
+    assert.deepEqual(
+      files
+        .list("src")
+        .map((entry) => entry.path)
+        .sort(),
       ["src/example.ts", "src/other.md"],
     );
     const open = files.open("src/example.ts");
@@ -61,10 +60,14 @@ test("path traversal, hidden files, symlinks and non-text files are rejected", (
       "src\\example.ts",
       "C:/secrets.txt",
       "node_modules/index.js",
-    ]) assert.throws(() => files.open(path), undefined, path);
+    ])
+      assert.throws(() => files.open(path), undefined, path);
     symlinkSync(join(outer, "outside.ts"), join(root, "src", "escaped.ts"));
     assert.throws(() => files.open("src/escaped.ts"), /escapes|symbolic/u);
-    assert.equal(files.list("src").some((entry) => entry.name === "escaped.ts"), false);
+    assert.equal(
+      files.list("src").some((entry) => entry.name === "escaped.ts"),
+      false,
+    );
     writeFileSync(join(root, "src", "blob.ts"), Buffer.from([0, 1, 2]));
     assert.throws(() => files.open("src/blob.ts"), /Binary/u);
     writeFileSync(join(root, "src", "huge.ts"), "x".repeat(512 * 1024 + 1));

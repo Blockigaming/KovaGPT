@@ -175,18 +175,30 @@ test("choosing repository, editing and saving require a local native confirmatio
     assert.equal(files[0].path, "example.ts");
     const original = await call("open", undefined, "example.ts");
     const preview = await call(
-      "preview", undefined, "example.ts", "const original = false;\n", original.hash,
+      "preview",
+      undefined,
+      "example.ts",
+      "const original = false;\n",
+      original.hash,
     );
     assert.equal(preview.changed, true);
     const rejected = await call(
-      "save", undefined, "example.ts", "const original = false;\n", original.hash,
+      "save",
+      undefined,
+      "example.ts",
+      "const original = false;\n",
+      original.hash,
     );
     assert.equal(rejected.saved, false);
     assert.equal(readFileSync(join(project, "example.ts"), "utf8"), original.content);
     assert.equal(prompts.at(-1).title, "Save changes to local file?");
     enableSave();
     const saved = await call(
-      "save", undefined, "example.ts", "const original = false;\n", original.hash,
+      "save",
+      undefined,
+      "example.ts",
+      "const original = false;\n",
+      original.hash,
     );
     assert.equal(saved.saved, true);
     assert.equal(readFileSync(join(project, "example.ts"), "utf8"), "const original = false;\n");

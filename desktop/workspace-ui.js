@@ -34,8 +34,11 @@ function updateButtons() {
     : "Choose a source file from the left navigation.";
 }
 function discardAllowed() {
-  return !opened || editor.value === original ||
-    window.confirm("Discard unsaved changes to this source file?");
+  return (
+    !opened ||
+    editor.value === original ||
+    window.confirm("Discard unsaved changes to this source file?")
+  );
 }
 
 function resetEditor() {
@@ -94,57 +97,70 @@ async function showFolder(parent, directory = "") {
       children.hidden = true;
       parent.append(children);
       button.setAttribute("aria-expanded", "false");
-      button.addEventListener("click", () => guarded(async () => {
-        const expanding = children.hidden;
-        children.hidden = !expanding;
-        button.setAttribute("aria-expanded", String(expanding));
-        button.textContent = (expanding ? "▾  " : "▸  ") + entry.name;
-        if (expanding) await showFolder(children, entry.path);
-      }));
+      button.addEventListener("click", () =>
+        guarded(async () => {
+          const expanding = children.hidden;
+          children.hidden = !expanding;
+          button.setAttribute("aria-expanded", String(expanding));
+          button.textContent = (expanding ? "▾  " : "▸  ") + entry.name;
+          if (expanding) await showFolder(children, entry.path);
+        }),
+      );
     } else {
       button.addEventListener("click", () => guarded(() => openFile(entry.path, button)));
     }
   }
 }
-choose.addEventListener("click", () => guarded(async () => {
-  if (!discardAllowed()) return;
-  const selected = await api.chooseFolder();
-  if (!selected.selected) return;
-  resetEditor();
-  folderName.textContent = selected.name;
-  closeFolder.disabled = false;
-  await showFolder(tree);
-  notify("Local folder selected. Choose a source file to edit.");
-}));
-closeFolder.addEventListener("click", () => guarded(async () => {
-  if (!discardAllowed()) return;
-  await api.closeFolder();
-  resetEditor();
-  tree.replaceChildren();
-  folderName.textContent = "No folder selected";
-  closeFolder.disabled = true;
-  notify("Folder access ended. The workspace has forgotten its path.");
-}));
+choose.addEventListener("click", () =>
+  guarded(async () => {
+    if (!discardAllowed()) return;
+    const selected = await api.chooseFolder();
+    if (!selected.selected) return;
+    resetEditor();
+    folderName.textContent = selected.name;
+    closeFolder.disabled = false;
+    await showFolder(tree);
+    notify("Local folder selected. Choose a source file to edit.");
+  }),
+);
+closeFolder.addEventListener("click", () =>
+  guarded(async () => {
+    if (!discardAllowed()) return;
+    await api.closeFolder();
+    resetEditor();
+    tree.replaceChildren();
+    folderName.textContent = "No folder selected";
+    closeFolder.disabled = true;
+    notify("Folder access ended. The workspace has forgotten its path.");
+  }),
+);
 editor.addEventListener("input", () => {
   showDiff();
   updateButtons();
 });
-preview.addEventListener("click", () => guarded(async () => {
-  if (!opened) return;
-  const result = await api.preview(opened, editor.value, openedHash);
-  if (!result.changed) {
-    showDiff();
-    notify("No changes.");
-    return;
-  }
-  const before = result.beforeLines.map((line) => "- " + line).join("\n");
-  const after = result.afterLines.map((line) => "+ " + line).join("\n");
-  showDiff(
-    "Changes near line " + result.firstLine + (result.truncated ? " (preview truncated)" : "") +
-      "\n" + before + (before && after ? "\n" : "") + after,
-  );
-  notify("Reviewed local diff. Saving still requires native confirmation.");
-}));
+preview.addEventListener("click", () =>
+  guarded(async () => {
+    if (!opened) return;
+    const result = await api.preview(opened, editor.value, openedHash);
+    if (!result.changed) {
+      showDiff();
+      notify("No changes.");
+      return;
+    }
+    const before = result.beforeLines.map((line) => "- " + line).join("\n");
+    const after = result.afterLines.map((line) => "+ " + line).join("\n");
+    showDiff(
+      "Changes near line " +
+        result.firstLine +
+        (result.truncated ? " (preview truncated)" : "") +
+        "\n" +
+        before +
+        (before && after ? "\n" : "") +
+        after,
+    );
+    notify("Reviewed local diff. Saving still requires native confirmation.");
+  }),
+);
 async function saveFile() {
   if (!opened) return;
   const result = await api.save(opened, editor.value, openedHash);

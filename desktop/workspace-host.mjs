@@ -19,16 +19,30 @@ export function registerWorkspaceScheme(protocol) {
  * The local coding workspace has its own offline renderer, profile and allowlisted
  * IPC. No Kova website renderer receives this preload, filesystem access or IPC.
  */
-export function installLocalWorkspace({ BrowserWindow, ipcMain, session, dialog, assetsPath, iconPath }) {
+export function installLocalWorkspace({
+  BrowserWindow,
+  ipcMain,
+  session,
+  dialog,
+  assetsPath,
+  iconPath,
+}) {
   const localSession = session.fromPartition("persist:kova-local-workspace");
   const filesystem = createLocalWorkspace();
   let window = null;
 
   localSession.protocol.handle("kova-local", async (request) => {
     let location;
-    try { location = new URL(request.url); } catch { return new Response(null, { status: 404 }); }
-    const asset = location.host === "workspace" &&
-      !location.search && !location.hash && ASSETS[location.pathname];
+    try {
+      location = new URL(request.url);
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+    const asset =
+      location.host === "workspace" &&
+      !location.search &&
+      !location.hash &&
+      ASSETS[location.pathname];
     if (!asset) return new Response(null, { status: 404 });
     return new Response(readFileSync(join(assetsPath, asset[0])), {
       headers: {
@@ -46,10 +60,13 @@ export function installLocalWorkspace({ BrowserWindow, ipcMain, session, dialog,
   localSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 
   const trusted = (event) =>
-    Boolean(window && !window.isDestroyed() &&
+    Boolean(
+      window &&
+      !window.isDestroyed() &&
       event.sender === window.webContents &&
       event.senderFrame === window.webContents.mainFrame &&
-      event.senderFrame?.url === WORKSPACE_URL);
+      event.senderFrame?.url === WORKSPACE_URL,
+    );
 
   function handler(channel, action) {
     ipcMain.handle("kova-workspace:" + channel, async (event, ...args) => {
@@ -79,7 +96,8 @@ export function installLocalWorkspace({ BrowserWindow, ipcMain, session, dialog,
       type: "warning",
       title: "Save changes to local file?",
       message: "Overwrite the selected source file with your edited content?",
-      detail: "This writes only to the folder you explicitly selected. KovaGPT does not run or upload the code.",
+      detail:
+        "This writes only to the folder you explicitly selected. KovaGPT does not run or upload the code.",
       buttons: ["Cancel", "Save file"],
       defaultId: 0,
       cancelId: 0,
