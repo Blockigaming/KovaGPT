@@ -1,4 +1,4 @@
-# Mobile and desktop acceptance ledger
+|  |  | Native local repository integration code committed; device testing pending | Dedicated offline, separately sandboxed local coding workspace with scope-checked file editor, explicit folder and save consent, and no remote website IPC; installed OS testing pending. |
 
 Source: owner attachment, November 8, 2026. This preserves all 436 requirements.
 
