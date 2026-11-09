@@ -57,14 +57,6 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Diagnose sidebar Prettier output (read-only diff)
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          cp src/lib/sidebar-swipe.mjs src/lib/sidebar-swipe.format-diagnostic.mjs
-          npx --no-install prettier --write src/lib/sidebar-swipe.format-diagnostic.mjs
-          diff -u src/lib/sidebar-swipe.mjs src/lib/sidebar-swipe.format-diagnostic.mjs || true
-          rm src/lib/sidebar-swipe.format-diagnostic.mjs
-
       - name: Formatting changed files
         if: steps.scope.outputs.run == 'true'
         run: npm run format:check:changed
