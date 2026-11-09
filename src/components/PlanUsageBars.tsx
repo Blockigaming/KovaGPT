@@ -18,11 +18,13 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
 
   return (
     <div className="kova-plan-usage">
-      {windows.map(({ id, resetsAt, regularUsed, regularLimit, thinkingUsed, thinkingLimit }) => {
-        const percent = Math.max(
-          boundedPercent(regularUsed, regularLimit),
-          boundedPercent(thinkingUsed, thinkingLimit),
-        );
+      {windows.map(
+        ({ id, resetsAt, regularUsed, regularLimit, thinkingUsed, thinkingLimit, costPercentUsed }) => {
+          const percent = Math.max(
+            boundedPercent(regularUsed, regularLimit),
+            boundedPercent(thinkingUsed, thinkingLimit),
+            costPercentUsed,
+          );
         const label = `${CHAT_USAGE_WINDOWS[id]} chat usage`;
         return (
           <div key={id} className="kova-plan-usage-row">
@@ -46,7 +48,8 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
             </p>
           </div>
         );
-      })}
+        },
+      )}
       <p className="text-xs leading-5 text-muted-foreground">
         Today's images {boundedPercent(images, base.images * multiplier)}% used · uploads{" "}
         {boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.
