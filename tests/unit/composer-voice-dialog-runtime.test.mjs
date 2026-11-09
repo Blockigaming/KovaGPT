@@ -2037,6 +2037,10 @@ test("Voice mute disables actual audio tracks and prevents silence-gate submissi
   assert.ok(stream.tracks.every((track) => track.enabled === true));
   await f.click("Finish turn");
   assert.ok(stream.tracks.every((track) => track.stopped > 0));
-  assert.equal(f.requests.at(-1)?.url, "/api/voice", "Only the explicit finished turn may transcribe");
+  assert.equal(
+    f.requests.at(-1)?.url,
+    "/api/voice",
+    "Only the explicit finished turn may transcribe",
+  );
   f.unmount();
 });
