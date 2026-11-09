@@ -62,14 +62,14 @@ const data = (uploads = 1) => ({
   images: 0,
   resetsAt: new Date(Date.now() + 100_000).toISOString(),
 });
-test("loading never paints zero, then authoritative remaining and UTC reset appear", async () => {
+test("loading never paints zero, then authoritative percentage and UTC reset appear", async () => {
   const f = fixture();
   assert.match(text(f.tree).replace(/\s+/g, " "), /Checking/);
   assert.doesNotMatch(text(f.tree).replace(/\s+/g, " "), /remaining today/);
   f.requests[0].resolve(data());
   await settle();
   f.render();
-  assert.match(text(f.tree).replace(/\s+/g, " "), /1 of 2 uploads remaining today/);
+  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 50% used/);
   assert.match(text(f.tree).replace(/\s+/g, " "), /UTC/);
   f.timers[0].fn();
   f.render();
@@ -99,19 +99,19 @@ test("principal transition excludes old counts and guests issue no usage read", 
   f.requests[0].resolve(data(2));
   await settle();
   f.render();
-  assert.match(text(f.tree).replace(/\s+/g, " "), /2 of 2/);
+  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100% used/);
   f.render({ ownerId: null });
   f.render();
   assert.match(text(f.tree).replace(/\s+/g, " "), /Sign in/);
   assert.equal(f.requests.length, 2);
 });
-test("limit reached is zero remaining without fabricated negative or percentage", async () => {
+test("limit reached reports 100% usage without negative or exact counts", async () => {
   const f = fixture();
   f.requests[0].resolve(data(3));
   await settle();
   f.render();
-  assert.match(text(f.tree).replace(/\s+/g, " "), /0 of 2/);
-  assert.doesNotMatch(text(f.tree).replace(/\s+/g, " "), /%/);
+  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100% used/);
+  assert.doesNotMatch(text(f.tree).replace(/\s+/g, " "), /\d+ of \d+/);
 });
 
 test("unknown plan never invents a Free denominator", async () => {
@@ -123,6 +123,6 @@ test("unknown plan never invents a Free denominator", async () => {
   assert.match(text(f.tree), /Checking your plan/);
   plan.status = "unavailable";
   f.render();
-  assert.match(text(f.tree), /plan limit is unavailable/);
+  assert.match(text(f.tree), /progress is temporarily unavailable/);
   assert.doesNotMatch(text(f.tree), /of 2/);
 });
