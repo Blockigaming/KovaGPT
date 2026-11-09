@@ -1459,9 +1459,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "figma",
     label: "Figma",
-    description: "Reference design files, comments, and prototypes.",
+    description: "Look up file metadata using an exact Figma URL or file key.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "figma.com",
   },
   {
