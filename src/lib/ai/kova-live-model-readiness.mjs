@@ -15,13 +15,14 @@ export function auditKovaModelConfiguration(app) {
   const id = app?.id ?? "";
   if (
     app?.name !== "kovagpt-prod-web" ||
-    !/\/resourceGroups\/rg-kovagpt-prod\/providers\/Microsoft\.App\/containerApps\/kovagpt-prod-web$/i.test(id)
-  ) blockers.push("production_app_identity_mismatch");
+    !/\/resourceGroups\/rg-kovagpt-prod\/providers\/Microsoft\.App\/containerApps\/kovagpt-prod-web$/i.test(
+      id,
+    )
+  )
+    blockers.push("production_app_identity_mismatch");
 
   const containers = app?.properties?.template?.containers;
-  const web = Array.isArray(containers) && containers.length === 1
-    ? containers[0]
-    : null;
+  const web = Array.isArray(containers) && containers.length === 1 ? containers[0] : null;
   if (!web) blockers.push("expected_one_web_container");
   const entries = web && Array.isArray(web.env) ? web.env : [];
   const env = new Map(entries.map((item) => [item.name, item]));
@@ -48,9 +49,11 @@ export function auditKovaModelConfiguration(app) {
   if (!key?.secretRef || typeof key.secretRef !== "string")
     blockers.push("openai_api_key_secret_reference_missing");
   const declaredSecrets = app?.properties?.configuration?.secrets;
-  if (Array.isArray(declaredSecrets) &&
-      key?.secretRef &&
-      !declaredSecrets.some((item) => item.name === key.secretRef))
+  if (
+    Array.isArray(declaredSecrets) &&
+    key?.secretRef &&
+    !declaredSecrets.some((item) => item.name === key.secretRef)
+  )
     blockers.push("openai_api_key_secret_reference_unresolved");
   if (!Array.isArray(declaredSecrets)) warnings.push("secret_catalog_could_not_be_confirmed");
 
@@ -60,16 +63,23 @@ export function auditKovaModelConfiguration(app) {
   if (costCeiling !== null && !(Number(costCeiling) >= 2 && Number(costCeiling) <= 10))
     warnings.push("request_reservation_ceiling_may_block_astra_ultra");
 
-  const expectedIds = CONSUMER_MODELS.map((m) => m.id);
+  const expectedIds = CONSUMER_MODELS.map((model) => model.id);
   if (
     expectedIds.length !== 7 ||
-    expectedIds.some((id) => !Object.hasOwn(HOSTED_MODEL_MAP, id)) ||
-    expectedIds.filter((id) => CONSUMER_MODELS.find((m) => m.id === id)).length !== 7
-  ) blockers.push("model_catalog_inconsistent");
+    new Set(expectedIds).size !== 7 ||
+    expectedIds.some((modelId) => !Object.hasOwn(HOSTED_MODEL_MAP, modelId))
+  )
+    blockers.push("model_catalog_inconsistent");
   const combinations = {
-    free: CONSUMER_MODELS.filter((m) => m.tiers.includes("free")).length * MODE_IDS_BY_TIER.free.length,
-    plus: CONSUMER_MODELS.filter((m) => m.tiers.includes("plus")).length * MODE_IDS_BY_TIER.plus.length,
-    pro: CONSUMER_MODELS.filter((m) => m.tiers.includes("pro")).length * MODE_IDS_BY_TIER.pro.length,
+    free:
+      CONSUMER_MODELS.filter((model) => model.tiers.includes("free")).length *
+      MODE_IDS_BY_TIER.free.length,
+    plus:
+      CONSUMER_MODELS.filter((model) => model.tiers.includes("plus")).length *
+      MODE_IDS_BY_TIER.plus.length,
+    pro:
+      CONSUMER_MODELS.filter((model) => model.tiers.includes("pro")).length *
+      MODE_IDS_BY_TIER.pro.length,
   };
   if (combinations.free !== 2 || combinations.plus !== 35 || combinations.pro !== 42)
     blockers.push("model_entitlements_inconsistent");
