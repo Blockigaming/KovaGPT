@@ -267,7 +267,7 @@ for (const [path, label] of [
   });
 }
 
-test("New chat, Search, customization and Settings invoke their existing callbacks once", () => {
+test("New chat, chat search, customization and Settings invoke their intended callbacks once", () => {
   const f = fixture();
   f.find("New chat").props.onClick();
   f.search.props.onClick();
@@ -280,7 +280,7 @@ test("New chat, Search, customization and Settings invoke their existing callbac
   settings.props.onSelect();
   assert.deepEqual(f.calls, [
     ["new"],
-    ["search"],
+    ["local-search", true],
     ["customize", opener],
     ["settings", "appearance"],
   ]);
