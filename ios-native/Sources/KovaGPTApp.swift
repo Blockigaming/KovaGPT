@@ -52,6 +52,8 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
                             action: #selector(sharePage)),
             UIBarButtonItem(title: "Scan", style: .plain, target: self,
                             action: #selector(scanDocument)),
+            UIBarButtonItem(title: "About", style: .plain, target: self,
+                            action: #selector(showAbout)),
         ]
         browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
     }
@@ -108,6 +110,14 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             popover.barButtonItem = navigationItem.rightBarButtonItems?.first
         }
         present(controller, animated: true)
+    }
+
+    @objc private func showAbout() {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+            as? String ?? "Unavailable"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion")
+            as? String ?? "Unavailable"
+        showMessage("Version \(version) (build \(build))")
     }
 
     @objc private func scanDocument() {
