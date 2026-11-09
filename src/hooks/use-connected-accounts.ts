@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import type { ConnectedAccount } from "@/integrations/connection-flows.mjs";
-export type AccountStatus = { configuredProviders: { id: string }[]; accounts: ConnectedAccount[] };
+export type AccountStatus = {
+  configuredProviders: { id: string }[];
+  accounts: ConnectedAccount[];
+  verificationAvailable?: boolean;
+};
 export function useConnectedAccounts(principal: string | null, enabled: boolean) {
   const [state, setState] = useState<{
     principal: string | null;
