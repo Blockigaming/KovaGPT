@@ -18,32 +18,19 @@ export async function enforceDailyMessageQuota(
   signal?.throwIfAborted();
   if (selection && isUnlimitedBasicChat(tier, selection.modelId, selection.mode)) return null;
   const windows = chatUsageWindows(tier);
-  const [daily] = windows;
   const weekly = windows.find(({ id }) => id === "weekly");
   const short = windows.find(({ id }) => id === "five_hour");
-  const query = weekly
-    ? loose(caller.supabaseAdmin).rpc("try_consume_paid_message", {
-        _user_id: caller.userId,
-        _thinking: thinking,
-        _weekly_limit: thinking ? weekly.thinkingLimit : weekly.regularLimit,
-        _short_limit: short ? (thinking ? short.thinkingLimit : short.regularLimit) : null,
-      })
-    : loose(caller.supabaseAdmin).rpc("try_consume_daily_message", {
-        _user_id: caller.userId,
-        _thinking: thinking,
-        _regular_limit: daily.regularLimit,
-        _thinking_limit: daily.thinkingLimit,
-      });
+  const query = loose(caller.supabaseAdmin).rpc("try_consume_paid_message", {
+    _user_id: caller.userId,
+    _thinking: thinking,
+    _weekly_limit: thinking ? weekly!.thinkingLimit : weekly!.regularLimit,
+    _short_limit: short ? (thinking ? short.thinkingLimit : short.regularLimit) : null,
+  });
   const { data, error } = await (signal ? query.abortSignal(signal) : query);
   const outcome: unknown = data;
-  const exhausted = weekly
-    ? outcome === "weekly" || (short && outcome === "five_hour")
-      ? outcome
-      : null
-    : outcome === false
-      ? "daily"
-      : null;
-  const allowed = weekly ? outcome === "allowed" : outcome === true;
+  const exhausted =
+    outcome === "weekly" || (short && outcome === "five_hour") ? outcome : null;
+  const allowed = outcome === "allowed";
   if (error || (!allowed && !exhausted))
     return Response.json(
       {
