@@ -450,18 +450,20 @@ function fixture(initial = {}, options = {}) {
     const tracks = [
       {
         stopped: 0,
+        enabled: true,
         stop() {
           this.stopped++;
         },
       },
       {
         stopped: 0,
+        enabled: true,
         stop() {
           this.stopped++;
         },
       },
     ];
-    return { tracks, getTracks: () => tracks };
+    return { tracks, getTracks: () => tracks, getAudioTracks: () => tracks };
   }
   render();
   return {
@@ -1987,5 +1989,54 @@ test("canceling inline dictation rejects late microphone access and stops all ac
   assert.equal(f.recorders.length, 0);
   assert.equal(f.requests.length, 1, "cancelled capture cannot upload audio");
   assert.deepEqual(f.closed, [false]);
+  f.unmount();
+});
+
+test("Voice captions are controlled by the dialog and reset when the session closes", async () => {
+  const f = fixture({ mode: "voice" });
+  await f.ready();
+  const dialog = () => f.nodes().find((node) => node.type === "DialogContent");
+  assert.equal(dialog().props["data-voice-mode"], "voice");
+  assert.equal(dialog().props["data-voice-captions"], "closed");
+  const show = f.nodes().find((node) => node.props?.["aria-label"] === "Show voice captions");
+  assert.ok(show);
+  assert.equal(show.props["aria-pressed"], false);
+  show.props.onClick();
+  await f.flush();
+  assert.equal(dialog().props["data-voice-captions"], "open");
+  const hide = f.nodes().find((node) => node.props?.["aria-label"] === "Hide voice captions");
+  assert.ok(hide);
+  assert.equal(hide.props["aria-pressed"], true);
+  hide.props.onClick();
+  await f.flush();
+  assert.equal(dialog().props["data-voice-captions"], "closed");
+  assert.equal(f.microphoneRequests.length, 0, "Caption controls must never capture audio");
+  f.unmount();
+});
+
+test("Voice mute disables actual audio tracks and prevents silence-gate submissions", async () => {
+  const f = fixture({ mode: "voice" }, { audioAnalysis: true });
+  await f.ready();
+  await f.click("Start");
+  const stream = await f.acquire();
+  assert.ok(stream.tracks.every((track) => track.enabled === true));
+  const mute = f.nodes().find((node) => node.props?.["aria-label"] === "Mute microphone");
+  assert.ok(mute);
+  assert.equal(mute.props["aria-pressed"], false);
+  mute.props.onClick();
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.enabled === false));
+  const unmute = f.nodes().find((node) => node.props?.["aria-label"] === "Unmute microphone");
+  assert.ok(unmute);
+  assert.equal(unmute.props["aria-pressed"], true);
+  await f.speechLevelAt(0.08, 100);
+  await f.speechLevelAt(0.001, 1400);
+  assert.equal(f.requests.length, 1, "Muted microphone must not auto-submit");
+  unmute.props.onClick();
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.enabled === true));
+  await f.click("Finish turn");
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.requests.at(-1)?.url, "/api/voice", "Only the explicit finished turn may transcribe");
   f.unmount();
 });
