@@ -227,8 +227,7 @@ function setMenuBarIcon(visible) {
 }
 function setDockIcon(visible) {
   // Never hide both ways of reopening the installed app.
-  if (process.platform !== "darwin" || !app.dock || (!visible && !showMenuBarIcon))
-    return false;
+  if (process.platform !== "darwin" || !app.dock || (!visible && !showMenuBarIcon)) return false;
   if (visible) void app.dock.show();
   else app.dock.hide();
   showDockIcon = visible;
@@ -464,8 +463,7 @@ else {
       registerCompanionShortcut("Disabled");
     if (process.platform === "darwin") {
       setMenuBarIcon(savedDesktopPreferences.showMenuBarIcon === true);
-      if (savedDesktopPreferences.showDockIcon === false && showMenuBarIcon)
-        setDockIcon(false);
+      if (savedDesktopPreferences.showDockIcon === false && showMenuBarIcon) setDockIcon(false);
     }
     installAppMenu();
     createWindow();
