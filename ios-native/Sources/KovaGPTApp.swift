@@ -243,7 +243,7 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             return
         }
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("KovaGPT-Photo-\\(UUID().uuidString)")
+            .appendingPathComponent("KovaGPT-Photo-\(UUID().uuidString)")
             .appendingPathExtension("jpg")
         do {
             try data.write(to: url, options: .atomic)
