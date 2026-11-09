@@ -130,7 +130,10 @@ test("monthly safety cap counts earlier costs and included Pro Argon Lite chat",
 test("only server service role can query raw cost limits and budget ledger", async () => {
   const db = await fixture();
   try {
-    const first = await db.query("select * from public.kova_plan_cost_progress($1,'plus')", [owner]);
+    const first = await db.query(
+      "select * from public.kova_plan_cost_progress($1,'plus')",
+      [owner],
+    );
     assert.equal(Number(first.rows[0].monthly_allowance), 60);
     assert.equal(first.rows[0].five_hour_allowance !== null, true);
     const pro = await db.query("select * from public.kova_plan_cost_progress($1,'pro')", [owner]);
