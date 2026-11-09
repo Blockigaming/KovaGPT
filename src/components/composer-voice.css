@@ -909,6 +909,27 @@
 .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-close:hover {
   background: #c64e55;
 }
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid #454e5f;
+  background: #2e3543;
+  color: #f2f5fc;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle[aria-pressed="true"] {
+  background: #f1f4fc;
+  color: #1b2431;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+.kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-microphone-toggle:hover {
+  filter: brightness(1.12);
+}
 .kova-voice-dialog[data-voice-mode="voice"][data-voice-availability="ready"] .kova-voice-footnote {
   color: #dae0ec;
 }
