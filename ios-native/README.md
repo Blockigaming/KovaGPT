@@ -17,17 +17,18 @@ that PDF; users may save/share it and attach it to chat explicitly.
 
 ## Native Home Screen shortcut widget
 
-The WidgetKit medium Home Screen widget has **New chat** and **Scan document**
-actions. Both use a registered `kovagpt://` scheme with a strict allowlist in
+The WidgetKit medium Home Screen widget has **New chat**, **Scan document**,
+**Camera**, and **Photos** actions. Both use a registered `kovagpt://` scheme with a strict allowlist in
 `KovaGPTApp.swift`: no arbitrary URL, host, query, fragment or shell command
 is accepted. New chat opens the app home; Scan presents the existing VisionKit
 scanner only after the app becomes visible. It never uploads a scan without an
 explicit user share. The app extension must compile with the unsigned simulator
 preview and still requires a signed iPhone installation for real-device testing.
 
-This is **partial coverage** of requirement 309: camera, Photos, voice and
-microphone widget actions are not included, and no background microphone or
-screen capture is activated by this widget.
+This is **partial coverage** of requirement 309: the Camera and Photos actions
+open native pickers and prepare an explicit iOS sharing sheet, not a silent chat
+attachment. Voice and microphone actions are not included, and no background
+microphone or screen capture is activated by this widget.
 
 This preview is not signed or distributed via the App Store. Embedded provider
 OAuth may be restricted in WKWebView; production requires secure external
