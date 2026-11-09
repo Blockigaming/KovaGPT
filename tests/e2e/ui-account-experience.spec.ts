@@ -66,11 +66,21 @@ test("Settings keeps a closed rail, shows percentage usage, and exposes editable
   await prepare(page);
   await page.goto("/settings/usage");
   await waitForKovaHydration(page);
-  await expect(
-    page.getByRole("progressbar", { name: "Daily chat usage", exact: true }),
-  ).toHaveAttribute("aria-valuenow", "24");
-  await expect(page.getByRole("progressbar")).toHaveCount(1);
-  await expect(page.getByText(/12 \/ 50 regular · 2 \/ 10 Thinking/)).toBeVisible();
+  // Free displays rolling 5-hour and weekly percentages, not the retired daily counter.
+  const windows = planUsageFixture("free").windows;
+  await expect(page.getByRole("progressbar")).toHaveCount(windows.length);
+  for (const window of windows) {
+    const label = window.id === "five_hour" ? "5-hour chat usage" : "Weekly chat usage";
+    const percent = Math.max(
+      Math.round((12 / window.regularLimit) * 100),
+      Math.round((2 / window.thinkingLimit) * 100),
+    );
+    await expect(page.getByRole("progressbar", { name: label, exact: true })).toHaveAttribute(
+      "aria-valuenow",
+      String(percent),
+    );
+  }
+  await expect(page.locator(".kova-plan-usage")).toContainText("Today's images");
   await expect(page.getByRole("button", { name: "Close settings", exact: true })).toBeVisible();
   await page.goto("/settings/memory");
   await waitForKovaHydration(page);
