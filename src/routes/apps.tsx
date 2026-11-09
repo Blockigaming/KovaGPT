@@ -1245,7 +1245,8 @@ function AppsPage() {
     const requestPrincipal = principal;
     const current = () =>
       generation === generationRef.current && principalRef.current === requestPrincipal;
-    const label = id === "gmail" ? "Gmail" : id === "google-calendar" ? "Google Calendar" : "Google Drive";
+    const label =
+      id === "gmail" ? "Gmail" : id === "google-calendar" ? "Google Calendar" : "Google Drive";
     googleBusyRef.current = true;
     setGoogleBusy(true);
     setGoogleApiCheck(id);
