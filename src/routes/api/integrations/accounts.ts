@@ -4,6 +4,12 @@ import { configuredOAuthProviders } from "@/integrations/oauth-providers.server"
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { verifiedConnectionReadDates } from "@/integrations/verified-reads.mjs";
 import { createClient } from "@supabase/supabase-js";
+
+type LinkedIntegrationAccount = Record<string, unknown> & {
+  id: string;
+  provider_id: string;
+  updated_at: string | null;
+};
 export const Route = createFileRoute("/api/integrations/accounts")({
   server: {
     handlers: {
@@ -25,11 +31,12 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             { error: "accounts_unavailable" },
             { status: 503, headers: { "Cache-Control": "no-store" } },
           );
+        const accounts = (data ?? []) as LinkedIntegrationAccount[];
         // Legacy OAuth callbacks wrote last_success_at without a real API read.
         // Only successful read audit events can verify a particular service.
         let verificationAvailable = true;
         let verifiedByAccount = Object.create(null);
-        if (data?.length) {
+        if (accounts.length) {
           const { data: events, error: historyError } = await db
             .from("integration_audit_events")
             .select("linked_account_id,event_type,result,safe_summary,created_at")
@@ -38,14 +45,14 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             .eq("result", "success")
             .in(
               "linked_account_id",
-              data.map((account) => account.id),
+              accounts.map((account) => account.id),
             )
             .order("created_at", { ascending: false })
             .limit(1000);
           if (historyError) {
             verificationAvailable = false;
           } else {
-            verifiedByAccount = verifiedConnectionReadDates(data, events, CONNECTION_FLOWS);
+            verifiedByAccount = verifiedConnectionReadDates(accounts, events, CONNECTION_FLOWS);
           }
         }
         return Response.json(
@@ -59,7 +66,7 @@ export const Route = createFileRoute("/api/integrations/accounts")({
                 optionalScopes,
               }),
             ),
-            accounts: (data ?? []).map((account) => ({
+            accounts: accounts.map((account) => ({
               ...account,
               verified_reads: verifiedByAccount[account.id] ?? {},
             })),
