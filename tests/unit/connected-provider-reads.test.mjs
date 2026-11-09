@@ -146,9 +146,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
       id,
       "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : "fake-token",
-      id === "calendly"
-        ? { calendlyUserUri: "https://api.calendly.com/users/KNOWN_USER" }
-        : {},
+      id === "calendly" ? { calendlyUserUri: "https://api.calendly.com/users/KNOWN_USER" } : {},
     );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
@@ -485,7 +483,10 @@ test("Calendly requires explicit read scopes and a fixed account-scoped event ro
   );
   assert.equal(canReadConnection({ ...account, status: "expired" }, "calendly"), false);
   assert.equal(
-    connectionAuthorizationUrl("calendly", "https://auth.calendly.com/oauth/authorize?state=fixture"),
+    connectionAuthorizationUrl(
+      "calendly",
+      "https://auth.calendly.com/oauth/authorize?state=fixture",
+    ),
     "https://auth.calendly.com/oauth/authorize?state=fixture",
   );
   assert.equal(
