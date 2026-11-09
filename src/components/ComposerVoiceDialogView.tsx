@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { AudioLines, Captions, Info, Loader2, X } from "lucide-react";
+import { AudioLines, Captions, Info, Loader2, Mic, MicOff, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,6 +41,8 @@ export interface ComposerVoiceDialogViewProps {
   voicePicker?: ReactNode;
   conversationModelControl?: ReactNode;
   recordingControl?: ReactNode;
+  microphoneMuted?: boolean;
+  onToggleMicrophoneMuted?: () => void;
   retryControl?: ReactNode;
   cancelControl?: ReactNode;
   transcriptReview?: ReactNode;
@@ -67,6 +69,8 @@ export function ComposerVoiceDialogView({
   voicePicker,
   conversationModelControl,
   recordingControl,
+  microphoneMuted = false,
+  onToggleMicrophoneMuted,
   retryControl,
   cancelControl,
   transcriptReview,
@@ -262,6 +266,18 @@ export function ComposerVoiceDialogView({
             <div className="kova-voice-use-transcript">{useTranscriptControl}</div>
           )}
           <div className="kova-voice-dock">
+            {ready && mode === "voice" && phase === "recording" && onToggleMicrophoneMuted && (
+              <button
+                type="button"
+                className="kova-voice-microphone-toggle"
+                aria-label={microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+                title={microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+                aria-pressed={microphoneMuted}
+                onClick={onToggleMicrophoneMuted}
+              >
+                {microphoneMuted ? <MicOff aria-hidden="true" /> : <Mic aria-hidden="true" />}
+              </button>
+            )}
             {ready && recordingControl && (
               <div className="kova-voice-record-control">{recordingControl}</div>
             )}
