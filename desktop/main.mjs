@@ -30,6 +30,7 @@ app.enableSandbox();
 app.setName("KovaGPT");
 let mainWindow = null;
 let companionWindow = null;
+const extraWindows = new Set();
 let ready = false;
 let selectedCompanionShortcut = defaultCompanionShortcut(process.platform);
 let registeredCompanionShortcut = null;
@@ -70,10 +71,18 @@ function saveCompanionShortcut(value) {
   return persistDesktopPreferences({ companionShortcut: value });
 }
 
-const confirmExternal = async (value) => {
+const ownedWindowFor = (contents) => {
+  if (contents === mainWindow?.webContents && !mainWindow.isDestroyed()) return mainWindow;
+  if (contents === companionWindow?.webContents && !companionWindow.isDestroyed())
+    return companionWindow;
+  for (const window of extraWindows)
+    if (!window.isDestroyed() && contents === window.webContents) return window;
+  return null;
+};
+const confirmExternal = async (value, sourceWindow = mainWindow) => {
   const url = externalUrl(value);
-  if (!url || !mainWindow || mainWindow.isDestroyed()) return;
-  const result = await dialog.showMessageBox(mainWindow, {
+  if (!url || !sourceWindow || sourceWindow.isDestroyed()) return;
+  const result = await dialog.showMessageBox(sourceWindow, {
     type: "question",
     title: "Open in your browser?",
     message: `Open ${new URL(url).hostname} in your default browser?`,
@@ -82,7 +91,7 @@ const confirmExternal = async (value) => {
     defaultId: 0,
     cancelId: 0,
   });
-  if (result.response === 1) await shell.openExternal(url);
+  if (result.response === 1 && !sourceWindow.isDestroyed()) await shell.openExternal(url);
 };
 const openApp = () => {
   if (!ready) return;
@@ -327,6 +336,17 @@ function installAppMenu() {
     Menu.buildFromTemplate([
       ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
       {
+        label: "File",
+        submenu: [
+          {
+            label: "New Window",
+            accelerator: "CommandOrControl+N",
+            click: () => createWindow(false, true),
+          },
+          { role: "close" },
+        ],
+      },
+      {
         label: "Companion",
         submenu: [
           { label: "Open Companion Window", click: openCompanion },
@@ -371,7 +391,7 @@ const loadHome = async (window) => {
     else window.close();
   }
 };
-function createWindow(companion = false) {
+function createWindow(companion = false, additional = false) {
   const window = new BrowserWindow({
     title: companion ? "KovaGPT Companion" : "KovaGPT",
     width: companion ? 540 : 1280,
@@ -385,6 +405,7 @@ function createWindow(companion = false) {
     webPreferences: { ...WEB_PREFERENCES },
   });
   if (companion) companionWindow = window;
+  else if (additional) extraWindows.add(window);
   else mainWindow = window;
   window.webContents.setUserAgent(
     `${window.webContents.getUserAgent()} KovaGPTDesktop/${app.getVersion()}`,
@@ -394,14 +415,14 @@ function createWindow(companion = false) {
     if (isKovaUrl(url)) return;
     event.preventDefault();
     // A navigation needs a second explicit confirmation before leaving the app.
-    void confirmExternal(url);
+    void confirmExternal(url, window);
   });
   window.webContents.on("will-redirect", (event, url) => {
     if (!isKovaUrl(url)) event.preventDefault();
   });
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (isKovaUrl(url)) void window.loadURL(url).catch(() => {});
-    else void confirmExternal(url);
+    else void confirmExternal(url, window);
     return { action: "deny" };
   });
   window.webContents.on("render-process-gone", () => {
@@ -410,6 +431,7 @@ function createWindow(companion = false) {
   window.on("closed", () => {
     if (mainWindow === window) mainWindow = null;
     if (companionWindow === window) companionWindow = null;
+    extraWindows.delete(window);
   });
   void loadHome(window);
   return window;
@@ -433,20 +455,20 @@ else {
     // Requests must come from Kova's main frame and still require a user choice.
     appSession.setPermissionCheckHandler(
       (contents, permission, origin) =>
-        (contents === mainWindow?.webContents || contents === companionWindow?.webContents) &&
+        Boolean(ownedWindowFor(contents)) &&
         isKovaUrl(origin) &&
         ["media", "notifications"].includes(permission),
     );
     appSession.setPermissionRequestHandler(async (contents, permission, callback, details) => {
+      const target = ownedWindowFor(contents);
       if (
-        (contents !== mainWindow?.webContents && contents !== companionWindow?.webContents) ||
+        !target ||
         !isKovaUrl(contents.getURL()) ||
         !isKovaUrl(details.requestingUrl) ||
         details.isMainFrame !== true ||
         !["media", "notifications"].includes(permission)
       )
         return callback(false);
-      const target = contents === companionWindow?.webContents ? companionWindow : mainWindow;
       const { response } = await dialog.showMessageBox(target, {
         type: "question",
         title: "KovaGPT permission",
@@ -460,7 +482,7 @@ else {
       });
       callback(
         response === 1 &&
-          (mainWindow === target || companionWindow === target) &&
+          ownedWindowFor(contents) === target &&
           !target.isDestroyed() &&
           isKovaUrl(contents.getURL()),
       );
