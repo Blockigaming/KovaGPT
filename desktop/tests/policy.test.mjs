@@ -71,7 +71,10 @@ test("remote web content has no desktop privileges", () => {
 
 test("desktop companion accelerators are limited to reviewed choices", () => {
   assert.deepEqual(COMPANION_SHORTCUTS, [
-    "Alt+Space", "CommandOrControl+Shift+Space", "CommandOrControl+Shift+K", "Disabled",
+    "Alt+Space",
+    "CommandOrControl+Shift+Space",
+    "CommandOrControl+Shift+K",
+    "Disabled",
   ]);
   assert.equal(defaultCompanionShortcut("darwin"), "Alt+Space");
   assert.equal(defaultCompanionShortcut("win32"), "Alt+Space");
