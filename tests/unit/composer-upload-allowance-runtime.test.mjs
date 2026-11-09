@@ -100,7 +100,10 @@ test("principal transition excludes old counts and guests issue no usage read", 
   await settle();
   f.render();
   assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 0\s*% used/);
-  assert.doesNotMatch(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100\s*% used/);
+  assert.doesNotMatch(
+    text(f.tree).replace(/\s+/g, " "),
+    /Today's upload allowance is 100\s*% used/,
+  );
   f.render({ ownerId: null });
   f.render();
   assert.match(text(f.tree).replace(/\s+/g, " "), /Sign in/);
