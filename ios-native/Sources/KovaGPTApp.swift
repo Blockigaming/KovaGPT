@@ -2,11 +2,14 @@ import SwiftUI
 import WebKit
 import VisionKit
 import PDFKit
+import PhotosUI
 
 /// Shortcuts accept only known in-app actions, never arbitrary web URLs or commands.
 private enum NativeShortcut: String {
     case newChat = "new-chat"
     case scan = "scan"
+    case camera = "camera"
+    case photos = "photos"
 
     init?(url: URL) {
         guard url.scheme?.lowercased() == "kovagpt",
@@ -55,7 +58,10 @@ struct NativeBrowser: UIViewControllerRepresentable {
 /// Native iPhone/iPad viewer with no JavaScript bridge, automatic screen capture or
 /// privileged WKScriptMessageHandler. All document scans remain local until shared.
 final class BrowserController: UIViewController, WKNavigationDelegate,
-                               VNDocumentCameraViewControllerDelegate {
+                               VNDocumentCameraViewControllerDelegate,
+                               UINavigationControllerDelegate,
+                               UIImagePickerControllerDelegate,
+                               PHPickerViewControllerDelegate {
     private var browser: WKWebView!
     private var lastShortcutID: UUID?
     private var pendingShortcut: NativeShortcut?
@@ -81,6 +87,10 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
             browser.load(URLRequest(url: URL(string: "https://kovagpt.com/")!))
         case .scan:
             scanDocument()
+        case .camera:
+            takePhoto()
+        case .photos:
+            choosePhoto()
         }
     }
 
@@ -202,6 +212,79 @@ final class BrowserController: UIViewController, WKNavigationDelegate,
         })
         alert.addAction(UIAlertAction(title: "Close", style: .cancel))
         present(alert, animated: true)
+    }
+
+    /// Only a user-initiated shortcut can present these native selectors.
+    /// A selected image is shared explicitly, never sent to Kova's servers.
+    private func takePhoto() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            showMessage("A camera is not available on this device.")
+            return
+        }
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func choosePhoto() {
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.selectionLimit = 1
+        configuration.filter = .images
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func shareChosenPhoto(_ image: UIImage) {
+        // Re-encoding excludes the original file's metadata, including GPS tags.
+        guard let data = image.jpegData(compressionQuality: 0.9) else {
+            showMessage("This image could not be prepared.")
+            return
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("KovaGPT-Photo-\\(UUID().uuidString)")
+            .appendingPathExtension("jpg")
+        do {
+            try data.write(to: url, options: .atomic)
+            share([url])
+        } catch {
+            showMessage("Could not prepare the selected photo.")
+        }
+    }
+
+    func imagePickerController(_ picker: UIImagePickerController,
+                               didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        picker.dismiss(animated: true) {
+            guard let image = info[.originalImage] as? UIImage else {
+                self.showMessage("No image was captured.")
+                return
+            }
+            self.shareChosenPhoto(image)
+        }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+    }
+
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        guard let provider = results.first?.itemProvider else { return }
+        guard provider.canLoadObject(ofClass: UIImage.self) else {
+            showMessage("This photo cannot be opened.")
+            return
+        }
+        provider.loadObject(ofClass: UIImage.self) { [weak self] item, _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard let image = item as? UIImage else {
+                    self.showMessage("The selected photo could not be loaded.")
+                    return
+                }
+                self.shareChosenPhoto(image)
+            }
+        }
     }
 
     @objc private func scanDocument() {
