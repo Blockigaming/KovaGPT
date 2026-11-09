@@ -75,6 +75,10 @@ export function selectOAuthTokens(providerId, payload) {
   };
 }
 
+export function oauthRefreshEndpoint(providerId, tokenEndpoint) {
+  return providerId === "figma" ? "https://api.figma.com/v1/oauth/refresh" : tokenEndpoint;
+}
+
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
   if (
     ![
@@ -115,8 +119,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
         Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
       },
       body: new URLSearchParams({
-        grant_type: "refresh_token",
-        ...(providerId === "figma" ? {} : { client_id: clientId }),
+        ...(providerId === "figma" ? {} : { grant_type: "refresh_token", client_id: clientId }),
         refresh_token: refreshToken,
       }),
       redirect: "error",
