@@ -141,12 +141,19 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows = data.value;
-  if (id === "calendly") rows = data.collection;
-  else if (id === "notion") rows = data.results;
-  else if (id === "linear") rows = data.data?.issues?.nodes;
-  else if (id === "slack") rows = data.messages?.matches;
-  else if (id === "dropbox") rows = data.matches;
-  else if (id === "box") rows = data.entries;
+  if (id === "calendly") {
+    rows = data.collection;
+  } else if (id === "notion") {
+    rows = data.results;
+  } else if (id === "linear") {
+    rows = data.data?.issues?.nodes;
+  } else if (id === "slack") {
+    rows = data.messages?.matches;
+  } else if (id === "dropbox") {
+    rows = data.matches;
+  } else if (id === "box") {
+    rows = data.entries;
+  }
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
   if (id === "ms-teams" || id === "calendly")
     rows = rows.filter((row) =>
@@ -166,7 +173,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
         ? null
         : safeConnectionLink(url);
     let snippet = str(row.bodyPreview ?? row.description ?? row.text);
-    if (id === "outlook-calendar")
+    if (id === "outlook-calendar") {
       snippet = [
         row.start?.dateTime &&
           `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
@@ -175,14 +182,16 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
       ]
         .filter(Boolean)
         .join("; ");
-    else if (id === "calendly")
+    } else if (id === "calendly") {
       snippet = [
         row.start_time && `Start: ${str(row.start_time, 60)}`,
         row.end_time && `End: ${str(row.end_time, 60)}`,
       ]
         .filter(Boolean)
         .join("; ");
-    else if (id === "dropbox") snippet = str(row.path_display);
+    } else if (id === "dropbox") {
+      snippet = str(row.path_display);
+    }
     const item = {
       id: str(row.id ?? row.ts ?? (id === "calendly" ? row.uri : ""), 300),
       title:
