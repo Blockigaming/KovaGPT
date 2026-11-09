@@ -172,9 +172,7 @@ if (scope === "public") {
     await expect(composer).toBeVisible();
     // Offline, pending and retrying states are intentionally quiet; severe
     // device errors and conflicts still have their own visible recovery flow.
-    await expect(
-      page.getByLabel("Chat history synchronization", { exact: true }),
-    ).toHaveCount(0);
+    await expect(page.getByLabel("Chat history synchronization", { exact: true })).toHaveCount(0);
     await page.screenshot({ path: info.outputPath("quiet-sync-recovery.png") });
   });
 
@@ -190,17 +188,13 @@ if (scope === "public") {
     const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     await expect(composer).toBeVisible();
     await expect.poll(() => requests).toBeGreaterThan(0);
-    await expect(
-      page.getByLabel("Chat history synchronization", { exact: true }),
-    ).toHaveCount(0);
+    await expect(page.getByLabel("Chat history synchronization", { exact: true })).toHaveCount(0);
     const before = await composer.boundingBox();
     expect(before).not.toBeNull();
     await page.reload({ waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(composer).toBeVisible();
-    await expect(
-      page.getByLabel("Chat history synchronization", { exact: true }),
-    ).toHaveCount(0);
+    await expect(page.getByLabel("Chat history synchronization", { exact: true })).toHaveCount(0);
     const after = await composer.boundingBox();
     expect(after).not.toBeNull();
     expect(Math.abs(after!.y - before!.y)).toBeLessThanOrEqual(1);
@@ -260,9 +254,7 @@ if (scope === "public") {
     }
   }
 
-  test("appearance controls fit at enlarged UI size", async ({
-    page,
-  }, info) => {
+  test("appearance controls fit at enlarged UI size", async ({ page }, info) => {
     await coreFixture(page, "dark", "plus");
     await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
