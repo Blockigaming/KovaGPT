@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 import { AudioLines, Captions, Info, Loader2, Mic, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -34,6 +34,7 @@ export interface ComposerVoiceDialogViewProps {
   availability: ComposerVoiceAvailability;
   hasTranscript: boolean;
   handsFreeListening?: boolean;
+  inputLevel?: number;
   microphoneAvailable?: boolean;
   replyAvailable?: boolean;
   error?: string;
@@ -64,6 +65,7 @@ export function ComposerVoiceDialogView({
   availability,
   hasTranscript,
   handsFreeListening = false,
+  inputLevel = 0,
   microphoneAvailable = true,
   replyAvailable = true,
   error,
@@ -209,7 +211,17 @@ export function ComposerVoiceDialogView({
         <div className="kova-voice-body">
           <div className="kova-voice-canvas">
             {ready && !contentFirst && (
-              <div className="kova-voice-orb-shell" aria-hidden="true">
+              <div
+                className="kova-voice-orb-shell"
+                aria-hidden="true"
+                style={
+                  {
+                    "--kova-voice-orb-scale": String(
+                      1 + Math.max(0, Math.min(1, inputLevel)) * 0.18,
+                    ),
+                  } as CSSProperties
+                }
+              >
                 <div className="kova-voice-orb-glow" />
                 <svg
                   className="kova-voice-mark"
