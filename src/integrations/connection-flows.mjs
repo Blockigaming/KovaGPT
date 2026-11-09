@@ -67,6 +67,14 @@ export const CONNECTION_FLOWS = {
     label: "Slack",
     description: "Search Slack messages visible to your connected user.",
   },
+  figma: {
+    provider: "figma",
+    scopes: ["file_metadata:read"],
+    tool: "figma_file_lookup",
+    label: "Figma",
+    description:
+      "Read metadata for a Figma file by its exact file URL or key. This is not a search of all Figma files.",
+  },
   calendly: {
     provider: "calendly",
     scopes: ["users:read", "scheduled_events:read"],
@@ -144,6 +152,7 @@ export function connectionAuthorizationUrl(provider, value) {
     dropbox: "https://www.dropbox.com/oauth2/authorize",
     box: "https://account.box.com/api/oauth2/authorize",
     calendly: "https://auth.calendly.com/oauth/authorize",
+    figma: "https://www.figma.com/oauth",
   };
   try {
     const url = new URL(value),
