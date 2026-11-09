@@ -55,9 +55,8 @@ async function workFixture(
 }
 
 for (const legacy of [true, false]) {
-  test(`sidebar excludes Work ${legacy ? "even in saved legacy shortcuts" : "from the default navigation"}`, async ({
-    page,
-  }) => {
+  const caseName = legacy ? "even in saved legacy shortcuts" : "from the default navigation";
+  test(`sidebar excludes Work ${caseName}`, async ({ page }) => {
     const commands = await workFixture(page, "free", true);
     await page.goto("/");
     await waitForKovaHydration(page);
