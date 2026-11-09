@@ -5,6 +5,8 @@ import {
   desktopCapturer,
   dialog,
   globalShortcut,
+  ipcMain,
+  protocol,
   Menu,
   nativeImage,
   Tray,
@@ -24,10 +26,13 @@ import {
   defaultCompanionShortcut,
   validatedCompanionShortcut,
 } from "./policy.mjs";
+import { installLocalWorkspace, registerWorkspaceScheme } from "./workspace-host.mjs";
 
 // The remote page gets no preload, IPC bridge, filesystem, shell, or Node access.
 app.enableSandbox();
 app.setName("KovaGPT");
+registerWorkspaceScheme(protocol);
+let openLocalWorkspace = () => {};
 let mainWindow = null;
 let companionWindow = null;
 const extraWindows = new Set();
@@ -408,6 +413,11 @@ function installAppMenu() {
             accelerator: "CommandOrControl+N",
             click: () => createWindow(false, true),
           },
+          {
+            label: "Open Local Coding Workspace",
+            accelerator: "CommandOrControl+Shift+E",
+            click: () => openLocalWorkspace(),
+          },
           { label: "Copy local source file...", click: () => void copyLocalSourceFile() },
           { role: "close" },
         ],
@@ -552,6 +562,16 @@ else {
           !target.isDestroyed() &&
           isKovaUrl(contents.getURL()),
       );
+    });
+    // A separate offline partition and validated IPC; never a remote web preload.
+    openLocalWorkspace = installLocalWorkspace({
+      BrowserWindow,
+      ipcMain,
+      protocol,
+      session,
+      dialog,
+      assetsPath: app.getAppPath(),
+      iconPath: join(process.resourcesPath, "kova-logo.png"),
     });
     const savedDesktopPreferences = readDesktopPreferences();
     selectedCompanionShortcut = loadCompanionShortcut();
