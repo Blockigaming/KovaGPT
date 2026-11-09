@@ -526,6 +526,19 @@ export function SettingsDialog({
     };
   }, [open, tab, loggedIn, userKey, usageRetry]);
 
+  // An already-open Usage/Billing screen must refresh exactly when its current
+  // window expires. The server remains authoritative for the next percentage.
+  useEffect(() => {
+    if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn || !userKey || !usage)
+      return;
+    const resets = usage.windows.map(({ resetsAt }) => Date.parse(resetsAt));
+    if (resets.length === 0 || resets.some((time) => !Number.isFinite(time))) return;
+    const nextReset = Math.min(...resets);
+    const delay = Math.min(2_147_483_647, Math.max(1_000, nextReset - Date.now() + 500));
+    const timer = window.setTimeout(() => setUsageRetry((value) => value + 1), delay);
+    return () => window.clearTimeout(timer);
+  }, [open, tab, loggedIn, userKey, usage]);
+
   useEffect(() => {
     if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
     let cancelled = false;
@@ -1995,9 +2008,10 @@ export function SettingsDialog({
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
                   <p className="text-sm text-muted-foreground">
-                    Free chat usage resets daily. Plus has 5-hour and weekly chat limits, and Pro
-                    has a weekly chat limit. Each bar shows the higher of the regular and Thinking
-                    usage percentages. Token limits also apply to longer conversations.
+                    Free and Plus have rolling 5-hour and weekly chat usage meters. The 5-hour
+                    meter refreshes hourly as older activity expires. Pro has one weekly chat
+                    meter. Percentages reflect regular, Thinking, and cost-weighted usage, with
+                    additional token safety limits for longer conversations.
                   </p>
                   <Link
                     to="/pricing"
