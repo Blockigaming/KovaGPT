@@ -1699,9 +1699,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "calendly",
     label: "Calendly",
-    description: "Reference scheduled meetings and event links.",
+    description: "Find your scheduled meetings by name. Requires OAuth setup and consent.",
     category: "Calendar",
-    status: "planned",
+    status: "setup_required",
     domain: "calendly.com",
   },
   {
