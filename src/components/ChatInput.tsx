@@ -1765,7 +1765,12 @@ export function ChatInput({
           </button>
         </div>
         {showSketchMention ? (
-          <div id="kova-sketch-mention-suggestion" role="group" aria-label="Mention suggestions" className="px-3 pb-2">
+          <div
+            id="kova-sketch-mention-suggestion"
+            role="group"
+            aria-label="Mention suggestions"
+            className="px-3 pb-2"
+          >
             <button
               type="button"
               className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-popover px-3 text-left text-sm text-popover-foreground"
