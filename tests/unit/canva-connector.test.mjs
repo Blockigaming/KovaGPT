@@ -96,7 +96,10 @@ test("Canva token exchange requires PKCE and confidential Basic authentication",
   const req = oauthTokenRequest(input);
   assert.equal(req.method, "POST");
   assert.equal(req.headers["Content-Type"], "application/x-www-form-urlencoded");
-  assert.equal(req.headers.Authorization, "Basic " + Buffer.from("client:secret").toString("base64"));
+  assert.equal(
+    req.headers.Authorization,
+    "Basic " + Buffer.from("client:secret").toString("base64"),
+  );
   assert.equal(req.body.get("grant_type"), "authorization_code");
   assert.equal(req.body.get("code_verifier"), input.verifier);
   assert.equal(req.body.get("client_secret"), null);
