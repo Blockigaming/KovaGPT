@@ -1162,7 +1162,9 @@ export function SettingsDialog({
         keywords: item.keywords ?? [],
         description: SETTINGS_DESCRIPTIONS[item.v] ?? "",
         groups: [
-          ...groups.filter((group) => group.tabs.some((tab) => tab.v === item.v)).map((group) => group.title),
+          ...groups
+            .filter((group) => group.tabs.some((tab) => tab.v === item.v))
+            .map((group) => group.title),
           ...destinationGroups
             .filter((group) => group.tabs.some((tab) => tab.v === item.v))
             .map((group) => group.title),
