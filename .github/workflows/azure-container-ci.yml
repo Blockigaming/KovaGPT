@@ -57,13 +57,6 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Diagnose desktop formatting
-        if: steps.scope.outputs.run == 'true'
-        run: |
-          npx --no-install prettier --write desktop/main.mjs desktop/tests/policy.test.mjs desktop/tests/window.test.mjs
-          git diff -- desktop/main.mjs desktop/tests/policy.test.mjs desktop/tests/window.test.mjs
-          git checkout -- desktop/main.mjs desktop/tests/policy.test.mjs desktop/tests/window.test.mjs
-
       - name: Formatting changed files
         if: steps.scope.outputs.run == 'true'
         run: npm run format:check:changed
