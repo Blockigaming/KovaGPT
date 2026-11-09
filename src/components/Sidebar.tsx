@@ -1741,13 +1741,7 @@ export function Sidebar({
                 <button
                   className="kova-nav-row"
                   type="button"
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();
-                    else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen(true);
-                    }
-                  }}
+                  onClick={openChatSearch}
                 >
                   View all chats
                 </button>
