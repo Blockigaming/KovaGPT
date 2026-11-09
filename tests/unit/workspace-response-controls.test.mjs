@@ -59,6 +59,7 @@ function fixture({ current = true, quickAnswer = false } = {}) {
     nextConvId: "chat",
     priorMessages: [],
     newId: () => "new-attempt",
+    approvedOneShot: undefined,
   };
   new Function(...Object.keys(dependencies), compiled)(...Object.values(dependencies));
   return { controller, skipThinkingRef, retryGenerationRef, inFlightRef, calls };
