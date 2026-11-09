@@ -1,7 +1,7 @@
 export type VerifiedReadAccount = {
   id: string;
   provider_id: string;
-  updated_at: string;
+  updated_at: string | null;
 };
 export type VerifiedReadEvent = {
   linked_account_id: string | null;
