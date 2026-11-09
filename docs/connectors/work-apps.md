@@ -11,8 +11,8 @@ Google and GitHub use their dedicated connection flows. Microsoft covers Outlook
 | Linear     | `https://kovagpt.com/api/integrations/oauth/callback/linear`     | `LINEAR_OAUTH_CLIENT_ID`, `LINEAR_OAUTH_CLIENT_SECRET`         | Issue title search with the `read` scope                                                             |
 | Slack      | `https://kovagpt.com/api/integrations/oauth/callback/slack`      | `SLACK_OAUTH_CLIENT_ID`, `SLACK_OAUTH_CLIENT_SECRET`           | Message search with the user's `search:read` token                                                   |
 | Salesforce | `https://kovagpt.com/api/integrations/oauth/callback/salesforce` | `SALESFORCE_OAUTH_CLIENT_ID`, `SALESFORCE_OAUTH_CLIENT_SECRET` | Name search over an explicitly selected Account, Contact or Opportunity record type                  |
-| Dropbox    | `https://kovagpt.com/api/integrations/oauth/callback/dropbox`    | `DROPBOX_OAUTH_CLIENT_ID`, `DROPBOX_OAUTH_CLIENT_SECRET`    | Bounded file/folder metadata search with `files.metadata.read`; refresh needs offline authorization |
-| Box        | `https://kovagpt.com/api/integrations/oauth/callback/box`        | `BOX_OAUTH_CLIENT_ID`, `BOX_OAUTH_CLIENT_SECRET`            | Bounded file search; access is controlled by the Box app's read scope and account permissions         |
+| Dropbox    | `https://kovagpt.com/api/integrations/oauth/callback/dropbox`    | `DROPBOX_OAUTH_CLIENT_ID`, `DROPBOX_OAUTH_CLIENT_SECRET`       | Bounded file/folder metadata search with `files.metadata.read`; refresh needs offline authorization  |
+| Box        | `https://kovagpt.com/api/integrations/oauth/callback/box`        | `BOX_OAUTH_CLIENT_ID`, `BOX_OAUTH_CLIENT_SECRET`               | Bounded file search; access is controlled by the Box app's read scope and account permissions        |
 
 Provider settings can require administrator consent, workspace installation, public distribution approval, verification or account eligibility. Configuring an app for one workspace does not prove it can be installed by other workspaces.
 
