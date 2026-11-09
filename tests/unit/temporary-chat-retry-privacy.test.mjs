@@ -61,6 +61,7 @@ function fixture() {
     },
     userMsg: { id: "original-request-id" },
     retryTool: null,
+    approvedOneShot: undefined,
     text: "temporary prompt",
     atts: [],
     priorMessages: [],
