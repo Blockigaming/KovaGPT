@@ -43,3 +43,14 @@ It invokes the operating system's login-item API and verifies the result.
 Unsigned/unpackaged previews and Linux do not claim automatic startup.
 Installation tests must confirm the actual OS shortcut, window focus,
 permission prompts and launch-item persistence before public distribution.
+
+## macOS menu bar and Dock preferences
+
+On macOS, **Companion → Show menu bar icon** creates a native Tray icon
+with actions to open the main app, open the companion, or quit. The icon is
+loaded from the packaged local Kova asset, never supplied by a web page.
+**Companion → Show Dock icon** controls the system Dock appearance. The app
+refuses to hide the Dock icon unless the menu bar icon is active, so both
+entry points cannot be hidden simultaneously. The toggles are stored in
+local preferences with the approved shortcut. The tray is destroyed on quit.
+Physical Mac installation and menu bar/Dock verification remain required.

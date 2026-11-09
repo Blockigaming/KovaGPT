@@ -5,7 +5,7 @@ import { EventEmitter } from "node:events";
 import vm from "node:vm";
 import * as policy from "../policy.mjs";
 
-async function fixture() {
+async function fixture(platform = "linux") {
   const app = new EventEmitter();
   Object.assign(app, {
     enableSandbox() {},
@@ -23,7 +23,30 @@ async function fixture() {
     external = [],
     prompts = [],
     menus = [],
-    copiedImages = [];
+    copiedImages = [],
+    trays = [],
+    dockEvents = [];
+  app.dock = {
+    show: () => dockEvents.push("show"),
+    hide: () => dockEvents.push("hide"),
+  };
+  class TestTray extends EventEmitter {
+    constructor(icon) {
+      super();
+      this.icon = icon;
+      this.destroyed = false;
+      trays.push(this);
+    }
+    setToolTip(value) {
+      this.tooltip = value;
+    }
+    setContextMenu(value) {
+      this.menu = value;
+    }
+    destroy() {
+      this.destroyed = true;
+    }
+  }
   let permissions, checks;
   class Window extends EventEmitter {
     constructor(options) {
@@ -56,7 +79,7 @@ async function fixture() {
   const source = readFileSync(new URL("../main.mjs", import.meta.url), "utf8")
     .replace(
       /^import \{[\s\S]*?\} from "electron";$/m,
-      "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, Menu, session, shell, systemPreferences } = electron;",
+      "const { app, BrowserWindow, clipboard, desktopCapturer, dialog, globalShortcut, Menu, nativeImage, Tray, session, shell, systemPreferences } = electron;",
     )
     .replace(/^import .* from "node:path";$/m, "const join = (...parts) => parts.join('/');")
     .replace(
@@ -69,11 +92,21 @@ async function fixture() {
     );
   vm.runInNewContext(source, {
     policy,
-    process: { platform: "linux", resourcesPath: "/app/resources" },
+    process: { platform, resourcesPath: "/app/resources" },
     URL,
     electron: {
       app,
       BrowserWindow: Window,
+      Tray: TestTray,
+      nativeImage: {
+        createFromPath: () => ({
+          resize() {
+            return this;
+          },
+          isEmpty: () => false,
+          setTemplateImage() {},
+        }),
+      },
       clipboard: { writeImage: (image) => copiedImages.push(image) },
       desktopCapturer: {
         getSources: async () => [{ thumbnail: { isEmpty: () => false } }],
@@ -122,6 +155,8 @@ async function fixture() {
     windows,
     menus,
     copiedImages,
+    trays,
+    dockEvents,
   };
 }
 
@@ -198,4 +233,26 @@ test("screen capture needs two native choices and only copies to clipboard", asy
   assert.equal(f.prompts[0].title, "Copy a screen image?");
   assert.equal(f.prompts[1].title, "Choose screen");
   assert.equal(f.copiedImages.length, 1);
+});
+
+test("macOS menu bar and Dock preferences preserve a visible native entry point", async () => {
+  const f = await fixture("darwin");
+  const companion = () => f.menus.at(-1).find((item) => item.label === "Companion");
+  const choice = (label) => companion().submenu.find((item) => item.label === label);
+  assert.ok(choice("Show menu bar icon"));
+  assert.ok(choice("Show Dock icon"));
+  choice("Show menu bar icon").click({ checked: true });
+  assert.equal(f.trays.length, 1);
+  assert.equal(f.trays[0].tooltip, "KovaGPT");
+  assert.equal(choice("Show menu bar icon").checked, true);
+  choice("Show Dock icon").click({ checked: false });
+  assert.deepEqual(f.dockEvents, ["hide"]);
+  assert.equal(choice("Show Dock icon").checked, false);
+  choice("Show menu bar icon").click({ checked: false });
+  assert.equal(f.trays[0].destroyed, true);
+  assert.deepEqual(f.dockEvents, ["hide", "show"]);
+  assert.equal(choice("Show Dock icon").checked, true);
+  choice("Show Dock icon").click({ checked: false });
+  assert.equal(f.prompts.at(-1).title, "Keep an app entry point");
+  assert.deepEqual(f.dockEvents, ["hide", "show"]);
 });

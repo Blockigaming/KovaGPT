@@ -6,6 +6,8 @@ import {
   dialog,
   globalShortcut,
   Menu,
+  nativeImage,
+  Tray,
   session,
   shell,
   systemPreferences,
@@ -31,24 +33,41 @@ let companionWindow = null;
 let ready = false;
 let selectedCompanionShortcut = defaultCompanionShortcut(process.platform);
 let registeredCompanionShortcut = null;
+let menuBarTray = null;
+let showMenuBarIcon = false;
+let showDockIcon = true;
 const preferencesPath = () => join(app.getPath("userData"), "desktop-preferences.json");
-function loadCompanionShortcut() {
+function readDesktopPreferences() {
   try {
     const saved = JSON.parse(readFileSync(preferencesPath(), "utf8"));
-    return validatedCompanionShortcut(saved?.companionShortcut, process.platform);
+    return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
   } catch {
-    return defaultCompanionShortcut(process.platform);
+    return {};
   }
 }
-function saveCompanionShortcut(value) {
+function loadCompanionShortcut() {
+  return validatedCompanionShortcut(readDesktopPreferences().companionShortcut, process.platform);
+}
+function persistDesktopPreferences(updates) {
   try {
-    writeFileSync(preferencesPath(), JSON.stringify({ companionShortcut: value }) + "\n", {
-      mode: 0o600,
-    });
+    const current = readDesktopPreferences();
+    writeFileSync(
+      preferencesPath(),
+      JSON.stringify({
+        companionShortcut: validatedCompanionShortcut(current.companionShortcut, process.platform),
+        showMenuBarIcon: current.showMenuBarIcon === true,
+        showDockIcon: current.showDockIcon !== false,
+        ...updates,
+      }) + "\n",
+      { mode: 0o600 },
+    );
     return true;
   } catch {
     return false;
   }
+}
+function saveCompanionShortcut(value) {
+  return persistDesktopPreferences({ companionShortcut: value });
 }
 
 const confirmExternal = async (value) => {
@@ -171,6 +190,51 @@ async function copyScreenToClipboard() {
   }
 }
 
+/** The remote renderer has no bridge to the native macOS menu bar or Dock. */
+function setMenuBarIcon(visible) {
+  if (process.platform !== "darwin" || !ready) return false;
+  if (!visible) {
+    menuBarTray?.destroy();
+    menuBarTray = null;
+    showMenuBarIcon = false;
+    return true;
+  }
+  if (menuBarTray) return true;
+  try {
+    const icon = nativeImage.createFromPath(join(process.resourcesPath, "kova-logo.png")).resize({
+      width: 18,
+      height: 18,
+    });
+    if (icon.isEmpty()) return false;
+    icon.setTemplateImage(true);
+    const tray = new Tray(icon);
+    tray.setToolTip("KovaGPT");
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: "Open KovaGPT", click: openApp },
+        { label: "Open Companion Window", click: openCompanion },
+        { type: "separator" },
+        { label: "Quit KovaGPT", click: () => app.quit() },
+      ]),
+    );
+    tray.on("click", openApp);
+    menuBarTray = tray;
+    showMenuBarIcon = true;
+    return true;
+  } catch {
+    return false;
+  }
+}
+function setDockIcon(visible) {
+  // Never hide both ways of reopening the installed app.
+  if (process.platform !== "darwin" || !app.dock || (!visible && !showMenuBarIcon))
+    return false;
+  if (visible) void app.dock.show();
+  else app.dock.hide();
+  showDockIcon = visible;
+  return true;
+}
+
 function installAppMenu() {
   const shortcutItems = COMPANION_SHORTCUTS.map((value) => ({
     label: value === "Alt+Space" && process.platform === "darwin" ? "Option+Space" : value,
@@ -204,6 +268,62 @@ function installAppMenu() {
           },
         ]
       : [];
+  const macPlacement =
+    process.platform === "darwin"
+      ? [
+          {
+            label: "Show menu bar icon",
+            type: "checkbox",
+            checked: showMenuBarIcon,
+            click: (item) => {
+              if (!setMenuBarIcon(item.checked)) {
+                dialog.showMessageBoxSync({
+                  type: "warning",
+                  title: "Menu bar setting unchanged",
+                  message: "The KovaGPT app icon could not be loaded.",
+                  buttons: ["OK"],
+                });
+                installAppMenu();
+                return;
+              }
+              if (!showMenuBarIcon && !showDockIcon) setDockIcon(true);
+              if (!persistDesktopPreferences({ showMenuBarIcon, showDockIcon }))
+                dialog.showMessageBoxSync({
+                  type: "warning",
+                  title: "Preference not saved",
+                  message: "The menu bar choice works now but could not be saved.",
+                  buttons: ["OK"],
+                });
+              installAppMenu();
+            },
+          },
+          {
+            label: "Show Dock icon",
+            type: "checkbox",
+            checked: showDockIcon,
+            click: (item) => {
+              if (!setDockIcon(item.checked)) {
+                dialog.showMessageBoxSync({
+                  type: "warning",
+                  title: "Keep an app entry point",
+                  message: "Enable the menu bar icon before hiding KovaGPT from the Dock.",
+                  buttons: ["OK"],
+                });
+                installAppMenu();
+                return;
+              }
+              if (!persistDesktopPreferences({ showMenuBarIcon, showDockIcon }))
+                dialog.showMessageBoxSync({
+                  type: "warning",
+                  title: "Preference not saved",
+                  message: "The Dock choice works now but could not be saved.",
+                  buttons: ["OK"],
+                });
+              installAppMenu();
+            },
+          },
+        ]
+      : [];
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
@@ -214,6 +334,7 @@ function installAppMenu() {
           { label: "Keyboard shortcut", submenu: shortcutItems },
           { label: "Copy screen to clipboard...", click: () => void copyScreenToClipboard() },
           ...launchSetting,
+          ...macPlacement,
         ],
       },
       { role: "editMenu" },
@@ -334,17 +455,27 @@ else {
           isKovaUrl(contents.getURL()),
       );
     });
+    const savedDesktopPreferences = readDesktopPreferences();
     selectedCompanionShortcut = loadCompanionShortcut();
     if (
       !registerCompanionShortcut(selectedCompanionShortcut) &&
       !registerCompanionShortcut("CommandOrControl+Shift+Space")
     )
       registerCompanionShortcut("Disabled");
+    if (process.platform === "darwin") {
+      setMenuBarIcon(savedDesktopPreferences.showMenuBarIcon === true);
+      if (savedDesktopPreferences.showDockIcon === false && showMenuBarIcon)
+        setDockIcon(false);
+    }
     installAppMenu();
     createWindow();
   });
   app.on("activate", openApp);
-  app.on("will-quit", () => globalShortcut.unregisterAll());
+  app.on("will-quit", () => {
+    globalShortcut.unregisterAll();
+    menuBarTray?.destroy();
+    menuBarTray = null;
+  });
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
   });
