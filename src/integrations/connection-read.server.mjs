@@ -140,20 +140,13 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
-  let rows =
-    id === "calendly"
-      ? data.collection
-      : id === "notion"
-        ? data.results
-        : id === "linear"
-          ? data.data?.issues?.nodes
-          : id === "slack"
-            ? data.messages?.matches
-            : id === "dropbox"
-              ? data.matches
-              : id === "box"
-                ? data.entries
-                : data.value;
+  let rows = data.value;
+  if (id === "calendly") rows = data.collection;
+  else if (id === "notion") rows = data.results;
+  else if (id === "linear") rows = data.data?.issues?.nodes;
+  else if (id === "slack") rows = data.messages?.matches;
+  else if (id === "dropbox") rows = data.matches;
+  else if (id === "box") rows = data.entries;
   if (!Array.isArray(rows)) throw new Error("invalid_connection_response");
   if (id === "ms-teams" || id === "calendly")
     rows = rows.filter((row) =>
@@ -167,37 +160,37 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     // Dropbox search matches wrap the actual file/folder metadata twice.
     const row = id === "dropbox" ? match?.metadata?.metadata : match;
     if (!row || typeof row !== "object") continue;
-    const url =
-      id === "calendly"
+    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
+    const safeUrl =
+      id === "calendly" || typeof url !== "string" || url.length > 2048
         ? null
-        : row.webLink ?? row.webUrl ?? row.url ?? row.permalink ?? row.shared_link?.url;
+        : safeConnectionLink(url);
+    let snippet = str(row.bodyPreview ?? row.description ?? row.text);
+    if (id === "outlook-calendar")
+      snippet = [
+        row.start?.dateTime &&
+          `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
+        row.end?.dateTime &&
+          `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
+      ]
+        .filter(Boolean)
+        .join("; ");
+    else if (id === "calendly")
+      snippet = [
+        row.start_time && `Start: ${str(row.start_time, 60)}`,
+        row.end_time && `End: ${str(row.end_time, 60)}`,
+      ]
+        .filter(Boolean)
+        .join("; ");
+    else if (id === "dropbox") snippet = str(row.path_display);
     const item = {
       id: str(row.id ?? row.ts ?? (id === "calendly" ? row.uri : ""), 300),
       title:
         id === "notion"
           ? title(row)
           : str(row.subject ?? row.name ?? row.displayName ?? row.title ?? row.text, 300),
-      url: typeof url === "string" && url.length <= 2048 ? safeConnectionLink(url) : null,
-      snippet:
-        id === "outlook-calendar"
-          ? [
-              row.start?.dateTime &&
-                `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
-              row.end?.dateTime &&
-                `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
-            ]
-              .filter(Boolean)
-              .join("; ")
-          : id === "calendly"
-            ? [
-                row.start_time && `Start: ${str(row.start_time, 60)}`,
-                row.end_time && `End: ${str(row.end_time, 60)}`,
-              ]
-                .filter(Boolean)
-                .join("; ")
-            : id === "dropbox"
-              ? str(row.path_display)
-              : str(row.bodyPreview ?? row.description ?? row.text),
+      url: safeUrl,
+      snippet,
     };
     // Measure the serialized UTF-8 result, including JSON escaping. A provider
     // can return control characters or very large URLs; never cut serialized
