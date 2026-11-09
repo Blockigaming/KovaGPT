@@ -61,6 +61,14 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: npm run format:check:changed
 
+      - name: Diagnose exact composer formatting differences
+        if: failure() && steps.scope.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx prettier --write src/components/ChatInput.tsx tests/unit/composer-mobile-longpress.test.mjs >/dev/null
+          git diff -- src/components/ChatInput.tsx tests/unit/composer-mobile-longpress.test.mjs
+
       - name: Legacy repository formatting audit
         if: steps.scope.outputs.run == 'true'
         continue-on-error: true
