@@ -847,8 +847,7 @@
     radial-gradient(ellipse at 31% 25%, #f9ffff 0%, #dbeaff 16%, transparent 50%),
     radial-gradient(ellipse at 78% 22%, #d1e1ff 0%, #92aeff 35%, transparent 68%),
     radial-gradient(ellipse at 31% 73%, #a8c4ff 0%, #5a71dd 45%, transparent 80%),
-    radial-gradient(ellipse at 79% 77%, #e4efff 0%, #94aafa 40%, transparent 74%),
-    #6e83dd;
+    radial-gradient(ellipse at 79% 77%, #e4efff 0%, #94aafa 40%, transparent 74%), #6e83dd;
   box-shadow:
     inset -10px -14px 30px #4459b640,
     inset 12px 18px 32px #ffffff7a,
