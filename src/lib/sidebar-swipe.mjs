@@ -47,8 +47,7 @@ export function installInteractiveSidebarSwipe({
     const { active, dx, dy } = gesture;
     gesture = null;
     if (!active) return;
-    const change =
-      commit && shouldSettleSidebarSwipe({ open, dx, dy, width: width(), elapsedMs });
+    const change = commit && shouldSettleSidebarSwipe({ open, dx, dy, width: width(), elapsedMs });
     const finalOpen = change ? !open : open;
     const finishDistance = open ? (finalOpen ? 0 : -width()) : finalOpen ? width() : 0;
     void drawer.offsetWidth;
@@ -100,7 +99,10 @@ export function installInteractiveSidebarSwipe({
     gesture.dy = dy;
     const progress = distance / width();
     drawer.dataset.swipeDragging = open ? "closing" : "opening";
-    drawer.style.setProperty("--kova-swipe-distance", String(open ? -distance : distance) + "px");
+    drawer.style.setProperty(
+      "--kova-swipe-distance",
+      String(open ? -distance : distance) + "px",
+    );
     scrim.dataset.swipeDragging = drawer.dataset.swipeDragging;
     scrim.style.setProperty("--kova-swipe-progress", String(open ? 1 - progress : progress));
     if (event.cancelable) event.preventDefault();
