@@ -42,10 +42,10 @@ function target() {
   };
 }
 
-function fixture(open) {
+function fixture(open, shared = {}) {
   const events = surface();
-  const drawer = target();
-  const scrim = target();
+  const drawer = shared.drawer ?? target();
+  const scrim = shared.scrim ?? target();
   let toggles = 0;
   let allowed = true;
   let selected = false;
@@ -153,4 +153,22 @@ test("edge, vertical motion, selection, modal and multitouch guards are retained
     assert.equal(f.toggles(), 0, interrupt);
     f.cleanup();
   }
+});
+
+test("new closing gesture interrupts pending opening settle animation", () => {
+  const opening = fixture(false);
+  opening.dispatch("touchstart", 12);
+  opening.dispatch("touchmove", 142, 100, 100);
+  opening.dispatch("touchend", 142, 100, 120);
+  assert.equal(opening.toggles(), 1);
+  assert.equal(opening.drawer.dataset.swipeDragging, "settling-opening");
+  opening.cleanup();
+
+  const closing = fixture(true, { drawer: opening.drawer, scrim: opening.scrim });
+  closing.dispatch("touchstart", 200, 100, 140);
+  closing.dispatch("touchmove", 70, 100, 180);
+  assert.equal(closing.drawer.style.getPropertyValue("--kova-swipe-distance"), "-130px");
+  closing.dispatch("touchend", 70, 100, 200);
+  assert.equal(closing.toggles(), 1);
+  closing.cleanup();
 });
