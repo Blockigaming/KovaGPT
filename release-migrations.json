@@ -4620,7 +4620,7 @@
       "order": 218,
       "filename": "20261109145000_kova_hourly_windows_monthly_cost_safety.sql",
       "timestamp": "20261109145000",
-      "sha256": "aada7a29adc717d52dde77dfef277f27608c9e33bad42e5adf802b07d3f67773",
+      "sha256": "8db004bf1bd63d92860a3a3bc05d7e6d250dd4969574085f344c4ccfffe397af",
       "tables": ["message_usage_hourly"],
       "functions": ["try_consume_paid_message", "kova_plan_cost_progress", "acquire_ai_generation"],
       "destructive": false,
