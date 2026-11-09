@@ -232,10 +232,18 @@ export function ConnectedAccountManager({
                     ? "Account authorized. Search to verify access."
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
-                {account.last_success_at && (
+                {data?.verificationAvailable === false ? (
+                  <p className="text-xs text-muted-foreground mt-1" role="status">
+                    Verification history is temporarily unavailable.
+                  </p>
+                ) : account.verified_reads?.[id] ? (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Provider API last succeeded on {account.last_success_at.slice(0, 10)} (UTC).
-                    This does not verify every service or permission.
+                    {flow.label} read verified on {account.verified_reads[id].slice(0, 10)} (UTC).
+                    Other permissions have not been verified.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Read access has not been verified for this service on the current grant.
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2 mt-2">
