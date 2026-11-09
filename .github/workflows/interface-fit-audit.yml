@@ -95,7 +95,7 @@ jobs:
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
           --project="${{ matrix.browser }}-320" --project="${{ matrix.browser }}-landscape"
-          --grep="interactive fields, long actions|table actions submit on the first|sync retries keep recovery controls stable|conversation loading keeps composer" --repeat-each=5
+          --grep="interactive fields, long actions|table actions submit on the first|transient sync retries stay silent and do not move the composer|actionable chat sync recovery controls stay inside their notice|conversation loading keeps composer" --repeat-each=5
       - name: Check repeated form submission through real clicks
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
