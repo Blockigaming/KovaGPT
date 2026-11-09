@@ -1,4 +1,5 @@
 import { permanentlyDeleteChat } from "./permanent-chat-delete";
+import { canSendChatHistory } from "./chat-history-bridge";
 import { toast } from "sonner";
 import {
   archiveConversation,
@@ -63,6 +64,10 @@ export async function removeHomeChat(context: Context, id: string) {
   if (!context.current()) return;
   const chat = context.items.find((item) => item.id === id);
   if (!chat) return;
+  if (!canSendChatHistory(context.ownerId)) {
+    toast.error("Chat history is still loading. Retry deletion after it finishes syncing.");
+    return;
+  }
   const wasActive = context.activeId === id;
   if (wasActive) context.setActive(null);
   try {
