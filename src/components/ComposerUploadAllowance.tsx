@@ -75,8 +75,8 @@ export function ComposerUploadAllowance({ ownerId }: { ownerId: string | null })
   if (planStatus !== "ready")
     return (
       <span>
-        {snapshot.data.uploads} uploads recorded today. Your plan limit is unavailable; the server
-        will check it before accepting an upload.
+        Today's upload progress is temporarily unavailable. The server checks your plan before
+        accepting a file.
       </span>
     );
   const limit = DAILY_UPLOAD_LIMIT_BY_TIER[tier];
@@ -88,10 +88,11 @@ export function ComposerUploadAllowance({ ownerId }: { ownerId: string | null })
     timeZone: "UTC",
     timeZoneName: "short",
   }).format(new Date(snapshot.data.resetsAt));
+  const percent = limit > 0 ? Math.min(100, Math.round((100 * snapshot.data.uploads) / limit)) : 100;
   return (
     <span>
-      {Math.max(0, limit - snapshot.data.uploads)} of {limit} uploads remaining today. Resets{" "}
-      {reset}. The server checks the allowance again when you upload.
+      Today's upload allowance is {percent}% used. Resets {reset}. The server checks the allowance
+      again when you upload.
     </span>
   );
 }
