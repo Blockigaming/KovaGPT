@@ -64,9 +64,13 @@ test("Free/Plus have hourly-refreshed five-hour and weekly bars; Pro only weekly
 test("atomic message quota recovers one hourly bucket while retaining weekly history", async () => {
   const db = await fixture();
   try {
-    const consume = async () =>
-      (await db.query("select public.try_consume_paid_message($1,false,10,2) as outcome", [owner]))
-        .rows[0].outcome;
+    const consume = async () => {
+      const response = await db.query(
+        "select public.try_consume_paid_message($1,false,10,2) as outcome",
+        [owner],
+      );
+      return response.rows[0].outcome;
+    };
     assert.equal(await consume(), "allowed");
     assert.equal(await consume(), "allowed");
     assert.equal(await consume(), "five_hour");
@@ -88,10 +92,10 @@ test("Free cost-window limit prices every reserved request, not message count al
   try {
     assert.equal((await request(db, "free", 0.09)).decision, "acquired");
     assert.equal((await request(db, "free", 0.02)).decision, "five_hour_cost");
-    const { rows } = await db.query(
-      "select * from public.kova_plan_cost_progress($1,'free')",
-      [owner],
-    );
+    const progress = await db.query("select * from public.kova_plan_cost_progress($1,'free')", [
+      owner,
+    ]);
+    const { rows } = progress;
     assert.equal(Number(rows[0].monthly_allowance), 3);
     assert.ok(Number(rows[0].five_hour_used) >= 0.09);
     assert.ok(Number(rows[0].five_hour_allowance) >= 0.1);
@@ -126,14 +130,10 @@ test("monthly safety cap counts earlier costs and included Pro Argon Lite chat",
 test("only server service role can query raw cost limits and budget ledger", async () => {
   const db = await fixture();
   try {
-    const first = await db.query("select * from public.kova_plan_cost_progress($1,'plus')", [
-      owner,
-    ]);
+    const first = await db.query("select * from public.kova_plan_cost_progress($1,'plus')", [owner]);
     assert.equal(Number(first.rows[0].monthly_allowance), 60);
     assert.equal(first.rows[0].five_hour_allowance !== null, true);
-    const pro = await db.query("select * from public.kova_plan_cost_progress($1,'pro')", [
-      owner,
-    ]);
+    const pro = await db.query("select * from public.kova_plan_cost_progress($1,'pro')", [owner]);
     assert.equal(pro.rows[0].five_hour_allowance, null);
     await db.exec("set role authenticated");
     await assert.rejects(
