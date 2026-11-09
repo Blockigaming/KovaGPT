@@ -21,7 +21,7 @@ private struct ShortcutProvider: TimelineProvider {
 
 private struct KovaShortcutsView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 13) {
+        VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
                     .foregroundStyle(.blue)
@@ -33,6 +33,10 @@ private struct KovaShortcutsView: View {
             HStack(spacing: 10) {
                 shortcut("New chat", icon: "square.and.pencil", link: "kovagpt://new-chat")
                 shortcut("Scan document", icon: "doc.viewfinder", link: "kovagpt://scan")
+            }
+            HStack(spacing: 10) {
+                shortcut("Camera", icon: "camera", link: "kovagpt://camera")
+                shortcut("Photos", icon: "photo.on.rectangle", link: "kovagpt://photos")
             }
         }
         .padding(14)
@@ -75,7 +79,7 @@ private struct KovaShortcutsWidget: Widget {
             }
         }
         .configurationDisplayName("KovaGPT shortcuts")
-        .description("Open a new chat or scan a document with a native shortcut.")
+        .description("Start a chat, scan a document, or choose camera and Photos shortcuts.")
         .supportedFamilies([.systemMedium])
     }
 }
