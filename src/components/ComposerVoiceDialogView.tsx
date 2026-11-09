@@ -356,7 +356,7 @@ export function ComposerVoiceDialogView({
                       </p>
                       <p>
                         {mode === "voice"
-                          ? "Your draft stays separate from spoken turns. Reply speech uses your selected voice, or the configured default when no choices are listed."
+                          ? "Your draft stays separate from spoken turns. Reply speech uses your selected voice or the configured default. Captions show completed turns rather than synchronized live subtitles."
                           : "You review the transcript before adding it to your chat draft."}
                       </p>
                     </PopoverContent>
