@@ -116,10 +116,11 @@ for (const tier of ["free", "plus", "pro"] as const)
         await expect(bar).toHaveAttribute("aria-valuemax", "100");
         await expect(bar).toHaveAttribute(
           "aria-valuenow",
-          String(Math.floor((regularUsed / regularLimit) * 100)),
+          String(Math.round((regularUsed / regularLimit) * 100)),
         );
       }
-      await expect(page.locator(".kova-plan-usage")).toContainText(/2 \/ \d+ images/);
+      await expect(page.locator(".kova-plan-usage")).toContainText(/Today's images \d+% used/);
+      await expect(page.locator(".kova-plan-usage")).not.toContainText(/\d+\s*\/\s*\d+\s+images/);
     }
     await page.screenshot({
       path: `artifacts/ui-finish-${test.info().project.name}-${tier}-usage.png`,
