@@ -17,6 +17,9 @@ const states = [
 type State = (typeof states)[number];
 function VoicePreview() {
   const [state, setState] = useState<State>("ready");
+  const [mode, setMode] = useState<"dictate" | "voice">("dictate");
+  const [captionsOpen, setCaptionsOpen] = useState(false);
+  const [microphoneMuted, setMicrophoneMuted] = useState(false);
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
   const [voice, setVoice] = useState("Sample · Clear");
@@ -64,6 +67,21 @@ function VoicePreview() {
             <option>light</option>
           </select>
         </label>
+        <label>
+          Mode{" "}
+          <select
+            value={mode}
+            onChange={(event) => {
+              setMode(event.target.value as "dictate" | "voice");
+              setCaptionsOpen(false);
+              setMicrophoneMuted(false);
+            }}
+            className="min-h-11 rounded-lg border bg-background px-3"
+          >
+            <option value="dictate">Dictate</option>
+            <option value="voice">Voice</option>
+          </select>
+        </label>
         {action("Open voice preview", () => setOpen(true))}
       </div>
       <p role="status" className="mt-3 text-sm">
@@ -73,6 +91,16 @@ function VoicePreview() {
         open={open}
         onOpenChange={setOpen}
         phase={phase}
+        mode={mode}
+        captionsOpen={captionsOpen}
+        onCaptionsChange={setCaptionsOpen}
+        microphoneMuted={microphoneMuted}
+        onToggleMicrophoneMuted={() => setMicrophoneMuted((value) => !value)}
+        voiceReply={
+          mode === "voice" && state === "playback"
+            ? "This is a synthetic saved reply for visual layout testing."
+            : undefined
+        }
         availability={state === "unconfigured" ? "unconfigured" : "ready"}
         status={
           state === "recording"
@@ -110,12 +138,26 @@ function VoicePreview() {
           <Button
             type="button"
             disabled={state === "transcribing"}
-            title={state === "recording" ? "Stop and transcribe" : "Start recording"}
+            title={
+              state === "recording"
+                ? mode === "voice"
+                  ? "Finish turn"
+                  : "Stop and transcribe"
+                : mode === "voice"
+                  ? "Start"
+                  : "Start recording"
+            }
             onClick={() => setState(state === "recording" ? "transcript" : "recording")}
           >
             {state === "recording" ? <Square aria-hidden="true" /> : <Mic aria-hidden="true" />}
             <span className="sr-only">
-              {state === "recording" ? "Stop and transcribe" : "Start recording"}
+              {state === "recording"
+                ? mode === "voice"
+                  ? "Finish turn"
+                  : "Stop and transcribe"
+                : mode === "voice"
+                  ? "Start"
+                  : "Start recording"}
             </span>
           </Button>
         }
