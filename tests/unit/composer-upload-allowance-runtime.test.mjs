@@ -69,7 +69,7 @@ test("loading never paints zero, then authoritative percentage and UTC reset app
   f.requests[0].resolve(data());
   await settle();
   f.render();
-  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 50% used/);
+  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 50\s*% used/);
   assert.match(text(f.tree).replace(/\s+/g, " "), /UTC/);
   f.timers[0].fn();
   f.render();
@@ -99,7 +99,8 @@ test("principal transition excludes old counts and guests issue no usage read", 
   f.requests[0].resolve(data(2));
   await settle();
   f.render();
-  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100% used/);
+  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 0\s*% used/);
+  assert.doesNotMatch(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100\s*% used/);
   f.render({ ownerId: null });
   f.render();
   assert.match(text(f.tree).replace(/\s+/g, " "), /Sign in/);
@@ -110,7 +111,7 @@ test("limit reached reports 100% usage without negative or exact counts", async 
   f.requests[0].resolve(data(3));
   await settle();
   f.render();
-  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100% used/);
+  assert.match(text(f.tree).replace(/\s+/g, " "), /Today's upload allowance is 100\s*% used/);
   assert.doesNotMatch(text(f.tree).replace(/\s+/g, " "), /\d+ of \d+/);
 });
 
