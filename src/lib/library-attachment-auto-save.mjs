@@ -54,7 +54,9 @@ export function createLibraryAttachmentAutoSaver({
         });
       }
       completed.add(key);
-      if (getScope() === scope) onSuccess(attachment.name, attachment);
+      if (getScope() === scope) {
+        try { onSuccess(attachment.name, attachment); } catch { /* Notification observers cannot roll back a confirmed save. */ }
+      }
       if (completed.size > 256) completed.delete(completed.values().next().value);
     } catch {
       if (getScope() === scope)
