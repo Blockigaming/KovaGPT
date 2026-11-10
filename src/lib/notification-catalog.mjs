@@ -256,6 +256,7 @@ export const NOTIFICATION_GROUPS = {
     "survey_requested"
   ]
 };
+NOTIFICATION_GROUPS.collaboration.push("project_comment_posted","project_comment_deleted");
 export const NOTIFICATION_IDS = Object.freeze(Object.values(NOTIFICATION_GROUPS).flat());
 const surfaces = {
   "modal": [
