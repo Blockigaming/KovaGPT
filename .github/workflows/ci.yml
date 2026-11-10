@@ -578,6 +578,21 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Allocate unused local Supabase database port
+        # Hosted runners can already have the default 54322 port in use.
+        # Isolate only the ephemeral CI database, never a production connection.
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import socket
+          from pathlib import Path
+          with socket.socket() as probe:
+              probe.bind(("127.0.0.1", 0))
+              port = probe.getsockname()[1]
+          with Path("supabase/config.toml").open("a", encoding="utf-8") as config:
+              config.write(f"\\n[db]\\nport = {port}\\n")
+          print(f"Isolated CI database port: {port}")
+          PY
       - run: npm run release:db:isolated
       - name: Rehearse upgrade from captured production history
         run: npm run release:db:upgrade -- --capture-scheduled-candidate --capture-acl-detail
