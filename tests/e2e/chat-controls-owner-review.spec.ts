@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
-import { owner, chatA, functionNames } from "./actual-app-fixture";
+import { owner, chatA, functionNames, fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 test("response is unboxed with five ordered actions, public response sharing, and a persistent bookmark", async ({
@@ -255,7 +255,9 @@ test("cloud browser and steps precede outputs in the borderless activity surface
 });
 
 test("transient history failures retry quietly without a reconnect banner", async ({ page }) => {
-  await coreFixture(page, "dark");
+  // Background retries have no migration decision when no legacy chats exist.
+  // Pending migration controls are covered separately by interactive-forms-ui.
+  await fixture(page, "dark", true, false, "plus");
   let reads = 0;
   await page.route("**/api/chat/history**", (route) => {
     reads++;
@@ -263,7 +265,7 @@ test("transient history failures retry quietly without a reconnect banner", asyn
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  await expect(page.getByRole("article", { name: "KovaGPT response", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
   await expect.poll(() => reads, { timeout: 15000 }).toBeGreaterThan(1);
   await expect(
     page.getByText("Chats are saved on this device. Reconnecting to your account…", {
