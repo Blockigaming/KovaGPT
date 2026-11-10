@@ -2124,6 +2124,7 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
+      const notifiedServerActivities = new Set<string>();
 
       try {
         const activeTool = retryTool;
@@ -2237,6 +2238,10 @@ function KovaGPT() {
             }
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
+              if (sources && !notifiedServerActivities.has("search_completed")) {
+                notifiedServerActivities.add("search_completed");
+                publishKovaNotice({ id: "search_completed", title: "Web sources found" });
+              }
               updateAssistantMessage((message) => ({
                 ...message,
                 ...(sources ? { sources } : {}),
@@ -2247,6 +2252,19 @@ function KovaGPT() {
             }
 
             if (delta?.kind === "activity" && delta?.label) {
+              if (typeof delta.tool === "string") {
+                const eventId =
+                  delta.tool === "web_search" ? "search_started"
+                    : delta.tool === "data_analysis" || delta.tool === "file_analysis" ? "analysis_started"
+                      : null;
+                if (eventId && !notifiedServerActivities.has(eventId)) {
+                  notifiedServerActivities.add(eventId);
+                  publishKovaNotice({
+                    id: eventId,
+                    title: eventId === "search_started" ? "Searching sources" : "Analyzing data",
+                  });
+                }
+              }
               const { messageActivitiesFromDelta } =
                 await import("@/lib/message-activity-list.mjs");
               if (!isCurrentRequest()) return;
@@ -2421,6 +2439,7 @@ function KovaGPT() {
               : category === "rate_limit" ? "rate_limited"
               : category === "model_timeout" ? "request_timeout"
               : category === "model_provider_failure" ? "model_unavailable"
+              : err.code === "web_search_unavailable" ? "search_failed"
               : isNetwork ? "network_offline" : "generic_failure";
             publishKovaNotice({ id: failureEvent, title: friendly, message: "Your draft and any partial response are preserved." });
           }
