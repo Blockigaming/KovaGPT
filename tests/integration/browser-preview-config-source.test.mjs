@@ -13,6 +13,10 @@ test("browser CI uses the Node preview without changing the production preset", 
     workflow.indexOf("  verify:"),
     workflow.indexOf("\n  public-surface:"),
   );
+  const sharedPreviewJob = workflow.slice(
+    workflow.indexOf("  browser-preview:"),
+    workflow.indexOf("\n  public-surface:"),
+  );
   const browserJob = workflow.slice(
     workflow.indexOf("\n  browser:"),
     workflow.indexOf("\n  release-e2e:"),
@@ -33,8 +37,10 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(verifyJob, /- name: Bundle budget(?:\s+if:[^\n]+)?\s+run: npm run release:bundle/);
   assert.match(
     verifyJob,
-    /- name: Browser preview build\s+if: steps\.scope\.outputs\.run_ci == 'true'\s+env:\s+KOVA_BROWSER_PREVIEW: node\s+run: npm run build/,
+    /- name: Browser preview build\s+if: needs\.classify\.outputs\.run_ci == 'true'\s+env:\s+KOVA_BROWSER_PREVIEW: node\s+run: npm run build/,
   );
+  assert.match(sharedPreviewJob, /- name: Build immutable Node preview\s+run: npm run build/);
+  assert.match(sharedPreviewJob, /KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(verifyJob, /- name: Release checks(?:\s+if:[^\n]+)?\s+run: npm run test:release/);
 
   // Inspect the production artifact before the browser build replaces dist.
@@ -55,7 +61,7 @@ test("browser CI uses the Node preview without changing the production preset", 
     browserJob,
     /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
   );
-  assert.match(browserJob, /- name: Browser preview build(?:\s+if:[^\n]+)?\s+run: npm run build/);
+  assert.match(browserJob, /- name: Restore exact Node browser preview/);
   assert.match(
     browserJob,
     /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\} --workers=2/,
