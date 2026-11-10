@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { HealthDashboardPreview } from "@/components/HealthDashboardPreview";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
@@ -28,6 +29,7 @@ export function HealthConnectionsPanel({
   };
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<HealthSummary | null>(null);
+  const [showDemo, setShowDemo] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
   useEffect(() => {
@@ -118,16 +120,15 @@ export function HealthConnectionsPanel({
   };
   return (
     <section
-      className="mt-6 rounded-2xl border border-border p-5 space-y-4"
+      className="mt-6 space-y-5 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6"
       aria-labelledby="health-connections-title"
     >
-      <h2 id="health-connections-title" className="text-lg font-semibold">
-        Health accounts
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="health-connections-title" className="text-xl font-semibold tracking-tight">Health accounts</h2><span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">Coming soon</span></div>
       <p className="text-sm text-muted-foreground">
         Choose a provider and review its permissions. Summaries are fetched only when you click Read
         summaries. They are not added to chat or saved to your search index.
       </p>
+      <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">Health dashboard preview</p><p className="text-xs text-muted-foreground">See an example of future health visualizations.</p></div><Button variant="outline" aria-pressed={showDemo} onClick={() => setShowDemo((v) => !v)}>{showDemo ? "Hide example" : "View example"}</Button></div>{showDemo && <HealthDashboardPreview />}</div>
       {!ownerId ? (
         <p>Sign in to manage health connections.</p>
       ) : (
