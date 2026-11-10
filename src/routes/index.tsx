@@ -203,6 +203,7 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
@@ -2413,6 +2414,16 @@ function KovaGPT() {
                           : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
 
+          if (isCurrentRetryScope()) {
+            const failureEvent = quotaRejected
+              ? /image/i.test(raw) ? "image_limit" : /upload|file/i.test(raw) ? "upload_limit" : "assistant_limit"
+              : sessionExpired ? "session_expired"
+              : category === "rate_limit" ? "rate_limited"
+              : category === "model_timeout" ? "request_timeout"
+              : category === "model_provider_failure" ? "model_unavailable"
+              : isNetwork ? "network_offline" : "generic_failure";
+            publishKovaNotice({ id: failureEvent, title: friendly, message: "Your draft and any partial response are preserved." });
+          }
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           if (sessionExpired && isCurrentRetryScope())
             updateRequestNotice({
