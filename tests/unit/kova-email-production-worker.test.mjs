@@ -117,6 +117,30 @@ test("worker uses only database-selected one-record scopes and finalizes its exa
   assert.equal(d.calls[3][1].maxSends, 1);
   assert.doesNotMatch(JSON.stringify(result), /synthetic|owner@example/);
 });
+test("Supabase-only mode preserves account notices without dispatching owned auth mail", async () => {
+  const hosted = {
+    ...env(),
+    KOVA_AUTH_MODE: "supabase",
+    KOVA_AUTH_EMAIL_DISPATCH_ENABLED: "false",
+    KOVA_EMAIL_QUEUE_ENABLED: "false",
+  };
+  const config = productionEmailWorkerConfiguration(hosted);
+  const d = dependencies();
+  const result = await runProductionEmailWorker(run, config, d);
+  assert.equal(result.auth, null);
+  assert.equal(result.account.sent, 1);
+  assert.equal(result.attempted, 1);
+  assert.equal(
+    d.calls.some(([name]) => name === "auth"),
+    false,
+  );
+  assert.equal(d.calls.at(-1)[0], "kova_email_finish_worker_run");
+  for (const key of ["KOVA_AUTH_EMAIL_DISPATCH_ENABLED", "KOVA_EMAIL_QUEUE_ENABLED"])
+    assert.throws(
+      () => productionEmailWorkerConfiguration({ ...hosted, [key]: "true" }),
+      /owned_auth_disabled/,
+    );
+});
 test("replay or concurrent claim rejection performs no reads, sends or finish", async () => {
   const d = dependencies({ claim: false });
   assert.deepEqual(

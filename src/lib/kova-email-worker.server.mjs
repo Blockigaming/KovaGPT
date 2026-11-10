@@ -38,7 +38,7 @@ export function productionEmailWorkerConfiguration(env = process.env) {
     !publicOrigin ||
     env.AZURE_ENVIRONMENT !== "production" ||
     env.CONTAINER_APP_NAME !== "kovagpt-prod-web" ||
-    !["dual", "kova"].includes(env.KOVA_AUTH_MODE) ||
+    !["supabase", "dual", "kova"].includes(env.KOVA_AUTH_MODE) ||
     env.KOVA_AUTH_PUBLIC_ORIGIN !== publicOrigin ||
     env.KOVA_AUTH_ORIGIN !== publicOrigin ||
     env.SUPABASE_URL !== DATABASE_ORIGIN ||
@@ -47,6 +47,10 @@ export function productionEmailWorkerConfiguration(env = process.env) {
     fail("target_invalid");
   const authEnabled = env.KOVA_AUTH_EMAIL_DISPATCH_ENABLED === "true";
   const accountEnabled = env.KOVA_ACCOUNT_EMAIL_DISPATCH_ENABLED === "true";
+  // Supabase owns verification/recovery in hosted-only mode. Account notices
+  // remain a separate lane; stale owned-auth flags must never enable it.
+  if (env.KOVA_AUTH_MODE === "supabase" && (authEnabled || env.KOVA_EMAIL_QUEUE_ENABLED === "true"))
+    fail("owned_auth_disabled");
   if ((!authEnabled && !accountEnabled) || (authEnabled && env.KOVA_EMAIL_QUEUE_ENABLED !== "true"))
     fail("disabled");
   for (const name of ["SUPABASE_SERVICE_ROLE_KEY", "RESEND_API_KEY"])
