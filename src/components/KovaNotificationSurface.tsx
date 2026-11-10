@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { notificationDefinition } from "@/lib/notification-catalog.mjs";
+import { noticeIsDismissed, rememberNoticeDismissal } from "@/lib/notification-dismissal-policy.mjs";
 import "./kova-notification-surface.css";
 
 export type KovaNotice = {
@@ -10,6 +11,7 @@ export type KovaNotice = {
   message?: string;
   confirmed?: boolean;
   key?: string;
+  campaignId?: string;
   primaryLabel?: string;
   onPrimary?: () => void;
   secondaryLabel?: string;
@@ -30,7 +32,7 @@ function composingIn(target: EventTarget | null) {
 }
 
 /** A single global host: independent of which feature route is mounted. */
-export function KovaNotificationSurface() {
+export function KovaNotificationSurface({ accountId }: { accountId?: string | null }) {
   const [pending, setPending] = useState<KovaNotice[]>([]);
   const [editing, setEditing] = useState(false);
   const [composing, setComposing] = useState(false);
@@ -38,7 +40,15 @@ export function KovaNotificationSurface() {
   const active = pending[0] ?? null;
   const panelRef = useRef<HTMLElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const dismiss = useCallback(() => setPending((items) => items.slice(1)), []);
+  const dismiss = useCallback(() => {
+    if (active) {
+      const group = notificationDefinition(active.id)?.group;
+      rememberNoticeDismissal(window.localStorage, {
+        accountId, id: active.id, campaignId: active.campaignId, group,
+      });
+    }
+    setPending((items) => items.slice(1));
+  }, [active, accountId]);
 
   useEffect(() => {
     const focus = (event: FocusEvent) => setEditing(composingIn(event.target));
@@ -58,6 +68,9 @@ export function KovaNotificationSurface() {
           (notice.message && notice.message.length > 2000)) return;
       const definition = notificationDefinition(notice.id);
       if (!definition || (definition.requiresEvidence && notice.confirmed !== true)) return;
+      if (noticeIsDismissed(window.localStorage, {
+        accountId, id: notice.id, campaignId: notice.campaignId, group: definition.group,
+      })) return;
       const key = notice.key ?? notice.id;
       if (definition.surface === "status" || definition.surface === "inline") {
         // Source components own the visible operational status or inline error.
@@ -92,7 +105,7 @@ export function KovaNotificationSurface() {
       document.removeEventListener("compositionstart", compositionStart);
       document.removeEventListener("compositionend", compositionEnd);
     };
-  }, []);
+  }, [accountId]);
 
   const definition = active ? notificationDefinition(active.id) : null;
   const defer = !!definition && ["announcements", "onboarding", "feedback"].includes(definition.group) &&
