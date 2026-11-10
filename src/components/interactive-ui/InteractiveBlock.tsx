@@ -392,13 +392,13 @@ function FieldControl({
             className="grid gap-1"
           >
             {field.options!.map((o) => (
-              <label
+              <div
                 key={o.value}
-                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
                 <RadioGroupItem value={o.value} aria-label={o.label} />
                 <span className="min-w-0 text-sm">{o.label}</span>
-              </label>
+              </div>
             ))}
           </RadioGroup>
           {field.help && (
@@ -429,9 +429,9 @@ function FieldControl({
           </legend>
           <div className="grid gap-1">
             {field.options!.map((o, i) => (
-              <label
+              <div
                 key={o.value}
-                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
                 <Checkbox
                   id={i === 0 ? id : undefined}
@@ -441,7 +441,7 @@ function FieldControl({
                   onCheckedChange={(checked) => updateSelection(o.value, checked === true)}
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
-              </label>
+              </div>
             ))}
           </div>
           {field.help && (
