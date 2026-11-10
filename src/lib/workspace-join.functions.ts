@@ -35,7 +35,7 @@ export const submitWorkspaceJoinRequest = createServerFn({method:"POST"})
   });
 
 export async function deliverJoinRequestNotice(id:string) {
-  if (!process.env.RESEND_API_KEY || !process.env.KOVA_TEAM_NOTIFICATION_FROM) return false;
+  if (!process.env.RESEND_API_KEY) return false;
   const db=loose(supabaseAdmin);
   const res=await db.from("team_join_requests").select("id,team_id,requester_email,status,notification_sent_at")
     .eq("id",id).single();
@@ -49,7 +49,7 @@ export async function deliverJoinRequestNotice(id:string) {
     method:"POST",redirect:"error",signal:AbortSignal.timeout(10000),
     headers:{"Authorization":"Bearer "+process.env.RESEND_API_KEY,"Content-Type":"application/json",
       "Idempotency-Key":"kova-workspace-join:"+id},
-    body:JSON.stringify({from:process.env.KOVA_TEAM_NOTIFICATION_FROM,to:[owner],
+    body:JSON.stringify({from:"KovaGPT <noreply@kovagpt.com>",to:[owner],
       subject:"Workspace membership request",
       text:"A verified account has requested to join your KovaGPT workspace "+team.data.name+
       ". Review the request in your team administration area. Request ID: "+id})
