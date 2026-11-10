@@ -41,11 +41,11 @@ jobs:
       VITE_KOVA_GOOGLE_AUTH_ENABLED: ${{ vars.VITE_KOVA_GOOGLE_AUTH_ENABLED || 'false' }}
       VITE_KOVA_AUTH_ORIGIN: ${{ vars.VITE_KOVA_AUTH_ORIGIN }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           package-manager-cache: false
@@ -88,7 +88,7 @@ jobs:
           test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
           printf '%s\n' "$reference" > "$RUNNER_TEMP/ghcr-candidate-image.txt"
           echo "Verified candidate: $reference. Not deployed; no Azure capacity, secret, or traffic changes." >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ghcr-production-candidate
           path: ${{ runner.temp }}/ghcr-candidate-image.txt
