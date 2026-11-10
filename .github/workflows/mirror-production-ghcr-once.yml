@@ -1,4 +1,4 @@
-name: Mirror current production image to private GHCR
+name: Mirror Azure registry images to private GHCR
 on:
   push:
     branches: [ops/ghcr-registry-migration-20261110]
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   mirror:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: read
@@ -25,33 +25,40 @@ jobs:
           subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
       - name: Install registry copy client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
-      - name: Copy exact serving digest without rebuilding or changing Azure
+      - name: Preserve all existing image digests in verified private destination
         env:
-          GHCR_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           umask 077
+          test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
           authfile="$RUNNER_TEMP/registry-auth.json"
           trap 'rm -f "$authfile"' EXIT
-          export REGISTRY_AUTH_FILE="$authfile"
-          app="$(az containerapp show -g rg-kovagpt-prod -n kovagpt-prod-web -o json)"
-          revision="$(printf '%s' "$app" | jq -er '[.properties.configuration.ingress.traffic[] | select(.weight == 100 and .revisionName != null)] | if length == 1 then .[0].revisionName else error("ambiguous production traffic") end')"
-          rev="$(az containerapp revision show -g rg-kovagpt-prod -n kovagpt-prod-web --revision "$revision" -o json)"
-          printf '%s' "$rev" | jq -e '.properties.active == true and .properties.template.scale.minReplicas >= 1' >/dev/null
-          python3 -c 'import os,json,urllib.request,urllib.error; req=urllib.request.Request("https://api.github.com/users/Blockigaming/packages/container/kovagpt-web",headers={"Authorization":"Bearer "+os.environ["GHCR_TOKEN"],"Accept":"application/vnd.github+json"}); exec("try:\n r=urllib.request.urlopen(req); assert json.load(r)[\"visibility\"] == \"private\", \"destination_must_be_private\"\nexcept urllib.error.HTTPError as e:\n assert e.code == 404, \"package_visibility_check_failed\"")'
-          source="$(printf '%s' "$rev" | jq -er '.properties.template.containers | if length == 1 then .[0].image else error("unexpected container count") end')"
-          [[ "$source" =~ ^kovagptacr-dte9hugbhjghcyb8.azurecr.io/kovagpt-web@sha256:[a-f0-9]{64}$ ]]
-          digest="${source##*@}"
-          printf '%s' "$GHCR_TOKEN" | skopeo login --authfile "$authfile" --username Blockigaming --password-stdin ghcr.io >/dev/null
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$authfile" --username Blockigaming --password-stdin ghcr.io >/dev/null
           az acr login -n kovagptacr --expose-token --query accessToken -o tsv | skopeo login --authfile "$authfile" --username 00000000-0000-0000-0000-000000000000 --password-stdin kovagptacr-dte9hugbhjghcyb8.azurecr.io >/dev/null
-          destination="ghcr.io/blockigaming/kovagpt-web:mirror-${digest#sha256:}"
-          skopeo copy --all --preserve-digests --authfile "$authfile" "docker://$source" "docker://$destination"
-          actual="$(skopeo inspect --authfile "$authfile" --format '{{.Digest}}' "docker://$destination")"
-          test "$actual" = "$digest"
-          {
-            echo "Production source revision: $revision"
-            echo "Verified private-registry candidate: ghcr.io/blockigaming/kovagpt-web@$actual"
-            echo "Image copied without rebuilding. No Azure configuration or traffic changed."
-            echo "Private package visibility and a persistent read-only Azure pull credential must be verified before cutover."
-          } >> "$GITHUB_STEP_SUMMARY"
+          repositories="$(az acr repository list -n kovagptacr -o tsv)"
+          test -n "$repositories"
+          : > "$RUNNER_TEMP/ghcr-image-map.tsv"
+          while IFS= read -r repository; do
+            [[ "$repository" =~ ^[a-z0-9][a-z0-9._/-]*$ ]]
+            digests="$(az acr repository show-manifests -n kovagptacr --repository "$repository" --query '[].digest' -o tsv)"
+            test -n "$digests"
+            while IFS= read -r digest; do
+              [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+              source="kovagptacr-dte9hugbhjghcyb8.azurecr.io/$repository@$digest"
+              destination="ghcr.io/blockigaming/kovagpt-web:archive-${repository//\//-}-${digest#sha256:}"
+              skopeo copy --all --preserve-digests --authfile "$authfile" "docker://$source" "docker://$destination"
+              actual="$(skopeo inspect --authfile "$authfile" --format '{{.Digest}}' "docker://$destination")"
+              test "$actual" = "$digest"
+              printf '%s\t%s\n' "$source" "ghcr.io/blockigaming/kovagpt-web@$actual" >> "$RUNNER_TEMP/ghcr-image-map.tsv"
+            done <<< "$digests"
+          done <<< "$repositories"
+          test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
+          echo "Verified archived image count: $(wc -l < "$RUNNER_TEMP/ghcr-image-map.tsv")" >> "$GITHUB_STEP_SUMMARY"
+          echo "All manifests copied with preserved digests; no builds, Azure traffic changes, or deletions." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ghcr-image-map
+          path: ${{ runner.temp }}/ghcr-image-map.tsv
+          retention-days: 90
