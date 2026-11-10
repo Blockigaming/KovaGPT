@@ -392,13 +392,20 @@ function FieldControl({
             className="grid gap-1"
           >
             {field.options!.map((o) => (
-              <label
+              <div
                 key={o.value}
-                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <RadioGroupItem value={o.value} />
-                <span className="text-sm">{o.label}</span>
-              </label>
+                <RadioGroupItem value={o.value} aria-label={o.label} />
+                <button
+                  type="button"
+                  disabled={disabled}
+                  className="min-w-0 flex-1 cursor-pointer text-left text-sm disabled:cursor-not-allowed"
+                  onClick={() => onChange(o.value)}
+                >
+                  {o.label}
+                </button>
+              </div>
             ))}
           </RadioGroup>
           {field.help && (
@@ -422,20 +429,34 @@ function FieldControl({
           </legend>
           <div className="grid gap-1">
             {field.options!.map((o, i) => (
-              <label
+              <div
                 key={o.value}
-                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
                 <Checkbox
                   id={i === 0 ? id : undefined}
+                  aria-label={o.label}
                   disabled={disabled}
                   checked={list.includes(o.value)}
                   onCheckedChange={(c) =>
                     onChange(c ? [...list, o.value] : list.filter((x) => x !== o.value))
                   }
                 />
-                <span className="text-sm">{o.label}</span>
-              </label>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  className="min-w-0 flex-1 cursor-pointer text-left text-sm disabled:cursor-not-allowed"
+                  onClick={() =>
+                    onChange(
+                      list.includes(o.value)
+                        ? list.filter((x) => x !== o.value)
+                        : [...list, o.value],
+                    )
+                  }
+                >
+                  {o.label}
+                </button>
+              </div>
             ))}
           </div>
           {field.help && (
