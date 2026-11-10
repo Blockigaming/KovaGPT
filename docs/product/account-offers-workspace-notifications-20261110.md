@@ -32,3 +32,13 @@ Status: **implementation in progress; NOT production ready.** Reference: owner's
 5. Existing CI and browser gates green before merge; production deployment separate, with secrets and rollback preserved.
 
 No claim is made here that all supplied notifications, promotion eligibility, or workspace request delivery currently exist.
+
+## 2026-11-10 trigger-wiring checkpoint
+
+The common notification host is mounted in the application root, scoped to the authenticated account, and queues blocking notices. Event dispatch has been added at actual operation result boundaries for: composer attachment validation and extraction; durable Library autosaves; image generation/save/copy; Voice recording/transcription/playback/errors; chat request quotas, session and network failures; scheduled task creation/update/pause/resume/deletion; Project creation/update/deletion/comments; share-link copy/revoke; connected account disconnect and verified Google OAuth return; password change; appearance; email notification preferences; and team workspace join and owner review. Browser online/offline events are also mapped.
+
+**This is not 100% of the 228 catalog IDs.** The catalog is a vocabulary, not a claim that each event has a live supported feature. Future work is required for complete signup/offer promotion, release announcements, onboarding tours and coach marks, all connected providers, billing lifecycle, background task run delivery and push/email preferences, permissions, rate counters, server capability gating, accessibility/browser acceptance and full source-trigger coverage. Do not display promotional notices for features or offers that do not have authoritative eligibility.
+
+Workspace domain registration requires a privileged external domain verification process; the new table does not create matches automatically. Signed worker retries for workspace-join emails are bounded by a claim lease, six attempts, and a 20-hour deduplication window. A durable request does not guarantee provider delivery. Owner approval is a prerequisite to the existing paid-seat invitation, not membership itself.
+
+The PR must remain a draft. Do not merge or deploy until the full required CI, rendered mobile/desktop browser, database migrations, owner email and promotion verification all pass. Run `tests/unit/notification-live-trigger-source.test.mjs` alongside the catalog and workspace eligibility unit tests. No production acceptance is claimed.
