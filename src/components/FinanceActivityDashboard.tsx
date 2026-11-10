@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { FinanceSnapshot } from "@/finances/finance-read.server.mjs";
 
 type FinanceRecord = FinanceSnapshot["transactions"][number];
@@ -45,6 +45,20 @@ export function FinanceActivityDashboard({ snapshot, demo = false }: Props) {
         <div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">Money spent</p><p className="mt-1 text-xl font-semibold tabular-nums">{currency(spent)}</p></div>
         <div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">Money received</p><p className="mt-1 text-xl font-semibold tabular-nums">{currency(received)}</p></div>
         <div className="rounded-xl border border-border p-4"><p className="text-xs text-muted-foreground">Net cash flow</p><p className="mt-1 text-xl font-semibold tabular-nums">{currency(received - spent)}</p></div>
+      </div>
+      <div className="rounded-xl border border-border p-3 sm:p-4">
+        <h4 className="text-sm font-medium">Cash flow composition</h4>
+        <p className="mt-1 text-xs text-muted-foreground">Share of returned money spent and received</p>
+        <div className="mx-auto mt-2 h-44 max-w-xs" role="img" aria-label={`Spent ${currency(spent)}; received ${currency(received)}`}>
+          {spent + received > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart><Pie data={[{ name: "Spent", value: spent }, { name: "Received", value: received }]} dataKey="value" nameKey="name" innerRadius={47} outerRadius={72} stroke="none">
+                <Cell fill="#8b5cf6" /><Cell fill="#06b6d4" />
+              </Pie><Tooltip formatter={(v) => currency(typeof v === "number" ? v : Number(v ?? 0))} /></PieChart>
+            </ResponsiveContainer>
+          ) : <p className="pt-12 text-center text-sm text-muted-foreground">No activity to chart</p>}
+        </div>
+        <div className="flex justify-center gap-5 text-xs text-muted-foreground"><span><span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm bg-violet-500" />Spent</span><span><span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm bg-cyan-500" />Received</span></div>
       </div>
       <div className="rounded-xl border border-border p-3 sm:p-4">
         <h4 className="text-sm font-medium">Daily activity</h4>
