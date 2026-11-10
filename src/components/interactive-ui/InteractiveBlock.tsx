@@ -382,7 +382,12 @@ function FieldControl({
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
             {label}
           </legend>
-          <div role="radiogroup" aria-labelledby={`${id}-label`} aria-required={field.required || undefined} className="grid gap-1">
+          <div
+            role="radiogroup"
+            aria-labelledby={`${id}-label`}
+            aria-required={field.required || undefined}
+            className="grid gap-1"
+          >
             {field.options!.map((o) => (
               <label
                 key={o.value}
