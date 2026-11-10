@@ -405,7 +405,6 @@ function FieldControl({
                   onChange={(event) => {
                     if (event.target.checked) onChange(o.value);
                   }}
-                  onClick={() => onChange(o.value)}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
@@ -453,7 +452,6 @@ function FieldControl({
                   disabled={disabled}
                   checked={list.includes(o.value)}
                   onChange={(event) => updateSelection(o.value, event.target.checked)}
-                  onClick={(event) => updateSelection(o.value, event.currentTarget.checked)}
                   className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
@@ -601,7 +599,6 @@ function TableBody({
           type="button"
           className="mt-3 h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           disabled={locked || selected.length === 0}
-          onPointerDown={preserveActionFocus}
           onClick={() => onSubmit({ selected })}
         >
           {block.submitLabel ?? "Submit"}
