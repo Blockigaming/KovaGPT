@@ -29,12 +29,12 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
-      position={mobile ? "top-center" : "bottom-right"}
+      position={mobile ? "bottom-center" : "bottom-right"}
       closeButton
       duration={4_000}
-      visibleToasts={4}
+      visibleToasts={mobile ? 2 : 3}
       gap={8}
-      mobileOffset={{ top: "calc(72px + env(safe-area-inset-top))", left: 16, right: 16 }}
+      mobileOffset={{ bottom: "calc(88px + env(safe-area-inset-bottom))", left: 16, right: 16 }}
       style={{ ...toasterStyle, ...style }}
       toastOptions={{
         classNames: {
