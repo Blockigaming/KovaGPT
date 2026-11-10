@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -383,32 +382,28 @@ function FieldControl({
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
             {label}
           </legend>
-          <RadioGroup
-            id={id}
-            value={String(value ?? "")}
-            onValueChange={onChange}
-            disabled={disabled}
-            aria-labelledby={`${id}-label`}
-            aria-required={field.required || undefined}
-            className="grid gap-1"
-          >
+          <div role="radiogroup" aria-labelledby={`${id}-label`} aria-required={field.required || undefined} className="grid gap-1">
             {field.options!.map((o) => (
-              <div
+              <label
                 key={o.value}
-                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <RadioGroupItem value={o.value} aria-label={o.label} />
-                <button
-                  type="button"
+                <input
+                  type="radio"
+                  name={id}
+                  value={o.value}
+                  aria-label={o.label}
+                  data-slot="radio-group-item"
+                  data-ui-reference="chatgpt.radio-group"
                   disabled={disabled}
-                  className="min-w-0 flex-1 cursor-pointer text-left text-sm disabled:cursor-not-allowed"
-                  onClick={() => onChange(o.value)}
-                >
-                  {o.label}
-                </button>
-              </div>
+                  checked={String(value ?? "") === o.value}
+                  onChange={(event) => event.target.checked && onChange(o.value)}
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <span className="min-w-0 text-sm">{o.label}</span>
+              </label>
             ))}
-          </RadioGroup>
+          </div>
           {field.help && (
             <p id={helpId} className="mt-1 text-xs text-muted-foreground">
               {field.help}
@@ -430,34 +425,29 @@ function FieldControl({
           </legend>
           <div className="grid gap-1">
             {field.options!.map((o, i) => (
-              <div
+              <label
                 key={o.value}
-                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <Checkbox
+                <input
+                  type="checkbox"
                   id={i === 0 ? id : undefined}
                   aria-label={o.label}
+                  data-slot="checkbox"
+                  data-ui-reference="chatgpt.checkbox"
                   disabled={disabled}
                   checked={list.includes(o.value)}
-                  onCheckedChange={(c) =>
-                    onChange(c ? [...list, o.value] : list.filter((x) => x !== o.value))
-                  }
-                />
-                <button
-                  type="button"
-                  disabled={disabled}
-                  className="min-w-0 flex-1 cursor-pointer text-left text-sm disabled:cursor-not-allowed"
-                  onClick={() =>
+                  onChange={(event) =>
                     onChange(
-                      list.includes(o.value)
-                        ? list.filter((x) => x !== o.value)
-                        : [...list, o.value],
+                      event.target.checked
+                        ? [...list, o.value]
+                        : list.filter((x) => x !== o.value),
                     )
                   }
-                >
-                  {o.label}
-                </button>
-              </div>
+                  className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <span className="min-w-0 text-sm">{o.label}</span>
+              </label>
             ))}
           </div>
           {field.help && (
