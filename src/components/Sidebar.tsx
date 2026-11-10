@@ -292,13 +292,14 @@ export function Sidebar({
   } | null>(null);
   const [resizing, setResizing] = useState(false);
   const signedIn = isLoaded && isSignedIn;
+  const verifiedWorkspaceEmail = user?.primaryEmailAddress?.verification?.status === "verified";
   const [availableWorkspaces, setAvailableWorkspaces] = useState<AvailableWorkspace[]>([]);
   const [workspaceJoinOpen, setWorkspaceJoinOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     setAvailableWorkspaces([]);
     setWorkspaceJoinOpen(false);
-    if (!signedIn || !user?.id) return;
+    if (!signedIn || !user?.id || !verifiedWorkspaceEmail) return;
     const accountId = user.id;
     void findAvailableWorkspaces()
       .then((results) => {
@@ -316,7 +317,7 @@ export function Sidebar({
       })
       .catch(() => { if (!cancelled) setAvailableWorkspaces([]); });
     return () => { cancelled = true; };
-  }, [signedIn, user?.id]);
+  }, [signedIn, user?.id, verifiedWorkspaceEmail]);
   const railOwner = signedIn ? user?.id : undefined;
   const layout =
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
