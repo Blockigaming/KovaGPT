@@ -272,7 +272,7 @@ function AuthPage() {
         }
         if (isSignUp) {
           toast.success("If this address can be registered, check your inbox to continue.");
-          publishKovaNotice({ id: "email_sent", title: "Check your inbox", message: "If this address can be registered, check your email to continue." });
+          publishKovaNotice({ id: "email_verification_required", title: "Check your inbox", message: "If this address can be registered, check your email to continue." });
           void navigate({ to: "/" });
           return;
         }
@@ -302,7 +302,7 @@ function AuthPage() {
           return;
         }
         toast.success("If this address can be registered, check your inbox to continue.");
-          publishKovaNotice({ id: "email_sent", title: "Check your inbox", message: "If this address can be registered, check your email to continue." });
+          publishKovaNotice({ id: "email_verification_required", title: "Check your inbox", message: "If this address can be registered, check your email to continue." });
         void navigate({ to: "/" });
         return;
       }
