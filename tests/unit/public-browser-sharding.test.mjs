@@ -109,7 +109,10 @@ test("public shards retain the three viewports and feed fail-closed existing req
   const section = (name, next) =>
     workflow.slice(workflow.indexOf(`\n  ${name}:`), workflow.indexOf(`\n  ${next}:`));
   const publicJob = section("public-surface", "browser");
-  assert.match(publicJob, /needs: verify/);
+  assert.match(publicJob, /needs: \[classify, browser-preview\]/);
+  assert.match(publicJob, /needs\.classify\.outputs\.run_ci == 'true'/);
+  assert.match(publicJob, /needs\.browser-preview\.result == 'success'/);
+  assert.match(publicJob, /name: Restore exact Node browser preview/);
   assert.match(publicJob, /KOVA_BROWSER_SUITE: "public"/);
   assert.match(publicJob, /PLAYWRIGHT_PREBUILT: "1"/);
   assert.match(publicJob, /project: \[phone-390x844, tablet-1024x768, desktop-1440x900\]/);
@@ -136,6 +139,7 @@ test("public shards retain the three viewports and feed fail-closed existing req
     assert.match(job, /github\.event\.pull_request\.draft == false/);
     assert.match(job, /needs: \[verify, public-surface\]/);
     assert.match(job, /KOVA_BROWSER_SUITE: "core"/);
+    assert.match(job, /name: Restore exact Node browser preview/);
     assert.match(job, /PUBLIC_RESULT: \$\{\{ needs\.public-surface\.result \}\}/);
     assert.doesNotMatch(job, /continue-on-error/);
     const gate = job.match(/run: (test "\$PUBLIC_RESULT" = success)/)?.[1];
