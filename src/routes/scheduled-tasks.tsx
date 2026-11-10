@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -599,6 +600,13 @@ function ScheduledTasksPage() {
           current.map((item) => (item.id === task.id ? (updated as ScheduledTask) : item)),
         );
       }
+      publishKovaNotice({
+        id: action === "delete" ? "task_deleted" : action === "paused" ? "task_paused" : action === "retry" ? "task_updated" : "task_resumed",
+        title: action === "delete" ? "Task deleted" : action === "paused" ? "Task paused" : action === "retry" ? "Task queued to retry" : "Task resumed",
+        message: task.title,
+        confirmed: true,
+        key: "task-action:" + task.id + ":" + action,
+      });
       const message =
         action === "delete"
           ? `“${task.title}” deleted.`
