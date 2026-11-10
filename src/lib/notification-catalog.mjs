@@ -321,6 +321,7 @@ const surfaces = {
   ]
 };
 surfaces.status.push("file_selected","file_processing","voice_ended");
+surfaces.inline.push("session_expired","assistant_limit","tool_limit","rate_limited","model_unavailable","request_timeout","network_offline","generic_failure");
 surfaces.toast.push("connection_failed","connection_canceled");
 const CONFIRMATION = new Set(["confirm_file_delete","confirm_project_delete","confirm_leave_project","disconnect_confirm","confirm_chat_delete","confirm_account_delete"]);
 const ERROR_WORDS = /(?:failed|unavailable|expired|invalid|blocked|timeout|offline|denied|restricted|error)$/;
