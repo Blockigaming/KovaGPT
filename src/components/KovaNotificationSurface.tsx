@@ -83,7 +83,12 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         return;
       }
       if (definition.surface === "toast") {
-        toast(notice.title, {
+        const notificationToast = definition.liveRegion === "assertive"
+          ? toast.error
+          : /(?:_completed|_created|_updated|_sent|_verified|_success|_ready|_restored|_saved|_disconnected)$/.test(notice.id)
+            ? toast.success
+            : toast;
+        notificationToast(notice.title, {
           id: key,
           description: notice.message,
           duration: 3000,
