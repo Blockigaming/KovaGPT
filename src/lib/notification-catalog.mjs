@@ -330,7 +330,7 @@ export function notificationDefinition(id) {
   return Object.freeze({ id, group, surface,
     priority: CONFIRMATION.has(id) ? 1 : surface === "inline" ? 4 : group === "announcements" ? 9 : 8,
     requiresEvidence: REQUIRE_ACTUAL_STATE.has(id),
-    dismissible: !CONFIRMATION.has(id),
+    dismissible: true,
     exclusive: CONFIRMATION.has(id) || surface === "modal" || surface === "sheet",
     liveRegion: ERROR_WORDS.test(id) ? "assertive" : "polite" });
 }
