@@ -76,6 +76,38 @@ export function ChatImage({
   const copyOnly = isMobile || touchMenu;
   const imageRef = useRef<HTMLImageElement>(null);
   const showRef = useRef<HTMLButtonElement>(null);
+  const touchHoldRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const cancelTouchHold = () => {
+    if (touchHoldRef.current !== null) clearTimeout(touchHoldRef.current);
+    touchHoldRef.current = null;
+    touchStartRef.current = null;
+  };
+  // Radix long-press can be cancelled by a native image touch/drag on tablets.
+  // An independent stationary hold dispatches the same contextmenu event only
+  // when Radix has not already opened the menu; movement/end cancels it.
+  const startTouchHold = (event: React.TouchEvent<HTMLImageElement>) => {
+    cancelTouchHold();
+    if (event.touches.length !== 1) return;
+    setTouchMenu(true);
+    const { clientX: x, clientY: y } = event.touches[0];
+    touchStartRef.current = { x, y };
+    touchHoldRef.current = setTimeout(() => {
+      touchHoldRef.current = null;
+      touchStartRef.current = null;
+      const target = imageRef.current;
+      if (!target || target.getAttribute("data-state") === "open") return;
+      target.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: x, clientY: y }),
+      );
+    }, 850);
+  };
+  const moveTouchHold = (event: React.TouchEvent<HTMLImageElement>) => {
+    const start = touchStartRef.current;
+    if (!start || event.touches.length !== 1) return cancelTouchHold();
+    const { clientX: x, clientY: y } = event.touches[0];
+    if (Math.hypot(x - start.x, y - start.y) > 12) cancelTouchHold();
+  };
   const lifetime = useRef({ marker, generation: 0, mounted: true });
   if (lifetime.current.marker !== marker) {
     lifetime.current.marker = marker;
@@ -85,6 +117,7 @@ export function ChatImage({
     const state = lifetime.current;
     state.mounted = true;
     return () => {
+      cancelTouchHold();
       state.mounted = false;
       state.generation++;
     };
@@ -189,9 +222,14 @@ export function ChatImage({
             referrerPolicy="no-referrer"
             tabIndex={0}
             aria-haspopup="menu"
-            style={{ WebkitTouchCallout: "none" }}
+            draggable={false}
+            style={{ WebkitTouchCallout: "none", touchAction: "manipulation" }}
             className={imageClassName}
             onPointerDown={(event) => setTouchMenu(event.pointerType !== "mouse")}
+            onTouchStart={startTouchHold}
+            onTouchMove={moveTouchHold}
+            onTouchEnd={cancelTouchHold}
+            onTouchCancel={cancelTouchHold}
             onKeyDown={(event) => {
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
