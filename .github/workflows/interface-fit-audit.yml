@@ -13,10 +13,15 @@ on:
       - tests/e2e/sidebar-touch-selection.spec.ts
       - tests/e2e/hydration.ts
       - tests/e2e/actual-app-fixture.ts
+      - tests/e2e/authenticated-fixture.ts
+      - tests/e2e/current-ui.ts
+      - tests/e2e/server-function-fixture.ts
       - tests/helpers/loopback-preview-headers.mjs
       - tests/fixtures/azure-local-network-guard.mjs
       - scripts/azure/local-preview.mjs
       - src/**
+      - public/**
+      - vite.config.ts
       - package.json
       - package-lock.json
   workflow_dispatch:
@@ -93,9 +98,19 @@ jobs:
           --project=desktop-1440x900 --project=phone-390x844
           --grep="Settings has full-height|returning-user auth|paints correctly|SSR controls|real sharing|desktop Settings width|management search preserves"
           --workers=2 --output=test-results/interface-fit/requested-controls
+      - name: Verify desktop and mobile loading and recovery budgets
+        env:
+          KOVA_LOADING_REPORT_SCOPE: loading
+        run: >-
+          npx --no-install playwright test --config=playwright.tab-resume.config.ts
+          --project=loading-desktop --project=loading-mobile
       - name: Verify five loaded sessions remain editable during auth refresh
         if: matrix.browser == 'chromium'
-        run: xvfb-run -a npx --no-install playwright test --config=playwright.tab-resume.config.ts
+        env:
+          KOVA_LOADING_REPORT_SCOPE: activation
+        run: >-
+          xvfb-run -a npx --no-install playwright test --config=playwright.tab-resume.config.ts
+          --project=five-browser-sessions --project=native-tab-activation
       - name: Repeat narrow-screen form and table action presses
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts

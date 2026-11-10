@@ -86,6 +86,12 @@ test("native tab activation keeps five loaded sessions editable within the retur
         });
       }, draft);
       const away = await context.newPage();
+      // Playwright otherwise forces every page to remain focused/visible.
+      // Disable only its test emulation so real activation events can occur.
+      for (const tab of [page, away]) {
+        const cdp = await context.newCDPSession(tab);
+        await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
+      }
       sessions.push({ page, away, composer, draft });
     }
     held = true;
@@ -131,7 +137,8 @@ test("native tab activation keeps five loaded sessions editable within the retur
       body: JSON.stringify(
         {
           method:
-            "headed Chromium bringToFront; trusted visible event to editable observation after two animation frames; synthetic hosted accounts; auth responses held",
+            "Chromium bringToFront with forced-focus emulation disabled; trusted visible event to editable observation after two animation frames; synthetic hosted accounts; auth responses held",
+          headless: info.project.use.headless ?? true,
           sessions: 5,
           samples: observations.length,
           meanMs,
