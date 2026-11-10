@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 218,
-  "latest": "20261109145000_kova_hourly_windows_monthly_cost_safety.sql",
+  "count": 219,
+  "latest": "20261110224500_workspace_discovery_join_requests.sql",
   "migrations": [
     {
       "order": 1,
@@ -4629,6 +4629,26 @@
       "rls": ["message_usage_hourly"],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 219,
+      "filename": "20261110224500_workspace_discovery_join_requests.sql",
+      "timestamp": "20261110224500",
+      "sha256": "6ed62447a7a138cdaa17d5f1c210f736639bfc115f9b063d81cb5762063fa9e2",
+      "tables": ["organization_join_requests"],
+      "functions": [
+        "workspace_discovery_domain",
+        "kova_discover_organizations",
+        "kova_request_organization_join",
+        "kova_workspace_join_inbox",
+        "kova_decline_organization_join"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["organization_join_requests"],
+      "policies": [],
+      "indexes": ["organization_join_requests_organization_pending"]
     }
   ]
 }
