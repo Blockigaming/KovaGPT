@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { authFetch, fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
@@ -118,6 +119,8 @@ export function ConnectedAccountManager({
       const body = await response.json();
       if (!response.ok) throw new Error("disconnect_failed");
       if (active.current)
+        publishKovaNotice({ id: "connection_disconnected", title: body.providerRevoked ? "Connection removed and access revoked" : "Connection removed locally", confirmed: true });
+      if (false)
         toast.success(
           body.providerRevoked
             ? "Account disconnected and provider access revoked."
