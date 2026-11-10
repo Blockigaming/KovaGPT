@@ -17,10 +17,11 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  classify:
+    # Cheap, source-only classification starts independent release lanes.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 5
     outputs:
       run_ci: ${{ steps.scope.outputs.run_ci }}
       run_database: ${{ steps.scope.outputs.run_database }}
@@ -68,43 +69,64 @@ jobs:
             echo "run_database=false" >> "$GITHUB_OUTPUT"
           fi
 
+  verify:
+    needs: classify
+    # A failed classifier must make the existing required verify check red, not skipped.
+    if: always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    outputs:
+      run_ci: ${{ needs.classify.outputs.run_ci }}
+      run_database: ${{ needs.classify.outputs.run_database }}
+      run_canonical_history: ${{ needs.classify.outputs.run_canonical_history }}
+    steps:
+      - name: Require successful change classification
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+        run: test "$CLASSIFY_RESULT" = success
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
       - name: Set up Node
-        if: steps.scope.outputs.run_ci == 'true' || steps.scope.outputs.run_canonical_history == 'true'
+        if: needs.classify.outputs.run_ci == 'true' || needs.classify.outputs.run_canonical_history == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
 
       - name: Check canonical history action inventory
-        if: steps.scope.outputs.run_ci == 'true' || steps.scope.outputs.run_canonical_history == 'true'
+        if: needs.classify.outputs.run_ci == 'true' || needs.classify.outputs.run_canonical_history == 'true'
         run: node scripts/release/canonical-history-decision.mjs --check
 
       - name: Install dependencies
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Formatting changed files
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run format:check:changed
 
       - name: Repository formatting audit
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run format:check
 
       - name: Lint
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run lint
 
       - name: Typecheck
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run typecheck
 
       - name: Release contracts
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run release:migrations && npm run release:manifest && npm run release:schema && npm run release:env && npm run release:security && git diff --exit-code -- release-migrations.json database-contract.json
 
       - name: Dependency audit
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         shell: bash
         run: |
           set -u
@@ -121,23 +143,23 @@ jobs:
           done
 
       - name: Unit tests
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run test:unit
 
       - name: API tests
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run test:api
 
       - name: Production build
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run build
 
       - name: Bundle budget
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run release:bundle
 
       - name: Install Playwright browsers
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -150,7 +172,7 @@ jobs:
 
       - name: Integration tests
         id: integration
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         shell: bash
         run: |
           mkdir -p artifacts/ci
@@ -168,12 +190,12 @@ jobs:
 
       - name: Read-only deployed baseline audit
         id: deployed_baseline
-        if: steps.scope.outputs.run_ci == 'true' && (github.head_ref || github.ref_name) != 'codex/kova-staging-owned-auth-20261019'
+        if: needs.classify.outputs.run_ci == 'true' && (github.head_ref || github.ref_name) != 'codex/kova-staging-owned-auth-20261019'
         continue-on-error: true
         run: npm run test:deployed-baseline:audit
 
       - name: Report deployed baseline audit blocker
-        if: steps.scope.outputs.run_ci == 'true' && steps.deployed_baseline.outcome == 'failure'
+        if: needs.classify.outputs.run_ci == 'true' && steps.deployed_baseline.outcome == 'failure'
         run: echo "::warning::The observational deployed-baseline audit could not produce accepted evidence; strict candidate gates will continue."
 
       - name: Upload deployed baseline evidence
@@ -189,20 +211,20 @@ jobs:
       # Preserve the Cloudflare artifact through integration tests, then build
       # a Node artifact for the prebuilt Playwright preview used below.
       - name: Browser preview build
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         env:
           KOVA_BROWSER_PREVIEW: node
         run: npm run build
 
       - name: Accessibility checks
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         env:
           PLAYWRIGHT_PREBUILT: "1"
         run: npm run test:a11y
 
       - name: Visual checks
         id: candidate_visual
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         env:
           KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR: artifacts/ui-audit/candidate-visual
           PLAYWRIGHT_PREBUILT: "1"
@@ -218,19 +240,19 @@ jobs:
           retention-days: 7
 
       - name: Browser smoke checks
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run test:browser
 
       - name: Release checks
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: npm run test:release
 
       - name: Clean tree check
-        if: steps.scope.outputs.run_ci == 'true'
+        if: needs.classify.outputs.run_ci == 'true'
         run: git diff --check
 
       - name: Upload Playwright report
-        if: failure() && steps.scope.outputs.run_ci == 'true'
+        if: failure() && needs.classify.outputs.run_ci == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-artifacts-verify
@@ -240,9 +262,43 @@ jobs:
             tests/e2e/*-snapshots
           if-no-files-found: ignore
 
+  browser-preview:
+    # Build one Node preview per exact source head; browser suites share its bytes.
+    needs: classify
+    if: needs.classify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      KOVA_BROWSER_PREVIEW: "node"
+      KOVA_BUILD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact source head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build immutable Node preview
+        run: npm run build
+      - name: Require complete preview and Work runner outputs
+        run: test -d dist/server && test -d dist/client && test -f dist/nitro.json && test -f node_modules/.nitro/last-build.json && test -d .nitro && test -f work-runner/build/office.mjs
+      - name: Upload exact preview for public and core browser suites
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            dist/
+            .nitro/
+            node_modules/.nitro/last-build.json
+            work-runner/build/office.mjs
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
+
   public-surface:
-    if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    needs: verify
+    if: needs.classify.outputs.run_ci == 'true' && needs.browser-preview.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    needs: [classify, browser-preview]
     runs-on: ubuntu-latest
     # The desktop shard traverses the complete public detail catalog in both
     # themes. Keep its full coverage when browser dependency downloads are slow.
@@ -263,7 +319,13 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm run build
+      - name: Restore exact Node browser preview
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .
+      - name: Check restored browser outputs
+        run: test -d dist/server && test -d dist/client && test -f dist/nitro.json && test -f node_modules/.nitro/last-build.json && test -d .nitro && test -f work-runner/build/office.mjs
       - run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
@@ -347,8 +409,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Browser preview build
-        run: npm run build
+      - name: Restore exact Node browser preview
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .
+      - name: Check restored browser outputs
+        run: test -d dist/server && test -d dist/client && test -f dist/nitro.json && test -f node_modules/.nitro/last-build.json && test -d .nitro && test -f work-runner/build/office.mjs
 
       - name: Install Playwright browsers
         run: |
@@ -395,6 +462,7 @@ jobs:
     env:
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
+      PLAYWRIGHT_PREBUILT: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -411,6 +479,13 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Restore exact Node browser preview
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .
+      - name: Check restored browser outputs
+        run: test -d dist/server && test -d dist/client && test -f dist/nitro.json && test -f node_modules/.nitro/last-build.json && test -d .nitro && test -f work-runner/build/office.mjs
       - run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
@@ -489,11 +564,9 @@ jobs:
           if-no-files-found: error
 
   isolated-database:
-    needs: verify
-    # The isolated local PostgreSQL rehearsal can provide source evidence even
-    # when an unrelated unit test fails. A failed verify job still blocks merge.
-    # A superseded, cancelled run must not queue another rehearsal.
-    if: always() && needs.verify.outputs.run_database == 'true' && !cancelled()
+    needs: classify
+    # Start DB proofs alongside verify. A failed verify still blocks final merge.
+    if: needs.classify.outputs.run_database == 'true' && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -505,7 +578,27 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Allocate unused local Supabase database port
+        # Hosted runners can already have the default 54322 port in use.
+        # Isolate only the ephemeral CI database, never a production connection.
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import socket
+          from pathlib import Path
+          with socket.socket() as probe:
+              probe.bind(("127.0.0.1", 0))
+              port = probe.getsockname()[1]
+          with Path("supabase/config.toml").open("a", encoding="utf-8") as config:
+              config.write(f"\n[db]\nport = {port}\n")
+          print(f"Isolated CI database port: {port}")
+          PY
       - run: npm run release:db:isolated
+      - name: Restore committed local-only Supabase configuration
+        # The isolated test uses a temporary port; the upgrade rehearsal requires
+        # a clean, immutable worktree and must never see the temporary config.
+        if: always()
+        run: git restore -- supabase/config.toml
       - name: Rehearse upgrade from captured production history
         run: npm run release:db:upgrade -- --capture-scheduled-candidate --capture-acl-detail
       - name: Verify current source rejects the historical proposal

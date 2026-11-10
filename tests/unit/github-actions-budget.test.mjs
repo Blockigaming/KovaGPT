@@ -12,7 +12,7 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   const exactHeadCheckoutCount =
     workflow.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/gu)
       ?.length ?? 0;
-  assert.equal(checkoutCount, 6);
+  assert.equal(checkoutCount, 8);
   assert.equal(
     exactHeadCheckoutCount,
     checkoutCount,
@@ -30,6 +30,17 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   assert.doesNotMatch(workflow, /- work|- "codex\/\*\*"/u);
   assert.doesNotMatch(workflow, /paths(?:-ignore)?:/u);
   assert.match(workflow, /name: Classify changed files/u);
+  assert.match(workflow, /verify:\s+needs: classify/u);
+  assert.match(workflow, /Require successful change classification/u);
+  assert.match(workflow, /run: test "\$CLASSIFY_RESULT" = success/u);
+  assert.match(workflow, /browser-preview:[\s\S]*?needs: classify/u);
+  assert.match(workflow, /needs: \[classify, browser-preview\]/u);
+  assert.equal(workflow.match(/Restore exact Node browser preview/gu)?.length, 3);
+  assert.equal(workflow.match(/npm run build/gu)?.length, 3);
+  assert.match(
+    workflow,
+    /name: browser-preview-\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/u,
+  );
   assert.match(workflow, /grep -Eqv/);
   assert.doesNotMatch(workflow, /grep -Ev[^\n]*\|\s*grep -q/u);
   assert.match(workflow, /name: Repository formatting audit/u);
@@ -53,7 +64,7 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   }
   assert.match(
     workflow,
-    /isolated-database:[\s\S]*?needs\.verify\.outputs\.run_database == 'true'/u,
+    /isolated-database:[\s\S]*?needs\.classify\.outputs\.run_database == 'true'/u,
   );
   assert.match(
     workflow,
