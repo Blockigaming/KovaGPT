@@ -35,7 +35,10 @@ test("both settings entry modes expose all twenty-two destinations through the g
   ]);
 });
 test("all settings sections are direct sidebar destinations with full-text search", () => {
-  assert.doesNotMatch(source, /const secondaryParents:|matchingSecondaryTabs|kova-settings-related/);
+  assert.doesNotMatch(
+    source,
+    /const secondaryParents:|matchingSecondaryTabs|kova-settings-related/,
+  );
   assert.match(source, /const allTabs = destinations;/);
   assert.match(source, /SETTINGS_DESCRIPTIONS\[item\.v\] \?\? ""/);
   assert.match(source, /tabs: group\.tabs\.filter\(matchesSettingsQuery\)/);
