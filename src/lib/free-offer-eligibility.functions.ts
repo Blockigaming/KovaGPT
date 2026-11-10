@@ -4,6 +4,7 @@ import { loose } from "@/lib/supabase-loose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { BILLING_ENV, BILLING_PLANS } from "@/lib/billing-plans";
 import { monthlyIntroBillingEnabled } from "@/lib/stripe.server";
+import { canDisplayFreeIntroOffer } from "./free-offer-eligibility-policy.mjs";
 
 /**
  * This endpoint is a conservative UI-visibility precheck, NOT a coupon grant.
@@ -34,15 +35,13 @@ export const getFreeOfferEligibility = createServerFn({ method: "GET" })
       ]);
       if (summaryResult.error || redemption.error || pending.error) return { eligible: false };
       const summary = summaryResult.data as Record<string, unknown> | null;
-      const eligible =
-        summary !== null &&
-        summary.tier === "free" &&
-        summary.effectiveTier === "free" &&
-        summary.activeSubscriptionCount === 0 &&
-        summary.billingConflict !== true &&
-        summary.trialing !== true &&
-        !redemption.data?.length &&
-        !pending.data?.length;
+      const eligible = canDisplayFreeIntroOffer({
+        summary,
+        redeemed: Boolean(redemption.data?.length),
+        pendingClaim: Boolean(pending.data?.length),
+        billingEnabled: monthlyIntroBillingEnabled(),
+        couponConfigured: Boolean(process.env.STRIPE_MONTHLY_INTRO_COUPON_ID),
+      });
       return { eligible };
     } catch {
       return { eligible: false };
