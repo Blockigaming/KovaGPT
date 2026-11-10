@@ -190,7 +190,9 @@ for (const theme of ["dark", "light"] as const) {
     await style.click();
     await expect(style).toBeChecked();
     const extra = form.getByRole("checkbox");
-    await extra.check();
+    // Radix checkboxes use controlled ARIA buttons, not native inputs.
+    // Wait for the React state update after the click in narrow Firefox.
+    await extra.click();
     await expect(extra).toBeChecked();
     const format = form.getByRole("combobox", { name: "Format", exact: true });
     await format.click();
