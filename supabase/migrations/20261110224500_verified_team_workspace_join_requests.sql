@@ -45,6 +45,7 @@ language sql stable security invoker set search_path='' as $$
   left join public.team_join_requests r on r.team_id=t.id and r.requester_id=p_actor
   where kova_private.team_verified_email(p_actor) is not null
     and split_part(lower(kova_private.team_verified_email(p_actor)),'@',2)=d.domain
+    and d.domain not in ('gmail.com','googlemail.com','yahoo.com','yahoo.co.uk','ymail.com','rocketmail.com','outlook.com','hotmail.com','live.com','msn.com','aol.com','icloud.com','me.com','mac.com','proton.me','protonmail.com','pm.me','mail.com','gmx.com','gmx.net','zoho.com')
     and t.status in ('active','trialing')
     and not t.billing_hold
     and t.owner_id<>p_actor
