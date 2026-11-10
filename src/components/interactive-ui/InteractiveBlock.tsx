@@ -405,6 +405,7 @@ function FieldControl({
                   onChange={(event) => {
                     if (event.target.checked) onChange(o.value);
                   }}
+                  onClick={() => onChange(o.value)}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
@@ -425,6 +426,15 @@ function FieldControl({
       );
     case "checkbox": {
       const list = Array.isArray(value) ? value : [];
+      const updateSelection = (option: string, checked: boolean) => {
+        onChange(
+          checked
+            ? list.includes(option)
+              ? list
+              : [...list, option]
+            : list.filter((x) => x !== option),
+        );
+      };
       return (
         <fieldset aria-describedby={describedBy} aria-invalid={error ? true : undefined}>
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
@@ -444,11 +454,8 @@ function FieldControl({
                   data-ui-reference="chatgpt.checkbox"
                   disabled={disabled}
                   checked={list.includes(o.value)}
-                  onChange={(event) =>
-                    onChange(
-                      event.target.checked ? [...list, o.value] : list.filter((x) => x !== o.value),
-                    )
-                  }
+                  onChange={(event) => updateSelection(o.value, event.target.checked)}
+                  onClick={(event) => updateSelection(o.value, event.currentTarget.checked)}
                   className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
