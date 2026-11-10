@@ -74,7 +74,9 @@ begin
  insert into public.team_join_requests(team_id, requester_id, requester_email)
  values (p_team,p_actor,v_email)
  on conflict(team_id,requester_id) do update set status='pending',
-   requester_email=excluded.requester_email,requested_at=now(),reviewed_at=null,reviewed_by=null
+   requester_email=excluded.requester_email,requested_at=now(),reviewed_at=null,reviewed_by=null,
+   notification_sent_at=null,notification_provider_id=null,
+   notification_started_at=null,notification_lease_until=null,notification_attempts=0
    where public.team_join_requests.status not in ('pending','approved')
  returning id into v_id;
  if v_id is null then select id into v_id from public.team_join_requests where team_id=p_team and requester_id=p_actor; end if;
