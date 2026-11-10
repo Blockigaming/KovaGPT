@@ -106,7 +106,7 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   await expect(settings).toBeHidden();
 });
 
-test("requested: account Upgrade goes directly to the plan selector", async ({ page }) => {
+test("requested: account Upgrade opens the selected hosted checkout flow", async ({ page }) => {
   await fixture(page, "dark", true);
   await page.goto("/");
   await waitForKovaHydration(page);
