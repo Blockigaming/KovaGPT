@@ -449,3 +449,54 @@ test("the native verification gate fences portal interaction, cannot be dismisse
   f.unmount();
   assert.equal(modal.open, false, "unmount never leaves an orphaned top-layer modal");
 });
+
+test("five returning hosted sessions keep controls ready while user and MFA checks are pending", async () => {
+  const users = Array.from({ length: 5 }, (_, i) => ({
+    id: `returning-owner-${i}`,
+    fixture: fixture(session(`returning-owner-${i}`)),
+  }));
+  await Promise.all(users.map(({ fixture: f }) => f.flush()));
+  const pending = users.map(({ id, fixture: f }) => {
+    const user = f.nextUser();
+    const assurance = f.nextAssurance();
+    f.event(session(id)); // Supabase emits SIGNED_IN when a loaded tab is refocused.
+    f.runTimers();
+    return { user, assurance };
+  });
+  await Promise.all(users.map(({ fixture: f }) => f.flush()));
+  for (const { id, fixture: f } of users) {
+    assert.equal(f.tree.key, id);
+    assert.equal(f.tree.props.value.isLoaded, true);
+    assert.equal(f.tree.props.value.user.id, id);
+    assert.equal(
+      f.nodes().some((node) => node.props.inert),
+      false,
+    );
+    assert.equal(
+      f.nodes().find((node) => node.type?.name === "AuthAuthorityGate").props.pending,
+      false,
+    );
+    assert.equal(
+      f.calls.some((call) => Array.isArray(call) && call[0] === "clear"),
+      false,
+    );
+  }
+  // A server rejection still signs out only the affected account; other tabs
+  // remain ready. No background request is treated as successful prematurely.
+  for (const [i, { id }] of users.entries()) {
+    pending[i].user.resolve(
+      i === 0
+        ? { data: { user: null }, error: { status: 401 } }
+        : { data: { user: { id } }, error: null },
+    );
+    pending[i].assurance.resolve({
+      data: { currentLevel: "aal1", nextLevel: "aal1" },
+      error: null,
+    });
+  }
+  await Promise.all(users.map(({ fixture: f }) => f.flush()));
+  assert.equal(users[0].fixture.tree.props.value.user, null);
+  assert.equal(users[0].fixture.calls.includes("sign-out"), true);
+  for (const { id, fixture: f } of users.slice(1)) assert.equal(f.tree.props.value.user.id, id);
+  for (const { fixture: f } of users) f.unmount();
+});
