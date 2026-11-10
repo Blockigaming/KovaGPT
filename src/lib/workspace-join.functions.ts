@@ -43,7 +43,7 @@ export async function deliverJoinRequestNotice(id:string) {
   const request=res.data;
   const team=await db.from("team_workspaces").select("owner_id,name").eq("id",request.team_id).single();
   if(team.error || !team.data) return false;
-  const owner=await teamRpc("team_verified_email",{p_user:team.data.owner_id}).catch(()=>null);
+  const owner=await teamRpc("kova_auth_directory_email",{p_account_id:team.data.owner_id}).catch(()=>null);
   if(typeof owner!=="string" || !owner.includes("@")) return false;
   const response=await fetch("https://api.resend.com/emails",{
     method:"POST",redirect:"error",signal:AbortSignal.timeout(10000),
