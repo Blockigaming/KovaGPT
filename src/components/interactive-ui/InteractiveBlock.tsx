@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -402,7 +401,9 @@ function FieldControl({
                   data-ui-reference="chatgpt.radio-group"
                   disabled={disabled}
                   checked={String(value ?? "") === o.value}
-                  onChange={(event) => event.target.checked && onChange(o.value)}
+                  onChange={(event) => {
+                    if (event.target.checked) onChange(o.value);
+                  }}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
