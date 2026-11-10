@@ -2,6 +2,7 @@
 
 ARG KOVA_SOURCE_SHA=unknown
 ARG KOVA_SOURCE_TREE=unknown
+ARG KOVA_SOURCE_CONTEXT=acr-git
 ARG KOVA_EXPECTED_SUPABASE_PROJECT_REF=unverified
 ARG KOVA_VERIFY_BROWSER_CONFIG=false
 
@@ -12,6 +13,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM node:24-bookworm-slim AS build
+ARG KOVA_SOURCE_CONTEXT
 ARG KOVA_SOURCE_SHA
 ARG KOVA_SOURCE_TREE
 ARG KOVA_EXPECTED_SUPABASE_PROJECT_REF
@@ -39,7 +41,7 @@ RUN case "$VITE_KOVA_AUTH_MODE" in \
       *) echo 'VITE_KOVA_GOOGLE_AUTH_ENABLED must be true or false' >&2; exit 1 ;; \
     esac
 
-RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
+RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" SOURCE_CONTEXT="$KOVA_SOURCE_CONTEXT" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:process.env.SOURCE_CONTEXT,sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
 RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=5120 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
     && if [ "$KOVA_VERIFY_BROWSER_CONFIG" = "true" ]; then \
