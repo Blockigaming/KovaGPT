@@ -34,6 +34,7 @@ export function KovaNotificationSurface() {
   const [pending, setPending] = useState<KovaNotice[]>([]);
   const [editing, setEditing] = useState(false);
   const [composing, setComposing] = useState(false);
+  const [liveMessage, setLiveMessage] = useState("");
   const active = pending[0] ?? null;
   const panelRef = useRef<HTMLElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -58,13 +59,17 @@ export function KovaNotificationSurface() {
       const definition = notificationDefinition(notice.id);
       if (!definition || (definition.requiresEvidence && notice.confirmed !== true)) return;
       const key = notice.key ?? notice.id;
-      if (["toast", "status", "inline"].includes(definition.surface)) {
-        // Status/error content also stays attached to its source component.
-        // The toast is a compact supplementary notification, not a modal.
+      if (definition.surface === "status" || definition.surface === "inline") {
+        // Source components own the visible operational status or inline error.
+        // Announce its change without duplicating a toast over the active tool.
+        setLiveMessage(notice.title);
+        return;
+      }
+      if (definition.surface === "toast") {
         toast(notice.title, {
           id: key,
           description: notice.message,
-          duration: definition.surface === "inline" ? 6500 : definition.surface === "status" ? 3500 : 3000,
+          duration: 3000,
           action: notice.onPrimary && notice.primaryLabel
             ? { label: notice.primaryLabel, onClick: notice.onPrimary } : undefined,
         });
@@ -134,8 +139,10 @@ export function KovaNotificationSurface() {
     return () => window.removeEventListener("keydown", keydown, true);
   }, [shown, active, definition, dismiss]);
 
-  if (!shown || !active || !definition) return null;
+  if (!shown || !active || !definition) return <span className="sr-only" role="status" aria-live="polite">{liveMessage}</span>;
   return (
+    <>
+    <span className="sr-only" role="status" aria-live="polite">{liveMessage}</span>
     <div className="kova-notice-backdrop" role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && definition.dismissible) dismiss();
@@ -169,5 +176,6 @@ export function KovaNotificationSurface() {
         </div>
       </section>
     </div>
+    </>
   );
 }
