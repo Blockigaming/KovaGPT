@@ -24,6 +24,10 @@ for (const theme of ["dark", "light"] as const) {
     if (page.viewportSize()!.width >= 768) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
+      for (const destination of ["Voice", "Security and login", "Storage", "Keyboard", "Usage", "Cloud Browser", "Family Center", "Location"]) {
+        await expect(navigation.getByRole("tab", { name: destination, exact: true })).toBeVisible();
+      }
+      await expect(surface.locator(".kova-settings-related")).toHaveCount(0);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
         await surface.locator("h1").evaluate((node) => {
@@ -38,6 +42,10 @@ for (const theme of ["dark", "light"] as const) {
       await expect(backToPreviousPage).toBeHidden();
       await expect(close).toBeVisible();
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
+      const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
+      for (const destination of ["Voice", "Security and login", "Storage", "Keyboard", "Usage", "Cloud Browser", "Family Center", "Location"]) {
+        await expect(navigation.getByRole("tab", { name: destination, exact: true })).toBeVisible();
+      }
       expect(
         await surface.locator("h1").evaluate((node) => {
           const style = getComputedStyle(node.closest(".sr-only")!);
@@ -142,4 +150,30 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await expect(dictation).toHaveCount(0);
   await expect(input).toHaveValue("Keep my typed draft");
   await expect(trigger).toBeFocused();
+});
+
+test("message composer shows only the text caret on focus across desktop and mobile", async ({ page }) => {
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await fixture(page, "dark", true, true);
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const composer = page.locator(".spec400-composer").first();
+    const field = composer.locator("textarea.spec400-composer-input");
+    await expect(field).toBeVisible();
+    const appearance = () =>
+      composer.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return {
+          borderColor: style.borderColor,
+          borderWidth: style.borderWidth,
+          outlineStyle: style.outlineStyle,
+          boxShadow: style.boxShadow,
+        };
+      });
+    const before = await appearance();
+    await field.focus();
+    await expect(field).toBeFocused();
+    expect(await appearance()).toEqual(before);
+  }
 });
