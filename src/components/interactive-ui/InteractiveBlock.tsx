@@ -445,9 +445,7 @@ function FieldControl({
                   checked={list.includes(o.value)}
                   onChange={(event) =>
                     onChange(
-                      event.target.checked
-                        ? [...list, o.value]
-                        : list.filter((x) => x !== o.value),
+                      event.target.checked ? [...list, o.value] : list.filter((x) => x !== o.value),
                     )
                   }
                   className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
