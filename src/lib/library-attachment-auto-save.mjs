@@ -6,6 +6,7 @@ export function createLibraryAttachmentAutoSaver({
   saveText,
   saveDocument,
   onError,
+  onSuccess = () => {},
 }) {
   const pending = new Set();
   const completed = new Set();
@@ -53,6 +54,7 @@ export function createLibraryAttachmentAutoSaver({
         });
       }
       completed.add(key);
+      if (getScope() === scope) onSuccess(attachment.name, attachment);
       if (completed.size > 256) completed.delete(completed.values().next().value);
     } catch {
       if (getScope() === scope)
