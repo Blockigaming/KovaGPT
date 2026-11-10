@@ -4,7 +4,6 @@ import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNod
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
-import { KovaNotificationSurface } from "@/components/KovaNotificationSurface";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 const SettingsDialog = lazy(() =>
@@ -274,7 +273,6 @@ export function AppShell({
       className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
     >
-      <KovaNotificationSurface />
       <Sidebar
         conversations={conversations}
         activeId={null}
