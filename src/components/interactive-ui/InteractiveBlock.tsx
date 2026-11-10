@@ -401,11 +401,10 @@ function FieldControl({
                   data-slot="radio-group-item"
                   data-ui-reference="chatgpt.radio-group"
                   disabled={disabled}
-                  checked={String(value ?? "") === o.value}
-                  // React's native change tracking can miss radio clicks after
-                  // concurrent draft updates in Firefox. Handle the click directly;
-                  // native keyboard activation also dispatches a click.
-                  readOnly
+                  // Let the browser own the selected state. A controlled
+                  // checked prop can roll back native clicks in Firefox/WebKit
+                  // while React persists the previous draft.
+                  defaultChecked={String(value ?? "") === o.value}
                   onClick={() => onChange(o.value)}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
@@ -427,13 +426,6 @@ function FieldControl({
       );
     case "checkbox": {
       const list = Array.isArray(value) ? value : [];
-      const updateSelection = (option: string, checked: boolean) => {
-        if (checked) {
-          if (!list.includes(option)) onChange([...list, option]);
-        } else if (list.includes(option)) {
-          onChange(list.filter((x) => x !== option));
-        }
-      };
       return (
         <fieldset aria-describedby={describedBy} aria-invalid={error ? true : undefined}>
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
@@ -452,11 +444,16 @@ function FieldControl({
                   data-slot="checkbox"
                   data-ui-reference="chatgpt.checkbox"
                   disabled={disabled}
-                  checked={list.includes(o.value)}
-                  // Derive the next value from controlled state instead of the
-                  // browser's transient checked property (WebKit/Safari).
-                  readOnly
-                  onClick={() => updateSelection(o.value, !list.includes(o.value))}
+                  value={o.value}
+                  // Native checkbox state stays interactive across rapid draft
+                  // updates; read all currently checked options from the DOM.
+                  defaultChecked={list.includes(o.value)}
+                  onClick={(event) => {
+                    const checked = event.currentTarget
+                      .closest("fieldset")
+                      ?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked');
+                    if (checked) onChange(Array.from(checked, (input) => input.value));
+                  }}
                   className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
