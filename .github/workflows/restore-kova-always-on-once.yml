@@ -1,0 +1,78 @@
+name: Restore Kova always-on configuration once
+on:
+  push:
+    branches: [ops/restore-kova-always-on-20261110]
+    paths: [.github/workflows/restore-kova-always-on-once.yml]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: restore-kova-always-on-once
+  cancel-in-progress: false
+jobs:
+  restore:
+    if: github.repository == 'Blockigaming/KovaGPT' && github.event_name == 'push'
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Restore only the prior serving revision after checking live state
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, subprocess, time
+          group = 'rg-kovagpt-prod'
+          app = 'kovagpt-prod-web'
+          warm = app + '--models627-4c0a75c'
+          idle = app + '--idlezero-20261109'
+          expected_image = 'kovagptacr-dte9hugbhjghcyb8.azurecr.io/kovagpt-web@sha256:6368c448ab9eff515e85f305a14bd5803f4b6d0736558c15864218651de2bb23'
+          def az(args, read=True):
+              r = subprocess.run(['az', *args, '--only-show-errors', '-o', 'json' if read else 'none'], capture_output=True, text=True, timeout=60)
+              if r.returncode:
+                  raise RuntimeError('always_on_azure_command_failed: ' + ' '.join(args[:3]))
+              return json.loads(r.stdout) if read else None
+          def revision(name):
+              return az(['containerapp','revision','show','-g',group,'-n',app,'--revision',name])['properties']
+          def traffic():
+              current = az(['containerapp','show','-g',group,'-n',app])
+              return {t.get('revisionName'):t.get('weight',0) for t in current['properties']['configuration']['ingress']['traffic'] if t.get('weight',0)>0}
+          account = az(['account','show'])
+          assert account['id'] == 'ab732127-11c3-46a7-a1cb-6ee8d86594f4', 'subscription_changed'
+          assert account['tenantId'] == '18a67414-b56e-4b79-8dc8-435494fcc9be', 'tenant_changed'
+          target = revision(warm)
+          assert target['template']['scale']['minReplicas'] == 1, 'prior_minimum_changed'
+          assert target['template']['containers'][0]['image'] == expected_image, 'prior_image_changed'
+          before = traffic()
+          if before != {warm:100}:
+              assert before == {idle:100}, 'serving_revision_changed_stop_without_mutation'
+              assert revision(idle)['template']['containers'][0]['image'] == expected_image, 'idle_image_changed'
+              az(['containerapp','revision','activate','-g',group,'-n',app,'--revision',warm],False)
+              for attempt in range(24):
+                  if revision(warm).get('healthState') == 'Healthy':
+                      break
+                  time.sleep(5)
+              else:
+                  raise RuntimeError('prior_revision_not_healthy_traffic_unchanged')
+              assert traffic() == before, 'traffic_changed_during_preparation'
+              az(['containerapp','ingress','traffic','set','-g',group,'-n',app,'--revision-weight',warm+'=100',idle+'=0'],False)
+          assert traffic() == {warm:100}, 'traffic_verification_failed'
+          az(['containerapp','revision','deactivate','-g',group,'-n',app,'--revision',idle],False)
+          final = revision(warm)
+          assert final['active'] is True and final['template']['scale']['minReplicas'] == 1, 'always_on_verification_failed'
+          assert revision(idle)['active'] is False, 'idle_revision_still_active'
+          receipt = {'status':'ALWAYS_ON_RESTORED','revision':warm,'minReplicas':1,'trafficPercent':100,'image':expected_image,'idleRevisionActive':False,'imageBuilds':0}
+          print(json.dumps(receipt))
+          with open(os.path.join(os.environ['RUNNER_TEMP'],'always-on-receipt.json'),'w') as f:
+              json.dump(receipt,f)
+          PY
+      - name: Preserve key-free restoration receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: kova-always-on-restoration
+          path: ${{ runner.temp }}/always-on-receipt.json
+          retention-days: 7
