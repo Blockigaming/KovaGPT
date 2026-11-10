@@ -14,7 +14,7 @@ import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { KovaNotificationSurface } from "@/components/KovaNotificationSurface";
+import { KovaNotificationSurface, publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
@@ -320,6 +320,28 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
 
 function RootNotificationCenter() {
   const { isLoaded, user } = useUser();
+  useEffect(() => {
+    if (!isLoaded) return;
+    const offline = () => {
+      if (navigator.onLine === false) publishKovaNotice({
+        id: "network_offline", title: "You're offline",
+        message: "Your unsent text is preserved. Check the connection before retrying.",
+      });
+    };
+    const online = () => {
+      if (navigator.onLine === true) publishKovaNotice({
+        id: "network_restored", title: "Browser connection restored",
+        message: "Network access may still need verification by the active feature.",
+        confirmed: true,
+      });
+    };
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    return () => {
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+    };
+  }, [isLoaded]);
   return isLoaded ? <KovaNotificationSurface key={user?.id ?? "guest"} /> : null;
 }
 
