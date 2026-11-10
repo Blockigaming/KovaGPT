@@ -5,8 +5,11 @@ export default defineConfig({
   ...base,
   testMatch: "**/performance/tab-return-continuity.spec.ts",
   workers: 1,
-  outputDir: "test-results/tab-resume",
-  reporter: [["list"], ["json", { outputFile: "test-results/tab-resume/results.json" }]],
+  outputDir: "test-results/interface-fit/tab-resume/screenshots",
+  reporter: [
+    ["list"],
+    ["json", { outputFile: "test-results/interface-fit/tab-resume/results.json" }],
+  ],
   projects: [
     {
       name: "five-browser-sessions",
