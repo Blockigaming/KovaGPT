@@ -35,7 +35,16 @@ export function searchConversations(
       if (attachment !== null && hasAttachment !== attachment) return [];
       if (conversation.updatedAt < after || conversation.updatedAt >= before) return [];
       const title = conversation.title.toLowerCase();
-      const messages = conversation.messages.map((message) => message.content).join("\n");
+      const messages = conversation.messages
+        .map((message) =>
+          [
+            message.content,
+            ...(message.attachments ?? []).map((attachment) =>
+              attachment.kind === "image" ? "" : attachment.name,
+            ),
+          ].join("\n"),
+        )
+        .join("\n");
       const content = messages.toLowerCase();
       if (
         terms.some(
