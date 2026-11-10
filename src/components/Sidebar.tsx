@@ -37,6 +37,7 @@ import {
   X,
   UserRound,
   ChevronRight,
+  Building2,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -57,6 +58,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTier } from "@/hooks/useTier";
+import { useWorkspaceDiscovery } from "@/lib/workspace-discovery-client";
+import { FindWorkspacesDialog } from "@/components/WorkspaceDiscovery";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 import {
@@ -302,6 +305,8 @@ export function Sidebar({
   } | null>(null);
   const [resizing, setResizing] = useState(false);
   const signedIn = isLoaded && isSignedIn;
+  const [findWorkspacesOpen, setFindWorkspacesOpen] = useState(false);
+  const { workspaces: discoverableWorkspaces } = useWorkspaceDiscovery(signedIn ? user?.id ?? null : null);
   const railOwner = signedIn ? user?.id : undefined;
   const layout =
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
@@ -1078,6 +1083,17 @@ export function Sidebar({
               ? "Explore Plus offer" : "Upgrade plan"}
         </Link>
       </DropdownMenuItem>
+      {discoverableWorkspaces.length > 0 ? (
+        <DropdownMenuItem
+          onSelect={() => {
+            cancelPendingSelection();
+            setFindWorkspacesOpen(true);
+          }}
+        >
+          <Building2 aria-hidden="true" />
+          Find workspaces
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
@@ -1129,6 +1145,11 @@ export function Sidebar({
 
   return (
     <>
+      <FindWorkspacesDialog
+        userId={signedIn ? user?.id ?? null : null}
+        open={findWorkspacesOpen}
+        onOpenChange={setFindWorkspacesOpen}
+      />
       {signedIn && (
         <LogoutConfirmDialog
           open={logoutConfirmOpen}

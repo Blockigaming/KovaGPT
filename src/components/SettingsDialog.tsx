@@ -9,6 +9,7 @@ import { BillingWorkspace, BillingSubscriptionFacts } from "@/components/Billing
 import "@/styles/settings-reference.css";
 import "@/styles/settings-page-layout.css";
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
+import { WorkspaceDiscoverySettings } from "@/components/WorkspaceDiscovery";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { formatDisplayDateTime } from "@/lib/time-format";
@@ -1944,6 +1945,7 @@ export function SettingsDialog({
                         Manage apps and permissions
                       </Link>
                     </Button>
+                    <WorkspaceDiscoverySettings userId={userKey} />
                   </section>
                 )}
               </TabsContent>

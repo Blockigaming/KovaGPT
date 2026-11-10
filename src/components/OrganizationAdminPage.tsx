@@ -12,6 +12,7 @@ import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { OrganizationScimControls } from "@/components/OrganizationScimControls";
+import { OrganizationJoinInbox } from "@/components/OrganizationJoinInbox";
 import { Input } from "@/components/ui/input";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import {
@@ -472,6 +473,14 @@ function OrganizationContent({ userId }: { userId: string }) {
           )}
           {org && (
             <>
+              {admin && (
+                <OrganizationJoinInbox
+                  userId={userId}
+                  organizationId={org.id}
+                  revision={org.revision}
+                  onInvited={() => { void refresh(org.id); }}
+                />
+              )}
               <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
