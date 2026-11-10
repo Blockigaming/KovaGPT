@@ -120,12 +120,7 @@ export function ConnectedAccountManager({
       if (!response.ok) throw new Error("disconnect_failed");
       if (active.current)
         publishKovaNotice({ id: "connection_disconnected", title: body.providerRevoked ? "Connection removed and access revoked" : "Connection removed locally", confirmed: true });
-      if (false)
-        toast.success(
-          body.providerRevoked
-            ? "Account disconnected and provider access revoked."
-            : "Account disconnected locally. Provider revocation may still be pending.",
-        );
+
     } catch {
       if (active.current)
         toast.error("Disconnect outcome could not be confirmed. Refresh status before retrying.");
