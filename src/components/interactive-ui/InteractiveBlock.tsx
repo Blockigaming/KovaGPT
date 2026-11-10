@@ -232,6 +232,7 @@ function FormBody({
         {hasFields && (
           <Button
             type="submit"
+            onPointerDown={preserveActionFocus}
             disabled={locked}
             className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
           >
