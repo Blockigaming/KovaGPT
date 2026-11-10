@@ -27,6 +27,9 @@ create table if not exists public.team_join_requests (
   reviewed_by uuid references auth.users(id) on delete set null,
   notification_sent_at timestamptz,
   notification_provider_id text,
+  notification_started_at timestamptz,
+  notification_lease_until timestamptz,
+  notification_attempts integer not null default 0 check(notification_attempts between 0 and 6),
   unique (team_id, requester_id)
 );
 create index if not exists team_join_requests_owner_queue on public.team_join_requests(team_id, status, requested_at);
@@ -98,3 +101,27 @@ begin
 end $$;
 revoke all on function public.review_verified_team_join(uuid,uuid,boolean) from public,anon,authenticated;
 grant execute on function public.review_verified_team_join(uuid,uuid,boolean) to service_role;
+
+
+-- Claim the precise notification with a lease. The same immutable provider
+-- idempotency key is reused for all retries; stop before the provider's
+-- 24-hour deduplication window can expire.
+create or replace function public.claim_team_join_notification(p_id uuid)
+returns jsonb language plpgsql security invoker set search_path='' as $$
+declare r public.team_join_requests;
+begin
+  update public.team_join_requests
+  set notification_started_at=coalesce(notification_started_at,now()),
+      notification_lease_until=now()+interval '2 minutes',
+      notification_attempts=notification_attempts+1
+  where id=p_id and status='pending' and notification_sent_at is null
+    and (notification_lease_until is null or notification_lease_until < now())
+    and notification_attempts < 6
+    and requested_at > now()-interval '20 hours'
+    and (notification_started_at is null or notification_started_at > now()-interval '20 hours')
+  returning * into r;
+  if r.id is null then return null; end if;
+  return to_jsonb(r);
+end $$;
+revoke all on function public.claim_team_join_notification(uuid) from public,anon,authenticated;
+grant execute on function public.claim_team_join_notification(uuid) to service_role;
