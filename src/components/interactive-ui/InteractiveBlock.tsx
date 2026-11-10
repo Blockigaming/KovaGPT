@@ -51,7 +51,8 @@ function writeStored(key: string | null, value: Stored) {
 }
 
 function preserveActionFocus(event: React.PointerEvent<HTMLButtonElement>) {
-  if (event.button === 0) event.preventDefault();
+  // Prevent mouse focus stealing without cancelling touch-generated clicks in Safari.
+  if (event.button === 0 && event.pointerType === "mouse") event.preventDefault();
 }
 
 export type InteractiveBlockProps = {
@@ -186,8 +187,12 @@ function FormBody({
     ...(initial ?? {}),
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Keep rapid successive field edits in event order, even before React commits
+  // a render (notably date + radio changes in narrow Firefox layouts).
+  const valuesRef = useRef(values);
   const set = (id: string, value: FormValue) => {
-    const next = { ...values, [id]: value };
+    const next = { ...valuesRef.current, [id]: value };
+    valuesRef.current = next;
     setValues(next);
     if (errors[id]) setErrors(({ [id]: _drop, ...rest }) => rest);
     onDraft(next);
