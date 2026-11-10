@@ -427,13 +427,11 @@ function FieldControl({
     case "checkbox": {
       const list = Array.isArray(value) ? value : [];
       const updateSelection = (option: string, checked: boolean) => {
-        onChange(
-          checked
-            ? list.includes(option)
-              ? list
-              : [...list, option]
-            : list.filter((x) => x !== option),
-        );
+        if (checked) {
+          if (!list.includes(option)) onChange([...list, option]);
+        } else if (list.includes(option)) {
+          onChange(list.filter((x) => x !== option));
+        }
       };
       return (
         <fieldset aria-describedby={describedBy} aria-invalid={error ? true : undefined}>
