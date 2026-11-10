@@ -105,9 +105,12 @@ export function InteractiveBlock({
     persist({ submission });
   };
   const saveDraft = (draft: InteractiveSubmission) => {
-    if (submitted) return;
-    setSubmitError(false);
-    persist({ draft });
+    if (submittedRef.current) return;
+    // FormBody already owns the live field state. Persist the draft directly
+    // without forcing the parent to rerender on every pointer/keyboard event.
+    // Parent rerenders during a Radix click can reinitialize its selection.
+    writeStored(storageKey, { draft });
+    if (submitError) setSubmitError(false);
   };
   const headingId = useId();
 
