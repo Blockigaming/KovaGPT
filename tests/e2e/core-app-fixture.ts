@@ -96,6 +96,10 @@ export async function coreFixture(
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
+    // The base authenticated fixture owns valid chat-history reads. Do not
+    // replace them with the generic disconnected-service fallback: doing so
+    // prevents the chat controller from ever becoming writable in UI tests.
+    if (path === "/api/chat/history") return route.fallback();
     if (path === "/api/google/status")
       return route.fulfill({
         json: {

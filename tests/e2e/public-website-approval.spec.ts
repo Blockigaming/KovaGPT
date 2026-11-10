@@ -170,7 +170,7 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });
 
-test("hosted checkout waits for explicit payment action without contacting Stripe", async ({
+test("hosted checkout starts automatically and fails safely without configured payments", async ({
   page,
 }, testInfo) => {
   const evidence = evidenceDirectory(testInfo.project.name);
@@ -188,13 +188,12 @@ test("hosted checkout waits for explicit payment action without contacting Strip
   await start.click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
   const dialog = page.getByRole("main");
-  await expect(dialog.locator('[data-checkout-state="ready"]')).toBeVisible();
-  await expect(
-    dialog.getByRole("button", { name: "Continue to payment", exact: true }),
-  ).toBeEnabled();
+  // The credential-free fixture must never invent a usable payment session.
+  await expect(dialog.locator('[data-checkout-state="error"]')).toBeVisible();
+  await expect(dialog.getByRole("alert")).toContainText("Secure checkout could not open.");
+  await expect(dialog.getByRole("button", { name: "Retry checkout", exact: true })).toBeVisible();
   await expect(dialog.locator("iframe")).toHaveCount(0);
-  await expect(dialog).toContainText("Payment opens full-screen in Stripe.");
-  await page.screenshot({ path: `${evidence}/checkout-ready.png` });
+  await page.screenshot({ path: `${evidence}/checkout-unavailable.png` });
   await page.getByRole("link", { name: "Back to plans", exact: true }).click();
   await expect(page).toHaveURL(/\/pricing/);
   await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();

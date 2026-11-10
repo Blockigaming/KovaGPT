@@ -268,6 +268,11 @@ test("Activity uses current chat data, separates inputs, and hides inactive brow
   assert.equal(sourcePanel.props.conversation, chat);
   assert.equal(sourcePanel.props.activeBrowserOnly, true);
   assert.equal(sourcePanel.props.separateInputs, true);
+  const browserPanel = nodes(activity).find(
+    (node) => node.type === "ConversationSourcesPanel" && node.props.browserOnly,
+  );
+  assert.equal(browserPanel.props.showActivity, true);
+  assert.equal(browserPanel.props.conversation, chat);
   assert.equal(
     nodes(activity).filter((node) => node.props.className === "kova-output-row").length,
     0,

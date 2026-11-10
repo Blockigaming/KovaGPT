@@ -184,10 +184,15 @@ for (const theme of ["dark", "light"] as const) {
     await form.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("3");
     await form.locator('input[type="date"]').fill("2026-11-05");
     const style = form.getByRole("radio");
-    await style.check();
+    // Radix radio items are buttons (role=radio), not native input[type=radio].
+    // Click the control and await its controlled React state instead of using
+    // Playwright check(), which can read the state before Firefox commits it.
+    await style.click();
     await expect(style).toBeChecked();
     const extra = form.getByRole("checkbox");
-    await extra.check();
+    // Radix checkboxes use controlled ARIA buttons, not native inputs.
+    // Wait for the React state update after the click in narrow Firefox.
+    await extra.click();
     await expect(extra).toBeChecked();
     const format = form.getByRole("combobox", { name: "Format", exact: true });
     await format.click();
@@ -338,6 +343,86 @@ for (const theme of ["dark", "light"] as const) {
     await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeFocused();
   });
 }
+
+test("background history sync keeps a pressed interactive choice in place", async ({ page }) => {
+  await showBlocks(page, "light", [
+    {
+      version: 1,
+      type: "form",
+      id: "sync-stable-choices",
+      title: "Sync-stable choices",
+      fields: [
+        {
+          id: "style",
+          label: "Style",
+          kind: "radio",
+          options: [{ value: "a", label: "Choice A" }],
+        },
+        {
+          id: "extras",
+          label: "Extras",
+          kind: "checkbox",
+          options: [{ value: "b", label: "Extra B" }],
+        },
+      ],
+      submitLabel: "Send choices",
+    },
+  ]);
+  const notice = page.getByLabel("Chat history synchronization", { exact: true });
+  const save = notice.getByRole("button", {
+    name: "Save existing chats to my account",
+    exact: true,
+  });
+  await expect(save).toBeEnabled();
+  let pending: { wait: Promise<void>; started: boolean } | null = null;
+  await page.route("**/api/chat/history**", async (route) => {
+    const gate = pending;
+    if (route.request().method() === "GET" && gate) {
+      gate.started = true;
+      await gate.wait;
+    }
+    await route.fallback();
+  });
+  const form = page.getByRole("region", { name: "Sync-stable choices", exact: true });
+  for (const control of [form.getByRole("radio"), form.getByRole("checkbox")]) {
+    await expect(control).toBeEnabled();
+    await control.scrollIntoViewIfNeeded();
+    const before = await control.boundingBox();
+    if (!before) throw new Error("Interactive choice is missing");
+    let release = () => {};
+    const gate = { wait: new Promise<void>((resolve) => (release = resolve)), started: false };
+    pending = gate;
+    let pressed = false;
+    try {
+      await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+      await page.mouse.down();
+      pressed = true;
+      // Initialization can still be finishing a device commit. Wait for an idle
+      // sync turn by signaling connectivity; never repeat the control press.
+      await expect
+        .poll(async () => {
+          if (!gate.started) await page.evaluate(() => window.dispatchEvent(new Event("online")));
+          return gate.started;
+        })
+        .toBe(true);
+      await expect(notice).toBeVisible();
+      await expect(notice.getByRole("status")).toHaveText(
+        "Earlier chat history remains on this device",
+      );
+      const during = await control.boundingBox();
+      if (!during) throw new Error("Interactive choice disappeared during sync");
+      expect(Math.abs(during.y - before.y)).toBeLessThan(1);
+      await page.mouse.up();
+      pressed = false;
+      await expect(control).toBeChecked();
+    } finally {
+      if (pressed) await page.mouse.up();
+      pending = null;
+      release();
+    }
+    await expect(save).toBeEnabled();
+  }
+});
 
 test("repeated form IDs keep labels, validation, and submission on the correct form", async ({
   page,

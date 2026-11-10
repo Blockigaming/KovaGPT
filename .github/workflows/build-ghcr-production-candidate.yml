@@ -1,0 +1,95 @@
+name: Build private GHCR production candidate
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Reviewed main commit; must equal this workflow revision
+        required: true
+        type: string
+      confirmation:
+        description: Type BUILD_ONLY to build on GitHub without deploying
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ghcr-production-candidate
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && inputs.confirmation == 'BUILD_ONLY'
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+      KOVA_BUILD_CONFIRMATION: BUILD_ONLY
+      KOVA_PRODUCTION_OPERATION: build
+      KOVA_PRODUCTION_BROWSER_INPUT_MODE: narrow-openai
+      KOVA_PRODUCTION_ACR_NAME: kovagptacr
+      KOVA_PRODUCTION_ACR_LOGIN_SERVER: kovagptacr-dte9hugbhjghcyb8.azurecr.io
+      KOVA_PRODUCTION_IMAGE_REPOSITORY: kovagpt-web
+      KOVA_PRODUCTION_SUPABASE_PROJECT_REF: mfbycmbjygcfkrsuepxf
+      KOVA_PRODUCTION_SUPABASE_URL: ${{ vars.KOVA_PRODUCTION_SUPABASE_URL }}
+      KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: ${{ vars.KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
+      KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: ${{ vars.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY }}
+      VITE_KOVA_AUTH_MODE: ${{ vars.VITE_KOVA_AUTH_MODE || 'supabase' }}
+      VITE_KOVA_GOOGLE_AUTH_ENABLED: ${{ vars.VITE_KOVA_GOOGLE_AUTH_ENABLED || 'false' }}
+      VITE_KOVA_AUTH_ORIGIN: ${{ vars.VITE_KOVA_AUTH_ORIGIN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Validate browser inputs and preserve exact source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
+          node --test tests/unit/azure-production-candidate-build.test.mjs tests/unit/azure-production-browser-workflow-inputs.test.mjs tests/unit/azure-narrow-openai-browser-inputs.test.mjs
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+          import { execFileSync } from "node:child_process";
+          import { productionCandidateConfig, productionCandidateBuildRequest } from "./scripts/azure/build-production-candidate.mjs";
+          const config = productionCandidateConfig(process.env);
+          const tree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], {encoding:"utf8"}).trim();
+          const request = productionCandidateBuildRequest(config, tree, false);
+          request.arguments.push({name:"KOVA_SOURCE_CONTEXT",value:"git-archive"});
+          writeFileSync(process.env.RUNNER_TEMP + "/ghcr-build-args", request.arguments.flatMap(({name,value})=>["--build-arg",name+"="+value]).join("\0")+"\0",{mode:0o600});
+          NODE
+          mkdir "$RUNNER_TEMP/ghcr-context"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/ghcr-context"
+      - name: Build and verify candidate without paid Azure build compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export DOCKER_CONFIG="$RUNNER_TEMP/ghcr-docker-auth"
+          mkdir -p "$DOCKER_CONFIG"
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username Blockigaming --password-stdin
+          mapfile -d '' -t buildargs < "$RUNNER_TEMP/ghcr-build-args"
+          image="ghcr.io/blockigaming/kovagpt-web:candidate-$GITHUB_SHA"
+          docker build --platform linux/amd64 "${buildargs[@]}" --tag "$image" "$RUNNER_TEMP/ghcr-context"
+          test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" = "$GITHUB_SHA"
+          docker run --rm --entrypoint node "$image" --check dist/server/index.mjs
+          docker push "$image"
+          docker pull "$image"
+          reference="$(docker inspect --format '{{index .RepoDigests 0}}' "$image")"
+          [[ "$reference" =~ ^ghcr.io/blockigaming/kovagpt-web@sha256:[a-f0-9]{64}$ ]]
+          test "$(gh api /users/Blockigaming/packages/container/kovagpt-web --jq .visibility)" = private
+          printf '%s\n' "$reference" > "$RUNNER_TEMP/ghcr-candidate-image.txt"
+          echo "Verified candidate: $reference. Not deployed; no Azure capacity, secret, or traffic changes." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ghcr-production-candidate
+          path: ${{ runner.temp }}/ghcr-candidate-image.txt
+          retention-days: 30

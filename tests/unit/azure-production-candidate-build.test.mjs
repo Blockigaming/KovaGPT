@@ -473,7 +473,9 @@ test("existing PLAN and Dockerfile require the same provenance context and label
   const dockerfile = readFileSync(new URL("../../Dockerfile", import.meta.url), "utf8");
   assert.match(plan, /value\.schemaVersion !== 3/u);
   assert.match(plan, /value\.sourceContext !== "acr-git"/u);
-  assert.match(dockerfile, /context:'acr-git'/u);
+  assert.match(dockerfile, /ARG KOVA_SOURCE_CONTEXT=acr-git/u);
+  assert.match(dockerfile, /SOURCE_CONTEXT="\$KOVA_SOURCE_CONTEXT"/u);
+  assert.match(dockerfile, /context:process\.env\.SOURCE_CONTEXT/u);
   for (const label of [
     "org.opencontainers.image.revision",
     "com.kovagpt.source.tree",
