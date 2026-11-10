@@ -402,9 +402,9 @@ function FieldControl({
                   data-ui-reference="chatgpt.radio-group"
                   disabled={disabled}
                   checked={String(value ?? "") === o.value}
-                  onChange={(event) => {
-                    if (event.target.checked) onChange(o.value);
-                  }}
+                  // A native radio change selects this option even on Firefox
+                  // layouts where the event's checked property lags the change.
+                  onChange={() => onChange(o.value)}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
