@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-          import json, os, subprocess, time
+          import json, os, re, subprocess, time
           group = 'rg-kovagpt-prod'
           app = 'kovagpt-prod-web'
           warm = app + '--models627-4c0a75c'
@@ -34,7 +34,9 @@ jobs:
           def az(args, read=True):
               r = subprocess.run(['az', *args, '--only-show-errors', '-o', 'json' if read else 'none'], capture_output=True, text=True, timeout=60)
               if r.returncode:
-                  raise RuntimeError('always_on_azure_command_failed: ' + ' '.join(args[:3]))
+                  match = re.search(r'ERROR:\s*\(([A-Za-z0-9_.-]+)\)',r.stderr)
+                  reason = match.group(1) if match else ('invalid_cli_arguments' if 'unrecognized arguments' in r.stderr else 'unclassified_azure_error')
+                  raise RuntimeError('always_on_azure_command_failed: ' + ' '.join(args[:3]) + ' code=' + reason)
               return json.loads(r.stdout) if read else None
           def revision(name):
               return az(['containerapp','revision','show','-g',group,'-n',app,'--revision',name])['properties']
