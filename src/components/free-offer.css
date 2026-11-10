@@ -24,3 +24,22 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Account-sheet variant: same compact, rounded claim affordance on mobile. */
+.kova-free-offer-sidebar {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  margin: 8px 0 0;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-size: 14px;
+  font-weight: 600;
+}
+.kova-free-offer-sidebar:hover { background: var(--accent); }
+@media (min-width: 1024px) {
+  .kova-free-offer-sidebar { min-height: 44px; }
+}
