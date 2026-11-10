@@ -590,7 +590,7 @@ jobs:
               probe.bind(("127.0.0.1", 0))
               port = probe.getsockname()[1]
           with Path("supabase/config.toml").open("a", encoding="utf-8") as config:
-              config.write(f"\\n[db]\\nport = {port}\\n")
+              config.write(f"\n[db]\nport = {port}\n")
           print(f"Isolated CI database port: {port}")
           PY
       - run: npm run release:db:isolated
