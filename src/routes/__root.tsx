@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { KovaNotificationSurface } from "@/components/KovaNotificationSurface";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
@@ -317,6 +318,11 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
   return <>{children}</>;
 }
 
+function RootNotificationCenter() {
+  const { isLoaded, user } = useUser();
+  return isLoaded ? <KovaNotificationSurface key={user?.id ?? "guest"} /> : null;
+}
+
 function RootInputModality() {
   useEffect(() => installInputModality(document), []);
   return null;
@@ -362,6 +368,7 @@ function RootComponent() {
           <Outlet />
         </AppAccountGate>
         <Toaster />
+        <RootNotificationCenter />
       </QueryClientProvider>
     </ClerkProvider>
   );
