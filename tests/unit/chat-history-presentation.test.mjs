@@ -82,7 +82,16 @@ test("a pending migration keeps the same notice through background sync transiti
 });
 
 test("background sync without a migration remains quiet and critical errors remain visible", () => {
-  for (const phase of ["local", "connecting", "saving_device", "syncing", "pending", "saved"])
+  for (const phase of [
+    "local",
+    "connecting",
+    "saving_device",
+    "syncing",
+    "pending",
+    "saved",
+    "offline",
+    "rate_limited",
+  ])
     assert.equal(notice(state(phase)), null, phase);
   const rendered = notice({ ...state("auth_required"), migration: 2 });
   const heading = rendered.children.find((node) => node?.props?.role === "status");

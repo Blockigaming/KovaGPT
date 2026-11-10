@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { coreFixture } from "../e2e/core-app-fixture";
+import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 // Exercise real routed surfaces; only account/service data is synthetic.
@@ -220,7 +221,9 @@ if (scope === "public") {
   });
 
   test("transient sync retries stay unobtrusive and do not move the composer", async ({ page }) => {
-    await coreFixture(page, "dark", "plus");
+    // No legacy chats: background retries have no migration decision to show.
+    // The pressed-control regression separately covers a pending migration.
+    await fixture(page, "dark", true, false, "plus");
     let hold = false;
     let heldRequests = 0;
     let release!: () => void;
