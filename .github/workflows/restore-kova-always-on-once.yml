@@ -25,52 +25,50 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-          import json, os, re, subprocess, time
-          group = 'rg-kovagpt-prod'
-          app = 'kovagpt-prod-web'
-          warm = app + '--models627-4c0a75c'
-          idle = app + '--idlezero-20261109'
-          expected_image = 'kovagptacr-dte9hugbhjghcyb8.azurecr.io/kovagpt-web@sha256:6368c448ab9eff515e85f305a14bd5803f4b6d0736558c15864218651de2bb23'
-          def az(args, read=True):
-              r = subprocess.run(['az', *args, '--only-show-errors', '-o', 'json' if read else 'none'], capture_output=True, text=True, timeout=60)
-              if r.returncode:
-                  match = re.search(r'ERROR:\s*\(([A-Za-z0-9_.-]+)\)',r.stderr)
-                  reason = match.group(1) if match else ('invalid_cli_arguments' if 'unrecognized arguments' in r.stderr else 'unclassified_azure_error')
-                  raise RuntimeError('always_on_azure_command_failed: ' + ' '.join(args[:3]) + ' code=' + reason)
+          import fnmatch, json, os, subprocess, time
+          group='rg-kovagpt-prod'; app='kovagpt-prod-web'
+          idle=app+'--idlezero-20261109'; warm=app+'--alwaysonrestore-20261110'
+          image='kovagptacr-dte9hugbhjghcyb8.azurecr.io/kovagpt-web@sha256:6368c448ab9eff515e85f305a14bd5803f4b6d0736558c15864218651de2bb23'
+          def az(args,read=True):
+              r=subprocess.run(['az',*args,'--only-show-errors','-o','json' if read else 'none'],capture_output=True,text=True,timeout=90)
+              if r.returncode: raise RuntimeError('always_on_azure_command_failed: '+' '.join(args[:3]))
               return json.loads(r.stdout) if read else None
+          def app_state():
+              return az(['containerapp','show','-g',group,'-n',app])
+          def traffic(a):
+              return {t.get('revisionName'):t.get('weight',0) for t in a['properties']['configuration']['ingress']['traffic'] if t.get('weight',0)>0}
           def revision(name):
               return az(['containerapp','revision','show','-g',group,'-n',app,'--revision',name])['properties']
-          def traffic():
-              current = az(['containerapp','show','-g',group,'-n',app])
-              return {t.get('revisionName'):t.get('weight',0) for t in current['properties']['configuration']['ingress']['traffic'] if t.get('weight',0)>0}
-          account = az(['account','show'])
-          assert account['id'] == 'ab732127-11c3-46a7-a1cb-6ee8d86594f4', 'subscription_changed'
-          assert account['tenantId'] == '18a67414-b56e-4b79-8dc8-435494fcc9be', 'tenant_changed'
-          target = revision(warm)
-          assert target['template']['scale']['minReplicas'] == 1, 'prior_minimum_changed'
-          assert target['template']['containers'][0]['image'] == expected_image, 'prior_image_changed'
-          before = traffic()
-          if before != {warm:100}:
-              assert before == {idle:100}, 'serving_revision_changed_stop_without_mutation'
-              assert revision(idle)['template']['containers'][0]['image'] == expected_image, 'idle_image_changed'
-              az(['containerapp','revision','activate','-g',group,'-n',app,'--revision',warm],False)
-              for attempt in range(24):
-                  if revision(warm).get('healthState') == 'Healthy':
-                      break
-                  time.sleep(5)
-              else:
-                  raise RuntimeError('prior_revision_not_healthy_traffic_unchanged')
-              assert traffic() == before, 'traffic_changed_during_preparation'
+          a=app_state()
+          assert a['id'].lower()=='/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourcegroups/rg-kovagpt-prod/providers/microsoft.app/containerapps/kovagpt-prod-web'
+          before=traffic(a)
+          assert before in ({idle:100},{warm:100}), 'serving_revision_changed_stop_without_mutation'
+          perms=az(['rest','--method','get','--url','https://management.azure.com'+a['id']+'/providers/Microsoft.Authorization/permissions?api-version=2022-04-01'])['value']
+          def allows(action):
+              return any(not p.get('condition') and any(fnmatch.fnmatchcase(action.lower(),x.lower()) for x in p.get('actions',[])) and not any(fnmatch.fnmatchcase(action.lower(),x.lower()) for x in p.get('notActions',[])) for p in perms)
+          assert allows('Microsoft.App/containerApps/write'), 'always_on_app_write_not_authorized'
+          source=revision(idle)
+          assert source['template']['containers'][0]['image']==image, 'source_image_changed'
+          revs=az(['containerapp','revision','list','-g',group,'-n',app])
+          if not any(r['name']==warm for r in revs):
+              assert before=={idle:100}, 'unexpected_target_absent'
+              az(['containerapp','revision','copy','-g',group,'-n',app,'--from-revision',idle,'--revision-suffix','alwaysonrestore-20261110','--min-replicas','1'],False)
+          for attempt in range(24):
+              target=revision(warm)
+              assert target['template']['containers'][0]['image']==image and target['template']['scale']['minReplicas']==1
+              if target.get('healthState')=='Healthy': break
+              time.sleep(5)
+          else: raise RuntimeError('replacement_not_healthy_traffic_unchanged')
+          assert traffic(app_state())==before, 'traffic_changed_during_preparation'
+          if before!={warm:100}:
               az(['containerapp','ingress','traffic','set','-g',group,'-n',app,'--revision-weight',warm+'=100',idle+'=0'],False)
-          assert traffic() == {warm:100}, 'traffic_verification_failed'
-          az(['containerapp','revision','deactivate','-g',group,'-n',app,'--revision',idle],False)
-          final = revision(warm)
-          assert final['active'] is True and final['template']['scale']['minReplicas'] == 1, 'always_on_verification_failed'
-          assert revision(idle)['active'] is False, 'idle_revision_still_active'
-          receipt = {'status':'ALWAYS_ON_RESTORED','revision':warm,'minReplicas':1,'trafficPercent':100,'image':expected_image,'idleRevisionActive':False,'imageBuilds':0}
+          assert traffic(app_state())=={warm:100}, 'traffic_verification_failed'
+          if allows('Microsoft.App/containerApps/revisions/deactivate/action'):
+              az(['containerapp','revision','deactivate','-g',group,'-n',app,'--revision',idle],False)
+          assert revision(warm)['active'] and revision(warm)['template']['scale']['minReplicas']==1
+          receipt={'status':'ALWAYS_ON_RESTORED','revision':warm,'minReplicas':1,'trafficPercent':100,'image':image,'imageBuilds':0,'idleRevisionActive':revision(idle)['active']}
           print(json.dumps(receipt))
-          with open(os.path.join(os.environ['RUNNER_TEMP'],'always-on-receipt.json'),'w') as f:
-              json.dump(receipt,f)
+          with open(os.path.join(os.environ['RUNNER_TEMP'],'always-on-receipt.json'),'w') as f: json.dump(receipt,f)
           PY
       - name: Preserve key-free restoration receipt
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
