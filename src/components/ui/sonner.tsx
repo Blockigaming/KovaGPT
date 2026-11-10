@@ -1,16 +1,17 @@
 import { Toaster as Sonner } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import "@/styles/notification-system.css";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 // Sonner owns delivery, stacking and close-button behavior. Its content uses the
 // pinned SDK Alert recipe; the floating background follows the existing palette.
 const toasterStyle = {
-  "--width": "360px",
+  "--width": "min(360px, calc(100vw - 32px))",
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
   "--normal-border": "var(--border)",
-  "--border-radius": "0.75rem",
+  "--border-radius": "0.875rem",
   "--normal-bg-hover": "var(--accent)",
   "--normal-border-hover": "var(--border)",
   "--gray2": "var(--accent)",
@@ -29,17 +30,17 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
-      position={mobile ? "top-center" : "bottom-right"}
+      position={mobile ? "bottom-center" : "bottom-right"}
       closeButton
       duration={4_000}
-      visibleToasts={4}
+      visibleToasts={mobile ? 2 : 3}
       gap={8}
-      mobileOffset={{ top: "calc(72px + env(safe-area-inset-top))", left: 16, right: 16 }}
+      mobileOffset={{ bottom: "calc(88px + env(safe-area-inset-bottom))", left: 16, right: 16 }}
       style={{ ...toasterStyle, ...style }}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background",
+            "group toast group-[.toaster]:!rounded-[0.875rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background",
           icon: "group-[.toast]:!m-0 group-[.toast]:!size-[20px] group-[.toast]:[&_svg]:!m-0 group-[.toast]:[&_svg]:!size-[20px]",
           content: "group-[.toast]:!min-w-0 group-[.toast]:!flex-1 group-[.toast]:!gap-0",
           title: "group-[.toast]:!font-semibold group-[.toast]:!leading-5 [text-wrap:pretty]",
