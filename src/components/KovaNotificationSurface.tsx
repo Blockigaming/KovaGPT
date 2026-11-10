@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { X, Bell, Sparkles, CheckCircle2, AlertCircle, ShieldCheck, Info } from "lucide-react";
 import { toast } from "sonner";
 import { notificationDefinition } from "@/lib/notification-catalog.mjs";
 import { noticeIsDismissed, rememberNoticeDismissal } from "@/lib/notification-dismissal-policy.mjs";
@@ -115,6 +115,18 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const defer = !!definition && ["announcements", "onboarding", "feedback"].includes(definition.group) &&
     (editing || composing);
   const shown = !!active && !!definition && !defer;
+  const visual = definition
+    ? definition.group === "announcements" || definition.group === "billing" ? "discovery"
+    : definition.group === "security" ? "security"
+    : ["workspace_join_approved", "task_completed", "subscription_updated", "offer_claimed"].includes(active?.id ?? "") ? "success"
+    : /(?:failed|error|blocked|denied|unavailable|expired|limit)$/.test(active?.id ?? "") ? "warning"
+    : "information"
+    : "information";
+  const NoticeIcon = visual === "discovery" ? Sparkles
+    : visual === "security" ? ShieldCheck
+    : visual === "success" ? CheckCircle2
+    : visual === "warning" ? AlertCircle
+    : definition?.group === "tasks" ? Bell : Info;
 
   useLayoutEffect(() => {
     if (!shown) return;
@@ -172,13 +184,17 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         aria-labelledby="kova-notice-title"
         aria-describedby={active.message ? "kova-notice-body" : undefined}
         data-surface={definition.surface}
+        data-group={definition.group}
+        data-visual={visual}
       >
+        <div className="kova-notice-symbol" aria-hidden="true"><NoticeIcon size={21} strokeWidth={1.8}/></div>
         {definition.dismissible && (
           <button className="kova-notice-close" type="button" aria-label="Close notification"
             onClick={dismiss}><X size={19} /></button>
         )}
+        {definition.group === "announcements" && <p className="kova-notice-eyebrow">What's new</p>}
         <h2 id="kova-notice-title">{active.title}</h2>
-        {active.message && <p id="kova-notice-body">{active.message}</p>}
+        {active.message && <p className="kova-notice-description" id="kova-notice-body">{active.message}</p>}
         <div className="kova-notice-actions">
           {active.onPrimary && active.primaryLabel && (
             <button className="kova-notice-primary" type="button" onClick={() => {
