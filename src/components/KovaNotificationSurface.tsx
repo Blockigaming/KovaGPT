@@ -25,6 +25,10 @@ export function publishKovaNotice(notice: KovaNotice) {
   }
 }
 
+function optionalNoticeStorage(): Storage | null {
+  try { return window.localStorage; } catch { return null; }
+}
+
 function composingIn(target: EventTarget | null) {
   return target instanceof HTMLElement &&
     (target.matches("textarea, input:not([type='button']):not([type='submit'])") ||
@@ -43,7 +47,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const dismiss = useCallback(() => {
     if (active) {
       const group = notificationDefinition(active.id)?.group;
-      rememberNoticeDismissal(window.localStorage, {
+      rememberNoticeDismissal(optionalNoticeStorage(), {
         accountId, id: active.id, campaignId: active.campaignId, group,
       });
     }
@@ -68,7 +72,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
           (notice.message && notice.message.length > 2000)) return;
       const definition = notificationDefinition(notice.id);
       if (!definition || (definition.requiresEvidence && notice.confirmed !== true)) return;
-      if (noticeIsDismissed(window.localStorage, {
+      if (noticeIsDismissed(optionalNoticeStorage(), {
         accountId, id: notice.id, campaignId: notice.campaignId, group: definition.group,
       })) return;
       const key = notice.key ?? notice.id;
