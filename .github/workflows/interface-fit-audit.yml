@@ -95,7 +95,7 @@ jobs:
           --workers=2 --output=test-results/interface-fit/requested-controls
       - name: Verify five loaded sessions remain editable during auth refresh
         if: matrix.browser == 'chromium'
-        run: npx --no-install playwright test --config=playwright.tab-resume.config.ts
+        run: xvfb-run -a npx --no-install playwright test --config=playwright.tab-resume.config.ts
       - name: Repeat narrow-screen form and table action presses
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
