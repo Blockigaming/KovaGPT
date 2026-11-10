@@ -838,6 +838,9 @@ function ImagesPage() {
     generationControllerRef.current = controller;
     setError(null);
     setLoading(true);
+    let quotaNoticeShown = false;
+    publishKovaNotice({ id: editSelection ? "image_edit_started" : "image_started",
+      title: editSelection ? "Image edit requested" : "Image generation requested" });
     try {
       const { response: res, body: data } = await imageApiRequest(
         userKey!,
@@ -862,6 +865,7 @@ function ImagesPage() {
         if (res.status === 429 && /limit/i.test(msg)) {
           setLimitMessage(msg);
           setLimitOpen(true);
+          quotaNoticeShown = true;
           publishKovaNotice({ id: "image_limit", title: "Image limit reached", message: msg });
         }
         throw new Error(res.status === 503 ? IMAGE_GENERATION_UNAVAILABLE : msg);
@@ -883,7 +887,7 @@ function ImagesPage() {
       const reveal = resultRevealRef.current;
       if (reveal?.generation === generation) reveal.error = message;
       setError(message);
-      publishKovaNotice({ id: editSelection ? "image_edit_failed" : "image_failed", title: "Image generation failed", message: "Your prompt has been preserved." });
+      if (!quotaNoticeShown) publishKovaNotice({ id: editSelection ? "image_edit_failed" : "image_failed", title: "Image generation failed", message: "Your prompt has been preserved." });
     } finally {
       if (generation === generationRef.current) {
         setLoading(false);
