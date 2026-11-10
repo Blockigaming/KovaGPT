@@ -1137,9 +1137,8 @@ export function SettingsDialog({
         }))
         .filter((group) => group.tabs.length > 0)
     : groups;
-  const hasSettingsMatches = !normalizedQuery || groups.some((group) =>
-    group.tabs.some(matchesSettingsQuery),
-  );
+  const hasSettingsMatches =
+    !normalizedQuery || groups.some((group) => group.tabs.some(matchesSettingsQuery));
   const selectTab = (value: string) => {
     if (value === "logout") {
       setLogoutConfirmOpen(true);
