@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -382,8 +383,10 @@ function FieldControl({
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
             {label}
           </legend>
-          <div
-            role="radiogroup"
+          <RadioGroup
+            value={String(value ?? "")}
+            onValueChange={onChange}
+            disabled={disabled}
             aria-labelledby={`${id}-label`}
             aria-required={field.required || undefined}
             className="grid gap-1"
@@ -393,25 +396,11 @@ function FieldControl({
                 key={o.value}
                 className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <input
-                  type="radio"
-                  name={id}
-                  value={o.value}
-                  aria-label={o.label}
-                  data-slot="radio-group-item"
-                  data-ui-reference="chatgpt.radio-group"
-                  disabled={disabled}
-                  // Let the browser own the selected state. A controlled
-                  // checked prop can roll back native clicks in Firefox/WebKit
-                  // while React persists the previous draft.
-                  defaultChecked={String(value ?? "") === o.value}
-                  onClick={() => onChange(o.value)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                />
+                <RadioGroupItem value={o.value} aria-label={o.label} />
                 <span className="min-w-0 text-sm">{o.label}</span>
               </label>
             ))}
-          </div>
+          </RadioGroup>
           {field.help && (
             <p id={helpId} className="mt-1 text-xs text-muted-foreground">
               {field.help}
@@ -426,6 +415,13 @@ function FieldControl({
       );
     case "checkbox": {
       const list = Array.isArray(value) ? value : [];
+      const updateSelection = (option: string, checked: boolean) => {
+        if (checked) {
+          if (!list.includes(option)) onChange([...list, option]);
+        } else if (list.includes(option)) {
+          onChange(list.filter((item) => item !== option));
+        }
+      };
       return (
         <fieldset aria-describedby={describedBy} aria-invalid={error ? true : undefined}>
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
@@ -437,24 +433,12 @@ function FieldControl({
                 key={o.value}
                 className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   id={i === 0 ? id : undefined}
                   aria-label={o.label}
-                  data-slot="checkbox"
-                  data-ui-reference="chatgpt.checkbox"
                   disabled={disabled}
-                  value={o.value}
-                  // Native checkbox state stays interactive across rapid draft
-                  // updates; read all currently checked options from the DOM.
-                  defaultChecked={list.includes(o.value)}
-                  onClick={(event) => {
-                    const checked = event.currentTarget
-                      .closest("fieldset")
-                      ?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked');
-                    if (checked) onChange(Array.from(checked, (input) => input.value));
-                  }}
-                  className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  checked={list.includes(o.value)}
+                  onCheckedChange={(checked) => updateSelection(o.value, checked === true)}
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
               </label>
