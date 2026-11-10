@@ -160,6 +160,9 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
+  // Sonner keeps the dismissed toast mounted briefly for its exit animation.
+  // Wait for it to leave before asserting the second deletion toast.
+  await expect(page.getByText("Chat deleted", { exact: true })).toHaveCount(0);
   await expect(
     page
       .getByRole("button", { name: "Open chat Composer review chat", exact: true })
