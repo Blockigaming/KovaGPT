@@ -490,7 +490,7 @@
 .spec400-expanded-textarea:focus-visible {
   outline: none !important;
   box-shadow: none !important;
-  border-color: var(--muted-foreground);
+  border-color: var(--muted-foreground) !important;
 }
 .spec400-dialog-footer {
   display: flex;
