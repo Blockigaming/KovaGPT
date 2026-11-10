@@ -31,6 +31,8 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   assert.doesNotMatch(workflow, /paths(?:-ignore)?:/u);
   assert.match(workflow, /name: Classify changed files/u);
   assert.match(workflow, /verify:\s+needs: classify/u);
+  assert.match(workflow, /Require successful change classification/u);
+  assert.match(workflow, /run: test "\$CLASSIFY_RESULT" = success/u);
   assert.match(workflow, /browser-preview:[\s\S]*?needs: classify/u);
   assert.match(workflow, /needs: \[classify, browser-preview\]/u);
   assert.equal(workflow.match(/Restore exact Node browser preview/gu)?.length, 3);
