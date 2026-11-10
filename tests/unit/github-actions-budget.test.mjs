@@ -37,7 +37,10 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   assert.match(workflow, /needs: \[classify, browser-preview\]/u);
   assert.equal(workflow.match(/Restore exact Node browser preview/gu)?.length, 3);
   assert.equal(workflow.match(/npm run build/gu)?.length, 3);
-  assert.match(workflow, /name: browser-preview-\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/u);
+  assert.match(
+    workflow,
+    /name: browser-preview-\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/u,
+  );
   assert.match(workflow, /grep -Eqv/);
   assert.doesNotMatch(workflow, /grep -Ev[^\n]*\|\s*grep -q/u);
   assert.match(workflow, /name: Repository formatting audit/u);
