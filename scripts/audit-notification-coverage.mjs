@@ -6,7 +6,7 @@
  * Run: node scripts/audit-notification-coverage.mjs [--require-complete]
  */
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NOTIFICATION_IDS, NOTIFICATION_GROUPS } from "../src/lib/notification-catalog.mjs";
 const root=fileURLToPath(new URL("../",import.meta.url));
@@ -24,7 +24,7 @@ for(const path of origins){
   const contents=readFileSync(path,"utf8");
   // Do not count string references, test fixtures, or the global dispatcher:
   // only direct publish calls with a static, auditable event identifier.
-  const pattern=/publishKovaNotice\s*\(\s*\{[\s\S]{0,500}?\bid\s*:\s*["']([a-z0-9_]+)["']/g;
+  const pattern=/publishKovaNotice\s*\(\s*\{\s*id\s*:\s*["']([a-z0-9_]+)["']/g;
   for(const match of contents.matchAll(pattern)){
     const id=match[1];
     if(emitters.has(id)) emitters.get(id).push(relative(root,path));
@@ -42,7 +42,7 @@ const rows=NOTIFICATION_IDS.map(id=>({
 const connected=rows.filter(row=>row.sourceConnected);
 const absent=rows.filter(row=>!row.sourceConnected);
 const summary={total:rows.length,sourceConnected:connected.length,missingSourceEmitter:absent.length,verifiedEndToEnd:0};
-if(import.meta.url===`file://${process.argv[1]}`){
+if(process.argv[1] && fileURLToPath(import.meta.url)===resolve(process.argv[1])){
   process.stdout.write(JSON.stringify({summary,rows},null,2)+"\n");
   if(process.argv.includes("--require-complete")&&absent.length)process.exitCode=1;
 }
