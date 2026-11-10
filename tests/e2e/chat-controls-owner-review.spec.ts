@@ -135,8 +135,14 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   page,
 }) => {
   await coreFixture(page, "dark");
+  // The fixture's history response must be intact before mutation begins.
+  // A generic /api/* 503 handler would silently prevent writable chat history.
+  const historyResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/chat/history",
+  );
   await page.goto("/");
   await waitForKovaHydration(page);
+  expect((await historyResponse).status()).toBe(200);
   const open = page
     .getByRole("button", { name: /^(Open menu|Expand sidebar|Open sidebar)$/ })
     .filter({ visible: true })
