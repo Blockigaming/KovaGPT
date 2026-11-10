@@ -91,6 +91,11 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   settings: SettingsGlyph,
   notifications: Bell,
 };
+const FreeOfferButton = lazy(() =>
+  import("@/components/FreeOfferButton").then((module) => ({
+    default: module.FreeOfferButton,
+  })),
+);
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
     default: module.ChatProjectDialog,
@@ -1890,6 +1895,11 @@ export function Sidebar({
                   </DropdownMenuTrigger>
                   {renderAccountMenu()}
                 </DropdownMenu>
+                {tierStatus === "ready" && tier === "free" && (
+                  <Suspense fallback={null}>
+                    <FreeOfferButton variant="sidebar" />
+                  </Suspense>
+                )}
               </>
             ) : isLoaded ? (
               <div className="w-full">
