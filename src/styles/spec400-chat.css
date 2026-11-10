@@ -70,8 +70,10 @@
   }
 }
 .spec400-composer[data-focus-origin="keyboard"]:focus-within {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  /* The writing surface already has a visible caret; no second focus bezel. */
+  outline: none;
+  outline-offset: 0;
+  box-shadow: none;
 }
 .spec400-input-region {
   position: relative;
