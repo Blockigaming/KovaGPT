@@ -1133,7 +1133,7 @@ export function SettingsDialog({
     ? groups
         .map((group) => ({
           ...group,
-          tabs: group.tabs.filter((item) => item.v === tab || matchesSettingsQuery(item)),
+          tabs: group.tabs.filter(matchesSettingsQuery),
         }))
         .filter((group) => group.tabs.length > 0)
     : groups;
@@ -1429,7 +1429,7 @@ export function SettingsDialog({
             </aside>
 
             <SettingsNavigationResize
-              width={settings.settingsNavigationWidth ?? (page ? 352 : 280)}
+              width={settings.settingsNavigationWidth ?? 272}
               onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
             />
 
