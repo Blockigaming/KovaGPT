@@ -1,5 +1,5 @@
 import "./free-offer.css";
-import { useState, type SVGProps } from "react";
+import { useEffect, useState, type SVGProps } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Dialog,
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { getFreeOfferEligibility } from "@/lib/free-offer-eligibility.functions";
 
 function Gift({ size = 18, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
   return (
@@ -34,6 +36,24 @@ export function FreeOfferButton() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const price = CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd;
+  const { user, isLoaded, isSignedIn } = useUser();
+  const [offer, setOffer] = useState<{ owner: string; eligible: boolean } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setOpen(false);
+    setOffer(null);
+    if (!isLoaded || !isSignedIn || !user?.id) return;
+    const owner = user.id;
+    void getFreeOfferEligibility().then((result) => {
+      if (!cancelled) setOffer({ owner, eligible: result.eligible === true });
+    }).catch(() => {
+      if (!cancelled) setOffer({ owner, eligible: false });
+    });
+    return () => { cancelled = true; };
+  }, [isLoaded, isSignedIn, user?.id]);
+  // A free plan or a personal email address is not proof of promotional
+  // eligibility. Never show the CTA before server verification.
+  if (!user?.id || !isSignedIn || offer?.owner !== user.id || !offer.eligible) return null;
   return (
     <>
       <button
@@ -69,8 +89,7 @@ export function FreeOfferButton() {
             Get 50% off Plus
           </Button>
           <p className="text-xs text-muted-foreground">
-            Your discount is applied automatically. Review your first payment and renewal terms at
-            checkout.
+            Offer eligibility and the final price are rechecked at checkout. Review the amount and renewal terms before paying.
           </p>
         </DialogContent>
       </Dialog>
