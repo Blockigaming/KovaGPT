@@ -33,6 +33,68 @@ const state = (phase, ownerId = "owner-a") => ({
   conflicts: [],
 });
 
+const statusImplementation = file.statements.find(
+  (node) => ts.isFunctionDeclaration(node) && node.name?.text === "ChatHistorySyncStatus",
+);
+assert.ok(statusImplementation);
+const statusCode = ts.transpileModule(
+  `${statusImplementation.getText(file).replace(/^export\s+/, "")}\nreturn ChatHistorySyncStatus();`,
+  {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.None,
+      jsx: ts.JsxEmit.React,
+    },
+  },
+).outputText;
+function notice(current, ownerId = "owner-a") {
+  const dependencies = {
+    current,
+    EMPTY: state("local", null),
+    subscribe: () => () => {},
+    controls: new Map([[ownerId, {}]]),
+    useUser: () => ({ user: ownerId ? { id: ownerId } : null }),
+    useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
+    useState: (initial) => [initial, () => {}],
+    useRef: (initial) => ({ current: initial }),
+    useEffect: () => {},
+    Button: "button",
+    React: {
+      createElement: (type, props, ...children) => ({
+        type,
+        props: props ?? {},
+        children: children.flat(Infinity),
+      }),
+    },
+  };
+  return new Function(...Object.keys(dependencies), statusCode)(...Object.values(dependencies));
+}
+
+test("a pending migration keeps the same notice through background sync transitions", () => {
+  for (const phase of ["local", "connecting", "saving_device", "syncing", "pending", "local"]) {
+    const rendered = notice({ ...state(phase), migration: 2 });
+    assert.ok(rendered, `${phase} must not remove the migration decision`);
+    assert.equal(rendered.props["aria-label"], "Chat history synchronization");
+    const heading = rendered.children.find((node) => node?.props?.role === "status");
+    assert.deepEqual(heading.children, ["Earlier chat history remains on this device"]);
+  }
+  assert.equal(notice(state("saved")), null, "remove the notice when no decision remains");
+});
+
+test("background sync without a migration remains quiet and critical errors remain visible", () => {
+  for (const phase of ["local", "connecting", "saving_device", "syncing", "pending", "saved"])
+    assert.equal(notice(state(phase)), null, phase);
+  const rendered = notice({ ...state("auth_required"), migration: 2 });
+  const heading = rendered.children.find((node) => node?.props?.role === "status");
+  assert.match(heading.children.join(""), /Your session needs verification/);
+});
+
+test("a migration notice never appears for a different or signed-out account", () => {
+  const pending = { ...state("local"), migration: 2 };
+  assert.equal(notice(pending, "owner-b"), null);
+  assert.equal(notice(pending, null), null);
+});
+
 test("automatic retries retain the existing recovery message and action", () => {
   let current = present(state("local"), state("offline"));
   for (const phase of ["connecting", "saving_device", "syncing", "pending", "syncing"]) {
