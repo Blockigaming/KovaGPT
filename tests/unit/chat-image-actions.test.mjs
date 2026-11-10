@@ -258,6 +258,10 @@ function menuFixture(mobile = false) {
       Event,
       Error,
       File,
+      // The context-menu long-press scheduler is intentionally inert in this
+      // synchronous render harness; browser acceptance exercises real timers.
+      setTimeout: () => 1,
+      clearTimeout() {},
       window: {
         addEventListener: (name, fn) => {
           if (!listeners.has(name)) listeners.set(name, new Set());
