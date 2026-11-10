@@ -35,12 +35,15 @@ import {
   Trash2,
   X,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import { WorkspaceJoinDialog } from "@/components/WorkspaceJoinDialog";
+import { findAvailableWorkspaces, type AvailableWorkspace } from "@/lib/workspace-join.functions";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
@@ -289,6 +292,31 @@ export function Sidebar({
   } | null>(null);
   const [resizing, setResizing] = useState(false);
   const signedIn = isLoaded && isSignedIn;
+  const [availableWorkspaces, setAvailableWorkspaces] = useState<AvailableWorkspace[]>([]);
+  const [workspaceJoinOpen, setWorkspaceJoinOpen] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setAvailableWorkspaces([]);
+    setWorkspaceJoinOpen(false);
+    if (!signedIn || !user?.id) return;
+    const accountId = user.id;
+    void findAvailableWorkspaces()
+      .then((results) => {
+        if (cancelled) return;
+        setAvailableWorkspaces(results);
+        if (!results.length) return;
+        // One introductory prompt per account and browser. The server is still
+        // the sole authority for matching domain and available workspaces.
+        const key = "kova:workspace-join-intro:" + accountId;
+        try {
+          if (window.localStorage.getItem(key)) return;
+          window.localStorage.setItem(key, "shown");
+        } catch { /* A blocked storage API should not prevent a useful prompt. */ }
+        setWorkspaceJoinOpen(true);
+      })
+      .catch(() => { if (!cancelled) setAvailableWorkspaces([]); });
+    return () => { cancelled = true; };
+  }, [signedIn, user?.id]);
   const railOwner = signedIn ? user?.id : undefined;
   const layout =
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
@@ -1100,6 +1128,15 @@ export function Sidebar({
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
+      {availableWorkspaces.length > 0 && (
+        <DropdownMenuItem onSelect={() => {
+          cancelPendingSelection();
+          setWorkspaceJoinOpen(true);
+        }}>
+          <UsersRound aria-hidden="true" />
+          Find workspaces
+        </DropdownMenuItem>
+      )}
       <DropdownMenuItem asChild>
         <Link
           to={tierStatus === "ready" && tier === "pro" ? "/pricing" : "/subscribe"}
@@ -1165,6 +1202,17 @@ export function Sidebar({
 
   return (
     <>
+      {signedIn && (
+        <WorkspaceJoinDialog
+          open={workspaceJoinOpen}
+          workspaces={availableWorkspaces}
+          onClose={() => setWorkspaceJoinOpen(false)}
+          onRequested={(teamId) => {
+            setAvailableWorkspaces((items) => items.map((item) =>
+              item.team_id === teamId ? { ...item, request_status: "pending" } : item));
+          }}
+        />
+      )}
       {signedIn && (
         <LogoutConfirmDialog
           open={logoutConfirmOpen}
@@ -1813,6 +1861,13 @@ export function Sidebar({
           </div>
 
           <footer className="kova-sidebar-footer">
+            {signedIn && availableWorkspaces.length > 0 && (
+              <button type="button" className="mb-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm hover:bg-accent"
+                onClick={() => setWorkspaceJoinOpen(true)}>
+                <UsersRound className="h-5 w-5" aria-hidden="true" />
+                <span>Find workspaces</span>
+              </button>
+            )}
             {signedIn ? (
               <>
                 <DropdownMenu modal={false}>
