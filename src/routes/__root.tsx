@@ -342,7 +342,7 @@ function RootNotificationCenter() {
       window.removeEventListener("online", online);
     };
   }, [isLoaded]);
-  return isLoaded ? <KovaNotificationSurface key={user?.id ?? "guest"} /> : null;
+  return isLoaded ? <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} /> : null;
 }
 
 function RootInputModality() {
