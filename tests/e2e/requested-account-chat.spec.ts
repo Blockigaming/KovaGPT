@@ -106,15 +106,15 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   await expect(settings).toBeHidden();
 });
 
-test("requested: account Upgrade goes directly to the plan selector", async ({ page }) => {
+test("requested: account Upgrade opens the selected hosted checkout flow", async ({ page }) => {
   await fixture(page, "dark", true);
   await page.goto("/");
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
   await sidebar.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Upgrade plan", exact: true }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByRole("heading", { name: "Upgrade your plan", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly$/);
+  await expect(page.getByRole("heading", { name: "Opening checkout…", exact: true })).toBeVisible();
   await expect(page.locator(".kova-settings-dialog")).toHaveCount(0);
 });
 

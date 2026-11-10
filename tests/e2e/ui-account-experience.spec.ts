@@ -67,10 +67,13 @@ test("Settings keeps a closed rail, shows percentage usage, and exposes editable
   await page.goto("/settings/usage");
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("progressbar", { name: "Daily chat usage", exact: true }),
+    page.getByRole("progressbar", { name: "5-hour chat usage", exact: true }),
   ).toHaveAttribute("aria-valuenow", "24");
-  await expect(page.getByRole("progressbar")).toHaveCount(1);
-  await expect(page.getByText(/12 \/ 50 regular · 2 \/ 10 Thinking/)).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Weekly chat usage", exact: true }),
+  ).toHaveAttribute("aria-valuenow", "3");
+  await expect(page.getByRole("progressbar")).toHaveCount(2);
+  await expect(page.getByText(/Usage percentages are estimates/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Close settings", exact: true })).toBeVisible();
   await page.goto("/settings/memory");
   await waitForKovaHydration(page);

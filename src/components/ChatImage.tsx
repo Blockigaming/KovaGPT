@@ -73,9 +73,63 @@ export function ChatImage({
   const [busy, setBusy] = useState(false);
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpenRef = useRef(false);
+  const onMenuOpenChange = (open: boolean) => {
+    menuOpenRef.current = open;
+    setMenuOpen(open);
+  };
   const copyOnly = isMobile || touchMenu;
   const imageRef = useRef<HTMLImageElement>(null);
   const showRef = useRef<HTMLButtonElement>(null);
+  const touchHoldRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const cancelTouchHold = () => {
+    if (touchHoldRef.current !== null) clearTimeout(touchHoldRef.current);
+    touchHoldRef.current = null;
+    touchStartRef.current = null;
+  };
+  // A stationary pointer/touch hold is a real user gesture. Use the recorded
+  // coordinates to position Radix's menu, then confirm the controlled state
+  // if the browser swallowed its usual synthetic contextmenu event.
+  const armTouchHold = (x: number, y: number) => {
+    if (touchHoldRef.current !== null) return;
+    touchStartRef.current = { x, y };
+    touchHoldRef.current = setTimeout(() => {
+      touchHoldRef.current = null;
+      touchStartRef.current = null;
+      if (menuOpenRef.current) return;
+      const target = imageRef.current;
+      if (!target) return;
+      target.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: x, clientY: y }),
+      );
+      onMenuOpenChange(true);
+    }, 850);
+  };
+  const startTouchHold = (event: React.TouchEvent<HTMLImageElement>) => {
+    if (event.touches.length !== 1) return cancelTouchHold();
+    setTouchMenu(true);
+    const { clientX, clientY } = event.touches[0];
+    armTouchHold(clientX, clientY);
+  };
+  const startPointerHold = (event: React.PointerEvent<HTMLImageElement>) => {
+    const touch = event.pointerType !== "mouse";
+    setTouchMenu(touch);
+    if (touch) armTouchHold(event.clientX, event.clientY);
+  };
+  const moveHold = (x: number, y: number) => {
+    const start = touchStartRef.current;
+    if (start && Math.hypot(x - start.x, y - start.y) > 12) cancelTouchHold();
+  };
+  const moveTouchHold = (event: React.TouchEvent<HTMLImageElement>) => {
+    if (event.touches.length !== 1) return cancelTouchHold();
+    const { clientX, clientY } = event.touches[0];
+    moveHold(clientX, clientY);
+  };
+  const movePointerHold = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (event.pointerType !== "mouse") moveHold(event.clientX, event.clientY);
+  };
   const lifetime = useRef({ marker, generation: 0, mounted: true });
   if (lifetime.current.marker !== marker) {
     lifetime.current.marker = marker;
@@ -85,6 +139,7 @@ export function ChatImage({
     const state = lifetime.current;
     state.mounted = true;
     return () => {
+      cancelTouchHold();
       state.mounted = false;
       state.generation++;
     };
@@ -173,7 +228,7 @@ export function ChatImage({
       </span>
     );
   return (
-    <ContextMenu>
+    <ContextMenu open={menuOpen} onOpenChange={onMenuOpenChange}>
       <span
         className={`inline-block min-w-0 max-w-full ${className ?? ""}`}
         data-chat-image="true"
@@ -189,9 +244,17 @@ export function ChatImage({
             referrerPolicy="no-referrer"
             tabIndex={0}
             aria-haspopup="menu"
-            style={{ WebkitTouchCallout: "none" }}
+            draggable={false}
+            style={{ WebkitTouchCallout: "none", touchAction: "manipulation" }}
             className={imageClassName}
-            onPointerDown={(event) => setTouchMenu(event.pointerType !== "mouse")}
+            onPointerDown={startPointerHold}
+            onPointerMove={movePointerHold}
+            onPointerUp={cancelTouchHold}
+            onPointerCancel={cancelTouchHold}
+            onTouchStart={startTouchHold}
+            onTouchMove={moveTouchHold}
+            onTouchEnd={cancelTouchHold}
+            onTouchCancel={cancelTouchHold}
             onKeyDown={(event) => {
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
