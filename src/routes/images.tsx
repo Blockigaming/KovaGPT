@@ -57,7 +57,7 @@ import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe
 import { cn } from "@/lib/utils";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { toast } from "sonner";
-import { publishKovaNotice, KovaNotificationSurface } from "@/components/KovaNotificationSurface";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 
 export const Route = createFileRoute("/images")({
   component: ImagesPage,
@@ -903,7 +903,6 @@ function ImagesPage() {
       className="kova-app-shell kova-images-workspace flex h-dvh w-full bg-background text-foreground"
       data-ui="modern"
     >
-      <KovaNotificationSurface />
       <Sidebar
         conversations={[]}
         activeId={null}
