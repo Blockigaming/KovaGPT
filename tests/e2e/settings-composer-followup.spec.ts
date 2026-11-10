@@ -24,8 +24,19 @@ for (const theme of ["dark", "light"] as const) {
     if (page.viewportSize()!.width >= 768) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-      for (const destination of ["Voice", "Security and login", "Storage", "Keyboard", "Usage", "Cloud Browser", "Family Center", "Location"]) {
-        await expect(navigation.getByRole("tab", { name: destination, exact: true })).toBeVisible();
+      for (const destination of [
+        "Voice",
+        "Security and login",
+        "Storage",
+        "Keyboard",
+        "Usage",
+        "Cloud Browser",
+        "Family Center",
+        "Location",
+      ]) {
+        await expect(
+          navigation.getByRole("tab", { name: destination, exact: true }),
+        ).toBeVisible();
       }
       await expect(surface.locator(".kova-settings-related")).toHaveCount(0);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
@@ -43,8 +54,19 @@ for (const theme of ["dark", "light"] as const) {
       await expect(close).toBeVisible();
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
-      for (const destination of ["Voice", "Security and login", "Storage", "Keyboard", "Usage", "Cloud Browser", "Family Center", "Location"]) {
-        await expect(navigation.getByRole("tab", { name: destination, exact: true })).toBeVisible();
+      for (const destination of [
+        "Voice",
+        "Security and login",
+        "Storage",
+        "Keyboard",
+        "Usage",
+        "Cloud Browser",
+        "Family Center",
+        "Location",
+      ]) {
+        await expect(
+          navigation.getByRole("tab", { name: destination, exact: true }),
+        ).toBeVisible();
       }
       expect(
         await surface.locator("h1").evaluate((node) => {
@@ -152,7 +174,9 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   await expect(trigger).toBeFocused();
 });
 
-test("message composer shows only the text caret on focus across desktop and mobile", async ({ page }) => {
+test("message composer shows only the text caret on focus across desktop and mobile", async ({
+  page,
+}) => {
   for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
     await fixture(page, "dark", true, true);
