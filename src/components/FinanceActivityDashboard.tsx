@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { FinanceSnapshot } from "@/finances/finance-read.server.mjs";
 
 type FinanceRecord = FinanceSnapshot["transactions"][number];
@@ -16,7 +16,7 @@ function summary(transactions: ReadonlyArray<Pick<FinanceRecord, "amount" | "dat
   const byDay = new Map<string, { date: string; spent: number; received: number }>();
   let spent = 0, received = 0;
   for (const t of transactions) {
-    if (!Number.isFinite(t.amount) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(t.date)) continue;
+    if (!Number.isFinite(t.amount) || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) continue;
     const day = byDay.get(t.date) ?? { date: t.date, spent: 0, received: 0 };
     if (t.amount >= 0) { day.spent += t.amount; spent += t.amount; }
     else { day.received += -t.amount; received += -t.amount; }
