@@ -32,7 +32,7 @@ function Gift({ size = 18, ...props }: SVGProps<SVGSVGElement> & { size?: number
   );
 }
 
-export function FreeOfferButton() {
+export function FreeOfferButton({ variant = "toolbar" }: { variant?: "toolbar" | "sidebar" }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const price = CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd;
@@ -59,12 +59,12 @@ export function FreeOfferButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="kova-free-offer"
-        aria-label="Free offer: 50% off your first month"
+        className={variant === "sidebar" ? "kova-free-offer kova-free-offer-sidebar" : "kova-free-offer"}
+        aria-label={variant === "sidebar" ? "Claim introductory Plus offer" : "Free offer: 50% off your first month"}
         data-free-introductory-offer="true"
       >
         <Gift aria-hidden="true" size={18} />
-        <span>Free offer</span>
+        <span>{variant === "sidebar" ? "Claim offer" : "Free offer"}</span>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md rounded-3xl p-7">
