@@ -36,6 +36,7 @@ import {
   Trash2,
   X,
   UserRound,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -89,6 +90,9 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   settings: SettingsGlyph,
   notifications: Bell,
 };
+const SidebarFreeOffer = lazy(() =>
+  import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
+);
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
     default: module.ChatProjectDialog,
@@ -1054,10 +1058,8 @@ export function Sidebar({
         <span className="min-w-0">
           <strong className="block truncate">{displayName}</strong>
           <small className="block truncate text-foreground">{planLabel}</small>
-          <small className="block truncate text-foreground">
-            {accountEmail || "Email unavailable"}
-          </small>
         </span>
+        <ChevronRight size={18} className="kova-profile-menu-account-chevron" aria-hidden="true" />
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
@@ -1071,7 +1073,9 @@ export function Sidebar({
           onClick={() => cancelPendingSelection()}
         >
           <Sparkles aria-hidden="true" />
-          {tierStatus === "ready" && tier === "pro" ? "View plans" : "Upgrade plan"}
+          {tierStatus === "ready" && tier === "pro"
+            ? "View plans" : tierStatus === "ready" && tier === "free"
+              ? "Explore Plus offer" : "Upgrade plan"}
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem
@@ -1779,6 +1783,11 @@ export function Sidebar({
                   </DropdownMenuTrigger>
                   {renderAccountMenu()}
                 </DropdownMenu>
+                {tierStatus === "ready" && tier === "free" ? (
+                  <Suspense fallback={null}>
+                    <SidebarFreeOffer variant="claim" />
+                  </Suspense>
+                ) : null}
               </>
             ) : isLoaded ? (
               <div className="w-full">

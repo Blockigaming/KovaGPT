@@ -24,3 +24,21 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Account-area free-tier offer. A working CTA must remain independent of the menu. */
+.kova-free-offer-claim {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 6px;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 10%, var(--background));
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 550;
+}
+.kova-free-offer-claim:hover { background: color-mix(in srgb, var(--foreground) 14%, var(--background)); }
+@media (max-width: 767px) { .kova-free-offer-claim { min-height: 48px; font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .kova-free-offer { transition: none; } }
