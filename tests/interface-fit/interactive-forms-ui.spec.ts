@@ -184,7 +184,10 @@ for (const theme of ["dark", "light"] as const) {
     await form.getByRole("spinbutton", { name: "Quantity", exact: true }).fill("3");
     await form.locator('input[type="date"]').fill("2026-11-05");
     const style = form.getByRole("radio");
-    await style.check();
+    // Radix radio items are buttons (role=radio), not native input[type=radio].
+    // Click the control and await its controlled React state instead of using
+    // Playwright check(), which can read the state before Firefox commits it.
+    await style.click();
     await expect(style).toBeChecked();
     const extra = form.getByRole("checkbox");
     await extra.check();
