@@ -282,14 +282,16 @@ jobs:
       - name: Build immutable Node preview
         run: npm run build
       - name: Require complete preview and Work runner outputs
-        run: test -d dist/server && test -d dist/client && test -f work-runner/build/office.mjs
+        run: test -d dist/server && test -d dist/client && test -d .nitro && test -f work-runner/build/office.mjs
       - name: Upload exact preview for public and core browser suites
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             dist/
+            .nitro/
             work-runner/build/office.mjs
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 2
 
@@ -322,7 +324,7 @@ jobs:
           name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
           path: .
       - name: Check restored browser outputs
-        run: test -d dist/server && test -d dist/client && test -f work-runner/build/office.mjs
+        run: test -d dist/server && test -d dist/client && test -d .nitro && test -f work-runner/build/office.mjs
       - run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
@@ -412,7 +414,7 @@ jobs:
           name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
           path: .
       - name: Check restored browser outputs
-        run: test -d dist/server && test -d dist/client && test -f work-runner/build/office.mjs
+        run: test -d dist/server && test -d dist/client && test -d .nitro && test -f work-runner/build/office.mjs
 
       - name: Install Playwright browsers
         run: |
@@ -482,7 +484,7 @@ jobs:
           name: browser-preview-${{ github.event.pull_request.head.sha || github.sha }}
           path: .
       - name: Check restored browser outputs
-        run: test -d dist/server && test -d dist/client && test -f work-runner/build/office.mjs
+        run: test -d dist/server && test -d dist/client && test -d .nitro && test -f work-runner/build/office.mjs
       - run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
