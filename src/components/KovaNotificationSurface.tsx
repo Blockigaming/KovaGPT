@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { notificationDefinition } from "@/lib/notification-catalog.mjs";
@@ -15,54 +15,135 @@ export type KovaNotice = {
   secondaryLabel?: string;
   onSecondary?: () => void;
 };
-/** Dispatch only after the related action has actually succeeded. */
+
+/** Emit only from a verified operation stage; never from a speculative click. */
 export function publishKovaNotice(notice: KovaNotice) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("kova:notice", { detail: notice }));
   }
 }
+
+function composingIn(target: EventTarget | null) {
+  return target instanceof HTMLElement &&
+    (target.matches("textarea, input:not([type='button']):not([type='submit'])") ||
+      target.isContentEditable);
+}
+
+/** A single global host: independent of which feature route is mounted. */
 export function KovaNotificationSurface() {
-  const [active, setActive] = useState<KovaNotice | null>(null);
+  const [pending, setPending] = useState<KovaNotice[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const active = pending[0] ?? null;
+  const panelRef = useRef<HTMLElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const dismiss = useCallback(() => setPending((items) => items.slice(1)), []);
+
   useEffect(() => {
+    const focus = (event: FocusEvent) => setEditing(composingIn(event.target));
+    const blur = () => {
+      window.requestAnimationFrame(() => setEditing(composingIn(document.activeElement)));
+    };
+    const compositionStart = () => setComposing(true);
+    const compositionEnd = () => setComposing(false);
+    document.addEventListener("focusin", focus);
+    document.addEventListener("focusout", blur);
+    document.addEventListener("compositionstart", compositionStart);
+    document.addEventListener("compositionend", compositionEnd);
     const handle = (event: Event) => {
       const notice = (event as CustomEvent<KovaNotice>).detail;
-      if (!notice || typeof notice.title !== "string" || notice.title.length > 160) return;
+      if (!notice || typeof notice.title !== "string" ||
+          !notice.title.trim() || notice.title.length > 160 ||
+          (notice.message && notice.message.length > 2000)) return;
       const definition = notificationDefinition(notice.id);
       if (!definition || (definition.requiresEvidence && notice.confirmed !== true)) return;
-      if (definition.surface === "toast" || definition.surface === "status" || definition.surface === "inline") {
+      const key = notice.key ?? notice.id;
+      if (["toast", "status", "inline"].includes(definition.surface)) {
+        // Status/error content also stays attached to its source component.
+        // The toast is a compact supplementary notification, not a modal.
         toast(notice.title, {
-          id: notice.key ?? notice.id,
+          id: key,
           description: notice.message,
-          duration: definition.surface === "status" ? 5000 : definition.surface === "inline" ? 7500 : 3000,
+          duration: definition.surface === "inline" ? 6500 : definition.surface === "status" ? 3500 : 3000,
           action: notice.onPrimary && notice.primaryLabel
             ? { label: notice.primaryLabel, onClick: notice.onPrimary } : undefined,
         });
-      } else {
-        setActive((previous) => previous ?? notice);
+        return;
       }
+      setPending((items) => {
+        if (items.some((item) => (item.key ?? item.id) === key)) return items;
+        const next = [...items, notice].sort(
+          (a, b) => (notificationDefinition(a.id)?.priority ?? 10) -
+            (notificationDefinition(b.id)?.priority ?? 10),
+        );
+        return next.slice(0, 12);
+      });
     };
     window.addEventListener("kova:notice", handle);
-    return () => window.removeEventListener("kova:notice", handle);
+    return () => {
+      window.removeEventListener("kova:notice", handle);
+      document.removeEventListener("focusin", focus);
+      document.removeEventListener("focusout", blur);
+      document.removeEventListener("compositionstart", compositionStart);
+      document.removeEventListener("compositionend", compositionEnd);
+    };
   }, []);
-  useEffect(() => {
-    if (!active) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && notificationDefinition(active.id)?.dismissible) {
-        event.preventDefault();
-        setActive(null);
+
+  const definition = active ? notificationDefinition(active.id) : null;
+  const defer = !!definition && ["announcements", "onboarding", "feedback"].includes(definition.group) &&
+    (editing || composing);
+  const shown = !!active && !!definition && !defer;
+
+  useLayoutEffect(() => {
+    if (!shown) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
+    const first = panelRef.current?.querySelector<HTMLElement>(
+      ".kova-notice-primary, .kova-notice-secondary, .kova-notice-close",
+    );
+    first?.focus({ preventScroll: true });
+    return () => {
+      const previous = returnFocusRef.current;
+      if (previous?.isConnected && document.activeElement === document.body) {
+        previous.focus({ preventScroll: true });
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [active]);
-  if (!active) return null;
-  const definition = notificationDefinition(active.id);
-  if (!definition) return null;
+  }, [shown, active?.key, active?.id]);
+
+  useEffect(() => {
+    if (!shown || !active) return;
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && definition?.dismissible) {
+        event.preventDefault();
+        dismiss();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const controls = [...panelRef.current.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
+      )].filter((control) => control.getClientRects().length > 0);
+      if (!controls.length) return;
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    window.addEventListener("keydown", keydown, true);
+    return () => window.removeEventListener("keydown", keydown, true);
+  }, [shown, active, definition, dismiss]);
+
+  if (!shown || !active || !definition) return null;
   return (
-    <div className="kova-notice-backdrop" role="presentation">
+    <div className="kova-notice-backdrop" role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && definition.dismissible) dismiss();
+      }}>
       <section
+        ref={panelRef}
         className="kova-notice-panel"
-        role="dialog"
+        role={definition.priority === 1 ? "alertdialog" : "dialog"}
         aria-modal="true"
         aria-labelledby="kova-notice-title"
         aria-describedby={active.message ? "kova-notice-body" : undefined}
@@ -70,19 +151,19 @@ export function KovaNotificationSurface() {
       >
         {definition.dismissible && (
           <button className="kova-notice-close" type="button" aria-label="Close notification"
-            onClick={() => setActive(null)}><X size={19} /></button>
+            onClick={dismiss}><X size={19} /></button>
         )}
         <h2 id="kova-notice-title">{active.title}</h2>
         {active.message && <p id="kova-notice-body">{active.message}</p>}
         <div className="kova-notice-actions">
           {active.onPrimary && active.primaryLabel && (
             <button className="kova-notice-primary" type="button" onClick={() => {
-              active.onPrimary?.(); setActive(null);
+              active.onPrimary?.(); dismiss();
             }}>{active.primaryLabel}</button>
           )}
           {definition.dismissible && (
             <button className="kova-notice-secondary" type="button" onClick={() => {
-              active.onSecondary?.(); setActive(null);
+              active.onSecondary?.(); dismiss();
             }}>{active.secondaryLabel || "Not now"}</button>
           )}
         </div>
