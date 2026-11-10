@@ -193,7 +193,7 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
   assert.match(settingsSource, /placeholder="Search settings"/);
   assert.match(settingsSource, /No settings found/);
   assert.match(settingsSource, /const filteredGroups = normalizedQuery/);
-  assert.match(settingsSource, /item\.v === tab \|\| matchesSettingsQuery\(item\)/);
+  assert.match(settingsSource, /tabs: group\.tabs\.filter\(matchesSettingsQuery\)/);
   assert.match(settingsSource, /aria-label="Settings navigation"/);
   assert.match(settingsSource, /aria-label="Back to settings"/);
   assert.match(settingsSource, /setMobileHome\(false\)/);
@@ -258,12 +258,8 @@ test("settings navigation is centralized and routes every rendered category", ()
     SETTINGS_SECTIONS: sections,
   });
   const pageTabs = categories("destinationGroups");
-  const primaryCalls = matching(
-    variable("pageGroups"),
-    (node) => ts.isCallExpression(node) && node.expression.getText(parsed) === "destination",
-  );
-  assert.equal(primaryCalls.length, 10);
-  assert.equal(new Set(primaryCalls.map((node) => node.arguments[0].text)).size, 10);
+  assert.match(settingsSource, /const groups = destinationGroups;/);
+  assert.doesNotMatch(settingsSource, /const secondaryParents:|matchingSecondaryTabs/);
   assert.deepEqual(
     pageTabs.map((tab) => [sectionForTab(tab.value), tab.label]),
     [
