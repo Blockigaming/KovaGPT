@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useState } from "react";
 import { submitWorkspaceJoinRequest, type AvailableWorkspace } from "@/lib/workspace-join.functions";
 
@@ -25,7 +26,7 @@ export function WorkspaceJoinDialog({workspaces,open,onClose,onRequested}:{
               setError(null);setSubmitting(workspace.team_id);
               try {
                 const result=await submitWorkspaceJoinRequest({data:{teamId:workspace.team_id}});
-                if(result.status==="pending")onRequested(workspace.team_id);
+                if(result.status==="pending"){ onRequested(workspace.team_id); publishKovaNotice({id:"workspace_join_requested",title:"Request submitted",message:"Your workspace administrator can review your request.",confirmed:true}); }
               } catch {setError("Couldn't send your request. Check your connection and try again.");}
               finally {setSubmitting(null);}
             }}>{submitting===workspace.team_id?"Sending…":workspace.request_status==="pending"?"Requested":"Request to join"}</button>
