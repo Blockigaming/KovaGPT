@@ -326,7 +326,7 @@ const REQUIRE_ACTUAL_STATE = new Set(["offer_available","offer_claimed","workspa
 export function notificationDefinition(id) {
   if (!NOTIFICATION_IDS.includes(id)) return null;
   const group = Object.keys(NOTIFICATION_GROUPS).find(k => NOTIFICATION_GROUPS[k].includes(id));
-  const surface = Object.keys(surfaces).find(k => surfaces[k].includes(id)) || (ERROR_WORDS.test(id) ? "inline" : "card");
+  const surface = Object.keys(surfaces).find(k => surfaces[k].includes(id)) || (ERROR_WORDS.test(id) || /(?:_limit|_failed|_unavailable|_restricted|_blocked|_expired)$/.test(id) ? "inline" : ["announcements","onboarding","feedback"].includes(group) ? "card" : /(?:started|starting|running|processing|connecting|reconnecting|generating)$/.test(id) ? "status" : "toast");
   return Object.freeze({ id, group, surface,
     priority: CONFIRMATION.has(id) ? 1 : surface === "inline" ? 4 : group === "announcements" ? 9 : 8,
     requiresEvidence: REQUIRE_ACTUAL_STATE.has(id),
