@@ -71,7 +71,8 @@ jobs:
 
   verify:
     needs: classify
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # A failed classifier must make the existing required verify check red, not skipped.
+    if: always() && !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 35
     outputs:
@@ -79,6 +80,10 @@ jobs:
       run_database: ${{ needs.classify.outputs.run_database }}
       run_canonical_history: ${{ needs.classify.outputs.run_canonical_history }}
     steps:
+      - name: Require successful change classification
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+        run: test "$CLASSIFY_RESULT" = success
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
