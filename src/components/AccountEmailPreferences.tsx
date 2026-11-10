@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -92,6 +93,7 @@ function AccountEmailControls({ ownerId }: { ownerId: string | null }) {
       if (current === generation.current) {
         setPreferences(value);
         setSaved("Email preference saved.");
+        publishKovaNotice({ id: "notification_preferences_updated", title: "Email preferences saved", confirmed: true });
       }
     } catch {
       if (current === generation.current) {
