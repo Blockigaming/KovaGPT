@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useEffect, useState } from "react";
 import { listTeamJoinRequests, reviewTeamJoinRequest } from "@/lib/workspace-join.functions";
 type RequestRow={id:string;team_id:string;requester_email:string;status:string;requested_at:string};
@@ -30,6 +31,7 @@ export function WorkspaceJoinAdminPanel({teamId}:{teamId:string}){
               const result=await reviewTeamJoinRequest({data:{requestId:request.id,approve}});
               if(!result.ok)throw Error("Request not saved");
               setRequests(items=>items.filter(item=>item.id!==request.id));
+              publishKovaNotice({id:approve?"workspace_join_approved":"workspace_join_denied",title:approve?"Request approved":"Request denied",message:approve?"You can now send an invitation from your team administration page.":"The request has been denied.",confirmed:true});
             }catch{setError("Review failed. Refresh and try again.");}
             finally{setBusy(null);}
           }}>{busy===request.id?"Saving…":approve?"Approve request":"Deny"}</button>)}
