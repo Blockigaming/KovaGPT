@@ -1119,7 +1119,6 @@ export function SettingsDialog({
     },
   ];
   const destinations = destinationGroups.flatMap((group) => group.tabs);
-  const destination = (value: string) => destinations.find((item) => item.v === value)!;
   // Every functional Settings destination belongs in the sidebar, including
   // the entries previously relegated to "Also in..." cards in the content area.
   const groups = destinationGroups;
