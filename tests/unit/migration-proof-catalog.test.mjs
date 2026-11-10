@@ -66,7 +66,7 @@ test("same-query inventory is read-only and binds all nineteen histories", () =>
   assert.match(workflow, /scripts\/release\/migration-proof-catalog\\\.\(mjs\|sql\)/u);
   assert.match(
     workflow,
-    /isolated-database:\s+needs: verify\s+#[\s\S]*?if: always\(\) && needs\.verify\.outputs\.run_database == 'true'/u,
+    /isolated-database:\s+needs: classify\s+#[\s\S]*?if: needs\.classify\.outputs\.run_database == 'true' && !cancelled\(\)/u,
   );
   assert.match(MIGRATION_PROOF_CATALOG_QUERY_SHA256, /^[a-f0-9]{64}$/u);
   assert.match(
