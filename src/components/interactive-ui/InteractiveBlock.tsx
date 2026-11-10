@@ -402,9 +402,11 @@ function FieldControl({
                   data-ui-reference="chatgpt.radio-group"
                   disabled={disabled}
                   checked={String(value ?? "") === o.value}
-                  // A native radio change selects this option even on Firefox
-                  // layouts where the event's checked property lags the change.
-                  onChange={() => onChange(o.value)}
+                  // React's native change tracking can miss radio clicks after
+                  // concurrent draft updates in Firefox. Handle the click directly;
+                  // native keyboard activation also dispatches a click.
+                  readOnly
+                  onClick={() => onChange(o.value)}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
@@ -451,7 +453,10 @@ function FieldControl({
                   data-ui-reference="chatgpt.checkbox"
                   disabled={disabled}
                   checked={list.includes(o.value)}
-                  onChange={(event) => updateSelection(o.value, event.target.checked)}
+                  // Derive the next value from controlled state instead of the
+                  // browser's transient checked property (WebKit/Safari).
+                  readOnly
+                  onClick={() => updateSelection(o.value, !list.includes(o.value))}
                   className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
