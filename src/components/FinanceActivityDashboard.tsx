@@ -56,7 +56,7 @@ export function FinanceActivityDashboard({ snapshot, demo = false }: Props) {
                 <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="date" tickFormatter={(d: string) => d.slice(5)} fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis fontSize={11} tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => "$" + v} />
-                <Tooltip formatter={(v: number | undefined) => currency(Number(v ?? 0))} />
+                <Tooltip formatter={(v) => currency(typeof v === "number" ? v : Number(v ?? 0))} />
                 <Bar name="Spent" dataKey="spent" fill="#8b5cf6" radius={[5, 5, 0, 0]} maxBarSize={24} />
                 <Bar name="Received" dataKey="received" fill="#06b6d4" radius={[5, 5, 0, 0]} maxBarSize={24} />
               </BarChart>
