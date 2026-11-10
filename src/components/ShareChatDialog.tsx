@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, Check, Link2, Loader2, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   Dialog,
