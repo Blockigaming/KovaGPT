@@ -320,6 +320,8 @@ const surfaces = {
     "settings_updated"
   ]
 };
+surfaces.status.push("file_selected","file_processing","voice_ended");
+surfaces.toast.push("connection_failed","connection_canceled");
 const CONFIRMATION = new Set(["confirm_file_delete","confirm_project_delete","confirm_leave_project","disconnect_confirm","confirm_chat_delete","confirm_account_delete"]);
 const ERROR_WORDS = /(?:failed|unavailable|expired|invalid|blocked|timeout|offline|denied|restricted|error)$/;
 const REQUIRE_ACTUAL_STATE = new Set(["offer_available","offer_claimed","workspace_join_requested","workspace_join_approved","task_completed","subscription_updated","upload_completed","image_ready","animation_ready","connection_success"]);
