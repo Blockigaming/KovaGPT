@@ -37,7 +37,8 @@
       :has(
         .spec400-composer-input[data-multiline="true"],
         .spec400-attachment-chips,
-        .spec400-selected-tool
+        .spec400-selected-tool,
+        .kova-link-preview-composer
       )
     ) {
     display: grid;
@@ -51,7 +52,8 @@
       :has(
         .spec400-composer-input[data-multiline="true"],
         .spec400-attachment-chips,
-        .spec400-selected-tool
+        .spec400-selected-tool,
+        .kova-link-preview-composer
       )
     )
     .spec400-composer-toolbar {
@@ -62,7 +64,8 @@
       :has(
         .spec400-composer-input[data-multiline="true"],
         .spec400-attachment-chips,
-        .spec400-selected-tool
+        .spec400-selected-tool,
+        .kova-link-preview-composer
       )
     )
     .spec400-input-region {
@@ -160,7 +163,8 @@
 .spec400-composer:has(
   .spec400-composer-input[data-multiline="true"],
   .spec400-attachment-chips,
-  .spec400-selected-tool
+  .spec400-selected-tool,
+  .kova-link-preview-composer
 ) {
   display: flex;
   flex-direction: column;
@@ -170,7 +174,8 @@
 .spec400-composer:has(
     .spec400-composer-input[data-multiline="true"],
     .spec400-attachment-chips,
-    .spec400-selected-tool
+    .spec400-selected-tool,
+    .kova-link-preview-composer
   )
   .spec400-composer-toolbar {
   display: flex;
@@ -178,7 +183,8 @@
 .spec400-composer:has(
     .spec400-composer-input[data-multiline="true"],
     .spec400-attachment-chips,
-    .spec400-selected-tool
+    .spec400-selected-tool,
+    .kova-link-preview-composer
   )
   .spec400-input-region {
   min-height: 26px;

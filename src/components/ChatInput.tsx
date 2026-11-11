@@ -78,6 +78,8 @@ import {
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
+import { LinkPreviewChip } from "@/components/LinkPreviewChip";
+import { firstLinkPreviewUrl } from "@/lib/link-preview.mjs";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
     default: module.ComposerSignInDialog,
@@ -1554,6 +1556,7 @@ export function ChatInput({
   const textWindow =
     previewText === undefined ? null : attachmentPreviewWindow(previewText, previewOffset);
   const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
+  const linkPreviewUrl = firstLinkPreviewUrl(value);
 
   return (
     <div
@@ -1673,6 +1676,7 @@ export function ChatInput({
             )}
           </ul>
         )}
+        {linkPreviewUrl && <LinkPreviewChip url={linkPreviewUrl} placement="composer" />}
         <div className="spec400-input-region">
           <textarea
             ref={ref}
