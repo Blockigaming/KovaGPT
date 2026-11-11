@@ -35,3 +35,19 @@ test("root has one global host and an authenticated persisted-notice bridge",()=
  assert.match(bridge,/markNotificationsRead/);
  assert.match(bridge,/document\.visibilityState === "visible"/);
 });
+
+test("server-emitted project, connection, research and security events retain their semantics",()=>{
+ const types={
+   project_invitation:"invitation_received",
+   project_role_change:"permission_changed",
+   connector_reauth:"connection_expired",
+   deep_research_complete:"research_completed",
+   security_alert:"security_check",
+ };
+ for(const [type,id] of Object.entries(types)){
+  assert.equal(persistedNoticeKind(task(type)),id,type);
+ }
+ for(const type of ["billing_issue","usage_threshold"]){
+  assert.equal(persistedNoticeKind(task(type)),null,"no fabricated billing/usage status for "+type);
+ }
+});
