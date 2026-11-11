@@ -103,8 +103,15 @@ export function LinkPreviewChip({
   if (!normalized) return null;
   const title = preview?.title || fallbackLinkTitle(normalized);
   const site = preview?.siteName || siteNameForLink(normalized);
-  // The favicon is only ever loaded from the linked site's own HTTPS origin.
-  const iconUrl = preview?.iconUrl ?? new URL("/favicon.ico", normalized).toString();
+  // Never initiate an arbitrary icon request before the server has verified a public page.
+  // Recognized brands use their fixed public icon origins, even if metadata is unavailable.
+  const knownIcon =
+    siteNameForLink(normalized) === "YouTube"
+      ? "https://www.youtube.com/favicon.ico"
+      : siteNameForLink(normalized) === "GitHub"
+        ? "https://github.com/favicon.ico"
+        : null;
+  const iconUrl = preview?.iconUrl ?? knownIcon;
 
   return (
     <div
@@ -120,7 +127,7 @@ export function LinkPreviewChip({
         title={"Open " + title + " on " + site}
         aria-label={"Open " + title + " on " + site + " in a new tab"}
       >
-        {!iconFailed ? (
+        {iconUrl && !iconFailed ? (
           <img
             className="kova-link-preview-icon"
             src={iconUrl}
