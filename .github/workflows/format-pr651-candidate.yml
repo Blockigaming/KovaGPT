@@ -52,7 +52,7 @@ jobs:
             tests/unit/workspace-search-categories.test.mjs \
             tests/unit/owner-interface-20261110-contracts.test.mjs \
             tests/unit/directory-mobile-density.test.mjs \
-            tests/unit/spec400-core-geometry-guards.test.mjs \
+            tests/unit/spec400-core-geometry-guards.test.mjs
       - name: Commit formatted source only
         run: |
           git config user.name "github-actions[bot]"
@@ -87,7 +87,7 @@ jobs:
             tests/unit/workspace-search-categories.test.mjs \
             tests/unit/owner-interface-20261110-contracts.test.mjs \
             tests/unit/directory-mobile-density.test.mjs \
-            tests/unit/spec400-core-geometry-guards.test.mjs \
+            tests/unit/spec400-core-geometry-guards.test.mjs
           if ! git diff --cached --quiet; then
             git commit -m "Format PR 651 changes"
             git push origin HEAD:feature/specific-page-link-preview-20261110
