@@ -50,7 +50,7 @@ export function useLibraryAttachmentAutoSave(enabled: boolean, principal: string
           publishKovaNotice({
             id: "file_saved",
             title: "File saved to Library",
-            message: name,
+            message: `${name} is available in your Library.`,
             confirmed: true,
           }),
         onError: (name, retry) => {
