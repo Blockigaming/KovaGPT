@@ -16,23 +16,16 @@ import { verifiedEndToEndIds } from "../src/lib/notification-acceptance-evidence
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
-const reportArgument = process.argv.find((argument) =>
-  argument.startsWith("--playwright-report="),
-);
-const requiredEvidenceArgument = process.argv.find((argument) =>
-  argument.startsWith("--require-verified="),
-);
-const requiredEvidenceIds = requiredEvidenceArgument
-  ? requiredEvidenceArgument
-      .slice("--require-verified=".length)
-      .split(",")
-      .filter(Boolean)
+const reportArg = process.argv.find((arg) => arg.startsWith("--playwright-report="));
+const requiredArg = process.argv.find((arg) => arg.startsWith("--require-verified="));
+const requiredEvidenceIds = requiredArg
+  ? requiredArg.slice("--require-verified=".length).split(",").filter(Boolean)
   : [];
 let evidenceError = null;
 let verified = new Set();
-if (reportArgument) {
+if (reportArg) {
   try {
-    const reportPath = resolve(root, reportArgument.slice("--playwright-report=".length));
+    const reportPath = resolve(root, reportArg.slice("--playwright-report=".length));
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
     verified = verifiedEndToEndIds(report, NOTIFICATION_IDS);
   } catch (error) {
@@ -128,10 +121,12 @@ const summary = {
   ),
 };
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  process.stdout.write(JSON.stringify({ summary, rows, unknownDynamicEmitters, evidenceError }, null, 2) + "\n");
+  process.stdout.write(
+    JSON.stringify({ summary, rows, unknownDynamicEmitters, evidenceError }, null, 2) + "\n",
+  );
   if (
-    requiredEvidenceArgument &&
-    (!reportArgument ||
+    requiredArg &&
+    (!reportArg ||
       evidenceError ||
       requiredEvidenceIds.some((id) => !NOTIFICATION_IDS.includes(id) || !verified.has(id)))
   )
