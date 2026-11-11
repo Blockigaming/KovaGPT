@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { rememberNoticeDismissal } from "@/lib/notification-dismissal-policy.mjs";
 import {
   listEligibleAnnouncementCampaigns,
   dismissAnnouncementCampaign,
@@ -19,11 +20,20 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
         // Never stack multiple marketing prompts in the same session.
         for (const campaign of campaigns.slice(0, 1)) {
           const actionUrl = campaign.actionUrl;
+          let recorded: Promise<void> | null = null;
           const acknowledge = () => {
-            void dismiss({ data: { campaignId: campaign.id } }).catch(() => {
-              // The local suppression policy still prevents repeated reminders in this
-              // browser. The server can retry cross-device dismissal next visit.
-            });
+            try {
+              rememberNoticeDismissal(window.localStorage, {
+                accountId: ownerId, id: campaign.eventId,
+                campaignId: campaign.id, group: "announcements",
+              });
+            } catch {
+              // Browser storage may be unavailable; the server remains authoritative.
+            }
+            recorded ??= dismiss({ data: { campaignId: campaign.id } })
+              .then(() => undefined)
+              .catch(() => undefined);
+            return recorded;
           };
           publishKovaNotice({
             id: campaign.eventId,
@@ -35,13 +45,16 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
             ...(actionUrl
               ? {
                   primaryLabel: "Explore",
-                  onPrimary: () => {
+                  onPrimary: async () => {
+                    // Persist dismissal first. Navigation must not cancel the
+                    // only server request intended to prevent repeated prompts.
+                    await acknowledge();
                     window.location.assign(actionUrl);
                   },
                 }
               : {}),
             secondaryLabel: "Not now",
-            onDismiss: acknowledge,
+            onDismiss: () => { void acknowledge(); },
           });
         }
       })
