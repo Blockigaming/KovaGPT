@@ -29,14 +29,34 @@ export function normalizeLinkPreviewUrl(raw) {
   }
 }
 
-export function firstLinkPreviewUrl(text) {
+// One invisible text position represents the entire URL while its visual
+// page chip is displayed. The canonical draft still stores the original link.
+export const COMPOSER_LINK_MARKER = "\u2063";
+
+export function firstLinkPreviewToken(text) {
   if (typeof text !== "string") return null;
   for (const match of text.slice(0, 20_000).matchAll(LINK_PATTERN)) {
-    const candidate = match[0].replace(/[.,!?;:)\]}]+$/u, "");
-    const url = normalizeLinkPreviewUrl(candidate);
-    if (url) return url;
+    const raw = match[0].replace(/[.,!?;:)\]}]+$/u, "");
+    const url = normalizeLinkPreviewUrl(raw);
+    if (url) return { raw, url, start: match.index, end: match.index + raw.length };
   }
   return null;
+}
+
+export function firstLinkPreviewUrl(text) {
+  return firstLinkPreviewToken(text)?.url ?? null;
+}
+
+export function toComposerLinkDisplay(text, rawLink) {
+  if (typeof text !== "string" || typeof rawLink !== "string" || !rawLink) return text;
+  const start = text.indexOf(rawLink);
+  if (start < 0) return text;
+  return text.slice(0, start) + COMPOSER_LINK_MARKER + text.slice(start + rawLink.length);
+}
+
+export function fromComposerLinkDisplay(display, rawLink) {
+  if (typeof display !== "string" || typeof rawLink !== "string" || !rawLink) return display;
+  return display.replace(COMPOSER_LINK_MARKER, rawLink);
 }
 
 export function isOnlyLink(text, url) {
