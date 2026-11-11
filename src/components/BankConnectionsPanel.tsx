@@ -225,7 +225,7 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="bank-connections-title" className="text-xl font-semibold tracking-tight">
-          Finances · Bank accounts
+          Bank accounts
         </h2>
         <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
           Read-only connections
