@@ -801,6 +801,16 @@ function ProjectsPage() {
       },
       ...prev.filter((project) => project.id !== id),
     ]);
+    // Only introduce Projects when the server-loaded account directory was empty.
+    // An optimistic empty array before load is not proof of first use.
+    if (resolvedUserKey === userKey && !loading && !loadError && projects.length === 0) {
+      publishKovaNotice({
+        id: "first_project",
+        title: "Your first project is ready",
+        message: "Add files, instructions, or conversations whenever you need them.",
+        key: "first-project:" + userKey,
+      });
+    }
     publishKovaNotice({ id: "project_created", title: "Project created", confirmed: true });
     void refresh();
     // Navigation can fail after the insert was confirmed; never offer another create as recovery.
