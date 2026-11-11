@@ -97,13 +97,37 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     // Defer low-priority discovery while any other modal owns the focus.
     // Radix portals often render outside the current route, so a page-level
     // flag is insufficient. Never include our own notice panel in the test.
-    const scan = () => setExternalDialogOpen(Boolean(document.querySelector(
-      '[role="dialog"]:not(.kova-notice-panel), [role="alertdialog"]:not(.kova-notice-panel), [data-state="open"][data-radix-popper-content-wrapper] [role="menu"]',
-    )));
+    const scan = () => {
+      const candidates = document.querySelectorAll<HTMLElement>(
+        '[role="dialog"]:not(.kova-notice-panel), [role="alertdialog"]:not(.kova-notice-panel), [data-state="open"][data-radix-popper-content-wrapper] [role="menu"]',
+      );
+      const anotherVisibleDialog = Array.from(candidates).some((element) =>
+        !element.closest(".kova-notice-panel") &&
+        element.getAttribute("aria-hidden") !== "true" &&
+        element.getClientRects().length > 0 &&
+        getComputedStyle(element).visibility !== "hidden",
+      );
+      setExternalDialogOpen(anotherVisibleDialog);
+    };
     scan();
-    const observer = new MutationObserver(scan);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-state", "role"] });
-    return () => observer.disconnect();
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        scan();
+      });
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-state", "role", "aria-hidden"],
+    });
+    return () => {
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {
