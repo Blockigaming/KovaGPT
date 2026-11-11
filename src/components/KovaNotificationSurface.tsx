@@ -59,6 +59,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const [pending, setPending] = useState<KovaNotice[]>([]);
   const [editing, setEditing] = useState(false);
   const [composing, setComposing] = useState(false);
+  const [externalDialogOpen, setExternalDialogOpen] = useState(false);
   const [liveMessage, setLiveMessage] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -83,6 +84,19 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     }
     setPending((items) => items.slice(1));
   }, [active, accountId]);
+
+  useEffect(() => {
+    // Defer low-priority discovery while any other modal owns the focus.
+    // Radix portals often render outside the current route, so a page-level
+    // flag is insufficient. Never include our own notice panel in the test.
+    const scan = () => setExternalDialogOpen(Boolean(document.querySelector(
+      '[role="dialog"]:not(.kova-notice-panel), [role="alertdialog"]:not(.kova-notice-panel), [data-state="open"][data-radix-popper-content-wrapper] [role="menu"]',
+    )));
+    scan();
+    const observer = new MutationObserver(scan);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-state", "role"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setActionBusy(false);
@@ -202,7 +216,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const defer =
     !!definition &&
     ["announcements", "onboarding", "feedback"].includes(definition.group) &&
-    (editing || composing);
+    (editing || composing || externalDialogOpen);
   const shown = !!active && !!definition && !defer;
   const visual = definition
     ? definition.group === "announcements" || definition.group === "billing"
