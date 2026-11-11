@@ -24,6 +24,8 @@ test("backend-entitlement and availability failures have specific notices", () =
     [{code:"hosted_tools_unavailable",status:503},"source_unavailable"],
     [{code:"message_quota_unavailable",status:503},"source_unavailable"],
     [{code:"analysis_sign_in_required",status:401},"sign_in_required"],
+    [{code:"file_upload_limit",status:429},"upload_limit"],
+    [{code:"image_generation_limit",status:429},"image_limit"],
     [{status:403},"permission_denied"],
     [{status:429,category:"rate_limit"},"rate_limited"],
     [{category:"model_timeout"},"request_timeout"],
