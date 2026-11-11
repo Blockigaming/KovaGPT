@@ -15,6 +15,7 @@ import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { KovaNotificationSurface, publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { PersistedNoticeBridge } from "@/components/PersistedNoticeBridge";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
@@ -319,7 +320,7 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
 }
 
 function RootNotificationCenter() {
-  const { isLoaded, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   useEffect(() => {
     if (!isLoaded) return;
     const offline = () => {
@@ -342,7 +343,12 @@ function RootNotificationCenter() {
       window.removeEventListener("online", online);
     };
   }, [isLoaded]);
-  return isLoaded ? <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} /> : null;
+  return isLoaded ? (
+    <>
+      <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />
+      {isSignedIn && user?.id ? <PersistedNoticeBridge key={user.id} ownerId={user.id} /> : null}
+    </>
+  ) : null;
 }
 
 function RootInputModality() {
