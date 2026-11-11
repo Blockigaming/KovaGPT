@@ -59,7 +59,7 @@ export async function resolveLinkPreview(raw, signal, read = publicRead) {
     url,
     title: fallbackLinkTitle(url),
     siteName,
-    iconUrl: new URL("/favicon.ico", url).toString(),
+    iconUrl: null,
   };
 
   if (siteName === "YouTube") {
@@ -92,7 +92,7 @@ export async function resolveLinkPreview(raw, signal, read = publicRead) {
       url,
       title: metadata.title || fallback.title,
       siteName: metadata.siteName || siteName,
-      iconUrl: metadata.iconUrl || fallback.iconUrl,
+      iconUrl: metadata.iconUrl || new URL("/favicon.ico", page.url).toString(),
     };
   } catch {
     return fallback;
