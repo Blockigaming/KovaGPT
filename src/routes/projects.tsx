@@ -1661,7 +1661,7 @@ function ProjectsPage() {
             className="kova-project-create-form space-y-5"
           >
             <div className="kova-project-create-field">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between">
                 <label htmlFor="create-project-name" className="text-sm font-medium">
                   Name
                 </label>
