@@ -146,7 +146,13 @@ test("radio click remains selected across rapid date/text updates and submits th
   const date = f.find("input", (node) => node.props.type === "date");
   date.props.onChange({ target: { value: "2026-11-05" } });
   const radio = f.find("radio");
-  radio.props.onClick();
+  // Pointerdown commits selection first, even if the following Firefox
+  // click only focuses the Radix item and no onValueChange event arrives.
+  radio.props.onPointerDown({ button: 0 });
+  await f.flush();
+  assert.equal(f.find("radiogroup").props.value, "a");
+  // Duplicate pointer/click/controlled changes must not unset it.
+  f.find("radio").props.onClick();
   f.find("radiogroup").props.onValueChange("a");
   await f.flush();
   assert.equal(f.find("radiogroup").props.value, "a");
