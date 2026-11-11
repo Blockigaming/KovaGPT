@@ -136,6 +136,10 @@ function createFixture() {
         calls.push({ args, ...pending });
         return pending.promise;
       },
+      publishKovaNotice(notice) {
+        assert.equal(typeof notice.id, "string");
+        if (notice.id === "project_created") successes.push([notice.title]);
+      },
       toast: {
         success: (...args) => successes.push(args),
         error: (message) => errors.push(message),

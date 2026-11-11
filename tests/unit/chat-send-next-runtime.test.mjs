@@ -6,6 +6,8 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
+import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 
 // The real primitive supplies geometry; this transparent boundary preserves
 // the caller's events, disabled state, children and ref in the route fixture.
@@ -140,6 +142,8 @@ function fixture() {
   let sequence = 0;
   const context = {
     ...helpers,
+    chatFailureNoticeId,
+    publishKovaNotice: notificationDeliveryStub.publishKovaNotice,
     React,
     Button,
     Suspense: React.Suspense,

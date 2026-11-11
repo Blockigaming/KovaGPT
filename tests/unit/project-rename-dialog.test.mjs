@@ -193,6 +193,10 @@ function fixture() {
     document,
     window,
     fnUpdate,
+    publishKovaNotice: (notice) => {
+      assert.equal(notice.id, "project_updated");
+      notices.push(["success", notice.title]);
+    },
     toast: {
       success: (message) => notices.push(["success", message]),
       error: (message) => notices.push(["error", message]),

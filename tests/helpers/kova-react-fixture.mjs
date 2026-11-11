@@ -26,6 +26,7 @@ export function reactFixture(path, select, options = {}) {
   const hooks = [],
     effects = [],
     messages = [],
+    notices = [],
     calls = [];
   let cursor = 0,
     tree;
@@ -82,7 +83,12 @@ export function reactFixture(path, select, options = {}) {
     },
   };
   const modules = {
-    "@/components/KovaNotificationSurface": notificationDeliveryStub,
+    "@/components/KovaNotificationSurface": {
+      publishKovaNotice(notice) {
+        notificationDeliveryStub.publishKovaNotice(notice);
+        notices.push(notice);
+      },
+    },
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},
@@ -159,6 +165,7 @@ export function reactFixture(path, select, options = {}) {
     input,
     calls,
     messages,
+    notices,
     nodes: () => nodes(tree),
     text: () => text(tree),
     unmount: () => hooks.forEach((h) => h.cleanup?.()),

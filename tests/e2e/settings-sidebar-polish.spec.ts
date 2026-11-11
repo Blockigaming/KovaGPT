@@ -79,9 +79,13 @@ test("desktop Settings width is editable and Back restores the originating page"
   const previousUrl = page.url();
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
-  await expect(page).toHaveURL(/\/settings\/appearance$/);
+  // The account menu opens General settings on the full-page desktop route.
+  // Exercise the real navigation into Appearance before checking its resize controls.
+  await expect(page).toHaveURL(/\/settings\/responses$/);
   const settings = page.locator(".kova-settings-page");
   const navigation = settings.getByRole("complementary", { name: "Settings navigation" });
+  await navigation.getByRole("tab", { name: "Appearance", exact: true }).click();
+  await expect(page).toHaveURL(/\/settings\/appearance$/);
   const width = settings.getByRole("slider", { name: "Settings sidebar width" });
   await expect(width).toHaveAttribute("aria-valuenow", "280");
   await expect(navigation).toHaveCSS("width", "280px");

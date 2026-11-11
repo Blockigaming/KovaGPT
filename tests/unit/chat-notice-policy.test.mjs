@@ -113,7 +113,7 @@ test("real quota response carries a reliable reset instant to the limit dialog",
 test("Thinking limit sheet uses the server category, not a guessed message string", () => {
   const dialog = readFileSync("src/components/LimitReachedDialog.tsx", "utf8");
   const route = readFileSync("src/routes/index.tsx", "utf8");
-  assert.match(dialog, /usageKind === "thinking" \? "Thinking limit reached"/);
+  assert.match(dialog, /usageKind === "thinking"\s*\?\s*"Thinking limit reached"/);
   assert.match(route, /usageKind: err\.usageKind/);
   assert.match(route, /usageKind=\{limitDialog\.usageKind\}/);
   assert.match(dialog, /max-sm:!bottom-0/);

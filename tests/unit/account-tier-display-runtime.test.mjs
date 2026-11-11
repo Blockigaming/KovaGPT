@@ -66,7 +66,7 @@ test("missing configuration and unmounted results never become known plans", asy
 
 test("sidebar shows real email and a neutral placeholder rather than invented initials", () => {
   const source = readFileSync("src/components/Sidebar.tsx", "utf8");
-  assert.match(source, /accountEmail \|\| "Email unavailable"/);
+  assert.match(source, /accountName \|\| accountEmail \|\| "Account details unavailable"/);
   assert.match(source, /isLoaded && accountName \? accountName.charAt/);
   assert.match(source, /accountInitial \|\| <UserRound/);
   assert.match(source, /tierStatus === "ready"/);
