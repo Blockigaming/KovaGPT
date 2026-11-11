@@ -25,14 +25,14 @@ jobs:
           persist-credentials: true
       - name: Import reviewed exact screenshots from pinned Playwright 1.56.0 evidence
         env:
-          GH_TOKEN: \${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "Blockigaming/KovaGPT"
           test "$GITHUB_REF" = "refs/heads/feature/finances-dashboard-preview-20261110"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git rev-parse HEAD^)" = "a1c6cad43243fbba8d9329d0496e2d03b237cb5e"
+          test "$(git rev-parse HEAD^)" = "096166bc1c839dc4dae6ac86b80d42ac19ba91ac"
           test "$(git rev-parse HEAD:src/components/auth/AuthDialog.tsx)" = "2b9ad0fd4d5c2a882e6a4866568e4422bf77faa6"
           test "$(git rev-parse HEAD:tests/e2e/auth-visual-regression.spec.ts)" = "03d6129e9a73b688f7b2c979fe3798b18e902277"
           dest="tests/e2e/auth-visual-regression.spec.ts-snapshots"
@@ -45,8 +45,8 @@ jobs:
             'https://api.github.com/repos/Blockigaming/KovaGPT/actions/artifacts/13874648901/zip' \
             --output "$archive"
           for project in desktop-1440x900 phone-390x844; do
-            src="test-results/assistant-auth-visual/results/auth-visual-regression-guest-auth-dialog-visual-baseline-\${project}/guest-auth-dialog-actual.png"
-            unzip -p "$archive" "$src" > "$dest/guest-auth-dialog-\${project}-linux.png"
+            src="test-results/assistant-auth-visual/results/auth-visual-regression-guest-auth-dialog-visual-baseline-${project}/guest-auth-dialog-actual.png"
+            unzip -p "$archive" "$src" > "$dest/guest-auth-dialog-${project}-linux.png"
           done
           echo '366eb557f11a4aef5c156466acbfe2ccb5aa9d9b2b6d21709ab44de50e0a5416  tests/e2e/auth-visual-regression.spec.ts-snapshots/guest-auth-dialog-desktop-1440x900-linux.png' | sha256sum --check --status
           echo 'e16ee1d94432dd4067d7da031501fe6b679756fe0b0263714789a00a360c6674  tests/e2e/auth-visual-regression.spec.ts-snapshots/guest-auth-dialog-phone-390x844-linux.png' | sha256sum --check --status
