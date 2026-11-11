@@ -194,16 +194,20 @@ function FormBody({
   // a render (notably date + radio changes in narrow Firefox layouts).
   const valuesRef = useRef(values);
   const set = (id: string, value: FormValue) => {
+    // Radix may invoke onClick and onValueChange for the same selection.
+    // Ignore duplicate events and merge updates functionally so an earlier
+    // low-priority field update cannot revert a later radio selection.
+    if (Object.is(valuesRef.current[id], value)) return;
     const next = { ...valuesRef.current, [id]: value };
     valuesRef.current = next;
-    setValues(next);
+    setValues((current) => ({ ...current, [id]: value }));
     if (errors[id]) setErrors(({ [id]: _drop, ...rest }) => rest);
     onDraft(next);
   };
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (locked) return;
-    const found = validateFormValues(block, values);
+    const found = validateFormValues(block, valuesRef.current);
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) {
@@ -213,7 +217,9 @@ function FormBody({
     const clean: FormValues = {};
     for (const f of block.fields)
       clean[f.id] =
-        f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
+        f.kind === "number" && valuesRef.current[f.id] !== ""
+          ? Number(valuesRef.current[f.id])
+          : valuesRef.current[f.id];
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
@@ -251,7 +257,7 @@ function FormBody({
             aria-pressed={submittedAction === action.id || undefined}
             className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
             onPointerDown={preserveActionFocus}
-            onClick={() => !locked && onSubmit({ action: action.id, values })}
+            onClick={() => !locked && onSubmit({ action: action.id, values: valuesRef.current })}
           >
             {action.label}
           </Button>
@@ -399,7 +405,14 @@ function FieldControl({
                 key={o.value}
                 className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <RadioGroupItem value={o.value} aria-label={o.label} />
+                <RadioGroupItem
+                  value={o.value}
+                  aria-label={o.label}
+                  // Firefox can focus a Radix radio without committing its
+                  // internal change event. Explicit clicks share the same
+                  // idempotent state path as keyboard/radio-group changes.
+                  onClick={() => onChange(o.value)}
+                />
                 <span className="min-w-0 text-sm">{o.label}</span>
               </div>
             ))}
