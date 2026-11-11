@@ -50,7 +50,9 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.ok(accessibilityIndex > previewBuildIndex);
   assert.doesNotMatch(verifyJob.slice(0, previewBuildIndex), /KOVA_BROWSER_PREVIEW/);
 
-  assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
+  const nodePreviewEnv = /^    env:\n(?: {6}[^\n]*\n)* {6}KOVA_BROWSER_PREVIEW: "node"$/m;
+
+  assert.match(browserJob, nodePreviewEnv);
   assert.match(
     browserJob,
     /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
@@ -60,7 +62,7 @@ test("browser CI uses the Node preview without changing the production preset", 
     browserJob,
     /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\} --workers=2/,
   );
-  assert.match(releaseE2eJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
+  assert.match(releaseE2eJob, nodePreviewEnv);
   assert.match(
     releaseE2eJob,
     /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
