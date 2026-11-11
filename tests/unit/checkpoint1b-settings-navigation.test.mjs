@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 const source = readFileSync("src/components/SettingsDialog.tsx", "utf8");
 test("both settings entry modes expose all twenty-two destinations through the grouped hierarchy", () => {
-  assert.match(source, /const groups = pageGroups;/);
+  assert.match(source, /const groups = destinationGroups;/);
   const primary = source.slice(
     source.indexOf("const destinationGroups:"),
-    source.indexOf("const groups = pageGroups"),
+    source.indexOf("const destinations = destinationGroups.flatMap"),
   );
   const labels = [...primary.matchAll(/label: "([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(labels, [
@@ -34,34 +34,14 @@ test("both settings entry modes expose all twenty-two destinations through the g
     "Log out",
   ]);
 });
-test("secondary panels remain searchable with parent return and explicit heading labelling", () => {
-  const parents = Function(
-    `return (${source.match(/const secondaryParents: Record<string, string> = (\{[\s\S]*?\});/)[1]})`,
-  )();
-  assert.deepEqual(
-    Object.keys(parents).sort(),
-    [
-      "email",
-      "voice",
-      "usage",
-      "cloud-browser",
-      "logout",
-      "report",
-      "about",
-      "shortcuts",
-      "memory",
-      "security",
-      "storage",
-      "location",
-      "parental",
-      "family",
-    ].sort(),
+test("all settings sections are direct sidebar destinations with full-text search", () => {
+  assert.doesNotMatch(
+    source,
+    /const secondaryParents:|matchingSecondaryTabs|kova-settings-related/,
   );
-  assert.equal(parents.memory, "data");
-  assert.equal(parents.family, "linked");
-  assert.match(source, /secondaryParents\[item.v\]/);
-  assert.match(source, /title: "Related settings", tabs: matchingSecondaryTabs/);
-  assert.match(source, /onClick=\{\(\) => selectTab\(parentTab\)\}/);
+  assert.match(source, /const allTabs = destinations;/);
+  assert.match(source, /SETTINGS_DESCRIPTIONS\[item\.v\] \?\? ""/);
+  assert.match(source, /tabs: group\.tabs\.filter\(matchesSettingsQuery\)/);
   assert.match(source, /aria-labelledby=\{currentSectionHeadingId\}/);
   assert.match(source, /id=\{currentSectionHeadingId\}/);
   assert.doesNotMatch(source, /<TabsTrigger value=\{tab\} className="sr-only"/);

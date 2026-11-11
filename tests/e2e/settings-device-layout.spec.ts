@@ -19,7 +19,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.locator(".kova-settings-navigation-heading h2")).toBeFocused();
       await expect(page.getByPlaceholder("Search settings")).not.toBeFocused();
       const tabs = navigation.getByRole("tab");
-      await expect(tabs).toHaveCount(10);
+      await expect(tabs).toHaveCount(22);
       for (const tab of await tabs.all()) {
         const box = (await tab.boundingBox())!;
         expect(box.height).toBeGreaterThanOrEqual(48);
@@ -35,8 +35,11 @@ for (const theme of ["dark", "light"] as const) {
     }
     await navigation.getByRole("tab", { name: "Data controls", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Data controls", exact: true })).toBeVisible();
-    const related = page.getByRole("navigation", { name: "Data controls sections" });
-    await related.getByRole("button", { name: /Security and login/ }).click();
+    if (phone) {
+      await page.getByRole("button", { name: "Back to settings", exact: true }).click();
+      await expect(navigation).toBeVisible();
+    }
+    await navigation.getByRole("tab", { name: "Security and login", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Security and login", exact: true }),
     ).toBeVisible();
