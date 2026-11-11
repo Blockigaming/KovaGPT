@@ -215,7 +215,18 @@ jobs:
 
       - name: Browser smoke checks
         if: steps.scope.outputs.run_ci == 'true'
-        run: npm run test:browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep all Chromium/Firefox/WebKit smoke tests; use the matching image
+          # because host apt mirrors are unavailable and WebKit needs native libs.
+          docker run --rm --init --ipc=host \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$PWD,dst=/workspace" \
+            --workdir /workspace \
+            --env CI=true \
+            mcr.microsoft.com/playwright:v1.56.0-noble \
+            bash -lc 'npm run test:browser'
 
       - name: Release checks
         if: steps.scope.outputs.run_ci == 'true'
