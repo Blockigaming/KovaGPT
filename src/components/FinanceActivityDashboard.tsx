@@ -12,8 +12,8 @@ import {
   YAxis,
 } from "recharts";
 import type { FinanceSnapshot } from "@/finances/finance-read.server.mjs";
+import { summarizeUsdActivity } from "@/finances/finance-activity-summary.mjs";
 
-type FinanceRecord = FinanceSnapshot["transactions"][number];
 type Props = { snapshot?: FinanceSnapshot | null; demo?: boolean };
 const demoRecords = [
   { date: "2026-11-02", name: "Groceries", amount: 64.2, currency: "USD", pending: false },
@@ -24,37 +24,12 @@ const demoRecords = [
 ] as const;
 const currency = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-function summary(transactions: ReadonlyArray<Pick<FinanceRecord, "amount" | "date">>) {
-  const byDay = new Map<string, { date: string; spent: number; received: number }>();
-  let spent = 0,
-    received = 0;
-  for (const t of transactions) {
-    if (
-      typeof t.amount !== "number" ||
-      !Number.isFinite(t.amount) ||
-      typeof t.date !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(t.date)
-    )
-      continue;
-    const day = byDay.get(t.date) ?? { date: t.date, spent: 0, received: 0 };
-    if (t.amount >= 0) {
-      day.spent += t.amount;
-      spent += t.amount;
-    } else {
-      day.received += -t.amount;
-      received += -t.amount;
-    }
-    byDay.set(t.date, day);
-  }
-  return {
-    spent,
-    received,
-    days: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)),
-  };
-}
 export function FinanceActivityDashboard({ snapshot, demo = false }: Props) {
   const records = demo ? demoRecords : (snapshot?.transactions ?? []);
-  const { spent, received, days } = useMemo(() => summary(records), [records]);
+  const { spent, received, days, excludedPending, excludedCurrency, excludedInvalid } = useMemo(
+    () => summarizeUsdActivity(records),
+    [records],
+  );
   if (!demo && !snapshot) return null;
   return (
     <section
@@ -82,6 +57,12 @@ export function FinanceActivityDashboard({ snapshot, demo = false }: Props) {
           {demo ? "DEMO DATA" : "LIVE READ"}
         </span>
       </div>
+      {!demo && excludedPending + excludedCurrency + excludedInvalid > 0 && (
+        <p role="status" className="text-xs text-muted-foreground">
+          Excluded from posted USD totals: {excludedPending} pending, {excludedCurrency} non-USD or
+          unknown-currency, and {excludedInvalid} invalid transactions.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-border p-4">
           <p className="text-xs text-muted-foreground">Money spent</p>
@@ -144,7 +125,7 @@ export function FinanceActivityDashboard({ snapshot, demo = false }: Props) {
       <div className="rounded-xl border border-border p-3 sm:p-4">
         <h4 className="text-sm font-medium">Daily activity</h4>
         <p className="mt-1 text-xs text-muted-foreground">
-          Spending and money received by transaction date · USD
+          Posted USD spending and money received by transaction date
         </p>
         {days.length ? (
           <div
@@ -206,7 +187,7 @@ export function FinanceActivityDashboard({ snapshot, demo = false }: Props) {
       <p className="text-xs text-muted-foreground">
         {demo
           ? "Sample values are illustrative only. No accounts or credentials are used."
-          : "Totals cover returned transactions only, not a complete account statement. Pending transactions may change. This is not financial advice."}
+          : "Totals include posted USD transactions only from the returned results, not a complete account statement. Other currencies and pending transactions are excluded. This is not financial advice."}
       </p>
     </section>
   );
