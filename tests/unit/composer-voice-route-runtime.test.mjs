@@ -6,6 +6,8 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
+import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 
 const parse = (path) =>
   ts.createSourceFile(
@@ -71,6 +73,8 @@ globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
+  chatFailureNoticeId,
+  notificationDeliveryStub,
   React,
   // This reused send fixture does not render controls; keep its transparent
   // shared Button dependency bound while exercising the actual chat callbacks.

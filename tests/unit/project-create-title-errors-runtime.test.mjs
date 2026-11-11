@@ -131,6 +131,10 @@ function createFixture() {
     `function Harness({isLoaded,isSignedIn,userKey}) { ${declarations}\n${createFunction}\nreturn {dialog: (${dialogSource}),openCreate,closeCreate,handleCreate,restoreCreateFocus,name,description,busy,createError}; } return Harness;`,
     {
       ...b.deps,
+      resolvedUserKey: props.userKey,
+      loading: false,
+      loadError: null,
+      projects: rows,
       fnCreate: (args) => {
         const pending = deferred();
         calls.push({ args, ...pending });

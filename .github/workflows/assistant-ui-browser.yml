@@ -175,11 +175,9 @@ jobs:
     name: Assistant auth visual
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.56.0-noble
+    # The reviewed auth snapshots use the Ubuntu runner's system font stack.
     timeout-minutes: 20
     env:
-      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
