@@ -44,3 +44,13 @@ test("only the first campaign is shown; action is safe and dismissal saves acros
   assert.match(server, /safePersistedNoticeActionUrl/);
   assert.match(root, /AnnouncementCampaignBridge/);
 });
+
+test("Explore action records campaign dismissal before leaving the page", () => {
+  const bridge=readFileSync("src/components/AnnouncementCampaignBridge.tsx","utf8");
+  const index=bridge.indexOf("onPrimary: async () =>");
+  const next=bridge.slice(index,index+350);
+  assert.ok(index>0);
+  assert.ok(next.indexOf("await acknowledge()")>0);
+  assert.ok(next.indexOf("window.location.assign(actionUrl)")>next.indexOf("await acknowledge()"));
+  assert.match(bridge,/rememberNoticeDismissal/);
+});
