@@ -7,6 +7,12 @@ if [[ "$#" -eq 0 ]]; then
   echo "::error::At least one Playwright browser is required"
   exit 64
 fi
+# Official, version-matched CI image includes native libraries and pinned browsers.
+# Verify each requested browser is present; Playwright will fail if it is not.
+if [[ "${PLAYWRIGHT_BROWSERS_PATH:-}" == "/ms-playwright" ]]; then
+  npx --no-install playwright install "$@"
+  exit 0
+fi
 if [[ -f /etc/apt/apt-mirrors.txt ]]; then
   printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' |
     sudo tee /etc/apt/apt-mirrors.txt >/dev/null

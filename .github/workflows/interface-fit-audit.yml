@@ -31,6 +31,8 @@ jobs:
     name: Application fit (${{ matrix.browser }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -66,9 +68,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
           bash scripts/ci/install-playwright-browsers.sh "${{ matrix.browser }}"
       - name: Verify the actual application hydrates in this engine
         run: >-

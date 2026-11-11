@@ -43,6 +43,8 @@ jobs:
         browser: [chromium, firefox, webkit]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 15
     env:
       AI_GENERATION_ENABLED: "false"

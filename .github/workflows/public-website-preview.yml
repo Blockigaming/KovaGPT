@@ -19,6 +19,8 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 20
     env:
       KOVA_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -34,7 +36,7 @@ jobs:
       - run: npm run typecheck
       - run: node --test tests/unit/public-website.test.mjs tests/unit/hosted-github-login-redirect.test.mjs
       - run: npm run build:azure
-      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/ci/install-playwright-browsers.sh chromium
       - run: npx playwright test --config playwright.public-website.config.ts
       - run: npx playwright test --config playwright.public-website-regression.config.ts
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
