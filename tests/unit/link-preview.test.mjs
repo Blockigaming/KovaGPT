@@ -28,6 +28,7 @@ test("previews only supported HTTPS links without credentials, custom ports, or 
   assert.equal(safePreviewTarget("https://localhost/"), null);
   assert.equal(safePreviewTarget("https://sub.internal/"), null);
   assert.equal(safePreviewTarget("https://127.0.0.1/"), null);
+  assert.equal(safePreviewTarget("https://[::1]/"), null);
 });
 
 test("blocks private, special-use and reserved IPv4 addresses", () => {

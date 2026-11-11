@@ -78,7 +78,7 @@ export function LinkPreviewChips({
               aria-label={"Open " + title} title={title}>
               <span className="kova-link-preview-logo" aria-hidden="true">
                 <Link2 className="kova-link-preview-fallback" />
-                <img src={favicon} alt="" loading="lazy" referrerPolicy="no-referrer"
+                <img key={favicon} src={favicon} alt="" loading="lazy" referrerPolicy="no-referrer"
                   onError={(event) => { event.currentTarget.style.display = "none"; }} />
               </span>
               <span className="kova-link-preview-text">

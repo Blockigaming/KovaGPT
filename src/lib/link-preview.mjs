@@ -1,5 +1,5 @@
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/giu;
-const MAX_URLS = 2;
+const MAX_URLS = 4;
 
 export function normalizeLinkPreviewUrl(value) {
   if (typeof value !== "string" || value.length > 2048) return null;

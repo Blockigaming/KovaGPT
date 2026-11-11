@@ -120,12 +120,14 @@ async function readPublicPage(target) {
         return;
       }
       response.on("data", (chunk) => {
+        const remaining = MAX_BODY_BYTES - count;
+        if (remaining > 0) chunks.push(chunk.subarray(0, remaining));
         count += chunk.length;
-        if (count > MAX_BODY_BYTES) {
+        if (count >= MAX_BODY_BYTES) {
+          // Most sites place their title and favicon in the first part of <head>.
+          // Stop reading at the byte cap but retain this bounded prefix.
+          resolve({ status, location, contentType, body: Buffer.concat(chunks).toString("utf8") });
           request.destroy();
-          resolve(null);
-        } else {
-          chunks.push(chunk);
         }
       });
       response.on("end", () => resolve({ status, location, contentType, body: Buffer.concat(chunks).toString("utf8") }));
