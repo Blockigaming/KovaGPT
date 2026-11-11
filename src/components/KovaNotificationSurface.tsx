@@ -206,6 +206,13 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
               /* Ignore notice acknowledgement failures. */
             }
           },
+          onAutoClose: () => {
+            try {
+              notice.onDismiss?.();
+            } catch {
+              /* The provider inbox is durable; a failed acknowledgement must not block UI. */
+            }
+          },
           description: notice.message,
           duration: 3000,
           action:
