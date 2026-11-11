@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { KovaNotificationSurface, publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { PersistedNoticeBridge } from "@/components/PersistedNoticeBridge";
+import { AnnouncementCampaignBridge } from "@/components/AnnouncementCampaignBridge";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
@@ -347,6 +348,7 @@ function RootNotificationCenter() {
     <>
       <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />
       {isSignedIn && user?.id ? <PersistedNoticeBridge key={user.id} ownerId={user.id} /> : null}
+      {isSignedIn && user?.id ? <AnnouncementCampaignBridge key={user.id} ownerId={user.id} /> : null}
     </>
   ) : null;
 }
