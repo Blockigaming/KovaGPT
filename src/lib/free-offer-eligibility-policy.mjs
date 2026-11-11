@@ -25,3 +25,20 @@ export function canDisplayFreeIntroOffer({
     pendingClaim === false
   );
 }
+
+/** A configured coupon ID is not proof of a redeemable first-month offer. */
+export function isVerifiedFirstMonthCoupon(coupon, nowSeconds = Math.floor(Date.now() / 1000)) {
+  if (!coupon || typeof coupon !== "object" || coupon.deleted === true) return false;
+  return (
+    coupon.valid === true &&
+    coupon.percent_off === 50 &&
+    coupon.duration === "once" &&
+    (coupon.redeem_by === null ||
+      (Number.isSafeInteger(coupon.redeem_by) && coupon.redeem_by > nowSeconds)) &&
+    (coupon.max_redemptions === null ||
+      (Number.isInteger(coupon.max_redemptions) &&
+        coupon.max_redemptions > 0 &&
+        Number.isInteger(coupon.times_redeemed) &&
+        coupon.times_redeemed < coupon.max_redemptions))
+  );
+}
