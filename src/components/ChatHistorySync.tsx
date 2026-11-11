@@ -380,22 +380,16 @@ export function ChatHistorySyncStatus() {
   const critical =
     state.conflicts.length > 0 ||
     ["device_error", "blocked", "auth_required", "cleared", "conflict"].includes(state.phase);
-  const transient = [
-    "offline",
-    "rate_limited",
-    "connecting",
-    "saving_device",
-    "syncing",
-    "pending",
-    "other_tab",
-    "unavailable",
-  ].includes(state.recoveryPhase ?? state.phase);
-  if (transient && !critical) return null;
+  // Keep a pending migration decision in place while background sync runs.
+  // Collapsing it during a pointer press moves the transcript's native controls.
+  // Sync without a migration or critical error still has no visible notice.
   const visible =
     state.migration > 0 ||
     state.conflicts.length > 0 ||
     ["device_error", "blocked", "auth_required", "cleared"].includes(state.phase);
   if (!visible) return null;
+  const labelPhase =
+    state.migration > 0 && !critical ? "local" : (state.recoveryPhase ?? state.phase);
   async function act(action: () => Promise<void> | undefined) {
     setBusy(true);
     try {
@@ -445,7 +439,7 @@ export function ChatHistorySyncStatus() {
       aria-busy={working || undefined}
     >
       <p role="status" aria-live="polite" className="font-medium text-foreground/80">
-        {labels[state.recoveryPhase ?? state.phase] ?? "Chat sync is pending"}
+        {labels[labelPhase] ?? "Chat sync is pending"}
       </p>
       {state.phase === "other_tab" && (
         <div className="mt-2 space-y-2">
