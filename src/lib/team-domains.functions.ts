@@ -83,7 +83,7 @@ export const verifyTeamDomain = createServerFn({ method: "POST" })
     const proof = await proofFor(data.teamId, domain);
     const dns = await import("node:dns/promises");
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let records: string[][] = [];
+    let records: string[][];
     try {
       records = await Promise.race([
         dns.resolveTxt(proof.recordHost),
