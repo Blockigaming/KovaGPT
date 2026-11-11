@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   persistedNoticeKind,
+  readSessionSeen,
+  rememberSessionSeen,
   pendingPersistedNotices,
   safePersistedNoticeActionUrl,
 } from "../../src/lib/persisted-notification-policy.mjs";
@@ -79,4 +81,19 @@ test("server-emitted project, connection, research and security events retain th
       "no fabricated billing/usage status for " + type,
     );
   }
+});
+
+test("durable notification playback deduplicates across reloads without changing server read state", () => {
+  const store = new Map();
+  const storage = {
+    getItem: (key) => store.get(key) ?? null,
+    setItem: (key, value) => store.set(key, value),
+  };
+  const owner = "550e8400-e29b-41d4-a716-446655440000";
+  const id = "650e8400-e29b-41d4-a716-446655440001";
+  assert.equal(readSessionSeen(storage, owner).size, 0);
+  assert.equal(rememberSessionSeen(storage, owner, new Set([id])), true);
+  assert.equal(readSessionSeen(storage, owner).has(id), true);
+  assert.equal(readSessionSeen(storage, "750e8400-e29b-41d4-a716-446655440002").has(id), false);
+  assert.equal(readSessionSeen({getItem(){throw Error("blocked");}}, owner).size, 0);
 });
