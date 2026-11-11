@@ -296,16 +296,29 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Distribute the complete five-viewport mobile suite across four
+          # disjoint shards. Two shards exceeded the 45-minute job limit
+          # during normal passing tests; preserve every project and assertion.
           - id: phone-a
             check_name: Phone shard (phone-a)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 1/2
+            shard: 1/4
           - id: phone-b
             check_name: Phone shard (phone-b)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 2/2
+            shard: 2/4
+          - id: phone-c
+            check_name: Phone shard (phone-c)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 3/4
+          - id: phone-d
+            check_name: Phone shard (phone-d)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 4/4
           - id: tablet
             check_name: Browser (tablet)
             projects: >-
