@@ -4643,7 +4643,7 @@
         "claim_team_join_notification"
       ],
       "destructive": false,
-      "dataBackfill": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": ["team_verified_domains", "team_join_requests"],
       "policies": [],
