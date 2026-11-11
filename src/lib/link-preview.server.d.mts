@@ -4,7 +4,4 @@ export type LinkPreview = {
   siteName: string;
   iconUrl: string | null;
 };
-export function resolveLinkPreview(
-  raw: string,
-  signal?: AbortSignal,
-): Promise<LinkPreview | null>;
+export function resolveLinkPreview(raw: string, signal?: AbortSignal): Promise<LinkPreview | null>;

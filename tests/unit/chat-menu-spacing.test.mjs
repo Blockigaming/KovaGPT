@@ -43,9 +43,15 @@ test("sidebar chat pin is one accessible hover control and the menu floats outsi
   assert.match(sidebar, /fill={conversation\.pinned \? "currentColor" : "none"}/);
   assert.match(sidebar, /onClick={\(event\) => {[\s\S]*?quickTogglePin\(conversation\);/);
   assert.match(styles, /\.kova-sidebar \.kova-chat-quick-pin\.is-pinned \{[\s\S]*?opacity: 1/);
-  assert.match(styles, /\.kova-sidebar \.kova-chat-row:is\(:hover, :focus-within\) \.kova-chat-quick-pin/);
+  assert.match(
+    styles,
+    /\.kova-sidebar \.kova-chat-row:is\(:hover, :focus-within\) \.kova-chat-quick-pin/,
+  );
   assert.match(sidebar, /side={mobileViewport \? "bottom" : "right"}/);
   assert.match(sidebar, /data-sidebar-menu-placement="floating"/);
   assert.match(shared, /<DropdownMenuPrimitive\.Portal>/);
-  assert.doesNotMatch(sidebar.slice(sidebar.indexOf('className="kova-sidebar-chat-menu"')), /Lock chat/);
+  assert.doesNotMatch(
+    sidebar.slice(sidebar.indexOf('className="kova-sidebar-chat-menu"')),
+    /Lock chat/,
+  );
 });

@@ -69,8 +69,7 @@ export function siteNameForLink(url) {
     return "YouTube";
   if (hostname === "github.com" || hostname === "gist.github.com") return "GitHub";
   if (hostname === "reddit.com" || hostname.endsWith(".reddit.com")) return "Reddit";
-  if (hostname === "wikipedia.org" || hostname.endsWith(".wikipedia.org"))
-    return "Wikipedia";
+  if (hostname === "wikipedia.org" || hostname.endsWith(".wikipedia.org")) return "Wikipedia";
   if (hostname === "docs.google.com") return "Google Docs";
   return hostname;
 }

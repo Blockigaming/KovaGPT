@@ -34,11 +34,7 @@ function previewFor(url: string): Promise<Preview | null> {
       const data: unknown = await response.json();
       if (!data || typeof data !== "object") return null;
       const item = data as Record<string, unknown>;
-      if (
-        item.url !== url ||
-        typeof item.title !== "string" ||
-        typeof item.siteName !== "string"
-      ) {
+      if (item.url !== url || typeof item.title !== "string" || typeof item.siteName !== "string") {
         return null;
       }
       const icon =

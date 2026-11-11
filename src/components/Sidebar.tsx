@@ -1016,10 +1016,7 @@ export function Sidebar({
             quickTogglePin(conversation);
           }}
         >
-          <Pin
-            aria-hidden="true"
-            fill={conversation.pinned ? "currentColor" : "none"}
-          />
+          <Pin aria-hidden="true" fill={conversation.pinned ? "currentColor" : "none"} />
         </button>
       ) : null}
       <DropdownMenu modal={false}>

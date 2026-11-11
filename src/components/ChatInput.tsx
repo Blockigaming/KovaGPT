@@ -859,8 +859,7 @@ export function ChatInput({
         const next =
           start < end
             ? visibleComposerValue.slice(0, start) + visibleComposerValue.slice(end)
-            : visibleComposerValue.slice(0, markerAt) +
-              visibleComposerValue.slice(markerAt + 1);
+            : visibleComposerValue.slice(0, markerAt) + visibleComposerValue.slice(markerAt + 1);
         setAtomicLinkRaw(null);
         onChange(next);
         const caret = start < end ? start : markerAt;
@@ -1226,8 +1225,7 @@ export function ChatInput({
         const field = ref.current;
         const start = field.selectionStart;
         const end = field.selectionEnd;
-        const canonical =
-          value.slice(0, start) + plain + value.slice(end);
+        const canonical = value.slice(0, start) + plain + value.slice(end);
         setAtomicLinkRaw(pastedToken.raw);
         onChange(canonical);
         const position = start + plain.length - pastedToken.raw.length + 1;
@@ -1667,9 +1665,7 @@ export function ChatInput({
   const removeLinkPreview = () => {
     if (!linkPreviewToken || disabled) return;
     setAtomicLinkRaw(null);
-    onChange(
-      value.slice(0, linkPreviewToken.start) + value.slice(linkPreviewToken.end),
-    );
+    onChange(value.slice(0, linkPreviewToken.start) + value.slice(linkPreviewToken.end));
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
@@ -1792,11 +1788,7 @@ export function ChatInput({
           </ul>
         )}
         {linkPreviewUrl && (
-          <LinkPreviewChip
-            url={linkPreviewUrl}
-            placement="composer"
-            onRemove={removeLinkPreview}
-          />
+          <LinkPreviewChip url={linkPreviewUrl} placement="composer" onRemove={removeLinkPreview} />
         )}
         <div className="spec400-input-region">
           <textarea

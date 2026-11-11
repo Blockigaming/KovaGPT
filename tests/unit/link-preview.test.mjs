@@ -58,7 +58,10 @@ test("metadata uses actual document title, decoded entities, site name, and same
     siteName: "Publishing Site",
     iconUrl: "https://news.example.org/assets/icon.ico",
   });
-  assert.equal(cleanLinkTitle("<script>alert(1)</script>Hello &mdash; there"), "alert(1)Hello — there");
+  assert.equal(
+    cleanLinkTitle("<script>alert(1)</script>Hello &mdash; there"),
+    "alert(1)Hello — there",
+  );
 });
 
 test("favicon URLs on unrelated hosts are not selected", () => {
@@ -91,13 +94,18 @@ test("YouTube oEmbed resolves the specific video title, not the YouTube homepage
 });
 
 test("general public pages return the actual Open Graph page title", async () => {
-  const html = '<html><head><meta property="og:title" content="A repository issue page"></head></html>';
+  const html =
+    '<html><head><meta property="og:title" content="A repository issue page"></head></html>';
   const read = async () => ({
     status: 200,
     headers: { "content-type": "text/html" },
     bodyBase64: Buffer.from(html).toString("base64"),
   });
-  const result = await resolveLinkPreview("https://github.com/example/repo/issues/12", undefined, read);
+  const result = await resolveLinkPreview(
+    "https://github.com/example/repo/issues/12",
+    undefined,
+    read,
+  );
   assert.equal(result?.title, "A repository issue page");
   assert.equal(result?.siteName, "GitHub");
 });
@@ -131,10 +139,7 @@ test("pasted page links render as one invisible editor position, retaining canon
   const afterBackspace = compact.replace(COMPOSER_LINK_MARKER, "");
   assert.equal(afterBackspace, "Explain this  please");
   // Keeping the marker while typing leaves the original URL untouched.
-  assert.equal(
-    fromComposerLinkDisplay(compact + " next", token.raw),
-    canonical + " next",
-  );
+  assert.equal(fromComposerLinkDisplay(compact + " next", token.raw), canonical + " next");
 });
 
 test("unmodified nonlink drafts never get an atomic marker", () => {
