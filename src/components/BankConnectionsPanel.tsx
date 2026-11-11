@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Car,
+  Boxes,
+  Building2,
+  CalendarDays,
   CreditCard,
-  DollarSign,
-  Home,
-  ShoppingBag,
-  ShoppingCart,
-  Utensils,
-} from "lucide-react";
+  Globe2,
+  PackageOpen,
+} from "@/components/ui/product-icons";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
@@ -31,12 +30,12 @@ const getPlaidSdk = createClientOnlyFn(async () => {
   return loadPlaidLink();
 });
 const exampleSpending = [
-  { label: "Rent and utilities", cents: 468942, icon: Home, color: "#08b94d" },
-  { label: "Groceries", cents: 214367, icon: ShoppingCart, color: "#10913e" },
+  { label: "Rent and utilities", cents: 468942, icon: Building2, color: "#08b94d" },
+  { label: "Groceries", cents: 214367, icon: Boxes, color: "#10913e" },
   { label: "Subscriptions", cents: 108924, icon: CreditCard, color: "#147235" },
-  { label: "Dining", cents: 132158, icon: Utensils, color: "#078af3" },
-  { label: "Travel and transport", cents: 174683, icon: Car, color: "#116bc0" },
-  { label: "Shopping and other", cents: 149318, icon: ShoppingBag, color: "#155595" },
+  { label: "Dining", cents: 132158, icon: CalendarDays, color: "#078af3" },
+  { label: "Travel and transport", cents: 174683, icon: Globe2, color: "#116bc0" },
+  { label: "Shopping and other", cents: 149318, icon: PackageOpen, color: "#155595" },
 ];
 const exampleTotal = exampleSpending.reduce((total, category) => total + category.cents, 0);
 const exampleCurrency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -46,7 +45,9 @@ function FinanceSpendingPreview() {
     <div className="mx-auto w-full max-w-[680px] space-y-14 py-8 sm:py-14">
       <header className="flex flex-col items-center gap-4 text-center">
         <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
-          <DollarSign aria-hidden="true" className="size-6 text-emerald-500" />
+          <span aria-hidden="true" className="text-2xl font-semibold text-emerald-500">
+            $
+          </span>
         </span>
         <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
           A new way to manage your finances
