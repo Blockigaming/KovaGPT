@@ -19,6 +19,15 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const reportArgument = process.argv.find((argument) =>
   argument.startsWith("--playwright-report="),
 );
+const requiredEvidenceArgument = process.argv.find((argument) =>
+  argument.startsWith("--require-verified="),
+);
+const requiredEvidenceIds = requiredEvidenceArgument
+  ? requiredEvidenceArgument
+      .slice("--require-verified=".length)
+      .split(",")
+      .filter(Boolean)
+  : [];
 let evidenceError = null;
 let verified = new Set();
 if (reportArgument) {
@@ -116,6 +125,13 @@ const summary = {
 };
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   process.stdout.write(JSON.stringify({ summary, rows, unknownDynamicEmitters, evidenceError }, null, 2) + "\n");
+  if (
+    requiredEvidenceArgument &&
+    (!reportArgument ||
+      evidenceError ||
+      requiredEvidenceIds.some((id) => !NOTIFICATION_IDS.includes(id) || !verified.has(id)))
+  )
+    process.exitCode = 1;
   if (
     process.argv.includes("--require-complete") &&
     (summary.missingSourceEmitter > 0 ||
