@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UsersRound } from "lucide-react";
+import { Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,7 @@ export function WorkspaceJoinDialog({
           className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-secondary"
           aria-hidden="true"
         >
-          <UsersRound className="h-5 w-5" strokeWidth={1.8} />
+          <Users className="h-5 w-5" strokeWidth={1.8} />
         </div>
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl font-semibold tracking-tight">
