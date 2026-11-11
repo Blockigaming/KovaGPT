@@ -13,12 +13,14 @@ export function LimitReachedDialog({
   open,
   onOpenChange,
   kind = "image",
+  usageKind,
   resetsAt,
   message,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   kind?: "image" | "chat" | "upload";
+  usageKind?: "thinking" | "regular";
   resetsAt?: number;
   message?: string;
 }) {
@@ -27,7 +29,7 @@ export function LimitReachedDialog({
       ? "Image limit reached"
       : kind === "upload"
         ? "Upload limit reached"
-        : "Message limit reached";
+        : usageKind === "thinking" ? "Thinking limit reached" : "Message limit reached";
   const reset =
     typeof resetsAt === "number" && Number.isFinite(resetsAt) ? new Date(resetsAt) : null;
   const validReset = reset && Number.isFinite(reset.valueOf()) ? reset : null;
