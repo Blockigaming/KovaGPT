@@ -192,6 +192,66 @@ export function PublicHeader() {
 
 export function PublicShell({ children }: { children: ReactNode }) {
   const shellRef = useRef<HTMLDivElement>(null);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  useEffect(() => {
+    const root = shellRef.current;
+    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const renderProgress = () => {
+      frame = 0;
+      const total = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, window.scrollY / total));
+      root.style.setProperty("--kova-page-progress", String(progress));
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(renderProgress);
+    };
+    const animated = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        "main > section, main > article, main article > section, .public-use-case, .public-plan-card, .public-section-heading, .public-workflow-example",
+      ),
+    ).slice(0, 100);
+    const observer =
+      "IntersectionObserver" in window
+        ? new IntersectionObserver(
+            (entries, current) => {
+              for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+                (entry.target as HTMLElement).setAttribute("data-kova-revealed", "true");
+                current.unobserve(entry.target);
+              }
+            },
+            { threshold: 0.07, rootMargin: "0px 0px -20px 0px" },
+          )
+        : null;
+    for (const item of animated) {
+      if (observer) observer.observe(item);
+      else item.setAttribute("data-kova-revealed", "true");
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const target = (event.target as Element | null)?.closest<HTMLElement>(
+        ".public-use-case, .public-plan-card, .public-workflow-example, .kova-public-interactive",
+      );
+      if (!target || !root.contains(target)) return;
+      const rect = target.getBoundingClientRect();
+      target.style.setProperty("--kova-pointer-x", (event.clientX - rect.left) + "px");
+      target.style.setProperty("--kova-pointer-y", (event.clientY - rect.top) + "px");
+    };
+    renderProgress();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    root.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => {
+      observer?.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      root.removeEventListener("pointermove", onPointerMove);
+      root.style.removeProperty("--kova-page-progress");
+    };
+  }, [pathname]);
   useEffect(() => {
     const shell = shellRef.current;
     const header = shell?.querySelector("header");

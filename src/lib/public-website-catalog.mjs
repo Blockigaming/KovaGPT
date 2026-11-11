@@ -1454,7 +1454,11 @@ export const PUBLIC_WEBSITE_PAGES = Object.freeze(
     ...securityPages,
     ...legalPages,
     ...resourcePages,
-    ...developerPages,
+    ...developerPages.map((item) => ({
+      ...item,
+      // A source contract is not an announced public developer launch.
+      availability: "Coming later this year",
+    })),
     ...directoryPages,
   ].map(Object.freeze),
 );
