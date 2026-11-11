@@ -477,7 +477,8 @@ export function ChatHistorySyncStatus() {
           </Button>
         </div>
       )}
-      {state.recoveryPhase && (
+      {state.recoveryPhase &&
+        ["device_error", "blocked", "auth_required"].includes(state.recoveryPhase) && (
         <Button
           data-ui-reference="chatgpt.chat-history.control"
           variant="outline"
