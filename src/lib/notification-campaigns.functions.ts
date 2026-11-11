@@ -100,8 +100,7 @@ export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" 
         dismissedIds: excluded,
         allowedEventIds: announcementIDs,
         safeActionUrl: safePersistedNoticeActionUrl,
-      })
-        .map((row) => ({
+      }).map((row) => ({
           id: row.id,
           eventId: row.event_id,
           releaseId: row.release_id,
