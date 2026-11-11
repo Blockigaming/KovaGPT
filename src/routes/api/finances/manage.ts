@@ -44,9 +44,6 @@ export const Route = createFileRoute("/api/finances/manage")({
             )
           )
             return Response.json({ error: "invalid_finance_action" }, { status: 400, headers });
-          // Paid access gates reads, never offboarding after a downgrade.
-          if (body.action === "read" && (await getCallerTier(auth)) === "free")
-            return Response.json({ error: "finance_plan_required" }, { status: 403, headers });
           const result =
             body.action === "read"
               ? await readFinanceConnection(auth, body.connectionId)
