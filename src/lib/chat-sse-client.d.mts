@@ -37,6 +37,7 @@ export type ChatRequestError = Error & {
   retryable: boolean;
   retryAfter?: number;
   usageKind?: "thinking" | "regular";
+  resetAtMs?: number;
 };
 
 export function chatResponseError(
