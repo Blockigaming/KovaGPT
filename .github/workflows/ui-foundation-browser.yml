@@ -63,7 +63,16 @@ jobs:
       - name: Build isolated UI fixture with application CSS
         run: npx --no-install vite build --config tests/ui-foundations/vite.config.ts
       - name: Install browser
-        run: npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GitHub runners can resolve the Ubuntu Azure mirror inconsistently.
+          # Use the same official, signed Ubuntu archives as the main CI matrix.
+          # This only changes package sources; it never skips browser dependencies.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\\tpriority:1\\nhttps://security.ubuntu.com/ubuntu/\\tpriority:2\\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npx --no-install playwright install --with-deps "${{ matrix.browser }}"
       - name: Exercise responsive layouts and real keyboard interactions
         run: npx --no-install playwright test --config playwright.ui-foundations.config.ts --project "${{ matrix.browser }}"
       - name: Verify SDK icon rendering in the installed browser
