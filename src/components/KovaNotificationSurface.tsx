@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { notificationDefinition } from "@/lib/notification-catalog.mjs";
+import { useClerkSafe } from "@/components/auth/ClerkSafe";
 import {
   noticeIsDismissed,
   rememberNoticeDismissal,
@@ -57,6 +58,7 @@ function composingIn(target: EventTarget | null) {
 
 /** A single global host: independent of which feature route is mounted. */
 export function KovaNotificationSurface({ accountId }: { accountId?: string | null }) {
+  const { openSignIn } = useClerkSafe();
   const [pending, setPending] = useState<KovaNotice[]>([]);
   const [editing, setEditing] = useState(false);
   const [composing, setComposing] = useState(false);
@@ -67,6 +69,10 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const [actionError, setActionError] = useState("");
   const touchStartRef = useRef<{ x: number; y: number; fromHandle: boolean } | null>(null);
   const active = pending[0] ?? null;
+  const authenticationNeeded =
+    active?.id === "sign_in_required" || active?.id === "session_expired";
+  const primaryAction = active?.onPrimary ?? (authenticationNeeded ? openSignIn : undefined);
+  const primaryActionLabel = active?.primaryLabel ?? (authenticationNeeded ? "Sign in" : undefined);
   const panelRef = useRef<HTMLElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const dismiss = useCallback(() => {
@@ -106,18 +112,18 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   }, [active?.key, active?.id]);
 
   const performPrimary = useCallback(async () => {
-    if (!active?.onPrimary || actionBusy) return;
+    if (!primaryAction || actionBusy) return;
     setActionBusy(true);
     setActionError("");
     try {
-      await active.onPrimary();
+      await primaryAction();
       dismiss();
     } catch {
       setActionError("That action could not be completed. Please try again.");
     } finally {
       setActionBusy(false);
     }
-  }, [active, actionBusy, dismiss]);
+  }, [primaryAction, actionBusy, dismiss]);
 
   useEffect(() => {
     const focus = (event: FocusEvent) => setEditing(composingIn(event.target));
@@ -415,7 +421,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
             </p>
           )}
           <div className="kova-notice-actions">
-            {active.onPrimary && active.primaryLabel && (
+            {primaryAction && primaryActionLabel && (
               <button
                 className="kova-notice-primary"
                 type="button"
@@ -425,7 +431,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
                 {actionBusy && (
                   <Loader2 aria-hidden="true" className="kova-notice-spinner" size={16} />
                 )}
-                {actionBusy ? "Working…" : active.primaryLabel}
+                {actionBusy ? "Working…" : primaryActionLabel}
               </button>
             )}
             {definition.dismissible && (
