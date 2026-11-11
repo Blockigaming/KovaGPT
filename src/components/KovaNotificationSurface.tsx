@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import {
   X,
   Bell,
@@ -24,6 +24,7 @@ export type KovaNotice = {
   confirmed?: boolean;
   key?: string;
   campaignId?: string;
+  anchorSelector?: string;
   primaryLabel?: string;
   onPrimary?: () => void | Promise<void>;
   secondaryLabel?: string;
@@ -60,6 +61,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const [editing, setEditing] = useState(false);
   const [composing, setComposing] = useState(false);
   const [externalDialogOpen, setExternalDialogOpen] = useState(false);
+  const [anchorPosition, setAnchorPosition] = useState<{ left: number; top: number } | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -218,6 +220,34 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     ["announcements", "onboarding", "feedback"].includes(definition.group) &&
     (editing || composing || externalDialogOpen);
   const shown = !!active && !!definition && !defer;
+  const nonBlocking = definition?.surface === "popover" || definition?.surface === "banner";
+  useEffect(() => {
+    if (definition?.surface !== "popover" || !active?.anchorSelector) {
+      setAnchorPosition(null);
+      return;
+    }
+    const updatePosition = () => {
+      try {
+        const target = document.querySelector(active.anchorSelector!);
+        const rect = target?.getBoundingClientRect();
+        if (!rect) { setAnchorPosition(null); return; }
+        const left = Math.max(12, Math.min(rect.left, window.innerWidth - 372));
+        const top = rect.bottom + 12 + 280 <= window.innerHeight
+          ? rect.bottom + 12
+          : Math.max(12, rect.top - 280);
+        setAnchorPosition({ left, top });
+      } catch {
+        setAnchorPosition(null);
+      }
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [definition?.surface, active?.anchorSelector]);
   const visual = definition
     ? definition.group === "announcements" || definition.group === "billing"
       ? "discovery"
@@ -248,7 +278,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
               : Info;
 
   useLayoutEffect(() => {
-    if (!shown) return;
+    if (!shown || nonBlocking) return;
     returnFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const first = panelRef.current?.querySelector<HTMLElement>(
@@ -261,7 +291,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         previous.focus({ preventScroll: true });
       }
     };
-  }, [shown, active?.key, active?.id]);
+  }, [shown, active?.key, active?.id, nonBlocking]);
 
   useEffect(() => {
     if (!shown || !active) return;
@@ -271,7 +301,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         dismiss();
         return;
       }
-      if (event.key !== "Tab" || !panelRef.current) return;
+      if (event.key !== "Tab" || !panelRef.current || nonBlocking) return;
       const controls = [
         ...panelRef.current.querySelectorAll<HTMLElement>(
           "button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
@@ -290,7 +320,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     };
     window.addEventListener("keydown", keydown, true);
     return () => window.removeEventListener("keydown", keydown, true);
-  }, [shown, active, definition, dismiss, actionBusy]);
+  }, [shown, active, definition, dismiss, actionBusy, nonBlocking]);
 
   if (!shown || !active || !definition)
     return (
@@ -306,6 +336,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
       <div
         className="kova-notice-backdrop"
         role="presentation"
+        data-surface={definition.surface}
         onMouseDown={(event) => {
           if (event.target === event.currentTarget && definition.dismissible && !actionBusy)
             dismiss();
@@ -314,13 +345,17 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         <section
           ref={panelRef}
           className="kova-notice-panel"
-          role={definition.priority === 1 ? "alertdialog" : "dialog"}
-          aria-modal="true"
+          role={nonBlocking ? "status" : definition.priority === 1 ? "alertdialog" : "dialog"}
+          aria-modal={nonBlocking ? undefined : true}
           aria-labelledby="kova-notice-title"
           aria-describedby={active.message ? "kova-notice-body" : undefined}
           data-surface={definition.surface}
           data-group={definition.group}
           data-visual={visual}
+          style={definition.surface === "popover" && anchorPosition
+            ? { "--kova-notice-popover-left": anchorPosition.left + "px",
+                "--kova-notice-popover-top": anchorPosition.top + "px" } as CSSProperties
+            : undefined}
           aria-busy={actionBusy}
           onTouchStart={(event) => {
             if (!definition.dismissible || actionBusy || event.touches.length !== 1) return;
