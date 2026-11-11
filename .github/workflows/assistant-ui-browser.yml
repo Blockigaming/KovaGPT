@@ -101,12 +101,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          bash scripts/ci/install-playwright-with-mirror-fallback.sh chromium
       - name: Select existing assistant tests and isolated preview
         run: |
           mkdir -p test-results/assistant-ui
@@ -185,12 +181,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          bash scripts/ci/install-playwright-with-mirror-fallback.sh chromium
       - name: Select the existing isolated auth visual gate
         run: |
           mkdir -p test-results/assistant-auth-visual
@@ -269,12 +261,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          bash scripts/ci/install-playwright-with-mirror-fallback.sh chromium
       - name: Select existing strict quality tests and isolated preview
         run: |
           mkdir -p test-results/assistant-quality
@@ -395,12 +383,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          bash scripts/ci/install-playwright-with-mirror-fallback.sh chromium
       - name: Select existing core regressions and isolated preview
         run: |
           mkdir -p test-results/assistant-core-regressions
