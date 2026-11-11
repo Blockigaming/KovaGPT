@@ -441,11 +441,7 @@ export function ChatHistorySyncStatus() {
         aria-label="Chat history synchronization"
         aria-busy={working || undefined}
       >
-        <p
-          role="status"
-          aria-live="polite"
-          className="min-w-0 flex-1 truncate text-foreground/80"
-        >
+        <p role="status" aria-live="polite" className="min-w-0 flex-1 truncate text-foreground/80">
           {labels.local}
         </p>
         <span className="hidden shrink-0 text-xs sm:inline" aria-hidden="true">
