@@ -1127,22 +1127,10 @@ export function Sidebar({
         </span>
         <span className="min-w-0">
           <strong className="block truncate">{displayName}</strong>
-          <small className="block truncate text-foreground">{planLabel}</small>
-          <small className="block truncate text-foreground">
-            {accountEmail || "Email unavailable"}
-          </small>
+          <small className="block truncate text-muted-foreground">{planLabel}</small>
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
-      {availableWorkspaces.length > 0 && (
-        <DropdownMenuItem onSelect={() => {
-          cancelPendingSelection();
-          setWorkspaceJoinOpen(true);
-        }}>
-          <UsersRound aria-hidden="true" />
-          Find workspaces
-        </DropdownMenuItem>
-      )}
       <DropdownMenuItem asChild>
         <Link
           to={tierStatus === "ready" && tier === "pro" ? "/pricing" : "/subscribe"}
@@ -1157,6 +1145,15 @@ export function Sidebar({
           {tierStatus === "ready" && tier === "pro" ? "View plans" : "Upgrade plan"}
         </Link>
       </DropdownMenuItem>
+      {availableWorkspaces.length > 0 && (
+        <DropdownMenuItem onSelect={() => {
+          cancelPendingSelection();
+          setWorkspaceJoinOpen(true);
+        }}>
+          <UsersRound aria-hidden="true" />
+          Find workspaces
+        </DropdownMenuItem>
+      )}
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
@@ -1178,7 +1175,7 @@ export function Sidebar({
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
-          onOpenSettings("appearance");
+          onOpenSettings("general");
         }}
       >
         <SettingsIcon aria-hidden="true" />
