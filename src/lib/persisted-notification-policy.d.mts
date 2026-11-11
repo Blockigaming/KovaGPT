@@ -7,10 +7,19 @@ export type PersistedNoticeInput={
  readAt?:string|null;
  source?:string|null;
 };
+export type EligiblePersistedNotice = {
+ id:string;
+ type:string;
+ title:string;
+ preview:string;
+ actionUrl:string|null;
+ readAt:null;
+ source:"application"|"agent";
+};
 export declare function persistedNoticeKind(row:PersistedNoticeInput|null|undefined):string|null;
 export declare function safePersistedNoticeActionUrl(value:unknown):string|null;
 export declare function pendingPersistedNotices(
  rows:unknown,
  seen:ReadonlySet<string>|null|undefined,
  limit?:number
-):PersistedNoticeInput[];
+):EligiblePersistedNotice[];
