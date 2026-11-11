@@ -54,3 +54,27 @@ The PR must remain a draft. Do not merge or deploy until the full required CI, r
 - Added per-user, campaign-version-scoped dismissal persistence for onboarding/discovery/marketing notifications, with operational alerts unaffected; blocked local storage does not hide critical messages.
 - Added source audits and regression tests. This effort does not imply all 228 events have live callbacks; some catalog items describe feature classes not present or not authorized in this deployment.
 - **Release blocker:** finish server/event-source binding for each available action, give each distinct event real eligibility/usage/recipient state, run `--require-complete` once every supported ID has an emitter, and validate critical journeys in a browser. Unavailable announcements must remain hidden rather than spoofing a fake completed feature.
+
+## Notification UX & feature-event pass — 2026-11-10
+- All 228 semantic IDs remain catalogued. Four UI families are differentiated:
+  blocking modal / mobile sheet, inline operational status, lightweight toast,
+  and nonblocking feature popover / release banner. Visuals inherit Kova light/dark
+  tokens and use safe-area offsets and reduced-motion support.
+- Low-priority discovery events must not open during typing, composition, an
+  existing dialog or account menu. A contextual popover can locate a target
+  with the optional `anchorSelector` on desktop; mobile converts it to an
+  accessible bottom sheet. Banners stay nonmodal.
+- File selection and actual document extraction now emit the file-selected
+  and file-processing states. Project first-use only emits after a confirmed
+  creation when the authenticated server-loaded directory was empty.
+- Durable inbox task, project, connection, research, and security items map
+  to their catalog identifiers; browser-session seen state prevents repeated
+  popups while preserving unread server records. Fail-closed on unknown types
+  or malformed links.
+- Server-owned campaign availability, a verified offer, and workspace membership
+  still require backend state. No synthetic subscription, authorization, task,
+  or quota changes are generated to make the notification count look complete.
+- Tests for popovers, banners, active dialog suppression, Library lifecycle,
+  first Projects use, and inbox isolation were added. No production-readiness
+  claim is made until CI, mobile+desktop browser, all event sources, and email
+  workflows pass verification.
