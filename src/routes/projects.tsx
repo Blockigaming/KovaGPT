@@ -48,7 +48,6 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   FolderKanban,
   Folder,
-  LayoutTemplate,
   Grid2X2,
   List,
   Plus,
@@ -85,7 +84,6 @@ import {
 } from "@/lib/projects.functions";
 import { moveChatToProject, setProjectArchived } from "@/lib/project-workspace.functions";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
-import { ProjectTemplatesDialog } from "@/components/ProjectTemplatesDialog";
 import { usePrincipalSessionPreferences } from "@/hooks/use-principal-session-preferences";
 import {
   MAX_MANAGEMENT_QUERY_LENGTH,
@@ -141,9 +139,6 @@ function ProjectsPage() {
   const search = Route.useSearch();
   const openedFromLink = useRef(false);
   const createReturnFocusRef = useRef<HTMLElement | null>(null);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
-  const templatesReturnFocusRef = useRef<HTMLButtonElement | null>(null);
-  const templatesOpenedUrlRef = useRef<string | undefined>(undefined);
   const [name, setName] = useState("");
   const [createNameTouched, setCreateNameTouched] = useState(false);
   const createNameError = createNameTouched && !name.trim() ? "Enter a project name." : null;
@@ -682,7 +677,6 @@ function ProjectsPage() {
     }
     setDropProjectId(null);
     setCreateOpen(false);
-    setTemplatesOpen(false);
     setName("");
     setCreateNameTouched(false);
     setDescription("");
@@ -911,23 +905,6 @@ function ProjectsPage() {
           actions={
             isSignedIn && !isLoading ? (
               <div className="kova-project-header-actions flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  className="kova-project-templates"
-                  aria-label="Project templates"
-                  title="Project templates"
-                  onClick={(event) => {
-                    templatesReturnFocusRef.current = event.currentTarget;
-                    templatesOpenedUrlRef.current = window.location.href;
-                    setTemplatesOpen(true);
-                  }}
-                >
-                  <LayoutTemplate
-                    className="kova-directory-mobile-icon h-4 w-4"
-                    aria-hidden="true"
-                  />
-                  <span>Templates</span>
-                </Button>
                 <Button
                   onClick={(event) => openCreate(event.currentTarget)}
                   className="kova-project-create"
@@ -1658,27 +1635,6 @@ function ProjectsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {isSignedIn && userKey && (
-        <ProjectTemplatesDialog
-          key={userKey}
-          open={templatesOpen}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            restoreDialogFocus(templatesReturnFocusRef.current, templatesOpenedUrlRef.current);
-          }}
-          onOpenChange={setTemplatesOpen}
-          userId={userKey}
-          onCopied={(projectId) => {
-            setTemplatesOpen(false);
-            void refresh();
-            void navigate({
-              to: "/projects/$projectId",
-              params: { projectId },
-            });
-          }}
-        />
-      )}
-
       <Dialog
         open={createVisible}
         onOpenChange={(open) => {
@@ -1686,12 +1642,13 @@ function ProjectsPage() {
         }}
       >
         <DialogContent
-          className="spec400-management-dialog"
+          className="spec400-management-dialog kova-project-create-dialog"
           ref={createDialogRef}
           onCloseAutoFocus={restoreCreateFocus}
         >
           <DialogHeader>
             <DialogTitle>New project</DialogTitle>
+            <DialogDescription>Give your project a name, then personalize its workspace.</DialogDescription>
           </DialogHeader>
           <form
             noValidate
@@ -1699,10 +1656,10 @@ function ProjectsPage() {
               e.preventDefault();
               if (!busy) handleCreate();
             }}
-            className="space-y-4"
+            className="kova-project-create-form space-y-5"
           >
-            <div>
-              <div className="flex items-center justify-between mb-1">
+            <div className="kova-project-create-field">
+              <div className="flex items-center justify-between mb-2">
                 <label htmlFor="create-project-name" className="text-sm font-medium">
                   Name
                 </label>
@@ -1741,7 +1698,7 @@ function ProjectsPage() {
                 </p>
               )}
             </div>
-            <div>
+            <div className="kova-project-create-field">
               <label
                 htmlFor="create-project-description"
                 className="text-sm font-medium mb-1 block"

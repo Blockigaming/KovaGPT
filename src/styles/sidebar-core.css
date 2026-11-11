@@ -24,7 +24,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 0;
-  border-radius: 20px;
+  border-radius: 0 20px 20px 0;
   transition:
     width var(--kova-motion-standard) var(--kova-ease),
     min-width var(--kova-motion-standard) var(--kova-ease),
@@ -527,7 +527,7 @@ button.kova-sidebar-scrim {
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
     min-width: 0;
     max-width: calc(100vw - 24px);
-    border-radius: 24px;
+    border-radius: 0 24px 24px 0;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
@@ -685,7 +685,7 @@ button.kova-auth-sign-up:hover {
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: min(360px, calc(100vw - 80px));
     max-width: calc(100vw - 64px);
-    border-radius: 24px;
+    border-radius: 0 24px 24px 0;
     overflow: hidden;
     --sidebar-row-height: 48px;
     --sidebar-icon-slot: 22px;

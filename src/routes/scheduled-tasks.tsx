@@ -238,7 +238,7 @@ function ScheduledTasksPage() {
         setExecutionAvailable(r.executionAvailable);
         setDataPrincipal(principal);
         setDataGeneration(generation);
-        setAccessState(r.eligible ? "eligible" : "unavailable");
+        setAccessState(r.eligible ? "eligible" : "error");
       })
       .catch(() => {
         if (!cancel && generationRef.current === generation && principalRef.current === principal) {
@@ -766,8 +766,7 @@ function ScheduledTasksPage() {
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
               <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Tasks are included with every signed-in plan. Access could not be confirmed for this
-                account. Sign in again or try later.
+                Account access could not be verified. Your signed-in session is preserved.
               </p>
               <Link
                 to="/"
@@ -783,14 +782,14 @@ function ScheduledTasksPage() {
               <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
               <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                KovaGPT could not safely verify account access to Scheduled Tasks. Try again to
-                check availability.
+                KovaGPT could not verify Task access for this session. Your account is still
+                signed in. Retry without leaving this page.
               </p>
               <Button
                 variant="outline"
                 type="button"
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center border border-border text-sm font-medium"
+                onClick={() => setLifecycleVersion((version) => version + 1)}
+                className="inline-flex items-center justify-center text-sm font-medium"
               >
                 Try again
               </Button>

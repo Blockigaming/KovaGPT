@@ -383,10 +383,9 @@ export function ChatHistorySyncStatus() {
   // Keep a pending migration decision in place while background sync runs.
   // Collapsing it during a pointer press moves the transcript's native controls.
   // Sync without a migration or critical error still has no visible notice.
-  const visible =
-    state.migration > 0 ||
-    state.conflicts.length > 0 ||
-    ["device_error", "blocked", "auth_required", "cleared"].includes(state.phase);
+  // Retry transient sync failures silently; keep decisions that protect
+  // local-only chats and conflicting copies explicitly accessible.
+  const visible = state.migration > 0 || state.conflicts.length > 0;
   if (!visible) return null;
   const labelPhase =
     state.migration > 0 && !critical ? "local" : (state.recoveryPhase ?? state.phase);
