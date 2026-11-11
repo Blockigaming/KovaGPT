@@ -8,7 +8,36 @@ import {
   clearDraft,
   type Conversation,
 } from "./chat-store";
-import { canWriteChatHistory } from "./chat-history-bridge";
+import { CHAT_HISTORY_CHANGED_EVENT, canWriteChatHistory } from "./chat-history-bridge";
+
+/**
+ * Wait only for a valid, current account's history writer to initialize.
+ * The sidebar can become interactive before the lazily mounted history runtime
+ * finishes startup; a click during that interval must not silently disappear.
+ * Never enqueue a deletion or promise success while writes are blocked.
+ */
+function waitForHistoryWriter(owner: string | null, current: () => boolean): Promise<boolean> {
+  if (!current()) return Promise.resolve(false);
+  if (canWriteChatHistory(owner)) return Promise.resolve(true);
+  if (!owner || typeof window === "undefined") return Promise.resolve(false);
+  return new Promise((resolve) => {
+    let completed = false;
+    const finish = (ready: boolean) => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeout);
+      window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, check);
+      resolve(ready);
+    };
+    const check = () => {
+      if (!current()) finish(false);
+      else if (canWriteChatHistory(owner)) finish(true);
+    };
+    const timeout = setTimeout(() => finish(false), 8_000);
+    window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, check);
+    check(); // Close the window between the first check and listener registration.
+  });
+}
 
 /** A five-second grace period precedes the content-free deletion tombstone. */
 export async function permanentlyDeleteChat(
@@ -16,7 +45,7 @@ export async function permanentlyDeleteChat(
   chat: Conversation,
   current: () => boolean = () => true,
 ): Promise<boolean> {
-  if (!current() || !canWriteChatHistory(owner)) return false;
+  if (!(await waitForHistoryWriter(owner, current)) || !current()) return false;
   return deleteChatWithUndo(owner, chat.id, current, () =>
     commitPermanentChatDeletion(owner, chat, current),
   );
