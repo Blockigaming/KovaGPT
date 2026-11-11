@@ -32,8 +32,10 @@ export function pendingPersistedNotices(rows,seen,limit=2){
     if(result.length>=limit)break;
     if(typeof row?.id!=="string" || !/^[0-9a-f-]{36}$/i.test(row.id) ||
       seen?.has(row.id) || !persistedNoticeKind(row) ||
+      (row.source!=="application" && row.source!=="agent") ||
       typeof row.title!=="string" || row.title.length>240 ||
-      typeof row.preview!=="string" || row.preview.length>2000) continue;
+      typeof row.preview!=="string" || row.preview.length>2000 ||
+      (row.actionUrl!==null && typeof row.actionUrl!=="string")) continue;
     result.push(row);
   }
   return result;
