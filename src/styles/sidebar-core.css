@@ -684,11 +684,10 @@ button.kova-auth-sign-up:hover {
   .kova-sidebar-chat-menu:has(> .kova-inline-project-choices) {
     min-width: min(240px, calc(100vw - 24px));
   }
-  .kova-sidebar-chat-menu:has(> .kova-inline-project-choices) [data-project-menu-trigger] {
+  .kova-sidebar-chat-menu [data-project-menu-trigger] {
     white-space: nowrap;
   }
-  .kova-sidebar-chat-menu:has(> .kova-inline-project-choices)
-    .kova-inline-project-choices [role="separator"] {
+  .kova-inline-project-choices [role="separator"] {
     margin-block: 3px;
   }
 }
