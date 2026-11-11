@@ -31,3 +31,8 @@ test("security confirmation outranks promotion and promotions do not interrupt t
 test("same event is not shown multiple times simultaneously", () => {
   assert.equal(selectNotificationQueue([{ id: "copied" }, { id: "copied" }]).length, 1);
 });
+
+test("global connection loss is visible and clears when online", () => {
+  assert.equal(notificationDefinition("network_offline").surface, "toast");
+  assert.equal(notificationDefinition("network_restored").surface, "toast");
+});
