@@ -1,4 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Car,
+  CreditCard,
+  DollarSign,
+  Home,
+  ShoppingBag,
+  ShoppingCart,
+  Utensils,
+} from "lucide-react";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
@@ -21,6 +30,74 @@ const getPlaidSdk = createClientOnlyFn(async () => {
   const { loadPlaidLink } = await import("@/finances/plaid-link.client");
   return loadPlaidLink();
 });
+const exampleSpending = [
+  { label: "Rent and utilities", cents: 468942, icon: Home, color: "#08b94d" },
+  { label: "Groceries", cents: 214367, icon: ShoppingCart, color: "#10913e" },
+  { label: "Subscriptions", cents: 108924, icon: CreditCard, color: "#147235" },
+  { label: "Dining", cents: 132158, icon: Utensils, color: "#078af3" },
+  { label: "Travel and transport", cents: 174683, icon: Car, color: "#116bc0" },
+  { label: "Shopping and other", cents: 149318, icon: ShoppingBag, color: "#155595" },
+];
+const exampleTotal = exampleSpending.reduce((total, category) => total + category.cents, 0);
+const exampleCurrency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+function FinanceSpendingPreview() {
+  return (
+    <div className="mx-auto w-full max-w-[680px] space-y-14 py-8 sm:py-14">
+      <header className="flex flex-col items-center gap-4 text-center">
+        <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
+          <DollarSign aria-hidden="true" className="size-6 text-emerald-500" />
+        </span>
+        <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          A new way to manage your finances
+        </h2>
+        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
+          See how Kova can help you make sense of spending, subscriptions, balances, and
+          investments.
+        </p>
+        <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground">
+          Coming soon
+        </span>
+      </header>
+      <section
+        aria-labelledby="finance-example-spending"
+        className="rounded-3xl border border-border bg-card p-4 text-card-foreground sm:p-6"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+          <div>
+            <h3 id="finance-example-spending" className="font-semibold">
+              Spending
+            </h3>
+            <p className="text-xs text-muted-foreground">Sample data</p>
+          </div>
+          <p className="font-semibold tabular-nums">{exampleCurrency.format(exampleTotal / 100)}</p>
+        </div>
+        <div aria-hidden="true" className="my-4 flex h-10 gap-0.5">
+          {exampleSpending.map(({ label, cents, color }) => (
+            <span key={label} className="rounded" style={{ backgroundColor: color, flex: cents }} />
+          ))}
+        </div>
+        <ul className="space-y-3">
+          {exampleSpending.map(({ label, cents, icon: Icon }) => (
+            <li
+              key={label}
+              className="flex items-center justify-between gap-3 text-sm sm:text-base"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <Icon aria-hidden="true" className="size-4" />
+                </span>
+                <span>{label}</span>
+              </span>
+              <span className="shrink-0 tabular-nums">{exampleCurrency.format(cents / 100)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
 export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
   const [status, setStatus] = useState<FinanceStatus | null>(null);
   const [busy, setBusyState] = useState(false);
@@ -217,6 +294,10 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
       return String(amount);
     }
   };
+  if (!status?.configured && !status?.connections.length && !message) {
+    return <FinanceSpendingPreview />;
+  }
+
   return (
     <section
       className="mt-8 space-y-5 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6"
@@ -230,7 +311,7 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
           Read-only connections
         </span>
       </div>
-      <FinanceActivityDashboard demo={!snapshot} snapshot={snapshot} />
+      {snapshot ? <FinanceActivityDashboard snapshot={snapshot} /> : <FinanceSpendingPreview />}
       <p className="text-sm text-muted-foreground">
         Connect through Plaid to read balances and recent transactions. Kova cannot move money or
         place trades. Data is fetched when you choose to read it.
