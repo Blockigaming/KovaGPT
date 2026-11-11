@@ -45,10 +45,7 @@ test("one-device passes, failures, skipped runs and fake event dispatch tests ne
       NOTIFICATION_ACCEPTANCE_PROJECTS.map((project) => run(project)),
     ),
   ]);
-  assert.deepEqual(
-    [...verifiedEndToEndIds(fixture, ["network_offline", "offer_claimed"])],
-    [],
-  );
+  assert.deepEqual([...verifiedEndToEndIds(fixture, ["network_offline", "offer_claimed"])], []);
 });
 
 test("no report, malformed results, or unrecognized project is never evidence", () => {
