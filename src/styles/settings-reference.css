@@ -1,19 +1,19 @@
 /* Settings has one shared control system. Page and dialog sizing live in
    settings-page-layout.css; phone navigation is intentionally a separate view. */
 .kova-settings-reference {
-  --settings-space: 20px;
+  --settings-space: 24px;
   --settings-control-width: 208px;
-  --settings-card: color-mix(in srgb, var(--foreground) 2%, var(--background));
+  --settings-card: color-mix(in srgb, var(--foreground) 3%, var(--background));
   font-family: var(--font-ui);
   color: var(--foreground);
   background: var(--background);
   isolation: isolate;
 }
 [role="dialog"].kova-settings-dialog.is-authenticated {
-  width: min(980px, calc(100vw - 48px));
-  max-width: 980px;
-  height: min(760px, calc(100dvh - 48px));
-  max-height: calc(100dvh - 48px);
+  width: min(1100px, calc(100vw - 64px));
+  max-width: 1100px;
+  height: min(820px, calc(100dvh - 64px));
+  max-height: calc(100dvh - 64px);
   border-radius: 24px;
 }
 [role="dialog"].kova-settings-dialog > [data-kova-dialog-close] {
@@ -34,7 +34,7 @@
   width: var(--kova-settings-navigation-width, 256px);
   min-width: 0;
   min-height: 0;
-  padding: 20px 14px 24px;
+  padding: 24px 16px;
   border-right: 1px solid var(--border);
   overflow: auto;
   overscroll-behavior: contain;
@@ -53,12 +53,12 @@
   flex: none;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
-  margin-bottom: 18px;
+  min-height: 56px;
+  margin-bottom: 24px;
 }
 .kova-settings-reference .kova-settings-nav-title h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 21px;
   line-height: 28px;
   font-weight: 600;
   letter-spacing: -0.025em;
@@ -71,8 +71,8 @@
   display: flex;
   flex: none;
   align-items: center;
-  height: 40px;
-  margin-bottom: 18px;
+  height: 42px;
+  margin-bottom: 28px;
 }
 .kova-settings-reference .kova-settings-search > svg {
   position: absolute;
@@ -107,7 +107,7 @@
   overflow: visible;
 }
 .kova-settings-reference .kova-settings-nav section + section {
-  margin-top: 18px;
+  margin-top: 24px;
 }
 .kova-settings-reference .kova-settings-nav-group {
   margin: 0 0 8px;
@@ -125,7 +125,7 @@
   width: 100%;
   min-height: 42px;
   margin: 2px 0;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: 0;
   border-radius: 11px;
   color: var(--foreground);
@@ -182,9 +182,9 @@
   flex: none;
   align-items: center;
   gap: 16px;
-  min-height: 96px;
+  min-height: 120px;
   margin: 0;
-  padding: 24px 32px 20px;
+  padding: 28px 36px 24px;
 }
 .kova-settings-reference .kova-settings-section-copy {
   flex: 1;
@@ -192,9 +192,9 @@
 }
 .kova-settings-reference .kova-settings-content-header h2 {
   margin: 0;
-  font-size: 25px;
+  font-size: 28px;
   font-weight: 600;
-  line-height: 34px;
+  line-height: 36px;
   letter-spacing: -0.035em;
 }
 .kova-settings-reference .kova-settings-section-copy p {
@@ -230,7 +230,7 @@
   min-width: 0;
   width: 100%;
   margin: 0;
-  padding: 0 32px 40px;
+  padding: 0 36px 40px;
   overflow: visible;
   line-height: 1.5;
 }
@@ -245,9 +245,9 @@
 .kova-settings-reference .kova-profile-settings > section {
   min-width: 0;
   margin: 0;
-  padding: 20px 22px;
+  padding: 24px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
   background: var(--settings-card);
 }
 .kova-settings-reference .kova-settings-content h3 {
@@ -530,21 +530,30 @@
     overflow: hidden;
   }
   .kova-settings-reference .kova-settings-nav .kova-settings-nav-item {
-    min-height: 56px;
-    margin: 2px 0;
-    padding: 11px 12px;
-    gap: 12px;
-    border-radius: 12px;
-    background: transparent;
+    min-height: 70px;
+    margin: 0;
+    padding: 15px 14px;
+    gap: 13px;
+    border-radius: 0;
+    background: var(--settings-card);
   }
-  .kova-settings-reference .kova-settings-nav-item[aria-selected="true"] {
-    background: var(--surface-selected);
+  .kova-settings-reference .kova-settings-nav-item + .kova-settings-nav-item {
+    border-top: 1px solid var(--border);
+  }
+  .kova-settings-reference .kova-settings-nav-item:first-of-type {
+    border-radius: 18px 18px 0 0;
+  }
+  .kova-settings-reference .kova-settings-nav-item:last-child {
+    border-radius: 0 0 18px 18px;
+  }
+  .kova-settings-reference .kova-settings-nav-item:only-of-type {
+    border-radius: 18px;
   }
   .kova-settings-reference .kova-settings-nav-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: transparent;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--surface-secondary);
   }
   .kova-settings-reference .kova-settings-nav-icon svg {
     width: 20px;

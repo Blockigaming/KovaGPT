@@ -150,15 +150,11 @@ for (const theme of ["light", "dark"] as const) {
       await expect(navigation.getByRole("tab", { name: "General", exact: true })).toBeInViewport({
         ratio: 1,
       });
-      const subscriptions = navigation.getByRole("tab", {
-        name: "Subscriptions",
-        exact: true,
+      await expect(
+        navigation.getByRole("tab", { name: "Subscriptions", exact: true }),
+      ).toBeInViewport({
+        ratio: 1,
       });
-      // The expanded 22-destination sidebar scrolls independently. A tab
-      // below its fold should become fully reachable, not remain in view
-      // while an unrelated Settings control is being edited.
-      await subscriptions.scrollIntoViewIfNeeded();
-      await expect(subscriptions).toBeInViewport({ ratio: 0.99 });
     }
     await artifact.click();
     await boundedPopup(page);

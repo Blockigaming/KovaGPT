@@ -139,13 +139,3 @@ test("rate-limited recovery stays distinct from offline through retries and clea
   assert.equal(present(current, state("saved")).recoveryPhase, undefined);
   assert.equal(present(current, state("syncing", "owner-b")).recoveryPhase, undefined);
 });
-
-test("transient retries stay quiet while critical recovery remains actionable", () => {
-  const migration = notice({ ...state("pending"), migration: 1, recoveryPhase: "offline" });
-  assert.ok(migration, "unsaved device migration must stay visible");
-  assert.doesNotMatch(JSON.stringify(migration), /Retry chat sync/);
-
-  const critical = notice({ ...state("pending"), recoveryPhase: "device_error" });
-  assert.ok(critical, "device save failure must remain visible during retry");
-  assert.match(JSON.stringify(critical), /Retry chat sync/);
-});

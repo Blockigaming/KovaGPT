@@ -322,7 +322,7 @@ test("control samples own viewport scrolling and expose the same top-level revie
   );
 });
 
-test("composer sample uses production input without a keyboard focus bezel", () => {
+test("composer sample uses production inner-input and keyboard outer-focus roles", () => {
   const source = read("review-kit/components/ControlSheet.tsx");
   assert.match(source, /className="spec400-composer"/);
   assert.match(source, /data-focus-origin=\{composerFocusOrigin\}/);
@@ -333,8 +333,8 @@ test("composer sample uses production input without a keyboard focus bezel", () 
     "src/styles/spec400-chat.css",
     '.spec400-composer[data-focus-origin="keyboard"]:focus-within',
   )[0];
-  assert.equal(declarations(composer, "outline")[0].value, "none");
-  assert.equal(declarations(composer, "outline-offset")[0].value, "0");
+  assert.equal(declarations(composer, "outline")[0].value, "2px solid var(--ring)");
+  assert.equal(declarations(composer, "outline-offset")[0].value, "2px");
   const inner = rules("src/styles/spec400-chat.css", ".spec400-composer-input").find(
     (rule) => rule.selector === ".spec400-composer-input",
   );

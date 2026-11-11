@@ -70,10 +70,8 @@
   }
 }
 .spec400-composer[data-focus-origin="keyboard"]:focus-within {
-  /* The writing surface already has a visible caret; no second focus bezel. */
-  outline: none;
-  outline-offset: 0;
-  box-shadow: none;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 .spec400-input-region {
   position: relative;
@@ -486,11 +484,6 @@
   line-height: 1.625;
   background: var(--background);
   color: var(--foreground);
-}
-.spec400-expanded-textarea:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  border-color: var(--muted-foreground) !important;
 }
 .spec400-dialog-footer {
   display: flex;
