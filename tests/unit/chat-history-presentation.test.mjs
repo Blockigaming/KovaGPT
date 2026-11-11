@@ -139,3 +139,16 @@ test("rate-limited recovery stays distinct from offline through retries and clea
   assert.equal(present(current, state("saved")).recoveryPhase, undefined);
   assert.equal(present(current, state("syncing", "owner-b")).recoveryPhase, undefined);
 });
+
+test("temporary sync failures do not show manual retry controls during pending migration", () => {
+  for (const phase of ["offline", "rate_limited"]) {
+    const rendered = notice({ ...state(phase), migration: 2, recoveryPhase: phase });
+    assert.ok(rendered, "The earlier-device-chat migration decision remains available");
+    assert.doesNotMatch(JSON.stringify(rendered), /Retry chat sync/);
+  }
+  for (const phase of ["blocked", "device_error", "auth_required"]) {
+    const rendered = notice({ ...state(phase), migration: 2, recoveryPhase: phase });
+    assert.ok(rendered, "Actionable recovery stays visible");
+    assert.match(JSON.stringify(rendered), /Retry chat sync/);
+  }
+});
