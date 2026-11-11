@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
@@ -104,6 +105,8 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/lib/link-preview.mjs": linkPreview,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
         reads.push("document reader");

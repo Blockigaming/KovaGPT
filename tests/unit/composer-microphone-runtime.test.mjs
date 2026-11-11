@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -109,6 +110,8 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     },
   };
   const modules = {
+    "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/lib/link-preview.mjs": linkPreview,
     react,
     "lucide-react": {},
     "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },

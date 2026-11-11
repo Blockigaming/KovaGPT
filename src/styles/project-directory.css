@@ -683,3 +683,8 @@ body .kova-project-create-dialog[data-kova-dialog-surface] {
     flex: 1 1 130px;
   }
 }
+
+/* The grid owns the 8px label-to-input gap; remove the legacy label margin. */
+.kova-project-create-field > div:first-child {
+  margin-bottom: 0;
+}

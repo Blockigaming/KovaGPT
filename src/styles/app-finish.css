@@ -1124,7 +1124,7 @@
 .kova-chat-input:focus-within {
   outline: none !important;
   box-shadow: none !important;
-  border-color: transparent !important;
+  border-color: var(--border);
 }
 .kova-app :is(input, textarea, [role="combobox"]):focus:not(:focus-visible),
 .kova-page :is(input, textarea, [role="combobox"]):focus:not(:focus-visible),
@@ -1170,4 +1170,14 @@
     outline: 2px solid Highlight !important;
     outline-offset: 2px;
   }
+}
+
+/* Keep selected Tasks labels legible without a border or focus bezel. */
+.kova-task-filters [data-state="active"] {
+  background-color: #252525;
+  color: #fff;
+}
+.dark .kova-task-filters [data-state="active"] {
+  background-color: #ededed;
+  color: #111;
 }
