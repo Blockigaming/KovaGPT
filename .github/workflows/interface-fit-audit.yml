@@ -31,6 +31,13 @@ jobs:
     name: Application fit (${{ matrix.browser }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    # Playwright 1.56.0 image bundles the native libraries required by WebKit/Firefox.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
+      options: --user 1001 --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     strategy:
       fail-fast: false
