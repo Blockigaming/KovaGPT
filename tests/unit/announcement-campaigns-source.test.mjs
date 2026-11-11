@@ -33,7 +33,7 @@ test("server gates campaigns on verified user, effective plan, expiry and saved 
   assert.match(server, /monthlyIntroBillingEnabled/);
   assert.match(server, /user_subscription_summary/);
   assert.match(server, /kova_monthly_subscription_summary/);
-  assert.match(server, /\.eq\("enabled", true\)\.lte\("starts_at", now\)\.gt\("ends_at", now\)/);
+  assert.match(server, /\.eq\("enabled", true\)\s*\.lte\("starts_at", now\)\s*\.gt\("ends_at", now\)/);
   assert.match(server, /allowed_tiers/);
   assert.match(server, /kova_notification_campaign_dismissals/);
 });
