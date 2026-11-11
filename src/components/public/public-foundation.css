@@ -917,11 +917,11 @@
 @keyframes kova-public-enter {
   from {
     opacity: 0.55;
-    transform: translate3d(0, 28px, 0) scale(0.987);
+    transform: translate3d(0, 28px, 0);
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 }
 [data-public-shell] [data-kova-revealed="true"] {
