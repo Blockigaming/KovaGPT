@@ -15,6 +15,8 @@ export function chatFailureNoticeId(error, { signedIn = false, networkFailure = 
     return "reasoning_restricted";
   if (code === "kova_model_runtime_unverified") return "model_unavailable";
   if (code === "kova_model_vision_unavailable") return "unsupported_content";
+  if (code === "file_upload_limit") return "upload_limit";
+  if (code === "image_generation_limit") return "image_limit";
   if (code === "web_search_unavailable") return "search_failed";
   if (code === "hosted_tools_unavailable") return "source_unavailable";
   if (code === "message_quota_unavailable") return "source_unavailable";
@@ -27,8 +29,6 @@ export function chatFailureNoticeId(error, { signedIn = false, networkFailure = 
     return "rate_limited";
   if (category === "model_timeout" || status === 408) return "request_timeout";
   if (category === "model_provider_failure") return "model_unavailable";
-  if (code === "file_upload_limit") return "upload_limit";
-  if (code === "image_generation_limit") return "image_limit";
   if (status === 403) return "permission_denied";
   if (networkFailure || category === "network_failure") return "network_offline";
   return "generic_failure";
