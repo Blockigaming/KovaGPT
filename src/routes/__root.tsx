@@ -337,11 +337,30 @@ function RootNotificationCenter() {
         confirmed: true,
       });
     };
+    const controllerChanged = () => {
+      // A new service-worker controller is evidence of an actual app update.
+      // Never announce an update on ordinary page load or a speculative release.
+      publishKovaNotice({
+        id: "app_update",
+        title: "An app update is available",
+        message: "Reload to use the latest version. Save anything you're editing first.",
+        confirmed: true,
+        campaignId: import.meta.env.VITE_KOVA_BUILD_SHA || "service-worker",
+        primaryLabel: "Reload",
+        onPrimary: () => window.location.reload(),
+      });
+    };
     window.addEventListener("offline", offline);
     window.addEventListener("online", online);
+    if (import.meta.env.PROD) {
+      navigator.serviceWorker?.addEventListener("controllerchange", controllerChanged);
+    }
     return () => {
       window.removeEventListener("offline", offline);
       window.removeEventListener("online", online);
+      if (import.meta.env.PROD) {
+        navigator.serviceWorker?.removeEventListener("controllerchange", controllerChanged);
+      }
     };
   }, [isLoaded]);
   return isLoaded ? (
