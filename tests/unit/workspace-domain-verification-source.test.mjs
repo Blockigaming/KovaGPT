@@ -37,7 +37,7 @@ test("domain activation has server-side owner check and DNS TXT proof before rec
   const server = readFileSync("src/lib/team-domains.functions.ts", "utf8");
   assert.match(server, /await assertOwner\(data\.teamId, context\.ownerId\)/);
   assert.match(server, /dns\.resolveTxt\(proof\.recordHost\)/);
-  assert.match(server, /record\.join\("") === proof\.txtValue/);
+  assert.match(server, /record\.join\(""\) === proof\.txtValue/);
   assert.match(server, /context\.revalidate/);
   assert.match(server, /upsert\(/);
   assert.match(server, /verification_method: "dns_txt"/);
