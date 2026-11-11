@@ -136,7 +136,10 @@ test("visual evidence contains screenshots rendered by the candidate", async () 
 test("auth visual preview uses tracked candidate edits without copying local secrets", async () => {
   const source = await readRootFile("tests/e2e/auth-visual-preview.mjs");
 
-  assert.match(source, /\["-c", `safe\.directory=\$\{sourceRoot\}`, "ls-files", "-z", "--cached"\]/u);
+  assert.match(
+    source,
+    /\["-c", `safe\.directory=\$\{sourceRoot\}`, "ls-files", "-z", "--cached"\]/u,
+  );
   assert.doesNotMatch(source, /safe\.directory=\*/u);
   assert.match(source, /await copyFile\(source, destination\)/u);
   assert.match(source, /baseName\.startsWith\("\.env"\)/u);
