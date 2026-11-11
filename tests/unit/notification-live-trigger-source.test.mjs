@@ -57,7 +57,8 @@ test("workspace discovery requires verified domain, not an email suffix heuristi
   assert.match(sql, /notification_attempts < 6/);
   assert.match(sql, /notification_started_at > now\(\)-interval '20 hours'/);
   assert.match(sql, /grant execute on function public\.claim_team_join_notification/);
-  assert.match(source("src/lib/workspace-join.functions.ts"), /retryWorkspaceJoinNotification/);
+  assert.match(source("src/lib/workspace-join.functions.ts"), /workspace-join-notifications\\.server/);
+  assert.match(source("src/lib/workspace-join-notifications.server.ts"), /retryWorkspaceJoinNotification/);
   assert.match(source("src/lib/team-invitations.server.ts"), /retryWorkspaceJoinNotification/);
   assert.match(source("src/components/Sidebar.tsx"), /verifiedWorkspaceEmail/);
 });
