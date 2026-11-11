@@ -1,6 +1,6 @@
 // Read-only Gmail access for the signed-in user.
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser } from "@/lib/api-auth.server";
+import { requireUser, getCallerTier } from "@/lib/api-auth.server";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { parseGoogleBinding } from "@/lib/google-account-policy.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
@@ -53,6 +53,8 @@ export const Route = createFileRoute("/api/google/gmail")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        if ((await getCallerTier(auth)) === "free")
+          return Response.json({ error: "gmail_plan_required" }, { status: 403 });
         const lockdown = await enforceLockdownCapability(
           auth.supabaseAdmin,
           auth.userId,

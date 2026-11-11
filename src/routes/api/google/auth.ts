@@ -1,6 +1,6 @@
 // Start Google OAuth flow. Requires a signed-in KovaGPT user.
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser } from "@/lib/api-auth.server";
+import { requireUser, getCallerTier } from "@/lib/api-auth.server";
 import { buildGoogleAuthUrl, beginGoogleOAuth } from "@/lib/google-oauth.server";
 import { googleConnectorScopes } from "@/lib/google-account-policy.mjs";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
@@ -18,6 +18,8 @@ export const Route = createFileRoute("/api/google/auth")({
         }
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        if (connector === "gmail" && (await getCallerTier(auth)) === "free")
+          return Response.json({ error: "gmail_plan_required" }, { status: 403 });
         const lockdown = await enforceLockdownCapability(
           auth.supabaseAdmin,
           auth.userId,
