@@ -224,8 +224,12 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
       aria-labelledby="bank-connections-title"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="bank-connections-title" className="text-xl font-semibold tracking-tight">Finances · Bank accounts</h2>
-        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">Read-only connections</span>
+        <h2 id="bank-connections-title" className="text-xl font-semibold tracking-tight">
+          Finances · Bank accounts
+        </h2>
+        <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+          Read-only connections
+        </span>
       </div>
       <p className="text-sm text-muted-foreground">
         Connect through Plaid to read balances and recent transactions. Kova cannot move money or
@@ -261,8 +265,19 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
           </div>
           <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><p className="font-medium">Dashboard preview</p><p className="text-xs text-muted-foreground">Explore the layout without connecting a bank.</p></div>
-              <Button variant="outline" aria-pressed={showDemo} onClick={() => setShowDemo((value) => !value)}>{showDemo ? "Hide example" : "View example"}</Button>
+              <div>
+                <p className="font-medium">Dashboard preview</p>
+                <p className="text-xs text-muted-foreground">
+                  Explore the layout without connecting a bank.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                aria-pressed={showDemo}
+                onClick={() => setShowDemo((value) => !value)}
+              >
+                {showDemo ? "Hide example" : "View example"}
+              </Button>
             </div>
             {showDemo && <FinanceActivityDashboard demo />}
           </div>
