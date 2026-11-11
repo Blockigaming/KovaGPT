@@ -167,7 +167,7 @@ import {
   memoryWriteBlockStorageKey,
 } from "@/lib/memory-write-coordinator.mjs";
 
-import { getUsage } from "@/lib/limits";
+
 
 import {
   useUser,
@@ -3863,7 +3863,7 @@ function KovaGPT() {
             kind={limitDialog.kind}
             usageKind={limitDialog.usageKind}
             message={limitDialog.message}
-            resetsAt={limitDialog.resetsAt ?? getUsage().resetsAt}
+            resetsAt={limitDialog.resetsAt}
           />
         )}
       </Suspense>
