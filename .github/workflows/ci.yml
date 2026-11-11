@@ -146,7 +146,7 @@ jobs:
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
             printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
-          npx playwright install --with-deps chromium firefox webkit
+          bash scripts/ci/install-playwright-browsers.sh chromium firefox webkit
 
       - name: Integration tests
         id: integration
@@ -270,7 +270,7 @@ jobs:
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
             printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
-          npx playwright install --with-deps chromium
+          bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Complete public route and detail checks
         run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
       - name: Preserve public suite evidence
@@ -357,7 +357,7 @@ jobs:
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
             printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
-          npx playwright install --with-deps chromium
+          bash scripts/ci/install-playwright-browsers.sh chromium
 
       - name: Browser tests
         env:
@@ -417,7 +417,7 @@ jobs:
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
             printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
-          npx playwright install --with-deps chromium
+          bash scripts/ci/install-playwright-browsers.sh chromium
       - run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=list,blob --workers=2
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

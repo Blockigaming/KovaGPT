@@ -95,7 +95,7 @@ jobs:
 
       - name: Install pinned test browser
         if: steps.scope.outputs.run == 'true'
-        run: npx --no-install playwright install --with-deps chromium
+        run: bash scripts/ci/install-playwright-browsers.sh chromium
 
       - name: Verify Node routes and core flows without external services
         if: steps.scope.outputs.run == 'true'

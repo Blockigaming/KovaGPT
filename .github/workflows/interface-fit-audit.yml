@@ -69,7 +69,7 @@ jobs:
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
             printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
-          npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+          bash scripts/ci/install-playwright-browsers.sh "${{ matrix.browser }}"
       - name: Verify the actual application hydrates in this engine
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
