@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { getFreeOfferEligibility } from "@/lib/free-offer-eligibility.functions";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 
 function Gift({ size = 18, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
   return (
@@ -45,12 +46,30 @@ export function FreeOfferButton({ variant = "toolbar" }: { variant?: "toolbar" |
     if (!isLoaded || !isSignedIn || !user?.id) return;
     const owner = user.id;
     void getFreeOfferEligibility().then((result) => {
-      if (!cancelled) setOffer({ owner, eligible: result.eligible === true });
+      if (!cancelled) {
+        const eligible = result.eligible === true;
+        setOffer({ owner, eligible });
+        if (eligible && variant === "toolbar") {
+          publishKovaNotice({
+            id: "offer_available",
+            key: "monthly-intro-v1",
+            campaignId: "monthly-intro-v1",
+            title: "A Plus offer is available",
+            message: "Your account qualifies for an introductory subscription offer. Check the price and renewal terms before choosing a plan.",
+            confirmed: true,
+            primaryLabel: "See offer",
+            onPrimary: () => void navigate({
+              to: "/subscribe" as never,
+              search: { plan: "plus_monthly" } as never,
+            }),
+          });
+        }
+      }
     }).catch(() => {
       if (!cancelled) setOffer({ owner, eligible: false });
     });
     return () => { cancelled = true; };
-  }, [isLoaded, isSignedIn, user?.id]);
+  }, [isLoaded, isSignedIn, user?.id, variant, navigate]);
   // A free plan or a personal email address is not proof of promotional
   // eligibility. Never show the CTA before server verification.
   if (!user?.id || !isSignedIn || offer?.owner !== user.id || !offer.eligible) return null;
