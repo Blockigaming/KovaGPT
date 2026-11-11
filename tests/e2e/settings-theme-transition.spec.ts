@@ -158,7 +158,7 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   }
   await expect(navigation).toBeVisible();
   const options = navigation.getByRole("tab");
-  await expect(options).toHaveCount(10);
+  await expect(options).toHaveCount(22);
   await expect(navigation.getByRole("tab", { name: "Archived chats", exact: true })).toHaveCount(0);
   for (let index = 0; index < (await options.count()); index++) {
     await options.nth(index).scrollIntoViewIfNeeded();
