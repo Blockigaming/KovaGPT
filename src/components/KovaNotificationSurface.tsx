@@ -16,6 +16,7 @@ export type KovaNotice = {
   onPrimary?: () => void;
   secondaryLabel?: string;
   onSecondary?: () => void;
+  onDismiss?: () => void;
 };
 
 /** Emit only from a verified operation stage; never from a speculative click. */
@@ -50,6 +51,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
       rememberNoticeDismissal(optionalNoticeStorage(), {
         accountId, id: active.id, campaignId: active.campaignId, group,
       });
+      try { active.onDismiss?.(); } catch { /* Keep the dialog dismissible on callback failure. */ }
     }
     setPending((items) => items.slice(1));
   }, [active, accountId]);
@@ -90,10 +92,13 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
             : toast;
         notificationToast(notice.title, {
           id: key,
+          onDismiss: () => { try { notice.onDismiss?.(); } catch { /* Ignore notice acknowledgement failures. */ } },
           description: notice.message,
           duration: 3000,
           action: notice.onPrimary && notice.primaryLabel
-            ? { label: notice.primaryLabel, onClick: notice.onPrimary } : undefined,
+            ? { label: notice.primaryLabel, onClick: () => {
+                try { notice.onDismiss?.(); } finally { notice.onPrimary?.(); }
+              } } : undefined,
         });
         return;
       }
