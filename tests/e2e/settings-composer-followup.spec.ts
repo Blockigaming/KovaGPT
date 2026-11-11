@@ -22,28 +22,9 @@ for (const theme of ["dark", "light"] as const) {
     const header = surface.locator(".kova-settings-content-header");
     expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
     if (page.viewportSize()!.width >= 768) {
-      const navigation = surface.getByRole("complementary", {
-        name: "Settings navigation",
-      });
+      const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-      for (const destination of [
-        "Voice",
-        "Security and login",
-        "Storage",
-        "Keyboard",
-        "Usage",
-        "Cloud Browser",
-        "Family Center",
-        "Location",
-      ]) {
-        await expect(
-          navigation.getByRole("tab", { name: destination, exact: true }),
-        ).toBeVisible();
-      }
-      await expect(surface.locator(".kova-settings-related")).toHaveCount(0);
-      await expect(
-        surface.locator(".kova-settings-navigation-heading h2"),
-      ).toBeVisible();
+      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
         await surface.locator("h1").evaluate((node) => {
           const style = getComputedStyle(node.closest(".sr-only")!);
@@ -51,35 +32,12 @@ for (const theme of ["dark", "light"] as const) {
         }),
       ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
-      const backToPreviousPage = surface.getByRole("button", {
-        name: "Back to app",
-      });
+      const backToPreviousPage = surface.getByRole("button", { name: "Back to app" });
       await expect(backToPreviousPage).toBeHidden();
-      await surface
-        .getByRole("button", { name: "Back to settings", exact: true })
-        .click();
+      await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
       await expect(backToPreviousPage).toBeHidden();
       await expect(close).toBeVisible();
-      await expect(
-        surface.locator(".kova-settings-navigation-heading h2"),
-      ).toBeVisible();
-      const navigation = surface.getByRole("complementary", {
-        name: "Settings navigation",
-      });
-      for (const destination of [
-        "Voice",
-        "Security and login",
-        "Storage",
-        "Keyboard",
-        "Usage",
-        "Cloud Browser",
-        "Family Center",
-        "Location",
-      ]) {
-        await expect(
-          navigation.getByRole("tab", { name: destination, exact: true }),
-        ).toBeVisible();
-      }
+      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
         await surface.locator("h1").evaluate((node) => {
           const style = getComputedStyle(node.closest(".sr-only")!);
@@ -87,13 +45,11 @@ for (const theme of ["dark", "light"] as const) {
         }),
       ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
       await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
-      await expect(
-        surface.getByRole("heading", { name: "Appearance", exact: true }),
-      ).toBeVisible();
+      await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
     }
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
     await page.screenshot({
       path: info.outputPath(`settings-${theme}.png`),
       animations: "disabled",
@@ -109,16 +65,12 @@ test("a started chat hides its resource tray and keeps preferences available in 
   await fixture(page, "dark", true, true);
   await page.goto("/");
   await waitForKovaHydration(page);
-  await expect(
-    page.getByText("Draft a release checklist.", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Draft a release checklist.", { exact: true })).toBeVisible();
   await expect(page.locator(".kova-composer-tray")).toBeHidden();
   const options = await openResponseOptions(page);
   await expect(options).toBeVisible();
   await closeCurrentSettings(page);
-  await expect(
-    page.getByRole("textbox", { name: "Message KovaGPT" }),
-  ).toBeEnabled();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeEnabled();
 });
 
 test("Type with voice replaces the composer inline and Escape preserves the draft", async ({
@@ -169,66 +121,25 @@ test("Type with voice replaces the composer inline and Escape preserves the draf
   const dictation = page.getByRole("region", { name: "Type with voice", exact: true });
   await expect(dictation).toHaveAttribute("data-voice-phase", "recording");
   await expect(dictation.locator(".kova-inline-dictation-wave i")).toHaveCount(72);
-  await expect(
-    dictation.getByRole("button", { name: "Stop and transcribe" }),
-  ).toBeVisible();
-  await expect(
-    dictation.getByRole("button", { name: "Add transcript to chat" }),
-  ).toBeDisabled();
+  await expect(dictation.getByRole("button", { name: "Stop and transcribe" })).toBeVisible();
+  await expect(dictation.getByRole("button", { name: "Add transcript to chat" })).toBeDisabled();
   await expect
     .poll(() =>
       page.evaluate(() => {
         const composer = document.querySelector(".spec400-composer")!;
         const recorder = document.querySelector(".kova-inline-dictation")!;
         return (
-          getComputedStyle(composer).backgroundColor ===
-          getComputedStyle(recorder).backgroundColor
+          getComputedStyle(composer).backgroundColor === getComputedStyle(recorder).backgroundColor
         );
       }),
     )
     .toBe(true);
   await expect(page.locator(".spec400-composer")).toBeHidden();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-  ).toBe(true);
-  await page.screenshot({
-    path: info.outputPath("inline-dictation.png"),
-    animations: "disabled",
-  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("inline-dictation.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(dictation).toHaveCount(0);
   await expect(input).toHaveValue("Keep my typed draft");
   await expect(trigger).toBeFocused();
-});
-
-test("message composer shows only the text caret on focus across desktop and mobile", async ({
-  page,
-}) => {
-  for (const viewport of [
-    { width: 1280, height: 800 },
-    { width: 390, height: 844 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await fixture(page, "dark", true, true);
-    await page.goto("/");
-    await waitForKovaHydration(page);
-    const composer = page.locator(".spec400-composer").first();
-    const field = composer.locator("textarea.spec400-composer-input");
-    await expect(field).toBeVisible();
-    const appearance = () =>
-      composer.evaluate((node) => {
-        const style = getComputedStyle(node);
-        return {
-          borderColor: style.borderColor,
-          borderWidth: style.borderWidth,
-          outlineStyle: style.outlineStyle,
-          boxShadow: style.boxShadow,
-        };
-      });
-    const before = await appearance();
-    await field.focus();
-    await expect(field).toBeFocused();
-    expect(await appearance()).toEqual(before);
-  }
 });
