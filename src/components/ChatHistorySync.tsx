@@ -363,17 +363,21 @@ export function ChatHistorySyncStatus() {
     unavailable: "Account chat sync is unavailable in this browser.",
     cleared: "Device history was cleared. Reload to resume account sync.",
   };
+  // Preserve persistent recovery for blocked/auth/device-save failures even
+  // when the automatic controller enters a temporary pending state. Routine
+  // offline/rate-limited retries remain silent.
+  const criticalRecovery = ["device_error", "blocked", "auth_required"].includes(
+    state.recoveryPhase ?? "",
+  );
   const critical =
+    criticalRecovery ||
     state.conflicts.length > 0 ||
     ["device_error", "blocked", "auth_required", "cleared", "conflict"].includes(state.phase);
   // Keep a pending migration decision in place while background sync runs.
   // Collapsing it during a pointer press moves the transcript's native controls.
   // Routine sync and passive multi-tab lock handoffs are silent. Real conflicts,
   // unsaved device data and blocked persistence still require recoverable UI.
-  const visible =
-    state.migration > 0 ||
-    state.conflicts.length > 0 ||
-    ["device_error", "blocked", "auth_required", "cleared"].includes(state.phase);
+  const visible = state.migration > 0 || critical;
   if (!visible) return null;
   const labelPhase =
     state.migration > 0 && !critical ? "local" : (state.recoveryPhase ?? state.phase);
