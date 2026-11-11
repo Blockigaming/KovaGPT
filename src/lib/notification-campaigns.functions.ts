@@ -91,7 +91,7 @@ export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" 
         )
         .abortSignal(AbortSignal.timeout(10000));
       if (dismissed.error) return [];
-      const excluded = new Set(
+      const excluded = new Set<string>(
         (dismissed.data ?? []).map((row: { campaign_id: string }) => row.campaign_id),
       );
       const announcementIDs = new Set(NOTIFICATION_GROUPS.announcements);
