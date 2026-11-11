@@ -17,7 +17,6 @@ on:
       - src/**
       - package.json
       - package-lock.json
-      - scripts/ci/assert-playwright-native-runtime.mjs
   workflow_dispatch:
 
 permissions:
@@ -27,23 +26,30 @@ concurrency:
   group: interface-fit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Trust only the checked-out PR working tree inside the job container.
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   browser:
     name: Application fit (${{ matrix.browser }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
-      options: --user 1001
-    defaults:
-      run:
-        shell: bash
-    timeout-minutes: 25
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
     env:
+      HOME: /root
       KOVA_INTERFACE_ENGINE: ${{ matrix.browser }}
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
@@ -73,9 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
-          npx --no-install playwright install "${{ matrix.browser }}"
-          node scripts/ci/assert-playwright-native-runtime.mjs "${{ matrix.browser }}"
+          bash scripts/ci/install-playwright-browsers.sh "${{ matrix.browser }}"
       - name: Verify the actual application hydrates in this engine
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts

@@ -82,8 +82,8 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
       shard: "1/1",
     },
   ]);
-  assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
-  assert.equal(new Set(rows.map((row) => row.checkName)).size, rows.length);
+  assert.equal(new Set(rows.map((row) => row.id)).size, 9);
+  assert.equal(new Set(rows.map((row) => row.checkName)).size, 9);
   assert.match(
     browser,
     /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\} --workers=2$/m,
