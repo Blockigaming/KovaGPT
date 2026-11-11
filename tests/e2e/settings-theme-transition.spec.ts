@@ -169,11 +169,7 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
       await options.nth(index).evaluate((element: HTMLElement) => element.offsetHeight),
     ).toBeGreaterThanOrEqual(44);
   }
-  await navigation.getByRole("tab", { name: "Connections", exact: true }).click();
-  await settingsDialog
-    .getByRole("navigation", { name: "Connections sections" })
-    .getByRole("button", { name: "Cloud Browser", exact: true })
-    .click();
+  await navigation.getByRole("tab", { name: "Cloud Browser", exact: true }).click();
   await expect(
     settingsDialog.getByRole("heading", { name: "Cloud Browser", level: 2, exact: true }),
   ).toBeVisible();
