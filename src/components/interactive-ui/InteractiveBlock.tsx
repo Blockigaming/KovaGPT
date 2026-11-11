@@ -408,10 +408,16 @@ function FieldControl({
                 <RadioGroupItem
                   value={o.value}
                   aria-label={o.label}
-                  // Firefox can focus a Radix radio without committing its
-                  // internal change event. Explicit clicks share the same
-                  // idempotent state path as keyboard/radio-group changes.
-                  onClick={() => onChange(o.value)}
+                  // Capture pointer selection before Radix's focus/roving-tab
+                  // handlers. In short Firefox viewports a pointer click can
+                  // focus the item without firing a controlled change. The
+                  // idempotent form setter handles any subsequent click/change.
+                  onPointerDown={(event) => {
+                    if (!disabled && event.button === 0) onChange(o.value);
+                  }}
+                  onClick={() => {
+                    if (!disabled) onChange(o.value);
+                  }}
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
               </div>
