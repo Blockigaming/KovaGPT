@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { checkoutOriginKey } from "@/lib/checkout-notice-policy.mjs";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { createCheckoutSession, createPortalSession } from "@/utils/payments.functions";
 const CHECKOUT_ERROR_MESSAGE = "Secure checkout could not open. Try again.";
@@ -65,14 +67,40 @@ export function StripeEmbeddedCheckout({
       const url = new URL(result.url);
       if (url.origin !== "https://checkout.stripe.com")
         throw new Error("Secure checkout could not open.");
+      const receiptKey = checkoutOriginKey(owner);
+      if (receiptKey) {
+        try {
+          sessionStorage.setItem(
+            receiptKey,
+            JSON.stringify({
+              ownerId: owner,
+              startedAt: Date.now(),
+            }),
+          );
+        } catch {
+          // Storage restrictions must not prevent checkout.
+        }
+      }
+      publishKovaNotice({
+        id: "checkout_started",
+        title: "Opening secure checkout",
+        message: "Your subscription is not active until payment is confirmed.",
+      });
       window.location.assign(url.href);
     } catch (reason) {
-      if (active())
+      if (active()) {
         setError(
           reason instanceof Error && SAFE_CHECKOUT_ERRORS.has(reason.message)
             ? reason.message
             : CHECKOUT_ERROR_MESSAGE,
         );
+        publishKovaNotice({
+          id: "checkout_unavailable",
+          title: "Checkout unavailable",
+          message:
+            "The payment page did not open. You can retry without starting a second checkout.",
+        });
+      }
     } finally {
       if (generation.current === token) pending.current = false;
       if (active()) setBusy(false);

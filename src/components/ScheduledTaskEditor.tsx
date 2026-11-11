@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -345,10 +346,24 @@ function ScheduledTaskEditorBody({
         const persistedTask = await create({
           data: { ...operation.data, expectedUserId: userKey },
         });
-        if (active.current) onCreated?.(persistedTask);
-      } else if (operation.kind === "update")
+        if (active.current) {
+          onCreated?.(persistedTask);
+          publishKovaNotice({
+            id: "task_created",
+            title: "Scheduled task created",
+            message: persistedTask.title,
+            confirmed: true,
+          });
+        }
+      } else if (operation.kind === "update") {
         await update({ data: { ...operation.data, expectedUserId: userKey } });
-      else await share({ data: { ...operation.data, expectedUserId: userKey } });
+        if (active.current)
+          publishKovaNotice({
+            id: "task_updated",
+            title: "Scheduled task updated",
+            confirmed: true,
+          });
+      } else await share({ data: { ...operation.data, expectedUserId: userKey } });
       if (!active.current) return;
       pending.current = null;
       onSaved();

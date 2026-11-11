@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
 import { saveToLibrary } from "@/lib/library.functions";
 import {
@@ -45,10 +46,23 @@ export function useLibraryAttachmentAutoSave(enabled: boolean, principal: string
             () => mounted.current && scope.current === originalScope,
             documentSaves.current,
           ),
-        onError: (name, retry) =>
+        onSuccess: (name) =>
+          publishKovaNotice({
+            id: "file_saved",
+            title: "File saved to Library",
+            message: `${name} is available in your Library.`,
+            confirmed: true,
+          }),
+        onError: (name, retry) => {
+          publishKovaNotice({
+            id: "upload_failed",
+            title: "File attached but Library save failed",
+            message: name,
+          });
           toast.error(`${name} was attached but could not be saved to your Library.`, {
             action: { label: "Retry save", onClick: () => void retry() },
-          }),
+          });
+        },
       }),
     [saveImage, saveText],
   );
