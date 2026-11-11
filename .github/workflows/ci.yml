@@ -309,16 +309,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Four shards retain every phone project within the runner time limit.
           - id: phone-a
             check_name: Phone shard (phone-a)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 1/2
+            shard: 1/4
           - id: phone-b
             check_name: Phone shard (phone-b)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 2/2
+            shard: 2/4
+          - id: phone-c
+            check_name: Phone shard (phone-c)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 3/4
+          - id: phone-d
+            check_name: Phone shard (phone-d)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 4/4
           - id: tablet
             check_name: Browser (tablet)
             projects: >-

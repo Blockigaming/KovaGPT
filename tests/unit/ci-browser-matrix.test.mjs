@@ -47,8 +47,10 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
       return { id, checkName, projects, shard };
     });
   assert.deepEqual(rows, [
-    { id: "phone-a", checkName: "Phone shard (phone-a)", projects: phones, shard: "1/2" },
-    { id: "phone-b", checkName: "Phone shard (phone-b)", projects: phones, shard: "2/2" },
+    { id: "phone-a", checkName: "Phone shard (phone-a)", projects: phones, shard: "1/4" },
+    { id: "phone-b", checkName: "Phone shard (phone-b)", projects: phones, shard: "2/4" },
+    { id: "phone-c", checkName: "Phone shard (phone-c)", projects: phones, shard: "3/4" },
+    { id: "phone-d", checkName: "Phone shard (phone-d)", projects: phones, shard: "4/4" },
     {
       id: "tablet",
       checkName: "Browser (tablet)",
@@ -80,8 +82,8 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
       shard: "1/1",
     },
   ]);
-  assert.equal(new Set(rows.map((row) => row.id)).size, 7);
-  assert.equal(new Set(rows.map((row) => row.checkName)).size, 7);
+  assert.equal(new Set(rows.map((row) => row.id)).size, rows.length);
+  assert.equal(new Set(rows.map((row) => row.checkName)).size, rows.length);
   assert.match(
     browser,
     /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\} --workers=2$/m,
