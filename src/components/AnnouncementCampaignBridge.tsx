@@ -24,8 +24,10 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
           const acknowledge = () => {
             try {
               rememberNoticeDismissal(window.localStorage, {
-                accountId: ownerId, id: campaign.eventId,
-                campaignId: campaign.id, group: "announcements",
+                accountId: ownerId,
+                id: campaign.eventId,
+                campaignId: campaign.id,
+                group: "announcements",
               });
             } catch {
               // Browser storage may be unavailable; the server remains authoritative.
@@ -54,7 +56,9 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
                 }
               : {}),
             secondaryLabel: "Not now",
-            onDismiss: () => { void acknowledge(); },
+            onDismiss: () => {
+              void acknowledge();
+            },
           });
         }
       })

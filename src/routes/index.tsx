@@ -167,8 +167,6 @@ import {
   memoryWriteBlockStorageKey,
 } from "@/lib/memory-write-coordinator.mjs";
 
-
-
 import {
   useUser,
   useClerkSafe,
@@ -2386,7 +2384,13 @@ function KovaGPT() {
               : /upload|file/i.test(raw)
                 ? "upload"
                 : "chat";
-            setLimitDialog({ open: true, kind, message: raw, resetsAt: err.resetAtMs, usageKind: err.usageKind });
+            setLimitDialog({
+              open: true,
+              kind,
+              message: raw,
+              resetsAt: err.resetAtMs,
+              usageKind: err.usageKind,
+            });
           }
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||

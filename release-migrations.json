@@ -4661,7 +4661,10 @@
       "reversible": false,
       "rls": ["kova_notification_campaigns", "kova_notification_campaign_dismissals"],
       "policies": [],
-      "indexes": ["kova_notification_campaigns_active_window", "kova_notification_campaign_dismissals_owner"]
+      "indexes": [
+        "kova_notification_campaigns_active_window",
+        "kova_notification_campaign_dismissals_owner"
+      ]
     }
   ]
 }

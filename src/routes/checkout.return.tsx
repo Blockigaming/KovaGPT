@@ -80,7 +80,9 @@ function CheckoutReturn() {
             id: "subscription_updated",
             key: "checkout-confirmed:" + session_id,
             title: "Subscription confirmed",
-            message: "Your " + (resolved.tier === "pro" ? "Pro" : "Plus") +
+            message:
+              "Your " +
+              (resolved.tier === "pro" ? "Pro" : "Plus") +
               " plan is active for this account.",
             confirmed: true,
           });

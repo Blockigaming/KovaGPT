@@ -56,6 +56,7 @@ The PR must remain a draft. Do not merge or deploy until the full required CI, r
 - **Release blocker:** finish server/event-source binding for each available action, give each distinct event real eligibility/usage/recipient state, run `--require-complete` once every supported ID has an emitter, and validate critical journeys in a browser. Unavailable announcements must remain hidden rather than spoofing a fake completed feature.
 
 ## Notification UX & feature-event pass — 2026-11-10
+
 - All 228 semantic IDs remain catalogued. Four UI families are differentiated:
   blocking modal / mobile sheet, inline operational status, lightweight toast,
   and nonblocking feature popover / release banner. Visuals inherit Kova light/dark

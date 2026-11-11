@@ -29,7 +29,9 @@ export function LimitReachedDialog({
       ? "Image limit reached"
       : kind === "upload"
         ? "Upload limit reached"
-        : usageKind === "thinking" ? "Thinking limit reached" : "Message limit reached";
+        : usageKind === "thinking"
+          ? "Thinking limit reached"
+          : "Message limit reached";
   const reset =
     typeof resetsAt === "number" && Number.isFinite(resetsAt) ? new Date(resetsAt) : null;
   const validReset = reset && Number.isFinite(reset.valueOf()) ? reset : null;

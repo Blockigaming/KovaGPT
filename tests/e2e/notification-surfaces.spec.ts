@@ -72,7 +72,11 @@ test("contextual tips are nonmodal and announcements defer behind existing dialo
     dialog.setAttribute("role", "dialog");
     document.body.appendChild(dialog);
   });
-  await emit(page, { id: "whats_new", title: "New update", message: "Verified feature announcement." });
+  await emit(page, {
+    id: "whats_new",
+    title: "New update",
+    message: "Verified feature announcement.",
+  });
   await expect(page.getByText("New update", { exact: true })).toHaveCount(0);
   await page.evaluate(() => document.getElementById("kova-external-dialog-test")?.remove());
   await expect(page.getByText("New update", { exact: true })).toBeVisible();

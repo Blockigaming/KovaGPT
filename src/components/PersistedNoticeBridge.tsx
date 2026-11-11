@@ -11,7 +11,11 @@ import {
 } from "@/lib/persisted-notification-policy.mjs";
 
 function safeSessionStorage(): Storage | null {
-  try { return window.sessionStorage; } catch { return null; }
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
 /**

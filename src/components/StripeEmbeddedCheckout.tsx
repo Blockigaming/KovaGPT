@@ -70,9 +70,13 @@ export function StripeEmbeddedCheckout({
       const receiptKey = checkoutOriginKey(owner);
       if (receiptKey) {
         try {
-          sessionStorage.setItem(receiptKey, JSON.stringify({
-            ownerId: owner, startedAt: Date.now(),
-          }));
+          sessionStorage.setItem(
+            receiptKey,
+            JSON.stringify({
+              ownerId: owner,
+              startedAt: Date.now(),
+            }),
+          );
         } catch {
           // Storage restrictions must not prevent checkout.
         }

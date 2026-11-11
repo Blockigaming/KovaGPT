@@ -23,8 +23,7 @@ export function chatFailureNoticeId(error, { signedIn = false, networkFailure = 
   if (code === "message_window_limit") {
     return error.usageKind === "thinking" ? "thinking_limit" : "assistant_limit";
   }
-  if (category === "quota_exceeded" && (status === 429 || status === 402))
-    return "assistant_limit";
+  if (category === "quota_exceeded" && (status === 429 || status === 402)) return "assistant_limit";
   if (category === "rate_limit" || (status === 429 && code !== "message_window_limit"))
     return "rate_limited";
   if (category === "model_timeout" || status === 408) return "request_timeout";

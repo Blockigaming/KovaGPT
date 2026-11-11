@@ -8,13 +8,23 @@ test("first project onboarding requires a server-loaded empty directory and save
   const created = src.indexOf('id: "project_created", title: "Project created"');
   const first = src.indexOf('id: "first_project"');
   assert.ok(first >= 0 && first < created);
-  assert.match(src, /resolvedUserKey === userKey && !loading && !loadError && projects\.length === 0/);
+  assert.match(
+    src,
+    /resolvedUserKey === userKey && !loading && !loadError && projects\.length === 0/,
+  );
   assert.ok(NOTIFICATION_IDS.includes("first_project"));
 });
 
 test("Library file lifecycle notices follow actual selection, extraction and save", () => {
   const src = readFileSync("src/components/LibraryUploadDialog.tsx", "utf8");
-  for (const id of ["file_selected", "file_processing", "upload_started", "upload_completed", "upload_failed", "upload_limit"]) {
+  for (const id of [
+    "file_selected",
+    "file_processing",
+    "upload_started",
+    "upload_completed",
+    "upload_failed",
+    "upload_limit",
+  ]) {
     assert.ok(src.includes(`"${id}"`), `missing ${id}`);
   }
   const extraction = src.indexOf("await extractDocumentFile");

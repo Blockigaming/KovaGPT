@@ -78,10 +78,14 @@ export function readSessionSeen(storage, ownerId) {
   if (!storage || !key) return new Set();
   try {
     const parsed = JSON.parse(storage.getItem(key) ?? "[]");
-    return new Set(Array.isArray(parsed)
-      ? parsed.filter(id => typeof id === "string" && /^[a-f0-9-]{36}$/i.test(id)).slice(-100)
-      : []);
-  } catch { return new Set(); }
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((id) => typeof id === "string" && /^[a-f0-9-]{36}$/i.test(id)).slice(-100)
+        : [],
+    );
+  } catch {
+    return new Set();
+  }
 }
 export function rememberSessionSeen(storage, ownerId, seen) {
   const key = notificationSessionSeenKey(ownerId);
@@ -89,5 +93,7 @@ export function rememberSessionSeen(storage, ownerId, seen) {
   try {
     storage.setItem(key, JSON.stringify([...seen].slice(-100)));
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }

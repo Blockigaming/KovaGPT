@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   X,
   Bell,
@@ -101,11 +108,12 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
       const candidates = document.querySelectorAll<HTMLElement>(
         '[role="dialog"]:not(.kova-notice-panel), [role="alertdialog"]:not(.kova-notice-panel), [data-state="open"][data-radix-popper-content-wrapper] [role="menu"]',
       );
-      const anotherVisibleDialog = Array.from(candidates).some((element) =>
-        !element.closest(".kova-notice-panel") &&
-        element.getAttribute("aria-hidden") !== "true" &&
-        element.getClientRects().length > 0 &&
-        getComputedStyle(element).visibility !== "hidden",
+      const anotherVisibleDialog = Array.from(candidates).some(
+        (element) =>
+          !element.closest(".kova-notice-panel") &&
+          element.getAttribute("aria-hidden") !== "true" &&
+          element.getClientRects().length > 0 &&
+          getComputedStyle(element).visibility !== "hidden",
       );
       setExternalDialogOpen(anotherVisibleDialog);
     };
@@ -269,11 +277,15 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
       try {
         const target = document.querySelector(active.anchorSelector!);
         const rect = target?.getBoundingClientRect();
-        if (!rect) { setAnchorPosition(null); return; }
+        if (!rect) {
+          setAnchorPosition(null);
+          return;
+        }
         const left = Math.max(12, Math.min(rect.left, window.innerWidth - 372));
-        const top = rect.bottom + 12 + 280 <= window.innerHeight
-          ? rect.bottom + 12
-          : Math.max(12, rect.top - 280);
+        const top =
+          rect.bottom + 12 + 280 <= window.innerHeight
+            ? rect.bottom + 12
+            : Math.max(12, rect.top - 280);
         setAnchorPosition({ left, top });
       } catch {
         setAnchorPosition(null);
@@ -391,10 +403,14 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
           data-surface={definition.surface}
           data-group={definition.group}
           data-visual={visual}
-          style={definition.surface === "popover" && anchorPosition
-            ? { "--kova-notice-popover-left": anchorPosition.left + "px",
-                "--kova-notice-popover-top": anchorPosition.top + "px" } as CSSProperties
-            : undefined}
+          style={
+            definition.surface === "popover" && anchorPosition
+              ? ({
+                  "--kova-notice-popover-left": anchorPosition.left + "px",
+                  "--kova-notice-popover-top": anchorPosition.top + "px",
+                } as CSSProperties)
+              : undefined
+          }
           aria-busy={actionBusy}
           onTouchStart={(event) => {
             if (!definition.dismissible || actionBusy || event.touches.length !== 1) return;

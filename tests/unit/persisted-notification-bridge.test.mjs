@@ -95,5 +95,15 @@ test("durable notification playback deduplicates across reloads without changing
   assert.equal(rememberSessionSeen(storage, owner, new Set([id])), true);
   assert.equal(readSessionSeen(storage, owner).has(id), true);
   assert.equal(readSessionSeen(storage, "750e8400-e29b-41d4-a716-446655440002").has(id), false);
-  assert.equal(readSessionSeen({getItem(){throw Error("blocked");}}, owner).size, 0);
+  assert.equal(
+    readSessionSeen(
+      {
+        getItem() {
+          throw Error("blocked");
+        },
+      },
+      owner,
+    ).size,
+    0,
+  );
 });

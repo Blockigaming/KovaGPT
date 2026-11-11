@@ -272,7 +272,14 @@ const surfaces = {
     "unusual_activity",
     "guided_tour",
   ],
-  sheet: ["join_workspace_offer", "offer_available", "choose_subscription", "voice_select", "sign_in_required", "session_expired"],
+  sheet: [
+    "join_workspace_offer",
+    "offer_available",
+    "choose_subscription",
+    "voice_select",
+    "sign_in_required",
+    "session_expired",
+  ],
   inline: [
     "upload_failed",
     "upload_limit",

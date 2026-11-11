@@ -31,11 +31,11 @@ test("desktop contextual UI and mobile release banners are independent of blocki
   assert.match(css, /prefers-reduced-motion: reduce/);
 });
 
-test("streaming changes do not repeatedly scan hidden or offscreen dialogs",()=>{
- const host=readFileSync("src/components/KovaNotificationSurface.tsx","utf8");
- assert.match(host,/new MutationObserver/);
- assert.match(host,/requestAnimationFrame/);
- assert.match(host,/cancelAnimationFrame/);
- assert.match(host,/getClientRects\(\)\.length > 0/);
- assert.match(host,/getComputedStyle\(element\)\.visibility !== "hidden"/);
+test("streaming changes do not repeatedly scan hidden or offscreen dialogs", () => {
+  const host = readFileSync("src/components/KovaNotificationSurface.tsx", "utf8");
+  assert.match(host, /new MutationObserver/);
+  assert.match(host, /requestAnimationFrame/);
+  assert.match(host, /cancelAnimationFrame/);
+  assert.match(host, /getClientRects\(\)\.length > 0/);
+  assert.match(host, /getComputedStyle\(element\)\.visibility !== "hidden"/);
 });
