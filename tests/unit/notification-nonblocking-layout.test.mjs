@@ -14,6 +14,7 @@ test("contextual tips never become full blocking dialogs by default", () => {
 test("nonblocking notices do not claim aria-modal and respect current dialogs", () => {
   const src = readFileSync("src/components/KovaNotificationSurface.tsx", "utf8");
   assert.match(src, /externalDialogOpen/);
+  assert.match(src, /externalDialogOpen && \(definition\.exclusive \|\| lowPriority\)/);
   assert.match(src, /MutationObserver/);
   assert.match(src, /aria-modal=\{nonBlocking \? undefined : true\}/);
   assert.match(src, /event\.key !== "Tab" \|\| !panelRef\.current \|\| nonBlocking/);
