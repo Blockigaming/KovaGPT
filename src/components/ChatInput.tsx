@@ -816,6 +816,34 @@ export function ChatInput({
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // A link typed manually has the same one-keystroke removal behavior even
+    // before its title chip has collapsed the editor text.
+    if (
+      !activeAtomicLink &&
+      !disabled &&
+      (e.key === "Backspace" || e.key === "Delete") &&
+      !(e.nativeEvent as KeyboardEvent).isComposing
+    ) {
+      const token = firstLinkPreviewToken(value);
+      if (token) {
+        const start = e.currentTarget.selectionStart;
+        const end = e.currentTarget.selectionEnd;
+        const hitsToken =
+          start < end
+            ? start < token.end && end > token.start
+            : e.key === "Backspace"
+              ? start > token.start && start <= token.end
+              : start >= token.start && start < token.end;
+        if (hitsToken) {
+          e.preventDefault();
+          const from = start < end ? Math.min(start, token.start) : token.start;
+          const through = start < end ? Math.max(end, token.end) : token.end;
+          onChange(value.slice(0, from) + value.slice(through));
+          window.requestAnimationFrame(() => ref.current?.setSelectionRange(from, from));
+          return;
+        }
+      }
+    }
     if (activeAtomicLink && (e.key === "Backspace" || e.key === "Delete")) {
       const start = e.currentTarget.selectionStart;
       const end = e.currentTarget.selectionEnd;
