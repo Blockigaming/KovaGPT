@@ -12,8 +12,24 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NOTIFICATION_IDS, NOTIFICATION_GROUPS } from "../src/lib/notification-catalog.mjs";
+import { verifiedEndToEndIds } from "../src/lib/notification-acceptance-evidence.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
+
+const reportArgument = process.argv.find((argument) =>
+  argument.startsWith("--playwright-report="),
+);
+let evidenceError = null;
+let verified = new Set();
+if (reportArgument) {
+  try {
+    const reportPath = resolve(root, reportArgument.slice("--playwright-report=".length));
+    const report = JSON.parse(readFileSync(reportPath, "utf8"));
+    verified = verifiedEndToEndIds(report, NOTIFICATION_IDS);
+  } catch (error) {
+    evidenceError = error instanceof Error ? error.message : String(error);
+  }
+}
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -83,7 +99,7 @@ const rows = NOTIFICATION_IDS.map((id) => {
     sourceConnected,
     campaignCapable: group === "announcements" && campaignCapable,
     // Only actual browser+backend test results may mark this true.
-    verifiedEndToEnd: false,
+    verifiedEndToEnd: verified.has(id),
   };
 });
 const summary = {
@@ -95,13 +111,17 @@ const summary = {
   campaignCapable: rows.filter((row) => row.campaignCapable).length,
   missingSourceEmitter: rows.filter((row) => !row.sourceConnected).length,
   unclassifiedDynamicEmitters: unknownDynamicEmitters.length,
-  verifiedEndToEnd: 0,
+  verifiedEndToEnd: rows.filter((row) => row.verifiedEndToEnd).length,
+  missingEndToEndEvidence: rows.filter((row) => !row.verifiedEndToEnd).length,
 };
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  process.stdout.write(JSON.stringify({ summary, rows, unknownDynamicEmitters }, null, 2) + "\n");
+  process.stdout.write(JSON.stringify({ summary, rows, unknownDynamicEmitters, evidenceError }, null, 2) + "\n");
   if (
     process.argv.includes("--require-complete") &&
-    (summary.missingSourceEmitter > 0 || summary.unclassifiedDynamicEmitters > 0)
+    (summary.missingSourceEmitter > 0 ||
+      summary.unclassifiedDynamicEmitters > 0 ||
+      summary.missingEndToEndEvidence > 0 ||
+      evidenceError)
   )
     process.exitCode = 1;
 }
