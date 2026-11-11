@@ -141,12 +141,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium firefox webkit
+          # Use runner-native libraries; actual browser tests fail if any dependency is missing.
+          npx playwright install chromium firefox webkit
 
       - name: Integration tests
         id: integration
@@ -266,11 +262,8 @@ jobs:
       - run: npm run build
       - run: |
           set -euo pipefail
-          # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium
+          # Use runner-native libraries; actual browser tests fail if any dependency is missing.
+          npx playwright install chromium
       - name: Complete public route and detail checks
         run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
       - name: Preserve public suite evidence
@@ -353,11 +346,8 @@ jobs:
       - name: Install Playwright browsers
         run: |
           set -euo pipefail
-          # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium
+          # Use runner-native libraries; actual browser tests fail if any dependency is missing.
+          npx playwright install chromium
 
       - name: Browser tests
         env:
@@ -413,11 +403,8 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: |
           set -euo pipefail
-          # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium
+          # Use runner-native libraries; actual browser tests fail if any dependency is missing.
+          npx playwright install chromium
       - run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=list,blob --workers=2
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

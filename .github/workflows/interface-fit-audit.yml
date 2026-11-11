@@ -66,10 +66,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+          # Use runner-native libraries; actual browser tests fail if any dependency is missing.
+          npx --no-install playwright install "${{ matrix.browser }}"
       - name: Verify the actual application hydrates in this engine
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
