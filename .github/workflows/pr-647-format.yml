@@ -1,0 +1,58 @@
+name: Format notification PR candidate
+
+on:
+  push:
+    branches:
+      - feat/account-offers-workspace-discovery-notices-20261110
+
+permissions:
+  contents: write
+
+concurrency:
+  group: format-pr-647-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    if: github.repository == 'Blockigaming/KovaGPT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - name: Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format touched files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git diff --name-only -z origin/main...HEAD |
+            while IFS= read -r -d '' file; do
+              case "$file" in
+                *.js|*.mjs|*.mts|*.ts|*.tsx|*.jsx|*.css|*.md|*.json|*.yml|*.yaml)
+                  if test -f "$file"; then printf '%s\0' "$file"; fi
+                  ;;
+              esac
+            done |
+            xargs -0 -r ./node_modules/.bin/prettier --write --
+      - name: Verify formatting
+        run: npm run format:check
+      - name: Commit formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git commit -m 'style: format notification PR after trigger fixes'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
