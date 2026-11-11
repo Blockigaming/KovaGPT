@@ -197,6 +197,7 @@ export function HelpSupportForm() {
         updateDraft({ submittedEmail: cleanEmail, status: "sent" });
         publishKovaNotice({ id: "feedback_sent", title: "Support request received", message: "Your message was accepted by KovaGPT support.", confirmed: true });
       } else if (response.status >= 400 && response.status < 500) {
+        publishKovaNotice({ id: "feedback_failed", title: "Support could not accept this request", message: "Review your email and message before retrying." });
         updateDraft({
           submissionError:
             response.status === 429
