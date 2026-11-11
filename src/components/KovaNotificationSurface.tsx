@@ -215,10 +215,12 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   }, [accountId]);
 
   const definition = active ? notificationDefinition(active.id) : null;
+  const lowPriority =
+    !!definition && ["announcements", "onboarding", "feedback"].includes(definition.group);
   const defer =
     !!definition &&
-    ["announcements", "onboarding", "feedback"].includes(definition.group) &&
-    (editing || composing || externalDialogOpen);
+    ((externalDialogOpen && (definition.exclusive || lowPriority)) ||
+      (lowPriority && (editing || composing)));
   const shown = !!active && !!definition && !defer;
   const nonBlocking = definition?.surface === "popover" || definition?.surface === "banner";
   useEffect(() => {
@@ -432,8 +434,11 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
                 type="button"
                 disabled={actionBusy}
                 onClick={() => {
-                  active.onSecondary?.();
-                  dismiss();
+                  try {
+                    active.onSecondary?.();
+                  } finally {
+                    dismiss();
+                  }
                 }}
               >
                 {active.secondaryLabel || "Not now"}
