@@ -20,7 +20,7 @@ const mocks: Record<string, string> = {
   "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;`,
   "@/components/WorkflowSkillsPanel": `export const WorkflowSkillsPanel=()=>null;`,
   "@/integrations/supabase/client": `export const supabase={auth:{resend:async()=>({error:null})}};`,
-  "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
+  "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};if(url==="/api/finances/manage"&&init?.method!=="POST")return {ok:true,json:async()=>({configured:false,planEligible:false,connections:[]})};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
   "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data})=>{window.operations.push(["provider-read",data]);return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
   "@/lib/google-client": `export const getGoogleStatus=async()=>window.googleStatus;export const startGoogleConnect=async(...args)=>{window.operations.push(["google-connect",...args])};export const disconnectGoogleAccount=async(...args)=>{window.operations.push(["google-disconnect",...args]);window.googleStatus={connected:false,state:"disconnected",accounts:[],selectedConnectionId:null,selectionRevision:2}};export const selectGoogleAccount=async(...args)=>window.operations.push(["google-select",...args]);`,
   "@/lib/github.functions": `export const getGitHubManagement=async()=>window.githubData;export const refreshGitHubInstallations=async()=>window.operations.push(["github-refresh"]);export const updateGitHubRepositoryGrants=async(...args)=>window.operations.push(["github-grants",...args]);export const disconnectGitHub=async(...args)=>window.operations.push(["github-disconnect",...args]);`,
@@ -136,19 +136,6 @@ async function boot(
   await expect(page.locator("[data-plugin-id]")).toHaveCount(MASTER_CONNECTORS.length);
   await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
 }
-
-test("Finances opens directly to the coming-soon spending preview", async ({ page }) => {
-  await boot(page);
-  await page.getByRole("tab", { name: "Finances", exact: true }).click();
-  const panel = page.getByRole("tabpanel", { name: "Finances" });
-  await expect(panel.getByText("Coming soon", { exact: true })).toBeVisible();
-  const spending = panel.getByRole("region", { name: "Spending" });
-  await expect(spending.getByText("Example data", { exact: true })).toBeVisible();
-  await expect(spending.getByText("$12,195.93", { exact: true })).toBeVisible();
-  await expect(spending.getByRole("listitem")).toHaveCount(4);
-  await expect(panel.getByRole("button")).toHaveCount(0);
-  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
-});
 
 test("approved master directory supports primary and category filters", async ({ page }) => {
   await boot(page);
