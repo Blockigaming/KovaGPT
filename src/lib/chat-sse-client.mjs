@@ -276,6 +276,13 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
       : `chat_http_${response.status || "error"}`;
   error.category =
     typeof payload.category === "string" && payload.category ? payload.category : undefined;
+  // The message-quota backend supplies an authoritative kind. Preserve it so
+  // Thinking limits are never mislabeled as regular-message exhaustion.
+  error.usageKind =
+    payload.code === "message_window_limit" &&
+    (payload.kind === "thinking" || payload.kind === "regular")
+      ? payload.kind
+      : undefined;
   error.requestId =
     typeof payload.requestId === "string" && payload.requestId
       ? payload.requestId
