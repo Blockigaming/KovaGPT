@@ -17,6 +17,7 @@ on:
       - src/**
       - package.json
       - package-lock.json
+      - scripts/ci/assert-playwright-native-runtime.mjs
   workflow_dispatch:
 
 permissions:
@@ -31,6 +32,12 @@ jobs:
     name: Application fit (${{ matrix.browser }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -66,10 +73,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+          test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
+          npx --no-install playwright install "${{ matrix.browser }}"
+          node scripts/ci/assert-playwright-native-runtime.mjs "${{ matrix.browser }}"
       - name: Verify the actual application hydrates in this engine
         run: >-
           npx --no-install playwright test --config=playwright.interface-fit.config.ts

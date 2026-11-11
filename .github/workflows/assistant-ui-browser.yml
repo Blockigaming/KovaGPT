@@ -58,6 +58,7 @@ on:
       - src/styles/**
       - package.json
       - package-lock.json
+      - scripts/ci/assert-playwright-native-runtime.mjs
       - tsconfig.json
       - vite.config.ts
   workflow_dispatch:
@@ -74,6 +75,12 @@ jobs:
     name: Assistant UI (${{ matrix.project }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -101,12 +108,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
+          npx --no-install playwright install chromium
+          node scripts/ci/assert-playwright-native-runtime.mjs chromium
       - name: Select existing assistant tests and isolated preview
         run: |
           mkdir -p test-results/assistant-ui
@@ -164,6 +168,12 @@ jobs:
     name: Assistant auth visual
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 20
     env:
       AI_GENERATION_ENABLED: "false"
@@ -185,12 +195,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
+          npx --no-install playwright install chromium
+          node scripts/ci/assert-playwright-native-runtime.mjs chromium
       - name: Select the existing isolated auth visual gate
         run: |
           mkdir -p test-results/assistant-auth-visual
@@ -242,6 +249,12 @@ jobs:
     name: Assistant quality (${{ matrix.project }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -269,12 +282,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
+          npx --no-install playwright install chromium
+          node scripts/ci/assert-playwright-native-runtime.mjs chromium
       - name: Select existing strict quality tests and isolated preview
         run: |
           mkdir -p test-results/assistant-quality
@@ -346,6 +356,12 @@ jobs:
     name: Assistant early core regressions (${{ matrix.id }})
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
+      options: --user 1001
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -395,12 +411,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # The Azure mirror stalled two runners before browser tests could run.
-          # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx --no-install playwright install --with-deps chromium
+          test "${PLAYWRIGHT_BROWSERS_PATH:-}" = "/ms-playwright"
+          npx --no-install playwright install chromium
+          node scripts/ci/assert-playwright-native-runtime.mjs chromium
       - name: Select existing core regressions and isolated preview
         run: |
           mkdir -p test-results/assistant-core-regressions
