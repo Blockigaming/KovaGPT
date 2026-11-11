@@ -9,7 +9,7 @@ export type EligibleCampaignRow = {
 };
 
 export declare function selectEligibleCampaignRows<T extends EligibleCampaignRow>(
-  rows: T[] | unknown,
+  rows: T[],
   options: {
     tier: string;
     dismissedIds: ReadonlySet<string>;
