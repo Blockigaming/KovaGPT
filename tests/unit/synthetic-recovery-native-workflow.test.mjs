@@ -54,6 +54,7 @@ function validate(text) {
   assert.equal(job.steps[0].with["persist-credentials"], false);
   const execute = job.steps.find((step) => step.run?.includes("--execute"));
   assert.match(execute.run, /--output.*\/receipt\.json/);
+  assert.doesNotMatch(execute.run, /for attempt in/);
   const cleanup = job.steps.find((step) => step.run?.includes("--cleanup-only"));
   assert.equal(cleanup.if, "always()");
   const uploads = job.steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@"));
@@ -71,6 +72,7 @@ function validate(text) {
   const archiveExecute = archive.steps.find((step) => step.run?.includes("--execute"));
   assert.match(archiveExecute.run, /smoke-generic-operator-archive-native\.py/);
   assert.match(archiveExecute.run, /--output.*\/receipt\.json/);
+  assert.doesNotMatch(archiveExecute.run, /for attempt in/);
   const archiveCleanup = archive.steps.find((step) => step.run?.includes("--cleanup-only"));
   assert.equal(archiveCleanup.if, "always()");
   const archiveUploads = archive.steps.filter((step) =>

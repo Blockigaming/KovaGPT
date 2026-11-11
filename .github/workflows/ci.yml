@@ -16,10 +16,24 @@ concurrency:
 permissions:
   contents: read
 
+# Trust only the checked-out PR working tree inside the job container.
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
+    env:
+      HOME: /root
     timeout-minutes: 35
     outputs:
       run_ci: ${{ steps.scope.outputs.run_ci }}
@@ -143,10 +157,7 @@ jobs:
           set -euo pipefail
           # The Azure mirror stalled two runners before browser tests could run.
           # Keep Ubuntu's signed archives and every browser/check unchanged.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium firefox webkit
+          bash scripts/ci/install-playwright-browsers.sh chromium firefox webkit
 
       - name: Integration tests
         id: integration
@@ -244,10 +255,13 @@ jobs:
     if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     needs: verify
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     # The desktop shard traverses the complete public detail catalog in both
     # themes. Keep its full coverage when browser dependency downloads are slow.
     timeout-minutes: 45
     env:
+      HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "public"
       PLAYWRIGHT_PREBUILT: "1"
@@ -267,10 +281,7 @@ jobs:
       - run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium
+          bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Complete public route and detail checks
         run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
       - name: Preserve public suite evidence
@@ -286,26 +297,42 @@ jobs:
     name: ${{ matrix.check_name }}
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     # The tablet job runs three full browser projects on two workers.
     # Allow it to finish on slower runners without changing per-test limits.
     timeout-minutes: ${{ matrix.id == 'tablet' && 65 || 45 }}
     env:
+      HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Distribute the complete five-viewport mobile suite across four
+          # disjoint shards. Two shards exceeded the 45-minute job limit
+          # during normal passing tests; preserve every project and assertion.
           - id: phone-a
             check_name: Phone shard (phone-a)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 1/2
+            shard: 1/4
           - id: phone-b
             check_name: Phone shard (phone-b)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 2/2
+            shard: 2/4
+          - id: phone-c
+            check_name: Phone shard (phone-c)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 3/4
+          - id: phone-d
+            check_name: Phone shard (phone-d)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 4/4
           - id: tablet
             check_name: Browser (tablet)
             projects: >-
@@ -354,10 +381,7 @@ jobs:
         run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium
+          bash scripts/ci/install-playwright-browsers.sh chromium
 
       - name: Browser tests
         env:
@@ -390,15 +414,18 @@ jobs:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && !cancelled()
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     # Keep all four release checks and allow the largest shard to finish and upload its report.
     timeout-minutes: 60
     env:
+      HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       # Keep the existing required check names red if any public shard fails or is skipped.
       - name: Require complete public coverage
@@ -414,11 +441,8 @@ jobs:
       - run: |
           set -euo pipefail
           # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
-          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          fi
-          npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=list,blob --workers=2
+          bash scripts/ci/install-playwright-browsers.sh chromium
+      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/8 --reporter=list,blob --workers=2
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
