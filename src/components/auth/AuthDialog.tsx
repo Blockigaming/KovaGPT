@@ -263,7 +263,7 @@ export function AuthDialog({
         if (error) throw error;
         setStep("magic-sent");
         setCooldown(RESEND_COOLDOWN_SECONDS);
-        if (resend) publishKovaNotice({ id: "email_sent", title: "Another sign-in link requested", confirmed: true });
+        if (resend) publishKovaNotice({ id: "email_verification_required", title: "Another sign-in link requested", message: "Check your inbox if a link was issued for this address." });
       } catch (err) {
         console.error("[KovaAuth] Magic-link request failed", {
           error: err instanceof Error ? err.name : "unknown_error",
