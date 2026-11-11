@@ -15,7 +15,7 @@ test("shared notice UI has responsive themed desktop and mobile geometry", () =>
     "kova-notice-symbol",
     "kova-notice-actions",
     "data-visual={visual}",
-    'aria-modal="true"',
+    "aria-modal={nonBlocking ? undefined : true}",
     "focus-visible",
   ]) {
     assert.ok((css + "\n" + ui).includes(value), value);
