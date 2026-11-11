@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { X, Bell, Sparkles, CheckCircle2, AlertCircle, ShieldCheck, Info } from "lucide-react";
+import { X, Bell, Sparkles, CheckCircle2, AlertCircle, ShieldCheck, Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { notificationDefinition } from "@/lib/notification-catalog.mjs";
 import { noticeIsDismissed, rememberNoticeDismissal } from "@/lib/notification-dismissal-policy.mjs";
@@ -13,7 +13,7 @@ export type KovaNotice = {
   key?: string;
   campaignId?: string;
   primaryLabel?: string;
-  onPrimary?: () => void;
+  onPrimary?: () => void | Promise<void>;
   secondaryLabel?: string;
   onSecondary?: () => void;
   onDismiss?: () => void;
@@ -42,6 +42,9 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   const [editing, setEditing] = useState(false);
   const [composing, setComposing] = useState(false);
   const [liveMessage, setLiveMessage] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const touchStartRef = useRef<{ x: number; y: number; fromHandle: boolean } | null>(null);
   const active = pending[0] ?? null;
   const panelRef = useRef<HTMLElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -55,6 +58,25 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     }
     setPending((items) => items.slice(1));
   }, [active, accountId]);
+
+  useEffect(() => {
+    setActionBusy(false);
+    setActionError("");
+  }, [active?.key, active?.id]);
+
+  const performPrimary = useCallback(async () => {
+    if (!active?.onPrimary || actionBusy) return;
+    setActionBusy(true);
+    setActionError("");
+    try {
+      await active.onPrimary();
+      dismiss();
+    } catch {
+      setActionError("That action could not be completed. Please try again.");
+    } finally {
+      setActionBusy(false);
+    }
+  }, [active, actionBusy, dismiss]);
 
   useEffect(() => {
     const focus = (event: FocusEvent) => setEditing(composingIn(event.target));
@@ -157,7 +179,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   useEffect(() => {
     if (!shown || !active) return;
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && definition?.dismissible) {
+      if (event.key === "Escape" && definition?.dismissible && !actionBusy) {
         event.preventDefault();
         dismiss();
         return;
@@ -176,7 +198,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     };
     window.addEventListener("keydown", keydown, true);
     return () => window.removeEventListener("keydown", keydown, true);
-  }, [shown, active, definition, dismiss]);
+  }, [shown, active, definition, dismiss, actionBusy]);
 
   if (!shown || !active || !definition) return <span className="sr-only" role="status" aria-live="polite">{liveMessage}</span>;
   return (
@@ -184,7 +206,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     <span className="sr-only" role="status" aria-live="polite">{liveMessage}</span>
     <div className="kova-notice-backdrop" role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && definition.dismissible) dismiss();
+        if (event.target === event.currentTarget && definition.dismissible && !actionBusy) dismiss();
       }}>
       <section
         ref={panelRef}
@@ -196,23 +218,46 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         data-surface={definition.surface}
         data-group={definition.group}
         data-visual={visual}
+        aria-busy={actionBusy}
+        onTouchStart={(event) => {
+          if (!definition.dismissible || actionBusy || event.touches.length !== 1) return;
+          const box = panelRef.current?.getBoundingClientRect();
+          if (!box) return;
+          touchStartRef.current = {
+            x: event.touches[0].clientX,
+            y: event.touches[0].clientY,
+            fromHandle: event.touches[0].clientY - box.top <= 42 && panelRef.current?.scrollTop === 0,
+          };
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStartRef.current;
+          touchStartRef.current = null;
+          if (!start?.fromHandle || actionBusy || !definition.dismissible || event.changedTouches.length !== 1) return;
+          const dx = event.changedTouches[0].clientX - start.x;
+          const dy = event.changedTouches[0].clientY - start.y;
+          if (dy > 100 && Math.abs(dx) < 55 && window.matchMedia("(max-width: 640px)").matches) dismiss();
+        }}
       >
         <div className="kova-notice-symbol" aria-hidden="true"><NoticeIcon size={21} strokeWidth={1.8}/></div>
         {definition.dismissible && (
           <button className="kova-notice-close" type="button" aria-label="Close notification"
+            disabled={actionBusy}
             onClick={dismiss}><X size={19} /></button>
         )}
         {definition.group === "announcements" && <p className="kova-notice-eyebrow">What's new</p>}
         <h2 id="kova-notice-title">{active.title}</h2>
         {active.message && <p className="kova-notice-description" id="kova-notice-body">{active.message}</p>}
+        {actionError && <p className="kova-notice-action-error" role="alert">{actionError}</p>}
         <div className="kova-notice-actions">
           {active.onPrimary && active.primaryLabel && (
-            <button className="kova-notice-primary" type="button" onClick={() => {
-              active.onPrimary?.(); dismiss();
-            }}>{active.primaryLabel}</button>
+            <button className="kova-notice-primary" type="button"
+              disabled={actionBusy} onClick={() => void performPrimary()}>
+              {actionBusy && <Loader2 aria-hidden="true" className="kova-notice-spinner" size={16}/>}
+              {actionBusy ? "Working…" : active.primaryLabel}
+            </button>
           )}
           {definition.dismissible && (
-            <button className="kova-notice-secondary" type="button" onClick={() => {
+            <button className="kova-notice-secondary" type="button" disabled={actionBusy} onClick={() => {
               active.onSecondary?.(); dismiss();
             }}>{active.secondaryLabel || "Not now"}</button>
           )}
