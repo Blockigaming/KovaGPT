@@ -1,9 +1,18 @@
 import { useState } from "react";
 import { UsersRound } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { submitWorkspaceJoinRequest, type AvailableWorkspace } from "@/lib/workspace-join.functions";
+import {
+  submitWorkspaceJoinRequest,
+  type AvailableWorkspace,
+} from "@/lib/workspace-join.functions";
 
 export function WorkspaceJoinDialog({
   workspaces,
@@ -21,16 +30,20 @@ export function WorkspaceJoinDialog({
   if (!workspaces.length) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(next) => {
-      if (!next && !submitting) {
-        setError(null);
-        onClose();
-      }
-    }}>
-      <DialogContent
-        className="max-w-[460px] gap-0 rounded-[22px] border border-border bg-popover p-6 text-popover-foreground max-sm:!bottom-0 max-sm:!top-auto max-sm:!left-0 max-sm:!w-full max-sm:!max-w-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-[26px] max-sm:!px-5 max-sm:!pb-[calc(20px+env(safe-area-inset-bottom))]"
-      >
-        <div className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-secondary" aria-hidden="true">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !submitting) {
+          setError(null);
+          onClose();
+        }
+      }}
+    >
+      <DialogContent className="max-w-[460px] gap-0 rounded-[22px] border border-border bg-popover p-6 text-popover-foreground max-sm:!bottom-0 max-sm:!top-auto max-sm:!left-0 max-sm:!w-full max-sm:!max-w-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-[26px] max-sm:!px-5 max-sm:!pb-[calc(20px+env(safe-area-inset-bottom))]">
+        <div
+          className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-secondary"
+          aria-hidden="true"
+        >
           <UsersRound className="h-5 w-5" strokeWidth={1.8} />
         </div>
         <DialogHeader className="space-y-2">
@@ -38,8 +51,8 @@ export function WorkspaceJoinDialog({
             Join your workspace?
           </DialogTitle>
           <DialogDescription className="text-sm leading-6">
-            A KovaGPT workspace has verified your email domain. Request access from
-            its administrator; joining is never automatic.
+            A KovaGPT workspace has verified your email domain. Request access from its
+            administrator; joining is never automatic.
           </DialogDescription>
         </DialogHeader>
 
@@ -48,26 +61,35 @@ export function WorkspaceJoinDialog({
             const pending = workspace.request_status === "pending";
             const approved = workspace.request_status === "approved";
             return (
-              <div key={workspace.team_id}
-                className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 p-3">
+              <div
+                key={workspace.team_id}
+                className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 p-3"
+              >
                 <div className="min-w-0 flex-1">
                   <strong className="block truncate text-sm">{workspace.team_name}</strong>
                   <span className="text-xs leading-5 text-muted-foreground">
-                    {pending ? "Request awaiting review"
-                      : approved ? "Approved — administrator invitation required"
+                    {pending
+                      ? "Request awaiting review"
+                      : approved
+                        ? "Approved — administrator invitation required"
                         : workspace.request_status === "denied"
                           ? "A previous request was denied"
                           : "Verified domain association"}
                   </span>
                 </div>
-                <Button type="button" size="sm" className="min-h-11 rounded-full px-4"
+                <Button
+                  type="button"
+                  size="sm"
+                  className="min-h-11 rounded-full px-4"
                   disabled={pending || approved || submitting !== null}
                   aria-label={`Request to join ${workspace.team_name}`}
                   onClick={async () => {
                     setError(null);
                     setSubmitting(workspace.team_id);
                     try {
-                      const result = await submitWorkspaceJoinRequest({ data: { teamId: workspace.team_id } });
+                      const result = await submitWorkspaceJoinRequest({
+                        data: { teamId: workspace.team_id },
+                      });
                       if (result.status !== "pending") throw new Error("Unconfirmed request");
                       onRequested(workspace.team_id);
                       publishKovaNotice({
@@ -77,24 +99,41 @@ export function WorkspaceJoinDialog({
                         confirmed: true,
                       });
                     } catch {
-                      setError("Your request could not be confirmed. Check your connection and try again.");
+                      setError(
+                        "Your request could not be confirmed. Check your connection and try again.",
+                      );
                     } finally {
                       setSubmitting(null);
                     }
-                  }}>
-                  {submitting === workspace.team_id ? "Sending…"
-                    : pending ? "Requested"
-                      : approved ? "Approved" : "Request to join"}
+                  }}
+                >
+                  {submitting === workspace.team_id
+                    ? "Sending…"
+                    : pending
+                      ? "Requested"
+                      : approved
+                        ? "Approved"
+                        : "Request to join"}
                 </Button>
               </div>
             );
           })}
         </div>
-        {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
-        <Button type="button" variant="secondary"
+        {error && (
+          <p role="alert" className="mt-4 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
           className="mt-6 min-h-12 w-full rounded-full"
           disabled={submitting !== null}
-          onClick={() => { setError(null); onClose(); }}>
+          onClick={() => {
+            setError(null);
+            onClose();
+          }}
+        >
           Not now
         </Button>
       </DialogContent>

@@ -93,7 +93,11 @@ function AccountEmailControls({ ownerId }: { ownerId: string | null }) {
       if (current === generation.current) {
         setPreferences(value);
         setSaved("Email preference saved.");
-        publishKovaNotice({ id: "notification_preferences_updated", title: "Email preferences saved", confirmed: true });
+        publishKovaNotice({
+          id: "notification_preferences_updated",
+          title: "Email preferences saved",
+          confirmed: true,
+        });
       }
     } catch {
       if (current === generation.current) {

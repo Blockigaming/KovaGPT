@@ -51,7 +51,9 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
             ...(actionUrl
               ? {
                   primaryLabel: "View",
-                  onPrimary: () => { window.location.assign(actionUrl); },
+                  onPrimary: () => {
+                    window.location.assign(actionUrl);
+                  },
                 }
               : {}),
             onDismiss: () => {
@@ -67,7 +69,9 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
       }
     };
     void check();
-    const focus = () => { if (document.visibilityState === "visible") void check(); };
+    const focus = () => {
+      if (document.visibilityState === "visible") void check();
+    };
     window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", focus);
     return () => {

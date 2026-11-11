@@ -6,11 +6,27 @@
  * all checks against current membership, domain verification, and permissions.
  */
 const PERSONAL_DOMAINS = new Set([
-  "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk",
-  "ymail.com", "rocketmail.com", "outlook.com", "hotmail.com",
-  "live.com", "msn.com", "aol.com", "icloud.com", "me.com",
-  "mac.com", "proton.me", "protonmail.com", "pm.me", "mail.com",
-  "gmx.com", "gmx.net", "zoho.com",
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "yahoo.co.uk",
+  "ymail.com",
+  "rocketmail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "msn.com",
+  "aol.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "proton.me",
+  "protonmail.com",
+  "pm.me",
+  "mail.com",
+  "gmx.com",
+  "gmx.net",
+  "zoho.com",
 ]);
 
 export function normalizedEmailDomain(email) {

@@ -1,10 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import {
-  NOTIFICATION_IDS,
-  notificationDefinition,
-} from "../../src/lib/notification-catalog.mjs";
+import { NOTIFICATION_IDS, notificationDefinition } from "../../src/lib/notification-catalog.mjs";
 
 const source = (path) => readFileSync(path, "utf8");
 
@@ -26,10 +23,16 @@ test("real feature operations emit exact source-backed notices", () => {
     "src/components/ScheduledTaskEditor.tsx": ["task_created", "task_updated"],
     "src/routes/scheduled-tasks.tsx": ["task_deleted", "task_paused", "task_resumed"],
     "src/components/WorkspaceJoinDialog.tsx": ["workspace_join_requested"],
-    "src/components/WorkspaceJoinAdminPanel.tsx": ["workspace_join_approved", "workspace_join_denied"],
+    "src/components/WorkspaceJoinAdminPanel.tsx": [
+      "workspace_join_approved",
+      "workspace_join_denied",
+    ],
     "src/components/KovaPasswordPanel.tsx": ["password_updated"],
     "src/components/AccountEmailPreferences.tsx": ["notification_preferences_updated"],
-    "src/components/ProjectCollaboration.tsx": ["project_comment_posted", "project_comment_deleted"],
+    "src/components/ProjectCollaboration.tsx": [
+      "project_comment_posted",
+      "project_comment_deleted",
+    ],
   };
   for (const [path, ids] of Object.entries(expected)) {
     const content = source(path);
@@ -42,7 +45,9 @@ test("real feature operations emit exact source-backed notices", () => {
 });
 
 test("workspace discovery requires verified domain, not an email suffix heuristic", () => {
-  const sql = source("supabase/migrations/20261110224500_verified_team_workspace_join_requests.sql");
+  const sql = source(
+    "supabase/migrations/20261110224500_verified_team_workspace_join_requests.sql",
+  );
   assert.match(sql, /team_verified_domains/);
   assert.match(sql, /team_verified_email\(p_actor\)/);
   assert.match(sql, /team_join_requests/);

@@ -21,16 +21,25 @@ export const getFreeOfferEligibility = createServerFn({ method: "GET" })
     const db = loose(supabaseAdmin);
     try {
       const [summaryResult, redemption, pending] = await Promise.all([
-        db.rpc("kova_monthly_subscription_summary", {
-          p_user: owner,
-          p_plus_price: BILLING_PLANS.plus_monthly.livePriceId,
-          p_pro_price: BILLING_PLANS.pro_monthly.livePriceId,
-        }).abortSignal(AbortSignal.timeout(10000)),
-        db.from("kova_policy_intro_redemptions")
-          .select("user_id").eq("user_id", owner).limit(1)
+        db
+          .rpc("kova_monthly_subscription_summary", {
+            p_user: owner,
+            p_plus_price: BILLING_PLANS.plus_monthly.livePriceId,
+            p_pro_price: BILLING_PLANS.pro_monthly.livePriceId,
+          })
           .abortSignal(AbortSignal.timeout(10000)),
-        db.from("kova_policy_checkout_claims")
-          .select("id").eq("user_id", owner).in("state", ["pending", "open"]).limit(1)
+        db
+          .from("kova_policy_intro_redemptions")
+          .select("user_id")
+          .eq("user_id", owner)
+          .limit(1)
+          .abortSignal(AbortSignal.timeout(10000)),
+        db
+          .from("kova_policy_checkout_claims")
+          .select("id")
+          .eq("user_id", owner)
+          .in("state", ["pending", "open"])
+          .limit(1)
           .abortSignal(AbortSignal.timeout(10000)),
       ]);
       if (summaryResult.error || redemption.error || pending.error) return { eligible: false };

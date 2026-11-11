@@ -276,14 +276,22 @@ export function ComposerVoiceDialog({
     handled?: boolean;
   } | null>(null);
 
-  const updatePhase = useCallback((next: Phase) => {
-    const previous = phaseRef.current;
-    phaseRef.current = next;
-    setPhase(next);
-    if (previous === next) return;
-    if (next === "recording") publishKovaNotice({ id: mode === "voice" ? "voice_listening" : "dictation_started", title: mode === "voice" ? "Voice listening" : "Dictation recording" });
-    if (next === "transcribing") publishKovaNotice({ id: "dictation_started", title: "Transcribing recording" });
-  }, [mode]);
+  const updatePhase = useCallback(
+    (next: Phase) => {
+      const previous = phaseRef.current;
+      phaseRef.current = next;
+      setPhase(next);
+      if (previous === next) return;
+      if (next === "recording")
+        publishKovaNotice({
+          id: mode === "voice" ? "voice_listening" : "dictation_started",
+          title: mode === "voice" ? "Voice listening" : "Dictation recording",
+        });
+      if (next === "transcribing")
+        publishKovaNotice({ id: "dictation_started", title: "Transcribing recording" });
+    },
+    [mode],
+  );
 
   const clearRecordingTimers = useCallback(() => {
     if (recordingDeadline.current !== null) clearTimeout(recordingDeadline.current);
@@ -477,7 +485,15 @@ export function ComposerVoiceDialog({
       updatePhase("idle");
       setAudioUrl("");
       setError(message);
-      const eventId = /usage|limit|allowance/i.test(message) ? "voice_limit" : /microphone.*(denied|blocked)|permission/i.test(message) ? "microphone_blocked" : /unavailable|not configured/i.test(message) ? "voice_unavailable" : mode === "dictate" ? "dictation_failed" : "voice_disconnected";
+      const eventId = /usage|limit|allowance/i.test(message)
+        ? "voice_limit"
+        : /microphone.*(denied|blocked)|permission/i.test(message)
+          ? "microphone_blocked"
+          : /unavailable|not configured/i.test(message)
+            ? "voice_unavailable"
+            : mode === "dictate"
+              ? "dictation_failed"
+              : "voice_disconnected";
       publishKovaNotice({ id: eventId, title: "Voice needs attention", message });
     },
     [releaseResources, updatePhase, mode],
@@ -722,7 +738,11 @@ export function ComposerVoiceDialog({
         // without a second transcript review or an automatic Send action.
         closing.current = true;
         onTranscript(result.text.trim());
-        publishKovaNotice({ id: "dictation_ready", title: "Dictation inserted into your message", confirmed: true });
+        publishKovaNotice({
+          id: "dictation_ready",
+          title: "Dictation inserted into your message",
+          confirmed: true,
+        });
         closeDialog(false);
       } else {
         updatePhase("idle");

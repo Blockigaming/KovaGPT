@@ -3,9 +3,14 @@
  * to apply a discount. Checkout independently verifies eligibility.
  */
 export function canDisplayFreeIntroOffer({
-  summary, redeemed, pendingClaim, billingEnabled, couponConfigured,
+  summary,
+  redeemed,
+  pendingClaim,
+  billingEnabled,
+  couponConfigured,
 } = {}) {
-  return billingEnabled === true &&
+  return (
+    billingEnabled === true &&
     couponConfigured === true &&
     summary !== null &&
     typeof summary === "object" &&
@@ -17,5 +22,6 @@ export function canDisplayFreeIntroOffer({
     summary.billingSetupIncomplete !== true &&
     summary.trialing !== true &&
     redeemed === false &&
-    pendingClaim === false;
+    pendingClaim === false
+  );
 }

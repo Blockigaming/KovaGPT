@@ -95,7 +95,11 @@ export function ShareChatDialog({
       await navigator.clipboard.writeText(created.url);
       if (current.current !== expected || controller.signal.aborted) return;
       setCopied(true);
-      publishKovaNotice({ id: "sharing_link_copied", title: "Public view-only link copied", confirmed: true });
+      publishKovaNotice({
+        id: "sharing_link_copied",
+        title: "Public view-only link copied",
+        confirmed: true,
+      });
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted)
         setError(

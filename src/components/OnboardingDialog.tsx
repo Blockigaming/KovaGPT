@@ -219,7 +219,11 @@ export function OnboardingDialog({
         onStarterSelected?.(starter);
       }
       setOpen(false);
-      publishKovaNotice({ id: "settings_updated", title: "Setup completed", message: "Your preferences have been saved." });
+      publishKovaNotice({
+        id: "settings_updated",
+        title: "Setup completed",
+        message: "Your preferences have been saved.",
+      });
       await navigate({ to: "/" });
       window.requestAnimationFrame(() => {
         document

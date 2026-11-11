@@ -348,11 +348,21 @@ function ScheduledTaskEditorBody({
         });
         if (active.current) {
           onCreated?.(persistedTask);
-          publishKovaNotice({ id: "task_created", title: "Scheduled task created", message: persistedTask.title, confirmed: true });
+          publishKovaNotice({
+            id: "task_created",
+            title: "Scheduled task created",
+            message: persistedTask.title,
+            confirmed: true,
+          });
         }
       } else if (operation.kind === "update") {
         await update({ data: { ...operation.data, expectedUserId: userKey } });
-        if (active.current) publishKovaNotice({ id: "task_updated", title: "Scheduled task updated", confirmed: true });
+        if (active.current)
+          publishKovaNotice({
+            id: "task_updated",
+            title: "Scheduled task updated",
+            confirmed: true,
+          });
       } else await share({ data: { ...operation.data, expectedUserId: userKey } });
       if (!active.current) return;
       pending.current = null;

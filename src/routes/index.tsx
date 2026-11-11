@@ -2254,8 +2254,10 @@ function KovaGPT() {
             if (delta?.kind === "activity" && delta?.label) {
               if (typeof delta.tool === "string") {
                 const eventId =
-                  delta.tool === "web_search" ? "search_started"
-                    : delta.tool === "data_analysis" || delta.tool === "file_analysis" ? "analysis_started"
+                  delta.tool === "web_search"
+                    ? "search_started"
+                    : delta.tool === "data_analysis" || delta.tool === "file_analysis"
+                      ? "analysis_started"
                       : null;
                 if (eventId && !notifiedServerActivities.has(eventId)) {
                   notifiedServerActivities.add(eventId);
@@ -2434,14 +2436,29 @@ function KovaGPT() {
 
           if (isCurrentRetryScope()) {
             const failureEvent = quotaRejected
-              ? /image/i.test(raw) ? "image_limit" : /upload|file/i.test(raw) ? "upload_limit" : "assistant_limit"
-              : sessionExpired ? "session_expired"
-              : category === "rate_limit" ? "rate_limited"
-              : category === "model_timeout" ? "request_timeout"
-              : category === "model_provider_failure" ? "model_unavailable"
-              : err.code === "web_search_unavailable" ? "search_failed"
-              : isNetwork ? "network_offline" : "generic_failure";
-            publishKovaNotice({ id: failureEvent, title: friendly, message: "Your draft and any partial response are preserved." });
+              ? /image/i.test(raw)
+                ? "image_limit"
+                : /upload|file/i.test(raw)
+                  ? "upload_limit"
+                  : "assistant_limit"
+              : sessionExpired
+                ? "session_expired"
+                : category === "rate_limit"
+                  ? "rate_limited"
+                  : category === "model_timeout"
+                    ? "request_timeout"
+                    : category === "model_provider_failure"
+                      ? "model_unavailable"
+                      : err.code === "web_search_unavailable"
+                        ? "search_failed"
+                        : isNetwork
+                          ? "network_offline"
+                          : "generic_failure";
+            publishKovaNotice({
+              id: failureEvent,
+              title: friendly,
+              message: "Your draft and any partial response are preserved.",
+            });
           }
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           if (sessionExpired && isCurrentRetryScope())

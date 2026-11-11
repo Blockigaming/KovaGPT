@@ -3,7 +3,7 @@
  * it must never invent product availability, usage limits or a completed server action.
  */
 export const NOTIFICATION_GROUPS = {
-  "announcements": [
+  announcements: [
     "whats_new",
     "new_features",
     "try_feature",
@@ -26,9 +26,9 @@ export const NOTIFICATION_GROUPS = {
     "appearance_options_new",
     "app_update",
     "feature_changing",
-    "feature_retired"
+    "feature_retired",
   ],
-  "onboarding": [
+  onboarding: [
     "welcome",
     "welcome_back",
     "first_conversation",
@@ -40,9 +40,9 @@ export const NOTIFICATION_GROUPS = {
     "guided_tour",
     "tour_finished",
     "quick_tip",
-    "did_you_know"
+    "did_you_know",
   ],
-  "models": [
+  models: [
     "thinking_limit",
     "thinking_almost_exhausted",
     "reasoning_restricted",
@@ -54,9 +54,9 @@ export const NOTIFICATION_GROUPS = {
     "message_too_long",
     "conversation_full",
     "conversation_continue",
-    "usage_restored"
+    "usage_restored",
   ],
-  "billing": [
+  billing: [
     "upgrade_available",
     "more_reasoning",
     "more_images",
@@ -69,9 +69,9 @@ export const NOTIFICATION_GROUPS = {
     "subscription_updated",
     "offer_available",
     "offer_claimed",
-    "offer_ineligible"
+    "offer_ineligible",
   ],
-  "images": [
+  images: [
     "image_limit",
     "image_started",
     "image_generating",
@@ -90,9 +90,9 @@ export const NOTIFICATION_GROUPS = {
     "unsupported_image",
     "sketch_unsaved",
     "image_copied",
-    "image_save_failed"
+    "image_save_failed",
   ],
-  "files": [
+  files: [
     "file_selected",
     "upload_started",
     "upload_completed",
@@ -113,9 +113,9 @@ export const NOTIFICATION_GROUPS = {
     "file_inaccessible",
     "paste_converted",
     "library_load_failed",
-    "no_matching_files"
+    "no_matching_files",
   ],
-  "voice": [
+  voice: [
     "voice_select",
     "microphone_permission",
     "microphone_blocked",
@@ -135,9 +135,9 @@ export const NOTIFICATION_GROUPS = {
     "dictation_started",
     "dictation_ready",
     "dictation_failed",
-    "voice_unavailable"
+    "voice_unavailable",
   ],
-  "tools": [
+  tools: [
     "search_started",
     "search_completed",
     "search_failed",
@@ -153,9 +153,9 @@ export const NOTIFICATION_GROUPS = {
     "chart_created",
     "widget_failed",
     "source_auth_needed",
-    "search_no_results"
+    "search_no_results",
   ],
-  "tasks": [
+  tasks: [
     "task_created",
     "task_updated",
     "task_paused",
@@ -174,9 +174,9 @@ export const NOTIFICATION_GROUPS = {
     "notifications_permission",
     "notifications_blocked",
     "notification_preferences_updated",
-    "shared_task_unavailable"
+    "shared_task_unavailable",
   ],
-  "collaboration": [
+  collaboration: [
     "project_created",
     "project_updated",
     "project_deleted",
@@ -205,9 +205,9 @@ export const NOTIFICATION_GROUPS = {
     "workspace_join_requested",
     "workspace_join_approved",
     "workspace_join_denied",
-    "workspace_join_failed"
+    "workspace_join_failed",
   ],
-  "security": [
+  security: [
     "sign_in_required",
     "session_expired",
     "email_verification_required",
@@ -228,9 +228,9 @@ export const NOTIFICATION_GROUPS = {
     "account_restricted",
     "age_restricted",
     "settings_updated",
-    "theme_changed"
+    "theme_changed",
   ],
-  "status": [
+  status: [
     "copied",
     "saved",
     "changes_updated",
@@ -243,9 +243,9 @@ export const NOTIFICATION_GROUPS = {
     "save_failed",
     "request_canceled",
     "unsupported_content",
-    "update_required"
+    "update_required",
   ],
-  "feedback": [
+  feedback: [
     "feedback_requested",
     "feedback_details",
     "feedback_sent",
@@ -253,13 +253,13 @@ export const NOTIFICATION_GROUPS = {
     "report_problem",
     "feature_feedback",
     "rating_requested",
-    "survey_requested"
-  ]
+    "survey_requested",
+  ],
 };
-NOTIFICATION_GROUPS.collaboration.push("project_comment_posted","project_comment_deleted");
+NOTIFICATION_GROUPS.collaboration.push("project_comment_posted", "project_comment_deleted");
 export const NOTIFICATION_IDS = Object.freeze(Object.values(NOTIFICATION_GROUPS).flat());
 const surfaces = {
-  "modal": [
+  modal: [
     "confirm_file_delete",
     "confirm_project_delete",
     "confirm_leave_project",
@@ -268,15 +268,10 @@ const surfaces = {
     "confirm_account_delete",
     "security_check",
     "unusual_activity",
-    "guided_tour"
+    "guided_tour",
   ],
-  "sheet": [
-    "join_workspace_offer",
-    "offer_available",
-    "choose_subscription",
-    "voice_select"
-  ],
-  "inline": [
+  sheet: ["join_workspace_offer", "offer_available", "choose_subscription", "voice_select"],
+  inline: [
     "upload_failed",
     "upload_limit",
     "image_failed",
@@ -288,9 +283,9 @@ const surfaces = {
     "task_failed",
     "source_unavailable",
     "save_failed",
-    "history_failed"
+    "history_failed",
   ],
-  "status": [
+  status: [
     "image_started",
     "image_generating",
     "image_delayed",
@@ -302,9 +297,9 @@ const surfaces = {
     "voice_listening",
     "voice_speaking",
     "voice_muted",
-    "voice_reconnecting"
+    "voice_reconnecting",
   ],
-  "toast": [
+  toast: [
     "copied",
     "saved",
     "changes_updated",
@@ -318,33 +313,106 @@ const surfaces = {
     "workspace_join_requested",
     "workspace_join_approved",
     "subscription_updated",
-    "settings_updated"
-  ]
+    "settings_updated",
+  ],
 };
-surfaces.status.push("file_selected","file_processing","voice_ended","search_started","search_completed","analysis_started","notifications_permission");
-surfaces.inline.push("session_expired","assistant_limit","tool_limit","rate_limited","model_unavailable","request_timeout","network_offline","generic_failure");
-surfaces.toast.push("connection_failed","connection_canceled");
-const CONFIRMATION = new Set(["confirm_file_delete","confirm_project_delete","confirm_leave_project","disconnect_confirm","confirm_chat_delete","confirm_account_delete"]);
-const ERROR_WORDS = /(?:failed|unavailable|expired|invalid|blocked|timeout|offline|denied|restricted|error)$/;
-const REQUIRE_ACTUAL_STATE = new Set(["offer_available","offer_claimed","workspace_join_requested","workspace_join_approved","task_completed","subscription_updated","upload_completed","image_ready","animation_ready","connection_success"]);
+surfaces.status.push(
+  "file_selected",
+  "file_processing",
+  "voice_ended",
+  "search_started",
+  "search_completed",
+  "analysis_started",
+  "notifications_permission",
+);
+surfaces.inline.push(
+  "session_expired",
+  "assistant_limit",
+  "tool_limit",
+  "rate_limited",
+  "model_unavailable",
+  "request_timeout",
+  "network_offline",
+  "generic_failure",
+);
+surfaces.toast.push("connection_failed", "connection_canceled");
+const CONFIRMATION = new Set([
+  "confirm_file_delete",
+  "confirm_project_delete",
+  "confirm_leave_project",
+  "disconnect_confirm",
+  "confirm_chat_delete",
+  "confirm_account_delete",
+]);
+const ERROR_WORDS =
+  /(?:failed|unavailable|expired|invalid|blocked|timeout|offline|denied|restricted|error)$/;
+const REQUIRE_ACTUAL_STATE = new Set([
+  "offer_available",
+  "offer_claimed",
+  "workspace_join_requested",
+  "workspace_join_approved",
+  "task_completed",
+  "subscription_updated",
+  "upload_completed",
+  "image_ready",
+  "animation_ready",
+  "connection_success",
+]);
 export function notificationDefinition(id) {
   if (!NOTIFICATION_IDS.includes(id)) return null;
-  const group = Object.keys(NOTIFICATION_GROUPS).find(k => NOTIFICATION_GROUPS[k].includes(id));
-  const surface = Object.keys(surfaces).find(k => surfaces[k].includes(id)) || (ERROR_WORDS.test(id) || /(?:_limit|_failed|_unavailable|_restricted|_blocked|_expired)$/.test(id) ? "inline" : ["announcements","onboarding","feedback"].includes(group) ? "card" : /(?:started|starting|running|processing|connecting|reconnecting|generating)$/.test(id) ? "status" : "toast");
-  return Object.freeze({ id, group, surface,
-    priority: CONFIRMATION.has(id) ? 1 : surface === "inline" ? 4 : group === "announcements" ? 9 : 8,
+  const group = Object.keys(NOTIFICATION_GROUPS).find((k) => NOTIFICATION_GROUPS[k].includes(id));
+  const surface =
+    Object.keys(surfaces).find((k) => surfaces[k].includes(id)) ||
+    (ERROR_WORDS.test(id) ||
+    /(?:_limit|_failed|_unavailable|_restricted|_blocked|_expired)$/.test(id)
+      ? "inline"
+      : ["announcements", "onboarding", "feedback"].includes(group)
+        ? "card"
+        : /(?:started|starting|running|processing|connecting|reconnecting|generating)$/.test(id)
+          ? "status"
+          : "toast");
+  return Object.freeze({
+    id,
+    group,
+    surface,
+    priority: CONFIRMATION.has(id)
+      ? 1
+      : surface === "inline"
+        ? 4
+        : group === "announcements"
+          ? 9
+          : 8,
     requiresEvidence: REQUIRE_ACTUAL_STATE.has(id),
     dismissible: true,
     exclusive: CONFIRMATION.has(id) || surface === "modal" || surface === "sheet",
-    liveRegion: ERROR_WORDS.test(id) ? "assertive" : "polite" });
+    liveRegion: ERROR_WORDS.test(id) ? "assertive" : "polite",
+  });
 }
-export function selectNotificationQueue(events, { activeExclusive = false, isComposing = false } = {}) {
+export function selectNotificationQueue(
+  events,
+  { activeExclusive = false, isComposing = false } = {},
+) {
   const seen = new Set();
   return (Array.isArray(events) ? events : [])
-    .filter(e => e && typeof e.id === "string" && notificationDefinition(e.id))
-    .filter(e => !notificationDefinition(e.id).requiresEvidence || e.confirmed === true)
-    .filter(e => { const key = e.key || e.id; if (seen.has(key)) return false; seen.add(key); return true; })
-    .filter(e => !(isComposing && ["announcements","onboarding","feedback"].includes(notificationDefinition(e.id).group)))
-    .sort((a,b)=>notificationDefinition(a.id).priority-notificationDefinition(b.id).priority)
-    .filter((e,i) => !(activeExclusive && notificationDefinition(e.id).exclusive) && (!notificationDefinition(e.id).exclusive || i === 0));
+    .filter((e) => e && typeof e.id === "string" && notificationDefinition(e.id))
+    .filter((e) => !notificationDefinition(e.id).requiresEvidence || e.confirmed === true)
+    .filter((e) => {
+      const key = e.key || e.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .filter(
+      (e) =>
+        !(
+          isComposing &&
+          ["announcements", "onboarding", "feedback"].includes(notificationDefinition(e.id).group)
+        ),
+    )
+    .sort((a, b) => notificationDefinition(a.id).priority - notificationDefinition(b.id).priority)
+    .filter(
+      (e, i) =>
+        !(activeExclusive && notificationDefinition(e.id).exclusive) &&
+        (!notificationDefinition(e.id).exclusive || i === 0),
+    );
 }

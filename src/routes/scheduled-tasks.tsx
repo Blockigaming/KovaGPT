@@ -292,10 +292,19 @@ function ScheduledTasksPage() {
               publishKovaNotice({ id: "task_started", title: "Task started", message: item.title });
               shown++;
             } else if (item.status === "completed" && item.last_run_at) {
-              publishKovaNotice({ id: "task_completed", title: "Task completed", message: item.title, confirmed: true });
+              publishKovaNotice({
+                id: "task_completed",
+                title: "Task completed",
+                message: item.title,
+                confirmed: true,
+              });
               shown++;
             } else if (item.status === "failed") {
-              publishKovaNotice({ id: "task_failed", title: "Task failed", message: "Open its run history to review the error." });
+              publishKovaNotice({
+                id: "task_failed",
+                title: "Task failed",
+                message: "Open its run history to review the error.",
+              });
               shown++;
             }
           }
@@ -629,8 +638,22 @@ function ScheduledTasksPage() {
         );
       }
       publishKovaNotice({
-        id: action === "delete" ? "task_deleted" : action === "paused" ? "task_paused" : action === "retry" ? "task_updated" : "task_resumed",
-        title: action === "delete" ? "Task deleted" : action === "paused" ? "Task paused" : action === "retry" ? "Task queued to retry" : "Task resumed",
+        id:
+          action === "delete"
+            ? "task_deleted"
+            : action === "paused"
+              ? "task_paused"
+              : action === "retry"
+                ? "task_updated"
+                : "task_resumed",
+        title:
+          action === "delete"
+            ? "Task deleted"
+            : action === "paused"
+              ? "Task paused"
+              : action === "retry"
+                ? "Task queued to retry"
+                : "Task resumed",
         message: task.title,
         confirmed: true,
         key: "task-action:" + task.id + ":" + action,

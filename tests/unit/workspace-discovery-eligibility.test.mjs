@@ -7,17 +7,27 @@ import {
 
 test("personal addresses never reveal workspace discovery", () => {
   for (const domain of ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"]) {
-    assert.equal(canDiscoverWorkspaces({
-      email: "person@" + domain, emailVerified: true, verifiedWorkspaceDomains: [domain],
-    }), false);
+    assert.equal(
+      canDiscoverWorkspaces({
+        email: "person@" + domain,
+        emailVerified: true,
+        verifiedWorkspaceDomains: [domain],
+      }),
+      false,
+    );
   }
 });
 
 test("custom email alone is insufficient", () => {
   assert.equal(canDiscoverWorkspaces({ email: "a@school.edu", emailVerified: true }), false);
-  assert.equal(canDiscoverWorkspaces({
-    email: "a@school.edu", emailVerified: true, verifiedWorkspaceDomains: ["different.edu"],
-  }), false);
+  assert.equal(
+    canDiscoverWorkspaces({
+      email: "a@school.edu",
+      emailVerified: true,
+      verifiedWorkspaceDomains: ["different.edu"],
+    }),
+    false,
+  );
 });
 
 test("requires verified account and authoritative matching domain", () => {
@@ -28,6 +38,16 @@ test("requires verified account and authoritative matching domain", () => {
 });
 
 test("invalid input fails closed", () => {
-  assert.equal(canDiscoverWorkspaces({ email: "bad", emailVerified: true, verifiedWorkspaceDomains: ["bad"] }), false);
-  assert.equal(canDiscoverWorkspaces({ email: "a@work.org", emailVerified: true, verifiedWorkspaceDomains: null }), false);
+  assert.equal(
+    canDiscoverWorkspaces({ email: "bad", emailVerified: true, verifiedWorkspaceDomains: ["bad"] }),
+    false,
+  );
+  assert.equal(
+    canDiscoverWorkspaces({
+      email: "a@work.org",
+      emailVerified: true,
+      verifiedWorkspaceDomains: null,
+    }),
+    false,
+  );
 });

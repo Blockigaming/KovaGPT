@@ -317,11 +317,17 @@ export function Sidebar({
         try {
           if (window.localStorage.getItem(key)) return;
           window.localStorage.setItem(key, "shown");
-        } catch { /* A blocked storage API should not prevent a useful prompt. */ }
+        } catch {
+          /* A blocked storage API should not prevent a useful prompt. */
+        }
         setWorkspaceJoinOpen(true);
       })
-      .catch(() => { if (!cancelled) setAvailableWorkspaces([]); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setAvailableWorkspaces([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [signedIn, user?.id, verifiedWorkspaceEmail]);
   const railOwner = signedIn ? user?.id : undefined;
   const layout =
@@ -1146,10 +1152,12 @@ export function Sidebar({
         </Link>
       </DropdownMenuItem>
       {availableWorkspaces.length > 0 && (
-        <DropdownMenuItem onSelect={() => {
-          cancelPendingSelection();
-          setWorkspaceJoinOpen(true);
-        }}>
+        <DropdownMenuItem
+          onSelect={() => {
+            cancelPendingSelection();
+            setWorkspaceJoinOpen(true);
+          }}
+        >
           <UsersRound aria-hidden="true" />
           Find workspaces
         </DropdownMenuItem>
@@ -1211,8 +1219,11 @@ export function Sidebar({
           workspaces={availableWorkspaces}
           onClose={() => setWorkspaceJoinOpen(false)}
           onRequested={(teamId) => {
-            setAvailableWorkspaces((items) => items.map((item) =>
-              item.team_id === teamId ? { ...item, request_status: "pending" } : item));
+            setAvailableWorkspaces((items) =>
+              items.map((item) =>
+                item.team_id === teamId ? { ...item, request_status: "pending" } : item,
+              ),
+            );
           }}
         />
       )}
@@ -1865,8 +1876,11 @@ export function Sidebar({
 
           <footer className="kova-sidebar-footer">
             {signedIn && availableWorkspaces.length > 0 && (
-              <button type="button" className="mb-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm hover:bg-accent"
-                onClick={() => setWorkspaceJoinOpen(true)}>
+              <button
+                type="button"
+                className="mb-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm hover:bg-accent"
+                onClick={() => setWorkspaceJoinOpen(true)}
+              >
                 <UsersRound className="h-5 w-5" aria-hidden="true" />
                 <span>Find workspaces</span>
               </button>

@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { X, Bell, Sparkles, CheckCircle2, AlertCircle, ShieldCheck, Info, Loader2 } from "lucide-react";
+import {
+  X,
+  Bell,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
+  Info,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { notificationDefinition } from "@/lib/notification-catalog.mjs";
-import { noticeIsDismissed, rememberNoticeDismissal } from "@/lib/notification-dismissal-policy.mjs";
+import {
+  noticeIsDismissed,
+  rememberNoticeDismissal,
+} from "@/lib/notification-dismissal-policy.mjs";
 import "./kova-notification-surface.css";
 
 export type KovaNotice = {
@@ -27,13 +39,19 @@ export function publishKovaNotice(notice: KovaNotice) {
 }
 
 function optionalNoticeStorage(): Storage | null {
-  try { return window.localStorage; } catch { return null; }
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function composingIn(target: EventTarget | null) {
-  return target instanceof HTMLElement &&
+  return (
+    target instanceof HTMLElement &&
     (target.matches("textarea, input:not([type='button']):not([type='submit'])") ||
-      target.isContentEditable);
+      target.isContentEditable)
+  );
 }
 
 /** A single global host: independent of which feature route is mounted. */
@@ -52,9 +70,16 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     if (active) {
       const group = notificationDefinition(active.id)?.group;
       rememberNoticeDismissal(optionalNoticeStorage(), {
-        accountId, id: active.id, campaignId: active.campaignId, group,
+        accountId,
+        id: active.id,
+        campaignId: active.campaignId,
+        group,
       });
-      try { active.onDismiss?.(); } catch { /* Keep the dialog dismissible on callback failure. */ }
+      try {
+        active.onDismiss?.();
+      } catch {
+        /* Keep the dialog dismissible on callback failure. */
+      }
     }
     setPending((items) => items.slice(1));
   }, [active, accountId]);
@@ -91,14 +116,25 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
     document.addEventListener("compositionend", compositionEnd);
     const handle = (event: Event) => {
       const notice = (event as CustomEvent<KovaNotice>).detail;
-      if (!notice || typeof notice.title !== "string" ||
-          !notice.title.trim() || notice.title.length > 160 ||
-          (notice.message && notice.message.length > 2000)) return;
+      if (
+        !notice ||
+        typeof notice.title !== "string" ||
+        !notice.title.trim() ||
+        notice.title.length > 160 ||
+        (notice.message && notice.message.length > 2000)
+      )
+        return;
       const definition = notificationDefinition(notice.id);
       if (!definition || (definition.requiresEvidence && notice.confirmed !== true)) return;
-      if (noticeIsDismissed(optionalNoticeStorage(), {
-        accountId, id: notice.id, campaignId: notice.campaignId, group: definition.group,
-      })) return;
+      if (
+        noticeIsDismissed(optionalNoticeStorage(), {
+          accountId,
+          id: notice.id,
+          campaignId: notice.campaignId,
+          group: definition.group,
+        })
+      )
+        return;
       const key = notice.key ?? notice.id;
       if (definition.surface === "status" || definition.surface === "inline") {
         // Source components own the visible operational status or inline error.
@@ -107,27 +143,46 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         return;
       }
       if (definition.surface === "toast") {
-        const notificationToast = definition.liveRegion === "assertive"
-          ? toast.error
-          : /(?:_completed|_created|_updated|_sent|_verified|_success|_ready|_restored|_saved|_disconnected)$/.test(notice.id)
-            ? toast.success
-            : toast;
+        const notificationToast =
+          definition.liveRegion === "assertive"
+            ? toast.error
+            : /(?:_completed|_created|_updated|_sent|_verified|_success|_ready|_restored|_saved|_disconnected)$/.test(
+                  notice.id,
+                )
+              ? toast.success
+              : toast;
         notificationToast(notice.title, {
           id: key,
-          onDismiss: () => { try { notice.onDismiss?.(); } catch { /* Ignore notice acknowledgement failures. */ } },
+          onDismiss: () => {
+            try {
+              notice.onDismiss?.();
+            } catch {
+              /* Ignore notice acknowledgement failures. */
+            }
+          },
           description: notice.message,
           duration: 3000,
-          action: notice.onPrimary && notice.primaryLabel
-            ? { label: notice.primaryLabel, onClick: () => {
-                try { notice.onDismiss?.(); } finally { notice.onPrimary?.(); }
-              } } : undefined,
+          action:
+            notice.onPrimary && notice.primaryLabel
+              ? {
+                  label: notice.primaryLabel,
+                  onClick: () => {
+                    try {
+                      notice.onDismiss?.();
+                    } finally {
+                      notice.onPrimary?.();
+                    }
+                  },
+                }
+              : undefined,
         });
         return;
       }
       setPending((items) => {
         if (items.some((item) => (item.key ?? item.id) === key)) return items;
         const next = [...items, notice].sort(
-          (a, b) => (notificationDefinition(a.id)?.priority ?? 10) -
+          (a, b) =>
+            (notificationDefinition(a.id)?.priority ?? 10) -
             (notificationDefinition(b.id)?.priority ?? 10),
         );
         return next.slice(0, 12);
@@ -144,26 +199,44 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
   }, [accountId]);
 
   const definition = active ? notificationDefinition(active.id) : null;
-  const defer = !!definition && ["announcements", "onboarding", "feedback"].includes(definition.group) &&
+  const defer =
+    !!definition &&
+    ["announcements", "onboarding", "feedback"].includes(definition.group) &&
     (editing || composing);
   const shown = !!active && !!definition && !defer;
   const visual = definition
-    ? definition.group === "announcements" || definition.group === "billing" ? "discovery"
-    : definition.group === "security" ? "security"
-    : ["workspace_join_approved", "task_completed", "subscription_updated", "offer_claimed"].includes(active?.id ?? "") ? "success"
-    : /(?:failed|error|blocked|denied|unavailable|expired|limit)$/.test(active?.id ?? "") ? "warning"
-    : "information"
+    ? definition.group === "announcements" || definition.group === "billing"
+      ? "discovery"
+      : definition.group === "security"
+        ? "security"
+        : [
+              "workspace_join_approved",
+              "task_completed",
+              "subscription_updated",
+              "offer_claimed",
+            ].includes(active?.id ?? "")
+          ? "success"
+          : /(?:failed|error|blocked|denied|unavailable|expired|limit)$/.test(active?.id ?? "")
+            ? "warning"
+            : "information"
     : "information";
-  const NoticeIcon = visual === "discovery" ? Sparkles
-    : visual === "security" ? ShieldCheck
-    : visual === "success" ? CheckCircle2
-    : visual === "warning" ? AlertCircle
-    : definition?.group === "tasks" ? Bell : Info;
+  const NoticeIcon =
+    visual === "discovery"
+      ? Sparkles
+      : visual === "security"
+        ? ShieldCheck
+        : visual === "success"
+          ? CheckCircle2
+          : visual === "warning"
+            ? AlertCircle
+            : definition?.group === "tasks"
+              ? Bell
+              : Info;
 
   useLayoutEffect(() => {
     if (!shown) return;
-    returnFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement : null;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const first = panelRef.current?.querySelector<HTMLElement>(
       ".kova-notice-primary, .kova-notice-secondary, .kova-notice-close",
     );
@@ -185,85 +258,141 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
-      const controls = [...panelRef.current.querySelectorAll<HTMLElement>(
-        "button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
-      )].filter((control) => control.getClientRects().length > 0);
+      const controls = [
+        ...panelRef.current.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])",
+        ),
+      ].filter((control) => control.getClientRects().length > 0);
       if (!controls.length) return;
-      const first = controls[0], last = controls[controls.length - 1];
+      const first = controls[0],
+        last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault(); last.focus();
+        event.preventDefault();
+        last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault(); first.focus();
+        event.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", keydown, true);
     return () => window.removeEventListener("keydown", keydown, true);
   }, [shown, active, definition, dismiss, actionBusy]);
 
-  if (!shown || !active || !definition) return <span className="sr-only" role="status" aria-live="polite">{liveMessage}</span>;
+  if (!shown || !active || !definition)
+    return (
+      <span className="sr-only" role="status" aria-live="polite">
+        {liveMessage}
+      </span>
+    );
   return (
     <>
-    <span className="sr-only" role="status" aria-live="polite">{liveMessage}</span>
-    <div className="kova-notice-backdrop" role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && definition.dismissible && !actionBusy) dismiss();
-      }}>
-      <section
-        ref={panelRef}
-        className="kova-notice-panel"
-        role={definition.priority === 1 ? "alertdialog" : "dialog"}
-        aria-modal="true"
-        aria-labelledby="kova-notice-title"
-        aria-describedby={active.message ? "kova-notice-body" : undefined}
-        data-surface={definition.surface}
-        data-group={definition.group}
-        data-visual={visual}
-        aria-busy={actionBusy}
-        onTouchStart={(event) => {
-          if (!definition.dismissible || actionBusy || event.touches.length !== 1) return;
-          const box = panelRef.current?.getBoundingClientRect();
-          if (!box) return;
-          touchStartRef.current = {
-            x: event.touches[0].clientX,
-            y: event.touches[0].clientY,
-            fromHandle: event.touches[0].clientY - box.top <= 42 && panelRef.current?.scrollTop === 0,
-          };
-        }}
-        onTouchEnd={(event) => {
-          const start = touchStartRef.current;
-          touchStartRef.current = null;
-          if (!start?.fromHandle || actionBusy || !definition.dismissible || event.changedTouches.length !== 1) return;
-          const dx = event.changedTouches[0].clientX - start.x;
-          const dy = event.changedTouches[0].clientY - start.y;
-          if (dy > 100 && Math.abs(dx) < 55 && window.matchMedia("(max-width: 640px)").matches) dismiss();
+      <span className="sr-only" role="status" aria-live="polite">
+        {liveMessage}
+      </span>
+      <div
+        className="kova-notice-backdrop"
+        role="presentation"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget && definition.dismissible && !actionBusy)
+            dismiss();
         }}
       >
-        <div className="kova-notice-symbol" aria-hidden="true"><NoticeIcon size={21} strokeWidth={1.8}/></div>
-        {definition.dismissible && (
-          <button className="kova-notice-close" type="button" aria-label="Close notification"
-            disabled={actionBusy}
-            onClick={dismiss}><X size={19} /></button>
-        )}
-        {definition.group === "announcements" && <p className="kova-notice-eyebrow">What's new</p>}
-        <h2 id="kova-notice-title">{active.title}</h2>
-        {active.message && <p className="kova-notice-description" id="kova-notice-body">{active.message}</p>}
-        {actionError && <p className="kova-notice-action-error" role="alert">{actionError}</p>}
-        <div className="kova-notice-actions">
-          {active.onPrimary && active.primaryLabel && (
-            <button className="kova-notice-primary" type="button"
-              disabled={actionBusy} onClick={() => void performPrimary()}>
-              {actionBusy && <Loader2 aria-hidden="true" className="kova-notice-spinner" size={16}/>}
-              {actionBusy ? "Working…" : active.primaryLabel}
+        <section
+          ref={panelRef}
+          className="kova-notice-panel"
+          role={definition.priority === 1 ? "alertdialog" : "dialog"}
+          aria-modal="true"
+          aria-labelledby="kova-notice-title"
+          aria-describedby={active.message ? "kova-notice-body" : undefined}
+          data-surface={definition.surface}
+          data-group={definition.group}
+          data-visual={visual}
+          aria-busy={actionBusy}
+          onTouchStart={(event) => {
+            if (!definition.dismissible || actionBusy || event.touches.length !== 1) return;
+            const box = panelRef.current?.getBoundingClientRect();
+            if (!box) return;
+            touchStartRef.current = {
+              x: event.touches[0].clientX,
+              y: event.touches[0].clientY,
+              fromHandle:
+                event.touches[0].clientY - box.top <= 42 && panelRef.current?.scrollTop === 0,
+            };
+          }}
+          onTouchEnd={(event) => {
+            const start = touchStartRef.current;
+            touchStartRef.current = null;
+            if (
+              !start?.fromHandle ||
+              actionBusy ||
+              !definition.dismissible ||
+              event.changedTouches.length !== 1
+            )
+              return;
+            const dx = event.changedTouches[0].clientX - start.x;
+            const dy = event.changedTouches[0].clientY - start.y;
+            if (dy > 100 && Math.abs(dx) < 55 && window.matchMedia("(max-width: 640px)").matches)
+              dismiss();
+          }}
+        >
+          <div className="kova-notice-symbol" aria-hidden="true">
+            <NoticeIcon size={21} strokeWidth={1.8} />
+          </div>
+          {definition.dismissible && (
+            <button
+              className="kova-notice-close"
+              type="button"
+              aria-label="Close notification"
+              disabled={actionBusy}
+              onClick={dismiss}
+            >
+              <X size={19} />
             </button>
           )}
-          {definition.dismissible && (
-            <button className="kova-notice-secondary" type="button" disabled={actionBusy} onClick={() => {
-              active.onSecondary?.(); dismiss();
-            }}>{active.secondaryLabel || "Not now"}</button>
+          {definition.group === "announcements" && (
+            <p className="kova-notice-eyebrow">What's new</p>
           )}
-        </div>
-      </section>
-    </div>
+          <h2 id="kova-notice-title">{active.title}</h2>
+          {active.message && (
+            <p className="kova-notice-description" id="kova-notice-body">
+              {active.message}
+            </p>
+          )}
+          {actionError && (
+            <p className="kova-notice-action-error" role="alert">
+              {actionError}
+            </p>
+          )}
+          <div className="kova-notice-actions">
+            {active.onPrimary && active.primaryLabel && (
+              <button
+                className="kova-notice-primary"
+                type="button"
+                disabled={actionBusy}
+                onClick={() => void performPrimary()}
+              >
+                {actionBusy && (
+                  <Loader2 aria-hidden="true" className="kova-notice-spinner" size={16} />
+                )}
+                {actionBusy ? "Working…" : active.primaryLabel}
+              </button>
+            )}
+            {definition.dismissible && (
+              <button
+                className="kova-notice-secondary"
+                type="button"
+                disabled={actionBusy}
+                onClick={() => {
+                  active.onSecondary?.();
+                  dismiss();
+                }}
+              >
+                {active.secondaryLabel || "Not now"}
+              </button>
+            )}
+          </div>
+        </section>
+      </div>
     </>
   );
 }

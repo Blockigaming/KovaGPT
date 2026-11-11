@@ -45,30 +45,36 @@ export function FreeOfferButton({ variant = "toolbar" }: { variant?: "toolbar" |
     setOffer(null);
     if (!isLoaded || !isSignedIn || !user?.id) return;
     const owner = user.id;
-    void getFreeOfferEligibility().then((result) => {
-      if (!cancelled) {
-        const eligible = result.eligible === true;
-        setOffer({ owner, eligible });
-        if (eligible && variant === "toolbar") {
-          publishKovaNotice({
-            id: "offer_available",
-            key: "monthly-intro-v1",
-            campaignId: "monthly-intro-v1",
-            title: "A Plus offer is available",
-            message: "Your account qualifies for an introductory subscription offer. Check the price and renewal terms before choosing a plan.",
-            confirmed: true,
-            primaryLabel: "See offer",
-            onPrimary: () => void navigate({
-              to: "/subscribe" as never,
-              search: { plan: "plus_monthly" } as never,
-            }),
-          });
+    void getFreeOfferEligibility()
+      .then((result) => {
+        if (!cancelled) {
+          const eligible = result.eligible === true;
+          setOffer({ owner, eligible });
+          if (eligible && variant === "toolbar") {
+            publishKovaNotice({
+              id: "offer_available",
+              key: "monthly-intro-v1",
+              campaignId: "monthly-intro-v1",
+              title: "A Plus offer is available",
+              message:
+                "Your account qualifies for an introductory subscription offer. Check the price and renewal terms before choosing a plan.",
+              confirmed: true,
+              primaryLabel: "See offer",
+              onPrimary: () =>
+                void navigate({
+                  to: "/subscribe" as never,
+                  search: { plan: "plus_monthly" } as never,
+                }),
+            });
+          }
         }
-      }
-    }).catch(() => {
-      if (!cancelled) setOffer({ owner, eligible: false });
-    });
-    return () => { cancelled = true; };
+      })
+      .catch(() => {
+        if (!cancelled) setOffer({ owner, eligible: false });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [isLoaded, isSignedIn, user?.id, variant, navigate]);
   // A free plan or a personal email address is not proof of promotional
   // eligibility. Never show the CTA before server verification.
@@ -78,8 +84,14 @@ export function FreeOfferButton({ variant = "toolbar" }: { variant?: "toolbar" |
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={variant === "sidebar" ? "kova-free-offer kova-free-offer-sidebar" : "kova-free-offer"}
-        aria-label={variant === "sidebar" ? "Claim introductory Plus offer" : "Free offer: 50% off your first month"}
+        className={
+          variant === "sidebar" ? "kova-free-offer kova-free-offer-sidebar" : "kova-free-offer"
+        }
+        aria-label={
+          variant === "sidebar"
+            ? "Claim introductory Plus offer"
+            : "Free offer: 50% off your first month"
+        }
         data-free-introductory-offer="true"
       >
         <Gift aria-hidden="true" size={18} />
@@ -108,7 +120,8 @@ export function FreeOfferButton({ variant = "toolbar" }: { variant?: "toolbar" |
             Get 50% off Plus
           </Button>
           <p className="text-xs text-muted-foreground">
-            Offer eligibility and the final price are rechecked at checkout. Review the amount and renewal terms before paying.
+            Offer eligibility and the final price are rechecked at checkout. Review the amount and
+            renewal terms before paying.
           </p>
         </DialogContent>
       </Dialog>

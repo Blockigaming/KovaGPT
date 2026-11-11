@@ -68,7 +68,12 @@ export function KovaPasswordPanel() {
       const payload = (await response.json()) as { changed?: unknown };
       if (!response.ok || payload.changed !== true) throw new Error("password_change_failed");
       setEditing(false);
-      publishKovaNotice({ id: "password_updated", title: "Password changed", message: "Other devices have been signed out.", confirmed: true });
+      publishKovaNotice({
+        id: "password_updated",
+        title: "Password changed",
+        message: "Other devices have been signed out.",
+        confirmed: true,
+      });
     } catch {
       toast.error("Password change could not be confirmed. Sign in again before retrying.");
     } finally {

@@ -46,9 +46,19 @@ export function useLibraryAttachmentAutoSave(enabled: boolean, principal: string
             () => mounted.current && scope.current === originalScope,
             documentSaves.current,
           ),
-        onSuccess: (name) => publishKovaNotice({ id: "file_saved", title: "File saved to Library", message: name, confirmed: true }),
+        onSuccess: (name) =>
+          publishKovaNotice({
+            id: "file_saved",
+            title: "File saved to Library",
+            message: name,
+            confirmed: true,
+          }),
         onError: (name, retry) => {
-          publishKovaNotice({ id: "upload_failed", title: "File attached but Library save failed", message: name });
+          publishKovaNotice({
+            id: "upload_failed",
+            title: "File attached but Library save failed",
+            message: name,
+          });
           toast.error(`${name} was attached but could not be saved to your Library.`, {
             action: { label: "Retry save", onClick: () => void retry() },
           });

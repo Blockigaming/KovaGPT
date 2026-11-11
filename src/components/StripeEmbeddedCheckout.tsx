@@ -66,7 +66,11 @@ export function StripeEmbeddedCheckout({
       const url = new URL(result.url);
       if (url.origin !== "https://checkout.stripe.com")
         throw new Error("Secure checkout could not open.");
-      publishKovaNotice({ id: "checkout_started", title: "Opening secure checkout", message: "Your subscription is not active until payment is confirmed." });
+      publishKovaNotice({
+        id: "checkout_started",
+        title: "Opening secure checkout",
+        message: "Your subscription is not active until payment is confirmed.",
+      });
       window.location.assign(url.href);
     } catch (reason) {
       if (active()) {
@@ -75,7 +79,12 @@ export function StripeEmbeddedCheckout({
             ? reason.message
             : CHECKOUT_ERROR_MESSAGE,
         );
-        publishKovaNotice({ id: "checkout_unavailable", title: "Checkout unavailable", message: "The payment page did not open. You can retry without starting a second checkout." });
+        publishKovaNotice({
+          id: "checkout_unavailable",
+          title: "Checkout unavailable",
+          message:
+            "The payment page did not open. You can retry without starting a second checkout.",
+        });
       }
     } finally {
       if (generation.current === token) pending.current = false;

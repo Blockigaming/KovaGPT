@@ -143,11 +143,18 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
       if (action === "enable") {
         if (!status.ready || !status.publicKey) throw Error("Push is not enabled.");
         if (Notification.permission === "default") {
-          publishKovaNotice({ id: "notifications_permission", title: "Browser notification permission requested" });
+          publishKovaNotice({
+            id: "notifications_permission",
+            title: "Browser notification permission requested",
+          });
         }
         await enableDevicePush(ownerId, status.publicKey, next.signal);
         if (current === generation.current && Notification.permission === "granted") {
-          publishKovaNotice({ id: "notification_preferences_updated", title: "Browser notifications enabled", confirmed: true });
+          publishKovaNotice({
+            id: "notification_preferences_updated",
+            title: "Browser notifications enabled",
+            confirmed: true,
+          });
         }
       } else if (action === "disable") await disableDevicePush(ownerId, next.signal);
       else if (action === "preferences") {
@@ -159,10 +166,13 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
             : null,
         });
         if (current === generation.current) {
-          publishKovaNotice({ id: "notification_preferences_updated", title: "Notification quiet hours saved", confirmed: true });
+          publishKovaNotice({
+            id: "notification_preferences_updated",
+            title: "Notification quiet hours saved",
+            confirmed: true,
+          });
         }
-      }
-      else if (device)
+      } else if (device)
         await pushApi(ownerId, next.signal, {
           action: "revoke",
           id: device.id,
@@ -170,9 +180,16 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
         });
       if (current === generation.current) await load();
     } catch (cause) {
-      if (current === generation.current && action === "enable" && Notification.permission === "denied") {
-        publishKovaNotice({ id: "notifications_blocked", title: "Browser notifications are blocked",
-          message: "Allow notifications in your browser's site settings before enabling them." });
+      if (
+        current === generation.current &&
+        action === "enable" &&
+        Notification.permission === "denied"
+      ) {
+        publishKovaNotice({
+          id: "notifications_blocked",
+          title: "Browser notifications are blocked",
+          message: "Allow notifications in your browser's site settings before enabling them.",
+        });
       }
       if (current === generation.current)
         setError(

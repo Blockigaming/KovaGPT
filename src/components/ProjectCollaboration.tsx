@@ -341,7 +341,11 @@ function ProjectCollaborationSession({
             if (scopeRef.current !== scopeKey) return;
             setComments(Comments.parse(rows));
             setDeletingComment(null);
-            publishKovaNotice({ id: "project_comment_deleted", title: "Comment deleted", confirmed: true });
+            publishKovaNotice({
+              id: "project_comment_deleted",
+              title: "Comment deleted",
+              confirmed: true,
+            });
           } catch (error) {
             if (scopeRef.current === scopeKey)
               toast.error(error instanceof Error ? error.message : "Comment could not be deleted");

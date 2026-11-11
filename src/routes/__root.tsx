@@ -325,17 +325,21 @@ function RootNotificationCenter() {
   useEffect(() => {
     if (!isLoaded) return;
     const offline = () => {
-      if (navigator.onLine === false) publishKovaNotice({
-        id: "network_offline", title: "You're offline",
-        message: "Your unsent text is preserved. Check the connection before retrying.",
-      });
+      if (navigator.onLine === false)
+        publishKovaNotice({
+          id: "network_offline",
+          title: "You're offline",
+          message: "Your unsent text is preserved. Check the connection before retrying.",
+        });
     };
     const online = () => {
-      if (navigator.onLine === true) publishKovaNotice({
-        id: "network_restored", title: "Browser connection restored",
-        message: "Network access may still need verification by the active feature.",
-        confirmed: true,
-      });
+      if (navigator.onLine === true)
+        publishKovaNotice({
+          id: "network_restored",
+          title: "Browser connection restored",
+          message: "Network access may still need verification by the active feature.",
+          confirmed: true,
+        });
     };
     const controllerChanged = () => {
       // A new service-worker controller is evidence of an actual app update.
@@ -367,7 +371,9 @@ function RootNotificationCenter() {
     <>
       <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />
       {isSignedIn && user?.id ? <PersistedNoticeBridge key={user.id} ownerId={user.id} /> : null}
-      {isSignedIn && user?.id ? <AnnouncementCampaignBridge key={user.id} ownerId={user.id} /> : null}
+      {isSignedIn && user?.id ? (
+        <AnnouncementCampaignBridge key={user.id} ownerId={user.id} />
+      ) : null}
     </>
   ) : null;
 }

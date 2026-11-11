@@ -39,7 +39,11 @@
   font-size: 14px;
   font-weight: 600;
 }
-.kova-free-offer-sidebar:hover { background: var(--accent); }
+.kova-free-offer-sidebar:hover {
+  background: var(--accent);
+}
 @media (min-width: 1024px) {
-  .kova-free-offer-sidebar { min-height: 44px; }
+  .kova-free-offer-sidebar {
+    min-height: 44px;
+  }
 }

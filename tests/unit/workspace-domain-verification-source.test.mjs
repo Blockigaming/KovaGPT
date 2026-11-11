@@ -4,7 +4,14 @@ import { readFileSync } from "node:fs";
 import { normalizeTeamDomain } from "../../src/lib/team-domain-policy.mjs";
 
 test("consumer domains never qualify for workspace DNS verification", () => {
-  for (const domain of ["gmail.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com", "proton.me"]) {
+  for (const domain of [
+    "gmail.com",
+    "outlook.com",
+    "hotmail.com",
+    "yahoo.com",
+    "icloud.com",
+    "proton.me",
+  ]) {
     assert.equal(normalizeTeamDomain(domain), null, domain);
   }
 });
@@ -13,7 +20,15 @@ test("organization domains are normalized and structurally validated", () => {
   assert.equal(normalizeTeamDomain(" SCHOOL.edu. "), "school.edu");
   assert.equal(normalizeTeamDomain("Company.COM"), "company.com");
   assert.equal(normalizeTeamDomain("dept.school.edu"), "dept.school.edu");
-  for (const domain of ["localhost", "www..example.com", "-bad.example.com", "bad-.example.com", "1.2.3.4", "https://school.edu", "a@school.edu"]) {
+  for (const domain of [
+    "localhost",
+    "www..example.com",
+    "-bad.example.com",
+    "bad-.example.com",
+    "1.2.3.4",
+    "https://school.edu",
+    "a@school.edu",
+  ]) {
     assert.equal(normalizeTeamDomain(domain), null, domain);
   }
 });
