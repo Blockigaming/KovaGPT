@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, Globe2 } from "lucide-react";
+import { ExternalLink, Globe2, X } from "lucide-react";
 import {
   fallbackLinkTitle,
   normalizeLinkPreviewUrl,
@@ -74,9 +74,11 @@ function previewFor(url: string): Promise<Preview | null> {
 export function LinkPreviewChip({
   url,
   placement = "message",
+  onRemove,
 }: {
   url: string;
   placement?: "composer" | "message";
+  onRemove?: () => void;
 }) {
   const normalized = normalizeLinkPreviewUrl(url);
   const [preview, setPreview] = useState<Preview | null>(() =>
@@ -146,6 +148,17 @@ export function LinkPreviewChip({
         </span>
         <ExternalLink className="kova-link-preview-external" aria-hidden="true" />
       </a>
+      {placement === "composer" && onRemove && (
+        <button
+          type="button"
+          className="kova-link-preview-remove"
+          onClick={onRemove}
+          title="Remove this link"
+          aria-label="Remove linked page from message"
+        >
+          <X aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }
