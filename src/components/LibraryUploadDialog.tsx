@@ -66,6 +66,12 @@ export function LibraryUploadDialog({
     busyRef.current = true;
     setStatus("processing");
     setError("");
+    publishKovaNotice({
+      id: "file_processing",
+      title: "Preparing document",
+      message: file.name,
+      key: "library-processing:" + file.name,
+    });
     try {
       const { extractDocumentFile } = await import("@/lib/document-extraction/client");
       const extracted = await extractDocumentFile(file, current.controller.signal);
@@ -155,7 +161,15 @@ export function LibraryUploadDialog({
               .join(",")}
             disabled={busy || status === "ready"}
             onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null);
+              const selected = event.target.files?.[0] ?? null;
+              setFile(selected);
+              if (selected) {
+                publishKovaNotice({
+                  id: "file_selected",
+                  title: "File selected",
+                  message: selected.name,
+                });
+              }
               operationId.current = null;
               setStatus("idle");
               setError("");
