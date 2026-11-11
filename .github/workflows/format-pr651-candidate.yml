@@ -1,0 +1,94 @@
+name: Format PR 651 changes
+on:
+  push:
+    branches:
+      - feature/specific-page-link-preview-20261110
+    paths:
+      - .github/workflows/format-pr651-candidate.yml
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/specific-page-link-preview-20261110
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Normalize all PR 651 feature files
+        run: |
+          npx prettier --write \
+            src/components/ChatHistorySync.tsx \
+            src/components/SettingsDialog.tsx \
+            src/components/CommandPalette.tsx \
+            src/components/public/PublicShell.tsx \
+            src/components/public/public-foundation.css \
+            src/routes/projects.tsx \
+            src/routes/download.tsx \
+            src/routes/library.tsx \
+            src/routes/scheduled-tasks.tsx \
+            src/routes/apps.tsx \
+            src/routes/api/google/auth.ts \
+            src/routes/api/google/gmail.ts \
+            src/routes/api/finances/link-token.ts \
+            src/routes/api/finances/exchange.ts \
+            src/routes/api/finances/manage.ts \
+            src/styles/app-finish.css \
+            src/styles/project-directory.css \
+            src/styles/file-directories.css \
+            src/styles/spec400-management.css \
+            src/styles/sidebar-core.css \
+            src/lib/google-tools.server.ts \
+            src/lib/settings-search.mjs \
+            src/lib/settings-search.d.mts \
+            src/lib/public-website-catalog.mjs \
+            src/lib/public-content.ts \
+            tests/unit/settings-search-relevance.test.mjs \
+            tests/unit/workspace-search-categories.test.mjs \
+            tests/unit/owner-interface-20261110-contracts.test.mjs \
+            tests/unit/directory-mobile-density.test.mjs \
+            tests/unit/spec400-core-geometry-guards.test.mjs \
+      - name: Commit formatted source only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/ChatHistorySync.tsx \
+            src/components/SettingsDialog.tsx \
+            src/components/CommandPalette.tsx \
+            src/components/public/PublicShell.tsx \
+            src/components/public/public-foundation.css \
+            src/routes/projects.tsx \
+            src/routes/download.tsx \
+            src/routes/library.tsx \
+            src/routes/scheduled-tasks.tsx \
+            src/routes/apps.tsx \
+            src/routes/api/google/auth.ts \
+            src/routes/api/google/gmail.ts \
+            src/routes/api/finances/link-token.ts \
+            src/routes/api/finances/exchange.ts \
+            src/routes/api/finances/manage.ts \
+            src/styles/app-finish.css \
+            src/styles/project-directory.css \
+            src/styles/file-directories.css \
+            src/styles/spec400-management.css \
+            src/styles/sidebar-core.css \
+            src/lib/google-tools.server.ts \
+            src/lib/settings-search.mjs \
+            src/lib/settings-search.d.mts \
+            src/lib/public-website-catalog.mjs \
+            src/lib/public-content.ts \
+            tests/unit/settings-search-relevance.test.mjs \
+            tests/unit/workspace-search-categories.test.mjs \
+            tests/unit/owner-interface-20261110-contracts.test.mjs \
+            tests/unit/directory-mobile-density.test.mjs \
+            tests/unit/spec400-core-geometry-guards.test.mjs \
+          if ! git diff --cached --quiet; then
+            git commit -m "Format PR 651 changes"
+            git push origin HEAD:feature/specific-page-link-preview-20261110
+          fi
