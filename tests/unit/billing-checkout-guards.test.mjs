@@ -82,7 +82,10 @@ test("checkout return reports active only from the server-verified account tier"
 
   assert.match(route, /session_id: normalizeCheckoutSessionId\(s\.session_id\)/u);
   assert.match(route, /getSubscriptionSummary\(\{ data: \{ environment: BILLING_ENV \} \}\)/u);
-  assert.match(route, /const resolved = checkoutVerificationForTier\(summary\.tier\);\s*setVerification\(resolved\)/u);
+  assert.match(
+    route,
+    /const resolved = checkoutVerificationForTier\(summary\.tier\);\s*setVerification\(resolved\)/u,
+  );
   assert.match(route, /Subscription verification pending/u);
   assert.match(route, /this page never grants access on its own/u);
   assert.doesNotMatch(

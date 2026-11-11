@@ -32,7 +32,8 @@ export function loadUiModule(path, dependencies, globals = {}) {
       if (id === "react/jsx-runtime") return jsxRuntime;
       if (Object.hasOwn(dependencies, id)) return dependencies[id];
       if (id === "@/components/KovaNotificationSurface") return notificationDeliveryStub;
-      if (id === "@/lib/checkout-notice-policy.mjs") return { checkoutOriginKey, activeCheckoutOrigin };
+      if (id === "@/lib/checkout-notice-policy.mjs")
+        return { checkoutOriginKey, activeCheckoutOrigin };
       if (Object.hasOwn(nativeControlModules, id)) return nativeControlModules[id];
       throw new Error(`Unexpected dependency ${id} in ${path}`);
     },
