@@ -1,3 +1,4 @@
+import { settingsSearchMatches } from "@/lib/settings-search.mjs";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
@@ -1166,9 +1167,7 @@ export function SettingsDialog({
     allTabs[0];
   const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
   const matchesSettingsQuery = (item: TabDef) =>
-    [item.label, ...(item.keywords ?? [])].some((term) =>
-      term.toLocaleLowerCase().includes(normalizedQuery),
-    );
+    settingsSearchMatches(item, normalizedQuery, SETTINGS_DESCRIPTIONS[item.v] ?? "");
   const matchingSecondaryTabs = normalizedQuery
     ? destinations.filter(
         (item) =>
@@ -1185,7 +1184,7 @@ export function SettingsDialog({
     ? [
         ...groups.map((group) => ({
           ...group,
-          tabs: group.tabs.filter((item) => item.v === tab || matchesSettingsQuery(item)),
+          tabs: group.tabs.filter(matchesSettingsQuery),
         })),
         { title: "Related settings", tabs: matchingSecondaryTabs },
       ].filter((group) => group.tabs.length > 0)
