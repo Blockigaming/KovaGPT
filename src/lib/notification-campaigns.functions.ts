@@ -101,13 +101,13 @@ export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" 
         allowedEventIds: announcementIDs,
         safeActionUrl: safePersistedNoticeActionUrl,
       }).map((row) => ({
-          id: row.id,
-          eventId: row.event_id,
-          releaseId: row.release_id,
-          title: row.title,
-          message: row.body,
-          actionUrl: row.action_path ? safePersistedNoticeActionUrl(row.action_path) : null,
-        }));
+        id: row.id,
+        eventId: row.event_id,
+        releaseId: row.release_id,
+        title: row.title,
+        message: row.body,
+        actionUrl: row.action_path ? safePersistedNoticeActionUrl(row.action_path) : null,
+      }));
     } catch {
       return [];
     }
