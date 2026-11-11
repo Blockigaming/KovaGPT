@@ -197,6 +197,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
         return;
       }
       if (definition.surface === "toast") {
+        if (notice.id === "network_restored") toast.dismiss("network_offline");
         const notificationToast =
           definition.liveRegion === "assertive"
             ? toast.error
@@ -222,7 +223,7 @@ export function KovaNotificationSurface({ accountId }: { accountId?: string | nu
             }
           },
           description: notice.message,
-          duration: 3000,
+          duration: notice.id === "network_offline" ? Infinity : 3000,
           action:
             notice.onPrimary && notice.primaryLabel
               ? {
