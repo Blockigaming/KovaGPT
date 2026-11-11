@@ -3,8 +3,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { loose } from "@/lib/supabase-loose";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { BILLING_ENV, BILLING_PLANS } from "@/lib/billing-plans";
-import { monthlyIntroBillingEnabled } from "@/lib/stripe.server";
-import { canDisplayFreeIntroOffer } from "./free-offer-eligibility-policy.mjs";
+import { createStripeClient, monthlyIntroBillingEnabled } from "@/lib/stripe.server";
+import {
+  canDisplayFreeIntroOffer,
+  isVerifiedFirstMonthCoupon,
+} from "./free-offer-eligibility-policy.mjs";
 
 /**
  * This endpoint is a conservative UI-visibility precheck, NOT a coupon grant.
@@ -51,7 +54,13 @@ export const getFreeOfferEligibility = createServerFn({ method: "GET" })
         billingEnabled: monthlyIntroBillingEnabled(),
         couponConfigured: Boolean(process.env.STRIPE_MONTHLY_INTRO_COUPON_ID),
       });
-      return { eligible };
+      if (!eligible) return { eligible: false };
+      // Check the actual Stripe coupon instead of trusting a configured ID.
+      // Checkout independently revalidates redemption and entitlement.
+      const coupon = await createStripeClient(BILLING_ENV).coupons.retrieve(
+        process.env.STRIPE_MONTHLY_INTRO_COUPON_ID!,
+      );
+      return { eligible: isVerifiedFirstMonthCoupon(coupon) };
     } catch {
       return { eligible: false };
     }
