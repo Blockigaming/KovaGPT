@@ -259,6 +259,8 @@ export const NOTIFICATION_GROUPS = {
 NOTIFICATION_GROUPS.collaboration.push("project_comment_posted", "project_comment_deleted");
 export const NOTIFICATION_IDS = Object.freeze(Object.values(NOTIFICATION_GROUPS).flat());
 const surfaces = {
+  popover: ["try_feature", "check_this_out", "quick_tip", "did_you_know"],
+  banner: ["app_update", "feature_changing", "feature_retired"],
   modal: [
     "confirm_file_delete",
     "confirm_project_delete",
