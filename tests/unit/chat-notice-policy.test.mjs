@@ -74,7 +74,8 @@ test("real quota response carries a reliable reset instant to the limit dialog",
   assert.equal(invalid.resetAtMs,undefined);
   const route=readFileSync("src/routes/index.tsx","utf8");
   assert.match(route,/resetsAt: err\.resetAtMs/);
-  assert.match(route,/limitDialog\.resetsAt \?\? getUsage\(\)\.resetsAt/);
+  assert.match(route,/resetsAt=\{limitDialog\.resetsAt\}/);
+  assert.doesNotMatch(route,/getUsage\(\)\.resetsAt/);
 });
 
 test("Thinking limit sheet uses the server category, not a guessed message string", () => {
