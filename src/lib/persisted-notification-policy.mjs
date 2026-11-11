@@ -3,6 +3,16 @@ const CATALOG=new Set(NOTIFICATION_IDS);
 const SERVER_KIND_TO_NOTICE={
   task_result:"task_completed",
   task_failure:"task_failed",
+  project_invitation:"invitation_received",
+  project_role_change:"permission_changed",
+  shared_chat:"invitation_received",
+  connector_reauth:"connection_expired",
+  deep_research_complete:"research_completed",
+  security_alert:"security_check",
+  file_processing:"file_processing",
+  // Billing issues and usage-threshold warnings remain in the durable inbox
+  // until a truthful, correctly scoped alert type is implemented. Never claim
+  // a payment succeeded or a quota is exhausted from a generic warning.
 };
 /**
  * Only server-persisted, unread events map to user-visible notifications.
