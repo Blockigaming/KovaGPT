@@ -5,9 +5,10 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("browser CI uses the Node preview without changing the production preset", async () => {
-  const [viteConfig, workflow] = await Promise.all([
+  const [viteConfig, workflow, authVisualPreview] = await Promise.all([
     read("vite.config.ts"),
     read(".github/workflows/ci.yml"),
+    read("tests/e2e/auth-visual-preview.mjs"),
   ]);
   const verifyJob = workflow.slice(
     workflow.indexOf("  verify:"),
@@ -50,7 +51,10 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.ok(accessibilityIndex > previewBuildIndex);
   assert.doesNotMatch(verifyJob.slice(0, previewBuildIndex), /KOVA_BROWSER_PREVIEW/);
 
-  assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
+  // HOME may precede the preview flag in a pinned container job. Check
+  // the job-level environment, not an arbitrary step's environment.
+  const jobEnvironment = (job) => job.match(/^    env:\n((?:      [^\n]*\n)*)/m)?.[1] ?? "";
+  assert.match(jobEnvironment(browserJob), /^      KOVA_BROWSER_PREVIEW: "node"$/m);
   assert.match(
     browserJob,
     /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
@@ -60,7 +64,7 @@ test("browser CI uses the Node preview without changing the production preset", 
     browserJob,
     /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\} --workers=2/,
   );
-  assert.match(releaseE2eJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
+  assert.match(jobEnvironment(releaseE2eJob), /^      KOVA_BROWSER_PREVIEW: "node"$/m);
   assert.match(
     releaseE2eJob,
     /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
@@ -68,5 +72,13 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(
     releaseE2eJob,
     /run: npm run test:e2e -- --shard=\$\{\{ matrix\.shard \}\}\/8 --reporter=list,blob --workers=2/,
+  );
+  // GitHub's container checkout path can differ from github.workspace.
+  // The fixture must explicitly trust only the actual candidate checkout.
+  assert.ok(
+    authVisualPreview.includes(
+      '["-c", `safe.directory=${sourceRoot}`, "ls-files", "-z", "--cached"]',
+    ),
+    "The auth fixture may trust only its exact source working tree",
   );
 });

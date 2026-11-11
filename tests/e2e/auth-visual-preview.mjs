@@ -105,9 +105,11 @@ function isExcludedTrackedPath(path) {
 }
 
 async function copyTrackedWorkingTree() {
-  const { stdout } = await run("git", ["ls-files", "-z", "--cached"], {
-    captureStdout: true,
-  });
+  const { stdout } = await run(
+    "git",
+    ["-c", `safe.directory=${sourceRoot}`, "ls-files", "-z", "--cached"],
+    { captureStdout: true },
+  );
   const paths = stdout
     .toString("utf8")
     .split("\0")
