@@ -11,8 +11,8 @@ test("Playwright dependencies retain signed Ubuntu mirrors and bounded fallback"
   assert.match(helper, /https:\/\/archive\.ubuntu\.com\/ubuntu\//);
   assert.match(helper, /https:\/\/azure\.archive\.ubuntu\.com\/ubuntu\//);
   assert.match(helper, /https:\/\/security\.ubuntu\.com\/ubuntu\//);
-  assert.match(helper, /--connect-timeout 5 --max-time 12/);
-  assert.match(helper, /timeout --signal=TERM --kill-after=10s 420s/);
+  assert.match(helper, /original_mirrors/);
+  assert.match(helper, /timeout --signal=TERM --kill-after=10s 360s/);
   assert.match(helper, /playwright install --with-deps "\$@"/);
   assert.doesNotMatch(helper, /--allow-unauthenticated|--force-yes|trusted=yes|--no-sandbox/);
 });

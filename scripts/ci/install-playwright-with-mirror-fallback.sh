@@ -20,32 +20,32 @@ if [[ -z "${VERSION_CODENAME:-}" ]]; then
   exit 1
 fi
 
-# The default Ubuntu archive repeatedly failed DNS on hosted runners. Probe
-# bounded connectivity to official Ubuntu Release metadata before APT runs.
-# The Azure archive is the existing runner mirror fallback. APT continues to
-# verify the original signed repository metadata and packages.
-for mirror in \
-  "https://archive.ubuntu.com/ubuntu/" \
-  "https://azure.archive.ubuntu.com/ubuntu/"; do
-  if ! curl --fail --silent --location --head \
-      --connect-timeout 5 --max-time 12 \
-      "${mirror}dists/${VERSION_CODENAME}/InRelease" >/dev/null 2>&1; then
-    echo "Ubuntu mirror is unreachable; testing next reviewed mirror: ${mirror}" >&2
-    continue
-  fi
+# The default Ubuntu archive has repeatedly failed DNS on hosted runners.
+# The runner's original mirror configuration is the first signed APT source;
+# an alternate official mirror is attempted only when that real install fails.
+# Avoid curl HEAD probes: they can reject valid APT endpoints on cloud runners.
+original_mirrors="$(cat /etc/apt/apt-mirrors.txt)"
+if timeout --signal=TERM --kill-after=10s 360s \
+    npx --no-install playwright install --with-deps "$@"; then
+  exit 0
+fi
+echo "::warning::Runner's signed Ubuntu mirror could not install browser dependencies" >&2
 
-  printf '%s\tpriority:1\n%s\tpriority:2\n' \
-    "${mirror}" "https://security.ubuntu.com/ubuntu/" \
-    | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+if [[ "$original_mirrors" == *"azure.archive.ubuntu.com"* ]]; then
+  fallback="https://archive.ubuntu.com/ubuntu/"
+else
+  fallback="https://azure.archive.ubuntu.com/ubuntu/"
+fi
+printf '%s\tpriority:1\n%s\tpriority:2\n' \
+  "$fallback" "https://security.ubuntu.com/ubuntu/" \
+  | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
 
-  # Bound upstream stalls. If installation fails, attempt the second reviewed
-  # mirror. Do not skip missing browser/native dependencies or CI tests.
-  if timeout --signal=TERM --kill-after=10s 420s \
-      npx --no-install playwright install --with-deps "$@"; then
-    exit 0
-  fi
-  echo "Browser dependency installation failed on ${mirror}; trying fallback" >&2
-done
+if timeout --signal=TERM --kill-after=10s 360s \
+    npx --no-install playwright install --with-deps "$@"; then
+  exit 0
+fi
 
-echo "::error::Both reviewed signed Ubuntu mirrors failed browser installation" >&2
+# Leave this ephemeral runner with its original approved signed sources.
+printf '%s\n' "$original_mirrors" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+echo "::error::Both runner-default and alternate signed Ubuntu mirrors failed browser installation" >&2
 exit 1
