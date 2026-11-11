@@ -23,10 +23,7 @@ test("shared notice UI has responsive themed desktop and mobile geometry", () =>
 });
 test("toasts avoid composer controls in short viewports and limit stacking", () => {
   const ui = source("src/components/ui/sonner.tsx");
-  assert.match(
-    ui,
-    /shortViewport \? "top-center" : mobile \? "bottom-center" : "bottom-right"/,
-  );
+  assert.match(ui, /shortViewport \? "top-center" : mobile \? "bottom-center" : "bottom-right"/);
   assert.match(ui, /visibleToasts=\{shortViewport \? 1 : mobile \? 2 : 3\}/);
   assert.match(ui, /max-height: 560px/);
   assert.match(ui, /safe-area-inset-bottom/);
