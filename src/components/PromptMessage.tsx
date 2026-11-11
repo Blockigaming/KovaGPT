@@ -1,4 +1,5 @@
 import { Copy, Check } from "lucide-react";
+import { LinkPreviewChips } from "@/components/LinkPreviewChips";
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -29,6 +30,7 @@ export function PromptMessage({
             aria-label="Sent prompt"
           >
             {content}
+            <LinkPreviewChips text={content} variant="sent" />
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>

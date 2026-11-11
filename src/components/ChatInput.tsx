@@ -78,6 +78,7 @@ import {
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
+import { LinkPreviewChips } from "@/components/LinkPreviewChips";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
     default: module.ComposerSignInDialog,
@@ -1673,6 +1674,7 @@ export function ChatInput({
             )}
           </ul>
         )}
+        <LinkPreviewChips text={value} />
         <div className="spec400-input-region">
           <textarea
             ref={ref}
