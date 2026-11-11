@@ -91,6 +91,15 @@ const campaignCapable = readFileSync(
   join(root, "src/components/AnnouncementCampaignBridge.tsx"),
   "utf8",
 ).includes("listEligibleAnnouncementCampaigns");
+const requiredArgument = process.argv.find((argument) =>
+  argument.startsWith("--require-verified="),
+);
+const requiredVerifiedIds = requiredArgument
+  ? requiredArgument.slice("--require-verified=".length).split(",")
+  : [];
+const missingRequiredVerified = requiredVerifiedIds.filter(
+  (id) => !NOTIFICATION_IDS.includes(id) || !verified.has(id),
+);
 const rows = NOTIFICATION_IDS.map((id) => {
   const sources = index.get(id);
   const literalEmitters = [...sources.literal];
@@ -122,6 +131,8 @@ const summary = {
   unclassifiedDynamicEmitters: unknownDynamicEmitters.length,
   verifiedEndToEnd: rows.filter((row) => row.verifiedEndToEnd).length,
   missingEndToEndEvidence: rows.filter((row) => !row.verifiedEndToEnd).length,
+  requiredVerified: requiredVerifiedIds.length,
+  missingRequiredVerified,
 };
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   process.stdout.write(JSON.stringify({ summary, rows, unknownDynamicEmitters, evidenceError }, null, 2) + "\n");
@@ -131,6 +142,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
       evidenceError ||
       requiredEvidenceIds.some((id) => !NOTIFICATION_IDS.includes(id) || !verified.has(id)))
   )
+    process.exitCode = 1;
+  if (requiredArgument && (missingRequiredVerified.length > 0 || evidenceError))
     process.exitCode = 1;
   if (
     process.argv.includes("--require-complete") &&
