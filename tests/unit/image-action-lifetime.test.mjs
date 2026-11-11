@@ -35,6 +35,11 @@ function fixture() {
       new Promise((r) => {
         resolveFetch = r;
       }),
+    publishKovaNotice: (notice) => {
+      assert.equal(notice.id, "image_copied");
+      assert.equal(notice.confirmed, true);
+      events.push("success");
+    },
     toast: { success: () => events.push("success"), error: () => events.push("error") },
   };
   const copy = new Function(...Object.keys(dependencies), js + ";return copyGeneratedImage;")(
@@ -111,6 +116,11 @@ function saveFixture() {
       return new Promise((resolve) => {
         resolveSave = resolve;
       });
+    },
+    publishKovaNotice: (notice) => {
+      assert.equal(notice.id, "file_saved");
+      assert.equal(notice.confirmed, true);
+      state.notices.push(notice.id);
     },
     toast: {
       success: (value) => state.notices.push(value),

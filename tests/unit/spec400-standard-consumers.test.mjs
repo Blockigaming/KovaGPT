@@ -27,11 +27,15 @@ test("temporary-chat context uses a semantic book rather than sparkle decoration
   assert.doesNotMatch(dialog, /Sparkles/);
   assert.match(dialog, /BookOpen className="h-5 w-5"/);
 });
-test("phone toasts occupy the safe top region clear of expanded composers", () => {
+test("short viewport toasts clear pressed controls and mobile toasts avoid the composer", () => {
   const toaster = read("ui/sonner");
-  assert.match(toaster, /mobile \? "top-center" : "bottom-right"/);
+  assert.match(
+    toaster,
+    /shortViewport \? "top-center" : mobile \? "bottom-center" : "bottom-right"/,
+  );
+  assert.match(toaster, /max-height: 560px/);
   assert.match(toaster, /top: "calc\(72px \+ env\(safe-area-inset-top\)\)"/);
-  assert.match(toaster, /left: 16, right: 16/);
+  assert.match(toaster, /left: 16,\s*right: 16/);
   assert.match(toaster, /duration=\{4_000\}/);
 });
 

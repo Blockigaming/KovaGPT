@@ -1,4 +1,5 @@
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -115,6 +116,7 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},

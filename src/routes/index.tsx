@@ -534,6 +534,13 @@ function KovaGPT() {
         saveDraft(userKey, activeId, input);
         if (activeId) savePendingActive(userKey, activeId);
       }
+      try {
+        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (!returnTo.startsWith("/settings/"))
+          window.sessionStorage.setItem("kova-settings-return-to", returnTo);
+      } catch {
+        // Settings remains reachable when browser storage is unavailable.
+      }
       void navigate({ to: "/settings/$section", params: { section: settingsSectionForTab(tab) } });
     },
     [

@@ -54,6 +54,11 @@ function fixture({
       throw new Error("navigation_failed");
   };
   const modules = {
+    "@/components/KovaNotificationSurface": {
+      publishKovaNotice(notice) {
+        assert.ok(notice && typeof notice.id === "string");
+      },
+    },
     react: {
       useState: (initial) => [initial, () => {}],
       useEffect: () => {},

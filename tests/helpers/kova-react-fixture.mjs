@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { fixtureElement, nativeControlModules } from "./native-control-bindings.mjs";
+import { notificationDeliveryStub } from "./notification-test-double.mjs";
 
 export const nodes = (node) =>
   !node || typeof node !== "object"
@@ -81,6 +82,7 @@ export function reactFixture(path, select, options = {}) {
     },
   };
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},

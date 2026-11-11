@@ -74,6 +74,8 @@ vm.runInNewContext(output, {
     }
   },
   require(id) {
+    if (id === "@/components/KovaNotificationSurface")
+      return { publishKovaNotice: (notice) => assert.ok(notice?.id) };
     if (id === "@/lib/document-extraction/pdf-metadata.mjs") return pdfMetadata;
     if (id === "@/components/ComposerPdfPages") return { ComposerPdfPages: empty };
     if (id === "@/lib/composer-local-attachments.mjs") return localAttachments;

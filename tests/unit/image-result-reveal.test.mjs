@@ -162,6 +162,9 @@ function fixture({ signedIn = true } = {}) {
     setError: (value) => {
       state.error = value;
     },
+    publishKovaNotice: (notice) => {
+      assert.ok(notice && typeof notice.id === "string");
+    },
     setLoginOpen: (value) => actions.push(["login", value]),
     setLimitOpen: (value) => {
       state.limitOpen = value;

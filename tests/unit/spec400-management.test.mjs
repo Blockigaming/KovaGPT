@@ -51,7 +51,8 @@ test("task deep links only open authorized records and creation receipt follows 
   assert.match(schedules, /tasks\.find\(\(task\) => task.id === requestedTaskId\)/);
   assert.match(schedules, /not accessible to this account/);
   assert.match(editor, /const persistedTask = await create/);
-  assert.match(editor, /if \(active.current\) onCreated\?\.\(persistedTask\)/);
+  assert.match(editor, /if \(active.current\) \{\s*onCreated\?\.\(persistedTask\)/);
+  assert.match(editor, /onCreated\?\.\(persistedTask\);\s*publishKovaNotice\(\{/);
   assert.match(schedules, /onCreated=\{\(persistedTask\) => setCreatedTask\(persistedTask\)\}/);
 });
 test("schedule mutations retain idempotent retry and principal pinning", () => {

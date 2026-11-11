@@ -64,6 +64,7 @@ function fixture(options = {}) {
     React,
     SIDEBAR_SHORTCUTS,
     SIDEBAR_ITEMS,
+    availableWorkspaces: [],
     sidebarStyle: {},
     signedIn: true,
     canSchedule: true,
@@ -282,7 +283,7 @@ test("New chat, Search, customization and Settings invoke their existing callbac
     ["new"],
     ["search"],
     ["customize", opener],
-    ["settings", "appearance"],
+    ["settings", "general"],
   ]);
 });
 

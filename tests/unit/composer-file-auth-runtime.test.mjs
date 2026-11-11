@@ -1,4 +1,5 @@
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import assert from "node:assert/strict";
@@ -104,6 +105,7 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     "@/lib/document-extraction/client": {
       extractDocumentFile: async () => {
         reads.push("document reader");

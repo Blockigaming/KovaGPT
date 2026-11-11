@@ -27,10 +27,10 @@ const toastButtonClassName =
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const mobile = useIsMobile();
-  const [shortLandscape, setShortLandscape] = useState(false);
+  const [shortViewport, setShortViewport] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia("(max-height: 480px) and (orientation: landscape)");
-    const update = () => setShortLandscape(query.matches);
+    const query = window.matchMedia("(max-height: 560px)");
+    const update = () => setShortViewport(query.matches);
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
@@ -38,12 +38,17 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
-      position={shortLandscape ? "top-center" : mobile ? "bottom-center" : "bottom-right"}
+      position={shortViewport ? "top-center" : mobile ? "bottom-center" : "bottom-right"}
       closeButton
       duration={4_000}
-      visibleToasts={shortLandscape ? 1 : mobile ? 2 : 3}
+      visibleToasts={shortViewport ? 1 : mobile ? 2 : 3}
       gap={8}
-      mobileOffset={{ bottom: "calc(88px + env(safe-area-inset-bottom))", left: 16, right: 16 }}
+      mobileOffset={{
+        top: "calc(72px + env(safe-area-inset-top))",
+        bottom: "calc(88px + env(safe-area-inset-bottom))",
+        left: 16,
+        right: 16,
+      }}
       style={{ ...toasterStyle, ...style }}
       toastOptions={{
         classNames: {

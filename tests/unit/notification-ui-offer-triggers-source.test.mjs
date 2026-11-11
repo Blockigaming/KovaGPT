@@ -21,11 +21,14 @@ test("shared notice UI has responsive themed desktop and mobile geometry", () =>
     assert.ok((css + "\n" + ui).includes(value), value);
   }
 });
-test("toasts avoid composer controls in short landscape and limit stacking", () => {
+test("toasts avoid composer controls in short viewports and limit stacking", () => {
   const ui = source("src/components/ui/sonner.tsx");
-  assert.match(ui, /shortLandscape \? "top-center" : mobile \? "bottom-center" : "bottom-right"/);
-  assert.match(ui, /visibleToasts=\{shortLandscape \? 1 : mobile \? 2 : 3\}/);
-  assert.match(ui, /max-height: 480px/);
+  assert.match(
+    ui,
+    /shortViewport \? "top-center" : mobile \? "bottom-center" : "bottom-right"/,
+  );
+  assert.match(ui, /visibleToasts=\{shortViewport \? 1 : mobile \? 2 : 3\}/);
+  assert.match(ui, /max-height: 560px/);
   assert.match(ui, /safe-area-inset-bottom/);
 });
 test("offer never displays solely on free plan", () => {

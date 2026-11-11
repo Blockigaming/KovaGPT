@@ -8,6 +8,7 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 let mobile = false;
 const { Toaster } = loadUiModule("src/components/ui/sonner.tsx", {
   sonner: { Toaster: "Sonner" },
+  react: { useState: (initial) => [initial, () => {}], useEffect: () => {} },
   "@/hooks/use-mobile": { useIsMobile: () => mobile },
 });
 const styles = postcss.parse(read("src/styles/visual-tokens.css"));
@@ -55,8 +56,9 @@ test("mobile toasts move above the composer while desktop keeps its corner", () 
   mobile = true;
   try {
     const { props } = Toaster({});
-    assert.equal(props.position, "top-center");
+    assert.equal(props.position, "bottom-center");
     assert.equal(props.mobileOffset.top, "calc(72px + env(safe-area-inset-top))");
+    assert.equal(props.mobileOffset.bottom, "calc(88px + env(safe-area-inset-bottom))");
     assert.equal(props.mobileOffset.left, 16);
     assert.equal(props.mobileOffset.right, 16);
   } finally {
@@ -76,5 +78,5 @@ test("caller styles merge without discarding palette bindings and normal toast b
   assert.equal(props.duration, 2000);
   assert.equal(props.position, "bottom-right");
   assert.equal(props.closeButton, true);
-  assert.equal(props.visibleToasts, 4);
+  assert.equal(props.visibleToasts, 3);
 });

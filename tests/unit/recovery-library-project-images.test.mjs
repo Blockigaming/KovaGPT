@@ -73,6 +73,9 @@ function imageFixture(status, editDraftDuringRequest = false) {
     setLoading(value) {
       state.loading = value;
     },
+    publishKovaNotice: (notice) => {
+      assert.ok(notice && typeof notice.id === "string");
+    },
     setLoginOpen() {},
     setLimitOpen() {},
     setLimitMessage() {},

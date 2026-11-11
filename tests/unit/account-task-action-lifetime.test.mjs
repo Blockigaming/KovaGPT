@@ -166,6 +166,10 @@ function taskFixture() {
     crypto: { randomUUID: () => "mutation" },
     update: request,
     remove: request,
+    publishKovaNotice: (notice) => {
+      assert.ok(notice && typeof notice.id === "string");
+      events.push(["notice", notice.id]);
+    },
     setPendingTaskIds: (value) => events.push(["pending", value]),
     setLoading: (value) => events.push(["loading", value]),
     setTasks: (fn) => {
@@ -379,6 +383,7 @@ function taskLoadFixture() {
     checkEligible: async () => ({ executionAvailable: true }),
     setExecutionAvailable: (value) => events.push(["executionAvailable", value]),
     taskListLoaded: { current: false },
+    observedRunStates: { current: new Map() },
     useCallback: (fn) => fn,
     list: () => {
       const pending = deferred();
