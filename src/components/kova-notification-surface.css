@@ -159,9 +159,14 @@
   from { opacity: .55; transform: translateY(100%); }
   to { opacity: 1; transform: translateY(0); }
 }
+.kova-notice-action-error { margin-top: 16px; color: var(--destructive, #c92d36); font-size: 13px; line-height: 1.5; }
+.kova-notice-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.kova-notice-actions button:disabled, .kova-notice-close:disabled { cursor: wait; opacity: .65; }
+.kova-notice-spinner { animation: kova-notice-spin 850ms linear infinite; }
+@keyframes kova-notice-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .kova-notice-backdrop, .kova-notice-panel,
-  .kova-notice-panel[data-surface="card"], .kova-notice-actions button {
+  .kova-notice-panel[data-surface="card"], .kova-notice-actions button, .kova-notice-spinner {
     animation: none;
     transition: none;
   }
