@@ -1,6 +1,6 @@
 export declare const NOTIFICATION_GROUPS: Readonly<Record<string, readonly string[]>>;
 export declare const NOTIFICATION_IDS: readonly string[];
-export type NotificationSurface = "modal" | "sheet" | "inline" | "status" | "toast" | "card";
+export type NotificationSurface = "modal" | "sheet" | "inline" | "status" | "toast" | "card" | "popover" | "banner";
 export type NotificationDefinition = Readonly<{
   id: string;
   group: string;
