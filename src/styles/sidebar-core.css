@@ -245,6 +245,42 @@
   line-height: 20px;
   text-align: left;
 }
+.kova-sidebar .kova-chat-quick-pin {
+  display: grid;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease;
+}
+.kova-sidebar .kova-chat-quick-pin svg {
+  width: 17px;
+  height: 17px;
+}
+.kova-sidebar .kova-chat-quick-pin.is-pinned {
+  opacity: 1;
+  color: var(--foreground);
+}
+.kova-sidebar .kova-chat-row:is(:hover, :focus-within) .kova-chat-quick-pin,
+.kova-sidebar .kova-chat-quick-pin:focus-visible {
+  opacity: 1;
+}
+.kova-sidebar .kova-chat-quick-pin:hover,
+.kova-sidebar .kova-chat-options:hover {
+  background: var(--sidebar-hover);
+  color: var(--foreground);
+}
 .kova-sidebar .kova-chat-options {
   display: grid;
   width: 28px;
@@ -425,10 +461,12 @@
   margin-top: 8px;
 }
 .kova-sidebar-chat-menu {
-  width: min(236px, calc(100vw - 24px));
+  /* Radix portals this menu into the document overlay, beyond the drawer edge. */
+  width: min(196px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
   padding: 8px;
-  border-radius: 22px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-floating);
 }
 .kova-sidebar :is(button, input, summary, a):focus-visible,
 .kova-sidebar-rail :is(button, a):focus-visible {
@@ -626,6 +664,9 @@ button.kova-auth-sign-up:hover {
 }
 
 @media (pointer: coarse), (max-width: 1023px) {
+  .kova-sidebar .kova-chat-quick-pin {
+    opacity: 1;
+  }
   .kova-sidebar-chat-menu [role="menuitem"] {
     min-height: 44px;
   }

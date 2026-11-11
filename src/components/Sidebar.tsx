@@ -206,6 +206,7 @@ export function Sidebar({
   const navigationOwnsFocusRef = useRef(false);
   const renameDialogRef = useRef<HTMLDialogElement | null>(null);
   const chatOptionsRefs = useRef(new globalThis.Map<string, HTMLButtonElement>());
+  const chatPinRefs = useRef(new globalThis.Map<string, HTMLButtonElement>());
   const renameReturnFocusRef = useRef<{ target: HTMLButtonElement | null; context: string } | null>(
     null,
   );
@@ -334,6 +335,19 @@ export function Sidebar({
       document.removeEventListener("pointerdown", relinquishPinFocus, true);
     };
   }, [chatActionContext]);
+
+  const quickTogglePin = (conversation: Conversation) => {
+    if (!onTogglePin) return;
+    const context = chatActionContextRef.current;
+    onTogglePin(conversation.id);
+    // Moving between Recent and Pinned can remount the row. Restore keyboard
+    // focus to the same chat's new quick-pin button only in the same sidebar.
+    window.requestAnimationFrame(() => {
+      if (context !== chatActionContextRef.current) return;
+      const next = chatPinRefs.current.get(conversation.id);
+      if (next?.isConnected) next.focus({ preventScroll: true });
+    });
+  };
 
   const beginPin = (conversation: Conversation, item: HTMLElement) => {
     if (!onTogglePin || chatActionContextRef.current !== chatActionContext) return;
@@ -985,6 +999,29 @@ export function Sidebar({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      {onTogglePin ? (
+        <button
+          type="button"
+          className={`kova-chat-quick-pin${conversation.pinned ? " is-pinned" : ""}`}
+          ref={(element) => {
+            if (element) chatPinRefs.current.set(conversation.id, element);
+            else chatPinRefs.current.delete(conversation.id);
+          }}
+          title={conversation.pinned ? "Unpin chat" : "Pin chat"}
+          aria-label={`${conversation.pinned ? "Unpin" : "Pin"} ${conversation.title}`}
+          aria-pressed={Boolean(conversation.pinned)}
+          data-pinned={conversation.pinned ? "true" : "false"}
+          onClick={(event) => {
+            event.stopPropagation();
+            quickTogglePin(conversation);
+          }}
+        >
+          <Pin
+            aria-hidden="true"
+            fill={conversation.pinned ? "currentColor" : "none"}
+          />
+        </button>
+      ) : null}
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
@@ -1000,11 +1037,12 @@ export function Sidebar({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          side={mobileViewport ? "top" : "right"}
+          side={mobileViewport ? "bottom" : "right"}
           align={mobileViewport ? "end" : "start"}
-          sideOffset={mobileViewport ? 4 : 12}
+          sideOffset={mobileViewport ? 10 : 14}
           collisionPadding={12}
           className="kova-sidebar-chat-menu"
+          data-sidebar-menu-placement="floating"
           onCloseAutoFocus={(event) => {
             if (closePinMenu(conversation.id, event)) return;
             const pending = archiveReturnFocusRef.current;
@@ -1030,6 +1068,7 @@ export function Sidebar({
               {conversation.pinned ? "Unpin" : "Pin"}
             </DropdownMenuItem>
           ) : null}
+          {(onShare || onDuplicate) && <DropdownMenuSeparator />}
           {onShare ? (
             <DropdownMenuItem onClick={() => onShare(conversation.id)}>
               <Share2 />
@@ -1042,21 +1081,24 @@ export function Sidebar({
               Duplicate
             </DropdownMenuItem>
           ) : null}
-          {signedIn && user?.id ? (
-            <ChatProjectSubmenu
-              ownerId={user.id}
-              onSelect={(projectId) => {
-                cancelPendingSelection();
-                setProjectChoice(projectId);
-                setProjectChat(conversation);
-              }}
-            />
-          ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-destructive" onClick={() => onDelete(conversation.id)}>
             <Trash2 />
             Delete
           </DropdownMenuItem>
+          {signedIn && user?.id ? (
+            <>
+              <DropdownMenuSeparator />
+              <ChatProjectSubmenu
+                ownerId={user.id}
+                onSelect={(projectId) => {
+                  cancelPendingSelection();
+                  setProjectChoice(projectId);
+                  setProjectChat(conversation);
+                }}
+              />
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
