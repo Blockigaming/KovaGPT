@@ -19,7 +19,7 @@ export function verifiedEndToEndIds(
     for (const suite of Array.isArray(suites) ? suites : []) {
       for (const spec of Array.isArray(suite.specs) ? suite.specs : []) {
         const file = String(spec.file ?? suite.file ?? "").replaceAll("\\", "/");
-        if (!file.endsWith("/notification-real-triggers.spec.ts")) continue;
+        if (file.split("/").at(-1) !== "notification-real-triggers.spec.ts") continue;
         const ids = [...String(spec.title ?? "").matchAll(/\[notice:([a-z0-9_]+)\]/g)]
           .map((match) => match[1])
           .filter((id) => validIds.has(id));
