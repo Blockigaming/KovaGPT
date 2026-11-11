@@ -46,7 +46,7 @@ test("real feature operations emit exact source-backed notices", () => {
 
 test("workspace discovery requires verified domain, not an email suffix heuristic", () => {
   const sql = source(
-    "supabase/migrations/20261110224500_verified_team_workspace_join_requests.sql",
+    "supabase/migrations/20261110224500_kova_verified_team_workspace_join_requests.sql",
   );
   assert.match(sql, /team_verified_domains/);
   assert.match(sql, /team_verified_email\(p_actor\)/);
