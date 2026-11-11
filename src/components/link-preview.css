@@ -88,3 +88,37 @@
     transition: none;
   }
 }
+
+/* The entire URL is a single, removable object in the composer, including on touch. */
+.kova-link-preview-composer {
+  display: flex;
+  align-items: center;
+}
+.kova-link-preview-composer .kova-link-preview-open {
+  flex: 1 1 auto;
+}
+.kova-link-preview-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.kova-link-preview-remove svg {
+  width: 16px;
+  height: 16px;
+}
+.kova-link-preview-remove:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-link-preview-remove:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}

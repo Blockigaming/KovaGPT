@@ -2,6 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   cleanLinkTitle,
+  COMPOSER_LINK_MARKER,
+  firstLinkPreviewToken,
+  toComposerLinkDisplay,
+  fromComposerLinkDisplay,
   fallbackLinkTitle,
   firstLinkPreviewUrl,
   isOnlyLink,
@@ -111,4 +115,29 @@ test("unsafe redirect does not fetch a local network destination", async () => {
   const result = await resolveLinkPreview("https://example.org/start", undefined, read);
   assert.equal(count, 1);
   assert.equal(result?.title, "example.org");
+});
+
+test("pasted page links render as one invisible editor position, retaining canonical URL", () => {
+  const url = "https://www.youtube.com/watch?v=zkMitXDo5es";
+  const canonical = "Explain this " + url + " please";
+  const token = firstLinkPreviewToken(canonical);
+  assert.equal(token?.raw, url);
+  assert.equal(token?.start, "Explain this ".length);
+  assert.equal(token?.end, "Explain this ".length + url.length);
+  const compact = toComposerLinkDisplay(canonical, token.raw);
+  assert.equal(compact, "Explain this " + COMPOSER_LINK_MARKER + " please");
+  assert.equal(fromComposerLinkDisplay(compact, token.raw), canonical);
+  // One Backspace on the marker removes every URL character in one operation.
+  const afterBackspace = compact.replace(COMPOSER_LINK_MARKER, "");
+  assert.equal(afterBackspace, "Explain this  please");
+  // Keeping the marker while typing leaves the original URL untouched.
+  assert.equal(
+    fromComposerLinkDisplay(compact + " next", token.raw),
+    canonical + " next",
+  );
+});
+
+test("unmodified nonlink drafts never get an atomic marker", () => {
+  assert.equal(firstLinkPreviewToken("ordinary text"), null);
+  assert.equal(toComposerLinkDisplay("ordinary text", ""), "ordinary text");
 });

@@ -82,7 +82,6 @@ import { LinkPreviewChip } from "@/components/LinkPreviewChip";
 import {
   COMPOSER_LINK_MARKER,
   firstLinkPreviewToken,
-  firstLinkPreviewUrl,
   fromComposerLinkDisplay,
   toComposerLinkDisplay,
 } from "@/lib/link-preview.mjs";
@@ -810,7 +809,7 @@ export function ChatInput({
     onChange(visible);
     // Typing an URL must not collapse it mid-word. Complete typed links when
     // whitespace is entered; pasted links collapse immediately.
-    if (/\\s$/u.test(visible)) {
+    if (/\s$/u.test(visible)) {
       const token = firstLinkPreviewToken(visible);
       if (token) setAtomicLinkRaw(token.raw);
     }
@@ -1186,7 +1185,7 @@ export function ChatInput({
       // A pasted page/video URL is one removable composer token, not dozens
       // of individual characters. The canonical prompt still stores the URL.
       const plain = event.clipboardData.getData("text/plain");
-      const target = event.target;
+      const target = event.target as HTMLElement;
       const pastedToken = firstLinkPreviewToken(plain);
       if (
         !disabled &&
