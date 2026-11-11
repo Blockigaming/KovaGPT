@@ -147,7 +147,10 @@ test("density changes stay mobile-scoped and preserve touch targets and the acti
   assert.match(phone, /--page-padding: 16px 20px 40px;/);
   assert.match(phone, /grid-template-columns: minmax\(0, 1fr\) 140px;/);
   assert.match(phone, /\.kova-project-create\s*\{[^}]*width: 140px;/);
-  assert.doesNotMatch(readFileSync("src/routes/projects.tsx", "utf8"), /ProjectTemplatesDialog|kova-project-templates/);
+  assert.doesNotMatch(
+    readFileSync("src/routes/projects.tsx", "utf8"),
+    /ProjectTemplatesDialog|kova-project-templates/,
+  );
   assert.match(phone, /button\[aria-controls="kova-timers-panel"\]\s*\{[^}]*min-height: 44px;/);
   assert.match(phone, /:has\(\.tabular-nums\)\s*> span:last-child/);
   assert.match(phone, /\.kova-project-file-link\s*\{[^}]*min-height: 0;/);

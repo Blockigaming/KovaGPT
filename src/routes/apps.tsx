@@ -1526,7 +1526,8 @@ function AppsPage() {
                   )}
                 </section>
                 {["gmail", "google-docs"].includes(visibleSelectedApp.id) &&
-                  tierStatus === "ready" && tier === "free" && (
+                  tierStatus === "ready" &&
+                  tier === "free" && (
                     <p role="status" className="spec400-plugin-notice">
                       {visibleSelectedApp.label} requires Kova Plus or Pro.
                     </p>
@@ -1623,8 +1624,12 @@ function AppsPage() {
                               </Button>
                               <Button
                                 variant="outline"
-                                disabled={googleBusy || visibleGoogleLoading ||
-                                  (visibleSelectedApp.id === "gmail" && (tierStatus !== "ready" || tier === "free"))}
+                                disabled={
+                                  googleBusy ||
+                                  visibleGoogleLoading ||
+                                  (visibleSelectedApp.id === "gmail" &&
+                                    (tierStatus !== "ready" || tier === "free"))
+                                }
                                 onClick={() =>
                                   void connectGoogle(account.id, visibleSelectedApp.id)
                                 }
@@ -1667,7 +1672,8 @@ function AppsPage() {
                         disabled={
                           googleBusy ||
                           visibleGoogleLoading ||
-                          (visibleSelectedApp.id === "gmail" && (tierStatus !== "ready" || tier === "free")) ||
+                          (visibleSelectedApp.id === "gmail" &&
+                            (tierStatus !== "ready" || tier === "free")) ||
                           visibleGoogleStatus?.state === "temporarily_unavailable"
                         }
                         onClick={() => void handleConnect(visibleSelectedApp)}

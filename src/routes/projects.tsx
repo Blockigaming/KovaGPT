@@ -1648,7 +1648,9 @@ function ProjectsPage() {
         >
           <DialogHeader>
             <DialogTitle>New project</DialogTitle>
-            <DialogDescription>Give your project a name, then personalize its workspace.</DialogDescription>
+            <DialogDescription>
+              Give your project a name, then personalize its workspace.
+            </DialogDescription>
           </DialogHeader>
           <form
             noValidate

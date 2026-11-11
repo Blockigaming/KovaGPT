@@ -15,7 +15,10 @@ test("Finances has no Kova tier restriction while retaining authenticated provid
 });
 
 test("Gmail requires a server-verified paid plan, not only a disabled UI button", () => {
-  assert.match(src("src/routes/api/google/auth.ts"), /connector === "gmail" && \(await getCallerTier\(auth\)\) === "free"/);
+  assert.match(
+    src("src/routes/api/google/auth.ts"),
+    /connector === "gmail" && \(await getCallerTier\(auth\)\) === "free"/,
+  );
   assert.match(src("src/routes/api/google/gmail.ts"), /\(await getCallerTier\(auth\)\) === "free"/);
   const tools = src("src/lib/google-tools.server.ts");
   assert.match(tools, /resolveEffectiveBillingTier/);

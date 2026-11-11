@@ -248,7 +248,8 @@ function ScheduledTasksPage() {
           return;
         } catch {
           if (!isCurrent()) return;
-          if (attempt < 2) await new Promise<void>((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
+          if (attempt < 2)
+            await new Promise<void>((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
         }
       }
       if (isCurrent()) {
@@ -793,8 +794,8 @@ function ScheduledTasksPage() {
               <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
               <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                KovaGPT could not verify Task access for this session. Your account is still
-                signed in. Retry without leaving this page.
+                KovaGPT could not verify Task access for this session. Your account is still signed
+                in. Retry without leaving this page.
               </p>
               <Button
                 variant="outline"

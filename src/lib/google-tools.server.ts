@@ -300,9 +300,10 @@ export async function getAvailableGoogleTools(
   }
   const health = await getGoogleConnectionHealth(userId, binding?.connectionId);
   if (!health.connected) return [];
-  return ALL_TOOLS.filter((tool) =>
-    (paid || !tool.function.name.startsWith("gmail_")) &&
-    hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
+  return ALL_TOOLS.filter(
+    (tool) =>
+      (paid || !tool.function.name.startsWith("gmail_")) &&
+      hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
   );
 }
 
@@ -404,7 +405,10 @@ export async function runGoogleTool(
     }
     throw error;
   }
-  if (name.startsWith("gmail_") && (await resolveEffectiveBillingTier(admin(), userId)) === "free") {
+  if (
+    name.startsWith("gmail_") &&
+    (await resolveEffectiveBillingTier(admin(), userId)) === "free"
+  ) {
     return { error: "gmail_plan_required", message: "Gmail requires Kova Plus or Pro." };
   }
   if (WRITE_TOOL_NAMES.has(name)) {

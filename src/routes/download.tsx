@@ -13,7 +13,11 @@ function DownloadPage() {
   const available = useSyncExternalStore(subscribeInstallPrompt, canPromptInstall, noServerPrompt);
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-6 py-16 sm:py-24">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-5xl flex-1 px-6 py-16 sm:py-24"
+      >
         <h1 className="text-4xl font-semibold tracking-tight">KovaGPT on your devices</h1>
         <p className="mt-5 text-muted-foreground">
           Install the KovaGPT web app for a dedicated window and a shortcut on your home screen.

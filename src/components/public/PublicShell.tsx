@@ -236,8 +236,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
       );
       if (!target || !root.contains(target)) return;
       const rect = target.getBoundingClientRect();
-      target.style.setProperty("--kova-pointer-x", (event.clientX - rect.left) + "px");
-      target.style.setProperty("--kova-pointer-y", (event.clientY - rect.top) + "px");
+      target.style.setProperty("--kova-pointer-x", event.clientX - rect.left + "px");
+      target.style.setProperty("--kova-pointer-y", event.clientY - rect.top + "px");
     };
     renderProgress();
     window.addEventListener("scroll", onScroll, { passive: true });
