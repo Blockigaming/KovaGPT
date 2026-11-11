@@ -98,7 +98,7 @@ export function FreeOfferButton({ variant = "toolbar" }: { variant?: "toolbar" |
         <span>{variant === "sidebar" ? "Claim offer" : "Free offer"}</span>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md rounded-3xl p-7">
+        <DialogContent className="kova-free-offer-dialog max-w-md rounded-3xl p-7">
           <DialogHeader>
             <Gift aria-hidden="true" className="mb-3 h-9 w-9 text-sky-500" />
             <DialogTitle>50% off your first month of Plus</DialogTitle>
