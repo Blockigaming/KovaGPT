@@ -204,6 +204,7 @@ import {
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { chatFailureNoticeId } from "@/lib/chat-notice-policy.mjs";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
@@ -2354,6 +2355,7 @@ function KovaGPT() {
             status?: number;
             code?: string;
             retryAfter?: number;
+            usageKind?: "thinking" | "regular";
           };
           const raw = err.message || "Something went wrong";
           const quotaRejected = err.status === 429 && err.category === "quota_exceeded";
@@ -2435,25 +2437,10 @@ function KovaGPT() {
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
 
           if (isCurrentRetryScope()) {
-            const failureEvent = quotaRejected
-              ? /image/i.test(raw)
-                ? "image_limit"
-                : /upload|file/i.test(raw)
-                  ? "upload_limit"
-                  : "assistant_limit"
-              : sessionExpired
-                ? "session_expired"
-                : category === "rate_limit"
-                  ? "rate_limited"
-                  : category === "model_timeout"
-                    ? "request_timeout"
-                    : category === "model_provider_failure"
-                      ? "model_unavailable"
-                      : err.code === "web_search_unavailable"
-                        ? "search_failed"
-                        : isNetwork
-                          ? "network_offline"
-                          : "generic_failure";
+            const failureEvent = chatFailureNoticeId(err, {
+              signedIn: isSignedIn,
+              networkFailure: isNetwork,
+            });
             publishKovaNotice({
               id: failureEvent,
               title: friendly,
