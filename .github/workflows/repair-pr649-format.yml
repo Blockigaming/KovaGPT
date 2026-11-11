@@ -16,7 +16,7 @@ jobs:
           persist-credentials: true
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npx prettier --write src/components/BankConnectionsPanel.tsx src/components/FinanceActivityDashboard.tsx src/components/HealthConnectionsPanel.tsx src/components/HealthDashboardPreview.tsx
