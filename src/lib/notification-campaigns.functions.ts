@@ -7,6 +7,7 @@ import { monthlyIntroBillingEnabled } from "@/lib/stripe.server";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { NOTIFICATION_GROUPS } from "@/lib/notification-catalog.mjs";
 import { safePersistedNoticeActionUrl } from "@/lib/persisted-notification-policy.mjs";
+import { selectEligibleCampaignRows } from "@/lib/notification-campaign-policy.mjs";
 
 export type AnnouncementCampaign = {
   id: string;
@@ -94,23 +95,12 @@ export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" 
         (dismissed.data ?? []).map((row: { campaign_id: string }) => row.campaign_id),
       );
       const announcementIDs = new Set(NOTIFICATION_GROUPS.announcements);
-      return rows
-        .filter(
-          (row) =>
-            !excluded.has(row.id) &&
-            announcementIDs.has(row.event_id) &&
-            Array.isArray(row.allowed_tiers) &&
-            row.allowed_tiers.includes(tier) &&
-            /^[0-9a-f-]{36}$/i.test(row.id) &&
-            typeof row.release_id === "string" &&
-            row.release_id.length <= 80 &&
-            typeof row.title === "string" &&
-            row.title.length <= 120 &&
-            typeof row.body === "string" &&
-            row.body.length <= 700 &&
-            (row.action_path === null || safePersistedNoticeActionUrl(row.action_path) !== null),
-        )
-        .slice(0, 2)
+      return selectEligibleCampaignRows(rows, {
+        tier,
+        dismissedIds: excluded,
+        allowedEventIds: announcementIDs,
+        safeActionUrl: safePersistedNoticeActionUrl,
+      })
         .map((row) => ({
           id: row.id,
           eventId: row.event_id,
