@@ -395,9 +395,9 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     settingsStylesSource,
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ).declarations;
-  assert.equal(auth.width, "min(1100px, calc(100vw - 64px))");
-  assert.equal(auth.height, "min(820px, calc(100dvh - 64px))");
-  assert.equal(auth["max-height"], "calc(100dvh - 64px)");
+  assert.equal(auth.width, "min(980px, calc(100vw - 48px))");
+  assert.equal(auth.height, "min(760px, calc(100dvh - 48px))");
+  assert.equal(auth["max-height"], "calc(100dvh - 48px)");
   assert.match(settingsSource, /const Surface = page \? SettingsPageContent : DialogContent/);
   assert.match(settingsSource, /loggedIn \? "is-authenticated" : "is-guest"/);
   const page = styleRule(
