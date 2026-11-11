@@ -42,7 +42,7 @@ jobs:
             while IFS= read -r -d '' file; do
               case "$file" in
                 *.js|*.mjs|*.mts|*.ts|*.tsx|*.jsx|*.css|*.md|*.json|*.yml|*.yaml)
-                  if test -f "$file"; then printf '%s\\0' "$file"; fi
+                  if test -f "$file"; then printf '%s\0' "$file"; fi
                   ;;
               esac
             done |
