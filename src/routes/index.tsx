@@ -622,6 +622,7 @@ function KovaGPT() {
     kind: "image" | "chat" | "upload";
     message?: string;
     resetsAt?: number;
+    usageKind?: "thinking" | "regular";
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightTargetRef = useRef<{
@@ -2385,7 +2386,7 @@ function KovaGPT() {
               : /upload|file/i.test(raw)
                 ? "upload"
                 : "chat";
-            setLimitDialog({ open: true, kind, message: raw, resetsAt: err.resetAtMs });
+            setLimitDialog({ open: true, kind, message: raw, resetsAt: err.resetAtMs, usageKind: err.usageKind });
           }
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
@@ -3860,6 +3861,7 @@ function KovaGPT() {
             open={limitDialog.open}
             onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
             kind={limitDialog.kind}
+            usageKind={limitDialog.usageKind}
             message={limitDialog.message}
             resetsAt={limitDialog.resetsAt ?? getUsage().resetsAt}
           />
