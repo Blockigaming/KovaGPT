@@ -290,7 +290,14 @@ export async function getAvailableGoogleTools(
   binding?: GoogleAccountBinding,
 ): Promise<ToolDef[]> {
   await assertLockdownAllows(admin(), userId, "connector_read");
-  const paid = (await resolveEffectiveBillingTier(admin(), userId)) !== "free";
+  // Fail closed for Gmail when billing is unreachable, but avoid disabling
+  // the separately entitled free Calendar/Drive tools.
+  let paid = false;
+  try {
+    paid = (await resolveEffectiveBillingTier(admin(), userId)) !== "free";
+  } catch {
+    paid = false;
+  }
   const health = await getGoogleConnectionHealth(userId, binding?.connectionId);
   if (!health.connected) return [];
   return ALL_TOOLS.filter((tool) =>

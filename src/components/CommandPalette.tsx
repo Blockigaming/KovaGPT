@@ -187,7 +187,13 @@ export function CommandPalette({
     : null;
   const deferredQuery = useDeferredValue(query);
   const normalized = deferredQuery.trim().toLowerCase();
-  const conversationMatches = normalized
+  const [searchView, setSearchView] = useState<"all" | "chats" | "images" | "documents" | "projects">("all");
+  const showActions = searchView === "all";
+  const showWorkspace = !["chats"].includes(searchView);
+  const showChats = searchView === "all" || searchView === "chats";
+  const conversationMatches = !showChats
+    ? []
+    : normalized
     ? searchConversations([...conversations, ...archivedConversations], deferredQuery).slice(0, 8)
     : conversations.slice(0, 6).map((conversation) => ({
         conversation,
@@ -319,8 +325,7 @@ export function CommandPalette({
   };
   const visibleActions = useMemo(
     () =>
-      quickActions
-        .slice(1)
+      (showActions ? quickActions.slice(1) : [])
         .map((action) =>
           action.action === "focus-input" && closesSidebarToFocus
             ? { ...action, label: "Close sidebar and focus message box" }
@@ -339,20 +344,25 @@ export function CommandPalette({
             (pinnedCommands.includes(action.href ?? action.action ?? "") ? 20 : 0),
         }))
         .sort((a, b) => b.score - a.score),
-    [normalized, recentCommands, pinnedCommands, closesSidebarToFocus],
+    [normalized, recentCommands, pinnedCommands, closesSidebarToFocus, showActions],
   );
   const visibleWorkspaceItems = useMemo(
     () =>
-      workspaceItems
+      (showWorkspace ? workspaceItems : [])
+        .filter((item) =>
+          searchView === "images" ? item.type === "image" :
+          searchView === "documents" ? item.type === "library" :
+          searchView === "projects" ? item.type === "project" : true,
+        )
         .filter((item) =>
           normalized ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized) : true,
         )
         .slice(0, 20),
-    [normalized, workspaceItems],
+    [normalized, workspaceItems, searchView, showWorkspace],
   );
   const actionItems = useMemo(
-    () => ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)],
-    [visibleActions],
+    () => showActions ? ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)] : [],
+    [visibleActions, showActions],
   );
   const workspaceStartIndex = actionItems.length;
   const chatStartIndex = workspaceStartIndex + visibleWorkspaceItems.length;
@@ -375,6 +385,9 @@ export function CommandPalette({
   useEffect(() => {
     setActiveOptionKey("action:new-chat");
   }, [query, open]);
+  useEffect(() => {
+    if (open) setSearchView("all");
+  }, [open]);
 
   useEffect(() => {
     if (!open || totalItems === 0) return;
@@ -573,6 +586,13 @@ export function CommandPalette({
             aria-label="Search workspace, commands, and chats"
             className=" min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
+          {query.length > 0 && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => {
+              onQueryChange("");
+              searchInputRef.current?.focus({ preventScroll: true });
+            }} className="min-h-9 shrink-0 rounded-lg px-3 text-xs text-muted-foreground"
+            aria-label="Clear search">Clear</Button>
+          )}
           <Button
             data-ui-reference="chatgpt.search-dialog.control"
             variant="ghost"
@@ -587,11 +607,25 @@ export function CommandPalette({
         </div>
 
         <div
+          role="tablist"
+          aria-label="Search result type"
+          className="mx-3 mt-2 flex min-h-11 shrink-0 items-center gap-1 overflow-x-auto rounded-full bg-muted/55 p-1 sm:mx-5"
+        >
+          {(["all", "chats", "images", "documents", "projects"] as const).map((view) => (
+            <button key={view} type="button" role="tab" aria-selected={searchView === view}
+              onClick={() => setSearchView(view)}
+              className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-medium capitalize transition-colors hover:bg-accent focus-visible:outline-offset-2 ${searchView === view ? "bg-[var(--surface-selected)] text-foreground" : "text-muted-foreground"}`}
+            >{view === "all" ? "All" : view[0].toUpperCase() + view.slice(1)}</button>
+          ))}
+        </div>
+        <div
           id="command-palette-results"
           role="listbox"
           aria-label="Command palette results"
           className="min-h-0 flex-1 max-h-[60dvh] overflow-y-auto overscroll-contain p-2"
         >
+          {showActions && (
+            <>
           <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
           <Button
             data-ui-reference="chatgpt.search-dialog.control"
@@ -707,6 +741,10 @@ export function CommandPalette({
             );
           })}
 
+            </>
+          )}
+          {showWorkspace && (
+            <>
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Workspace</div>
           {workspaceStatus === "loading" ? (
             <p role="status" className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
@@ -766,6 +804,10 @@ export function CommandPalette({
             );
           })}
 
+            </>
+          )}
+          {showChats && (
+            <>
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
           {normalized ? null : (
             <p className="px-3 pb-2 text-[11px] text-muted-foreground">
@@ -802,9 +844,13 @@ export function CommandPalette({
               </Button>
             ))
           )}
+            </>
+          )}
+          {showActions && (
           <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
             Press Alt+Enter to pin or unpin the selected command.
           </p>
+          )}
         </div>
       </div>
     </div>
