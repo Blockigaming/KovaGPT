@@ -34,14 +34,12 @@ test("eligible announcements require the actual account tier and valid campaign 
 });
 
 test("dismissed campaigns are suppressed and only two are returned per account", () => {
-  assert.deepEqual(
-    select([campaign], { dismissedIds: new Set([campaign.id]) }),
-    [],
-  );
-  const rows = [campaign, { ...campaign, id: "650e8400-e29b-41d4-a716-446655440001" }, {
-    ...campaign,
-    id: "750e8400-e29b-41d4-a716-446655440002",
-  }];
+  assert.deepEqual(select([campaign], { dismissedIds: new Set([campaign.id]) }), []);
+  const rows = [
+    campaign,
+    { ...campaign, id: "650e8400-e29b-41d4-a716-446655440001" },
+    { ...campaign, id: "750e8400-e29b-41d4-a716-446655440002" },
+  ];
   assert.equal(select(rows).length, 2);
   assert.deepEqual(select(null), []);
 });
