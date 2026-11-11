@@ -20,8 +20,7 @@ test("[notice:network_offline][notice:network_restored] offline and recovery not
   context,
 }, testInfo) => {
   await context.setOffline(true);
-  const offlineStatus = page.getByRole("status").filter({ hasText: "You're offline" });
-  await expect(offlineStatus).toBeAttached();
+  await expect(page.getByText("You're offline", { exact: true })).toBeVisible();
   await context.setOffline(false);
   await expect(page.getByText("Browser connection restored", { exact: true })).toBeVisible();
   await testInfo.attach("network-recovery-" + testInfo.project.name, {
