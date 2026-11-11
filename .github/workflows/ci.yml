@@ -45,7 +45,22 @@ jobs:
             exit 0
           fi
 
-          files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            echo "::warning::PR base commit is missing from checkout; attempting explicit fetch."
+            timeout 45s git fetch --no-tags --depth=200 origin "$base_sha" || true
+          fi
+          if git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            files="$(git diff --name-only "$base_sha" HEAD)"
+          else
+            # Fail closed. A missing baseline must never classify real code as
+            # documentation-only or skip tests, database or history checks.
+            echo "::warning::PR baseline unavailable; enabling every release gate."
+            echo "run_ci=true" >> "$GITHUB_OUTPUT"
+            echo "run_database=true" >> "$GITHUB_OUTPUT"
+            echo "run_canonical_history=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           printf '%s\n' "$files"
 
           # A single grep avoids SIGPIPE under pipefail on very large PRs. A
