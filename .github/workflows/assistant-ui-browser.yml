@@ -69,6 +69,13 @@ concurrency:
   group: assistant-ui-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Trust only this job's checked-out working tree. Containers can have a
+# different UID from the mounted GitHub workspace; all tests remain active.
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+
 jobs:
   browser:
     name: Assistant UI (${{ matrix.project }})
