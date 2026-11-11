@@ -1,0 +1,30 @@
+name: Format PR 649 changed files
+on:
+  push:
+    branches:
+      - feature/finances-dashboard-preview-20261110
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx prettier --write src/components/BankConnectionsPanel.tsx src/components/FinanceActivityDashboard.tsx src/components/HealthConnectionsPanel.tsx src/components/HealthDashboardPreview.tsx
+      - name: Commit formatting fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/BankConnectionsPanel.tsx src/components/FinanceActivityDashboard.tsx src/components/HealthConnectionsPanel.tsx src/components/HealthDashboardPreview.tsx
+          if ! git diff --cached --quiet; then
+            git commit -m "Apply Prettier to finance and health dashboard changes"
+            git push origin HEAD:feature/finances-dashboard-preview-20261110
+          fi
