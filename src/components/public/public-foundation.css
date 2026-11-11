@@ -985,6 +985,10 @@
     transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
     opacity 200ms ease;
 }
+[data-public-shell] :is([data-public-primary], main a.min-h-11) {
+  /* Keep the rendered target above 44px at fractional animation offsets. */
+  min-height: 45px;
+}
 [data-public-shell] :is(.public-hero, main > section:first-of-type) {
   position: relative;
   isolation: isolate;
