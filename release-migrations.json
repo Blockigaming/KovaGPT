@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 218,
-  "latest": "20261109145000_kova_hourly_windows_monthly_cost_safety.sql",
+  "count": 220,
+  "latest": "20261110233000_kova_notification_campaigns.sql",
   "migrations": [
     {
       "order": 1,
@@ -4629,6 +4629,42 @@
       "rls": ["message_usage_hourly"],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 219,
+      "filename": "20261110224500_kova_verified_team_workspace_join_requests.sql",
+      "timestamp": "20261110224500",
+      "sha256": "7b709f529cb4941a1969b0ca61638a1f96e579068c0542376d194203ba3e63c8",
+      "tables": ["team_verified_domains", "team_join_requests"],
+      "functions": [
+        "discover_verified_team_workspaces",
+        "request_verified_team_join",
+        "review_verified_team_join",
+        "claim_team_join_notification"
+      ],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["team_verified_domains", "team_join_requests"],
+      "policies": [],
+      "indexes": ["team_verified_domains_domain_idx", "team_join_requests_owner_queue"]
+    },
+    {
+      "order": 220,
+      "filename": "20261110233000_kova_notification_campaigns.sql",
+      "timestamp": "20261110233000",
+      "sha256": "5f753e33a436b92563d4e45963ef88181180f04418923f239375e5c5caa10f19",
+      "tables": ["kova_notification_campaigns", "kova_notification_campaign_dismissals"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["kova_notification_campaigns", "kova_notification_campaign_dismissals"],
+      "policies": [],
+      "indexes": [
+        "kova_notification_campaigns_active_window",
+        "kova_notification_campaign_dismissals_owner"
+      ]
     }
   ]
 }

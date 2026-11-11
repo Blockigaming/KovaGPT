@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -111,6 +112,7 @@ function ScheduledTasksPage() {
   const { taskId: requestedTaskId } = Route.useSearch();
   const openedTaskLink = useRef<string | null>(null);
   const taskListLoaded = useRef(false);
+  const observedRunStates = useRef(new Map<string, { status: string; lastRun: string | null }>());
   const [taskLinkError, setTaskLinkError] = useState<string | null>(null);
   const userKey = user?.id ?? null;
   const timeFormat = useTimeFormatPreference(userKey, isLoaded);
@@ -199,6 +201,7 @@ function ScheduledTasksPage() {
     setAccessState("loading");
     setTasks([]);
     taskListLoaded.current = false;
+    observedRunStates.current.clear();
     openedTaskLink.current = null;
     setTaskLinkError(null);
     setCreatedTask(null);
@@ -272,6 +275,41 @@ function ScheduledTasksPage() {
           request !== listRequestRef.current
         )
           return;
+        const previouslyLoaded = taskListLoaded.current;
+        const previouslyObserved = observedRunStates.current;
+        const newest = new Map<string, { status: string; lastRun: string | null }>();
+        for (const item of next) {
+          newest.set(item.id, { status: item.status, lastRun: item.last_run_at });
+        }
+        if (previouslyLoaded) {
+          let shown = 0;
+          for (const item of next) {
+            const prior = previouslyObserved.get(item.id);
+            // Only a fresh server-observed status transition is a real task
+            // lifecycle event. Initial historical rows must not trigger popups.
+            if (!prior || prior.status === item.status || shown >= 2) continue;
+            if (item.status === "running") {
+              publishKovaNotice({ id: "task_started", title: "Task started", message: item.title });
+              shown++;
+            } else if (item.status === "completed" && item.last_run_at) {
+              publishKovaNotice({
+                id: "task_completed",
+                title: "Task completed",
+                message: item.title,
+                confirmed: true,
+              });
+              shown++;
+            } else if (item.status === "failed") {
+              publishKovaNotice({
+                id: "task_failed",
+                title: "Task failed",
+                message: "Open its run history to review the error.",
+              });
+              shown++;
+            }
+          }
+        }
+        observedRunStates.current = newest;
         taskListLoaded.current = true;
         if (availability) setExecutionAvailable(availability.executionAvailable);
         setTasks(next);
@@ -599,6 +637,27 @@ function ScheduledTasksPage() {
           current.map((item) => (item.id === task.id ? (updated as ScheduledTask) : item)),
         );
       }
+      publishKovaNotice({
+        id:
+          action === "delete"
+            ? "task_deleted"
+            : action === "paused"
+              ? "task_paused"
+              : action === "retry"
+                ? "task_updated"
+                : "task_resumed",
+        title:
+          action === "delete"
+            ? "Task deleted"
+            : action === "paused"
+              ? "Task paused"
+              : action === "retry"
+                ? "Task queued to retry"
+                : "Task resumed",
+        message: task.title,
+        confirmed: true,
+        key: "task-action:" + task.id + ":" + action,
+      });
       const message =
         action === "delete"
           ? `“${task.title}” deleted.`

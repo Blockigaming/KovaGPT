@@ -6,6 +6,8 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { BILLING_ENV } from "@/lib/billing-plans";
 import { getSubscriptionSummary, type SubscriptionSummary } from "@/utils/payments.functions";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { checkoutOriginKey, activeCheckoutOrigin } from "@/lib/checkout-notice-policy.mjs";
 
 type VerificationState =
   | { kind: "checking" }
@@ -52,7 +54,8 @@ export const Route = createFileRoute("/checkout/return")({
 
 function CheckoutReturn() {
   const { session_id } = Route.useSearch();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const ownerId = user?.id ?? null;
   const { openSignIn } = useClerkSafe();
   const [attempt, setAttempt] = useState(0);
   const [verification, setVerification] = useState<VerificationState>({ kind: "checking" });
@@ -63,7 +66,29 @@ function CheckoutReturn() {
     setVerification({ kind: "checking" });
     void getSubscriptionSummary({ data: { environment: BILLING_ENV } })
       .then((summary) => {
-        if (!cancelled) setVerification(checkoutVerificationForTier(summary.tier));
+        if (cancelled) return;
+        const resolved = checkoutVerificationForTier(summary.tier);
+        setVerification(resolved);
+        if (resolved.kind !== "active" || !ownerId) return;
+        const receiptKey = checkoutOriginKey(ownerId);
+        if (!receiptKey) return;
+        try {
+          const stored = JSON.parse(sessionStorage.getItem(receiptKey) ?? "null");
+          if (!activeCheckoutOrigin(stored, ownerId)) return;
+          sessionStorage.removeItem(receiptKey);
+          publishKovaNotice({
+            id: "subscription_updated",
+            key: "checkout-confirmed:" + session_id,
+            title: "Subscription confirmed",
+            message:
+              "Your " +
+              (resolved.tier === "pro" ? "Pro" : "Plus") +
+              " plan is active for this account.",
+            confirmed: true,
+          });
+        } catch {
+          // A blocked or malformed browser receipt cannot grant access.
+        }
       })
       .catch(() => {
         if (!cancelled) setVerification({ kind: "error" });
@@ -71,7 +96,7 @@ function CheckoutReturn() {
     return () => {
       cancelled = true;
     };
-  }, [attempt, isLoaded, isSignedIn, session_id]);
+  }, [attempt, isLoaded, isSignedIn, ownerId, session_id]);
 
   const status = (() => {
     if (!session_id) {

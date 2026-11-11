@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 
 const TOPICS = [
   "Account & sign-in",
@@ -194,7 +195,18 @@ export function HelpSupportForm() {
       if (!current()) return;
       if (response.ok && payload?.success === true) {
         updateDraft({ submittedEmail: cleanEmail, status: "sent" });
+        publishKovaNotice({
+          id: "feedback_sent",
+          title: "Support request received",
+          message: "Your message was accepted by KovaGPT support.",
+          confirmed: true,
+        });
       } else if (response.status >= 400 && response.status < 500) {
+        publishKovaNotice({
+          id: "feedback_failed",
+          title: "Support could not accept this request",
+          message: "Review your email and message before retrying.",
+        });
         updateDraft({
           submissionError:
             response.status === 429

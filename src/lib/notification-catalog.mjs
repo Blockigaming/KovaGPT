@@ -1,0 +1,426 @@
+/**
+ * Unified notification contract. A catalog entry describes presentation only:
+ * it must never invent product availability, usage limits or a completed server action.
+ */
+export const NOTIFICATION_GROUPS = {
+  announcements: [
+    "whats_new",
+    "new_features",
+    "try_feature",
+    "check_this_out",
+    "interface_updated",
+    "tour_available",
+    "image_tools_new",
+    "animation_tools_new",
+    "reference_images_new",
+    "templates_new",
+    "sketch_new",
+    "search_updated",
+    "library_search_new",
+    "projects_new",
+    "interactive_answers_new",
+    "connections_new",
+    "sharing_new",
+    "scheduling_new",
+    "notification_controls_new",
+    "appearance_options_new",
+    "app_update",
+    "feature_changing",
+    "feature_retired",
+  ],
+  onboarding: [
+    "welcome",
+    "welcome_back",
+    "first_conversation",
+    "first_project",
+    "first_file",
+    "first_image",
+    "first_voice",
+    "first_task",
+    "guided_tour",
+    "tour_finished",
+    "quick_tip",
+    "did_you_know",
+  ],
+  models: [
+    "thinking_limit",
+    "thinking_almost_exhausted",
+    "reasoning_restricted",
+    "model_unavailable",
+    "mode_changed",
+    "assistant_limit",
+    "tool_limit",
+    "rate_limited",
+    "message_too_long",
+    "conversation_full",
+    "conversation_continue",
+    "usage_restored",
+  ],
+  billing: [
+    "upgrade_available",
+    "more_reasoning",
+    "more_images",
+    "more_uploads",
+    "restricted_tool",
+    "choose_subscription",
+    "checkout_started",
+    "checkout_unavailable",
+    "checkout_canceled",
+    "subscription_updated",
+    "offer_available",
+    "offer_claimed",
+    "offer_ineligible",
+  ],
+  images: [
+    "image_limit",
+    "image_started",
+    "image_generating",
+    "image_delayed",
+    "image_ready",
+    "image_failed",
+    "image_edit_started",
+    "image_edited",
+    "image_edit_failed",
+    "animation_started",
+    "animation_ready",
+    "animation_failed",
+    "reference_saved",
+    "reference_missing",
+    "image_too_large",
+    "unsupported_image",
+    "sketch_unsaved",
+    "image_copied",
+    "image_save_failed",
+  ],
+  files: [
+    "file_selected",
+    "upload_started",
+    "upload_completed",
+    "upload_failed",
+    "upload_limit",
+    "file_too_large",
+    "document_too_long",
+    "spreadsheet_too_large",
+    "unsupported_file",
+    "attachments_limit",
+    "storage_full",
+    "project_file_limit",
+    "file_processing",
+    "file_processing_failed",
+    "file_saved",
+    "file_removed",
+    "confirm_file_delete",
+    "file_inaccessible",
+    "paste_converted",
+    "library_load_failed",
+    "no_matching_files",
+  ],
+  voice: [
+    "voice_select",
+    "microphone_permission",
+    "microphone_blocked",
+    "voice_starting",
+    "voice_connecting",
+    "voice_listening",
+    "voice_speaking",
+    "voice_muted",
+    "voice_limit",
+    "voice_disconnected",
+    "voice_reconnecting",
+    "voice_ended",
+    "voice_session_limit",
+    "voice_context_full",
+    "voice_conflict",
+    "no_audio",
+    "dictation_started",
+    "dictation_ready",
+    "dictation_failed",
+    "voice_unavailable",
+  ],
+  tools: [
+    "search_started",
+    "search_completed",
+    "search_failed",
+    "research_limit",
+    "research_started",
+    "research_running",
+    "research_completed",
+    "research_failed",
+    "source_unavailable",
+    "analysis_started",
+    "analysis_limit",
+    "analysis_failed",
+    "chart_created",
+    "widget_failed",
+    "source_auth_needed",
+    "search_no_results",
+  ],
+  tasks: [
+    "task_created",
+    "task_updated",
+    "task_paused",
+    "task_resumed",
+    "task_deleted",
+    "task_limit",
+    "schedule_unsupported",
+    "task_activation_failed",
+    "task_started",
+    "task_completed",
+    "reminder_ready",
+    "monitor_match",
+    "monitor_no_match",
+    "task_failed",
+    "task_needs_approval",
+    "notifications_permission",
+    "notifications_blocked",
+    "notification_preferences_updated",
+    "shared_task_unavailable",
+  ],
+  collaboration: [
+    "project_created",
+    "project_updated",
+    "project_deleted",
+    "confirm_project_delete",
+    "project_shared",
+    "invitation_sent",
+    "invitation_received",
+    "invitation_accepted",
+    "invitation_declined",
+    "member_joined",
+    "member_removed",
+    "permission_changed",
+    "access_revoked",
+    "sharing_link_copied",
+    "sharing_disabled",
+    "confirm_leave_project",
+    "connection_started",
+    "connection_success",
+    "connection_failed",
+    "connection_expired",
+    "connection_canceled",
+    "disconnect_confirm",
+    "connection_disconnected",
+    "external_approval",
+    "join_workspace_offer",
+    "workspace_join_requested",
+    "workspace_join_approved",
+    "workspace_join_denied",
+    "workspace_join_failed",
+  ],
+  security: [
+    "sign_in_required",
+    "session_expired",
+    "email_verification_required",
+    "email_sent",
+    "email_verified",
+    "email_link_expired",
+    "invalid_credentials",
+    "sign_in_rate_limit",
+    "password_updated",
+    "security_check",
+    "unusual_activity",
+    "permission_denied",
+    "temporary_chat",
+    "privacy_updated",
+    "memory_updated",
+    "confirm_chat_delete",
+    "confirm_account_delete",
+    "account_restricted",
+    "age_restricted",
+    "settings_updated",
+    "theme_changed",
+  ],
+  status: [
+    "copied",
+    "saved",
+    "changes_updated",
+    "network_offline",
+    "network_restored",
+    "request_timeout",
+    "retrying",
+    "generic_failure",
+    "history_failed",
+    "save_failed",
+    "request_canceled",
+    "unsupported_content",
+    "update_required",
+  ],
+  feedback: [
+    "feedback_requested",
+    "feedback_details",
+    "feedback_sent",
+    "feedback_failed",
+    "report_problem",
+    "feature_feedback",
+    "rating_requested",
+    "survey_requested",
+  ],
+};
+NOTIFICATION_GROUPS.collaboration.push("project_comment_posted", "project_comment_deleted");
+export const NOTIFICATION_IDS = Object.freeze(Object.values(NOTIFICATION_GROUPS).flat());
+const surfaces = {
+  popover: ["try_feature", "check_this_out", "quick_tip", "did_you_know"],
+  banner: ["app_update", "feature_changing", "feature_retired"],
+  modal: [
+    "confirm_file_delete",
+    "confirm_project_delete",
+    "confirm_leave_project",
+    "disconnect_confirm",
+    "confirm_chat_delete",
+    "confirm_account_delete",
+    "security_check",
+    "unusual_activity",
+    "guided_tour",
+  ],
+  sheet: [
+    "join_workspace_offer",
+    "offer_available",
+    "choose_subscription",
+    "voice_select",
+    "sign_in_required",
+    "session_expired",
+  ],
+  inline: [
+    "upload_failed",
+    "upload_limit",
+    "image_failed",
+    "search_failed",
+    "analysis_failed",
+    "model_unavailable",
+    "conversation_full",
+    "workspace_join_failed",
+    "task_failed",
+    "source_unavailable",
+    "save_failed",
+    "history_failed",
+  ],
+  status: [
+    "image_started",
+    "image_generating",
+    "image_delayed",
+    "file_processing",
+    "task_started",
+    "research_started",
+    "research_running",
+    "voice_connecting",
+    "voice_listening",
+    "voice_speaking",
+    "voice_muted",
+    "voice_reconnecting",
+  ],
+  toast: [
+    "copied",
+    "saved",
+    "changes_updated",
+    "file_saved",
+    "file_removed",
+    "image_copied",
+    "feedback_sent",
+    "connection_success",
+    "project_created",
+    "project_updated",
+    "workspace_join_requested",
+    "workspace_join_approved",
+    "subscription_updated",
+    "settings_updated",
+  ],
+};
+surfaces.status.push(
+  "file_selected",
+  "file_processing",
+  "voice_ended",
+  "search_started",
+  "search_completed",
+  "analysis_started",
+  "notifications_permission",
+);
+surfaces.inline.push(
+  "session_expired",
+  "assistant_limit",
+  "tool_limit",
+  "rate_limited",
+  "model_unavailable",
+  "request_timeout",
+  "generic_failure",
+);
+surfaces.toast.push("connection_failed", "connection_canceled", "network_offline");
+const CONFIRMATION = new Set([
+  "confirm_file_delete",
+  "confirm_project_delete",
+  "confirm_leave_project",
+  "disconnect_confirm",
+  "confirm_chat_delete",
+  "confirm_account_delete",
+]);
+const ERROR_WORDS =
+  /(?:failed|unavailable|expired|invalid|blocked|timeout|offline|denied|restricted|error)$/;
+const REQUIRE_ACTUAL_STATE = new Set([
+  "offer_available",
+  "offer_claimed",
+  "workspace_join_requested",
+  "workspace_join_approved",
+  "task_completed",
+  "subscription_updated",
+  "upload_completed",
+  "image_ready",
+  "animation_ready",
+  "connection_success",
+]);
+export function notificationDefinition(id) {
+  if (!NOTIFICATION_IDS.includes(id)) return null;
+  const group = Object.keys(NOTIFICATION_GROUPS).find((k) => NOTIFICATION_GROUPS[k].includes(id));
+  const surface =
+    Object.keys(surfaces).find((k) => surfaces[k].includes(id)) ||
+    (ERROR_WORDS.test(id) ||
+    /(?:_limit|_failed|_unavailable|_restricted|_blocked|_expired)$/.test(id)
+      ? "inline"
+      : ["announcements", "onboarding", "feedback"].includes(group)
+        ? "card"
+        : /(?:started|starting|running|processing|connecting|reconnecting|generating)$/.test(id)
+          ? "status"
+          : "toast");
+  return Object.freeze({
+    id,
+    group,
+    surface,
+    priority: CONFIRMATION.has(id)
+      ? 1
+      : surface === "inline"
+        ? 4
+        : group === "announcements"
+          ? 9
+          : 8,
+    requiresEvidence: REQUIRE_ACTUAL_STATE.has(id),
+    dismissible: true,
+    exclusive: CONFIRMATION.has(id) || surface === "modal" || surface === "sheet",
+    liveRegion: ERROR_WORDS.test(id) ? "assertive" : "polite",
+  });
+}
+export function selectNotificationQueue(
+  events,
+  { activeExclusive = false, isComposing = false } = {},
+) {
+  const seen = new Set();
+  return (Array.isArray(events) ? events : [])
+    .filter((e) => e && typeof e.id === "string" && notificationDefinition(e.id))
+    .filter((e) => !notificationDefinition(e.id).requiresEvidence || e.confirmed === true)
+    .filter((e) => {
+      const key = e.key || e.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .filter(
+      (e) =>
+        !(
+          isComposing &&
+          ["announcements", "onboarding", "feedback"].includes(notificationDefinition(e.id).group)
+        ),
+    )
+    .sort((a, b) => notificationDefinition(a.id).priority - notificationDefinition(b.id).priority)
+    .filter(
+      (e, i) =>
+        !(activeExclusive && notificationDefinition(e.id).exclusive) &&
+        (!notificationDefinition(e.id).exclusive || i === 0),
+    );
+}
