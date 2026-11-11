@@ -14,7 +14,7 @@ const ALIASES = Object.freeze({
   memory: "remember memories personalized personalization saved knowledge facts preferences updates",
   shortcuts: "keyboard keys hotkeys commands accessibility navigation",
   usage: "usage credits limits quotas messages rate capacity plan models tokens",
-  linked: "plugins connections apps integrations connected providers gmail google drive calendar health finances bank",
+  linked: "plugins connections apps integrations connected providers gmail google drive calendar health finances bank tools",
   "cloud-browser": "web browsing internet permissions websites agents browser remote",
   family: "family members child guardian parent family center",
   location: "location gps map city region address privacy",

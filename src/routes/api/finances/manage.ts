@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser, getCallerTier } from "@/lib/api-auth.server";
+import { requireUser } from "@/lib/api-auth.server";
 import {
   listFinanceConnections,
   readFinanceConnection,
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/finances/manage")({
           return Response.json(
             {
               ...(await listFinanceConnections(auth)),
-              planEligible: (await getCallerTier(auth)) !== "free",
+              planEligible: true,
             },
             { headers },
           );
