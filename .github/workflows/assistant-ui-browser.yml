@@ -69,7 +69,7 @@ concurrency:
   group: assistant-ui-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Trust only this job's checked-out workspace inside the browser container.
+# Trust only the checked-out PR working tree inside the job container.
 env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: safe.directory
@@ -114,7 +114,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
           bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Select existing assistant tests and isolated preview
         run: |
@@ -197,7 +198,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
           bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Select the existing isolated auth visual gate
         run: |
@@ -280,7 +282,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
           bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Select existing strict quality tests and isolated preview
         run: |
@@ -405,7 +408,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
           bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Select existing core regressions and isolated preview
         run: |

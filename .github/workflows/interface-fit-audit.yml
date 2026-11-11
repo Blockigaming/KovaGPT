@@ -26,7 +26,7 @@ concurrency:
   group: interface-fit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Trust only this job's checked-out workspace inside the browser container.
+# Trust only the checked-out PR working tree inside the job container.
 env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: safe.directory
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
-    timeout-minutes: 25
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:

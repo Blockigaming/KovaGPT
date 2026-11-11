@@ -16,7 +16,7 @@ concurrency:
 permissions:
   contents: read
 
-# Trust only this job's checked-out workspace inside the browser container.
+# Trust only the checked-out PR working tree inside the job container.
 env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: safe.directory
@@ -155,7 +155,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
           bash scripts/ci/install-playwright-browsers.sh chromium firefox webkit
 
       - name: Integration tests
@@ -279,7 +280,7 @@ jobs:
       - run: npm run build
       - run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
           bash scripts/ci/install-playwright-browsers.sh chromium
       - name: Complete public route and detail checks
         run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
@@ -309,16 +310,29 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Distribute the complete five-viewport mobile suite across four
+          # disjoint shards. Two shards exceeded the 45-minute job limit
+          # during normal passing tests; preserve every project and assertion.
           - id: phone-a
             check_name: Phone shard (phone-a)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 1/2
+            shard: 1/4
           - id: phone-b
             check_name: Phone shard (phone-b)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 2/2
+            shard: 2/4
+          - id: phone-c
+            check_name: Phone shard (phone-c)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 3/4
+          - id: phone-d
+            check_name: Phone shard (phone-d)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 4/4
           - id: tablet
             check_name: Browser (tablet)
             projects: >-
@@ -366,7 +380,7 @@ jobs:
       - name: Install Playwright browsers
         run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
           bash scripts/ci/install-playwright-browsers.sh chromium
 
       - name: Browser tests
@@ -411,7 +425,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       # Keep the existing required check names red if any public shard fails or is skipped.
       - name: Require complete public coverage
@@ -426,9 +440,9 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: |
           set -euo pipefail
-          # Bounded installation with reviewed signed Ubuntu-mirror failover.
+          # Use Ubuntu's signed HTTPS archives before Playwright installs native packages.
           bash scripts/ci/install-playwright-browsers.sh chromium
-      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=list,blob --workers=2
+      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/8 --reporter=list,blob --workers=2
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
