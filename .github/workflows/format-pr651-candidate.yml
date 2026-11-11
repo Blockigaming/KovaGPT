@@ -23,6 +23,7 @@ jobs:
       - name: Format candidate and inherited workflow
         run: |
           npx prettier --write \
+            .github/workflows/repair-pr649-format.yml \
             src/components/ChatInput.tsx \
             src/components/LinkPreviewChip.tsx \
             src/components/PromptMessage.tsx \

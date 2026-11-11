@@ -1243,8 +1243,9 @@ export function ChatInput({
         );
         return;
       }
-      const target = event.target as HTMLTextAreaElement | undefined;
-      const selectionTarget = target?.tagName === "TEXTAREA" ? target : ref.current;
+      const selectionPasteTarget = event.target as HTMLTextAreaElement | undefined;
+      const selectionTarget =
+        selectionPasteTarget?.tagName === "TEXTAREA" ? selectionPasteTarget : ref.current;
       try {
         const prepared = prepareLocalPaste(plain);
         const paste = {
