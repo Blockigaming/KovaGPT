@@ -1,6 +1,5 @@
 import { Toaster as Sonner } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useState } from "react";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
@@ -27,23 +26,15 @@ const toastButtonClassName =
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const mobile = useIsMobile();
-  const [shortLandscape, setShortLandscape] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(max-height: 480px) and (orientation: landscape)");
-    const update = () => setShortLandscape(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
   return (
     <Sonner
       className="toaster group"
-      position={shortLandscape ? "top-center" : mobile ? "bottom-center" : "bottom-right"}
+      position={mobile ? "top-center" : "bottom-right"}
       closeButton
       duration={4_000}
-      visibleToasts={shortLandscape ? 1 : mobile ? 2 : 3}
+      visibleToasts={4}
       gap={8}
-      mobileOffset={{ bottom: "calc(88px + env(safe-area-inset-bottom))", left: 16, right: 16 }}
+      mobileOffset={{ top: "calc(72px + env(safe-area-inset-top))", left: 16, right: 16 }}
       style={{ ...toasterStyle, ...style }}
       toastOptions={{
         classNames: {

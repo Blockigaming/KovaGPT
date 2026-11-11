@@ -1,4 +1,3 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -263,12 +262,7 @@ export function AuthDialog({
         if (error) throw error;
         setStep("magic-sent");
         setCooldown(RESEND_COOLDOWN_SECONDS);
-        if (resend)
-          publishKovaNotice({
-            id: "email_verification_required",
-            title: "Another sign-in link requested",
-            message: "Check your inbox if a link was issued for this address.",
-          });
+        if (resend) toast.success("Another link was requested.");
       } catch (err) {
         console.error("[KovaAuth] Magic-link request failed", {
           error: err instanceof Error ? err.name : "unknown_error",

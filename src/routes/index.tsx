@@ -167,6 +167,8 @@ import {
   memoryWriteBlockStorageKey,
 } from "@/lib/memory-write-coordinator.mjs";
 
+import { getUsage } from "@/lib/limits";
+
 import {
   useUser,
   useClerkSafe,
@@ -201,8 +203,6 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { chatFailureNoticeId } from "@/lib/chat-notice-policy.mjs";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
@@ -619,8 +619,6 @@ function KovaGPT() {
     open: boolean;
     kind: "image" | "chat" | "upload";
     message?: string;
-    resetsAt?: number;
-    usageKind?: "thinking" | "regular";
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightTargetRef = useRef<{
@@ -2125,7 +2123,6 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
-      const notifiedServerActivities = new Set<string>();
 
       try {
         const activeTool = retryTool;
@@ -2239,10 +2236,6 @@ function KovaGPT() {
             }
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
-              if (sources && !notifiedServerActivities.has("search_completed")) {
-                notifiedServerActivities.add("search_completed");
-                publishKovaNotice({ id: "search_completed", title: "Web sources found" });
-              }
               updateAssistantMessage((message) => ({
                 ...message,
                 ...(sources ? { sources } : {}),
@@ -2253,21 +2246,6 @@ function KovaGPT() {
             }
 
             if (delta?.kind === "activity" && delta?.label) {
-              if (typeof delta.tool === "string") {
-                const eventId =
-                  delta.tool === "web_search"
-                    ? "search_started"
-                    : delta.tool === "data_analysis" || delta.tool === "file_analysis"
-                      ? "analysis_started"
-                      : null;
-                if (eventId && !notifiedServerActivities.has(eventId)) {
-                  notifiedServerActivities.add(eventId);
-                  publishKovaNotice({
-                    id: eventId,
-                    title: eventId === "search_started" ? "Searching sources" : "Analyzing data",
-                  });
-                }
-              }
               const { messageActivitiesFromDelta } =
                 await import("@/lib/message-activity-list.mjs");
               if (!isCurrentRequest()) return;
@@ -2355,8 +2333,6 @@ function KovaGPT() {
             status?: number;
             code?: string;
             retryAfter?: number;
-            usageKind?: "thinking" | "regular";
-            resetAtMs?: number;
           };
           const raw = err.message || "Something went wrong";
           const quotaRejected = err.status === 429 && err.category === "quota_exceeded";
@@ -2384,13 +2360,7 @@ function KovaGPT() {
               : /upload|file/i.test(raw)
                 ? "upload"
                 : "chat";
-            setLimitDialog({
-              open: true,
-              kind,
-              message: raw,
-              resetsAt: err.resetAtMs,
-              usageKind: err.usageKind,
-            });
+            setLimitDialog({ open: true, kind, message: raw });
           }
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
@@ -2443,17 +2413,6 @@ function KovaGPT() {
                           : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
 
-          if (isCurrentRetryScope()) {
-            const failureEvent = chatFailureNoticeId(err, {
-              signedIn: isSignedIn,
-              networkFailure: isNetwork,
-            });
-            publishKovaNotice({
-              id: failureEvent,
-              title: friendly,
-              message: "Your draft and any partial response are preserved.",
-            });
-          }
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           if (sessionExpired && isCurrentRetryScope())
             updateRequestNotice({
@@ -3865,9 +3824,8 @@ function KovaGPT() {
             open={limitDialog.open}
             onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
             kind={limitDialog.kind}
-            usageKind={limitDialog.usageKind}
             message={limitDialog.message}
-            resetsAt={limitDialog.resetsAt}
+            resetsAt={getUsage().resetsAt}
           />
         )}
       </Suspense>

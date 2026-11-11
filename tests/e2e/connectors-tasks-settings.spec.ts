@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 import { waitForKovaHydration } from "./hydration";
-import { chooseSettingsSection, openCurrentSettings } from "./current-ui";
+import { openCurrentSettings } from "./current-ui";
 
 test("connected apps and scheduled tasks fit the configured viewport", async ({ page }) => {
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
@@ -26,7 +26,6 @@ test("Settings remains reachable from the responsive shell", async ({ page }) =>
     await page.getByRole("button", { name: "Open menu" }).click();
   }
   const settings = await openCurrentSettings(page);
-  await chooseSettingsSection(page, "Appearance");
   await expect(settings.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
   await expect(settings.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Close settings", exact: true }).click();

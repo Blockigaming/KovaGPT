@@ -14,9 +14,6 @@ import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { KovaNotificationSurface, publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { PersistedNoticeBridge } from "@/components/PersistedNoticeBridge";
-import { AnnouncementCampaignBridge } from "@/components/AnnouncementCampaignBridge";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
@@ -320,64 +317,6 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
   return <>{children}</>;
 }
 
-function RootNotificationCenter() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  useEffect(() => {
-    if (!isLoaded) return;
-    const offline = () => {
-      if (navigator.onLine === false)
-        publishKovaNotice({
-          id: "network_offline",
-          title: "You're offline",
-          message: "Your unsent text is preserved. Check the connection before retrying.",
-        });
-    };
-    const online = () => {
-      if (navigator.onLine === true)
-        publishKovaNotice({
-          id: "network_restored",
-          title: "Browser connection restored",
-          message: "Network access may still need verification by the active feature.",
-          confirmed: true,
-        });
-    };
-    const controllerChanged = () => {
-      // A new service-worker controller is evidence of an actual app update.
-      // Never announce an update on ordinary page load or a speculative release.
-      publishKovaNotice({
-        id: "app_update",
-        title: "An app update is available",
-        message: "Reload to use the latest version. Save anything you're editing first.",
-        confirmed: true,
-        campaignId: import.meta.env.VITE_KOVA_BUILD_SHA || "service-worker",
-        primaryLabel: "Reload",
-        onPrimary: () => window.location.reload(),
-      });
-    };
-    window.addEventListener("offline", offline);
-    window.addEventListener("online", online);
-    if (import.meta.env.PROD) {
-      navigator.serviceWorker?.addEventListener("controllerchange", controllerChanged);
-    }
-    return () => {
-      window.removeEventListener("offline", offline);
-      window.removeEventListener("online", online);
-      if (import.meta.env.PROD) {
-        navigator.serviceWorker?.removeEventListener("controllerchange", controllerChanged);
-      }
-    };
-  }, [isLoaded]);
-  return isLoaded ? (
-    <>
-      <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />
-      {isSignedIn && user?.id ? <PersistedNoticeBridge key={user.id} ownerId={user.id} /> : null}
-      {isSignedIn && user?.id ? (
-        <AnnouncementCampaignBridge key={user.id} ownerId={user.id} />
-      ) : null}
-    </>
-  ) : null;
-}
-
 function RootInputModality() {
   useEffect(() => installInputModality(document), []);
   return null;
@@ -423,7 +362,6 @@ function RootComponent() {
           <Outlet />
         </AppAccountGate>
         <Toaster />
-        <RootNotificationCenter />
       </QueryClientProvider>
     </ClerkProvider>
   );

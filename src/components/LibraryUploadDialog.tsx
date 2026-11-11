@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   LIBRARY_ORIGINAL_MAX_BYTES,
   ORIGINAL_DOCUMENT_MIMES,
@@ -56,34 +55,17 @@ export function LibraryUploadDialog({
       !ORIGINAL_DOCUMENT_MIMES[file.name.split(".").pop()?.toLowerCase() ?? ""]
     ) {
       setError("Choose a supported document within the file-size limit.");
-      publishKovaNotice({
-        id: file.size > LIBRARY_ORIGINAL_MAX_BYTES ? "file_too_large" : "unsupported_file",
-        title: "This file cannot be uploaded",
-        message: "Choose a supported document within the file-size limit.",
-      });
       return;
     }
     busyRef.current = true;
     setStatus("processing");
     setError("");
-    publishKovaNotice({
-      id: "file_processing",
-      title: "Preparing document",
-      message: file.name,
-      key: "library-processing:" + file.name,
-    });
     try {
       const { extractDocumentFile } = await import("@/lib/document-extraction/client");
       const extracted = await extractDocumentFile(file, current.controller.signal);
       current.controller.signal.throwIfAborted();
       setNote(extracted.note);
       setStatus("uploading");
-      publishKovaNotice({
-        id: "upload_started",
-        title: "Uploading document",
-        message: file.name,
-        key: "library-upload:" + (operationId.current ?? file.name),
-      });
       const { saveOriginalLibraryFile } = await import("@/lib/library-original-client");
       operationId.current ??= crypto.randomUUID();
       await saveOriginalLibraryFile(
@@ -96,24 +78,10 @@ export function LibraryUploadDialog({
       current.controller.signal.throwIfAborted();
       uploaded.current = true;
       setStatus("ready");
-      publishKovaNotice({
-        id: "upload_completed",
-        title: "File uploaded",
-        message: file.name,
-        confirmed: true,
-      });
       onSaved();
     } catch (cause) {
       if (!current.controller.signal.aborted) {
         setStatus("failed");
-        publishKovaNotice({
-          id:
-            cause instanceof Error && /limit|quota|allowance/i.test(cause.message)
-              ? "upload_limit"
-              : "upload_failed",
-          title: "Upload not completed",
-          message: "Your file selection is preserved.",
-        });
         setError(
           cause instanceof Error
             ? cause.message
@@ -161,15 +129,7 @@ export function LibraryUploadDialog({
               .join(",")}
             disabled={busy || status === "ready"}
             onChange={(event) => {
-              const selected = event.target.files?.[0] ?? null;
-              setFile(selected);
-              if (selected) {
-                publishKovaNotice({
-                  id: "file_selected",
-                  title: "File selected",
-                  message: selected.name,
-                });
-              }
+              setFile(event.target.files?.[0] ?? null);
               operationId.current = null;
               setStatus("idle");
               setError("");

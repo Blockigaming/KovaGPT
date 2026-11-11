@@ -9,7 +9,6 @@ import "@/styles/settings-reference.css";
 import "@/styles/settings-page-layout.css";
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
-import { WorkspaceDiscoverySettings } from "@/components/WorkspaceDiscoverySettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -1853,7 +1852,6 @@ export function SettingsDialog({
                         Manage apps and permissions
                       </Link>
                     </Button>
-                    <WorkspaceDiscoverySettings />
                   </section>
                 )}
               </TabsContent>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, Check, Link2, Loader2, Trash2 } from "lucide-react";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -95,10 +95,9 @@ export function ShareChatDialog({
       await navigator.clipboard.writeText(created.url);
       if (current.current !== expected || controller.signal.aborted) return;
       setCopied(true);
-      publishKovaNotice({
-        id: "sharing_link_copied",
-        title: "Public view-only link copied",
-        confirmed: true,
+      toast.success("Public view-only link copied", {
+        className: "kova-share-success",
+        icon: <Check aria-hidden="true" />,
       });
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted)
@@ -132,7 +131,7 @@ export function ShareChatDialog({
       if (current.current !== expected || controller.signal.aborted) return;
       setLink(null);
       setCopied(false);
-      publishKovaNotice({ id: "sharing_disabled", title: "Share link removed", confirmed: true });
+      toast.success("Share link removed");
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted)
         setError(error instanceof Error ? error.message : "Try again.");

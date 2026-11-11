@@ -57,7 +57,6 @@ import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe
 import { cn } from "@/lib/utils";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { toast } from "sonner";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 
 export const Route = createFileRoute("/images")({
   component: ImagesPage,
@@ -760,8 +759,7 @@ function ImagesPage() {
           imageUrl,
         },
       });
-      if (generation === saveGenerationRef.current)
-        publishKovaNotice({ id: "file_saved", title: "Image saved to Library", confirmed: true });
+      if (generation === saveGenerationRef.current) toast.success("Saved to Library");
     } catch (error) {
       if (generation === saveGenerationRef.current)
         toast.error(error instanceof Error ? error.message : "Could not save image");
@@ -809,8 +807,7 @@ function ImagesPage() {
             });
       if (generation !== generationRef.current) return;
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      if (generation === generationRef.current)
-        publishKovaNotice({ id: "image_copied", title: "Image copied", confirmed: true });
+      if (generation === generationRef.current) toast.success("Image copied");
     } catch (error) {
       if (generation === generationRef.current)
         toast.error(error instanceof Error ? error.message : "Could not copy image");
@@ -840,11 +837,6 @@ function ImagesPage() {
     generationControllerRef.current = controller;
     setError(null);
     setLoading(true);
-    let quotaNoticeShown = false;
-    publishKovaNotice({
-      id: editSelection ? "image_edit_started" : "image_started",
-      title: editSelection ? "Image edit requested" : "Image generation requested",
-    });
     try {
       const { response: res, body: data } = await imageApiRequest(
         userKey!,
@@ -869,8 +861,6 @@ function ImagesPage() {
         if (res.status === 429 && /limit/i.test(msg)) {
           setLimitMessage(msg);
           setLimitOpen(true);
-          quotaNoticeShown = true;
-          publishKovaNotice({ id: "image_limit", title: "Image limit reached", message: msg });
         }
         throw new Error(res.status === 503 ? IMAGE_GENERATION_UNAVAILABLE : msg);
       }
@@ -882,11 +872,6 @@ function ImagesPage() {
       if (reveal?.generation === generation) reveal.imageUrl = imageUrl;
       setResult(imageUrl);
       setResultPrompt(trimmed);
-      publishKovaNotice({
-        id: editSelection ? "image_edited" : "image_ready",
-        title: editSelection ? "Image edited" : "Image ready",
-        confirmed: true,
-      });
       addToHistory(trimmed, imageUrl);
       setPrompt((current) => (current.trim() === trimmed ? "" : current));
     } catch (e) {
@@ -895,12 +880,6 @@ function ImagesPage() {
       const reveal = resultRevealRef.current;
       if (reveal?.generation === generation) reveal.error = message;
       setError(message);
-      if (!quotaNoticeShown)
-        publishKovaNotice({
-          id: editSelection ? "image_edit_failed" : "image_failed",
-          title: "Image generation failed",
-          message: "Your prompt has been preserved.",
-        });
     } finally {
       if (generation === generationRef.current) {
         setLoading(false);

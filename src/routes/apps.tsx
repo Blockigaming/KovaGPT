@@ -1,4 +1,3 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   Select,
   SelectContent,
@@ -1047,11 +1046,7 @@ function AppsPage() {
       void refreshGoogle().then((status) => {
         if (!status) return;
         if (status.connected && status.state === "connected") {
-          publishKovaNotice({
-            id: "connection_success",
-            title: "Google connection verified",
-            confirmed: true,
-          });
+          toast.success("Google connection verified");
           recordActivity("Google", "Connection verified");
         } else {
           toast.warning(
@@ -1068,10 +1063,7 @@ function AppsPage() {
             : err === "exchange_failed"
               ? "Google sign-in failed, try again"
               : "Google sign-in could not be completed";
-      publishKovaNotice({
-        id: err === "access_denied" ? "connection_canceled" : "connection_failed",
-        title: msg,
-      });
+      toast.error(msg);
     }
     if (ok || err) {
       params.delete("google_connected");

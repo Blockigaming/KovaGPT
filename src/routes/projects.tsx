@@ -68,7 +68,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { SkeletonLine, EmptyState, ErrorState } from "@/components/states";
 import {
@@ -433,7 +432,7 @@ function ProjectsPage() {
     try {
       const { id } = await fnDuplicate({ data: { id: p.id } });
       if (currentUserKeyRef.current !== operationUserKey) return;
-      publishKovaNotice({ id: "project_created", title: "Project duplicated", confirmed: true });
+      toast.success("Project duplicated");
       void refresh();
       await navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
@@ -449,8 +448,7 @@ function ProjectsPage() {
       await fnDelete({ data: { id: p.id } });
       if (currentUserKeyRef.current !== operationUserKey) return;
       setProjects((current) => current.filter((project) => project.id !== p.id));
-      toast.dismiss(toastId);
-      publishKovaNotice({ id: "project_deleted", title: "Project deleted", confirmed: true });
+      toast.success("Project deleted", { id: toastId });
     } catch (e) {
       if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed to delete", { id: toastId });
@@ -582,7 +580,7 @@ function ProjectsPage() {
       await fnUpdate({ data: { id: target.id, name: nextName, description: nextDesc || null } });
       if (!current()) return;
       closeRename();
-      publishKovaNotice({ id: "project_updated", title: "Project updated", confirmed: true });
+      toast.success("Project updated");
     } catch (e) {
       if (!current()) return;
       setRenameError(
@@ -801,17 +799,7 @@ function ProjectsPage() {
       },
       ...prev.filter((project) => project.id !== id),
     ]);
-    // Only introduce Projects when the server-loaded account directory was empty.
-    // An optimistic empty array before load is not proof of first use.
-    if (resolvedUserKey === userKey && !loading && !loadError && projects.length === 0) {
-      publishKovaNotice({
-        id: "first_project",
-        title: "Your first project is ready",
-        message: "Add files, instructions, or conversations whenever you need them.",
-        key: "first-project:" + userKey,
-      });
-    }
-    publishKovaNotice({ id: "project_created", title: "Project created", confirmed: true });
+    toast.success("Project created");
     void refresh();
     // Navigation can fail after the insert was confirmed; never offer another create as recovery.
     try {
@@ -880,7 +868,7 @@ function ProjectsPage() {
     try {
       const { project_id } = await fnAccept({ data: { invite_id: id } });
       if (currentUserKeyRef.current !== operationUserKey) return;
-      publishKovaNotice({ id: "invitation_accepted", title: "Joined project", confirmed: true });
+      toast.success("Joined project");
       navigate({ to: "/projects/$projectId", params: { projectId: project_id } });
     } catch (e) {
       if (currentUserKeyRef.current !== operationUserKey) return;

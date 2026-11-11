@@ -1,4 +1,3 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -143,7 +142,7 @@ function ProjectCollaborationSession({
       attempt.current = null;
       setBody("");
       setMentions([]);
-      publishKovaNotice({ id: "project_comment_posted", title: "Comment posted", confirmed: true });
+      toast.success("Comment posted");
     } catch (e) {
       if (scopeRef.current === scopeKey)
         toast.error(e instanceof Error ? e.message : "Comment could not be posted");
@@ -341,11 +340,7 @@ function ProjectCollaborationSession({
             if (scopeRef.current !== scopeKey) return;
             setComments(Comments.parse(rows));
             setDeletingComment(null);
-            publishKovaNotice({
-              id: "project_comment_deleted",
-              title: "Comment deleted",
-              confirmed: true,
-            });
+            toast.success("Comment deleted");
           } catch (error) {
             if (scopeRef.current === scopeKey)
               toast.error(error instanceof Error ? error.message : "Comment could not be deleted");

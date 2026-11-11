@@ -1,4 +1,3 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,10 +27,7 @@ export function AppearanceSettings({
   const [navigationWidthDraft, setNavigationWidthDraft] = useState<number | null>(null);
   const change = (patch: Partial<Settings>) => {
     setNotice("");
-    if (patch.mode) {
-      applyThemeMode(patch.mode);
-      publishKovaNotice({ id: "theme_changed", title: "Appearance changed", confirmed: true });
-    }
+    if (patch.mode) applyThemeMode(patch.mode);
     onChange({ ...settings, ...patch });
   };
   const rows = [

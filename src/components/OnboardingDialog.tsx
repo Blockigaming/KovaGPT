@@ -14,7 +14,6 @@ import { getOnboarding, saveOnboarding, skipOnboarding } from "@/lib/onboarding.
 import { shouldOpenOnboarding } from "@/lib/onboarding-response-policy.mjs";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { saveDraft } from "@/lib/chat-store";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { ArrowLeft, Check, Sparkles } from "lucide-react";
 
 const USES = [
@@ -219,11 +218,6 @@ export function OnboardingDialog({
         onStarterSelected?.(starter);
       }
       setOpen(false);
-      publishKovaNotice({
-        id: "settings_updated",
-        title: "Setup completed",
-        message: "Your preferences have been saved.",
-      });
       await navigate({ to: "/" });
       window.requestAnimationFrame(() => {
         document

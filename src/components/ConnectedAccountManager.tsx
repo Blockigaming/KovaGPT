@@ -1,4 +1,3 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { authFetch, fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
@@ -76,21 +75,9 @@ export function ConnectedAccountManager({
       const body = await response.json();
       const url = connectionAuthorizationUrl(flow.provider, body.url);
       if (!response.ok || !url) throw new Error("connection_start_failed");
-      if (active.current) {
-        publishKovaNotice({
-          id: "connection_started",
-          title: "Opening secure connection",
-          message: "Finish authorization with the provider to connect your account.",
-        });
-        window.location.assign(url);
-      }
+      if (active.current) window.location.assign(url);
     } catch {
-      if (active.current)
-        publishKovaNotice({
-          id: "connection_failed",
-          title: "Connection could not start",
-          message: "Refresh and try again.",
-        });
+      if (active.current) toast.error("Could not start this connection. Refresh and try again.");
     } finally {
       if (active.current) setBusy(false);
     }
@@ -131,20 +118,14 @@ export function ConnectedAccountManager({
       const body = await response.json();
       if (!response.ok) throw new Error("disconnect_failed");
       if (active.current)
-        publishKovaNotice({
-          id: "connection_disconnected",
-          title: body.providerRevoked
-            ? "Connection removed and access revoked"
-            : "Connection removed locally",
-          confirmed: true,
-        });
+        toast.success(
+          body.providerRevoked
+            ? "Account disconnected and provider access revoked."
+            : "Account disconnected locally. Provider revocation may still be pending.",
+        );
     } catch {
       if (active.current)
-        publishKovaNotice({
-          id: "connection_failed",
-          title: "Disconnect not confirmed",
-          message: "Check the current connection status before retrying.",
-        });
+        toast.error("Disconnect outcome could not be confirmed. Refresh status before retrying.");
     } finally {
       if (active.current) {
         setDisconnect(null);
@@ -182,11 +163,7 @@ export function ConnectedAccountManager({
                 await refreshAccess();
               } catch {
                 if (active.current)
-                  publishKovaNotice({
-                    id: "connection_failed",
-                    title: "Connection renewal failed",
-                    message: "Refresh or reconnect the account.",
-                  });
+                  toast.error("Could not renew access. Refresh or reconnect the account.");
               } finally {
                 if (active.current) {
                   await reload();

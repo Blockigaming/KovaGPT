@@ -248,12 +248,7 @@ export async function retryTeamInvitationEmail() {
     if (["42P01", "PGRST205"].includes(result.error.code)) return 0;
     throw new Error("Invitation email queue could not be read.");
   }
-  if (!result.data?.length) {
-    // No paid invitation needs dispatch. Use the same signed worker's spare
-    // capacity for the oldest durable workspace join notification.
-    const notifications = await import("./workspace-join-notifications.server");
-    return notifications.retryWorkspaceJoinNotification();
-  }
+  if (!result.data?.length) return 0;
   const invite = result.data[0] as TeamEmailInvitation;
   await settleEmailInvitation(await readTeam(invite.team_id), invite);
   return 1;

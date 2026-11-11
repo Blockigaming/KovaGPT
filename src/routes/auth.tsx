@@ -2,7 +2,6 @@ import { createFileRoute, redirect, useNavigate, useSearch } from "@tanstack/rea
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -272,11 +271,6 @@ function AuthPage() {
         }
         if (isSignUp) {
           toast.success("If this address can be registered, check your inbox to continue.");
-          publishKovaNotice({
-            id: "email_verification_required",
-            title: "Check your inbox",
-            message: "If this address can be registered, check your email to continue.",
-          });
           void navigate({ to: "/" });
           return;
         }
@@ -301,21 +295,10 @@ function AuthPage() {
         if (error) throw error;
         if (data.session) {
           toast.success("Welcome to KovaGPT.");
-          publishKovaNotice({
-            id: "welcome",
-            title: "Welcome to KovaGPT",
-            message: "Your account is ready.",
-            confirmed: true,
-          });
           window.location.replace(getSafePostAuthRedirect());
           return;
         }
         toast.success("If this address can be registered, check your inbox to continue.");
-        publishKovaNotice({
-          id: "email_verification_required",
-          title: "Check your inbox",
-          message: "If this address can be registered, check your email to continue.",
-        });
         void navigate({ to: "/" });
         return;
       }

@@ -1,4 +1,3 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useEffect, useRef, useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,12 +67,7 @@ export function KovaPasswordPanel() {
       const payload = (await response.json()) as { changed?: unknown };
       if (!response.ok || payload.changed !== true) throw new Error("password_change_failed");
       setEditing(false);
-      publishKovaNotice({
-        id: "password_updated",
-        title: "Password changed",
-        message: "Other devices have been signed out.",
-        confirmed: true,
-      });
+      toast.success("Password changed. Other devices have been signed out.");
     } catch {
       toast.error("Password change could not be confirmed. Sign in again before retrying.");
     } finally {
