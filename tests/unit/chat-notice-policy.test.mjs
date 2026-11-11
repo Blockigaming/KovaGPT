@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
+import { chatResponseError } from "../../src/lib/chat-sse-client.mjs";
 import { NOTIFICATION_IDS } from "../../src/lib/notification-catalog.mjs";
 
 test("server quota kind distinguishes Thinking from ordinary messages", () => {
@@ -49,4 +50,27 @@ test("client preserves backend quota metadata rather than guessing from error wo
   assert.match(parser,/error\.usageKind/);
   assert.match(route,/chatFailureNoticeId\(err/);
   assert.doesNotMatch(route,/const failureEvent = quotaRejected/);
+});
+
+test("real quota response carries a reliable reset instant to the limit dialog", async () => {
+  const reset = "2026-11-12T00:00:00.000Z";
+  const error = await chatResponseError(Response.json({
+    error: "Your weekly Thinking allowance is used.",
+    code: "message_window_limit",
+    category: "quota_exceeded",
+    kind: "thinking",
+    resetsAt: reset,
+    retryable: false,
+  }, {status:429}));
+  assert.equal(error.usageKind,"thinking");
+  assert.equal(error.resetAtMs, Date.parse(reset));
+  assert.equal(chatFailureNoticeId(error), "thinking_limit");
+  const invalid = await chatResponseError(Response.json({
+    error:"Rate limit",code:"message_window_limit",kind:"thinking",
+    resetsAt:"not a date",
+  },{status:429}));
+  assert.equal(invalid.resetAtMs,undefined);
+  const route=readFileSync("src/routes/index.tsx","utf8");
+  assert.match(route,/resetsAt: err\.resetAtMs/);
+  assert.match(route,/limitDialog\.resetsAt \?\? getUsage\(\)\.resetsAt/);
 });
