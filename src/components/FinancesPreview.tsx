@@ -4,32 +4,32 @@ const categories = [
   {
     name: "Rent and utilities",
     icon: House,
-    segments: [{ amount: 1300, color: "bg-green-500" }],
+    segments: [{ cents: 685046, color: "bg-green-500" }],
   },
   {
     name: "Groceries",
     icon: ShoppingCart,
-    segments: [{ amount: 650, color: "bg-green-600" }],
+    segments: [{ cents: 194738, color: "bg-green-600" }],
   },
   {
     name: "Subscriptions",
     icon: Banknote,
     segments: [
-      { amount: 350, color: "bg-green-700" },
-      { amount: 200, color: "bg-blue-500" },
+      { cents: 27129, color: "bg-green-700" },
+      { cents: 16728, color: "bg-blue-500" },
     ],
   },
   {
     name: "Dining",
     icon: Utensils,
     segments: [
-      { amount: 300, color: "bg-blue-600" },
-      { amount: 200, color: "bg-blue-700" },
+      { cents: 178613, color: "bg-blue-600" },
+      { cents: 117339, color: "bg-blue-700" },
     ],
   },
 ].map((category) => ({
   ...category,
-  amount: category.segments.reduce((sum, segment) => sum + segment.amount, 0),
+  cents: category.segments.reduce((sum, segment) => sum + segment.cents, 0),
 }));
 
 const segments = categories.flatMap((category) => category.segments);
@@ -37,11 +37,10 @@ const segments = categories.flatMap((category) => category.segments);
 const dollars = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-  maximumFractionDigits: 0,
 });
 
 export function FinancesPreview() {
-  const total = categories.reduce((sum, category) => sum + category.amount, 0);
+  const total = categories.reduce((sum, category) => sum + category.cents, 0);
 
   return (
     <div className="mx-auto w-full max-w-[680px] pb-8 pt-10 text-foreground sm:pt-[72px]">
@@ -68,21 +67,21 @@ export function FinancesPreview() {
         <p className="mb-1 text-xs text-muted-foreground">Example data</p>
         <div className="flex items-center justify-between gap-4 border-b border-border pb-3 text-lg font-semibold">
           <h3 id="finances-spending-title">Spending</h3>
-          <span className="tabular-nums">{dollars.format(total)}</span>
+          <span className="tabular-nums">{dollars.format(total / 100)}</span>
         </div>
         <div aria-hidden="true" className="mt-4 flex h-10 gap-0.5">
-          {segments.map(({ amount, color }) => (
-            <span key={color} className={`rounded-sm ${color}`} style={{ flex: amount }} />
+          {segments.map(({ cents, color }) => (
+            <span key={color} className={`rounded-sm ${color}`} style={{ flex: cents }} />
           ))}
         </div>
         <ul className="mt-3">
-          {categories.map(({ name, amount, icon: Icon }) => (
+          {categories.map(({ name, cents, icon: Icon }) => (
             <li key={name} className="flex min-h-12 items-center gap-3 text-sm sm:text-base">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <Icon aria-hidden="true" className="size-4" />
               </span>
               <span>{name}</span>
-              <span className="ml-auto tabular-nums">{dollars.format(amount)}</span>
+              <span className="ml-auto tabular-nums">{dollars.format(cents / 100)}</span>
             </li>
           ))}
         </ul>

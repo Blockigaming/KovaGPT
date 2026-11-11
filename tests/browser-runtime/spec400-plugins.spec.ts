@@ -144,7 +144,7 @@ test("Finances opens directly to the coming-soon spending preview", async ({ pag
   await expect(panel.getByText("Coming soon", { exact: true })).toBeVisible();
   const spending = panel.getByRole("region", { name: "Spending" });
   await expect(spending.getByText("Example data", { exact: true })).toBeVisible();
-  await expect(spending.getByText("$3,000", { exact: true })).toBeVisible();
+  await expect(spending.getByText("$12,195.93", { exact: true })).toBeVisible();
   await expect(spending.getByRole("listitem")).toHaveCount(4);
   await expect(panel.getByRole("button")).toHaveCount(0);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
