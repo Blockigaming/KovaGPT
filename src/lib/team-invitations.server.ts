@@ -252,7 +252,7 @@ export async function retryTeamInvitationEmail() {
     // No paid invitation needs dispatch. Use the same signed worker's spare
     // capacity for the oldest durable workspace join notification.
     const { retryWorkspaceJoinNotification } = await import(
-      "./workspace-join-notifications.server"
+      "./workspace-join-notifications.server",
     );
     return retryWorkspaceJoinNotification();
   }
