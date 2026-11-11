@@ -70,7 +70,7 @@ jobs:
           # Use the same official, signed Ubuntu archives as the main CI matrix.
           # This only changes package sources; it never skips browser dependencies.
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            printf 'https://archive.ubuntu.com/ubuntu/\\tpriority:1\\nhttps://security.ubuntu.com/ubuntu/\\tpriority:2\\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           fi
           npx --no-install playwright install --with-deps "${{ matrix.browser }}"
       - name: Exercise responsive layouts and real keyboard interactions
