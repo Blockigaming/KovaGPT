@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { canDisplayFreeIntroOffer } from "../../src/lib/free-offer-eligibility-policy.mjs";
+import {
+  canDisplayFreeIntroOffer,
+  isVerifiedFirstMonthCoupon,
+} from "../../src/lib/free-offer-eligibility-policy.mjs";
 
 const base = {
   summary: {
@@ -56,4 +59,32 @@ test("eligible offer notice is server-evidenced and has an actionable checkout d
   assert.match(source, /to: "\/subscribe"/);
   const dismissal = readFileSync("src/lib/notification-dismissal-policy.mjs", "utf8");
   assert.match(dismissal, /PROMOTIONAL_BILLING_IDS/);
+});
+
+test("first-month offer requires an active, unexpired, unexhausted Stripe coupon", () => {
+  const coupon = {
+    valid: true,
+    percent_off: 50,
+    duration: "once",
+    deleted: false,
+    redeem_by: null,
+    max_redemptions: null,
+    times_redeemed: 0,
+  };
+  assert.equal(isVerifiedFirstMonthCoupon(coupon, 1_800_000_000), true);
+  for (const invalid of [
+    null,
+    { ...coupon, valid: false },
+    { ...coupon, deleted: true },
+    { ...coupon, percent_off: 25 },
+    { ...coupon, duration: "repeating" },
+    { ...coupon, redeem_by: 1_700_000_000 },
+    { ...coupon, max_redemptions: 3, times_redeemed: 3 },
+    { ...coupon, max_redemptions: 3, times_redeemed: undefined },
+  ]) {
+    assert.equal(isVerifiedFirstMonthCoupon(invalid, 1_800_000_000), false);
+  }
+  const backend = readFileSync("src/lib/free-offer-eligibility.functions.ts", "utf8");
+  assert.match(backend, /\.coupons\.retrieve\(/);
+  assert.match(backend, /isVerifiedFirstMonthCoupon\(coupon\)/);
 });
