@@ -4,6 +4,8 @@ import { Users, Mail, CreditCard, ArrowUpRight, Crown, Sparkles, Loader2 } from 
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
+import { WorkspaceJoinAdminPanel } from "@/components/WorkspaceJoinAdminPanel";
+import { TeamDomainVerificationPanel } from "@/components/TeamDomainVerificationPanel";
 import { Input } from "@/components/ui/input";
 import {
   getTeamWorkspace,
@@ -200,6 +202,8 @@ function TeamWorkspace({ owner }: { owner: string }) {
             key={team.id}
             className="overflow-hidden rounded-[28px] border border-border bg-card/30"
           >
+            {team.owner && <TeamDomainVerificationPanel teamId={team.id} />}
+            {team.owner && <WorkspaceJoinAdminPanel teamId={team.id} />}
             <div className="flex flex-wrap items-center justify-between gap-5 border-b border-border p-5 sm:p-7">
               <div className="flex min-w-0 items-center gap-4">
                 <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-muted">

@@ -481,6 +481,24 @@ jobs:
           python3 scripts/release/validate-playwright-reports.py "$directory" blob-reports
       - name: Merge Playwright reports
         run: npx playwright merge-reports --reporter=html ./blob-reports
+      - name: Collect real-trigger notification acceptance evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          npx playwright merge-reports --reporter=json ./blob-reports > artifacts/ci/notification-browser-report.json
+          node scripts/audit-notification-coverage.mjs \
+            --playwright-report=artifacts/ci/notification-browser-report.json \
+            --require-verified=network_offline,network_restored,theme_changed \
+            > artifacts/ci/notification-coverage.json
+      - name: Upload notification coverage evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: notification-coverage-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/ci/notification-*.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload merged Playwright report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

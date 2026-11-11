@@ -22,6 +22,7 @@ export function createLibraryAttachmentAutoSaver(options: {
     attachment: PendingAttachment,
     scope: AttachmentSaveScope,
   ) => Promise<unknown>;
+  onSuccess?: (name: string, attachment: PendingAttachment) => void;
   onError: (name: string, retry: () => Promise<void>) => void;
 }): (
   attachment: PendingAttachment,

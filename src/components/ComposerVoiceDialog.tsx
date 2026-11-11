@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
@@ -275,10 +276,22 @@ export function ComposerVoiceDialog({
     handled?: boolean;
   } | null>(null);
 
-  const updatePhase = useCallback((next: Phase) => {
-    phaseRef.current = next;
-    setPhase(next);
-  }, []);
+  const updatePhase = useCallback(
+    (next: Phase) => {
+      const previous = phaseRef.current;
+      phaseRef.current = next;
+      setPhase(next);
+      if (previous === next) return;
+      if (next === "recording")
+        publishKovaNotice({
+          id: mode === "voice" ? "voice_listening" : "dictation_started",
+          title: mode === "voice" ? "Voice listening" : "Dictation recording",
+        });
+      if (next === "transcribing")
+        publishKovaNotice({ id: "dictation_started", title: "Transcribing recording" });
+    },
+    [mode],
+  );
 
   const clearRecordingTimers = useCallback(() => {
     if (recordingDeadline.current !== null) clearTimeout(recordingDeadline.current);
@@ -472,8 +485,18 @@ export function ComposerVoiceDialog({
       updatePhase("idle");
       setAudioUrl("");
       setError(message);
+      const eventId = /usage|limit|allowance/i.test(message)
+        ? "voice_limit"
+        : /microphone.*(denied|blocked)|permission/i.test(message)
+          ? "microphone_blocked"
+          : /unavailable|not configured/i.test(message)
+            ? "voice_unavailable"
+            : mode === "dictate"
+              ? "dictation_failed"
+              : "voice_disconnected";
+      publishKovaNotice({ id: eventId, title: "Voice needs attention", message });
     },
-    [releaseResources, updatePhase],
+    [releaseResources, updatePhase, mode],
   );
 
   useLayoutEffect(() => {
@@ -620,6 +643,7 @@ export function ComposerVoiceDialog({
         onState: (state, code) => {
           if (!isCurrent(scope) || voicePlayback.current !== playback) return;
           if (state === "loading") started = true;
+          if (state === "playing") publishKovaNotice({ id: "voice_speaking", title: "Speaking" });
           if (state === "error") {
             const messages: Record<string, string> = {
               speech_message_not_synced:
@@ -714,6 +738,11 @@ export function ComposerVoiceDialog({
         // without a second transcript review or an automatic Send action.
         closing.current = true;
         onTranscript(result.text.trim());
+        publishKovaNotice({
+          id: "dictation_ready",
+          title: "Dictation inserted into your message",
+          confirmed: true,
+        });
         closeDialog(false);
       } else {
         updatePhase("idle");
@@ -1020,8 +1049,10 @@ export function ComposerVoiceDialog({
 
   const closeDialog = (next: boolean) => {
     if (!next) {
+      const hadActiveVoice = voiceSessionActive.current;
       closing.current = true;
       releaseResources();
+      if (hadActiveVoice) publishKovaNotice({ id: "voice_ended", title: "Voice session ended" });
     }
     onOpenChange(next);
   };
