@@ -520,7 +520,7 @@ export function ChatHistorySyncStatus() {
           </Button>
         </div>
       )}
-      {state.recoveryPhase && (
+      {state.recoveryPhase && critical && (
         <Button
           data-ui-reference="chatgpt.chat-history.control"
           variant="outline"
