@@ -23,12 +23,18 @@ env:
   GIT_CONFIG_KEY_0: safe.directory
   GIT_CONFIG_VALUE_0: ${{ github.workspace }}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
+    env:
+      HOME: /root
     timeout-minutes: 35
     outputs:
       run_ci: ${{ steps.scope.outputs.run_ci }}
@@ -271,6 +277,7 @@ jobs:
     # themes. Keep its full coverage when browser dependency downloads are slow.
     timeout-minutes: 45
     env:
+      HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "public"
       PLAYWRIGHT_PREBUILT: "1"
@@ -312,6 +319,7 @@ jobs:
     # Allow it to finish on slower runners without changing per-test limits.
     timeout-minutes: ${{ matrix.id == 'tablet' && 65 || 45 }}
     env:
+      HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
     strategy:
@@ -414,6 +422,7 @@ jobs:
     # Keep all four release checks and allow the largest shard to finish and upload its report.
     timeout-minutes: 60
     env:
+      HOME: /root
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
     strategy:

@@ -76,6 +76,10 @@ env:
   GIT_CONFIG_KEY_0: safe.directory
   GIT_CONFIG_VALUE_0: ${{ github.workspace }}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   browser:
     name: Assistant UI (${{ matrix.project }})
@@ -89,6 +93,7 @@ jobs:
       matrix:
         project: [desktop, phone, narrow]
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
@@ -174,6 +179,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 20
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
@@ -255,6 +261,7 @@ jobs:
       matrix:
         project: [desktop-1440x900, phone-390x844, tablet-1024x768, phone-320x700]
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
@@ -378,6 +385,7 @@ jobs:
             project: phone-390x844
             specs: production-audit chat-image-actions
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
       KOVA_BROWSER_SUITE: "core"

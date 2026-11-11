@@ -41,6 +41,10 @@ env:
   GIT_CONFIG_KEY_0: safe.directory
   GIT_CONFIG_VALUE_0: ${{ github.workspace }}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   browser:
     name: Shared UI (${{ matrix.browser }})
@@ -54,6 +58,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 15
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
