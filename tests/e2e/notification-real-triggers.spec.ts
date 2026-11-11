@@ -75,6 +75,14 @@ test("[contract:offer_available] a server-eligible account receives the offer an
   await offerButton.click();
   const details = page.getByRole("dialog", { name: "50% off your first month of Plus" });
   await expect(details).toBeVisible();
+  if (page.viewportSize()!.width <= 640) {
+    await expect
+      .poll(async () => {
+        const rect = await details.boundingBox();
+        return rect ? Math.abs(rect.y + rect.height - page.viewportSize()!.height) : 999;
+      })
+      .toBeLessThan(5);
+  }
   await testInfo.attach("eligible-offer-details-" + testInfo.project.name, {
     body: await page.screenshot(),
     contentType: "image/png",
