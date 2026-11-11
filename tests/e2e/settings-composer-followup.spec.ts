@@ -60,8 +60,12 @@ for (const theme of ["dark", "light"] as const) {
         .click();
       await expect(backToPreviousPage).toBeHidden();
       await expect(close).toBeVisible();
-      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
-      const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
+      await expect(
+        surface.locator(".kova-settings-navigation-heading h2"),
+      ).toBeVisible();
+      const navigation = surface.getByRole("complementary", {
+        name: "Settings navigation",
+      });
       for (const destination of [
         "Voice",
         "Security and login",
