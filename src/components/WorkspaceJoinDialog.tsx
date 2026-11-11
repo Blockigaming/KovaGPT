@@ -1,39 +1,103 @@
-import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { useState } from "react";
+import { UsersRound } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { submitWorkspaceJoinRequest, type AvailableWorkspace } from "@/lib/workspace-join.functions";
 
-export function WorkspaceJoinDialog({workspaces,open,onClose,onRequested}:{
-  workspaces:AvailableWorkspace[];open:boolean;onClose:()=>void;
-  onRequested:(teamId:string)=>void;
+export function WorkspaceJoinDialog({
+  workspaces,
+  open,
+  onClose,
+  onRequested,
+}: {
+  workspaces: AvailableWorkspace[];
+  open: boolean;
+  onClose: () => void;
+  onRequested: (teamId: string) => void;
 }) {
-  const [submitting,setSubmitting]=useState<string|null>(null);
-  const [error,setError]=useState<string|null>(null);
-  if(!open || !workspaces.length)return null;
-  return <div className="fixed inset-0 z-[1200] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
-    <section className="w-full max-h-[85dvh] max-w-[460px] overflow-y-auto rounded-t-3xl border border-border bg-popover p-5 text-popover-foreground shadow-2xl sm:rounded-3xl sm:p-6"
-      role="dialog" aria-modal="true" aria-labelledby="workspace-join-title">
-      <h2 id="workspace-join-title" className="text-xl font-semibold">Join your workspace?</h2>
-      <p className="mt-2 text-sm text-muted-foreground">We found a KovaGPT workspace associated with your verified email domain. You can request access from its administrator.</p>
-      <div className="mt-5 space-y-2">
-        {workspaces.map(workspace=><div key={workspace.team_id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-3">
-          <div className="min-w-0">
-            <strong className="block truncate text-sm">{workspace.team_name}</strong>
-            <span className="text-xs text-muted-foreground">{workspace.request_status==="pending"?"Request pending":workspace.request_status==="approved"?"Approved — awaiting invitation":"Verified domain match"}</span>
-          </div>
-          <button type="button" disabled={workspace.request_status==="pending"||workspace.request_status==="approved"||submitting!==null}
-            className="min-h-11 rounded-full bg-foreground px-4 text-sm font-medium text-background disabled:opacity-50"
-            onClick={async()=>{
-              setError(null);setSubmitting(workspace.team_id);
-              try {
-                const result=await submitWorkspaceJoinRequest({data:{teamId:workspace.team_id}});
-                if(result.status==="pending"){ onRequested(workspace.team_id); publishKovaNotice({id:"workspace_join_requested",title:"Request submitted",message:"Your workspace administrator can review your request.",confirmed:true}); }
-              } catch {setError("Couldn't send your request. Check your connection and try again.");}
-              finally {setSubmitting(null);}
-            }}>{submitting===workspace.team_id?"Sending…":workspace.request_status==="pending"?"Requested":"Request to join"}</button>
-        </div>)}
-      </div>
-      {error&&<p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
-      <button className="mt-5 min-h-12 w-full rounded-full bg-secondary text-secondary-foreground sm:min-h-11" type="button" onClick={onClose}>Not now</button>
-    </section>
-  </div>;
+  const [submitting, setSubmitting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  if (!workspaces.length) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => {
+      if (!next && !submitting) {
+        setError(null);
+        onClose();
+      }
+    }}>
+      <DialogContent
+        className="max-w-[460px] gap-0 rounded-[22px] border border-border bg-popover p-6 text-popover-foreground max-sm:!bottom-0 max-sm:!top-auto max-sm:!left-0 max-sm:!w-full max-sm:!max-w-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-[26px] max-sm:!px-5 max-sm:!pb-[calc(20px+env(safe-area-inset-bottom))]"
+      >
+        <div className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-secondary" aria-hidden="true">
+          <UsersRound className="h-5 w-5" strokeWidth={1.8} />
+        </div>
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            Join your workspace?
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-6">
+            A KovaGPT workspace has verified your email domain. Request access from
+            its administrator; joining is never automatic.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="mt-5 max-h-[44dvh] space-y-2 overflow-y-auto overscroll-contain">
+          {workspaces.map((workspace) => {
+            const pending = workspace.request_status === "pending";
+            const approved = workspace.request_status === "approved";
+            return (
+              <div key={workspace.team_id}
+                className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/20 p-3">
+                <div className="min-w-0 flex-1">
+                  <strong className="block truncate text-sm">{workspace.team_name}</strong>
+                  <span className="text-xs leading-5 text-muted-foreground">
+                    {pending ? "Request awaiting review"
+                      : approved ? "Approved — administrator invitation required"
+                        : workspace.request_status === "denied"
+                          ? "A previous request was denied"
+                          : "Verified domain association"}
+                  </span>
+                </div>
+                <Button type="button" size="sm" className="min-h-11 rounded-full px-4"
+                  disabled={pending || approved || submitting !== null}
+                  aria-label={`Request to join ${workspace.team_name}`}
+                  onClick={async () => {
+                    setError(null);
+                    setSubmitting(workspace.team_id);
+                    try {
+                      const result = await submitWorkspaceJoinRequest({ data: { teamId: workspace.team_id } });
+                      if (result.status !== "pending") throw new Error("Unconfirmed request");
+                      onRequested(workspace.team_id);
+                      publishKovaNotice({
+                        id: "workspace_join_requested",
+                        title: "Request submitted",
+                        message: "The workspace administrator can review your request.",
+                        confirmed: true,
+                      });
+                    } catch {
+                      setError("Your request could not be confirmed. Check your connection and try again.");
+                    } finally {
+                      setSubmitting(null);
+                    }
+                  }}>
+                  {submitting === workspace.team_id ? "Sending…"
+                    : pending ? "Requested"
+                      : approved ? "Approved" : "Request to join"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+        {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
+        <Button type="button" variant="secondary"
+          className="mt-6 min-h-12 w-full rounded-full"
+          disabled={submitting !== null}
+          onClick={() => { setError(null); onClose(); }}>
+          Not now
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
 }
