@@ -6,7 +6,13 @@ import {
   pendingPersistedNotices,
   persistedNoticeKind,
   safePersistedNoticeActionUrl,
+  readSessionSeen,
+  rememberSessionSeen,
 } from "@/lib/persisted-notification-policy.mjs";
+
+function safeSessionStorage(): Storage | null {
+  try { return window.sessionStorage; } catch { return null; }
+}
 
 /**
  * Reuse the existing account-scoped, durable in-app inbox. No interval polling:
@@ -24,7 +30,7 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
   const requestRef = useRef({ busy: false, lastReadAt: 0 });
 
   useEffect(() => {
-    seenRef.current.clear();
+    seenRef.current = readSessionSeen(safeSessionStorage(), ownerId);
     requestRef.current = { busy: false, lastReadAt: 0 };
     if (!ownerId) return;
     let cancelled = false;
@@ -41,6 +47,7 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
           const type = persistedNoticeKind(notice);
           if (!type) continue;
           seenRef.current.add(notice.id);
+          rememberSessionSeen(safeSessionStorage(), ownerId, seenRef.current);
           const actionUrl = safePersistedNoticeActionUrl(notice.actionUrl);
           publishKovaNotice({
             id: type,
