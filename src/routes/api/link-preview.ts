@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/link-preview")({
         const limit = await consumeApplicationRateLimit({
           identity: resolveAnonymousClientKey(request.headers),
           action: "link_preview",
-          limit: 120,
+          limit: 60,
           windowSeconds: 3600,
         });
         if (!limit.allowed) {
