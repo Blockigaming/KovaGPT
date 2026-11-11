@@ -66,3 +66,28 @@ export function pendingPersistedNotices(rows, seen, limit = 2) {
   }
   return result;
 }
+
+/** Only presentation history is remembered locally; server read state is separate. */
+export function notificationSessionSeenKey(ownerId) {
+  return typeof ownerId === "string" && /^[a-z0-9_-]{8,128}$/i.test(ownerId)
+    ? "kova:notice:session-seen:" + ownerId
+    : null;
+}
+export function readSessionSeen(storage, ownerId) {
+  const key = notificationSessionSeenKey(ownerId);
+  if (!storage || !key) return new Set();
+  try {
+    const parsed = JSON.parse(storage.getItem(key) ?? "[]");
+    return new Set(Array.isArray(parsed)
+      ? parsed.filter(id => typeof id === "string" && /^[a-f0-9-]{36}$/i.test(id)).slice(-100)
+      : []);
+  } catch { return new Set(); }
+}
+export function rememberSessionSeen(storage, ownerId, seen) {
+  const key = notificationSessionSeenKey(ownerId);
+  if (!storage || !key) return false;
+  try {
+    storage.setItem(key, JSON.stringify([...seen].slice(-100)));
+    return true;
+  } catch { return false; }
+}
