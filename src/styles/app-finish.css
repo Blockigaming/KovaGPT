@@ -1126,17 +1126,20 @@
   box-shadow: none !important;
   border-color: transparent !important;
 }
-.kova-app :is(input, textarea, [role="combobox"]):focus,
-.kova-page :is(input, textarea, [role="combobox"]):focus,
-[data-slot="dialog-content"] :is(input, textarea):focus,
-.kova-settings-reference input:focus {
+.kova-app :is(input, textarea, [role="combobox"]):focus:not(:focus-visible),
+.kova-page :is(input, textarea, [role="combobox"]):focus:not(:focus-visible),
+[data-slot="dialog-content"] :is(input, textarea):focus:not(:focus-visible),
+.kova-settings-reference input:focus:not(:focus-visible) {
   outline: none !important;
   box-shadow: none !important;
 }
 .kova-page [data-slot="input"]:focus-visible,
-.kova-settings-reference input:focus-visible {
+.kova-settings-reference input:focus-visible,
+[data-slot="dialog-content"] :is(input, textarea):focus-visible {
   border-color: var(--input) !important;
   box-shadow: none !important;
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px;
 }
 .kova-file-filters button[aria-pressed],
 .kova-task-filters [data-slot="tabs-trigger"],

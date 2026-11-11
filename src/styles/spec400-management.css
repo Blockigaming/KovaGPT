@@ -775,10 +775,6 @@ body .spec400-library-inspector[data-kova-dialog-surface] {
   .kova-core-page.kova-projects-page.spec400-projects .kova-project-create {
     grid-area: 2 / 1;
   }
-  .kova-core-page.kova-projects-page.spec400-projects .kova-project-templates {
-    grid-area: 2 / 2;
-    justify-self: start;
-  }
 }
 
 /* Loading placeholders keep the same directory rhythm as loaded content. */

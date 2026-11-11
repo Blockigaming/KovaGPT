@@ -230,25 +230,36 @@ function ScheduledTasksPage() {
       setAccessState("signed-out");
       return;
     }
-    let cancel = false;
-    checkEligible({ data: { expectedUserId: userKey! } })
-      .then((r) => {
-        if (cancel || generationRef.current !== generation || principalRef.current !== principal)
-          return;
-        setExecutionAvailable(r.executionAvailable);
-        setDataPrincipal(principal);
-        setDataGeneration(generation);
-        setAccessState(r.eligible ? "eligible" : "error");
-      })
-      .catch(() => {
-        if (!cancel && generationRef.current === generation && principalRef.current === principal) {
+    let cancelled = false;
+    const isCurrent = () =>
+      !cancelled && generationRef.current === generation && principalRef.current === principal;
+    // Session refresh and a transient service outage are not evidence that a
+    // signed-in account lost task access. Two bounded retries avoid a false
+    // denial screen without changing server-side account admission.
+    const verify = async () => {
+      for (let attempt = 0; attempt < 3 && isCurrent(); attempt++) {
+        try {
+          const result = await checkEligible({ data: { expectedUserId: userKey! } });
+          if (!isCurrent()) return;
+          setExecutionAvailable(Boolean(result.executionAvailable));
           setDataPrincipal(principal);
           setDataGeneration(generation);
-          setAccessState("error");
+          setAccessState(result.eligible ? "eligible" : "error");
+          return;
+        } catch {
+          if (!isCurrent()) return;
+          if (attempt < 2) await new Promise<void>((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
         }
-      });
+      }
+      if (isCurrent()) {
+        setDataPrincipal(principal);
+        setDataGeneration(generation);
+        setAccessState("error");
+      }
+    };
+    void verify();
     return () => {
-      cancel = true;
+      cancelled = true;
     };
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 

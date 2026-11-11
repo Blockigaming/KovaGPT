@@ -1458,6 +1458,11 @@ export const PUBLIC_WEBSITE_PAGES = Object.freeze(
       ...item,
       // A source contract is not an announced public developer launch.
       availability: "Coming later this year",
+      description: `Coming later this year. ${item.description}`,
+      sections: item.sections.map((section) => ({
+        ...section,
+        body: `Preview documentation — developer API access is coming later this year. ${section.body}`,
+      })),
     })),
     ...directoryPages,
   ].map(Object.freeze),

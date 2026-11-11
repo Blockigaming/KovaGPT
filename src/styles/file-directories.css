@@ -537,8 +537,7 @@ html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file
     justify-content: flex-end;
     gap: 4px;
   }
-  .kova-core-page.kova-file-directory .kova-directory-refresh,
-  .kova-core-page.kova-file-directory .kova-project-templates {
+  .kova-core-page.kova-file-directory .kova-directory-refresh {
     width: 44px;
     min-width: 44px;
     min-height: 44px;
@@ -548,8 +547,7 @@ html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file
   .kova-core-page.kova-file-directory .kova-directory-refresh > svg {
     margin: 0;
   }
-  .kova-core-page.kova-file-directory .kova-directory-refresh > span,
-  .kova-core-page.kova-file-directory .kova-project-templates > span {
+  .kova-core-page.kova-file-directory .kova-directory-refresh > span {
     display: none;
   }
   .kova-core-page.kova-file-directory .kova-directory-mobile-icon {
@@ -592,10 +590,6 @@ html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file
     grid-area: 1 / 2;
     width: 140px;
     padding-inline: 12px;
-  }
-  .kova-core-page.kova-projects-page .kova-project-templates {
-    grid-area: 2 / 2;
-    justify-self: start;
   }
   .kova-core-page.kova-projects-page .kova-page-actions > .kova-core-utilities {
     grid-area: 2 / 2;

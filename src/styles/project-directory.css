@@ -596,18 +596,12 @@
 
   .kova-app-shell[data-ui="modern"]
     .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
-    :is(.kova-project-create, .kova-project-templates) {
+    .kova-project-create {
     width: auto;
     min-width: 0;
     padding-inline: 12px;
   }
 
-  .kova-app-shell[data-ui="modern"]
-    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
-    .kova-project-templates
-    > span {
-    display: inline;
-  }
 
   .kova-project-directory .kova-project-directory-tools {
     gap: 12px;
