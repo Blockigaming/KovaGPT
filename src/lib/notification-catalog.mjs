@@ -341,10 +341,9 @@ surfaces.inline.push(
   "rate_limited",
   "model_unavailable",
   "request_timeout",
-  "network_offline",
   "generic_failure",
 );
-surfaces.toast.push("connection_failed", "connection_canceled");
+surfaces.toast.push("connection_failed", "connection_canceled", "network_offline");
 const CONFIRMATION = new Set([
   "confirm_file_delete",
   "confirm_project_delete",
