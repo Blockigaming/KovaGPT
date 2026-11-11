@@ -32,7 +32,6 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
   const resumed = useRef(false);
   const [message, setMessage] = useState("");
   const [snapshot, setSnapshot] = useState<FinanceSnapshot | null>(null);
-  const [showDemo, setShowDemo] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
   const handler = useRef<PlaidHandler | null>(null);
@@ -231,6 +230,7 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
           Read-only connections
         </span>
       </div>
+      <FinanceActivityDashboard demo={!snapshot} snapshot={snapshot} />
       <p className="text-sm text-muted-foreground">
         Connect through Plaid to read balances and recent transactions. Kova cannot move money or
         place trades. Data is fetched when you choose to read it.
@@ -262,24 +262,6 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
             <Button variant="outline" onClick={() => void reload()} disabled={busy}>
               Refresh bank status
             </Button>
-          </div>
-          <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-medium">Dashboard preview</p>
-                <p className="text-xs text-muted-foreground">
-                  Explore the layout without connecting a bank.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                aria-pressed={showDemo}
-                onClick={() => setShowDemo((value) => !value)}
-              >
-                {showDemo ? "Hide example" : "View example"}
-              </Button>
-            </div>
-            {showDemo && <FinanceActivityDashboard demo />}
           </div>
           {status?.connections.map((connection, index) => (
             <div key={connection.id} className="rounded-xl border border-border p-3 space-y-2">
@@ -316,7 +298,6 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
       {busy && <p role="status">Working…</p>}
       {snapshot && (
         <div className="space-y-4">
-          <FinanceActivityDashboard snapshot={snapshot} />
           <p className="text-sm text-muted-foreground">
             Fetched {new Date(snapshot.fetchedAt).toLocaleString()}. Transactions cover the last 30
             days; up to 100 are shown. Positive amounts are money spent; negative amounts are money
