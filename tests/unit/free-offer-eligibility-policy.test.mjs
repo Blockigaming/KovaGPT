@@ -25,3 +25,14 @@ test("user-visible offer requires server precheck, never bare free-tier status",
  assert.match(backend,/kova_policy_intro_redemptions/);
  assert.match(backend,/kova_policy_checkout_claims/);
 });
+
+test("eligible offer notice is server-evidenced and has an actionable checkout destination",()=>{
+ const source=readFileSync("src/components/FreeOfferButton.tsx","utf8");
+ assert.match(source,/if \(eligible && variant === "toolbar"\)/);
+ assert.match(source,/id: "offer_available"/);
+ assert.match(source,/confirmed: true/);
+ assert.match(source,/campaignId: "monthly-intro-v1"/);
+ assert.match(source,/to: "\/subscribe"/);
+ const dismissal=readFileSync("src/lib/notification-dismissal-policy.mjs","utf8");
+ assert.match(dismissal,/PROMOTIONAL_BILLING_IDS/);
+});
