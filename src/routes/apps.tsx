@@ -34,7 +34,7 @@ import {
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
-import { BankConnectionsPanel } from "@/components/BankConnectionsPanel";
+import { FinancesPreview } from "@/components/FinancesPreview";
 import { HealthConnectionsPanel } from "@/components/HealthConnectionsPanel";
 import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
 import {
@@ -1894,10 +1894,7 @@ function AppsPage() {
                 )}
               </TabsContent>
               <TabsContent forceMount value="finances" className="spec400-connection-group">
-                <BankConnectionsPanel
-                  key={`banks:${userKey ?? "guest"}`}
-                  ownerId={isSignedIn ? userKey : null}
-                />
+                <FinancesPreview />
               </TabsContent>
               <TabsContent forceMount value="health" className="spec400-connection-group">
                 <HealthConnectionsPanel
