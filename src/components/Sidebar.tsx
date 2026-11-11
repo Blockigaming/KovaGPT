@@ -35,7 +35,7 @@ import {
   Trash2,
   X,
   UserRound,
-  UsersRound,
+  Users,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -1158,7 +1158,7 @@ export function Sidebar({
             setWorkspaceJoinOpen(true);
           }}
         >
-          <UsersRound aria-hidden="true" />
+          <Users aria-hidden="true" />
           Find workspaces
         </DropdownMenuItem>
       )}
@@ -1881,7 +1881,7 @@ export function Sidebar({
                 className="mb-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm hover:bg-accent"
                 onClick={() => setWorkspaceJoinOpen(true)}
               >
-                <UsersRound className="h-5 w-5" aria-hidden="true" />
+                <Users className="h-5 w-5" aria-hidden="true" />
                 <span>Find workspaces</span>
               </button>
             )}
