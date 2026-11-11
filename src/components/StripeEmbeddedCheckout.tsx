@@ -3,6 +3,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { checkoutOriginKey } from "@/lib/checkout-notice-policy.mjs";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { createCheckoutSession, createPortalSession } from "@/utils/payments.functions";
 const CHECKOUT_ERROR_MESSAGE = "Secure checkout could not open. Try again.";
@@ -66,6 +67,16 @@ export function StripeEmbeddedCheckout({
       const url = new URL(result.url);
       if (url.origin !== "https://checkout.stripe.com")
         throw new Error("Secure checkout could not open.");
+      const receiptKey = checkoutOriginKey(owner);
+      if (receiptKey) {
+        try {
+          sessionStorage.setItem(receiptKey, JSON.stringify({
+            ownerId: owner, startedAt: Date.now(),
+          }));
+        } catch {
+          // Storage restrictions must not prevent checkout.
+        }
+      }
       publishKovaNotice({
         id: "checkout_started",
         title: "Opening secure checkout",
