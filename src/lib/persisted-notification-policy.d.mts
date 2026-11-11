@@ -25,3 +25,14 @@ export declare function pendingPersistedNotices(
   seen: ReadonlySet<string> | null | undefined,
   limit?: number,
 ): EligiblePersistedNotice[];
+
+export declare function notificationSessionSeenKey(ownerId: unknown): string | null;
+export declare function readSessionSeen(
+  storage: Pick<Storage, "getItem"> | null | undefined,
+  ownerId: string | null,
+): Set<string>;
+export declare function rememberSessionSeen(
+  storage: Pick<Storage, "setItem"> | null | undefined,
+  ownerId: string | null,
+  seen: ReadonlySet<string>,
+): boolean;
