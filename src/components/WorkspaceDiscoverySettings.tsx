@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UsersRound } from "lucide-react";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
@@ -37,7 +37,7 @@ export function WorkspaceDiscoverySettings() {
           className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-secondary"
           aria-hidden="true"
         >
-          <UsersRound className="h-5 w-5" />
+          <Users className="h-5 w-5" />
         </span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold">Find workspaces</h3>
