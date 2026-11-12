@@ -394,6 +394,7 @@ const REQUIRE_ACTUAL_STATE = new Set([
   "workspace_join_approved",
   "workspace_join_denied",
   "task_completed",
+  "reminder_ready",
   "subscription_updated",
   "upload_completed",
   "image_ready",

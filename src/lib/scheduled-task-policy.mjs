@@ -162,6 +162,7 @@ export function parseTaskPayload(value, partial = false) {
     "triggerMode",
     "contextRefs",
     "eventTriggers",
+    ...(partial ? [] : ["taskKind"]),
   ]);
   const result = {};
   for (const key of ["title", "prompt"])
@@ -201,6 +202,16 @@ export function parseTaskPayload(value, partial = false) {
   if (value.eventTriggers !== undefined || !partial)
     result.eventTriggers = parseTaskTriggers(value.eventTriggers);
   if (!partial) {
+    if (value.taskKind !== undefined) {
+      if (
+        value.taskKind !== "reminder" ||
+        result.triggerMode !== "time" ||
+        result.contextRefs.length ||
+        result.eventTriggers.length
+      )
+        fail();
+      result.taskKind = "reminder";
+    }
     if (
       result.triggerMode === "time" &&
       ((!result.localTime && !result.run_at) || result.eventTriggers.length)

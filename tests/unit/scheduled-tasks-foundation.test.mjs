@@ -7,7 +7,7 @@ const owner = "11111111-1111-4111-8111-111111111111",
   other = "22222222-2222-4222-8222-222222222222";
 const sql = (name) =>
   readFileSync(new URL("../../supabase/migrations/" + name, import.meta.url), "utf8");
-async function fixture() {
+async function fixture({ reminders = false } = {}) {
   const db = new PGlite();
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
  create schema auth;create schema kova_private;
@@ -47,6 +47,18 @@ async function fixture() {
     "20261031220329_task_project_membership_argument_order.sql",
   ])
     await db.exec(sql(name));
+  if (reminders) {
+    await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
+    await db.exec(sql("20261104223100_kova_scheduled_task_active_plan_caps.sql"));
+    await db.exec(`alter table public.app_notifications add constraint app_notifications_type_check check (type in ('task_result','task_failure'));
+      alter table public.app_notifications add column created_at timestamptz not null default now(),
+        add column read_at timestamptz, add column expires_at timestamptz;
+      create table public.agent_notifications(id uuid primary key,owner_id uuid,created_at timestamptz,read_at timestamptz,expires_at timestamptz);
+      create table public.banned_users(user_id uuid);`);
+    await db.exec(sql("20260905023630_pwa_push_subscription_lifecycle.sql"));
+    await db.exec(sql("20261112054900_kova_project_member_push_preferences.sql"));
+    await db.exec(sql("20261112215449_kova_scheduled_reminder_notifications.sql"));
+  }
   await db.exec("grant all on all tables in schema public to service_role;set role service_role");
   return db;
 }
@@ -233,13 +245,21 @@ async function gmailGrant(db) {
   );
   return { connection, generation, grant };
 }
-async function claim(db, id) {
+async function claim(db, id, { reminders = false } = {}) {
   await db.query(
     "update public.scheduled_tasks set next_run_at=date_trunc('milliseconds',now()-interval '1 second') where id=$1 and trigger_mode='time'",
     [id],
   );
-  const task = (await db.query("select * from public.claim_due_scheduled_tasks('worker',1,120)"))
-    .rows[0];
+  if (reminders) {
+    const oldWorker = await db.query(
+      "select * from public.claim_due_scheduled_tasks('old-worker',1,120)",
+    );
+    assert.equal(oldWorker.rows.length, 0);
+  }
+  const claimName = reminders
+    ? "claim_due_scheduled_tasks_with_reminders"
+    : "claim_due_scheduled_tasks";
+  const task = (await db.query(`select * from public.${claimName}('worker',1,120)`)).rows[0];
   assert.equal(task.id, id);
   const at = task.next_run_at ?? task.run_at,
     runId = id + ":" + at.getTime();
@@ -814,6 +834,98 @@ test("Task claim and run admission enforce the same Free, Plus and Pro daily all
       );
       await db.query("delete from public.scheduled_tasks where id=$1", [created.id]);
     }
+  } finally {
+    await db.close();
+  }
+});
+
+test("a due reminder settles once, keeps the message private, and follows task preferences", async () => {
+  const db = await fixture({ reminders: true });
+  try {
+    await activate(db);
+    const privileges = await db.query(`select
+      has_function_privilege('anon', 'public.claim_due_scheduled_tasks_with_reminders(text,integer,integer)', 'EXECUTE') as anon,
+      has_function_privilege('authenticated', 'public.claim_due_scheduled_tasks_with_reminders(text,integer,integer)', 'EXECUTE') as authenticated,
+      has_function_privilege('service_role', 'public.claim_due_scheduled_tasks_with_reminders(text,integer,integer)', 'EXECUTE') as service`);
+    assert.deepEqual(privileges.rows[0], { anon: false, authenticated: false, service: true });
+    const createReminder = () =>
+      mutate(db, "create", {
+        ...createPayload(),
+        title: "Private reminder title",
+        prompt: "Private reminder message",
+        repeat: "none",
+        taskKind: "reminder",
+      });
+    const settle = (run) =>
+      db.query("select * from public.settle_scheduled_task_success($1,'worker',$2,$3,$4)", [
+        run.task.id,
+        run.at,
+        run.runId,
+        "Private reminder message",
+      ]);
+    const configId = "a".repeat(64);
+    const push = async (operation, args = {}) =>
+      (
+        await db.query("select public.web_push_rpc($1,$2,$3) result", [
+          owner,
+          operation,
+          JSON.stringify({ configId, ...args }),
+        ])
+      ).rows[0].result;
+    const device = randomUUID();
+    await push("heartbeat");
+    await push("subscribe", {
+      id: device,
+      endpointHash: "b".repeat(64),
+      sealed: "encrypted-subscription-only",
+      deviceSecretHash: "c".repeat(64),
+    });
+
+    const first = await createReminder();
+    const run = await claim(db, first.id, { reminders: true });
+    assert.equal((await begin(db, run)).task.task_kind, "reminder");
+    assert.equal((await settle(run)).rows[0].delivery_status, "sent");
+    await assert.rejects(settle(run), /lease_not_owned/);
+    const inbox = await db.query(
+      "select owner_id,type,title,safe_preview,action_url from app_notifications",
+    );
+    assert.deepEqual(inbox.rows, [
+      {
+        owner_id: owner,
+        type: "reminder_ready",
+        title: "Reminder ready",
+        safe_preview: "Your scheduled reminder is ready. Open Tasks to view it.",
+        action_url: "/scheduled-tasks?taskId=" + first.id,
+      },
+    ]);
+    assert.equal(
+      (await db.query("select result_summary from scheduled_task_runs where id=$1", [run.runId]))
+        .rows[0].result_summary,
+      "Private reminder message",
+    );
+
+    const workerId = randomUUID();
+    const delivery = await push("claim", { workerId });
+    assert.equal(delivery.id, device);
+    assert.equal(
+      (await db.query("select event_category from web_push_subscriptions where id=$1", [device]))
+        .rows[0].event_category,
+      "tasks",
+    );
+
+    await db.query("insert into notification_preferences values($1,true,$2)", [
+      owner,
+      JSON.stringify({ tasks: false }),
+    ]);
+    assert.deepEqual(await push("check", { id: device, workerId, revision: 1 }), {
+      eligible: false,
+      skip: true,
+    });
+    const next = await createReminder();
+    const muted = await claim(db, next.id, { reminders: true });
+    await begin(db, muted);
+    await settle(muted);
+    assert.equal((await db.query("select count(*)::int n from app_notifications")).rows[0].n, 1);
   } finally {
     await db.close();
   }

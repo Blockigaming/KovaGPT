@@ -2,6 +2,7 @@ import { NOTIFICATION_IDS } from "./notification-catalog.mjs";
 const CATALOG = new Set(NOTIFICATION_IDS);
 const SERVER_KIND_TO_NOTICE = {
   task_result: "task_completed",
+  reminder_ready: "reminder_ready",
   task_failure: "task_failed",
   project_invitation: "invitation_received",
   project_member_joined: "member_joined",

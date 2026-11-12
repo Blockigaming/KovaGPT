@@ -34,7 +34,7 @@ test.beforeAll(async () => {
     stdin: {
       contents: `import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{ScheduledTaskEditor}from'./src/components/ScheduledTaskEditor';
  window.fixture={calls:[],pending:[],failCreate:true,user:'${owner}'};
- function Harness(){const[user,setUser]=useState('${owner}');window.fixture.switchUser=()=>{window.fixture.user='${other}';setUser('${other}')};return <ScheduledTaskEditor userKey={user} draft={{title:user==='${owner}'?'Private old draft':'New account draft',prompt:'Saved prompt',localTime:'2027-01-01T09:00',repeat:'daily'}} executionAvailable={true} onClose={()=>{}} onSaved={()=>{}}/>};createRoot(document.getElementById('root')).render(<Harness/>);`,
+ function Harness(){const[user,setUser]=useState('${owner}');window.fixture.switchUser=()=>{window.fixture.user='${other}';setUser('${other}')};return <ScheduledTaskEditor userKey={user} draft={location.search ? undefined : {title:user==='${owner}'?'Private old draft':'New account draft',prompt:'Saved prompt',localTime:'2027-01-01T09:00',repeat:'daily'}} executionAvailable={true} onClose={()=>{}} onSaved={()=>{}}/>};createRoot(document.getElementById('root')).render(<Harness/>);`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -86,11 +86,12 @@ test.beforeAll(async () => {
   });
   bundle = result.outputFiles[0].text;
 });
-async function mount(page: import("@playwright/test").Page) {
-  await page.route("https://tasks-fixture.invalid/", (route) =>
+async function mount(page: import("@playwright/test").Page, newSchedule = false) {
+  const url = "https://tasks-fixture.invalid/" + (newSchedule ? "?new" : "");
+  await page.route(url, (route) =>
     route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' }),
   );
-  await page.goto("https://tasks-fixture.invalid/");
+  await page.goto(url);
   await page.addScriptTag({ content: bundle });
 }
 test("Tasks retries the exact captured mutation and pins the rendered account", async ({
@@ -157,4 +158,30 @@ test("new scheduled tasks never offer connected events or request event sources"
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue("New account draft");
   await expect(page.getByRole("region", { name: "Gmail event delivery" })).toHaveCount(0);
   expect(requests).toEqual([]);
+});
+
+test("a new reminder sends explicit typed intent and retains it for retries", async ({ page }) => {
+  await mount(page, true);
+  await page.getByLabel("Send a reminder").check();
+  await page.getByLabel("Title", { exact: true }).fill("School form");
+  await page.getByLabel("Reminder message", { exact: true }).fill("Bring the signed school form.");
+  await page.getByLabel("Deliver this reminder at the scheduled time.").check();
+  await page.getByRole("button", { name: "Save schedule", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Response interrupted");
+  await page.getByRole("button", { name: "Retry the same request" }).click();
+  const calls = await page.evaluate(() =>
+    (window as unknown as TaskBrowserWindow).fixture.calls.filter(
+      ({ name }) => name === "createScheduledTask",
+    ),
+  );
+  expect(calls).toHaveLength(2);
+  expect(calls[0].data).toEqual(calls[1].data);
+  expect(calls[0].data).toMatchObject({
+    taskKind: "reminder",
+    triggerMode: "time",
+    contextRefs: [],
+    eventTriggers: [],
+    prompt: "Bring the signed school form.",
+    expectedUserId: owner,
+  });
 });

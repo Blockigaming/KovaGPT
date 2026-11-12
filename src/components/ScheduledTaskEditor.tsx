@@ -120,6 +120,7 @@ function ScheduledTaskEditorBody({
   const dateSeparator = localTime.indexOf("T");
   const localDate = dateSeparator === -1 ? localTime : localTime.slice(0, dateSeparator);
   const localClock = dateSeparator === -1 ? "" : localTime.slice(dateSeparator + 1);
+  const [reminder, setReminder] = useState(task?.task_kind === "reminder");
   const [mode, setMode] = useState<"time" | "event">(task?.trigger_mode ?? "time");
   const [refs, setRefs] = useState<TaskContextRef[]>(task?.context_refs ?? []),
     [triggers, setTriggers] = useState<TaskTrigger[]>(task?.event_triggers ?? []);
@@ -241,11 +242,11 @@ function ScheduledTaskEditorBody({
       setError(reason instanceof Error ? reason.message : "The action could not be confirmed.");
   };
   const initialDraft = useRef(
-    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers }),
+    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers, reminder }),
   );
   const dirty =
     initialDraft.current !==
-    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers });
+    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers, reminder });
   function closeEditor(force = false) {
     if (!force && (busyRef.current || discardDecisionRef.current !== "closed")) return;
     if (!force && dirty) {
@@ -433,7 +434,8 @@ function ScheduledTaskEditorBody({
       timezone,
       repeat: mode === "event" ? "none" : repeat,
       triggerMode: mode,
-      contextRefs: refs,
+      contextRefs: reminder ? [] : refs,
+      ...(reminder && !task ? { taskKind: "reminder" as const } : {}),
       eventTriggers: mode === "event" ? triggers : [],
       ...(mode === "time" ? { localTime } : {}),
     };
@@ -611,6 +613,17 @@ function ScheduledTaskEditorBody({
             className="space-y-3"
           >
             <h3 className="text-base font-semibold">What should Kova do?</h3>
+            {!task && !draft && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  className="kova-native-check"
+                  type="checkbox"
+                  checked={reminder}
+                  onChange={(event) => setReminder(event.target.checked)}
+                />
+                Send a reminder
+              </label>
+            )}
             <label className="block text-sm">
               Title
               <Input
@@ -624,12 +637,14 @@ function ScheduledTaskEditorBody({
               {validationFeedback("title")}
             </label>
             <label className="block text-sm">
-              Prompt
+              {reminder ? "Reminder message" : "Prompt"}
               <Textarea
                 {...validationProps("prompt")}
                 className={`${control} min-h-[120px]`}
                 value={prompt}
-                placeholder="What would you like Kova to do?"
+                placeholder={
+                  reminder ? "What should we remind you about?" : "What would you like Kova to do?"
+                }
                 maxLength={4000}
                 onChange={(event) => setPrompt(event.target.value)}
               />
@@ -807,7 +822,9 @@ function ScheduledTaskEditorBody({
               />
               {task
                 ? "Save these settings in a paused state. I will review and resume the task separately."
-                : "Run this prompt in the background using my account usage allowance."}
+                : reminder
+                  ? "Deliver this reminder at the scheduled time."
+                  : "Run this prompt in the background using my account usage allowance."}
             </label>
             {validationFeedback("consent")}
           </fieldset>

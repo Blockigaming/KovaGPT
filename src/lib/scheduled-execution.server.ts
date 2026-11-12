@@ -21,6 +21,7 @@ type FailureType = "temporary" | "permanent" | "authorization" | "timeout";
 export type ClaimedScheduledTask = {
   id: string;
   user_id: string;
+  task_kind?: "prompt" | "reminder";
   title: string;
   prompt: string;
   run_at: string;
@@ -143,7 +144,7 @@ async function claimTasks(workerId: string, limit: number): Promise<ClaimedSched
   }
 
   const claimed = await admin
-    .rpc<ClaimedScheduledTask[]>("claim_due_scheduled_tasks", {
+    .rpc<ClaimedScheduledTask[]>("claim_due_scheduled_tasks_with_reminders", {
       p_worker_id: workerId,
       p_limit: limit,
       p_lease_seconds: 120,
@@ -336,7 +337,8 @@ async function executeClaimedTask(
   const id = runId(run.task);
 
   try {
-    const result = await executePrompt(run, workerId);
+    const result =
+      run.task.task_kind === "reminder" ? run.task.prompt : await executePrompt(run, workerId);
 
     const settlement = await admin
       .rpc<SuccessSettlementRow[]>("settle_scheduled_task_success", {

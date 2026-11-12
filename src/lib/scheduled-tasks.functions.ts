@@ -16,6 +16,7 @@ import { runtimeEnv } from "@/lib/runtime-env.server";
 import { z } from "zod";
 export type ScheduledTask = {
   id: string;
+  task_kind: "prompt" | "reminder";
   title: string;
   prompt: string;
   run_at: string;
@@ -49,7 +50,7 @@ type Query = PromiseLike<Result> & {
 };
 type Admin = { rpc(name: string, args: Record<string, unknown>): Query; from(name: string): Query };
 const fields =
-  "id,title,prompt,run_at,repeat,status,last_run_at,next_run_at,last_result,created_at,updated_at,revision,timezone,schedule_local,trigger_mode,context_refs,event_triggers,last_error";
+  "id,task_kind,title,prompt,run_at,repeat,status,last_run_at,next_run_at,last_result,created_at,updated_at,revision,timezone,schedule_local,trigger_mode,context_refs,event_triggers,last_error";
 function safeTaskError(code?: string, message?: string): Error {
   if (message === "task_execution_unavailable")
     return new Error("Background execution is not ready. Your task was not started.");

@@ -895,3 +895,96 @@ test("[notice:update_required] the supported app stays open until the release se
   await navigation;
   await expect(notice).toHaveCount(0);
 });
+
+test("[notice:reminder_ready] an inbox reminder opens the private scheduled result", async ({
+  page,
+}) => {
+  const taskId = "59595959-5959-4959-8959-595959595959";
+  const notificationId = "69696969-6969-4969-8969-696969696969";
+  const time = new Date().toISOString();
+  const privateMessage = "Bring the signed school form.";
+  let readAt: string | null = null;
+  await page.route("**/_serverFn/**", async (route) => {
+    const request = route.request();
+    const name = serverFunctionName(request.url());
+    const result = (value: unknown) => route.fulfill({ json: { result: value, context: {} } });
+    if (name.startsWith("listNotifications_"))
+      return result([
+        {
+          id: notificationId,
+          source: "application",
+          type: "reminder_ready",
+          title: "Reminder ready",
+          preview: "Your scheduled reminder is ready. Open Tasks to view it.",
+          actionUrl: "/scheduled-tasks?taskId=" + taskId,
+          readAt,
+          createdAt: time,
+        },
+      ]);
+    if (name.startsWith("markNotificationsRead_")) {
+      const { data } = fromJSON(request.postDataJSON()) as {
+        data: { expectedOwnerId: string; ids: string[]; source: string };
+      };
+      expect(data).toEqual({
+        expectedOwnerId: owner,
+        ids: [notificationId],
+        source: "application",
+      });
+      readAt = time;
+      return result({ ok: true });
+    }
+    if (name.startsWith("isScheduledTasksEligible_"))
+      return result({ eligible: true, executionAvailable: true });
+    if (name.startsWith("listScheduledTaskOffers_"))
+      return result({ sent: [], received: [], linked: null });
+    if (name.startsWith("listScheduledTasks_"))
+      return result([
+        {
+          id: taskId,
+          task_kind: "reminder",
+          title: "School form",
+          prompt: privateMessage,
+          status: "completed",
+          repeat: "none",
+          timezone: "UTC",
+          schedule_local: time.slice(0, 16),
+          run_at: time,
+          last_run_at: time,
+          last_result: privateMessage,
+          next_run_at: null,
+          created_at: time,
+          updated_at: time,
+          revision: 2,
+          trigger_mode: "time",
+          context_refs: [],
+          event_triggers: [],
+          last_error: null,
+        },
+      ]);
+    if (name.startsWith("listScheduledTaskRuns_"))
+      return result([
+        {
+          id: taskId + ":1",
+          status: "complete",
+          scheduled_for: time,
+          result_summary: privateMessage,
+        },
+      ]);
+    return route.fallback();
+  });
+
+  await page.reload();
+  await waitForKovaHydration(page);
+  const notice = page.locator("[data-sonner-toast]").filter({ hasText: "Reminder ready" });
+  await expect(notice).toHaveCount(1);
+  await expect(notice).not.toContainText(privateMessage);
+  await notice.getByRole("button", { name: "View" }).click();
+  await expect(page).toHaveURL(new RegExp("/scheduled-tasks\\?taskId=" + taskId + "$"));
+  await expect(page.getByRole("dialog").locator("details p.whitespace-pre-wrap")).toHaveText(
+    privateMessage,
+  );
+  await expect.poll(() => readAt).toBe(time);
+  await page.reload();
+  await waitForKovaHydration(page);
+  await expect(notice).toHaveCount(0);
+});

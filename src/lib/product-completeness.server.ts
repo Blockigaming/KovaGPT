@@ -244,6 +244,7 @@ export const COMMANDS: CommandDefinition[] = [
 ];
 
 export type NotificationType =
+  | "reminder_ready"
   | "task_result"
   | "task_failure"
   | "connector_reauth"

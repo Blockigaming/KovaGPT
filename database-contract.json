@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 226,
+  "migrationCount": 227,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -437,6 +437,8 @@
     "claim_developer_funding",
     "claim_due_scheduled_tasks",
     "claim_due_scheduled_tasks",
+    "claim_due_scheduled_tasks",
+    "claim_due_scheduled_tasks_with_reminders",
     "claim_library_image_cleanup",
     "claim_project_deletion",
     "claim_project_file_delete",
@@ -2269,6 +2271,7 @@
     "execute on function kova_private.auth_user_exists(uuid),\n  kova_private.verified_auth_user_for_email(text) to service_role",
     "execute on function kova_private.can_edit_project(uuid, uuid) to authenticated, service_role",
     "execute on function kova_private.can_read_retained_work_source(text) to authenticated",
+    "execute on function kova_private.claim_due_scheduled_tasks_internal(text,integer,integer,boolean)\n  to service_role",
     "execute on function kova_private.clear_chat_memory_on_account_deletion() to service_role",
     "execute on function kova_private.control_agent_job(uuid, text) to authenticated, service_role",
     "execute on function kova_private.current_organization_role(uuid) to authenticated,service_role",
@@ -2337,6 +2340,7 @@
     "execute on function public.claim_chat_context_summaries(integer) to service_role",
     "execute on function public.claim_due_scheduled_tasks(text, integer, integer)\n  to service_role",
     "execute on function public.claim_due_scheduled_tasks(text,integer,integer) to service_role",
+    "execute on function public.claim_due_scheduled_tasks_with_reminders(text,integer,integer)\n  to service_role",
     "execute on function public.claim_stripe_checkout_attempt(\n  uuid,\n  text,\n  text,\n  boolean\n) to service_role",
     "execute on function public.claim_stripe_customer_creation(uuid, text) to service_role",
     "execute on function public.claim_team_join_notification(uuid) to service_role",
@@ -2937,6 +2941,7 @@
     "all on function kova_private.can_edit_project(uuid, uuid) from public, anon",
     "all on function kova_private.can_read_retained_work_source(text) from public,anon,authenticated",
     "all on function kova_private.can_receive_project_notice(uuid) from public, anon, authenticated",
+    "all on function kova_private.claim_due_scheduled_tasks_internal(text,integer,integer,boolean)\n  from public, anon, authenticated",
     "all on function kova_private.clear_chat_memory_on_account_deletion() from public,anon,authenticated",
     "all on function kova_private.close_auth_email_dispatch(bigint,text,text,text)\n from public, anon, authenticated, service_role",
     "all on function kova_private.control_agent_job(uuid, text) from public, anon",
@@ -3039,6 +3044,7 @@
     "all on function public.claim_chat_context_summaries(integer) from public,anon,authenticated",
     "all on function public.claim_due_scheduled_tasks(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_due_scheduled_tasks(text,integer,integer) from public,anon,authenticated",
+    "all on function public.claim_due_scheduled_tasks_with_reminders(text,integer,integer)\n  from public, anon, authenticated",
     "all on function public.claim_stripe_customer_creation(uuid, text) from public, anon, authenticated",
     "all on function public.claim_team_join_notification(uuid) from public,anon,authenticated",
     "all on function public.claim_workspace_search_jobs(text) from public,anon,authenticated",
@@ -3973,5 +3979,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "7da63f56e42a513aa77919a8f6b13e0c0af751ecf951bf93040bcadf842ef03f"
+  "sha256": "b2f0601f010a3986c8642ff9d0742b7cb124d7e6a009acfb2affd4e766049681"
 }

@@ -158,9 +158,10 @@ export function KovaNotificationController({
         notificationToast(notice.title, {
           id: toastId,
           onDismiss: acknowledge,
-          onAutoClose: acknowledge,
+          onAutoClose:
+            notice.id === "reminder_ready" ? () => toastIds.delete(toastId) : acknowledge,
           description: notice.message,
-          duration: 3000,
+          duration: notice.id === "reminder_ready" ? 6000 : 3000,
           action:
             notice.onPrimary && notice.primaryLabel
               ? {

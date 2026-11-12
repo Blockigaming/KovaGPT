@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 226,
-  "latest": "20261112195600_kova_workspace_join_decision_notifications.sql",
+  "count": 227,
+  "latest": "20261112215449_kova_scheduled_reminder_notifications.sql",
   "migrations": [
     {
       "order": 1,
@@ -4750,6 +4750,20 @@
       "functions": ["notify_workspace_join_decision"],
       "destructive": false,
       "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 227,
+      "filename": "20261112215449_kova_scheduled_reminder_notifications.sql",
+      "timestamp": "20261112215449",
+      "sha256": "551c9643d47a7db5f8dbce46cb0869381191f6e699ae9b86d54e52c455114905",
+      "tables": [],
+      "functions": ["claim_due_scheduled_tasks", "claim_due_scheduled_tasks_with_reminders"],
+      "destructive": false,
+      "dataBackfill": false,
       "reversible": false,
       "rls": [],
       "policies": [],

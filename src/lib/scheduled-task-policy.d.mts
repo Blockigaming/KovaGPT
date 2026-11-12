@@ -15,6 +15,7 @@ export type TaskTrigger = {
   activities?: string[];
 };
 export type TaskPayload = {
+  taskKind?: "reminder";
   title?: string;
   prompt?: string;
   run_at?: string;

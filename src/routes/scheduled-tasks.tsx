@@ -310,7 +310,11 @@ function ScheduledTasksPage() {
             if (item.status === "running") {
               publishKovaNotice({ id: "task_started", title: "Task started", message: item.title });
               shown++;
-            } else if (item.status === "completed" && item.last_run_at) {
+            } else if (
+              item.status === "completed" &&
+              item.last_run_at &&
+              item.task_kind !== "reminder"
+            ) {
               publishKovaNotice({
                 id: "task_completed",
                 title: "Task completed",
@@ -389,7 +393,7 @@ function ScheduledTasksPage() {
     openedTaskLink.current = requestedTaskId;
     const selected = tasks.find((task) => task.id === requestedTaskId);
     if (selected) {
-      openTaskEditor(selected, "settings", null);
+      openTaskEditor(selected, selected.task_kind === "reminder" ? "history" : "settings", null);
       setTaskLinkError(null);
     } else
       setTaskLinkError("This scheduled task is unavailable or is not accessible to this account.");
