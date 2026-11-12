@@ -679,6 +679,11 @@ function ScheduledTasksPage() {
       if (generation === generationRef.current && principalRef.current === principal) {
         const detail = error instanceof Error ? error.message : "The response was interrupted.";
         const message = `Couldn’t confirm ${taskActionLabels[action]} for “${task.title}”. ${detail}`;
+        if (action === "scheduled")
+          publishKovaNotice({
+            id: "task_activation_failed",
+            title: "Task resumption could not be confirmed",
+          });
         setTaskFeedback((current) => ({
           ...current,
           [task.id]: { ...feedback, state: "error", message },

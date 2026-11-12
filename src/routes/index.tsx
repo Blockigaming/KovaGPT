@@ -1677,8 +1677,10 @@ function KovaGPT() {
     const nextConversations = await persistTemporaryConversation(userKey, active, conversations);
     if (generation !== storageGenerationRef.current) return;
     if (!nextConversations) {
-      toast.error("This chat could not be saved", {
-        description: "Storage is unavailable or full. Free space and retry.",
+      publishKovaNotice({
+        id: "save_failed",
+        title: "This chat could not be saved",
+        message: "Storage is unavailable or full. Free space and retry.",
       });
       return;
     }

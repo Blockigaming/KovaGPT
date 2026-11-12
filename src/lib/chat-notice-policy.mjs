@@ -15,6 +15,8 @@ export function chatFailureNoticeId(error, { signedIn = false, networkFailure = 
     return "reasoning_restricted";
   if (code === "kova_model_runtime_unverified") return "model_unavailable";
   if (code === "kova_model_vision_unavailable") return "unsupported_content";
+  if (code === "message_too_large") return "message_too_long";
+  if (code === "too_many_messages") return "conversation_full";
   if (code === "file_upload_limit") return "upload_limit";
   if (code === "image_generation_limit") return "image_limit";
   if (code === "web_search_unavailable") return "search_failed";

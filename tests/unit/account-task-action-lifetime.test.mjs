@@ -439,3 +439,20 @@ test("scheduled reads cannot resurrect a row while a mutation is pending", async
   assert.deepEqual(f.tasks(), []);
   assert.deepEqual(f.events, []);
 });
+
+test("failed task resumption notifies only the current account", async () => {
+  for (const stale of [false, true]) {
+    const f = taskFixture();
+    const task = { ...f.tasks()[0], status: "paused" };
+    const result = f.togglePause(task);
+    if (stale) f.principalRef.current = "another-owner";
+    f.requests[0].reject(new Error("resumption could not be confirmed"));
+    await result;
+    f.flushFrames();
+    assert.deepEqual(
+      f.events.filter(([kind]) => kind === "notice"),
+      stale ? [] : [["notice", "task_activation_failed"]],
+    );
+    if (!stale) assert.equal(f.feedback()[task.id].state, "error");
+  }
+});

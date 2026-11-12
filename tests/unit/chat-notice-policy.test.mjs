@@ -40,6 +40,8 @@ test("backend-entitlement and availability failures have specific notices", () =
     [{ code: "hosted_tools_unavailable", status: 503 }, "source_unavailable"],
     [{ code: "message_quota_unavailable", status: 503 }, "source_unavailable"],
     [{ code: "analysis_sign_in_required", status: 401 }, "sign_in_required"],
+    [{ code: "message_too_large", status: 413 }, "message_too_long"],
+    [{ code: "too_many_messages", status: 413 }, "conversation_full"],
     [{ code: "file_upload_limit", status: 429 }, "upload_limit"],
     [{ code: "image_generation_limit", status: 429 }, "image_limit"],
     [{ status: 403 }, "permission_denied"],
@@ -118,4 +120,36 @@ test("Thinking limit sheet uses the server category, not a guessed message strin
   assert.match(route, /usageKind=\{limitDialog\.usageKind\}/);
   assert.match(dialog, /max-sm:!bottom-0/);
   assert.match(dialog, /safe-area-inset-bottom/);
+});
+
+test("chat ingress length rejections preserve distinct notices through the HTTP parser", async () => {
+  const {
+    CHAT_MAX_MESSAGES,
+    CHAT_MAX_MESSAGE_CHARS,
+    normalizeChatPayload,
+    toChatIngressErrorEnvelope,
+  } = await import("../../src/lib/chat-ingress.server.mjs");
+  const cases = [
+    [[{ role: "user", content: "x".repeat(CHAT_MAX_MESSAGE_CHARS + 1) }], "message_too_long"],
+    [
+      Array.from({ length: CHAT_MAX_MESSAGES + 1 }, () => ({ role: "user", content: "x" })),
+      "conversation_full",
+    ],
+  ];
+  for (const [messages, id] of cases) {
+    let rejected;
+    assert.throws(
+      () => normalizeChatPayload({ messages }),
+      (cause) => {
+        rejected = cause;
+        return cause.status === 413;
+      },
+    );
+    const parsed = await chatResponseError(
+      Response.json(toChatIngressErrorEnvelope(rejected, "length-check"), {
+        status: rejected.status,
+      }),
+    );
+    assert.equal(chatFailureNoticeId(parsed), id);
+  }
 });
