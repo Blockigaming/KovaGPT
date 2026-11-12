@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import { PGlite } from "@electric-sql/pglite";
+import { createClient } from "@supabase/supabase-js";
 import ts from "typescript";
 import { z } from "zod";
 
@@ -141,4 +143,104 @@ test("feedback mutation accepts only the matching owner", async () => {
   });
   assert.equal(db.rating, null);
   assert.equal(db.mutations, 2);
+});
+
+test("Help survey retries update one owner-bound feedback record", async () => {
+  const db = new PGlite();
+  const key = "help-center-experience-v1";
+  try {
+    await db.exec(`
+      create role anon; create role authenticated; create schema auth;
+      create table auth.users(id uuid primary key);
+      create function auth.uid() returns uuid language sql stable as $$
+        select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+      $$;
+      grant usage on schema auth to authenticated;
+    `);
+    for (const migration of [
+      "20260722130000_product_completeness_reliability.sql",
+      "20260731120000_feedback_submissions_hardening.sql",
+    ]) {
+      await db.exec(readFileSync("supabase/migrations/" + migration, "utf8"));
+    }
+    await db.query("insert into auth.users(id) values ($1), ($2)", [ownerA, ownerB]);
+
+    const clientFor = (actor) =>
+      createClient("https://feedback-fixture.example.invalid", "fixture-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+          async fetch(target, options) {
+            const url = new URL(target);
+            assert.equal(url.pathname, "/rest/v1/feedback_submissions");
+            return db.transaction(async (tx) => {
+              await tx.exec("set local role authenticated");
+              await tx.query("select set_config('request.jwt.claim.sub',$1,true)", [actor]);
+              if (options.method === "POST") {
+                assert.equal(url.searchParams.get("on_conflict"), "owner_id,duplicate_key");
+                const row = JSON.parse(options.body);
+                await tx.query(
+                  `insert into public.feedback_submissions
+                     (owner_id,message_id,rating,attach_context,context_excerpt,duplicate_key)
+                   values($1,$2,$3,$4,$5,$6)
+                   on conflict(owner_id,duplicate_key) do update
+                     set rating=excluded.rating,attach_context=excluded.attach_context,
+                         context_excerpt=excluded.context_excerpt`,
+                  [
+                    row.owner_id,
+                    row.message_id,
+                    row.rating,
+                    row.attach_context,
+                    row.context_excerpt,
+                    row.duplicate_key,
+                  ],
+                );
+                return new Response(null, { status: 201 });
+              }
+              assert.equal(url.searchParams.get("owner_id"), "eq." + actor);
+              assert.equal(url.searchParams.get("message_id"), "in.(" + key + ")");
+              const { rows } = await tx.query(
+                "select message_id,rating from public.feedback_submissions where owner_id=$1 and message_id=$2",
+                [actor, key],
+              );
+              return Response.json(rows);
+            });
+          },
+        },
+      });
+    const { getResponseFeedbackBatch, submitResponseFeedback } = loadFeedbackFunctions();
+    const save = (contextExcerpt) =>
+      submitResponseFeedback({
+        data: { expectedOwnerId: ownerA, messageId: key, rating: "down", contextExcerpt },
+        context: { userId: ownerA, supabase: clientFor(ownerA) },
+      });
+    const load = (actor) =>
+      getResponseFeedbackBatch({
+        data: { expectedOwnerId: actor, messageIds: [key] },
+        context: { userId: actor, supabase: clientFor(actor) },
+      });
+    assert.equal((await save(undefined)).saved, true);
+    const answer = "Link directly to the setting.";
+    assert.equal((await save(answer)).saved, true);
+    assert.equal((await save(answer)).saved, true);
+    assert.equal((await load(ownerA)).ratings[key], "down");
+    assert.equal((await load(ownerB)).ratings[key], undefined);
+    assert.deepEqual(
+      (
+        await db.query(
+          "select owner_id,message_id,rating,attach_context,context_excerpt from public.feedback_submissions",
+        )
+      ).rows,
+      [
+        {
+          owner_id: ownerA,
+          message_id: key,
+          rating: "down",
+          attach_context: true,
+          context_excerpt: answer,
+        },
+      ],
+    );
+  } finally {
+    await db.close();
+  }
 });

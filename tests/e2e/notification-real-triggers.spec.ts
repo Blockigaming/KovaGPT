@@ -16,7 +16,9 @@ test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name));
   const saved = /\[notice:(network_offline|conversation_full)\]/u.test(testInfo.title);
   await fixture(page, "dark", true, saved, "free", {
-    preserveStorageOnReload: /\[notice:(did_you_know|feedback_requested)\]/u.test(testInfo.title),
+    preserveStorageOnReload: /\[notice:(did_you_know|feedback_requested|rating_requested)\]/u.test(
+      testInfo.title,
+    ),
   });
   await page.goto("/");
   await waitForKovaHydration(page);
@@ -646,6 +648,147 @@ test("[notice:feedback_requested] the Help feedback action opens the existing me
   await expect(page.locator("#support-message")).toBeFocused();
   await expect(invitation).toHaveCount(0);
   expect(submissions).toBe(0);
+});
+
+test("[notice:rating_requested] an opened Help answer offers a real account-bound rating", async ({
+  page,
+}) => {
+  const key = "help-center-experience-v1";
+  let stored: "down" | undefined;
+  let reads = 0;
+  const writes: Record<string, unknown>[] = [];
+  await page.route("**/_serverFn/**", async (route) => {
+    const request = route.request();
+    const name = serverFunctionName(request.url());
+    if (!/^(getResponseFeedbackBatch|submitResponseFeedback)_/.test(name)) return route.fallback();
+    const { data } = fromJSON(request.postDataJSON()) as { data: Record<string, unknown> };
+    expect(data.expectedOwnerId).toBe(owner);
+    if (name.startsWith("getResponseFeedbackBatch_")) {
+      expect(data.messageIds).toEqual([key]);
+      reads++;
+      return route.fulfill({
+        json: { result: { ratings: stored ? { [key]: stored } : {} }, context: {} },
+      });
+    }
+    writes.push(data);
+    if (writes.length === 1)
+      return route.fulfill({ json: { result: { saved: false }, context: {} } });
+    expect(data).toEqual({ expectedOwnerId: owner, messageId: key, rating: "down" });
+    stored = "down";
+    return route.fulfill({ json: { result: { saved: true }, context: {} } });
+  });
+  await page.goto("/help");
+  await waitForKovaHydration(page);
+  const question = page.getByRole("button", { name: /Why is Thinking blue/ });
+  const invitation = page.locator('[data-kova-notice-id="rating_requested"]');
+  await expect(invitation).toHaveCount(0);
+  expect(reads).toBe(0);
+  await question.click();
+  await expect(invitation).toBeVisible();
+  const needsWork = invitation.getByRole("button", { name: "Needs work", exact: true });
+  await needsWork.click();
+  await expect(invitation.getByRole("alert")).toContainText("Your rating could not be saved.");
+  await needsWork.click();
+  await expect(page.getByText("Rating saved", { exact: true })).toBeVisible();
+  await expect(question).toBeFocused();
+  expect(writes).toHaveLength(2);
+  expect(writes[0]).toEqual(writes[1]);
+  const before = reads;
+  await page.reload();
+  await waitForKovaHydration(page);
+  await question.click();
+  await expect.poll(() => reads).toBeGreaterThan(before);
+  await expect(invitation).toHaveCount(0);
+});
+
+test("[notice:rating_requested] Skip closes the rating without sending it", async ({ page }) => {
+  let writes = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    const name = serverFunctionName(route.request().url());
+    if (name.startsWith("getResponseFeedbackBatch_"))
+      return route.fulfill({ json: { result: { ratings: {} }, context: {} } });
+    if (name.startsWith("submitResponseFeedback_")) {
+      writes++;
+      return route.abort("blockedbyclient");
+    }
+    return route.fallback();
+  });
+  await page.goto("/help");
+  await waitForKovaHydration(page);
+  const question = page.getByRole("button", { name: /Why is Thinking blue/ });
+  const invitation = page.locator('[data-kova-notice-id="rating_requested"]');
+  await question.click();
+  await invitation.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(question).toBeFocused();
+  await expect(invitation).toHaveCount(0);
+  await page.reload();
+  await waitForKovaHydration(page);
+  await question.click();
+  await expect(invitation).toHaveCount(0);
+  expect(writes).toBe(0);
+});
+
+test("[notice:survey_requested] an optional follow-up is offered after a saved Help rating", async ({
+  page,
+}) => {
+  const key = "help-center-experience-v1";
+  let rated = false;
+  let loads = 0;
+  const answers: Record<string, unknown>[] = [];
+  await page.route("**/_serverFn/**", async (route) => {
+    const request = route.request();
+    const name = serverFunctionName(request.url());
+    if (!/^(getResponseFeedbackBatch|submitResponseFeedback)_/.test(name)) return route.fallback();
+    const { data } = fromJSON(request.postDataJSON()) as { data: Record<string, unknown> };
+    expect(data.expectedOwnerId).toBe(owner);
+    if (name.startsWith("getResponseFeedbackBatch_")) {
+      loads++;
+      return route.fulfill({
+        json: { result: { ratings: rated ? { [key]: "down" } : {} }, context: {} },
+      });
+    }
+    expect(data).toMatchObject({ messageId: key, rating: "down" });
+    if (data.contextExcerpt === undefined) rated = true;
+    else answers.push(data);
+    return route.fulfill({
+      json: { result: { saved: answers.length !== 1 }, context: {} },
+    });
+  });
+  await page.goto("/help");
+  await waitForKovaHydration(page);
+  const question = page.getByRole("button", { name: /Why is Thinking blue/ });
+  const survey = page.locator('[data-kova-notice-id="survey_requested"]');
+  await question.click();
+  await expect(survey).toHaveCount(0);
+  await page.getByRole("button", { name: "Needs work", exact: true }).click();
+  await expect(survey).toBeVisible();
+  expect(rated).toBe(true);
+  expect(answers).toHaveLength(0);
+  const comment = survey.getByRole("textbox", { name: "What could work better?" });
+  const text = "Show a direct link to the setting mentioned in the answer.";
+  await comment.fill(text);
+  const submit = survey.getByRole("button", { name: "Save feedback", exact: true });
+  await submit.click();
+  await expect(survey.getByRole("alert")).toContainText("Your feedback could not be saved.");
+  await expect(comment).toHaveValue(text);
+  await submit.click();
+  await expect(page.getByText("Feedback saved", { exact: true })).toBeVisible();
+  await expect(question).toBeFocused();
+  expect(answers).toHaveLength(2);
+  expect(answers[1]).toEqual({
+    expectedOwnerId: owner,
+    messageId: key,
+    rating: "down",
+    contextExcerpt: text,
+  });
+  expect(answers[0]).toEqual(answers[1]);
+
+  const before = loads;
+  await page.reload();
+  await waitForKovaHydration(page);
+  await question.click();
+  await expect.poll(() => loads).toBeGreaterThan(before);
+  await expect(survey).toHaveCount(0);
 });
 
 test("[contract:privacy_updated] saving browser privacy rules uses the current account and confirms the write", async ({

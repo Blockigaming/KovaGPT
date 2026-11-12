@@ -6,6 +6,7 @@ import { PublicShell } from "@/components/public/PublicShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HelpSupportForm as SupportForm } from "@/components/HelpSupportForm";
+import { HelpExperienceRating } from "@/components/HelpExperienceRating";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { HELP_CATEGORIES, HELP_FAQS, type HelpFaq } from "@/lib/help-center-data";
 import {
@@ -152,11 +153,13 @@ function FaqRow({
   faq,
   open,
   query,
+  ratingOwner,
   onToggle,
 }: {
   faq: HelpFaq;
   open: boolean;
   query: string;
+  ratingOwner?: string | null;
   onToggle: () => void;
 }) {
   const panelId = `answer-${faq.id}`;
@@ -198,6 +201,13 @@ function FaqRow({
         className="px-5 pb-5 text-[15px] leading-7 text-muted-foreground sm:px-6 sm:pb-6"
       >
         <Highlight text={faq.answer} query={query} />
+        {open && ratingOwner && (
+          <HelpExperienceRating
+            key={ratingOwner}
+            ownerId={ratingOwner}
+            questionId={`question-${faq.id}`}
+          />
+        )}
       </div>
     </article>
   );
@@ -273,6 +283,7 @@ function HelpPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
+  const lastOpenedId = Array.from(openIds).at(-1);
   const results = useMemo(() => {
     const filtered = activeCategory
       ? HELP_FAQS.filter((faq) => faq.category === activeCategory)
@@ -379,6 +390,7 @@ function HelpPage() {
                   faq={faq}
                   query={query}
                   open={openIds.has(faq.id)}
+                  ratingOwner={faq.id === lastOpenedId ? feedbackOwner : null}
                   onToggle={() => toggle(faq.id)}
                 />
               ))}
