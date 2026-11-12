@@ -1972,7 +1972,6 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            ...(voiceRequest ? { voice: true } : {}),
             ...(selectedWorkflowSkill ? { skill: selectedWorkflowSkill } : {}),
           };
           return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
@@ -2148,6 +2147,9 @@ function KovaGPT() {
           },
         );
 
+        const liveVoiceReply = voiceRequest
+          ? (await import("@/lib/voice/preference")).readLiveVoiceReply(userKey)
+          : null;
         const resp = await authFetch("/api/chat", {
           method: "POST",
           headers: {
@@ -2170,6 +2172,7 @@ function KovaGPT() {
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
+            ...(liveVoiceReply ? { voice: true } : {}),
             user:
               tempChat && tempChatContext === "clean"
                 ? requestWebSearch === undefined
@@ -2178,7 +2181,20 @@ function KovaGPT() {
                 : withResponsePresentation(
                     chatRequestProfile({
                       ...settings,
-                      ...(voiceRequest ? { responseLength: "short" as const } : {}),
+                      ...(liveVoiceReply
+                        ? {
+                            responseLength: liveVoiceReply.length,
+                            customInstructions: [
+                              liveVoiceReply.details.trim()
+                                ? settings.customInstructions?.slice(0, 6800)
+                                : settings.customInstructions,
+                              liveVoiceReply.details.trim() &&
+                                `Live Voice preferences: ${liveVoiceReply.details.trim()}`,
+                            ]
+                              .filter(Boolean)
+                              .join("\n\n"),
+                          }
+                        : {}),
                       ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
                     }),
                     settings,

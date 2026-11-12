@@ -686,7 +686,7 @@ export const Route = createFileRoute("/api/chat")({
             const personalContext = usesExistingContext ? user : undefined;
             const voiceStyle =
               auth && ingress.voice && !temporary
-                ? "\n\nThis reply will be spoken aloud. Answer directly in natural speech, usually in one to three short sentences. Avoid tables, lists, headings, and Markdown formatting unless the user explicitly needs them."
+                ? "\n\nThis reply will be spoken aloud. Answer directly in natural speech. Follow the user context responseLength preference: short is one to three sentences, medium gives a little explanation, and long gives a fuller spoken answer. Avoid tables, lists, headings, and Markdown formatting unless the user explicitly needs them."
                 : "";
             const personalityBlock =
               usesExistingContext && personality
@@ -1700,6 +1700,7 @@ export const Route = createFileRoute("/api/chat")({
                         FREE_CONNECTOR_PLANNING_INSTRUCTION +
                         buildUserContextBlock(personalContext ?? {}) +
                         personalityBlock +
+                        voiceStyle +
                         memoryBlock +
                         (conversationSummary?.block ?? "") +
                         projectBlock +

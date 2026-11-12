@@ -213,7 +213,7 @@ const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   security: "Sign-in methods, trusted devices, and account protection.",
   email: "Your account email and email preferences.",
   parental: "Manage parental controls for this account.",
-  voice: "Voice preferences and connection status.",
+  voice: "Choose how Live Voice looks and responds.",
   storage: "Review and manage your stored files.",
   shortcuts: "Keyboard shortcuts for working faster on desktop.",
   usage: "Your current usage and plan allowances.",
@@ -1118,7 +1118,7 @@ export function SettingsDialog({
         { v: "security", label: "Security and login", icon: ShieldCheck },
         { v: "email", label: "Account", icon: Mail, keywords: ["email"] },
         { v: "parental", label: "Parental controls", icon: Baby },
-        { v: "voice", label: "Voice", icon: Mic, keywords: ["microphone", "audio"] },
+        { v: "voice", label: "Live Voice", icon: Mic, keywords: ["microphone", "audio"] },
         { v: "storage", label: "Storage", icon: HardDrive },
         {
           v: "data",

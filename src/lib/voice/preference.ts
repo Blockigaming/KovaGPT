@@ -69,3 +69,23 @@ export function preferredVoiceGlow(owner: string | null | undefined) {
     return VOICE_GLOW_PALETTES[0];
   }
 }
+
+export const LIVE_VOICE_REPLY_KEY = "kova-live-voice-reply-v1";
+export const LIVE_VOICE_LENGTHS = ["short", "medium", "long"] as const;
+type LiveVoiceReply = { length: (typeof LIVE_VOICE_LENGTHS)[number]; details: string };
+export const LIVE_VOICE_DETAILS_LIMIT = 1000;
+
+export function readLiveVoiceReply(owner: string | null | undefined): LiveVoiceReply {
+  const key = principalScopedStorageKey(LIVE_VOICE_REPLY_KEY, owner);
+  try {
+    const stored = key && safeBrowserStorage("localStorage")?.getItem(key);
+    const value = stored ? JSON.parse(stored) : null;
+    return {
+      length: LIVE_VOICE_LENGTHS.find((length) => length === value?.length) ?? "short",
+      details:
+        typeof value?.details === "string" ? value.details.slice(0, LIVE_VOICE_DETAILS_LIMIT) : "",
+    };
+  } catch {
+    return { length: "short", details: "" };
+  }
+}

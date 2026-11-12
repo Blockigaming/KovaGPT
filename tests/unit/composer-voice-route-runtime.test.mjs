@@ -63,7 +63,7 @@ const storedAttachmentsDefinition = attachmentSource.statements
   .getText(attachmentSource)
   .replace(/^export /u, "");
 const compiled = js(`globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
-  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule")};
+  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule").replace('await import("@/lib/voice/preference")', '{ readLiveVoiceReply: () => ({ length: "medium", details: "Use simple examples." }) }')};
 globalThis.stop = ${arrow("stop")};
 globalThis.setInput = ${arrow("setInput")};
 globalThis.setAttachments = ${arrow("setAttachments")};
@@ -86,6 +86,13 @@ const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
 });
 const sendFixture = () => {
   const f = sendFixtureFactory();
+  f.context.summaryModule = f.context.summaryModule.then((module) => ({
+    ...module,
+    chatRequestProfile: ({ responseLength, customInstructions }) => ({
+      responseLength,
+      customInstructions,
+    }),
+  }));
   f.context.stopComposerVoiceRequestRef = { current: f.context.stop };
   return f;
 };
@@ -114,6 +121,10 @@ test("voice uses actual chat submission and returns only its exact successful as
   await settle();
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0].url, "/api/chat");
+  const payload = JSON.parse(f.requests[0].args.body);
+  assert.equal(payload.voice, true);
+  assert.equal(payload.user.responseLength, "medium");
+  assert.match(payload.user.customInstructions, /Use simple examples/);
   // This UI fixture does not sign receipts: it simulates the authenticated
   // chat route emitting a receipt alongside the streamed assistant answer.
   const receipt = `${"a".repeat(16)}.${"b".repeat(43)}`;

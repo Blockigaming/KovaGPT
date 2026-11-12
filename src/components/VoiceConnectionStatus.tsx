@@ -4,6 +4,10 @@ import { authFetch } from "@/lib/auth-fetch";
 import { principalScopedStorageKey, safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
 import {
   VOICE_PREFERENCE_KEY,
+  LIVE_VOICE_REPLY_KEY,
+  LIVE_VOICE_LENGTHS,
+  LIVE_VOICE_DETAILS_LIMIT,
+  readLiveVoiceReply,
   VOICE_GLOW_KEY,
   VOICE_GLOW_PALETTES,
   preferredVoiceGlow,
@@ -17,6 +21,7 @@ export function VoiceConnectionStatus() {
   const { user, isLoaded, isSignedIn } = useUser();
   const owner = isLoaded && isSignedIn ? user?.id : null;
   const [glow, setGlow] = useState(() => preferredVoiceGlow(owner).id);
+  const [reply, setReply] = useState(() => readLiveVoiceReply(owner));
   const current = useRef(owner);
   current.current = owner;
   const [result, setResult] = useState<{
@@ -32,6 +37,7 @@ export function VoiceConnectionStatus() {
   const request = useRef({ generation: 0 });
   useEffect(() => {
     setGlow(preferredVoiceGlow(owner).id);
+    setReply(readLiveVoiceReply(owner));
     setResult(null);
     setError("");
     pending.current = false;
@@ -86,10 +92,24 @@ export function VoiceConnectionStatus() {
       setError("Your browser couldn't save the selected voice.");
     }
   };
+  const saveReply = (next: typeof reply) => {
+    const key = principalScopedStorageKey(LIVE_VOICE_REPLY_KEY, owner);
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (!key || !storage) throw new Error();
+      storage.setItem(key, JSON.stringify(next));
+      setReply(next);
+      setError("");
+    } catch {
+      setError("Your browser couldn't save the Live Voice preferences.");
+    }
+  };
   return (
     <section aria-labelledby="voice-settings-heading" className="space-y-4">
       <div>
-        <h3 id="voice-settings-heading">Voice</h3>
+        <h3 id="voice-settings-heading" className="sr-only">
+          Live Voice preferences
+        </h3>
         <p className="mt-2 text-sm text-muted-foreground">
           Dictation and spoken replies use ElevenLabs. Your microphone is accessed only when you
           start recording.
@@ -123,6 +143,35 @@ export function VoiceConnectionStatus() {
             ))}
           </select>
         </label>
+      )}
+      {owner && (
+        <>
+          <label className="block space-y-2 text-sm">
+            <span className="block">Preferred reply length</span>
+            <select
+              className="min-h-11 w-full rounded-lg border border-border bg-background px-3"
+              value={reply.length}
+              onChange={(event) => {
+                const length = LIVE_VOICE_LENGTHS.find((option) => option === event.target.value);
+                if (length) saveReply({ ...reply, length });
+              }}
+            >
+              <option value="short">Brief</option>
+              <option value="medium">Balanced</option>
+              <option value="long">Detailed</option>
+            </select>
+          </label>
+          <label className="block space-y-2 text-sm">
+            <span className="block">Extra instructions</span>
+            <textarea
+              className="min-h-24 w-full rounded-lg border border-border bg-background p-3"
+              value={reply.details}
+              maxLength={LIVE_VOICE_DETAILS_LIMIT}
+              placeholder="For example, use plain language and explain unfamiliar terms."
+              onChange={(event) => saveReply({ ...reply, details: event.target.value })}
+            />
+          </label>
+        </>
       )}
       <Button
         type="button"
