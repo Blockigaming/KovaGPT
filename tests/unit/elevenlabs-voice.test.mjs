@@ -470,7 +470,7 @@ test("Live Voice mints only a scoped token and reserves daily usage for Free and
   };
   for (const [tier, count] of [
     ["free", 3],
-    ["plus", 4],
+    ["plus", 7],
     ["pro", 7],
   ]) {
     const calls = [];

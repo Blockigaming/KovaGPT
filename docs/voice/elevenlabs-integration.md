@@ -121,8 +121,7 @@ separate, review-before-send ElevenLabs recording tool.
    voice conversion is enabled. Store any replacement key in Azure Key Vault
    and bind the new version to the existing `ELEVENLABS_API_KEY` server setting.
 2. Set `KOVA_VOICE_CATALOG` to the curated provider voices in priority order.
-   Free can pick from the first three, Plus gets half rounded up with a floor
-   of three, and Pro gets the whole configured catalog. This catalog order
+   Free can pick from the first three, Plus gets the first ten, and Pro gets the whole configured catalog. This catalog order
    controls availability while the realtime flag is enabled. Test each chosen
    voice with the configured ElevenLabs key and TTS model.
 3. Confirm the existing voice/audio/speech flags, account feature flag, and
