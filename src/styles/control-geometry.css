@@ -25,7 +25,8 @@
   outline-offset: 2px;
 }
 .spec400-composer:focus-within {
-  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+  /* Keep the idle border identical when the insertion caret receives focus. */
+  border-color: var(--composer-border, transparent);
 }
 .spec400-composer-input:focus-visible {
   outline: none !important;

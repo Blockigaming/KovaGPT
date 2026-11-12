@@ -31,7 +31,7 @@ import {
   savePendingActive,
   saveConversations,
 } from "@/lib/chat-store";
-import { chatHistorySnapshot } from "@/lib/chat-history-bridge";
+import { canSendChatHistory, chatHistorySnapshot } from "@/lib/chat-history-bridge";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
 import { stageOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -92,6 +92,7 @@ export function AppShell({
     items: Conversation[];
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const deleteReady = principalReady && canSendChatHistory(userKey);
   const conversations = principalReady ? conversationState.items : [];
   const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
   const sidebarKeyboardFocusRef = useRef(false);
@@ -231,6 +232,10 @@ export function AppShell({
 
   const handleDelete = async (id: string) => {
     if (!principalReady) return;
+    if (!canSendChatHistory(userKey)) {
+      toast.error("Chat history is still preparing. Try again when changes can be saved.");
+      return;
+    }
     const chat = conversations.find((item) => item.id === id);
     if (!chat) return;
     const generation = trashPrincipalRef.current.generation;
@@ -279,6 +284,7 @@ export function AppShell({
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
+        deleteReady={deleteReady}
         onRename={async (id, title) =>
           updateSidebarChat(id, (chat) => ({ ...chat, title, updatedAt: Date.now() }))
         }
