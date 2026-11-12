@@ -129,7 +129,7 @@ test.describe("short desktop model picker", () => {
       return { width: parseFloat(style.width), color: style.backgroundColor };
     });
     expect(fillStyle.width).toBeGreaterThan(rail.width / 2);
-    expect(fillStyle.color).toBe("rgb(255, 255, 255)");
+    expect(fillStyle.color).toBe("rgb(124, 196, 255)");
 
     await picker.getByRole("button", { name: "Reset response effort to Lite" }).click();
     await expect(slider).toHaveAttribute("aria-valuetext", "Lite");

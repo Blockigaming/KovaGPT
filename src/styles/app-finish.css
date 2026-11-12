@@ -1265,7 +1265,7 @@
   position: absolute;
   inset: 0 auto 0 calc(-1 * var(--effort-half-thumb));
   width: calc(var(--effort-position) + var(--effort-half-thumb));
-  background: white;
+  background: var(--kova-chat-activity-accent);
   content: "";
 }
 

@@ -2118,7 +2118,7 @@ export function ChatInput({
                 mode={mode}
                 onChange={onModeChange}
                 userTier={userTier}
-                modelLabel={consumerModel(hostedModel)?.label}
+                modelLabel={CONSUMER_MODELS.find((model) => model.id === hostedModel)?.label}
                 compact
               />
             ) : (

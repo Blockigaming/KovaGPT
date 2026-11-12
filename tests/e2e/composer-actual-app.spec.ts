@@ -703,3 +703,58 @@ test("requested polish: temporary-chat notice remains compact and its privacy de
     animations: "disabled",
   });
 });
+
+test("a reply in another chat shows a top-right notification and an unread dot", async ({
+  page,
+}) => {
+  await fixture(page, "dark", true, true);
+  const requested = Promise.withResolvers<void>();
+  const complete = Promise.withResolvers<void>();
+  await page.route("**/api/chat", async (route) => {
+    requested.resolve();
+    await complete.promise;
+    await route.fulfill({
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"The background reply is ready."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+
+  const originChat = page.getByRole("button", {
+    name: "Open chat Composer review chat",
+    exact: true,
+  });
+  await revealSidebar(page);
+  await originChat.click();
+  await expect(page.getByText("Draft a release checklist.", { exact: true })).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await input.fill("Finish this while I read another chat.");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await requested.promise;
+
+  try {
+    const sidebar = await revealSidebar(page);
+    await sidebar
+      .getByRole("button", { name: "Open chat Second review chat", exact: true })
+      .click();
+    await expect(input).toHaveValue("Second chat draft");
+    await expect(page.getByText("New reply", { exact: true })).toHaveCount(0);
+  } finally {
+    complete.resolve();
+  }
+
+  const notification = page
+    .locator('[data-sonner-toast][data-x-position="right"][data-y-position="top"]')
+    .filter({ hasText: "New reply" });
+  await expect(notification).toContainText("Composer review chat");
+  const sidebar = await revealSidebar(page);
+  const dot = originChat.getByTestId("chat-unread-dot");
+  await expect(dot).toHaveCSS("background-color", "rgb(124, 196, 255)");
+  await expect(originChat).toHaveAttribute("aria-description", "Unread reply");
+  if ((await sidebar.getAttribute("role")) === "dialog") await dismissMobileSidebar(page);
+  await notification.getByRole("button", { name: "Open chat", exact: true }).click();
+  await expect(page.getByText("The background reply is ready.", { exact: true })).toBeVisible();
+  await revealSidebar(page);
+  await expect(dot).toHaveCount(0);
+});

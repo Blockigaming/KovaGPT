@@ -1,5 +1,6 @@
 /* Reference foundation. ChatGPT surface and control tokens are defined here once. Source: DESIGN.md. Component files own their geometry; there is no blanket button shape override. */
 :root {
+  --kova-chat-activity-accent: #7cc4ff;
   --kova-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --kova-motion-fast: 140ms;
   --kova-motion-standard: 220ms;

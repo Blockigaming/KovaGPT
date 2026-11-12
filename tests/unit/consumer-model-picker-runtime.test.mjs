@@ -40,7 +40,7 @@ function fixture(overrides = {}) {
 for (const tier of ["plus", "pro"]) {
   test(`${tier} picker shows seven products but authorizes only its entitled choices`, () => {
     const f = fixture({ tier });
-    assert.match(f.text(), /Argon 4\.6/);
+    assert.match(f.text(), /Kova Argon 4\.6/);
     for (const model of selection.CONSUMER_MODELS) {
       const button = f.find(
         "button",
@@ -58,7 +58,7 @@ test("sign-out and a plan downgrade never auto-send or silently replace the sele
     f.find("button", (n) => n.props["data-testid"] === "consumer-model-trigger").props[
       "aria-label"
     ],
-    "Choose Kova model: Xenon 5",
+    "Choose Kova model: Kova Xenon 5",
   );
   assert.deepEqual(f.changes, []);
   f.config.isSignedIn = false;

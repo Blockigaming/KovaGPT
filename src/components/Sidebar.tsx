@@ -109,6 +109,7 @@ function RailTooltip({ label, children }: { label: string; children: React.React
 
 export function Sidebar({
   conversations,
+  unreadReplyIds,
   activeId,
   onSelect,
   onNew,
@@ -129,6 +130,7 @@ export function Sidebar({
   compactOnly = false,
 }: {
   conversations: Conversation[];
+  unreadReplyIds?: ReadonlySet<string>;
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
@@ -987,8 +989,20 @@ export function Sidebar({
               }}
               aria-label={`Open chat ${conversation.title}`}
               aria-current={activeId === conversation.id ? "page" : undefined}
+              aria-description={
+                unreadReplyIds?.has(conversation.id) && activeId !== conversation.id
+                  ? "Unread reply"
+                  : undefined
+              }
             >
               <span className="truncate">{conversation.title}</span>
+              {unreadReplyIds?.has(conversation.id) && activeId !== conversation.id && (
+                <span
+                  className="kova-chat-unread-dot"
+                  data-testid="chat-unread-dot"
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </TooltipTrigger>
           <TooltipContent
