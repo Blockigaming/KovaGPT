@@ -198,12 +198,14 @@ test("real hosted chat admits durable global and owner budgets before analysis o
   const calls = [];
   let providerCalls = 0;
   let storageAvailable = true;
+  let providerFails = false;
   const env = { KOVA_OPENAI_SERVICES_ENABLED: "true" };
   const exports = {};
   const provider = {
     analyze: async (_input, options) => {
       assert.ok(options.signal instanceof AbortSignal);
       providerCalls++;
+      if (providerFails) throw new Error("Provider could not complete analysis");
       return { text: "Computed 6" };
     },
     searchFiles: async (_question, documents) => {
@@ -276,7 +278,11 @@ test("real hosted chat admits durable global and owner budgets before analysis o
   ]);
   await assert.rejects(
     invoke(),
-    (error) => error.message === "hosted_tool_budget_unavailable" && error.status === 429,
+    (error) => error.message === "analysis_limit" && error.status === 429,
+  );
+  await assert.rejects(
+    invoke("file_analysis"),
+    (error) => error.message === "tool_limit" && error.status === 429,
   );
   assert.equal(providerCalls, 2);
   await f.db.query("update diagnostic_rate_limits set request_count=20 where action=$1", [
@@ -287,6 +293,14 @@ test("real hosted chat admits durable global and owner budgets before analysis o
   storageAvailable = false;
   await assert.rejects(invoke(), (error) => error.status === 503);
   assert.equal(providerCalls, 2);
+  storageAvailable = true;
+  providerFails = true;
+  await f.db.query("delete from diagnostic_rate_limits");
+  await assert.rejects(
+    invoke(),
+    (error) => error.message === "analysis_failed" && error.status === 502,
+  );
+  assert.equal(providerCalls, 3);
   const admitted = calls.length;
   env.KOVA_REQUEST_CAPTURE_ENABLED = "true";
   await assert.rejects(invoke(), /hosted_tools_unavailable/);

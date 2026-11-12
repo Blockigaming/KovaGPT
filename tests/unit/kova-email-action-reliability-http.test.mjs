@@ -265,11 +265,14 @@ test("confirmed verification stays successful when cleanup fails and never publi
             : undefined,
     });
     const response = await app.handleKovaVerification(verificationPost());
-    assert.equal(response.status, 303);
+    assert.equal(response.status, 200);
     assert.deepEqual(names(app), ["kova_auth_consume_verification", "kova_auth_revoke_session"]);
-    const location = new URL(response.headers.get("location"));
-    assert.equal(location.searchParams.get("verified"), "1");
-    assert.equal(location.searchParams.get("sign-in"), "1");
+    const body = await response.text();
+    assert.match(body, /data-kova-notice-id="email_verified"/);
+    assert.match(body, /href="\/\?sign-in=1">Continue to sign in<\/a>/);
+    assert.ok(!body.includes(actionToken));
+    assert.doesNotMatch(body, /<script|http-equiv="refresh"/);
+    assert.equal(response.headers.has("location"), false);
     assert.equal(response.headers.has("set-cookie"), false);
     assertPrivate(response);
     assert.equal(JSON.stringify(app.logs).includes("fixture secret"), false);

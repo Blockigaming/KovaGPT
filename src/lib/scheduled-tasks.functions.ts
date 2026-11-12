@@ -7,6 +7,7 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import { activeScheduledExecutionReadiness } from "@/lib/scheduled-execution-readiness.server";
 import {
   TASK_CAPACITY_MESSAGE,
+  TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
   parseTaskPayload,
   type TaskContextRef,
   type TaskTrigger,
@@ -67,6 +68,8 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error(
       "Task access or a required connection is unavailable. Refresh your permissions.",
     );
+  if (code === "22023" && message === "task_schedule_invalid")
+    return new Error(TASK_SCHEDULE_UNSUPPORTED_MESSAGE);
   if (code === "22023" || code === "23514")
     return new Error("Check the task schedule, context, and trigger settings.");
   return new Error("Tasks are temporarily unavailable. Please retry.");
@@ -299,27 +302,34 @@ export const decideScheduledTaskCopy = createServerFn({ method: "POST" })
   });
 export const listScheduledTaskOffers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((value: unknown) => taskReadIdentity.parse(value))
+  .validator((value: unknown) =>
+    taskReadIdentity.extend({ linkedOfferId: z.string().uuid().optional() }).parse(value),
+  )
   .handler(async ({ data, context }) => {
     assertTaskPrincipal(data, context.userId);
     const { admin, signal } = await access(context.userId);
-    const [sent, received] = await Promise.all(
-      ["owner_id", "recipient_id"].map((column) =>
-        admin
-          .from("scheduled_task_copy_offers")
-          .select(
-            "id,source_task_id,owner_id,recipient_id,title,prompt,repeat,timezone,state,expires_at,created_at",
-          )
-          .eq(column, context.userId)
-          .eq("state", "pending")
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(100)
-          .abortSignal(signal),
-      ),
-    );
-    if (sent.error || received.error) throw safeTaskError();
-    return { sent: sent.data ?? [], received: received.data ?? [] };
+    const now = new Date().toISOString();
+    const pendingOffers = (column: "owner_id" | "recipient_id") =>
+      admin
+        .from("scheduled_task_copy_offers")
+        .select("id,source_task_id,title,prompt,repeat,timezone,expires_at")
+        .eq(column, context.userId)
+        .eq("state", "pending")
+        .gt("expires_at", now);
+    const newest = (query: Query) =>
+      query.order("created_at", { ascending: false }).limit(100).abortSignal(signal);
+    const [sent, received, linked] = await Promise.all([
+      newest(pendingOffers("owner_id")),
+      newest(pendingOffers("recipient_id")),
+      data.linkedOfferId
+        ? pendingOffers("recipient_id")
+            .eq("id", data.linkedOfferId)
+            .maybeSingle()
+            .abortSignal(signal)
+        : null,
+    ]);
+    if (sent.error || received.error || linked?.error) throw safeTaskError();
+    return { sent: sent.data ?? [], received: received.data ?? [], linked: linked?.data ?? null };
   });
 export const listScheduledTaskRuns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

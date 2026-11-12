@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Users, Mail, CreditCard, ArrowUpRight, Crown, Sparkles, Loader2 } from "lucide-react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useServerFn } from "@tanstack/react-start";
@@ -73,7 +73,7 @@ export function TeamPage() {
 function TeamWorkspace({ owner }: { owner: string }) {
   const [workspace, setWorkspace] = useState<TeamWorkspaceView | null>(null),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
+    [notice, setNotice] = useState<ReactNode>(null),
     [busy, setBusy] = useState(false);
   const pending = useRef(false),
     active = useRef(true);
@@ -103,7 +103,7 @@ function TeamWorkspace({ owner }: { owner: string }) {
     pending.current = true;
     setBusy(true);
     setError("");
-    setNotice("");
+    setNotice(null);
     try {
       await operation();
     } catch (reason) {
@@ -183,7 +183,12 @@ function TeamWorkspace({ owner }: { owner: string }) {
                 else
                   await mutate({ data: { teamId: invite.id, action: "accept", seat: "standard" } });
                 await refresh();
-                setNotice("You're now a member of the team.");
+                if (active.current)
+                  setNotice(
+                    <span data-kova-notice-id="member_joined">
+                      You're now a member of the team.
+                    </span>,
+                  );
               })
             }
           >
@@ -386,8 +391,16 @@ function TeamWorkspace({ owner }: { owner: string }) {
                       disabled={busy}
                       onClick={() =>
                         void act(async () => {
-                          await cancel({ data: { teamId: team.id } });
+                          const result = await cancel({ data: { teamId: team.id } });
+                          if (!result.ok)
+                            throw new Error("Checkout cancellation could not be confirmed.");
                           await refresh();
+                          if (active.current)
+                            setNotice(
+                              <span data-kova-notice-id="checkout_canceled">
+                                Checkout canceled. You can review seats and start again.
+                              </span>,
+                            );
                         })
                       }
                     >
@@ -427,7 +440,7 @@ function InviteComposer({
   busy: boolean;
   act: (fn: () => Promise<unknown>) => Promise<void>;
   refresh: () => Promise<void>;
-  onNotice: (message: string) => void;
+  onNotice: (message: ReactNode) => void;
   navigate: (url: string) => void;
 }) {
   const [email, setEmail] = useState(""),
@@ -450,9 +463,13 @@ function InviteComposer({
       setEmail("");
       setReview(null);
       onNotice(
-        result.emailSent
-          ? "Invitation emailed. Your member can sign in or create an account to accept."
-          : "Invitation saved. Email delivery is pending; refresh this workspace to retry safely.",
+        result.emailSent ? (
+          <span data-kova-notice-id="invitation_sent">
+            Invitation emailed. Your member can sign in or create an account to accept.
+          </span>
+        ) : (
+          "Invitation saved. Email delivery is pending; refresh this workspace to retry safely."
+        ),
       );
     } else onNotice("The seat payment is still being confirmed. No invitation has been sent yet.");
   }

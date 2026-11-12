@@ -46,6 +46,7 @@ import {
 } from "@/lib/scheduled-task-run-labels";
 import {
   TASK_CAPACITY_MESSAGE,
+  TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
   type TaskContextRef,
   type TaskTrigger,
   type TaskProvider,
@@ -375,6 +376,10 @@ function ScheduledTaskEditorBody({
       closeEditor(true);
     } catch (reason) {
       failed = true;
+      if (reason instanceof Error && reason.message === TASK_SCHEDULE_UNSUPPORTED_MESSAGE) {
+        pending.current = null;
+        operationIds.current.delete("save");
+      }
       fail(reason);
     } finally {
       busyRef.current = false;
@@ -385,13 +390,7 @@ function ScheduledTaskEditorBody({
       } else {
         focus.reveal = () => {
           if (mutationFocusRef.current !== focus) return;
-          if (
-            failed &&
-            active.current &&
-            saveAttemptRef.current === attempt &&
-            pending.current === operation &&
-            !focusMoved
-          ) {
+          if (failed && active.current && saveAttemptRef.current === attempt && !focusMoved) {
             const target = mutationErrorRef.current;
             restoreDialogFocus(target, openedUrl);
             // The footer can be well below the persistent recovery controls.
@@ -573,7 +572,13 @@ function ScheduledTaskEditorBody({
               tabIndex={-1}
               role="alert"
               aria-label="Scheduled task action failed"
-              data-kova-notice-id={error === TASK_CAPACITY_MESSAGE ? "task_limit" : undefined}
+              data-kova-notice-id={
+                error === TASK_CAPACITY_MESSAGE
+                  ? "task_limit"
+                  : error === TASK_SCHEDULE_UNSUPPORTED_MESSAGE
+                    ? "schedule_unsupported"
+                    : undefined
+              }
               className="rounded-lg border border-destructive p-3 text-sm"
             >
               {!task && pending.current?.kind === "create" && (

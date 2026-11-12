@@ -964,21 +964,22 @@ function ProjectDetailPage() {
               </div>
             )}
             <MembersTab
+              key={requestKey}
               members={members}
               invites={invites}
               isOwner={isOwner && !archived}
               onInvite={async (email, role) => {
                 const invitationRequestKey = requestKey;
                 const fn = (await import("@/lib/projects.functions")).inviteMember;
-                if (currentRequestKeyRef.current !== invitationRequestKey) return;
-                await callServerFnDirect(fn, {
+                if (currentRequestKeyRef.current !== invitationRequestKey) return false;
+                const invitation = await callServerFnDirect(fn, {
                   data: { project_id: projectId, email, role },
                 });
-                if (currentRequestKeyRef.current !== invitationRequestKey) return;
-                toast.success("Project invitation created", {
-                  description: "The recipient can review it in Projects after signing in.",
-                });
+                if (currentRequestKeyRef.current !== invitationRequestKey) return false;
+                if (!invitation?.id)
+                  throw new Error("The project invitation could not be confirmed.");
                 await refresh();
+                return currentRequestKeyRef.current === invitationRequestKey;
               }}
               onRevoke={async (id) => {
                 const invite = invites.find((item) => item.id === id);
@@ -3458,7 +3459,7 @@ function MembersTab({
   members: ProjectMember[];
   invites: ProjectInvite[];
   isOwner: boolean;
-  onInvite: (email: string, role: "editor" | "viewer") => Promise<void>;
+  onInvite: (email: string, role: "editor" | "viewer") => Promise<boolean>;
   onRevoke: (id: string) => Promise<void>;
   onRemove: (userId: string) => Promise<void>;
   onChangeRole: (userId: string, role: "editor" | "viewer") => Promise<void>;
@@ -3466,14 +3467,18 @@ function MembersTab({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"editor" | "viewer">("editor");
   const [busy, setBusy] = useState(false);
+  const [invited, setInvited] = useState(false);
   const pending = invites.filter((i) => i.status === "pending");
+  const shared = members.some((member) => member.role !== "owner");
 
   async function handleInvite() {
     if (!email.trim()) return;
     setBusy(true);
+    setInvited(false);
     try {
-      await onInvite(email.trim(), role);
+      if (!(await onInvite(email.trim(), role))) return;
       setEmail("");
+      setInvited(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -3483,6 +3488,11 @@ function MembersTab({
 
   return (
     <div className="space-y-6">
+      {shared && (
+        <p data-kova-notice-id="project_shared" className="text-sm text-muted-foreground">
+          Shared with project members
+        </p>
+      )}
       {isOwner && (
         <div className="border rounded-xl p-4">
           <label
@@ -3526,6 +3536,15 @@ function MembersTab({
               )}
             </Button>
           </div>
+          {invited && (
+            <p
+              role="status"
+              data-kova-notice-id="invitation_sent"
+              className="mt-3 text-sm text-muted-foreground"
+            >
+              Invitation created. The recipient can review it in Projects after signing in.
+            </p>
+          )}
         </div>
       )}
 

@@ -68,6 +68,7 @@ function fixture({ signedIn = true } = {}) {
     result: null,
     prompt: "",
     error: null,
+    generationError: null,
     modal: null,
     limitOpen: false,
     loginOpen: false,
@@ -160,7 +161,8 @@ function fixture({ signedIn = true } = {}) {
       state.resultPrompt = value;
     },
     setError: (value) => {
-      state.error = value;
+      state.generationError = value;
+      state.error = value?.message;
     },
     publishKovaNotice: (notice) => {
       assert.ok(notice && typeof notice.id === "string");
@@ -578,7 +580,7 @@ test("stale failures cannot change a newer intent or error", async () => {
   f.commit();
   assert.equal(f.dependencies.resultRevealRef.current, newer);
   assert.equal(newer.error, null);
-  assert.equal(f.state.error, null);
+  assert.equal(f.state.generationError, null);
   assert.deepEqual(f.calls, []);
   f.unmount();
 });
@@ -608,7 +610,7 @@ test("failure after an earlier result returns to prompt and retry success reveal
   f.finish();
   await pending;
   f.commit();
-  assert.equal(f.state.error, null);
+  assert.equal(f.state.generationError, null);
   assert.equal(f.document.activeElement, f.heading);
   assert.deepEqual(
     f.calls.map(([kind]) => kind),

@@ -162,6 +162,7 @@ test("workspace and campaign migrations retain workspace isolation, request reco
     await prepareTeamDatabase(db);
     await applyMigration(db, "20261110224500_kova_verified_team_workspace_join_requests.sql");
     await applyMigration(db, "20261110233000_kova_notification_campaigns.sql");
+    await applyMigration(db, "20261112022300_kova_workspace_join_review_current_authority.sql");
     const [owner, requester, unrelated, anotherRequester, unverified] = ids;
     await db.query("update auth.users set email='outside@other.invalid' where id=$1", [unrelated]);
     await db.query("update team_workspaces set status='active' where id=$1", [team]);
@@ -231,6 +232,19 @@ test("workspace and campaign migrations retain workspace isolation, request reco
       campaign.id,
       anotherRequester,
     ]);
+
+    await db.exec("reset role");
+    await db.query("update auth.users set email='eligible@example.invalid' where id=$1", [
+      unrelated,
+    ]);
+    await db.exec("set role service_role");
+    const staleId = await request(unrelated);
+    await db.exec("reset role");
+    await db.query("update auth.users set email='changed@other.invalid' where id=$1", [unrelated]);
+    await db.exec("set role service_role");
+    assert.deepEqual(await discover(unrelated), []);
+    await assert.rejects(review(owner, staleId, true), /Request eligibility has changed/);
+    assert.equal(await review(owner, staleId, false), true);
 
     await db.exec("set role authenticated");
     for (const table of [

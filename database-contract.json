@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 220,
+  "migrationCount": 221,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -940,6 +940,7 @@
     "retire_library_image_upload",
     "retire_mcp_oauth_client",
     "retire_password_authority",
+    "review_verified_team_join",
     "review_verified_team_join",
     "revoke_mcp_oauth_grant",
     "revoke_mcp_oauth_token",
@@ -2536,6 +2537,7 @@
     "execute on function public.resolve_workflow_skill(uuid, uuid, uuid) to service_role",
     "execute on function public.retire_mcp_oauth_client(uuid,uuid) to service_role",
     "execute on function public.review_verified_team_join(uuid,uuid,boolean) to service_role",
+    "execute on function public.review_verified_team_join(uuid,uuid,boolean) to service_role",
     "execute on function public.revoke_project_template_grant(uuid,uuid,uuid,bigint,uuid) to service_role",
     "execute on function public.save_developer_pricing_draft(uuid,uuid,text,bigint,text,text,text),public.approve_developer_pricing_draft(uuid,uuid,bigint,text),public.retire_developer_pricing_draft(uuid,uuid,bigint,text,text) to service_role",
     "execute on function public.save_study_set(uuid,bigint,uuid,jsonb,timestamptz,boolean) to authenticated",
@@ -3228,6 +3230,7 @@
     "all on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) from public,anon,authenticated",
     "all on function public.resolve_workflow_skill(uuid, uuid, uuid)\n  from public, anon, authenticated",
     "all on function public.retire_mcp_oauth_client(uuid,uuid) from public,anon,authenticated",
+    "all on function public.review_verified_team_join(uuid,uuid,boolean) from public,anon,authenticated",
     "all on function public.review_verified_team_join(uuid,uuid,boolean) from public,anon,authenticated",
     "all on function public.revoke_project_template_grant(uuid,uuid,uuid,bigint,uuid) from public, anon, authenticated",
     "all on function public.save_developer_pricing_draft(uuid,uuid,text,bigint,text,text,text),public.approve_developer_pricing_draft(uuid,uuid,bigint,text),public.retire_developer_pricing_draft(uuid,uuid,bigint,text,text) from public,anon,authenticated",
@@ -3951,5 +3954,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "cd86e79ee147a9c2f4d25fdb770f96895e8ee00d614c3c5d2763b8ed68a36434"
+  "sha256": "954604643767d176d7651a2cc22b3a7b3dc3e37baf213db172d660bf4a9a70c2"
 }

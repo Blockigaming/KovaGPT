@@ -68,8 +68,15 @@ import {
 
 export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
-  validateSearch: (search: Record<string, unknown>): { taskId?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { taskId?: string; offerId?: string } => ({
     taskId: typeof search.taskId === "string" ? search.taskId : undefined,
+    offerId:
+      search.offerId === undefined
+        ? undefined
+        : typeof search.offerId === "string" &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search.offerId)
+          ? search.offerId.toLowerCase()
+          : "",
   }),
   head: () => ({
     meta: [
@@ -109,7 +116,7 @@ const taskActionLabels: Record<TaskAction, string> = {
 function ScheduledTasksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const { tier, status: tierStatus } = useTier();
-  const { taskId: requestedTaskId } = Route.useSearch();
+  const { taskId: requestedTaskId, offerId } = Route.useSearch();
   const openedTaskLink = useRef<string | null>(null);
   const taskListLoaded = useRef(false);
   const observedRunStates = useRef(new Map<string, { status: string; lastRun: string | null }>());
@@ -890,6 +897,7 @@ function ScheduledTasksPage() {
                   tasks={tasks}
                   userKey={userKey}
                   eligible={visibleAccess === "eligible"}
+                  linkedOfferId={offerId}
                   onChanged={() => void loadTasks()}
                 />
               )}
@@ -1189,7 +1197,10 @@ function ScheduledTasksPage() {
                     ))}
                   </ul>
                 ) : tasks.length === 0 && loadError ? null : tasks.length === 0 ? (
-                  <div className="kova-empty-state">
+                  <div
+                    className="kova-empty-state"
+                    data-kova-notice-id={dataReady && executionAvailable ? "first_task" : undefined}
+                  >
                     <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
                     </div>

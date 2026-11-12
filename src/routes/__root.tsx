@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
@@ -391,6 +392,34 @@ function RootNotificationCenter() {
   ) : null;
 }
 
+function RootRouteContent() {
+  const invalidVerification = useRouterState({
+    select: ({ location }) =>
+      location.pathname === "/" &&
+      new URLSearchParams(location.searchStr).get("auth_error") === "invalid_verification",
+  });
+  if (!invalidVerification) return <Outlet />;
+  return (
+    <main id="main-content" tabIndex={-1} className="kova-state-screen">
+      <section
+        role="alert"
+        aria-labelledby="verification-link-title"
+        className="kova-state-panel"
+        data-kova-notice-id="email_link_expired"
+      >
+        <h1 id="verification-link-title">This verification link has expired or is invalid</h1>
+        <p>Open the sign-in form and select Resend verification email to request a new link.</p>
+        <a
+          href="/?sign-in=1"
+          className="mt-3 inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-5 text-primary-foreground"
+        >
+          Go to sign in
+        </a>
+      </section>
+    </main>
+  );
+}
+
 function RootInputModality() {
   useEffect(() => installInputModality(document), []);
   return null;
@@ -433,7 +462,7 @@ function RootComponent() {
         <RootThemeManager />
         <PlatformRuntime />
         <AppAccountGate>
-          <Outlet />
+          <RootRouteContent />
         </AppAccountGate>
         <Toaster />
         <RootNotificationCenter />

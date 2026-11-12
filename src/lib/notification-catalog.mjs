@@ -282,6 +282,8 @@ const surfaces = {
     "session_expired",
   ],
   inline: [
+    "analysis_limit",
+    "tool_limit",
     "upload_failed",
     "upload_limit",
     "document_too_long",

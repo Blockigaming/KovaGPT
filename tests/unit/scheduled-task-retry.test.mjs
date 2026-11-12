@@ -15,24 +15,42 @@ function load({
   plan = "plus",
   authenticated = true,
   accountAvailable = true,
+  offers = [],
 } = {}) {
   const calls = [],
     rpcCalls = [],
     exports = {};
   const task = { id: taskId, status: "scheduled" };
-  const taskQuery = () => {
+  const taskQuery = (table) => {
     let single = false;
+    let rows = offers;
     const query = {
       select: () => query,
-      eq: () => query,
-      gt: () => query,
+      eq: (column, value) => {
+        rows = rows.filter((row) => row[column] === value);
+        return query;
+      },
+      gt: (column, value) => {
+        rows = rows.filter((row) => row[column] > value);
+        return query;
+      },
       order: () => query,
       limit: () => query,
       maybeSingle: () => {
         single = true;
         return query;
       },
-      abortSignal: async () => ({ data: single ? task : [task], error: null }),
+      abortSignal: async () => ({
+        data:
+          table === "scheduled_task_copy_offers"
+            ? single
+              ? (rows[0] ?? null)
+              : rows
+            : single
+              ? task
+              : [task],
+        error: null,
+      }),
     };
     return query;
   };
@@ -141,6 +159,43 @@ test("task capacity is identified separately from a general database limit", asy
           : policy.TASK_CAPACITY_MESSAGE,
     });
   }
+});
+
+test("invalid schedule parameters have a distinct safe correction path", async () => {
+  const { update } = load({ rpcError: { code: "22023", message: "task_schedule_invalid" } });
+  await assert.rejects(update({ data: data(), context: { userId: owner } }), {
+    message: policy.TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
+  });
+});
+
+test("task copy links require the named verified recipient and an active offer", async () => {
+  const offer = {
+    id: "33333333-3333-4333-8333-333333333333",
+    owner_id: owner,
+    recipient_id: taskId,
+    state: "pending",
+    expires_at: "2099-01-01T00:00:00Z",
+  };
+  for (const [principal, row, eligible] of [
+    [taskId, offer, true],
+    [owner, offer, false],
+    [taskId, { ...offer, state: "revoked" }, false],
+    [taskId, { ...offer, expires_at: "2000-01-01T00:00:00Z" }, false],
+  ]) {
+    const { api } = load({ principal, offers: [row] });
+    const result = await api.listScheduledTaskOffers({
+      data: { expectedUserId: principal, linkedOfferId: offer.id },
+      context: { userId: principal },
+    });
+    assert.equal(result.linked, eligible ? offer : null);
+  }
+  const { api } = load({ principal: owner, offers: [offer] });
+  await assert.rejects(
+    api.listScheduledTaskOffers({
+      data: { expectedUserId: taskId, linkedOfferId: offer.id },
+      context: { userId: owner },
+    }),
+  );
 });
 
 for (const plan of ["free", "plus", "pro"]) {

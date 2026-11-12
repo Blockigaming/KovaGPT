@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 220,
-  "latest": "20261110233000_kova_notification_campaigns.sql",
+  "count": 221,
+  "latest": "20261112022300_kova_workspace_join_review_current_authority.sql",
   "migrations": [
     {
       "order": 1,
@@ -4665,6 +4665,20 @@
         "kova_notification_campaigns_active_window",
         "kova_notification_campaign_dismissals_owner"
       ]
+    },
+    {
+      "order": 221,
+      "filename": "20261112022300_kova_workspace_join_review_current_authority.sql",
+      "timestamp": "20261112022300",
+      "sha256": "07b512bd57a00ee68fa3593f8006b5bd8ff7414901e6c20efe3f613e1e2b6ebd",
+      "tables": [],
+      "functions": ["review_verified_team_join"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

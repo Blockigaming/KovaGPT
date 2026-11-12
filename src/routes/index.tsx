@@ -3393,6 +3393,7 @@ function KovaGPT() {
                   firstName={user?.firstName}
                   chatId={activeId}
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
+                  historyReady={principalReady && historyReady && !tempChat}
                   onSelect={setActiveId}
                 >
                   <ChatInput

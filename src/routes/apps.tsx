@@ -1573,7 +1573,7 @@ function AppsPage() {
                       </p>
                     )}
                     {visibleGoogleStatus?.state === "permission_incomplete" && (
-                      <p role="status">
+                      <p role="status" data-kova-notice-id="source_auth_needed">
                         Some requested permissions are missing. Reconnect and review the required
                         access.
                       </p>

@@ -82,7 +82,9 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
       }}
       mobileOffset={{
         top: "calc(72px + env(safe-area-inset-top))",
-        bottom: `max(calc(88px + env(safe-area-inset-bottom)), ${composerClearance}px)`,
+        bottom: composerClearance
+          ? `max(calc(88px + env(safe-area-inset-bottom)), ${composerClearance}px)`
+          : "calc(88px + env(safe-area-inset-bottom))",
         left: 16,
         right: 16,
       }}

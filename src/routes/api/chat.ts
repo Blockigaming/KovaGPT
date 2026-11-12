@@ -2529,6 +2529,29 @@ export const Route = createFileRoute("/api/chat")({
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
               if (contextFailure) throw error;
+              if (
+                selectedHostedTool &&
+                error instanceof Error &&
+                error.name === "OpenAiServiceError" &&
+                ["analysis_limit", "analysis_failed", "tool_limit"].includes(error.message)
+              ) {
+                const limited = error.message !== "analysis_failed";
+                return Response.json(
+                  {
+                    error:
+                      error.message === "tool_limit"
+                        ? "File analysis has reached its current request limit. Try again later."
+                        : limited
+                          ? "Data analysis has reached its current request limit. Try again later."
+                          : "Data analysis could not finish. Retry to run the analysis again.",
+                    code: error.message,
+                    category: limited ? "tool_limit" : "model_provider_failure",
+                    retryable: !limited,
+                    requestId,
+                  },
+                  { status: limited ? 429 : 502, headers: { "Cache-Control": "no-store" } },
+                );
+              }
               const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
                 status: providerError.status,

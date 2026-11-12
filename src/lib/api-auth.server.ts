@@ -33,8 +33,8 @@ export type AuthedCaller = {
 
 export type HttpAuthedCaller = AuthedCaller & { authProvider: "kova" | "supabase" };
 
-function jsonError(message: string, status: number) {
-  return new Response(JSON.stringify({ error: message }), {
+function jsonError(message: string, status: number, code?: string) {
+  return new Response(JSON.stringify({ error: message, ...(code ? { code } : {}) }), {
     status,
     headers: {
       "Cache-Control": "no-store",
@@ -389,6 +389,7 @@ export async function assertNotBanned(caller: AuthedCaller): Promise<Response | 
     return jsonError(
       "Your account has been suspended. Contact support@kovagpt.com if you believe this is a mistake.",
       403,
+      "account_restricted",
     );
   }
   return null;

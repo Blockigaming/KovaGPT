@@ -69,6 +69,55 @@ test("[notice:theme_changed] saving an appearance choice emits its own notice in
 const serverFunctionName = (url: string) =>
   functionNames.get(new URL(url).pathname.split("/").at(-1) ?? "") ?? "";
 
+test("[notice:first_conversation] empty synchronized history offers the first conversation without blocking chat", async ({
+  page,
+}, testInfo) => {
+  const notice = page.locator('[data-kova-notice-id="first_conversation"]');
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(notice).toBeVisible();
+  await expect(page.locator('[data-kova-notice-id="welcome_back"]')).toHaveCount(0);
+  await composer.fill("Write a short release summary.");
+  await expect(composer).toHaveValue("Write a short release summary.");
+  await expect(composer).toBeFocused();
+  await testInfo.attach("first-conversation-" + testInfo.project.name, {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+});
+
+test("[notice:shared_task_unavailable] an inaccessible task-copy link offers a safe return", async ({
+  page,
+}, testInfo) => {
+  let checkedOffers = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    const name = serverFunctionName(route.request().url());
+    if (name.startsWith("isScheduledTasksEligible_")) {
+      return route.fulfill({
+        json: { result: { eligible: true, executionAvailable: false }, context: {} },
+      });
+    }
+    if (name.startsWith("listScheduledTaskOffers_")) {
+      checkedOffers++;
+      return route.fulfill({
+        json: { result: { sent: [], received: [], linked: null }, context: {} },
+      });
+    }
+    return route.fallback();
+  });
+  await page.goto("/scheduled-tasks?offerId=11111111-1111-4111-8111-111111111111");
+  await waitForKovaHydration(page);
+  const notice = page.locator('[data-kova-notice-id="shared_task_unavailable"]');
+  await expect.poll(() => checkedOffers).toBeGreaterThan(0);
+  await expect(notice).toContainText("This task copy link is unavailable for this account.");
+  await expect(page.getByRole("button", { name: "Accept paused copy" })).toHaveCount(0);
+  await testInfo.attach("unavailable-task-copy-" + testInfo.project.name, {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+  await notice.getByRole("link", { name: "Back to scheduled tasks" }).click();
+  await expect(notice).toHaveCount(0);
+});
+
 test("[contract:offer_available] a server-eligible account receives the offer and details", async ({
   page,
 }, testInfo) => {

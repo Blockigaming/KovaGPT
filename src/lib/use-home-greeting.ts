@@ -22,7 +22,7 @@ export function useHomeGreeting(
     .trim()
     .split(/\s/u)[0]
     .slice(0, 32);
-  const [current, setCurrent] = useState({ owner: null as string | null, text: "Welcome back!" });
+  const [current, setCurrent] = useState({ owner: null as string | null, text: "How can I help?" });
   useEffect(() => {
     if (!owner) return;
     let index = 0;
@@ -37,5 +37,5 @@ export function useHomeGreeting(
     }
     setCurrent({ owner, text: greetings[index](name) });
   }, [owner, name, chatId]);
-  return current.owner === owner ? current.text : "Welcome back!";
+  return current.owner === owner ? current.text : "How can I help?";
 }

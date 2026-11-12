@@ -55,8 +55,12 @@ test("untrusted notification action links never leave app origin", () => {
 });
 test("root has one global host and an authenticated persisted-notice bridge", () => {
   const root = readFileSync("src/routes/__root.tsx", "utf8");
-  assert.match(root, /<KovaNotificationSurface key=/);
-  assert.match(root, /<PersistedNoticeBridge key=\{user\.id\}/);
+  assert.equal([...root.matchAll(/<KovaNotificationSurface\b/g)].length, 1);
+  assert.match(root, /<KovaNotificationSurface key=\{user\?\.id \?\? "guest"\}/);
+  assert.match(
+    root,
+    /isSignedIn && user\?\.id \? \([\s\S]*?<Suspense key=\{user\.id\}[^>]*>\s*<PersistedNoticeBridge ownerId=\{user\.id\}/,
+  );
   const bridge = readFileSync("src/components/PersistedNoticeBridge.tsx", "utf8");
   assert.match(bridge, /listNotifications/);
   assert.match(bridge, /markNotificationsRead/);

@@ -106,6 +106,16 @@ for (const path of origins) {
   const file = parseSource(path);
   const rel = relative(root, path);
   visit(file, (node) => {
+    if (
+      rel === "src/lib/kova-auth-http.server.ts" &&
+      ts.isCallExpression(node) &&
+      node.expression.getText(file) === "verificationPage" &&
+      node.arguments[1] &&
+      ts.isStringLiteralLike(node.arguments[1])
+    ) {
+      for (const match of node.arguments[1].text.matchAll(/data-kova-notice-id="([a-z_]+)"/g))
+        record([match[1]], "native", rel);
+    }
     if (ts.isJsxAttribute(node)) {
       const name = node.name.getText(file);
       const tag = node.parent.parent.tagName.getText(file);

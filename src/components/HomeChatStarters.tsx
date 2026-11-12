@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import type { Conversation } from "@/lib/chat-store";
+import { loadArchivedConversations, type Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
 export function ContinueWorking({
   conversations,
@@ -39,6 +39,7 @@ export function HomeWelcome({
   firstName,
   chatId,
   conversations,
+  historyReady,
   onSelect,
   children,
 }: {
@@ -46,10 +47,17 @@ export function HomeWelcome({
   firstName?: string | null;
   chatId: string | null;
   conversations: Conversation[];
+  historyReady: boolean;
   onSelect: (id: string) => void;
   children: ReactNode;
 }) {
-  const greeting = useHomeGreeting(owner, firstName, chatId);
+  const hasHistory = Boolean(
+    owner &&
+    historyReady &&
+    (conversations.some((conversation) => conversation.messages.length > 0) ||
+      loadArchivedConversations(owner).some((conversation) => conversation.messages.length > 0)),
+  );
+  const greeting = useHomeGreeting(hasHistory ? owner : null, firstName, chatId);
   const homeScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -95,10 +103,18 @@ export function HomeWelcome({
         >
           <h1
             id="chat-greeting"
+            data-kova-notice-id={
+              hasHistory && greeting.startsWith("Welcome back") ? "welcome_back" : undefined
+            }
             className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
           >
             {greeting}
           </h1>
+          {owner && historyReady && !hasHistory && (
+            <p data-kova-notice-id="first_conversation" className="text-sm text-muted-foreground">
+              Start your first conversation below.
+            </p>
+          )}
         </div>
         <div className="kova-empty-composer">{children}</div>
         {conversations.length ? (

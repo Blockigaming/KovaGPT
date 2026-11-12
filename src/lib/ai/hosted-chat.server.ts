@@ -38,11 +38,10 @@ export async function hostedChatCompletion(
     },
   ]) {
     const budget = await consumeOpenAiApplicationAdmission(admission);
-    if (!budget.allowed)
-      throw new OpenAiServiceError(
-        "hosted_tool_budget_unavailable",
-        budget.status === "limited" ? 429 : 503,
-      );
+    if (budget.allowed) continue;
+    if (budget.status === "limited")
+      throw new OpenAiServiceError(tool === "data_analysis" ? "analysis_limit" : "tool_limit", 429);
+    throw new OpenAiServiceError("hosted_tool_budget_unavailable", 503);
   }
   const provider = openAiServices(String(body.model), {
     maxOutputTokens: Number(body.max_completion_tokens),
@@ -52,18 +51,24 @@ export async function hostedChatCompletion(
       .join("\n\n"),
   });
   const options = { signal };
-  const result =
-    tool === "data_analysis"
-      ? await provider.analyze(transcript, options)
-      : await provider.searchFiles(
-          question,
-          [
-            { name: "Current chat context part 1", text: transcript.slice(0, 32000) },
-            ...(transcript.length > 32000
-              ? [{ name: "Current chat context part 2", text: transcript.slice(32000) }]
-              : []),
-          ],
-          options,
-        );
-  return hostedChatResult(result);
+  if (tool === "data_analysis") {
+    try {
+      return hostedChatResult(await provider.analyze(transcript, options));
+    } catch (error) {
+      if (signal.aborted) throw error;
+      throw new OpenAiServiceError("analysis_failed", 502);
+    }
+  }
+  return hostedChatResult(
+    await provider.searchFiles(
+      question,
+      [
+        { name: "Current chat context part 1", text: transcript.slice(0, 32000) },
+        ...(transcript.length > 32000
+          ? [{ name: "Current chat context part 2", text: transcript.slice(32000) }]
+          : []),
+      ],
+      options,
+    ),
+  );
 }

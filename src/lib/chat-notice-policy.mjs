@@ -11,6 +11,10 @@ export function chatFailureNoticeId(error, { signedIn = false, networkFailure = 
   if (code === "authentication_required" || status === 401)
     return signedIn ? "session_expired" : "sign_in_required";
   if (code === "analysis_sign_in_required") return "sign_in_required";
+  if (code === "analysis_limit") return "analysis_limit";
+  if (code === "analysis_failed") return "analysis_failed";
+  if (code === "tool_limit") return "tool_limit";
+  if (code === "account_restricted") return "account_restricted";
   if (code === "kova_model_not_entitled" || code === "mode_not_entitled")
     return "reasoning_restricted";
   if (code === "kova_model_runtime_unverified") return "model_unavailable";
