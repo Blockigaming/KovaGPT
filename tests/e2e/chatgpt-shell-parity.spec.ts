@@ -116,7 +116,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
 
-    for (const name of ["Library", "Projects", "Scheduled tasks", "Plugins"]) {
+    for (const name of ["Library", "Projects", "Scheduled tasks", "Connections"]) {
       await expect(chatNavigation.getByRole("link", { name, exact: true })).toBeVisible();
     }
     await chatNavigation.locator("summary").filter({ hasText: "More" }).click();

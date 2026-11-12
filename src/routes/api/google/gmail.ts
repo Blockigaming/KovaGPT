@@ -3,7 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { parseGoogleBinding } from "@/lib/google-account-policy.mjs";
-import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
+import {
+  canUsePaidGoogleConnector,
+  getValidGoogleAccessToken,
+  logAudit,
+} from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
@@ -53,6 +57,9 @@ export const Route = createFileRoute("/api/google/gmail")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        if (!(await canUsePaidGoogleConnector(auth.userId))) {
+          return Response.json({ error: "Gmail requires Kova Plus or Pro." }, { status: 403 });
+        }
         const lockdown = await enforceLockdownCapability(
           auth.supabaseAdmin,
           auth.userId,

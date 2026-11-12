@@ -12,6 +12,8 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   getValidGoogleAccessToken,
+  canUsePaidGoogleConnector,
+  GOOGLE_DOCS_MIME_TYPE,
   getGoogleConnection,
   getGoogleConnectionHealth,
   getGoogleExecutionBinding,
@@ -291,9 +293,18 @@ export async function getAvailableGoogleTools(
   await assertLockdownAllows(admin(), userId, "connector_read");
   const health = await getGoogleConnectionHealth(userId, binding?.connectionId);
   if (!health.connected) return [];
-  return ALL_TOOLS.filter((tool) =>
-    hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
-  );
+  const gmailAllowed =
+    !hasGoogleCapability(health.scopes, "gmail.read") &&
+    !hasGoogleCapability(health.scopes, "gmail.write")
+      ? false
+      : await canUsePaidGoogleConnector(userId);
+  return ALL_TOOLS.filter((tool) => {
+    const capability = googleToolCapability(tool.function.name);
+    return (
+      (!capability.startsWith("gmail.") || gmailAllowed) &&
+      hasGoogleCapability(health.scopes, capability)
+    );
+  });
 }
 
 export async function getGoogleToolContext(userId: string) {
@@ -555,10 +566,14 @@ export async function runGoogleTool(
     if (name === "drive_search") {
       const q = String(args.query ?? "").slice(0, 200);
       const max = Math.min(25, Math.max(1, Number(args.max_results ?? 10)));
+      const docsAllowed = await canUsePaidGoogleConnector(userId);
       const driveQ = q
         ? `name contains '${q.replace(/'/g, "\\'")}' and trashed=false`
         : "trashed=false";
-      const url = `${DRIVE}/files?pageSize=${max}&fields=files(id,name,mimeType,modifiedTime,webViewLink,size,owners(displayName))&q=${encodeURIComponent(driveQ)}&orderBy=modifiedTime desc`;
+      const visibleDriveQuery = docsAllowed
+        ? driveQ
+        : `${driveQ} and mimeType != '${GOOGLE_DOCS_MIME_TYPE}'`;
+      const url = `${DRIVE}/files?pageSize=${max}&fields=files(id,name,mimeType,modifiedTime,webViewLink,size,owners(displayName))&q=${encodeURIComponent(visibleDriveQuery)}&orderBy=modifiedTime desc`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) throw new Error(`drive list ${r.status}`);
       const j = (await r.json()) as {
@@ -605,6 +620,9 @@ export async function runGoogleTool(
       };
       let content = "";
       const mt = meta.mimeType ?? "";
+      if (mt === GOOGLE_DOCS_MIME_TYPE && !(await canUsePaidGoogleConnector(userId))) {
+        return { error: "Google Docs requires Kova Plus or Pro." };
+      }
       if (mt.startsWith("application/vnd.google-apps.")) {
         const exportMime = mt.includes("spreadsheet")
           ? "text/csv"
@@ -756,6 +774,9 @@ export async function stagePendingAction(
 ): Promise<PendingAction> {
   await assertLockdownAllows(admin(), userId, "connector_write");
   const validated = validateSupportedWrite(tool, args);
+  if (tool.startsWith("gmail_") && !(await canUsePaidGoogleConnector(userId))) {
+    throw new Error("Gmail requires Kova Plus or Pro.");
+  }
   const connection = await getGoogleConnection(userId, binding?.connectionId);
   const stagedGoogleSub =
     connection && typeof connection.google_sub === "string" ? connection.google_sub : "";

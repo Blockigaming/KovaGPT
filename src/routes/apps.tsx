@@ -1482,6 +1482,9 @@ function AppsPage() {
                   state={stateOf(visibleSelectedApp.id)}
                   configured={configuredOf(visibleSelectedApp.id)}
                 />
+                {(visibleSelectedApp.id === "gmail" || visibleSelectedApp.id === "google-docs") && (
+                  <p>{visibleSelectedApp.label} requires Kova Plus or Pro.</p>
+                )}
                 <section className="spec400-plugin-detail-section">
                   <h3>Capabilities and permissions</h3>
                   {selectedReview && (

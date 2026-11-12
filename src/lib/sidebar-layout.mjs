@@ -5,7 +5,7 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "library", label: "Library", to: "/library" },
   { id: "projects", label: "Projects", to: "/projects" },
   { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
-  { id: "apps", label: "Plugins", to: "/apps" },
+  { id: "apps", label: "Connections", to: "/apps" },
   { id: "maps", label: "Maps", to: "/maps" },
   { id: "memory", label: "Memory", to: "/memory" },
   { id: "settings", label: "Settings", to: "/settings/appearance" },

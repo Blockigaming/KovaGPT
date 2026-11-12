@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE)
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
 const root = process.cwd();
@@ -45,7 +45,7 @@ const bundled = await build({
             : {
                 path: ["", ".ts", ".tsx", ".mjs"]
                   .map((ext) => path.join(root, "src", args.path.slice(2)) + ext)
-                  .find(existsSync)!,
+                  .find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile())!,
               },
         );
         builder.onResolve({ filter: /^@tanstack\/react-start$/ }, (args) => ({
@@ -89,7 +89,6 @@ async function boot(
       operations: [],
       financeStatus: {
         configured: configured !== false,
-        planEligible: true,
         connections: connection
           ? [{ id: "00000000-0000-4000-8000-000000000004", status: "connected" }]
           : [],
@@ -146,15 +145,20 @@ async function boot(
       "*{box-sizing:border-box}body{font:16px Arial;margin:24px}button{padding:10px;margin:4px}table{width:100%}td,th{padding:8px;text-align:left}[role=alertdialog]{position:fixed;inset:15%;background:white;border:1px solid;padding:20px}",
   });
   await page.addScriptTag({ content: script });
-  await expect(page.getByRole("heading", { name: "Bank accounts" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: options.connection ? "Bank accounts" : "Spending" }),
+  ).toBeVisible();
 }
 
 test("bank Link is explicit and exchanges one public token after successful consent", async ({
   page,
 }) => {
   await boot(page);
+  await expect(page.getByRole("heading", { name: "Bank accounts" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Refresh bank status" })).toHaveCount(0);
+  await expect(page.getByText("Read-only connections")).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
-  await page.getByRole("button", { name: "Connect bank", exact: true }).click();
+  await page.getByRole("button", { name: "Link a bank", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as StateWindow).operations.length)).toBe(2);
   await page.evaluate(() => {
     (window as StateWindow).finishLink();
@@ -183,7 +187,8 @@ test("unconfigured finance and health stay disabled and never fetch private data
   page,
 }) => {
   await boot(page, { configured: false });
-  await expect(page.getByRole("button", { name: "Connect bank", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toBeDisabled();
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
@@ -212,7 +217,7 @@ test("switching account hides a pending bank read", async ({ page }) => {
     (window as StateWindow).owner = null;
     (window as StateWindow).renderPanels();
   });
-  await expect(page.getByText("Sign in to manage bank connections.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
   await page.evaluate(() => (window as StateWindow).resolveRead());
   await expect(page.getByText("Fixture checking")).toHaveCount(0);
 });
@@ -221,13 +226,13 @@ test("an old Plaid success callback cannot exchange its token after account swit
   page,
 }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Connect bank", exact: true }).click();
+  await page.getByRole("button", { name: "Link a bank", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as StateWindow).operations.length)).toBe(2);
   await page.evaluate(() => {
     (window as StateWindow).owner = null;
     (window as StateWindow).renderPanels();
   });
-  await expect(page.getByText("Sign in to manage bank connections.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
   await page.evaluate(() => (window as StateWindow).finishLink());
   expect(
     (await page.evaluate(() => (window as StateWindow).operations)).some(

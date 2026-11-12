@@ -50,10 +50,17 @@ for (const theme of themes) {
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
         await page.getByRole("button", { name: "More", exact: true }).click();
         await expect(page.getByRole("group", { name: "More destinations" })).toBeVisible();
-        for (const label of ["Kovas", "Sites", "Plugins", "Discover"])
+        for (const label of ["Kovas", "Sites", "Connections", "Discover"])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       } else {
-        for (const label of ["New chat", "Images", "Library", "Projects", "Plugins", "Discover"])
+        for (const label of [
+          "New chat",
+          "Images",
+          "Library",
+          "Projects",
+          "Connections",
+          "Discover",
+        ])
           await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
       }
     } else {
