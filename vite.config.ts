@@ -84,6 +84,12 @@ export default defineConfig(({ mode }) => {
                 ))
             )
               return "vendor-icons";
+            // Keep preference parsing and contrast adjustment independently cacheable.
+            if (
+              normalizedId ===
+              path.resolve(configDir, "src/lib/appearance-preferences.mjs").replaceAll("\\", "/")
+            )
+              return "appearance-preferences";
             if (!id.includes("node_modules")) return;
             if (
               id.includes("/react-markdown/") ||
