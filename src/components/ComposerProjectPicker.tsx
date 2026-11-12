@@ -1,16 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
+import { Folder, FolderPlus, Search } from "lucide-react";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { createProjectChat, listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import {
   isPrincipalBrowserStorageClearedEvent,
@@ -30,6 +25,9 @@ export function ComposerProjectPicker({
   onOpenChange,
   navigationBlocked,
   navigationBlockedReason = "Send or clear your draft and attachments before opening a project.",
+  anchorRef,
+  startChat,
+  side,
   returnFocusTarget,
   returnFocusUrl,
 }: {
@@ -38,6 +36,9 @@ export function ComposerProjectPicker({
   /** Must include unsent text, attachments, streaming, and unresolved composer state. */
   navigationBlocked: boolean;
   navigationBlockedReason?: string;
+  anchorRef: RefObject<HTMLElement | null>;
+  startChat: boolean;
+  side: "top" | "bottom";
   returnFocusTarget?: HTMLElement | null;
   returnFocusUrl?: string;
 }) {
@@ -45,6 +46,7 @@ export function ComposerProjectPicker({
   const principalId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   const navigate = useNavigate();
   const getProjects = useServerFn(listProjects);
+  const createChat = useServerFn(createProjectChat);
   const opening = useRef({ open, principalId, cycle: 0, invalidated: false });
   if (opening.current.open !== open) {
     opening.current = {
@@ -153,7 +155,9 @@ export function ComposerProjectPicker({
       scope.principalId !== principalId ||
       scope.cycle !== cycle ||
       visible?.status !== "ready" ||
-      !visible.projects.some((project) => project.id === projectId)
+      !visible.projects.some(
+        (project) => project.id === projectId && (!startChat || project.role !== "viewer"),
+      )
     )
       return;
     navigationPending.current = true;
@@ -167,7 +171,18 @@ export function ComposerProjectPicker({
       current.current.principalId === principalId &&
       current.current.cycle === cycle;
     try {
-      await navigate({ to: "/projects/$projectId", params: { projectId } });
+      if (startChat) {
+        const result = await createChat({
+          data: { project_id: projectId, title: "New chat", messages: [] },
+        });
+        if (!isCurrent()) return;
+        await navigate({
+          to: "/projects/$projectId/chat/$chatId",
+          params: { projectId, chatId: result.id },
+        });
+      } else {
+        await navigate({ to: "/projects/$projectId", params: { projectId } });
+      }
       if (isCurrent()) onOpenChange(false);
     } catch {
       if (isCurrent()) setNavigationError("The project could not be opened. Try again.");
@@ -180,24 +195,28 @@ export function ComposerProjectPicker({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next || !navigationPending.current) onOpenChange(next);
+      }}
+    >
+      <PopoverAnchor virtualRef={anchorRef} />
+      <PopoverContent
+        role="dialog"
+        aria-label="Choose project"
+        side={side}
+        align="start"
+        className={startChat ? "kova-composer-menu kova-composer-full-menu" : "kova-composer-menu"}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           restoreDialogFocus(returnFocusTarget, returnFocusUrl, navigationPending.current);
         }}
       >
-        <DialogHeader>
-          <DialogTitle>Choose project</DialogTitle>
-          <DialogDescription>
-            Open a project to use its chats, instructions, and files. This does not move or copy
-            your current chat.
-          </DialogDescription>
-        </DialogHeader>
         {visible?.status === "ready" ? (
           <div className="space-y-2">
-            <label className="block">
+            <label className="kova-composer-menu-search">
+              <Search aria-hidden="true" />
               <span className="sr-only">Search projects</span>
               <input
                 type="search"
@@ -205,7 +224,7 @@ export function ComposerProjectPicker({
                 value={projectQuery}
                 onChange={(event) => setProjectQuery(event.target.value)}
                 placeholder="Search projects"
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+                className="w-full bg-transparent text-sm"
               />
             </label>
             <Button
@@ -229,7 +248,8 @@ export function ComposerProjectPicker({
                 }
               }}
             >
-              {navigating === "__new__" ? "Opening…" : "+ New project"}
+              <FolderPlus aria-hidden="true" />
+              {navigating === "__new__" ? "Opening…" : "New project"}
             </Button>
           </div>
         ) : null}
@@ -268,12 +288,19 @@ export function ComposerProjectPicker({
                     data-kova-button-shape="preserve"
                     type="button"
                     variant="ghost"
-                    disabled={navigationBlocked || navigating !== null}
+                    disabled={
+                      navigationBlocked ||
+                      navigating !== null ||
+                      (startChat && project.role === "viewer")
+                    }
                     onClick={() => void chooseProject(project.id)}
-                    className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl border px-3 py-2 text-left"
+                    className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl px-3 py-2 text-left"
                     aria-label={`Open project ${project.name}`}
                   >
-                    <span className="min-w-0 [overflow-wrap:anywhere]">{project.name}</span>
+                    <span className="flex min-w-0 items-center gap-2 [overflow-wrap:anywhere]">
+                      <Folder aria-hidden="true" />
+                      {project.name}
+                    </span>
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {navigating === project.id
                         ? "Opening…"
@@ -297,12 +324,7 @@ export function ComposerProjectPicker({
             {navigationError}
           </p>
         )}
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 }

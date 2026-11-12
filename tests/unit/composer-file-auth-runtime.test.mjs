@@ -114,6 +114,8 @@ function fixture(
     "@/lib/document-extraction/pdf-metadata.mjs": pdfMetadata,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
+    "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },
+    "@/components/HelpSupportForm": { HelpSupportForm: "HelpSupportForm" },
     "lucide-react": {},
     "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
     "@tanstack/react-router": {
@@ -163,7 +165,7 @@ function fixture(
     modules[`@/components/${name}`] = { [name]: name };
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
-    ["popover", ["Popover", "PopoverContent", "PopoverTrigger"]],
+    ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],
     ["select", ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"]],
   ])
     modules[`@/components/ui/${module}`] = Object.fromEntries(names.map((name) => [name, name]));
@@ -286,7 +288,7 @@ for (const entry of [
     const f = fixture();
     const file = f.file();
     let prevented = false;
-    if (entry === "picker") await f.click("Files");
+    if (entry === "picker") await f.click("Add photos & files");
     if (entry === "file input")
       await f
         .nodes()
@@ -351,7 +353,7 @@ test("guest pasted-text attachment requires sign-in but ordinary text pasting re
 
 test("signed-in file selection, reads and drawing creation keep working", async () => {
   const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  await f.click("Files");
+  await f.click("Add photos & files");
   assert.deepEqual(f.choosers, ["Choose files"]);
   assert.equal(await f.drawing().onAttach([f.file()]), true);
   await f.flush();
@@ -389,13 +391,13 @@ test("guest attachment or image-tool submission is stopped before sending", asyn
     assert.ok(f.signIn());
   }
   const f = fixture();
-  await f.click("Create Image");
+  await f.click("Create an image");
   assert.ok(f.signIn());
   assert.deepEqual(f.toolChanges, []);
 });
 
 test("guest phone Photos and Camera require sign-in before the native chooser", async () => {
-  for (const action of ["Photos", "Camera", "Files"]) {
+  for (const action of ["Photos", "Camera", "Add photos & files"]) {
     const f = fixture(
       {},
       { isLoaded: true, user: null },
@@ -742,8 +744,8 @@ test("removing a file also blocks a stale Send callback and queued file analysis
 
 test("image selection toggles off and data analysis queues without any file or new allowance", async () => {
   const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  await f.click("Create Image");
-  await f.click("Create Image");
+  await f.click("Create an image");
+  await f.click("Create an image");
   assert.deepEqual(f.toolChanges, ["image", null]);
   await f.click("Send message");
   assert.deepEqual(f.submittedTools, [null]);
@@ -804,12 +806,28 @@ test("plus menus contain exactly the requested actions on each layout", () => {
     const menu = f.nodes().find((node) => node.props?.className === "kova-composer-quick-menu");
     const labels = nodes(menu)
       .filter((node) => node.type === "button")
-      .map((node) => text(node.props.children));
+      .map((node) => node.props["aria-label"] ?? text(node.props.children));
     assert.deepEqual(
       labels,
       mobile
-        ? ["Camera", "Photos", "Files", "Projects", "Create Image", "Drawing"]
-        : ["Files", "Library", "Projects", "Create Image", "Drawing"],
+        ? [
+            "Add photos & files",
+            "Add from Library",
+            "Create an image",
+            "Web search",
+            "Work in a project",
+            "Drawing",
+            "Camera",
+            "Photos",
+          ]
+        : [
+            "Add photos & files",
+            "Add from Library",
+            "Create an image",
+            "Web search",
+            "Work in a project",
+            "Drawing",
+          ],
     );
     assert.deepEqual([f.submissions, f.saves, f.reads], [[], [], []]);
   }

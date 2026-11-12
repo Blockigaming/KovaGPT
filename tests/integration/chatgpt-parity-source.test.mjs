@@ -183,7 +183,7 @@ test("active chat shares scoped header actions and keeps secondary controls reac
 });
 
 test("compact composer groups actions and preserves message editing and markdown", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask KovaGPT anything..."\}/);
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Work with KovaGPT"\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,

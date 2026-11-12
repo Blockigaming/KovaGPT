@@ -169,7 +169,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     modules[`@/components/${name}`] = { [name]: name };
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
-    ["popover", ["Popover", "PopoverContent", "PopoverTrigger"]],
+    ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],
     ["select", ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"]],
   ])
     modules[`@/components/ui/${module}`] = Object.fromEntries(names.map((name) => [name, name]));

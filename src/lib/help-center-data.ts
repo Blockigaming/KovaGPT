@@ -46,12 +46,12 @@ const rows: Row[] = [
   [
     "Library & sharing",
     "How do I copy or remove a chat link?",
-    "Open Share in a saved chat, review the text snapshot, then choose Create & copy link. Anyone with the link can read that snapshot for 30 days. Files and future messages are excluded. Remove link revokes it. A success popup appears only after the clipboard accepts the link.",
+    "Choose Share in a saved chat to copy its public link. Anyone with the link can read that snapshot for 30 days. Files and future messages are excluded. Revoke a link under Settings → Data controls. A success popup appears only after the clipboard accepts the link.",
   ],
   [
     "Library & sharing",
     "The clipboard won't copy a share link.",
-    "The created link remains visible in the Share dialog. Select that field and copy it manually, or allow clipboard access for KovaGPT and try Copy link again. A failed copy does not mean the link was revoked.",
+    "If clipboard access fails, the link appears in a dialog. Select the link to copy it manually or choose Copy link to retry.",
   ],
   [
     "Files & images",

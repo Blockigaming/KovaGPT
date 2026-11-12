@@ -15,12 +15,15 @@ function CheckoutPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   return (
     <main id="main-content" tabIndex={-1} className="min-h-dvh bg-background text-foreground">
-      <section className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-6 px-6 py-10">
-        <h1 className="text-xl font-semibold">Opening checkout…</h1>
+      <section className="mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center gap-4 text-center px-6 py-10">
+        <h1 className="kova-checkout-wave text-xl font-semibold">Opening checkout…</h1>
         {!plan ? (
           <p>Choose a plan to continue.</p>
         ) : !isLoaded ? (
-          <div className="h-96 animate-pulse rounded-3xl bg-muted" aria-label="Checking account" />
+          <div
+            className="h-12 w-full animate-pulse rounded-3xl bg-muted motion-reduce:animate-none"
+            aria-label="Checking account"
+          />
         ) : !isSignedIn ? (
           <button
             type="button"

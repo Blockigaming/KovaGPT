@@ -9,7 +9,7 @@ test("Library retires shared snapshots and the email invitation entry point", ()
   const sharing = read("src/components/ShareChatDialog.tsx");
   assert.doesNotMatch(source, /Shared with me|Shared by me|Open snapshot/);
   assert.doesNotMatch(sharing, /Invite by email|EmailShareChatDialog/);
-  assert.match(sharing, /Create & copy link/);
+  assert.match(sharing, /Public link copied/);
   assert.match(sharing, /Remove link/);
 });
 

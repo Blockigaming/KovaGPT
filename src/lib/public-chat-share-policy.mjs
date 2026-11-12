@@ -15,12 +15,8 @@ export function publicShareSnapshot(conversation) {
         )
         .map(({ role, content }) => ({ role, content }))
     : [];
-  if (!messages.length || messages.length > 500 || messages.some((m) => m.content.length > 50000))
-    throw new Error("Choose a chat with 1–500 text messages, each under 50,000 characters.");
-  const payload = { title, snapshot: { messages } };
-  if (new TextEncoder().encode(JSON.stringify(payload)).length > 500000)
-    throw new Error("This chat is too long to share. Choose a shorter conversation.");
-  return payload;
+  if (!Array.isArray(conversation.messages)) throw new Error("Invalid share content.");
+  return { title, snapshot: { messages } };
 }
 export const validShareToken = (value) =>
   typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);

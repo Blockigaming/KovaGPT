@@ -70,6 +70,8 @@ vm.runInNewContext(output, {
     }
   },
   require(id) {
+    if (id === "@/lib/consumer-model-selection.mjs") return { CONSUMER_MODELS: [] };
+    if (id === "@/components/HelpSupportForm") return { HelpSupportForm: empty };
     if (id === "@/lib/document-extraction/pdf-metadata.mjs") return pdfMetadata;
     if (id === "@/components/ComposerPdfPages") return { ComposerPdfPages: empty };
     if (id === "@/lib/composer-local-attachments.mjs") return localAttachments;
@@ -119,6 +121,7 @@ vm.runInNewContext(output, {
       const popover = nativeRequire("@radix-ui/react-popover");
       return {
         Popover: popover.Root,
+        PopoverAnchor: empty,
         PopoverTrigger: popover.Trigger,
         // Expose the actual Options children only in tests inspecting that surface.
         // The default render still reflects the closed toolbar.

@@ -6,10 +6,10 @@ const composer = readFileSync("src/components/ChatInput.tsx", "utf8");
 const styles = readFileSync("src/styles/composer-core.css", "utf8");
 const chatStyles = readFileSync("src/styles/spec400-chat.css", "utf8");
 
-test("desktop Attach prefers above the composer and retains collision bounds", () => {
+test("Attach spans the composer and switches sides for a tall draft", () => {
   assert.match(
     composer,
-    /className="kova-composer-menu spec400-attach-menu"\s+side="top"\s+align="start"\s+sideOffset=\{8\}\s+collisionPadding=\{12\}/,
+    /className="kova-composer-menu spec400-attach-menu kova-composer-full-menu"\s+side=\{longDraft \? "top" : "bottom"\}\s+align="start"\s+sideOffset=\{5\}\s+collisionPadding=\{8\}/,
   );
 });
 
@@ -26,9 +26,10 @@ test("composer menus own scrolling without a nested plugin scroll region", () =>
   assert.match(styles, /\.kova-composer-plugins\s*\{[^}]*border-top:/);
 });
 
-test("phone Attach keeps its separate bottom-sheet actions", () => {
-  assert.match(composer, /showAddMenu && isMobileLayout && \(\s*<MobileBottomSheet/);
-  assert.match(composer, /renderComposerActions\(true\)/);
+test("phone Attach uses the same anchored menu with phone upload options", () => {
+  assert.match(composer, /renderComposerActions\(isMobileLayout\)/);
+  assert.match(composer, /<PopoverAnchor virtualRef=\{composerAnchorRef\}/);
+  assert.match(composer, /Upload from your phone/);
 });
 
 test("phone composer stays touch-sized and grows for multiline text or attachments", () => {

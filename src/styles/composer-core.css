@@ -319,3 +319,87 @@
     min-height: 44px;
   }
 }
+
+[data-slot="popover-content"].kova-composer-menu {
+  border: 0;
+  border-radius: 18px;
+  background: var(--popover);
+}
+
+[data-slot="popover-content"].kova-composer-full-menu {
+  width: var(--radix-popover-trigger-width);
+  max-width: calc(100vw - 16px);
+}
+
+.kova-composer-menu-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding-inline: 10px;
+}
+
+.kova-composer-menu-search svg,
+.kova-composer-image-glyph,
+.kova-composer-library-glyph {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.kova-composer-menu-search svg {
+  color: var(--muted-foreground);
+}
+
+.kova-composer-image-glyph {
+  color: #ffdc78;
+  background: #167d9f;
+  border-radius: 5px;
+}
+
+.kova-composer-image-glyph svg,
+.kova-composer-library-glyph svg {
+  width: 100%;
+  height: 100%;
+}
+
+.kova-composer-library-glyph {
+  color: var(--muted-foreground);
+  filter: drop-shadow(2px -2px 0 color-mix(in srgb, currentColor 45%, transparent));
+}
+
+.kova-composer-web-glyph {
+  color: #27b9ed;
+}
+
+.kova-composer-full-menu .kova-composer-action small,
+.kova-composer-full-menu .kova-composer-plugin small {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.kova-composer-full-menu .kova-composer-action[data-highlighted="true"] {
+  background: var(--accent);
+}
+
+.spec400-composer[data-long-draft="true"] .spec400-composer-plus {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-start: 6px;
+}
+
+.spec400-composer[data-long-draft="true"] .spec400-input-region {
+  padding-inline-start: 42px;
+}
+
+@media (max-width: 480px) {
+  .kova-composer-full-menu .kova-composer-action,
+  .kova-composer-full-menu .kova-composer-plugin {
+    column-gap: 8px;
+  }
+
+  .kova-composer-full-menu .kova-composer-action small,
+  .kova-composer-full-menu .kova-composer-plugin small {
+    font-size: 0.75rem;
+  }
+}
