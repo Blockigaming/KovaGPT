@@ -70,7 +70,10 @@ test("shared composer defaults preserve existing callers while supporting projec
     /if \(disabled \|\| sendDisabled \|\| submittingRef\.current \|\| isStreaming \|\| pasteOffer\) return/,
   );
   assert.match(chatInput, /disabled=\{disabled\}/);
-  assert.match(chatInput, /showAddMenu && isMobileLayout/);
+  assert.match(
+    chatInput,
+    /showAddMenu && \(\s*<Popover[\s\S]*?renderComposerActions\(isMobileLayout\)/,
+  );
   assert.match(
     chatInput,
     /if \(!disabled && showAddMenu && e\.dataTransfer\.types\.includes\("Files"\)\)/,

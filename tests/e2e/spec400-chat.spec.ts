@@ -45,7 +45,7 @@ for (const theme of ["dark", "light"] as const) {
     await expect(input).toBeEnabled();
     await expect(page.locator("#chat-greeting")).toBeVisible();
     await expect(page.locator("#chat-greeting")).not.toHaveText("");
-    await expect(input).toHaveAttribute("placeholder", "Ask KovaGPT anything...");
+    await expect(input).toHaveAttribute("placeholder", "Work with KovaGPT");
     await expectRestingComposer(page);
     await expect(send).toBeHidden();
     await expect(send).toBeDisabled();
