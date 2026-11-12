@@ -1163,7 +1163,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   min-height: 44px;
   padding-inline: 14px;
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-panel);
+  border-radius: var(--kova-radius-button);
 }
 
 @media (min-width: 1024px) {
