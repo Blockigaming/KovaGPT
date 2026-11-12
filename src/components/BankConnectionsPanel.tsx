@@ -100,7 +100,13 @@ function FinanceSpendingPreview({ action }: { action?: React.ReactNode }) {
   );
 }
 
-export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
+export function BankConnectionsPanel({
+  ownerId,
+  visible = true,
+}: {
+  ownerId: string | null;
+  visible?: boolean;
+}) {
   const [status, setStatus] = useState<FinanceStatus | null>(null);
   const [busy, setBusyState] = useState(false);
   const running = useRef(false);
@@ -110,6 +116,8 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
   }, []);
   const resumed = useRef(false);
   const [message, setMessage] = useState("");
+  const initialRead = useRef(false);
+  const newlyLinked = useRef<string | null>(null);
   const [snapshot, setSnapshot] = useState<FinanceSnapshot | null>(null);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
@@ -138,7 +146,7 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
     } catch {
       if (active.current) {
         setStatus(null);
-        setMessage("Bank connection status is unavailable. Refresh to try again.");
+        setMessage("Bank connection status is unavailable.");
       }
     }
   }, [ownerId, request]);
@@ -169,9 +177,12 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
                 publicToken,
                 country: "US",
               });
-              if (!result.ok) throw new Error();
+              const connection = await result.json();
+              if (!result.ok || typeof connection.id !== "string") throw new Error();
               if (active.current) {
-                setMessage("Bank connected. Choose Read balances and transactions to fetch data.");
+                newlyLinked.current = connection.id;
+                initialRead.current = false;
+                setMessage("Bank connected.");
                 await reload();
               }
             } catch {
@@ -234,7 +245,6 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
     if (running.current || !ownerId || !status?.configured) return;
     setBusy(true);
     setMessage("");
-    setSnapshot(null);
     try {
       const response = await request("/api/finances/link-token", { country: "US" });
       const body = await response.json();
@@ -254,36 +264,60 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
       }
     }
   };
-  const manage = async (connectionId: string, action: "read" | "disconnect") => {
-    if (running.current) return;
-    setBusy(true);
-    setMessage("");
-    setSnapshot(null);
-    try {
-      const response = await request("/api/finances/manage", { connectionId, action });
-      const body = await response.json();
-      if (!response.ok) throw new Error();
-      if (active.current) {
-        if (action === "read") setSnapshot(body);
-        else {
+  const manage = useCallback(
+    async (connectionId: string, action: "read" | "disconnect") => {
+      if (running.current) return;
+      setBusy(true);
+      setMessage("");
+      if (action === "disconnect") setSnapshot(null);
+      try {
+        const response = await request("/api/finances/manage", { connectionId, action });
+        const body = await response.json();
+        if (!response.ok) throw new Error();
+        if (active.current) {
+          if (action === "read") setSnapshot(body);
+          else {
+            initialRead.current = false;
           setMessage("Bank disconnected and Plaid access removed.");
-          await reload();
+            await reload();
+          }
+        }
+      } catch {
+        if (active.current)
+          setMessage(
+            action === "read"
+              ? "The bank could not be read. Reconnect or try again later."
+              : "Disconnect could not be confirmed. Refresh status before retrying.",
+          );
+      } finally {
+        if (active.current) {
+          setBusy(false);
+          setDisconnect(null);
         }
       }
-    } catch {
-      if (active.current)
-        setMessage(
-          action === "read"
-            ? "The bank could not be read. Reconnect or try again later."
-            : "Disconnect could not be confirmed. Refresh status before retrying.",
-        );
-    } finally {
-      if (active.current) {
-        setBusy(false);
-        setDisconnect(null);
-      }
-    }
-  };
+    },
+    [reload, request, setBusy],
+  );
+  useEffect(() => {
+    if (
+      !visible ||
+      !ownerId ||
+      !status?.configured ||
+      busy ||
+      running.current ||
+      initialRead.current
+    )
+      return;
+    const connection = status.connections.find(
+      (candidate) =>
+        candidate.status === "connected" &&
+        (!newlyLinked.current || candidate.id === newlyLinked.current),
+    );
+    if (!connection) return;
+    initialRead.current = true;
+    newlyLinked.current = null;
+    void manage(connection.id, "read");
+  }, [visible, ownerId, status, busy, manage]);
   const money = (amount: number | null, currency: string | null) => {
     if (amount === null) return "Not available";
     try {
@@ -313,6 +347,19 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
             {message}
           </p>
         )}
+        {ownerId && !status && message && (
+          <div className="text-center">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMessage("");
+                void reload();
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
         {busy && (
           <p role="status" className="text-center">
             Working…
@@ -335,7 +382,7 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
       {snapshot && <FinanceActivityDashboard snapshot={snapshot} />}
       <p className="text-sm text-muted-foreground">
         Connect through Plaid to read balances and recent transactions. Kova cannot move money or
-        place trades. Data is fetched when you choose to read it.
+        place trades.
       </p>
       {!ownerId ? (
         <p>Sign in to manage bank connections.</p>
@@ -369,7 +416,7 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
                   disabled={busy || !status.configured || connection.status !== "connected"}
                   onClick={() => void manage(connection.id, "read")}
                 >
-                  Read balances and transactions
+                  Refresh balances and transactions
                 </Button>
                 <Button
                   variant="outline"
@@ -433,7 +480,11 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
             </table>
           </div>
           {!snapshot.transactions.length && (
-            <p>No transactions are available for this period yet.</p>
+            <p>
+              {snapshot.transactionsPending
+                ? "Plaid is still preparing your transactions. Refresh in a moment."
+                : "No transactions are available for this period yet."}
+            </p>
           )}
         </div>
       )}

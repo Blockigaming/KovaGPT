@@ -111,6 +111,7 @@ async function boot(
             date: "2026-10-30",
             amount: 5,
             currency: "USD",
+            category: "FOOD_AND_DRINK",
           },
         ],
         limited: false,
@@ -142,7 +143,7 @@ async function boot(
   }, options);
   await page.addStyleTag({
     content:
-      "*{box-sizing:border-box}body{font:16px Arial;margin:24px}button{padding:10px;margin:4px}table{width:100%}td,th{padding:8px;text-align:left}[role=alertdialog]{position:fixed;inset:15%;background:white;border:1px solid;padding:20px}",
+      "*{box-sizing:border-box}body{font:16px Arial;margin:24px}div[role=img]{height:256px}button{padding:10px;margin:4px}table{width:100%}td,th{padding:8px;text-align:left}[role=alertdialog]{position:fixed;inset:15%;background:white;border:1px solid;padding:20px}",
   });
   await page.addScriptTag({ content: script });
   await expect(
@@ -164,7 +165,14 @@ test("bank Link is explicit and exchanges one public token after successful cons
     (window as StateWindow).finishLink();
     (window as StateWindow).finishLink();
   });
-  await expect(page.getByText(/Bank connected\. Choose/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recent activity" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Daily cash flow/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Spending by category/ })).toBeVisible();
+  await expect(page.getByText("Food and drink", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Daily cash flow/ }).locator("svg")).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: /Spending by category/ }).locator("svg"),
+  ).toBeVisible();
   const operations = await page.evaluate(() => (window as StateWindow).operations);
   expect(operations.filter((operation) => operation[0] === "/api/finances/exchange")).toHaveLength(
     1,
@@ -172,7 +180,6 @@ test("bank Link is explicit and exchanges one public token after successful cons
   expect(operations.find((operation) => operation[0] === "/api/finances/exchange")?.[2]).toBe(
     "00000000-0000-4000-8000-000000000001",
   );
-  await page.getByRole("button", { name: "Read balances and transactions" }).click();
   await expect(page.getByText("Fixture checking")).toBeVisible();
   await expect(page.getByText("Fixture coffee")).toBeVisible();
   await page.getByRole("button", { name: "Disconnect bank 1" }).click();
@@ -209,10 +216,11 @@ test("health summaries load only after the user selects an account read", async 
 });
 test("switching account hides a pending bank read", async ({ page }) => {
   await boot(page, { connection: true });
+  await expect(page.getByText("Fixture checking")).toBeVisible();
   await page.evaluate(() => {
     (window as StateWindow).delayRead = true;
   });
-  await page.getByRole("button", { name: "Read balances and transactions" }).click();
+  await page.getByRole("button", { name: "Refresh balances and transactions" }).click();
   await page.evaluate(() => {
     (window as StateWindow).owner = null;
     (window as StateWindow).renderPanels();

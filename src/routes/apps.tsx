@@ -1899,6 +1899,7 @@ function AppsPage() {
               <TabsContent forceMount value="finances" className="spec400-connection-group">
                 <BankConnectionsPanel
                   key={`banks:${userKey ?? "guest"}`}
+                  visible={connectionGroup === "finances"}
                   ownerId={isSignedIn ? userKey : null}
                 />
               </TabsContent>
