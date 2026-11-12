@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
   "count": 219,
-  "latest": "20261112023605_public_chat_share_full_snapshots.sql",
+  "latest": "20261112023605_kova_public_chat_share_full_snapshots.sql",
   "migrations": [
     {
       "order": 1,
@@ -4632,7 +4632,7 @@
     },
     {
       "order": 219,
-      "filename": "20261112023605_public_chat_share_full_snapshots.sql",
+      "filename": "20261112023605_kova_public_chat_share_full_snapshots.sql",
       "timestamp": "20261112023605",
       "sha256": "d19e7c4437aae02ca0141ed0be92727c37d9d7d56cc8bf3c4499089298c4773f",
       "tables": [],
