@@ -1,0 +1,104 @@
+.kova-link-preview-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kova-link-preview-item {
+  display: flex;
+  flex: 0 1 330px;
+  min-width: 0;
+  max-width: 100%;
+}
+.kova-link-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  width: 100%;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-secondary, var(--background));
+  text-decoration: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.kova-link-preview-chip:hover {
+  background: var(--accent);
+  border-color: var(--ring);
+}
+.kova-link-preview-chip:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-link-preview-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.kova-link-preview-fallback {
+  width: 18px;
+  height: 18px;
+  color: var(--muted-foreground);
+}
+.kova-link-preview-logo img {
+  position: absolute;
+  inset: 0;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  background: var(--surface-secondary, var(--background));
+}
+.kova-link-preview-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.kova-link-preview-title {
+  color: var(--link-color, #4188df);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.kova-link-preview-domain {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.kova-link-preview-list[data-variant="sent"] {
+  margin-top: 10px;
+}
+.kova-link-preview-list[data-variant="sent"] .kova-link-preview-chip {
+  background: var(--background);
+}
+@media (max-width: 540px) {
+  .kova-link-preview-item {
+    flex-basis: 100%;
+  }
+  .kova-link-preview-chip {
+    border-radius: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-link-preview-chip { transition: none; }
+}
