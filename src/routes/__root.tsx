@@ -351,9 +351,13 @@ function RootNotificationCenter() {
           confirmed: true,
         });
     };
+    const workers = import.meta.env.PROD ? navigator.serviceWorker : null;
+    let controller = workers?.controller ?? null;
     const controllerChanged = () => {
-      // A new service-worker controller is evidence of an actual app update.
-      // Never announce an update on ordinary page load or a speculative release.
+      const next = workers?.controller ?? null;
+      const replaced = controller && next && controller !== next;
+      controller = next;
+      if (!replaced) return;
       publishKovaNotice({
         id: "app_update",
         title: "An app update is available",
@@ -366,15 +370,11 @@ function RootNotificationCenter() {
     };
     window.addEventListener("offline", offline);
     window.addEventListener("online", online);
-    if (import.meta.env.PROD) {
-      navigator.serviceWorker?.addEventListener("controllerchange", controllerChanged);
-    }
+    workers?.addEventListener("controllerchange", controllerChanged);
     return () => {
       window.removeEventListener("offline", offline);
       window.removeEventListener("online", online);
-      if (import.meta.env.PROD) {
-        navigator.serviceWorker?.removeEventListener("controllerchange", controllerChanged);
-      }
+      workers?.removeEventListener("controllerchange", controllerChanged);
     };
   }, [isLoaded]);
   return isLoaded ? (

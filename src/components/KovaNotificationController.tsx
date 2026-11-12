@@ -67,7 +67,7 @@ export function KovaNotificationController({
     // flag is insufficient. Never include our own notice panel in the test.
     const scan = () => {
       const candidates = document.querySelectorAll<HTMLElement>(
-        '[role="dialog"]:not(.kova-notice-panel), [role="alertdialog"]:not(.kova-notice-panel), [data-state="open"][data-radix-popper-content-wrapper] [role="menu"]',
+        '#public-mobile-navigation, [role="dialog"]:not(.kova-notice-panel), [role="alertdialog"]:not(.kova-notice-panel), [data-state="open"][data-radix-popper-content-wrapper] [role="menu"]',
       );
       const anotherVisibleDialog = Array.from(candidates).some(
         (element) =>
@@ -93,7 +93,9 @@ export function KovaNotificationController({
       attributes: true,
       attributeFilter: ["data-state", "role", "aria-hidden"],
     });
+    window.addEventListener("resize", scan);
     return () => {
+      window.removeEventListener("resize", scan);
       observer.disconnect();
       if (frame) cancelAnimationFrame(frame);
     };

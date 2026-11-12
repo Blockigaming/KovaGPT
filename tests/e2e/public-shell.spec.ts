@@ -99,6 +99,8 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   test.skip(testInfo.project.name !== "phone-390x844");
   await page.goto("/overview");
   await waitForHydration(page);
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
+  await expect(page.getByRole("heading", { name: "An app update is available" })).toHaveCount(0);
 
   const toggle = page.getByRole("button", { name: "Open navigation" });
   await expect(toggle).toHaveAttribute("aria-controls", "public-mobile-navigation");
