@@ -72,14 +72,10 @@ const unmountEffect = effects.find((effect) =>
 );
 const cancel = find(
   (node) =>
-    ts.isJsxElement(node) &&
-    node.openingElement.tagName.getText(ast) === "Button" &&
-    node.children.some(
-      (child) => ts.isJsxText(child) && child.text.includes("Cancel next message"),
-    ),
-)
-  .openingElement.attributes.properties.find((prop) => prop.name?.getText(ast) === "onClick")
-  .initializer.expression.getText(ast);
+    ts.isJsxAttribute(node) &&
+    node.name.getText(ast) === "onCancel" &&
+    node.parent.parent.tagName.getText(ast) === "NextChatPromptPanel",
+).initializer.expression.getText(ast);
 const sendSource = arrow("send").replace(
   'await import("@/lib/chat-summary-snapshot.mjs")',
   "await summaryModule",
@@ -107,14 +103,21 @@ const keptPreviewDefinition = keptPreviewAst.statements
   .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "QuotaRejectedDraftPreview")
   .getText(keptPreviewAst)
   .replace(/^export /u, "");
+const requestStatusDefinition = readFileSync("src/components/ChatRequestStatus.tsx", "utf8")
+  .replace(/^import .*;\n/gmu, "")
+  .replace("export default function", "function");
 const compiled = ts.transpileModule(
   `${keptPreviewDefinition}
+  ${requestStatusDefinition}
   globalThis.pendingMessageAttachments = ${pendingAttachmentsDefinition};
   globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
   globalThis.send = ${sendSource};\nglobalThis.queue = ${initializer("queueNextPrompt").getText(ast)};\nglobalThis.dispatch = ${dispatch};\nglobalThis.reconcileScope = ${scopeEffect};\nglobalThis.stop = ${arrow("stop")};\nglobalThis.cancel = ${cancel};\nglobalThis.startLifetime = ${unmountEffect};
   globalThis.reconcileNotice = ${noticeScopeEffect};
   globalThis.readVisibleNotice = () => ${initializer("visibleRequestNotice").getText(ast)};
-  globalThis.renderNotice = (pending = false) => (${initializer("requestStatusPanel").getText(ast)})(pending);
+  globalThis.renderNotice = (pending = false) => {
+    const shell = (${initializer("requestStatusPanel").getText(ast)})(pending);
+    return shell ? ChatRequestStatus(shell.props.children.props) : null;
+  };
   globalThis.readResponseRetry = () => ${retryResponse.initializer.expression.getText(ast)};
   globalThis.setInput = ${arrow("setInput")};
   globalThis.setAttachments = ${arrow("setAttachments")};

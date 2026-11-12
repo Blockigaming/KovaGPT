@@ -39,7 +39,7 @@ test("jump control stays in both chat headers and cannot cover transcript contro
   assert.doesNotMatch(button, /absolute|fixed|bottom-full|bottom-28/);
   assert.match(button, /element.scrollTo\(\{ top: element.scrollHeight, behavior: "smooth" \}\)/);
   assert.match(button, /element.focus\(\{ preventScroll: true \}\)/);
-  assert.match(variable("desktopToolbar"), /\{jumpToLatestButton\}/);
+  assert.match(variable("desktopToolbar"), /jumpToLatestButton=\{jumpToLatestButton\}/);
   const mobile = find(
     (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(file) === "MobileTopBar",
   );

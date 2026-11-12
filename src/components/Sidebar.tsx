@@ -846,6 +846,12 @@ export function Sidebar({
   const closeAfterMobileNavigation = (destination?: string) => {
     cancelPendingSelection();
     if (!open || !isMobileViewport()) return;
+    // Persist before the router can replace this drawer with its loading screen.
+    try {
+      safeBrowserStorage("localStorage")?.setItem("kova-mobile-sidebar-open", "0");
+    } catch {
+      // The in-memory drawer still closes when storage is unavailable.
+    }
     if (destination)
       navigationOwnsFocusRef.current = requestDrawerNavigationFocus({
         destination,
