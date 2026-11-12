@@ -1,4 +1,5 @@
 import { createGoogleOAuthSettlement } from "@/lib/google-oauth-settlement.server.mjs";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 // Per-user Google OAuth token management. Server-only.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -275,10 +276,24 @@ export async function runGoogleOAuthCleanup() {
 export async function getGoogleConnection(userId: string, connectionId?: string) {
   return accountRuntime().connection(userId, { connectionId });
 }
+export const GOOGLE_DOCS_MIME_TYPE = "application/vnd.google-apps.document";
+
+export async function canUsePaidGoogleConnector(userId: string): Promise<boolean> {
+  try {
+    const tier = await resolveEffectiveBillingTier(admin(), userId);
+    return tier === "plus" || tier === "pro";
+  } catch {
+    return false;
+  }
+}
+
 export async function getValidGoogleAccessToken(
   userId: string,
   binding: GoogleAccountBinding = {},
 ) {
+  if (binding.capability?.startsWith("gmail.") && !(await canUsePaidGoogleConnector(userId))) {
+    throw new Error("Gmail requires Kova Plus or Pro.");
+  }
   return accountRuntime().accessToken(userId, binding);
 }
 export async function disconnectGoogle(

@@ -25,7 +25,8 @@ test("brand accents remain available while the primary shell stays neutral", () 
   assert.match(lightTheme, /--surface-workspace: var\(--background\)/);
   assert.match(lightTheme, /--surface-composer: #ffffff/);
   assert.match(darkTheme, /color-scheme: dark/);
-  assert.match(darkTheme, /--background: #212121/);
+  assert.match(darkTheme, /--background: #000000/);
+  assert.match(darkTheme, /--sidebar: #202020/);
   assert.match(darkTheme, /--foreground: #ffffff/);
   assert.match(darkTheme, /--surface-composer: #303030/);
   assert.match(

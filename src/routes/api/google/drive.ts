@@ -2,7 +2,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { parseGoogleBinding } from "@/lib/google-account-policy.mjs";
-import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
+import {
+  canUsePaidGoogleConnector,
+  GOOGLE_DOCS_MIME_TYPE,
+  getValidGoogleAccessToken,
+  logAudit,
+} from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
@@ -49,10 +54,14 @@ export const Route = createFileRoute("/api/google/drive")({
           if (action === "search") {
             const q = String(body.query ?? "").slice(0, 300);
             const max = Math.min(25, Number(body.maxResults ?? 15));
+            const docsAllowed = await canUsePaidGoogleConnector(auth.userId);
             const driveQ = q
               ? `name contains '${q.replace(/'/g, "\\'")}' and trashed=false`
               : "trashed=false";
-            const url = `${DRIVE}/files?pageSize=${max}&fields=files(id,name,mimeType,modifiedTime,webViewLink,size)&q=${encodeURIComponent(driveQ)}&orderBy=modifiedTime desc`;
+            const visibleDriveQuery = docsAllowed
+              ? driveQ
+              : `${driveQ} and mimeType != '${GOOGLE_DOCS_MIME_TYPE}'`;
+            const url = `${DRIVE}/files?pageSize=${max}&fields=files(id,name,mimeType,modifiedTime,webViewLink,size)&q=${encodeURIComponent(visibleDriveQuery)}&orderBy=modifiedTime desc`;
             const r = await fetch(url, { headers: H });
             if (!r.ok) throw new Error(`drive list ${r.status}`);
             const j = await r.json();
@@ -74,6 +83,15 @@ export const Route = createFileRoute("/api/google/drive")({
             );
             if (!metaRes.ok) throw new Error(`drive meta ${metaRes.status}`);
             const meta = await metaRes.json();
+            if (
+              meta.mimeType === GOOGLE_DOCS_MIME_TYPE &&
+              !(await canUsePaidGoogleConnector(auth.userId))
+            ) {
+              return Response.json(
+                { error: "Google Docs requires Kova Plus or Pro." },
+                { status: 403 },
+              );
+            }
             let content = "";
             const mt: string = meta.mimeType ?? "";
             if (mt.startsWith("application/vnd.google-apps.")) {

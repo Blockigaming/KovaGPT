@@ -3,6 +3,7 @@ export type FinanceSnapshot = {
   startDate: string;
   endDate: string;
   limited: boolean;
+  transactionsPending?: boolean;
   accounts: {
     id: string | null;
     name: string | null;
@@ -21,6 +22,7 @@ export type FinanceSnapshot = {
     amount: number | null;
     currency: string | null;
     pending: boolean;
+    category?: string | null;
   }[];
 };
 export function readFinanceSnapshot(

@@ -33,6 +33,7 @@ const oauth = load(
   "src/lib/google-oauth.server.ts",
   {
     "@/lib/google-oauth-settlement.server.mjs": {},
+    "@/lib/billing-entitlement.server": {},
     "@/lib/lockdown-policy.mjs": {},
     "@supabase/supabase-js": {},
     "@/lib/endpoint-reliability.mjs": {},
@@ -88,13 +89,14 @@ test("Gmail-only grants cannot enable Calendar or Drive tools", () => {
 
 test("actual auth endpoint validates connector before starting an OAuth attempt", async () => {
   const calls = [];
+  let paid = false;
   const handler = load(
     "src/routes/api/google/auth.ts",
     {
       "@tanstack/react-router": { createFileRoute: () => (config) => config },
       "@/lib/api-auth.server": {
         requireUser: async () => ({ userId: "owner", supabaseAdmin: {} }),
-        getCallerTier: async () => "plus",
+        getCallerTier: async () => (paid ? "plus" : "free"),
       },
       "@/lib/google-oauth.server": {
         beginGoogleOAuth: async (...args) => {
@@ -120,7 +122,11 @@ test("actual auth endpoint validates connector before starting an OAuth attempt"
   });
   assert.equal(invalid.status, 400);
   assert.equal(calls.length, 0);
-  for (const connector of ["gmail", "google-calendar", "google-drive"]) {
+  const gmailRequest = new Request("https://kova.test/api/google/auth?connector=gmail");
+  assert.equal((await handler({ request: gmailRequest })).status, 403);
+  assert.equal(calls.length, 0);
+  for (const connector of ["google-calendar", "google-drive", "gmail"]) {
+    paid = connector === "gmail";
     const result = await handler({
       request: new Request(`https://kova.test/api/google/auth?connector=${connector}`),
     });
