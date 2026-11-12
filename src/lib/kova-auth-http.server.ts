@@ -734,7 +734,14 @@ export async function handleKovaLogout(request: Request): Promise<Response> {
 
 export async function handleKovaSession(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
-  if (unavailable) return unavailable;
+  if (unavailable) {
+    // A previously loaded dual-auth browser must be able to select hosted
+    // auth after the server cuts over. This is only a disabled-authority
+    // sentinel: never inspect or accept an owned cookie, query its store,
+    // issue credentials, or enable any owned-auth mutation in hosted mode.
+    if (unavailable.status === 404 && request.method === "GET") return json({ session: null });
+    return unavailable;
+  }
   const credential = readKovaSessionToken(request);
   if (!credential) return json({ session: null });
   if (!credential.ok) return jsonError("Invalid or expired session.", 401);
