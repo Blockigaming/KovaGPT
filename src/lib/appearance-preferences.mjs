@@ -55,6 +55,57 @@ export function appearanceValues(settings) {
   };
 }
 
+function luminance(color) {
+  const channels = [1, 3, 5].map((offset) => parseInt(color.slice(offset, offset + 2), 16) / 255);
+  const linear = channels.map((value) =>
+    value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+export function readableTextColor(background, foreground) {
+  if (!/^#[0-9a-f]{6}$/i.test(background) || !/^#[0-9a-f]{6}$/i.test(foreground)) return foreground;
+  const surface = luminance(background) + 0.05;
+  const text = luminance(foreground) + 0.05;
+  if (Math.max(surface, text) / Math.min(surface, text) >= 4.5) return foreground;
+  return surface / 0.05 >= 1.05 / surface ? "#000000" : "#ffffff";
+}
+
+const textSurfaces = [
+  ["background", "foreground"],
+  ["background", "muted-foreground"],
+  ["card", "card-foreground"],
+  ["popover", "popover-foreground"],
+  ["sidebar", "sidebar-foreground"],
+  ["accent", "accent-foreground"],
+  ["secondary", "secondary-foreground"],
+  ["primary", "primary-foreground"],
+];
+
+function applyReadableColors(root, values) {
+  const computed = root.ownerDocument?.defaultView?.getComputedStyle(root);
+  for (const token of new Set(textSurfaces.map(([, foreground]) => foreground))) {
+    if (values.interfaceColors[token])
+      root.style.setProperty(`--${token}`, values.interfaceColors[token]);
+    else root.style.removeProperty(`--${token}`);
+  }
+  if (!computed || !(Object.keys(values.interfaceColors).length || values.interfaceAccent)) return;
+
+  for (const [surface, foreground] of textSurfaces) {
+    if (
+      !values.interfaceColors[surface] &&
+      !values.interfaceColors.foreground &&
+      !values.interfaceColors[foreground] &&
+      !(surface === "primary" && values.interfaceAccent)
+    )
+      continue;
+    const background = computed.getPropertyValue(`--${surface}`).trim();
+    const color = computed.getPropertyValue(`--${foreground}`).trim();
+    const readable = readableTextColor(background, color);
+    if (readable !== color) root.style.setProperty(`--${foreground}`, readable);
+  }
+}
+
 export function applyReadingPreferences(root, settings) {
   const values = appearanceValues(settings);
   const fonts = {
@@ -83,6 +134,7 @@ export function applyReadingPreferences(root, settings) {
     if (values.interfaceAccent) root.style.setProperty(token, values.interfaceAccent);
     else root.style.removeProperty(token);
   }
+  applyReadableColors(root, values);
   root.style.setProperty("--kova-reading-size", `${values.readingSize}px`);
   // One shared column token preserves the saved 680/760/900 preferences.
   root.style.setProperty("--kova-reading-width", `${values.readingWidth}px`);

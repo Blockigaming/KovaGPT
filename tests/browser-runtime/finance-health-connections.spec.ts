@@ -167,7 +167,7 @@ test("bank Link is explicit and exchanges one public token after successful cons
   await expect(page.getByRole("button", { name: "Refresh bank status" })).toHaveCount(0);
   await expect(page.getByText("Read-only connections")).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
-  await page.getByRole("button", { name: "Link a bank", exact: true }).click();
+  await page.getByRole("button", { name: "Connect a bank", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as StateWindow).operations.length)).toBe(2);
   await page.evaluate(() => {
     (window as StateWindow).finishLink();
@@ -203,7 +203,7 @@ test("unconfigured finance and health stay disabled and never fetch private data
 }) => {
   await boot(page, { configured: false });
   await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toBeDisabled();
@@ -234,7 +234,7 @@ test("switching account hides a pending bank read", async ({ page }) => {
     (window as StateWindow).owner = null;
     (window as StateWindow).renderPanels();
   });
-  await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
   await page.evaluate(() => (window as StateWindow).resolveRead());
   await expect(page.getByText("Fixture checking")).toHaveCount(0);
@@ -244,13 +244,13 @@ test("an old Plaid success callback cannot exchange its token after account swit
   page,
 }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Link a bank", exact: true }).click();
+  await page.getByRole("button", { name: "Connect a bank", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as StateWindow).operations.length)).toBe(2);
   await page.evaluate(() => {
     (window as StateWindow).owner = null;
     (window as StateWindow).renderPanels();
   });
-  await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
   await page.evaluate(() => (window as StateWindow).finishLink());
   expect(

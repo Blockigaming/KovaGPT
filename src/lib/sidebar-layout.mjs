@@ -1,3 +1,4 @@
+import { readableTextColor } from "./appearance-preferences.mjs";
 import { principalScopedStorageKey } from "./principal-browser-storage.mjs";
 import { readSidebarShortcuts } from "./sidebar-shortcuts.mjs";
 
@@ -63,19 +64,13 @@ export function saveSidebarLayout(storage, owner, layout) {
 }
 export function sidebarColors(color) {
   if (!/^#[\da-f]{6}$/i.test(color)) return {};
-  const rgb = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16) / 255);
-  const light =
-    rgb.reduce(
-      (sum, n, i) =>
-        sum +
-        (n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][i],
-      0,
-    ) > 0.35;
+  const foreground = readableTextColor(color, "#fafafa");
+  const light = foreground === "#000000";
   return {
     "--sidebar": color,
-    "--foreground": light ? "#171717" : "#fafafa",
-    "--sidebar-foreground": light ? "#171717" : "#fafafa",
-    "--muted-foreground": light ? "#404040" : "#d4d4d4",
+    "--foreground": foreground,
+    "--sidebar-foreground": foreground,
+    "--muted-foreground": readableTextColor(color, light ? "#404040" : "#d4d4d4"),
     "--accent": light ? "#00000012" : "#ffffff18",
     "--border": light ? "#00000020" : "#ffffff25",
   };
