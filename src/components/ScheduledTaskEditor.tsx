@@ -434,7 +434,7 @@ function ScheduledTaskEditorBody({
       timezone,
       repeat: mode === "event" ? "none" : repeat,
       triggerMode: mode,
-      contextRefs: reminder ? [] : refs,
+      contextRefs: refs,
       ...(reminder && !task ? { taskKind: "reminder" as const } : {}),
       eventTriggers: mode === "event" ? triggers : [],
       ...(mode === "time" ? { localTime } : {}),

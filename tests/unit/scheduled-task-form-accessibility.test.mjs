@@ -21,11 +21,31 @@ function visit(node) {
 visit(parsed);
 const labelFor = (name) =>
   labels.find((label) =>
-    label.children.some((child) => ts.isJsxText(child) && child.text.trim() === name),
+    label.children.some((child) => {
+      if (ts.isJsxText(child)) return child.text.trim() === name;
+      if (
+        !ts.isJsxExpression(child) ||
+        !child.expression ||
+        !ts.isConditionalExpression(child.expression)
+      )
+        return false;
+      const { whenTrue, whenFalse } = child.expression;
+      return [whenTrue, whenFalse].some(
+        (branch) => ts.isStringLiteral(branch) && branch.text === name,
+      );
+    }),
   );
 
 test("scheduled task fields are named by their persistent wrapping labels", () => {
-  for (const name of ["Title", "Prompt", "Frequency", "Weekday", "Time", "Timezone"]) {
+  for (const name of [
+    "Title",
+    "Prompt",
+    "Reminder message",
+    "Frequency",
+    "Weekday",
+    "Time",
+    "Timezone",
+  ]) {
     const label = labelFor(name);
     assert.ok(label, `Missing visible ${name} label`);
     if (name === "Frequency" || name === "Weekday") {
@@ -45,6 +65,7 @@ test("visible labels preserve draft bindings and deliberate consent-gated save",
   for (const [name, field, setter] of [
     ["Title", "title", "setTitle"],
     ["Prompt", "prompt", "setPrompt"],
+    ["Reminder message", "prompt", "setPrompt"],
     ["Frequency", "repeat", "setRepeat"],
     ["Timezone", "timezone", "setTimezone"],
   ]) {
