@@ -230,6 +230,84 @@ test("[notice:shared_task_unavailable] an inaccessible task-copy link offers a s
   await expect(notice).toHaveCount(0);
 });
 
+test("[contract:monitor_match] task history shows a match only with a connected event receipt", async ({
+  page,
+}) => {
+  const matchedId = "11111111-1111-4111-8111-111111111111";
+  const ordinaryId = "33333333-3333-4333-8333-333333333333";
+  const time = "2026-11-12T12:00:00Z";
+  const task = {
+    prompt: "Review the saved task context.",
+    run_at: time,
+    repeat: "daily",
+    status: "scheduled",
+    last_run_at: time,
+    next_run_at: null,
+    last_result: null,
+    created_at: time,
+    updated_at: time,
+    revision: 2,
+    timezone: "UTC",
+    schedule_local: "2026-11-12T12:00",
+    context_refs: [],
+    event_triggers: [],
+    last_error: null,
+  };
+  const reads = new Set<string>();
+  await page.route("**/_serverFn/**", async (route) => {
+    const request = route.request();
+    const name = serverFunctionName(request.url());
+    if (name.startsWith("isScheduledTasksEligible_"))
+      return route.fulfill({
+        json: { result: { eligible: true, executionAvailable: true }, context: {} },
+      });
+    if (name.startsWith("listScheduledTaskOffers_"))
+      return route.fulfill({
+        json: { result: { sent: [], received: [], linked: null }, context: {} },
+      });
+    if (name.startsWith("listScheduledTasks_"))
+      return route.fulfill({
+        json: {
+          result: [
+            { ...task, id: matchedId, title: "Connected event review", trigger_mode: "event" },
+            { ...task, id: ordinaryId, title: "Ordinary time review", trigger_mode: "time" },
+          ],
+          context: {},
+        },
+      });
+    if (!name.startsWith("listScheduledTaskRuns_")) return route.fallback();
+    const { data } = fromJSON(request.postDataJSON()) as {
+      data: { expectedUserId: string; taskId: string };
+    };
+    expect(data.expectedUserId).toBe(owner);
+    expect([matchedId, ordinaryId]).toContain(data.taskId);
+    reads.add(data.taskId);
+    const match = data.taskId === matchedId;
+    return route.fulfill({
+      json: {
+        result: [
+          {
+            status: "complete",
+            scheduled_for: time,
+            result_summary: match ? "Reviewed the matching event." : "No matching event receipt.",
+            ...(match ? { matched_connected_event: true } : {}),
+          },
+        ],
+        context: {},
+      },
+    });
+  });
+  await page.goto("/scheduled-tasks");
+  await waitForKovaHydration(page);
+  await expect(page.getByText("Ordinary time review", { exact: true })).toBeVisible();
+  await expect.poll(() => reads.size).toBe(2);
+  const matched = page.locator('[data-kova-notice-id="monitor_match"]');
+  await expect(matched).toHaveCount(1);
+  await expect(matched).toContainText("Matched a connected event");
+  await expect(matched).toContainText("Reviewed the matching event.");
+  await expect(page.getByText(/No matching event receipt/)).toBeVisible();
+});
+
 test("[contract:offer_available][contract:offer_ineligible] verified offer details recheck eligibility before continuing", async ({
   page,
 }, testInfo) => {

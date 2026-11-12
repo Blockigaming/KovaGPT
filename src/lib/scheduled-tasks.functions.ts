@@ -38,6 +38,7 @@ type Result = { data: unknown; error: { code?: string; message?: string } | null
 type Query = PromiseLike<Result> & {
   select(value: string): Query;
   eq(key: string, value: unknown): Query;
+  in(key: string, values: string[]): Query;
   order(key: string, options?: { ascending: boolean }): Query;
   limit(value: number): Query;
   is(key: string, value: null): Query;
@@ -358,7 +359,35 @@ export const listScheduledTaskRuns = createServerFn({ method: "POST" })
     if (data.before) query = query.lt("scheduled_for", data.before);
     const result = await query.abortSignal(signal);
     if (result.error) throw safeTaskError(result.error.code);
-    return result.data ?? [];
+    const runs = Array.isArray(result.data) ? result.data : [];
+    const completed = runs.flatMap((run) =>
+      run?.status === "complete" && typeof run.scheduled_for === "string"
+        ? [run.scheduled_for]
+        : [],
+    );
+    if (!completed.length) return runs;
+    // Event and run timestamps are assigned together when the worker claims a match.
+    const events = await admin
+      .from("scheduled_task_events")
+      .select("scheduled_for")
+      .eq("user_id", context.userId)
+      .eq("task_id", data.taskId)
+      .eq("state", "completed")
+      .in("scheduled_for", completed)
+      .abortSignal(signal);
+    if (events.error) {
+      console.warn("[scheduled task event receipts]", events.error.code ?? "unavailable");
+      return runs;
+    }
+    if (!Array.isArray(events.data) || !events.data.length) return runs;
+    const matched = new Set(events.data.map((event) => event?.scheduled_for));
+    return runs.map((run) =>
+      run?.status === "complete" &&
+      typeof run.scheduled_for === "string" &&
+      matched.has(run.scheduled_for)
+        ? { ...run, matched_connected_event: true }
+        : run,
+    );
   });
 
 export type TaskConnectionOption = {

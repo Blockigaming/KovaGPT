@@ -13,11 +13,11 @@ if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
 // Isolated local fixtures: no provider, auth, database, or deployment calls.
 const root = process.cwd();
 const mocks: Record<string, string> = {
-  "@tanstack/react-router": `export const createFileRoute=()=>value=>value;`,
+  "@tanstack/react-router": `export const createFileRoute=()=>value=>value;export const CatchBoundary=({children})=>children;`,
   "@tanstack/react-start": `export const useServerFn=fn=>fn;export const createClientOnlyFn=fn=>fn;`,
   "@/components/AppShell": `export const AppShell=({children})=>children;`,
   "@/components/WorkspacePageHeader": `export const WorkspacePageHeader=({title,titleId,description})=><header className="kova-page-header"><h1 id={titleId}>{title}</h1><p>{description}</p></header>;`,
-  "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;`,
+  "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;export const useClerkSafe=()=>({openSignIn:()=>{}});`,
   "@/components/WorkflowSkillsPanel": `export const WorkflowSkillsPanel=()=>null;`,
   "@/integrations/supabase/client": `export const getSupabaseClientConfigStatus=()=>({configured:false});export const supabase={auth:{resend:async()=>({error:null})}};`,
   "@/utils/plan.functions": `export const getMyPlanTier=async({data})=>({ownerId:data.ownerId,tier:window.testTier??'free'});`,

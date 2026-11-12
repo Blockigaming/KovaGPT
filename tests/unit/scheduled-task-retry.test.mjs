@@ -16,6 +16,8 @@ function load({
   authenticated = true,
   accountAvailable = true,
   offers = [],
+  runs,
+  events = [],
 } = {}) {
   const calls = [],
     rpcCalls = [],
@@ -23,11 +25,20 @@ function load({
   const task = { id: taskId, status: "scheduled" };
   const taskQuery = (table) => {
     let single = false;
-    let rows = offers;
+    const fixtureRows = {
+      scheduled_task_copy_offers: offers,
+      scheduled_task_runs: runs,
+      scheduled_task_events: events,
+    }[table];
+    let rows = fixtureRows ?? [];
     const query = {
       select: () => query,
       eq: (column, value) => {
         rows = rows.filter((row) => row[column] === value);
+        return query;
+      },
+      in: (column, values) => {
+        rows = rows.filter((row) => values.includes(row[column]));
         return query;
       },
       gt: (column, value) => {
@@ -41,14 +52,7 @@ function load({
         return query;
       },
       abortSignal: async () => ({
-        data:
-          table === "scheduled_task_copy_offers"
-            ? single
-              ? (rows[0] ?? null)
-              : rows
-            : single
-              ? task
-              : [task],
+        data: fixtureRows ? (single ? (rows[0] ?? null) : rows) : single ? task : [task],
         error: null,
       }),
     };
@@ -117,6 +121,33 @@ const data = () => ({
   expectedUserId: owner,
   status: "scheduled",
   retry: true,
+});
+
+test("run history identifies only a completed event for the same account, task and run", async () => {
+  const first = "2026-11-12T12:00:00Z";
+  const second = "2026-11-12T13:00:00Z";
+  const scope = { user_id: owner, task_id: taskId };
+  const { api } = load({
+    runs: [
+      { ...scope, status: "complete", scheduled_for: first },
+      { ...scope, status: "complete", scheduled_for: second },
+      { ...scope, status: "failed", scheduled_for: first },
+    ],
+    events: [
+      { ...scope, state: "completed", scheduled_for: first },
+      { ...scope, state: "pending", scheduled_for: second },
+      { ...scope, state: "completed", scheduled_for: second, user_id: taskId },
+      { ...scope, state: "completed", scheduled_for: second, task_id: owner },
+    ],
+  });
+  const history = await api.listScheduledTaskRuns({
+    data: { expectedUserId: owner, taskId },
+    context: { userId: owner },
+  });
+  assert.equal(history.length, 3);
+  assert.equal(history[0].matched_connected_event, true);
+  assert.equal(history[1].matched_connected_event, undefined);
+  assert.equal(history[2].matched_connected_event, undefined);
 });
 test("retry dispatches the exact revision and mutation identity to atomic service-only admission", async () => {
   const { update, calls } = load(),

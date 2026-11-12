@@ -6,9 +6,9 @@ const A = "123e4567-e89b-42d3-a456-426614174000",
   V = "423e4567-e89b-42d3-a456-426614174000";
 const root = process.cwd();
 const mocks: Record<string, string> = {
-  "@tanstack/react-router": `export const createFileRoute=()=>value=>({...value,useSearch:()=>({})});export const useNavigate=()=>async()=>{};export const Link=({children})=>children;`,
+  "@tanstack/react-router": `export const createFileRoute=()=>value=>({...value,useSearch:()=>({})});export const useNavigate=()=>async()=>{};export const Link=({children})=>children;export const CatchBoundary=({children})=>children;`,
   "@/components/AppShell": `export const AppShell=({children})=>children;`,
-  "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,user:{id:window.testOwner}});export const SignInButton=({children})=>children;`,
+  "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,user:{id:window.testOwner}});export const SignInButton=({children})=>children;export const useClerkSafe=()=>({openSignIn:()=>{}});`,
   "@/lib/custom-kovas-client": `export const requestKovas=(...args)=>window.testRequest(...args);export const newKovaLinkToken=()=>"x".repeat(43);`,
   "@/lib/chat-store": `export const loadConversations=()=>[];export const saveConversations=async()=>true;export const savePendingActive=()=>{};export const saveDraft=()=>{};`,
   "@/components/CustomKovaPreview": `export default function Preview(){return null}`,

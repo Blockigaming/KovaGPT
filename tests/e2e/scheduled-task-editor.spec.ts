@@ -56,6 +56,10 @@ test.beforeAll(async () => {
             path: "supabase",
             namespace: "fixture",
           }));
+          builder.onResolve({ filter: /^@\/components\/auth\/ClerkSafe$/ }, () => ({
+            path: "clerk-safe",
+            namespace: "fixture",
+          }));
           builder.onResolve({ filter: /scheduled-tasks\.functions$/ }, () => ({
             path: "functions",
             namespace: "fixture",
@@ -65,14 +69,16 @@ test.beforeAll(async () => {
             contents:
               args.path === "supabase"
                 ? "export const supabase={auth:{getSession:async()=>({data:{session:{user:{id:window.fixture.user},access_token:'fixture-token'}}})}}"
-                : args.path === "start"
-                  ? "export const useServerFn=fn=>fn"
-                  : names
-                      .map(
-                        (name) =>
-                          `export const ${name}=async({data})=>{const f=window.fixture;f.calls.push({name:'${name}',data});if('${name}'==='listScheduledTaskConnections')return data.expectedUserId==='${owner}'?{connections:[],grants:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',provider:'github',connection_ref:'old',expires_at:'2027-01-01'},{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',provider:'github',connection_ref:'new',expires_at:'2027-01-01'},{id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',provider:'gmail',connection_ref:'mail',expires_at:'2027-01-01'}]}:{connections:[],grants:[]};if('${name}'==='listScheduledTaskResourceOptions')return new Promise(resolve=>f.pending.push({grantId:data.grantId,resolve}));if('${name}'==='createScheduledTask'&&f.failCreate){f.failCreate=false;throw new Error('Response interrupted')};return {items:[],nextCursor:null};};`,
-                      )
-                      .join("\n"),
+                : args.path === "clerk-safe"
+                  ? "export const useClerkSafe=()=>({openSignIn(){throw new Error('Unexpected sign-in in the task fixture')}})"
+                  : args.path === "start"
+                    ? "export const useServerFn=fn=>fn"
+                    : names
+                        .map(
+                          (name) =>
+                            `export const ${name}=async({data})=>{const f=window.fixture;f.calls.push({name:'${name}',data});if('${name}'==='listScheduledTaskConnections')return data.expectedUserId==='${owner}'?{connections:[],grants:[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',provider:'github',connection_ref:'old',expires_at:'2027-01-01'},{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',provider:'github',connection_ref:'new',expires_at:'2027-01-01'},{id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',provider:'gmail',connection_ref:'mail',expires_at:'2027-01-01'}]}:{connections:[],grants:[]};if('${name}'==='listScheduledTaskResourceOptions')return new Promise(resolve=>f.pending.push({grantId:data.grantId,resolve}));if('${name}'==='createScheduledTask'&&f.failCreate){f.failCreate=false;throw new Error('Response interrupted')};return {items:[],nextCursor:null};};`,
+                        )
+                        .join("\n"),
           }));
         },
       },

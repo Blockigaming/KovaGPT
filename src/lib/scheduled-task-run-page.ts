@@ -26,7 +26,13 @@ export type TaskRunPreview =
   | { kind: "empty" }
   | { kind: "unavailable" }
   | { kind: "deferred"; retryAt: number }
-  | { kind: "run"; status: unknown; at: string | null; summary: string | null };
+  | {
+      kind: "run";
+      status: unknown;
+      at: string | null;
+      summary: string | null;
+      matchedConnectedEvent?: true;
+    };
 
 export type TaskRunPageItem = {
   id: string;
@@ -89,6 +95,9 @@ export function createTaskRunPageReader(
             ? run.scheduled_for
             : null,
       summary: typeof run.result_summary === "string" ? run.result_summary : null,
+      ...(run.status === "complete" && run.matched_connected_event === true
+        ? { matchedConnectedEvent: true }
+        : {}),
     };
   };
   const pump = () => {

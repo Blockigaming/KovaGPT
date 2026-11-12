@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { createClient } from "@supabase/supabase-js";
 import ts from "typescript";
 
 const source = readFileSync("src/routes/projects.$projectId.tsx", "utf8");
@@ -64,6 +65,47 @@ function fixture() {
   };
 }
 const flushImport = () => Promise.resolve();
+
+test("the role endpoint confirms the changed row before returning success", async () => {
+  const source = readFileSync("src/lib/projects.functions.ts", "utf8");
+  const fn = ts.createSourceFile("project-functions.ts", source, ts.ScriptTarget.Latest, true);
+  const declaration = fn.statements
+    .filter(ts.isVariableStatement)
+    .flatMap((statement) => [...statement.declarationList.declarations])
+    .find((item) => item.name.getText(fn) === "updateMemberRole");
+  const handler = declaration?.initializer?.arguments?.[0]?.getText(fn);
+  assert.ok(handler);
+  const { outputText } = ts.transpileModule(`return (${handler});`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  });
+  const run = new Function(outputText)();
+  const data = { project_id: "project", user_id: "member", role: "editor" };
+  let rows = [{ user_id: "member", role: "editor" }];
+  const supabase = createClient("https://roles.example.test", "fixture-key", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: async (input, options) => {
+        const url = new URL(input);
+        assert.equal(url.pathname, "/rest/v1/project_members");
+        assert.equal(url.searchParams.get("project_id"), "eq.project");
+        assert.equal(url.searchParams.get("user_id"), "eq.member");
+        assert.equal(url.searchParams.get("select"), "user_id,role");
+        assert.equal(options.method, "PATCH");
+        assert.deepEqual(JSON.parse(options.body), { role: "editor" });
+        return Response.json(rows);
+      },
+    },
+  });
+  assert.deepEqual(await run({ data, context: { supabase } }), { ok: true });
+  for (const invalid of [
+    [],
+    [{ user_id: "other", role: "editor" }],
+    [{ user_id: "member", role: "viewer" }],
+  ]) {
+    rows = invalid;
+    await assert.rejects(run({ data, context: { supabase } }), /Failed to update role/u);
+  }
+});
 
 test("successful member role changes preserve the workspace instead of refreshing or moving focus", async () => {
   const f = fixture();

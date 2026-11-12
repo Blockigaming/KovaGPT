@@ -666,7 +666,12 @@ function AuthPage() {
           </div>
         )}
         {hasMfaChallenge ? (
-          <form onSubmit={submitMfa} className="space-y-3">
+          <form
+            onSubmit={submitMfa}
+            className="space-y-3"
+            aria-label="Two-factor verification"
+            data-kova-notice-id="security_check"
+          >
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">
               {mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
             </Label>

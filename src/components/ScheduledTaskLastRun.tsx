@@ -13,14 +13,20 @@ export function ScheduledTaskLastRun({
   lastRunAt?: string | null;
   lastResult?: string | null;
 }) {
-  if (preview?.kind === "run")
+  if (preview?.kind === "run") {
+    const matched = preview.status === "complete" && preview.matchedConnectedEvent === true;
     return (
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p
+        className="mt-2 text-xs text-muted-foreground"
+        data-kova-notice-id={matched ? "monitor_match" : undefined}
+      >
         Last run: {taskRunStatusLabel(preview.status)}
         {preview.at ? ` · ${formatDisplayDateTime(preview.at, timeFormat)}` : ""}
+        {matched ? " · Matched a connected event" : ""}
         {preview.summary ? ` · ${preview.summary}` : ""}
       </p>
     );
+  }
   const hasSavedHistory = Boolean(lastRunAt || lastResult);
   const label =
     !preview || preview.kind === "loading"

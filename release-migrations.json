@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 224,
-  "latest": "20261112054900_kova_project_member_push_preferences.sql",
+  "count": 225,
+  "latest": "20261112190309_kova_project_role_change_notifications.sql",
   "migrations": [
     {
       "order": 1,
@@ -4721,6 +4721,20 @@
       "tables": [],
       "functions": ["web_push_rpc"],
       "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 225,
+      "filename": "20261112190309_kova_project_role_change_notifications.sql",
+      "timestamp": "20261112190309",
+      "sha256": "615f9ebc745e119642af9a6e1d48f329e2b5904521082b24d1f475ad87033d5b",
+      "tables": [],
+      "functions": ["notify_project_member_role_change"],
+      "destructive": false,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],

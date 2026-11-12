@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
+import { persistedNoticeKind } from "../../src/lib/persisted-notification-policy.mjs";
 
 const migrations = new URL("../../supabase/migrations/", import.meta.url);
 
@@ -97,6 +98,12 @@ async function createDatabase() {
       "utf8",
     ),
   );
+  await database.exec(
+    await readFile(
+      new URL("20261112190309_kova_project_role_change_notifications.sql", migrations),
+      "utf8",
+    ),
+  );
   return database;
 }
 
@@ -131,6 +138,86 @@ async function activeNotices(database) {
     )
   ).rows;
 }
+
+test("project role changes deliver one owner-bound notice for each committed change", async () => {
+  const database = await createDatabase();
+  try {
+    await seed(database);
+    await database.query(
+      "INSERT INTO public.project_members(project_id,user_id,role) VALUES ($1,$2,'viewer')",
+      [projectId, inviteeId],
+    );
+    const rolePolicyMigration = await readFile(
+      new URL("20260712011732_d735f53a-21fb-4543-8ecb-456c04bade12.sql", migrations),
+      "utf8",
+    );
+    const updatePolicy = rolePolicyMigration.match(
+      /CREATE POLICY "owner can update members"[^;]+;/u,
+    )?.[0];
+    assert.ok(updatePolicy);
+    await database.exec(`
+      GRANT USAGE ON SCHEMA auth TO authenticated;
+      GRANT SELECT ON public.projects TO authenticated;
+      GRANT SELECT, UPDATE ON public.project_members TO authenticated;
+      ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY "fixture member visibility" ON public.project_members FOR SELECT TO authenticated
+        USING (user_id = auth.uid() OR EXISTS (
+          SELECT 1 FROM public.projects WHERE id = project_id AND owner_id = auth.uid()
+        ));
+      ${updatePolicy}
+    `);
+    const change = async (actor, role, rollback = false) => {
+      await setUser(database, actor);
+      if (rollback) await database.exec("BEGIN");
+      await database.exec("SET ROLE authenticated");
+      try {
+        const result = await database.query(
+          "UPDATE public.project_members SET role=$1 WHERE project_id=$2 AND user_id=$3 RETURNING role",
+          [role, projectId, inviteeId],
+        );
+        return result.rows;
+      } finally {
+        if (rollback) await database.exec("ROLLBACK");
+        await database.exec("RESET ROLE");
+      }
+    };
+    const readNotices = async () =>
+      (
+        await database.query(`SELECT owner_id, type, action_url, delivery_state FROM public.app_notifications
+        WHERE type='project_role_change'`)
+      ).rows;
+
+    assert.deepEqual(await change(attackerId, "editor"), []);
+    assert.deepEqual(await readNotices(), []);
+    assert.deepEqual(await change(ownerId, "editor"), [{ role: "editor" }]);
+    assert.deepEqual(await change(ownerId, "editor"), [{ role: "editor" }]);
+    const notices = await readNotices();
+    assert.deepEqual(notices, [
+      {
+        owner_id: inviteeId,
+        type: "project_role_change",
+        action_url: `/projects/${projectId}`,
+        delivery_state: "delivered",
+      },
+    ]);
+    assert.equal(
+      persistedNoticeKind({ type: notices[0].type, readAt: null }),
+      "permission_changed",
+    );
+
+    assert.deepEqual(await change(ownerId, "viewer", true), [{ role: "viewer" }]);
+    assert.equal((await readNotices()).length, 1, "Rolled back role writes cannot leave a notice");
+    await database.query(
+      `INSERT INTO public.notification_preferences(user_id,in_app_enabled,categories)
+        VALUES ($1,true,'{"projects":false}')`,
+      [inviteeId],
+    );
+    assert.deepEqual(await change(ownerId, "viewer"), [{ role: "viewer" }]);
+    assert.equal((await readNotices()).length, 1, "Projects opt-out suppresses the notice");
+  } finally {
+    await database.close();
+  }
+});
 
 test("invite RPCs are recipient-bound, atomic, and idempotent", async () => {
   const database = await createDatabase();
