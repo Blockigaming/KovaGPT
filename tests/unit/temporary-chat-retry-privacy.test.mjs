@@ -49,6 +49,7 @@ function fixture() {
     retryActionEpochRef: { current: new Map([["chat", 0]]) },
     retryActionEpoch: 0,
     setConversations: () => calls.push("edited"),
+    publishKovaNotice: (notice) => calls.push(notice.id),
     window: {
       setTimeout: (callback) => {
         timers.push(callback);
@@ -97,7 +98,7 @@ test("a current Retry action still executes and conversion advances its generati
   const f = fixture();
   f.context.retry();
   f.timers[0]();
-  assert.deepEqual(f.calls, ["sent"]);
+  assert.deepEqual(f.calls, ["retrying", "sent"]);
   const conversion = source.slice(
     source.indexOf("const saveTemporaryChat"),
     source.indexOf("const openCommandPalette"),

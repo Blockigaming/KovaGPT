@@ -301,6 +301,7 @@ const surfaces = {
     "image_started",
     "image_generating",
     "image_delayed",
+    "retrying",
     "file_processing",
     "task_started",
     "research_started",

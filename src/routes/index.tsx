@@ -2498,6 +2498,7 @@ function KovaGPT() {
                       retryTimerRef.current = window.setTimeout(() => {
                         if (!isCurrentRetryScope() || activeIdRef.current !== nextConvId) return;
                         retryTimerRef.current = null;
+                        publishKovaNotice({ id: "retrying", title: "Retrying response" });
                         send(text, atts, retryTool, 0, nextConvId, priorMessages, userMsg.id);
                       }, 100);
                     },

@@ -740,11 +740,13 @@ test("transient failure keeps partial output and a newer draft until one explici
   assert.equal(f.requests.length, 1, "clicking Retry waits for its guarded dispatch");
   assert.equal(f.timers.length, 1, "the toast action is single-use");
   assert.equal(f.delays[0], 100);
+  assert.ok(!f.notices.includes("retrying"));
   assert.equal(f.context.conversations[0].messages, failedTurn);
   f.timers[0]();
   await settle();
   assert.equal(f.context.requestNotice, null);
   assert.equal(f.requests.length, 2);
+  assert.equal(f.notices.filter((id) => id === "retrying").length, 1);
   assert.equal(f.requests[1].args.headers["Idempotency-Key"], firstRequestId);
   assert.deepEqual(JSON.parse(f.requests[1].args.body), originalPayload);
   const resentTurn = f.context.conversations[0].messages;

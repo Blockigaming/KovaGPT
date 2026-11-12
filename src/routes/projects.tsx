@@ -893,6 +893,11 @@ function ProjectsPage() {
       await fnDecline({ data: { invite_id: id } });
       if (currentUserKeyRef.current !== operationUserKey) return;
       setInvites((prev) => prev.filter((i) => i.invite_id !== id));
+      publishKovaNotice({
+        id: "invitation_declined",
+        title: "Invitation declined",
+        confirmed: true,
+      });
     } catch (e) {
       if (currentUserKeyRef.current !== operationUserKey) return;
       toast.error(e instanceof Error ? e.message : "Failed");
