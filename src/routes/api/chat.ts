@@ -37,7 +37,7 @@ import {
   imageModel,
   missingAiProviderResponse,
   prepareChatResponsesRequest,
-  providerErrorFromResponse,
+  chatProviderErrorFromResponse,
   providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
@@ -2571,7 +2571,9 @@ export const Route = createFileRoute("/api/chat")({
 
             if (!upstream.ok) {
               freeConnectorBudget?.rejectFinal(upstream.status);
-              const providerError = mapProviderError(await providerErrorFromResponse(upstream));
+              const providerError = mapProviderError(
+                await chatProviderErrorFromResponse(upstream, request.signal),
+              );
               const errMsg = providerError.message;
               const status = providerError.status;
               await finalizeGeneration({

@@ -1,7 +1,86 @@
-import type { MouseEventHandler } from "react";
+import { useEffect, useState, type MouseEventHandler } from "react";
 import { SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import type { NextPrompt } from "@/lib/chat-send-next";
+import { fetchForPrincipal } from "@/lib/chat-summary-snapshot.mjs";
+
+export function ContinueChatPanel({
+  ownerId,
+  chatId,
+  canUseMemory,
+  draftProtected,
+  onContinue,
+  onDismiss,
+}: {
+  ownerId: string;
+  chatId: string;
+  canUseMemory: boolean;
+  draftProtected: boolean;
+  onContinue: (draft: string) => boolean;
+  onDismiss: () => void;
+}) {
+  const [summary, setSummary] = useState("");
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    setSummary("");
+    setBlocked(false);
+    if (!canUseMemory) return;
+    const request = new AbortController();
+    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(5000)]);
+    void (async () => {
+      try {
+        const response = await fetchForPrincipal(
+          ownerId,
+          `/api/memory?continuationChatId=${encodeURIComponent(chatId)}`,
+          { signal },
+        );
+        if (!response.ok || signal.aborted) return;
+        const result = await response.json();
+        if (!signal.aborted && typeof result?.summary === "string")
+          setSummary(result.summary.trim().slice(0, 2000));
+      } catch {
+        // A saved summary is optional. The conversation limit still stands.
+      }
+    })();
+    return () => request.abort();
+  }, [ownerId, chatId, canUseMemory]);
+
+  const available = canUseMemory && Boolean(summary);
+  return (
+    <section
+      aria-label="Conversation limit"
+      className="mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm"
+      data-kova-notice-id={available ? "conversation_continue" : "conversation_full"}
+    >
+      <p role="status" className="grow">
+        {available
+          ? "This conversation is full. Continue in a new chat with an editable summary."
+          : "This conversation is full. Start a new chat to continue."}
+      </p>
+      {available && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={draftProtected}
+          onClick={() => {
+            setBlocked(!onContinue(`Continue from this saved conversation summary:\n\n${summary}`));
+          }}
+        >
+          Continue with summary
+        </Button>
+      )}
+      <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
+        Dismiss
+      </Button>
+      {available && (blocked || draftProtected) && (
+        <p className="basis-full text-xs text-muted-foreground">
+          Keep or clear your drafts before continuing.
+        </p>
+      )}
+    </section>
+  );
+}
 
 export function ChatRequestStatus({
   signedIn,

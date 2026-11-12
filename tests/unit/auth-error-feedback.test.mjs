@@ -61,6 +61,8 @@ function fixture(options = {}) {
         useSearch: () => search,
         useNavigate: () => (destination) => navigations.push(plain(destination)),
       },
+      "@/components/auth/GoogleIcon": { GoogleIcon: "google-icon" },
+      "@/lib/google-oauth-browser": { isOwnedGoogleConfigured: () => false },
       "@/components/NovaLogo": { NovaLogo: "logo" },
       "@/integrations/supabase/config": {
         SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.invalid" },

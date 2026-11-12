@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Check, Link2, Loader2, Trash2 } from "lucide-react";
+import { Copy, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   Dialog,
@@ -34,18 +35,17 @@ export function ShareChatDialog({
   current.current = scope;
   const operation = useRef<AbortController | null>(null);
   const [readyScope, setReadyScope] = useState("");
+  const [startedScope, setStartedScope] = useState("");
   const [preview, setPreview] = useState<PublicChatSnapshot | null>(null);
   const [link, setLink] = useState<{ id: string; url: string; expiresAt: string } | null>(null);
-  const [busy, setBusy] = useState(false),
-    [copied, setCopied] = useState(false),
-    [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   useEffect(() => {
     setReadyScope(scope);
     operation.current?.abort();
     setPreview(null);
     setLink(null);
     setBusy(false);
-    setCopied(false);
     setError("");
     if (open && owner && conversation) {
       try {
@@ -58,6 +58,21 @@ export function ShareChatDialog({
     // A snapshot stays fixed while this dialog is open, even if new messages arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
+  useEffect(() => {
+    if (!open || !isLoaded || readyScope !== scope || startedScope === scope) return;
+    if (!owner || !conversation || !preview) {
+      if (error || !owner || !conversation) {
+        toast.error(error || (owner ? "This chat could not be found." : "Sign in to share chats."));
+        onOpenChange(false);
+      }
+      return;
+    }
+    setStartedScope(scope);
+    void copyLink();
+    // Only one automatic attempt per share action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isLoaded, readyScope, scope, startedScope, owner, conversation, preview, error]);
+
   async function copyLink() {
     if (!preview || !owner || busy || readyScope !== scope) return;
     const expected = scope,
@@ -66,6 +81,7 @@ export function ShareChatDialog({
     operation.current = controller;
     setBusy(true);
     setError("");
+    let createdLink = link;
     try {
       let created = link;
       if (!created) {
@@ -89,22 +105,27 @@ export function ShareChatDialog({
           expiresAt: data.expiresAt,
         };
         if (current.current !== expected || controller.signal.aborted) return;
+        createdLink = created;
         setLink(created);
       }
       if (current.current !== expected || controller.signal.aborted) return;
       await navigator.clipboard.writeText(created.url);
       if (current.current !== expected || controller.signal.aborted) return;
-      setCopied(true);
       publishKovaNotice({
         id: "sharing_link_copied",
-        title: "Public view-only link copied",
+        title: "Public link copied",
         confirmed: true,
       });
+      onOpenChange(false);
     } catch (error) {
-      if (current.current === expected && !controller.signal.aborted)
-        setError(
-          error instanceof Error ? error.message : "Copy failed. Select and copy the link below.",
-        );
+      if (current.current === expected && !controller.signal.aborted) {
+        if (createdLink) {
+          setError("Copy failed. Select the link below to copy it manually.");
+        } else {
+          toast.error(error instanceof Error ? error.message : "The link could not be created.");
+          onOpenChange(false);
+        }
+      }
     } finally {
       if (
         current.current === expected &&
@@ -131,8 +152,8 @@ export function ShareChatDialog({
       if (!response.ok) throw new Error("This link could not be revoked. Try again.");
       if (current.current !== expected || controller.signal.aborted) return;
       setLink(null);
-      setCopied(false);
       publishKovaNotice({ id: "sharing_disabled", title: "Share link removed", confirmed: true });
+      onOpenChange(false);
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted)
         setError(error instanceof Error ? error.message : "Try again.");
@@ -147,36 +168,17 @@ export function ShareChatDialog({
   }
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        open={open && Boolean(link && error && readyScope === scope)}
+        onOpenChange={onOpenChange}
+      >
         <DialogContent className="kova-share-dialog">
           <DialogHeader>
-            <div className="kova-share-symbol">
-              <Link2 aria-hidden="true" />
-            </div>
-            <DialogTitle>
-              {copied ? "Public view-only link copied" : "Share this conversation"}
-            </DialogTitle>
+            <DialogTitle>Copy public link</DialogTitle>
             <DialogDescription>
-              Anyone with the link can read this text snapshot of the active branch. It expires
-              after 30 days. Other branches, files, private tool details, and future messages are
-              excluded.
+              Anyone with the link can read this chat snapshot for 30 days.
             </DialogDescription>
           </DialogHeader>
-          {preview && readyScope === scope ? (
-            <div className="kova-share-preview">
-              <strong>{preview.title}</strong>
-              <span>{preview.snapshot.messages.length} messages</span>
-              <details>
-                <summary>Review what will be shared</summary>
-                {preview.snapshot.messages.map((m, i) => (
-                  <article key={i}>
-                    <small>{m.role === "user" ? "You" : "KovaGPT"}</small>
-                    <p>{m.content}</p>
-                  </article>
-                ))}
-              </details>
-            </div>
-          ) : null}
           {link && readyScope === scope ? (
             <label className="kova-share-link">
               Share link
@@ -201,12 +203,10 @@ export function ShareChatDialog({
           >
             {busy ? (
               <Loader2 aria-hidden className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-            ) : copied ? (
-              <Check aria-hidden />
             ) : (
               <Copy aria-hidden />
             )}
-            {copied ? "Copy link again" : "Create & copy link"}
+            Copy link
           </Button>
           <div className="kova-share-secondary">
             {link ? (

@@ -383,6 +383,10 @@ export function ChatHistorySyncStatus() {
   if (!visible) return null;
   const labelPhase =
     state.migration > 0 && !critical ? "local" : (state.recoveryPhase ?? state.phase);
+  const manualRetryRequired =
+    state.recoveryPhase === "device_error" ||
+    state.recoveryPhase === "blocked" ||
+    state.recoveryPhase === "auth_required";
   async function act(action: () => Promise<void> | undefined) {
     setBusy(true);
     try {
@@ -394,6 +398,39 @@ export function ChatHistorySyncStatus() {
     }
   }
   const controller = controls.get(user.id);
+  // A tall migration banner can hide chat images behind the fixed composer in
+  // short landscape viewports. Keep explicit consent to migrate, but present
+  // it as a compact, borderless action row rather than an intrusive panel.
+  if (state.migration > 0 && !critical) {
+    return (
+      <div
+        className="mx-auto my-1 flex min-h-11 w-[calc(100%-1.5rem)] max-w-3xl min-w-0 items-center gap-2 px-1 text-sm text-muted-foreground"
+        aria-label="Chat history synchronization"
+        aria-busy={working || undefined}
+      >
+        <p role="status" aria-live="polite" className="min-w-0 flex-1 truncate text-foreground/80">
+          {labels.local}
+        </p>
+        <span className="hidden shrink-0 text-xs sm:inline" aria-hidden="true">
+          {state.migration} device chat{state.migration === 1 ? "" : "s"}
+        </span>
+        <Button
+          data-ui-reference="chatgpt.chat-history.control"
+          type="button"
+          variant="ghost"
+          aria-label="Save existing chats to my account"
+          className="min-h-11 shrink-0 rounded-full px-3 text-xs font-medium text-foreground hover:bg-accent"
+          disabled={working || !controller}
+          onClick={() => void act(() => controller?.migrate())}
+        >
+          <span className="hidden sm:inline">Save existing chats to my account</span>
+          <span className="sm:hidden" aria-hidden="true">
+            Save chats
+          </span>
+        </Button>
+      </div>
+    );
+  }
   return (
     <div
       className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
@@ -420,7 +457,7 @@ export function ChatHistorySyncStatus() {
           </Button>
         </div>
       )}
-      {state.recoveryPhase && critical && (
+      {manualRetryRequired && (
         <Button
           data-ui-reference="chatgpt.chat-history.control"
           variant="outline"

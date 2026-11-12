@@ -5,7 +5,13 @@ import { createRequire } from "node:module";
 import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
-import { consumeChatSse, chatResponseError } from "../../src/lib/chat-sse-client.mjs";
+import {
+  consumeChatSse,
+  chatResponseError,
+  chatFailurePresentation,
+  publishRequestedChatTool,
+} from "../../src/lib/chat-sse-client.mjs";
+import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
 import { withResponsePresentation } from "../../src/lib/spec400-response-preferences.mjs";
 import { HOSTED_MODEL_MAP } from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 import {
@@ -28,6 +34,7 @@ const mocks = {
     "getCallerTier",
     "assertFeatureEnabled",
     "enforceQuota",
+    "dailyFeatureLimit",
   ],
   "@/lib/account-identity.server.mjs": ["readAccountIdentity"],
   "@/integrations/connected-tools.server": ["getConnectedToolContext", "runConnectedTool"],
@@ -156,6 +163,9 @@ function fixture({
       getCallerTier: async () => (connectedModel ? "pro" : "free"),
       assertFeatureEnabled: noop,
       enforceQuota: noop,
+      dailyFeatureLimit: () => {
+        throw new Error("Unexpected daily feature limit");
+      },
     },
     "@/lib/account-identity.server.mjs": { readAccountIdentity: async () => null },
     "@/integrations/connected-tools.server": {
@@ -354,6 +364,11 @@ function fixture({
       providerSignal = init.signal;
       if (mode === "provider-error")
         return Response.json({ error: "private upstream detail" }, { status: 429 });
+      if (mode === "context-limit")
+        return Response.json(
+          { error: { code: "context_length_exceeded", message: "private upstream detail" } },
+          { status: 400 },
+        );
       if (mode === "headers-timeout") return new Promise(() => {});
       return new Response(
         new ReadableStream({
@@ -603,7 +618,8 @@ function composer(f) {
     announcement = "",
     httpCalls = 0;
   const retryTimers = [],
-    errors = [];
+    errors = [],
+    requestNotices = [];
   const ref = (current) => ({ current });
   const no = () => {};
   const context = {
@@ -646,7 +662,7 @@ function composer(f) {
     updateQuotaRejectedDrafts: (value) => {
       context.quotaRejectedDraftsRef.current = value;
     },
-    updateRequestNotice: no,
+    updateRequestNotice: (notice) => requestNotices.push(notice),
     activeId: f.chatId,
     conversations: [],
     editingMessage: null,
@@ -701,6 +717,10 @@ function composer(f) {
     USER_STOP_REASON: "kova_user_stopped_generation",
     consumeChatSse,
     chatResponseError,
+    chatFailurePresentation,
+    publishRequestedChatTool,
+    chatFailureNoticeId,
+    publishKovaNotice: no,
     withResponsePresentation,
     AbortController,
     DOMException,
@@ -711,7 +731,8 @@ function composer(f) {
       return {
         withResponsePresentation,
         createChatHistoryPayload: async (messages) => ({ messages }),
-        chatRequestProfile: () => ({}),
+        chatUserProfile: (_settings, _clean, requestedWebSearch) =>
+          requestedWebSearch === undefined ? {} : { webSearch: requestedWebSearch },
         fetchForPrincipal: async (owner, url, init) => {
           assert.equal(owner, ownerId);
           assert.equal(url, "/api/chat");
@@ -732,6 +753,7 @@ function composer(f) {
     context,
     send: () => context.composerSend(f.prompt, []),
     errors,
+    requestNotices,
     retryTimers,
     get items() {
       return items;
@@ -753,6 +775,25 @@ const waitForPartialOutput = (ui) =>
     () => ui.streaming && ui.items[0]?.messages[1]?.content === "Visible ",
     "the composer must expose partial output before upstream completion",
   );
+
+test("provider context exhaustion offers new-chat recovery without retry or private provider copy", async () => {
+  const f = fixture({ mode: "context-limit" });
+  const response = await f.post();
+  assert.equal(response.status, 400);
+  const error = await chatResponseError(response);
+  assert.equal(error.code, "CONTEXT_LIMIT");
+  assert.equal(error.retryable, false);
+  assert.doesNotMatch(error.message, /private upstream/);
+
+  const ui = composer(fixture({ mode: "context-limit" }));
+  await ui.send();
+  assert.equal(ui.requestNotices.at(-1).kind, "context-limit");
+  assert.equal(ui.requestNotices.at(-1).scope.conversationId, ui.context.activeIdRef.current);
+  assert.equal(ui.httpCalls, 1);
+  assert.equal(ui.streaming, false);
+  assert.equal(ui.retryTimers.length, 0);
+  assert.equal(ui.errors.length, 0);
+});
 
 test("actual composer callback → route → adapter → visible completion clears loading", async () => {
   const f = fixture(),

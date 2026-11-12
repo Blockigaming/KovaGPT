@@ -83,6 +83,7 @@ import { Route as ApiDocumentExportRouteImport } from './routes/api/document-exp
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiKovasRouteImport } from './routes/api/kovas'
+import { Route as ApiLinkPreviewRouteImport } from './routes/api/link-preview'
 import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiOrganizationsRouteImport } from './routes/api/organizations'
@@ -605,6 +606,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
 const ApiKovasRoute = ApiKovasRouteImport.update({
   id: '/api/kovas',
   path: '/api/kovas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLinkPreviewRoute = ApiLinkPreviewRouteImport.update({
+  id: '/api/link-preview',
+  path: '/api/link-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLivezRoute = ApiLivezRouteImport.update({
@@ -1466,6 +1472,7 @@ export interface FileRoutesByFullPath {
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/kovas': typeof ApiKovasRouteWithChildren
+  '/api/link-preview': typeof ApiLinkPreviewRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
@@ -1692,6 +1699,7 @@ export interface FileRoutesByTo {
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/kovas': typeof ApiKovasRouteWithChildren
+  '/api/link-preview': typeof ApiLinkPreviewRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
@@ -1919,6 +1927,7 @@ export interface FileRoutesById {
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/kovas': typeof ApiKovasRouteWithChildren
+  '/api/link-preview': typeof ApiLinkPreviewRoute
   '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/organizations': typeof ApiOrganizationsRouteWithChildren
@@ -2147,6 +2156,7 @@ export interface FileRouteTypes {
     | '/api/generate-image'
     | '/api/health'
     | '/api/kovas'
+    | '/api/link-preview'
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
@@ -2373,6 +2383,7 @@ export interface FileRouteTypes {
     | '/api/generate-image'
     | '/api/health'
     | '/api/kovas'
+    | '/api/link-preview'
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
@@ -2599,6 +2610,7 @@ export interface FileRouteTypes {
     | '/api/generate-image'
     | '/api/health'
     | '/api/kovas'
+    | '/api/link-preview'
     | '/api/livez'
     | '/api/memory'
     | '/api/organizations'
@@ -2826,6 +2838,7 @@ export interface RootRouteChildren {
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiKovasRoute: typeof ApiKovasRouteWithChildren
+  ApiLinkPreviewRoute: typeof ApiLinkPreviewRoute
   ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiOrganizationsRoute: typeof ApiOrganizationsRouteWithChildren
@@ -3484,6 +3497,13 @@ declare module '@tanstack/react-router' {
       path: '/api/kovas'
       fullPath: '/api/kovas'
       preLoaderRoute: typeof ApiKovasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/link-preview': {
+      id: '/api/link-preview'
+      path: '/api/link-preview'
+      fullPath: '/api/link-preview'
+      preLoaderRoute: typeof ApiLinkPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/livez': {
@@ -4736,6 +4756,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiKovasRoute: ApiKovasRouteWithChildren,
+  ApiLinkPreviewRoute: ApiLinkPreviewRoute,
   ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiOrganizationsRoute: ApiOrganizationsRouteWithChildren,

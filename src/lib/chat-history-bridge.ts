@@ -42,6 +42,13 @@ export function canSendChatHistory(ownerId: string | null) {
 export function markChatHistoryDirty(ownerId: string | null) {
   if (ownerId) views.get(ownerId)?.markDirty();
 }
+export function subscribeChatHistoryOwner(ownerId: string, notify: () => void) {
+  const changed = (event: Event) => {
+    if ((event as CustomEvent).detail?.ownerId === ownerId) notify();
+  };
+  window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
+  return () => window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
+}
 export function notifyChatHistoryChanged(ownerId: string, source: "local" | "cloud") {
   if (source === "cloud") invalidateChatHistorySnapshot(ownerId);
   window.dispatchEvent(

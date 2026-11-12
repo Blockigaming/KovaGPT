@@ -9,6 +9,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
+import { useTier } from "@/hooks/useTier";
 import { GOOGLE_CONNECT_IDS, type ConnectorItem } from "@/lib/connectors-catalog";
 import { masterConnectorSearchText } from "@/lib/connector-master-list.mjs";
 import {
@@ -821,6 +822,7 @@ function GoogleDisconnectSchedules({
 
 function AppsPage() {
   const { isLoaded, isSignedIn, user } = useUser();
+  const { tier, status: tierStatus } = useTier();
   const userKey = user?.id ?? null;
   const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
@@ -1531,6 +1533,13 @@ function AppsPage() {
                     </p>
                   )}
                 </section>
+                {["gmail", "google-docs"].includes(visibleSelectedApp.id) &&
+                  tierStatus === "ready" &&
+                  tier === "free" && (
+                    <p role="status" className="spec400-plugin-notice">
+                      {visibleSelectedApp.label} requires Kova Plus or Pro.
+                    </p>
+                  )}
                 {!isSignedIn ? (
                   <section className="spec400-plugin-detail-section">
                     <h3>Account</h3>
@@ -1623,7 +1632,12 @@ function AppsPage() {
                               </Button>
                               <Button
                                 variant="outline"
-                                disabled={googleBusy || visibleGoogleLoading}
+                                disabled={
+                                  googleBusy ||
+                                  visibleGoogleLoading ||
+                                  (visibleSelectedApp.id === "gmail" &&
+                                    (tierStatus !== "ready" || tier === "free"))
+                                }
                                 onClick={() =>
                                   void connectGoogle(account.id, visibleSelectedApp.id)
                                 }
@@ -1666,6 +1680,8 @@ function AppsPage() {
                         disabled={
                           googleBusy ||
                           visibleGoogleLoading ||
+                          (visibleSelectedApp.id === "gmail" &&
+                            (tierStatus !== "ready" || tier === "free")) ||
                           visibleGoogleStatus?.state === "temporarily_unavailable"
                         }
                         onClick={() => void handleConnect(visibleSelectedApp)}

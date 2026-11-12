@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { safePersistedNoticeActionUrl } from "@/lib/persisted-notification-policy.mjs";
 
 export type CenterNotification = {
   id: string;
@@ -30,32 +31,46 @@ type NotificationRow = {
   created_at: string;
 };
 
-const mutationSchema = z.object({
-  ids: z.array(z.string().uuid()).max(200).optional(),
+const ownerSchema = z.object({ expectedOwnerId: z.string().uuid() });
+const mutationSchema = ownerSchema.extend({
+  ids: z.array(z.string().uuid()).min(1).max(200).optional(),
   source: z.enum(["application", "agent", "all"]).default("all"),
 });
 
+function requireInboxOwner(expectedOwnerId: string, ownerId: string) {
+  if (expectedOwnerId !== ownerId) throw new Error("The notification account changed");
+}
+
+function missingAgentInbox(error: { code?: string } | null) {
+  return error?.code === "42P01" || error?.code === "PGRST205";
+}
+
 export const listNotifications = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<CenterNotification[]> => {
+  .validator((input: unknown) => ownerSchema.parse(input))
+  .handler(async ({ data, context }): Promise<CenterNotification[]> => {
+    requireInboxOwner(data.expectedOwnerId, context.userId);
     const client = context.supabase as unknown as LooseClient;
+    const now = new Date().toISOString();
     const [application, agent] = await Promise.all([
       client
         .from("app_notifications")
         .select("id,type,title,safe_preview,action_url,read_at,created_at")
         .eq("owner_id", context.userId)
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .eq("delivery_state", "delivered")
+        .or(`expires_at.is.null,expires_at.gt.${now}`)
         .order("created_at", { ascending: false })
         .limit(100),
       client
         .from("agent_notifications")
         .select("id,type,title,body,action_url,read_at,created_at")
         .eq("owner_id", context.userId)
-        .gt("expires_at", new Date().toISOString())
+        .gt("expires_at", now)
         .order("created_at", { ascending: false })
         .limit(100),
     ]);
-    if (application.error) throw new Error("Unable to load notifications");
+    if (application.error || (agent.error && !missingAgentInbox(agent.error)))
+      throw new Error("Unable to load notifications");
     // The agent migration can be deployed independently. Do not hide ordinary notifications while
     // an operator is applying it, but never invent agent rows.
     const rows: CenterNotification[] = ((application.data ?? []) as NotificationRow[]).map(
@@ -65,7 +80,7 @@ export const listNotifications = createServerFn({ method: "GET" })
         type: item.type,
         title: item.title,
         preview: item.safe_preview ?? "",
-        actionUrl: item.action_url,
+        actionUrl: safePersistedNoticeActionUrl(item.action_url),
         readAt: item.read_at,
         createdAt: item.created_at,
       }),
@@ -78,7 +93,7 @@ export const listNotifications = createServerFn({ method: "GET" })
           type: item.type,
           title: item.title,
           preview: item.body ?? "",
-          actionUrl: item.action_url,
+          actionUrl: safePersistedNoticeActionUrl(item.action_url),
           readAt: item.read_at,
           createdAt: item.created_at,
         })),
@@ -103,9 +118,14 @@ async function updateTables(
           ? client.from(table).update({ read_at: new Date().toISOString() })
           : client.from(table).delete();
       query = query.eq("owner_id", ownerId);
+      if (table === "app_notifications") query = query.eq("delivery_state", "delivered");
+      if (operation === "read") query = query.is("read_at", null);
       if (input.ids?.length) query = query.in("id", input.ids);
       const { error } = await query;
-      if (error && !String(error.message).includes("agent_notifications"))
+      if (
+        error &&
+        !(input.source === "all" && table === "agent_notifications" && missingAgentInbox(error))
+      )
         throw new Error("Unable to update notifications");
     }),
   );
@@ -115,6 +135,7 @@ export const markNotificationsRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => mutationSchema.parse(input))
   .handler(async ({ data, context }) => {
+    requireInboxOwner(data.expectedOwnerId, context.userId);
     await updateTables(context.supabase as unknown as LooseClient, context.userId, data, "read");
     return { ok: true };
   });
@@ -125,6 +146,7 @@ export const deleteNotifications = createServerFn({ method: "POST" })
     mutationSchema.extend({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    requireInboxOwner(data.expectedOwnerId, context.userId);
     await updateTables(context.supabase as unknown as LooseClient, context.userId, data, "delete");
     return { ok: true };
   });

@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import assert from "node:assert/strict";
@@ -31,6 +32,8 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "@/components/LinkPreviewChip": { LinkPreviewChip: empty },
+  "@/lib/link-preview.mjs": linkPreview,
   "@/components/OpenDesktopAppButton": {
     OpenDesktopAppButton: () =>
       React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
@@ -76,6 +79,8 @@ vm.runInNewContext(output, {
   require(id) {
     if (id === "@/components/KovaNotificationSurface")
       return { publishKovaNotice: (notice) => assert.ok(notice?.id) };
+    if (id === "@/lib/consumer-model-selection.mjs") return { CONSUMER_MODELS: [] };
+    if (id === "@/components/HelpSupportForm") return { HelpSupportForm: empty };
     if (id === "@/lib/document-extraction/pdf-metadata.mjs") return pdfMetadata;
     if (id === "@/components/ComposerPdfPages") return { ComposerPdfPages: empty };
     if (id === "@/lib/composer-local-attachments.mjs") return localAttachments;
@@ -124,7 +129,12 @@ vm.runInNewContext(output, {
     }
     if (id === "@/components/ui/popover") {
       const popover = nativeRequire("@radix-ui/react-popover");
-      return { Popover: popover.Root, PopoverTrigger: popover.Trigger, PopoverContent: empty };
+      return {
+        Popover: popover.Root,
+        PopoverAnchor: empty,
+        PopoverTrigger: popover.Trigger,
+        PopoverContent: empty,
+      };
     }
     if (
       [
@@ -229,7 +239,7 @@ test("spec400 desktop and mobile have the same toolbar and exact placeholder", (
     const html = render({ showAddMenu: true }, signedInAccount, device);
     for (const label of ["Attach", "Expand input", "Send message"])
       assert.ok(controlProps.has(label), label);
-    assert.equal(textareaProps.placeholder, "Ask KovaGPT anything...");
+    assert.equal(textareaProps.placeholder, "Work with KovaGPT");
     assert.match(html, /spec400-composer-toolbar/);
   }
 });

@@ -21,7 +21,7 @@ async function start(page: Parameters<typeof fixture>[0], empty = false) {
 test("requested: topbar, prompt insets and exact attachment actions", async ({ page }, info) => {
   await start(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-  await expect(input).toHaveAttribute("placeholder", "Ask KovaGPT anything...");
+  await expect(input).toHaveAttribute("placeholder", "Work with KovaGPT");
   const composer = page.locator(".spec400-composer");
   const box = (await composer.boundingBox())!;
   const text = (await input.boundingBox())!;
@@ -38,11 +38,21 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   await page.screenshot({ path: info.outputPath("requested-home.png"), animations: "disabled" });
   const menu = await openComposerAddMenu(page);
   const mobile = page.viewportSize()!.width < 1024;
-  await expect(menu.locator(".kova-composer-quick-menu button")).toHaveText(
-    mobile
-      ? ["Camera", "Photos", "Files", "Projects", "Create Image", "Drawing"]
-      : ["Files", "Library", "Projects", "Create Image", "Drawing"],
-  );
+  const buttons = menu.locator(".kova-composer-quick-menu > button");
+  await expect(buttons).toHaveCount(mobile ? 8 : 6);
+  for (const [index, name] of [
+    "Add photos & files",
+    "Add from Library",
+    "Create an image",
+    "Web search",
+    "Work in a project",
+    "Drawing",
+  ].entries())
+    await expect(buttons.nth(index)).toContainText(name);
+  await expect(menu).toHaveCSS("border-top-width", "0px");
+  await expect
+    .poll(async () => Math.abs((await menu.boundingBox())!.width - box.width))
+    .toBeLessThan(3);
   await page.screenshot({ path: info.outputPath("requested-menu.png"), animations: "disabled" });
 });
 
@@ -198,4 +208,25 @@ test("requested: desktop app control offers an installed-app link and honest ins
     "/download",
   );
   await expect(dialog).toContainText("when released");
+});
+
+test("slash commands are selectable by keyboard and show the account model menu", async ({
+  page,
+}) => {
+  await start(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await input.fill("/");
+  const commands = page.getByRole("group", { name: "Chat commands", exact: true });
+  await expect(commands.getByRole("button")).toHaveCount(5);
+  await input.fill("/model");
+  await input.press("Enter");
+  const models = page.getByRole("group", { name: "Choose Kova model", exact: true });
+  await expect(models.getByRole("button")).toHaveText(["KovaGPT Chat", "KovaGPT Thinking 4.2"]);
+  await models.getByRole("button", { name: "KovaGPT Thinking 4.2", exact: true }).click();
+  await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
+  await input.fill("/study");
+  await input.press("Enter");
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("button", { name: /remove study/i })).toBeVisible();
 });

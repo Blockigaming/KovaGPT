@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 import {
   persistedNoticeKind,
   readSessionSeen,
@@ -110,5 +113,83 @@ test("durable notification playback deduplicates across reloads without changing
       owner,
     ).size,
     0,
+  );
+});
+
+test("the inbox reads and mutates only delivered notifications for the requested account", async () => {
+  const owner = "650e8400-e29b-41d4-a716-446655440001";
+  const other = "750e8400-e29b-41d4-a716-446655440002";
+  const requests = [];
+  const client = createClient("https://inbox.test", "fixture-only", {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: {
+      fetch: async (input, init) => {
+        const url = new URL(input);
+        const table = url.pathname.split("/").at(-1);
+        assert.equal(url.searchParams.get("owner_id"), `eq.${owner}`);
+        requests.push({ table, method: init.method });
+        if (table === "agent_notifications") {
+          return Response.json({ code: "PGRST205" }, { status: 404 });
+        }
+        assert.equal(table, "app_notifications");
+        assert.equal(url.searchParams.get("delivery_state"), "eq.delivered");
+        if (init.method === "GET") {
+          assert.match(url.searchParams.get("or"), /expires_at\.is\.null,expires_at\.gt\./);
+          return Response.json([
+            {
+              id,
+              type: "task_result",
+              title: "Task completed",
+              safe_preview: "Saved",
+              action_url: "//other.test",
+              read_at: null,
+              created_at: "2026-11-12T00:00:00Z",
+            },
+          ]);
+        }
+        assert.equal(url.searchParams.get("id"), `in.(${id})`);
+        if (init.method === "PATCH") assert.equal(url.searchParams.get("read_at"), "is.null");
+        return new Response(null, { status: 204 });
+      },
+    },
+  });
+  const inbox = loadUiModule("src/lib/notification-center.functions.ts", {
+    "@tanstack/react-start": {
+      createServerFn() {
+        let validate;
+        const builder = {
+          middleware: () => builder,
+          validator(fn) {
+            validate = fn;
+            return builder;
+          },
+          handler: (fn) => async (data) =>
+            fn({ context: { userId: owner, supabase: client }, data: validate(data) }),
+        };
+        return builder;
+      },
+    },
+    zod: { z },
+    "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: {} },
+    "@/lib/persisted-notification-policy.mjs": { safePersistedNoticeActionUrl },
+  });
+
+  await assert.rejects(inbox.listNotifications({ expectedOwnerId: other }), /account changed/);
+  await assert.rejects(
+    inbox.markNotificationsRead({ expectedOwnerId: other, ids: [id], source: "application" }),
+    /account changed/,
+  );
+  await assert.rejects(inbox.markNotificationsRead({ expectedOwnerId: owner, ids: [] }));
+  assert.equal(requests.length, 0);
+  const items = await inbox.listNotifications({ expectedOwnerId: owner });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].id, id);
+  assert.equal(items[0].actionUrl, null);
+  const mutation = { expectedOwnerId: owner, ids: [id], source: "application" };
+  await inbox.markNotificationsRead(mutation);
+  await inbox.deleteNotifications(mutation);
+  assert.deepEqual(
+    requests.filter(({ table }) => table === "app_notifications").map(({ method }) => method),
+    ["GET", "PATCH", "DELETE"],
   );
 });

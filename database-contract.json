@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 222,
+  "migrationCount": 224,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -598,6 +598,7 @@
     "guard_organization_last_owner",
     "guard_organization_owner_auth_deletion",
     "guard_public_chat_share",
+    "guard_public_chat_share",
     "guard_session_legacy_principal",
     "guard_team_billing_finalization",
     "guard_verified_upstream_price",
@@ -1045,6 +1046,7 @@
     "web_push_account_current",
     "web_push_identity_current",
     "web_push_identity_current",
+    "web_push_rpc",
     "web_push_rpc",
     "work_sync_payload_depth_allowed",
     "work_sync_payload_depth_allowed",
@@ -3963,5 +3965,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "3ac54219138ef5536e6c54ce7ab53142252795c864def7e8fb8c3e7d54e7e47a"
+  "sha256": "0d48589567dfc86a2f63de729a5b2815cb63542373cd8e1268582880822bb0d8"
 }

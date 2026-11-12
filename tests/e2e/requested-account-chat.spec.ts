@@ -163,12 +163,8 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   await page.screenshot({ path: info.outputPath("chat-activity.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await header.getByRole("button", { name: "Share chat", exact: true }).click();
-  const share = page.getByRole("dialog", { name: "Share this conversation", exact: true });
-  await expect(share).toBeVisible();
-  expect(shares).toHaveLength(0);
-  await share.getByRole("button", { name: "Create & copy link", exact: true }).click();
-  const copied = page.getByRole("dialog", { name: "Public view-only link copied", exact: true });
-  await expect(copied).toBeVisible();
+  await expect(page.getByText("Public link copied", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Copy public link" })).toHaveCount(0);
   expect(shares).toHaveLength(1);
   expect(JSON.stringify(shares[0])).not.toContain("Actual input");
   await page.screenshot({ path: info.outputPath("chat-share.png"), animations: "disabled" });

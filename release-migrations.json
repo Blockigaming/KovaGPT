@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 222,
-  "latest": "20261112031000_kova_project_invitation_notifications.sql",
+  "count": 224,
+  "latest": "20261112054900_kova_project_member_push_preferences.sql",
   "migrations": [
     {
       "order": 1,
@@ -4682,6 +4682,20 @@
     },
     {
       "order": 222,
+      "filename": "20261112023605_kova_public_chat_share_full_snapshots.sql",
+      "timestamp": "20261112023605",
+      "sha256": "d19e7c4437aae02ca0141ed0be92727c37d9d7d56cc8bf3c4499089298c4773f",
+      "tables": [],
+      "functions": ["guard_public_chat_share"],
+      "destructive": true,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 223,
       "filename": "20261112031000_kova_project_invitation_notifications.sql",
       "timestamp": "20261112031000",
       "sha256": "048356ad0c4d815abca1e170e3d2c039fa3e1a81e7db0d64f0cc067ba4e87993",
@@ -4693,6 +4707,20 @@
         "decline_project_invite"
       ],
       "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 224,
+      "filename": "20261112054900_kova_project_member_push_preferences.sql",
+      "timestamp": "20261112054900",
+      "sha256": "aabadd0c4887660077be6423ca4b605a6a78a80b1c8e93053402fd83e1f72ea0",
+      "tables": [],
+      "functions": ["web_push_rpc"],
+      "destructive": true,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],

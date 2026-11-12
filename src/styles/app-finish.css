@@ -321,7 +321,7 @@
   gap: 8px;
   padding: 8px 10px;
   min-height: 38px;
-  border-radius: 11px;
+  border-radius: 999px;
   color: var(--muted-foreground);
   font-size: 13px;
   transition:
@@ -332,7 +332,8 @@
   width: 18px;
   height: 18px;
 }
-.kova-composer-tray-action:hover {
+.kova-composer-tray-action:hover,
+.kova-composer-tray-action[aria-expanded="true"] {
   color: var(--foreground);
   background: var(--accent);
 }
@@ -653,12 +654,6 @@
 .kova-share-secondary svg {
   width: 15px;
   height: 15px;
-}
-[data-sonner-toast].kova-share-success {
-  background: #102f27 !important;
-  color: #c7f7df !important;
-  border: 1px solid #235d49 !important;
-  border-radius: 14px;
 }
 .kova-public-share {
   min-height: 100dvh;
@@ -1113,5 +1108,95 @@
 @media (max-width: 1023px) {
   .kova-open-desktop-app {
     display: none;
+  }
+}
+
+/* A focused control must not grow a second outlined box on pointer input.
+   Keyboard-only buttons still retain their existing visible focus treatment. */
+.spec400-chat-input .spec400-composer:focus-within,
+.kova-settings-reference .kova-settings-search:focus-within,
+.kova-sidebar-search-wrap:focus-within,
+.spec400-library-search:focus-within,
+.kova-directory-search:focus-within,
+.spec400-plugin-search:focus-within,
+.kova-chat-input:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--border);
+}
+.kova-app :is(input, textarea, [role="combobox"]):focus:not(:focus-visible),
+.kova-page :is(input, textarea, [role="combobox"]):focus:not(:focus-visible),
+[data-slot="dialog-content"] :is(input, textarea):focus:not(:focus-visible),
+.kova-settings-reference input:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.kova-page [data-slot="input"]:focus-visible,
+.kova-settings-reference input:focus-visible,
+[data-slot="dialog-content"] :is(input, textarea):focus-visible {
+  border-color: var(--input) !important;
+  box-shadow: none !important;
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px;
+}
+.kova-file-filters button[aria-pressed],
+.kova-task-filters [data-slot="tabs-trigger"],
+.spec400-plugin-tabs [data-slot="tabs-trigger"] {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none;
+}
+.kova-file-filters button[aria-pressed="true"],
+.kova-task-filters [data-state="active"],
+.spec400-plugin-tabs [data-state="active"] {
+  color: var(--foreground);
+  background: var(--surface-selected, var(--accent));
+}
+.kova-task-filters {
+  padding: 4px;
+  gap: 4px;
+  border: 0;
+  box-shadow: none;
+}
+.kova-task-filters [data-slot="tabs-trigger"] {
+  padding-inline: 13px;
+}
+@media (forced-colors: active) {
+  .kova-page input:focus-visible,
+  .kova-settings-reference input:focus-visible,
+  .spec400-chat-input .spec400-composer:focus-within {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}
+
+/* Keep selected Tasks labels legible without a border or focus bezel. */
+.kova-task-filters [data-state="active"] {
+  background-color: #252525;
+  color: #fff;
+}
+.dark .kova-task-filters [data-state="active"] {
+  background-color: #ededed;
+  color: #111;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kova-checkout-wave {
+    background: linear-gradient(
+        105deg,
+        var(--foreground) 30%,
+        var(--muted-foreground) 50%,
+        var(--foreground) 70%
+      )
+      100% center / 240% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: kova-checkout-wave 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes kova-checkout-wave {
+  to {
+    background-position: 0 center;
   }
 }

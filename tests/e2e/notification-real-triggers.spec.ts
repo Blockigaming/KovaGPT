@@ -14,7 +14,8 @@ const supportedProjects = new Set(NOTIFICATION_ACCEPTANCE_PROJECTS);
 // evidence, not a claim about production mail, billing, or notification delivery.
 test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name));
-  await fixture(page, "dark", true, testInfo.title.includes("[notice:network_offline]"), "free", {
+  const saved = /\[notice:(network_offline|conversation_full)\]/u.test(testInfo.title);
+  await fixture(page, "dark", true, saved, "free", {
     preserveStorageOnReload: testInfo.title.includes("[contract:did_you_know]"),
   });
   await page.goto("/");
@@ -73,6 +74,61 @@ test("[notice:theme_changed] saving an appearance choice emits its own notice in
 
 const serverFunctionName = (url: string) =>
   functionNames.get(new URL(url).pathname.split("/").at(-1) ?? "") ?? "";
+
+test("[notice:conversation_full][notice:conversation_continue] a saved summary opens as an editable draft after context exhaustion", async ({
+  page,
+}) => {
+  let requestChatId: string | null = null;
+  let sends = 0;
+  let sendSummary!: () => void;
+  const waitForSummary = new Promise<void>((resolve) => {
+    sendSummary = resolve;
+  });
+  await page.route("**/api/chat", (route) => {
+    sends++;
+    requestChatId = route.request().postDataJSON().chatId;
+    return route.fulfill({
+      status: 400,
+      json: {
+        code: "CONTEXT_LIMIT",
+        error: "This conversation reached its context limit.",
+        retryable: false,
+      },
+    });
+  });
+  await page.route(
+    (url) => url.pathname === "/api/memory" && url.searchParams.has("continuationChatId"),
+    async (route) => {
+      const id = new URL(route.request().url()).searchParams.get("continuationChatId");
+      expect(id).toBeTruthy();
+      expect(id).toBe(requestChatId);
+      expect(route.request().headers()["x-kova-owner"]).toBe(owner);
+      await waitForSummary;
+      return route.fulfill({
+        json: { summary: "Keep the original decision to use the blue design." },
+      });
+    },
+  );
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("Continue the design discussion.");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  const recovery = page.getByRole("region", { name: "Conversation limit" });
+  await expect(recovery).toBeVisible();
+  await expect(recovery).toHaveAttribute("data-kova-notice-id", "conversation_full");
+  sendSummary();
+  await expect(recovery).toHaveAttribute("data-kova-notice-id", "conversation_continue");
+  const continueButton = recovery.getByRole("button", { name: "Continue with summary" });
+  await composer.fill("Protect this unsent text.");
+  await expect(continueButton).toBeDisabled();
+  await expect(composer).toHaveValue("Protect this unsent text.");
+  await composer.clear();
+  await continueButton.click();
+  await expect(composer).toHaveValue(
+    "Continue from this saved conversation summary:\n\nKeep the original decision to use the blue design.",
+  );
+  await expect(recovery).toBeHidden();
+  expect(sends).toBe(1);
+});
 
 test("[notice:first_conversation] empty synchronized history offers the first conversation without blocking chat", async ({
   page,

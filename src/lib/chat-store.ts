@@ -22,6 +22,12 @@ export { normalizeResponseSources, type ResponseSource } from "./response-source
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";
+export const TEMPORARY_CHAT_NOTICE_COPY = {
+  clean: "No history or memory. Profile, instructions, personality and connected apps stay off.",
+  personalized: "No history or new memory. Your enabled context and connected apps may be used.",
+  historyWithMemory: "New chats save on this device and may use saved memory.",
+  historyWithoutMemory: "New chats save on this device. Saved memory stays off.",
+} as const;
 export type ConversationWorkflowSkill = {
   installationId: string;
   versionId: string;
@@ -636,6 +642,18 @@ export function loadDraft(userKey: ChatStorageUserKey, conversationId: string | 
   return (
     readWithGuestLegacyMigration(userKey, draftStorageKey(userKey, conversationId), legacyKey) ?? ""
   );
+}
+
+export function emptyNewChatDraftKey(
+  userKey: ChatStorageUserKey,
+  attachmentDrafts: ReadonlyMap<string, readonly unknown[]>,
+) {
+  const key = draftStorageKey(userKey, null);
+  try {
+    return loadDraft(userKey, null) || attachmentDrafts.get(key)?.length ? null : key;
+  } catch {
+    return null;
+  }
 }
 
 export function saveDraft(

@@ -19,6 +19,7 @@ export type ProviderErrorCode =
   | "PROVIDER_RATE_LIMIT"
   | "PROVIDER_UNAVAILABLE"
   | "INVALID_PROVIDER_RESPONSE"
+  | "CONTEXT_LIMIT"
   | "SEARCH_UNAVAILABLE"
   | "RESEARCH_FAILED"
   | "EMBEDDING_UNAVAILABLE";
@@ -309,6 +310,8 @@ export function mapProviderError(error: unknown): KovaProviderError {
       status: number;
       retryable: boolean;
     };
+    if (source.code === "provider_context_limit")
+      return new KovaProviderError("CONTEXT_LIMIT", source.message, { status: 400 });
     const code: ProviderErrorCode =
       source.code === "provider_timeout"
         ? "PROVIDER_TIMEOUT"

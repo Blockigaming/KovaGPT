@@ -1175,7 +1175,7 @@ function ChatMessageInner({
           />
         </Suspense>
       )}
-      {!isUser && message.content.trim() && (
+      {editorOpen && !isUser && message.content.trim() && (
         <Suspense fallback={null}>
           <ArtifactEditor
             open={editorOpen}

@@ -274,6 +274,8 @@ function loginSurface(dialog, options = {}) {
     "@/lib/auth-retry-delay.mjs": { authRetryDelay },
     "@/lib/utils": { cn: (...args) => args.filter(Boolean).join(" ") },
     "@/assets/plugins/github.svg": { default: "github.svg" },
+    "@/components/auth/GoogleIcon": { GoogleIcon: "google-icon" },
+    "@/lib/google-oauth-browser": { isOwnedGoogleConfigured: () => false },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "@/components/auth/ForgotPasswordDialog": { ForgotPasswordDialog: "forgot" },
     "@/components/auth/ClerkSafe": { useUser: () => ({ isLoaded: true }) },

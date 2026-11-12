@@ -240,25 +240,37 @@ function ScheduledTasksPage() {
       setAccessState("signed-out");
       return;
     }
-    let cancel = false;
-    checkEligible({ data: { expectedUserId: userKey! } })
-      .then((r) => {
-        if (cancel || generationRef.current !== generation || principalRef.current !== principal)
-          return;
-        setExecutionAvailable(r.executionAvailable);
-        setDataPrincipal(principal);
-        setDataGeneration(generation);
-        setAccessState(r.eligible ? "eligible" : "unavailable");
-      })
-      .catch(() => {
-        if (!cancel && generationRef.current === generation && principalRef.current === principal) {
+    let cancelled = false;
+    const isCurrent = () =>
+      !cancelled && generationRef.current === generation && principalRef.current === principal;
+    // Session refresh and a transient service outage are not evidence that a
+    // signed-in account lost task access. Two bounded retries avoid a false
+    // denial screen without changing server-side account admission.
+    const verify = async () => {
+      for (let attempt = 0; attempt < 3 && isCurrent(); attempt++) {
+        try {
+          const result = await checkEligible({ data: { expectedUserId: userKey! } });
+          if (!isCurrent()) return;
+          setExecutionAvailable(Boolean(result.executionAvailable));
           setDataPrincipal(principal);
           setDataGeneration(generation);
-          setAccessState("error");
+          setAccessState(result.eligible ? "eligible" : "error");
+          return;
+        } catch {
+          if (!isCurrent()) return;
+          if (attempt < 2)
+            await new Promise<void>((resolve) => window.setTimeout(resolve, 350 * (attempt + 1)));
         }
-      });
+      }
+      if (isCurrent()) {
+        setDataPrincipal(principal);
+        setDataGeneration(generation);
+        setAccessState("error");
+      }
+    };
+    void verify();
     return () => {
-      cancel = true;
+      cancelled = true;
     };
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
@@ -837,8 +849,7 @@ function ScheduledTasksPage() {
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
               <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Tasks are included with every signed-in plan. Access could not be confirmed for this
-                account. Sign in again or try later.
+                Account access could not be verified. Your signed-in session is preserved.
               </p>
               <Link
                 to="/"
@@ -854,14 +865,14 @@ function ScheduledTasksPage() {
               <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
               <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                KovaGPT could not safely verify account access to Scheduled Tasks. Try again to
-                check availability.
+                KovaGPT could not verify Task access for this session. Your account is still signed
+                in. Retry without leaving this page.
               </p>
               <Button
                 variant="outline"
                 type="button"
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center border border-border text-sm font-medium"
+                onClick={() => setLifecycleVersion((version) => version + 1)}
+                className="inline-flex items-center justify-center text-sm font-medium"
               >
                 Try again
               </Button>

@@ -279,7 +279,7 @@ function bridgeFixture({ active = null } = {}) {
       return true;
     },
     loadChatHistoryDevice: async (owner) => ({ ownerId: owner }),
-    CHAT_HISTORY_CHANGED_EVENT: "history-changed",
+    subscribeChatHistoryOwner: () => () => {},
     scheduleDialogFocusReturn() {},
     window: {
       location: { href: "https://local.invalid/" },

@@ -30,28 +30,28 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
   const markRead = useServerFn(markNotificationsRead);
   const ownerRef = useRef(ownerId);
   ownerRef.current = ownerId;
-  const seenRef = useRef(new Set<string>());
-  const requestRef = useRef({ busy: false, lastReadAt: 0 });
 
   useEffect(() => {
-    seenRef.current = readSessionSeen(safeSessionStorage(), ownerId);
-    requestRef.current = { busy: false, lastReadAt: 0 };
     if (!ownerId) return;
+    const seen = readSessionSeen(safeSessionStorage(), ownerId);
     let cancelled = false;
+    let busy = false;
+    let lastReadAt = 0;
+    const isCurrent = () => !cancelled && ownerRef.current === ownerId;
     const check = async () => {
       const now = Date.now();
-      if (requestRef.current.busy || now - requestRef.current.lastReadAt < 15000) return;
-      requestRef.current.busy = true;
-      requestRef.current.lastReadAt = now;
+      if (!isCurrent() || busy || now - lastReadAt < 15000) return;
+      busy = true;
+      lastReadAt = now;
       try {
-        const notices = await list();
-        if (cancelled || ownerRef.current !== ownerId) return;
-        const eligible = pendingPersistedNotices(notices, seenRef.current, 2);
+        const notices = await list({ data: { expectedOwnerId: ownerId } });
+        if (!isCurrent()) return;
+        const eligible = pendingPersistedNotices(notices, seen, 2);
         for (const notice of eligible) {
           const type = persistedNoticeKind(notice);
           if (!type) continue;
-          seenRef.current.add(notice.id);
-          rememberSessionSeen(safeSessionStorage(), ownerId, seenRef.current);
+          seen.add(notice.id);
+          rememberSessionSeen(safeSessionStorage(), ownerId, seen);
           const actionUrl = safePersistedNoticeActionUrl(notice.actionUrl);
           publishKovaNotice({
             id: type,
@@ -63,12 +63,15 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
               ? {
                   primaryLabel: "View",
                   onPrimary: () => {
-                    window.location.assign(actionUrl);
+                    if (isCurrent()) window.location.assign(actionUrl);
                   },
                 }
               : {}),
             onDismiss: () => {
-              void markRead({ data: { ids: [notice.id], source: notice.source } }).catch(() => {});
+              if (!isCurrent()) return;
+              void markRead({
+                data: { ids: [notice.id], source: notice.source, expectedOwnerId: ownerId },
+              }).catch(() => {});
             },
           });
         }
@@ -76,7 +79,7 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
         // Inbox pages preserve errors and retries. Do not interrupt another
         // feature with a background notification-read failure.
       } finally {
-        requestRef.current.busy = false;
+        busy = false;
       }
     };
     void check();

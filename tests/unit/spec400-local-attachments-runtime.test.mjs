@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -119,8 +120,12 @@ function fixture(
     "@/components/KovaNotificationSurface": {
       publishKovaNotice: (notice) => notices.push(notice.id),
     },
+    "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/lib/link-preview.mjs": linkPreview,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
+    "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },
+    "@/components/HelpSupportForm": { HelpSupportForm: "HelpSupportForm" },
     "lucide-react": {},
     "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
     "@tanstack/react-router": {
@@ -171,7 +176,7 @@ function fixture(
     modules[`@/components/${name}`] = { [name]: name };
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
-    ["popover", ["Popover", "PopoverContent", "PopoverTrigger"]],
+    ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],
     ["select", ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"]],
   ])
     modules[`@/components/ui/${module}`] = Object.fromEntries(names.map((name) => [name, name]));

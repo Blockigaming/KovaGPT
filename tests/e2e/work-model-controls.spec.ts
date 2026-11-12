@@ -105,7 +105,7 @@ for (const tier of ["free", "plus", "pro"] as const) {
       panel.getByRole("combobox", { name: "Work model mode", exact: true }),
     ).toContainText("Kova Argon 4.6");
     await expect(panel.getByRole("status")).toContainText(
-      tier === "free" ? "Work requires Plus or Pro." : "A connected runner is available.",
+      tier === "free" ? "Work execution requires Plus or Pro." : "A connected runner is available.",
     );
     const restriction = panel.locator('[data-kova-notice-id="restricted_tool"]');
     if (tier === "free") {

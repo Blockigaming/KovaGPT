@@ -399,9 +399,26 @@ export function WorkExecutionPanel({
               <ol className="mt-2 space-y-2">
                 {(run.specialists ?? []).map((specialist) => (
                   <li key={specialist.id} className="text-sm">
-                    <p>
-                      <span className="font-medium">{specialist.role}</span> ·{" "}
-                      {specialist.status.replaceAll("_", " ")}
+                    <p
+                      role={specialist.role === "research" ? "status" : undefined}
+                      data-kova-notice-id={
+                        specialist.role !== "research"
+                          ? undefined
+                          : specialist.status === "queued"
+                            ? "research_started"
+                            : specialist.status === "running"
+                              ? "research_running"
+                              : specialist.status === "completed" && specialist.result
+                                ? "research_completed"
+                                : specialist.status === "failed"
+                                  ? "research_failed"
+                                  : undefined
+                      }
+                    >
+                      <span className="font-medium">
+                        {specialist.role === "research" ? "Research" : specialist.role}
+                      </span>{" "}
+                      · {specialist.status.replaceAll("_", " ")}
                     </p>
                     <p className="whitespace-pre-wrap">{specialist.objective}</p>
                     {specialist.result && (
@@ -509,7 +526,10 @@ export function WorkExecutionPanel({
             </div>
           ))}
           {run.approval && run.status === "approval_required" && (
-            <div className="rounded-3xl border bg-muted/40 p-5 space-y-3">
+            <div
+              className="rounded-3xl border bg-muted/40 p-5 space-y-3"
+              data-kova-notice-id="task_needs_approval"
+            >
               <p className="font-medium">Kova needs your permission</p>
               <p className="text-sm">{run.approval.action.replaceAll("_", " ")}</p>
               <p className="text-sm">

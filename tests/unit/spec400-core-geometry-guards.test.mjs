@@ -146,7 +146,7 @@ test("phone Projects places description before a single primary/templates action
     /\.spec400-projects \.kova-page-description\s*\{\s*grid-area: 1 \/ 1 \/ 2 \/ -1/,
   );
   assert.match(management, /\.spec400-projects \.kova-project-create\s*\{\s*grid-area: 2 \/ 1/);
-  assert.match(management, /\.spec400-projects \.kova-project-templates\s*\{\s*grid-area: 2 \/ 2/);
+  assert.doesNotMatch(projects, /ProjectTemplatesDialog|kova-project-templates/);
   assert.match(projects, /id="project-sort-explanation" className="sr-only"/);
   assert.match(projects, /aria-describedby="project-sort-explanation"/);
   assert.match(projects, /Last opened \(this device\)/);

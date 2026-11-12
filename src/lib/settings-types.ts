@@ -104,3 +104,28 @@ export const SETTINGS_SECTIONS = {
 export function settingsSectionForTab(tab?: string) {
   return Object.entries(SETTINGS_SECTIONS).find(([, value]) => value === tab)?.[0] ?? "responses";
 }
+
+export function rememberSettingsReturnPath() {
+  try {
+    const { pathname, search, hash } = window.location;
+    if (!pathname.startsWith("/settings/"))
+      window.sessionStorage.setItem("kova-settings-return-to", pathname + search + hash);
+  } catch {
+    // Settings remains reachable when browser storage is unavailable.
+  }
+}
+
+export function chatSettingsUseDialog(
+  hasAttachments: boolean,
+  temporary: boolean,
+  generating: boolean,
+  hasResult: boolean,
+) {
+  return (
+    window.matchMedia("(max-width: 1023px)").matches ||
+    hasAttachments ||
+    temporary ||
+    generating ||
+    hasResult
+  );
+}

@@ -3,6 +3,7 @@ import { AudioLines, Info, Loader2, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { VoiceSessionNotice } from "@/lib/voice-session";
 
 import "./composer-voice.css";
 
@@ -40,6 +41,7 @@ export interface ComposerVoiceDialogViewProps {
   microphoneAvailable?: boolean;
   replyAvailable?: boolean;
   error?: string;
+  sessionNotice?: VoiceSessionNotice;
   voicePicker?: ReactNode;
   conversationModelControl?: ReactNode;
   recordingControl?: ReactNode;
@@ -70,6 +72,7 @@ export function ComposerVoiceDialogView({
   microphoneAvailable = true,
   replyAvailable = true,
   error,
+  sessionNotice,
   voicePicker,
   conversationModelControl,
   recordingControl,
@@ -230,7 +233,17 @@ export function ComposerVoiceDialogView({
                 hasError ? "kova-voice-description kova-voice-error" : "kova-voice-description"
               }
               role={hasError ? "alert" : undefined}
-              data-kova-notice-id={firstVoicePermission ? "first_voice" : undefined}
+              data-kova-notice-id={
+                sessionNotice === "voice_context_full"
+                  ? "voice_context_full"
+                  : sessionNotice === "voice_session_limit"
+                    ? "voice_session_limit"
+                    : sessionNotice === "voice_conflict"
+                      ? "voice_conflict"
+                      : firstVoicePermission
+                        ? "first_voice"
+                        : undefined
+              }
             >
               {description}
             </DialogDescription>

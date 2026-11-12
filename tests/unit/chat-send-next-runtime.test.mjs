@@ -292,7 +292,8 @@ function fixture() {
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
       createChatHistoryPayload: async (messages) => ({ messages }),
-      chatRequestProfile: () => ({}),
+      chatUserProfile: (_settings, _clean, requestedWebSearch) =>
+        requestedWebSearch === undefined ? {} : { webSearch: requestedWebSearch },
       fetchForPrincipal: (principal, url, args) => {
         const d = deferred();
         requests.push({ ...d, principal, url, args });

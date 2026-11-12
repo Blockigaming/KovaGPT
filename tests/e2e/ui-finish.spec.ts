@@ -186,13 +186,14 @@ test("Share copies a real link and reports clipboard errors without false succes
   await page.goto("/");
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Share chat", exact: true }).first().click();
-  const dialog = page.getByRole("dialog", { name: "Share this conversation" });
+  const dialog = page.getByRole("dialog", { name: "Copy public link" });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Create & copy link" }).click();
   await expect(dialog.getByRole("textbox", { name: "Share link" })).toHaveValue(
     new URL(`/share/${token}`, page.url()).href,
   );
-  await expect(dialog.getByRole("alert")).toHaveText("Clipboard blocked");
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Copy failed. Select the link below to copy it manually.",
+  );
   await expect(
     page.getByRole("dialog", { name: "Public view-only link copied", exact: true }),
   ).toHaveCount(0);
@@ -206,10 +207,9 @@ test("Share copies a real link and reports clipboard errors without false succes
       },
     }),
   );
-  await dialog.getByRole("button", { name: "Create & copy link" }).click();
-  const success = page.getByRole("dialog", { name: "Public view-only link copied", exact: true });
-  await expect(success).toBeVisible();
-  await expect(success.getByRole("button", { name: "Copy link again", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Copy link", exact: true }).click();
+  await expect(page.getByText("Public link copied", { exact: true })).toBeVisible();
+  await expect(dialog).toBeHidden();
   expect(
     await page.evaluate(() => (window as Window & { copiedShareLink?: string }).copiedShareLink),
   ).toBe(new URL(`/share/${token}`, page.url()).href);

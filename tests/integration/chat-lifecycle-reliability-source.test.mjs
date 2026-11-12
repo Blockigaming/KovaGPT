@@ -73,11 +73,19 @@ test("explicit search requires a completed bounded search instead of an ordinary
 
 test("inline chat attachments consume upload quota but not durable storage quota", () => {
   const uploadQuota = readFileSync("src/lib/upload-quota.server.mjs", "utf8");
+  const apiAuth = readFileSync("src/lib/api-auth.server.ts", "utf8");
   assert.match(
     chatRoute,
     /preflight\.run\("upload_quota", \(signal\) =>\s*reserveUploads\(\s*auth,\s*currentAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal,/u,
   );
-  assert.match(chatRoute, /if \(!uploadAllowed\)[\s\S]{0,180}status: 429/u);
+  assert.match(chatRoute, /if \(!uploadAllowed\) return dailyFeatureLimit\("uploads"\);/u);
+  const dailyFeatureLimit = apiAuth.slice(
+    apiAuth.indexOf("export function dailyFeatureLimit"),
+    apiAuth.indexOf("export async function requireUser"),
+  );
+  assert.match(dailyFeatureLimit, /kind === "uploads"\s*\? "file_upload_limit"/u);
+  assert.match(dailyFeatureLimit, /category: "quota_exceeded"/u);
+  assert.match(dailyFeatureLimit, /status: 429, headers: \{ "Cache-Control": "no-store" \}/u);
   assert.match(
     uploadQuota,
     /rpc\("try_reserve_daily_uploads", \{\s*_user_id: caller\.userId,\s*_fingerprints: fingerprints,\s*_limit: limit,/u,

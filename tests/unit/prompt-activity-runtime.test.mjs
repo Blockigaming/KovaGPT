@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { loadUiModule, elements, text } from "../helpers/ui-state-harness.mjs";
@@ -20,6 +21,8 @@ const { MessageActivityList } = loadUiModule("src/components/MessageActivityList
   "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
 });
 const { PromptMessage } = loadUiModule("src/components/PromptMessage.tsx", {
+  "@/components/LinkPreviewChip": { LinkPreviewChip: () => null },
+  "@/lib/link-preview.mjs": linkPreview,
   "lucide-react": icons,
   "@/components/ui/context-menu": menus,
 });

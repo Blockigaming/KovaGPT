@@ -31,7 +31,11 @@ import {
   savePendingActive,
   saveConversations,
 } from "@/lib/chat-store";
-import { canSendChatHistory, chatHistorySnapshot } from "@/lib/chat-history-bridge";
+import {
+  canSendChatHistory,
+  canWriteChatHistory,
+  chatHistorySnapshot,
+} from "@/lib/chat-history-bridge";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
 import { stageOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -242,7 +246,15 @@ export function AppShell({
     const current = () =>
       trashPrincipalRef.current.generation === generation && trashPrincipalRef.current.ready;
     try {
-      if (!(await permanentlyDeleteChat(userKey, chat, current)) || !current()) return;
+      const deleted = await permanentlyDeleteChat(userKey, chat, current);
+      if (!current()) return;
+      if (!deleted) {
+        // Undo is a deliberate cancellation, not an error. A history writer
+        // that never becomes available, however, must not fail silently.
+        if (!canWriteChatHistory(userKey))
+          toast.error("Chat history is still syncing. Try deleting this chat again.");
+        return;
+      }
       setConversationState({ principal: storagePrincipal, items: loadConversations(userKey) });
     } catch {
       if (current()) toast.error("Could not delete the chat. Try again.");

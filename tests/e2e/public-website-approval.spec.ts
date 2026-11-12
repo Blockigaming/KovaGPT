@@ -44,11 +44,13 @@ test("implemented homepage, pricing tabs, FAQ, restored responsive asset, and re
     "src",
     "/images/classroom-hero-restored.webp",
   );
-  expect(
-    await page
-      .locator(".public-classroom img")
-      .evaluate((node) => (node as HTMLImageElement).naturalWidth),
-  ).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      page
+        .locator(".public-classroom img")
+        .evaluate((node) => (node as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
   await page.screenshot({ path: `${evidence}/desktop-hero.png` });
   await page.screenshot({ path: `${evidence}/desktop-full.png`, fullPage: true });
   await page.locator(".public-plans").screenshot({ path: `${evidence}/pricing-individual.png` });

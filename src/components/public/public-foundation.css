@@ -895,3 +895,134 @@
     margin-inline: 1rem;
   }
 }
+
+/* Public site motion system: transform/opacity only, no scroll-jacking. */
+[data-public-shell] {
+  --kova-page-progress: 0;
+  overflow-x: clip;
+}
+[data-public-shell]::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  z-index: 65;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  transform: scaleX(var(--kova-page-progress));
+  transform-origin: left center;
+  background: color-mix(in srgb, var(--foreground) 70%, transparent);
+  opacity: 0.55;
+}
+@keyframes kova-public-enter {
+  from {
+    opacity: 0.55;
+    transform: translate3d(0, 28px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+[data-public-shell] [data-kova-revealed="true"] {
+  animation: kova-public-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+[data-public-shell]
+  :is(.public-use-case, .public-plan-card, .public-workflow-example, .kova-public-interactive) {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 420ms ease;
+}
+[data-public-shell]
+  :is(
+    .public-use-case,
+    .public-plan-card,
+    .public-workflow-example,
+    .kova-public-interactive
+  )::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    360px circle at var(--kova-pointer-x, 50%) var(--kova-pointer-y, 50%),
+    color-mix(in srgb, var(--foreground) 10%, transparent),
+    transparent 70%
+  );
+  transition: opacity 260ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-public-shell]
+    :is(
+      .public-use-case,
+      .public-plan-card,
+      .public-workflow-example,
+      .kova-public-interactive
+    ):hover {
+    transform: translate3d(0, -6px, 0);
+    box-shadow: 0 18px 42px -24px color-mix(in srgb, var(--foreground) 22%, transparent);
+  }
+  [data-public-shell]
+    :is(
+      .public-use-case,
+      .public-plan-card,
+      .public-workflow-example,
+      .kova-public-interactive
+    ):hover::before {
+    opacity: 1;
+  }
+  [data-public-shell] :is(.public-action, [data-public-primary]):hover {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+[data-public-shell] :is(.public-action, [data-public-primary]) {
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 200ms ease;
+}
+[data-public-shell] :is([data-public-primary], main a.min-h-11) {
+  /* Keep the rendered target above 44px at fractional animation offsets. */
+  min-height: 45px;
+}
+[data-public-shell] :is(.public-hero, main > section:first-of-type) {
+  position: relative;
+  isolation: isolate;
+}
+[data-public-shell] :is(.public-hero, main > section:first-of-type)::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: -12% 0 auto 10%;
+  height: min(46vw, 520px);
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--foreground) 6%, transparent),
+    transparent 68%
+  );
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-public-shell]::before {
+    display: none;
+  }
+  [data-public-shell] [data-kova-revealed="true"] {
+    animation: none;
+  }
+  [data-public-shell]
+    :is(
+      .public-action,
+      .public-use-case,
+      .public-plan-card,
+      .public-workflow-example,
+      .kova-public-interactive
+    ) {
+    transform: none;
+    transition: none;
+  }
+}

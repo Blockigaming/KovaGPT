@@ -6,6 +6,7 @@ import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleIcon } from "@/components/auth/GoogleIcon";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { resolveLegacyAuthContext, supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ import {
   getEmailAuthRedirectUri,
   getOAuthRedirectUri,
   getSafePostAuthRedirect,
+  peekPostAuthRedirect,
   rememberPostAuthRedirect,
 } from "@/lib/oauth-session";
 import {
@@ -25,6 +27,7 @@ import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 import { authRetryDelay } from "@/lib/auth-retry-delay.mjs";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { isOwnedGoogleConfigured, startGoogleOAuth } from "@/lib/google-oauth-browser";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import githubLogo from "@/assets/plugins/github.svg";
 import { validateHostedGitHubLoginRedirect } from "@/lib/hosted-github-login-redirect.mjs";
@@ -91,8 +94,14 @@ function AuthPage() {
   const useKovaAuth = browserKovaAuthEnabled();
   const providers = useAuthProviders();
   const { isLoaded } = useUser();
+  const authMode = browserKovaAuthMode();
   const githubAvailable =
     browserKovaAuthMode() !== "kova" && providers.resolved && providers.github;
+  const googleAvailable = useKovaAuth
+    ? isOwnedGoogleConfigured()
+    : providers.resolved && providers.google;
+  const existingGoogleAvailable =
+    authMode === "dual" && !isSignUp && providers.resolved && providers.google;
   const minimumPasswordLength = useKovaAuth ? 12 : 6;
 
   const [email, setEmail] = useState(search.email ?? "");
@@ -104,6 +113,7 @@ function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState<"google" | "existing" | null>(null);
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
@@ -223,13 +233,28 @@ function AuthPage() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
+  const showPasskey = useKovaAuth && !isSignUp && passkeySupported;
+  const hasAlternativeSignIn =
+    googleAvailable || existingGoogleAvailable || githubAvailable || showPasskey;
   const emailValid = isValidEmail(email);
   const hasMfaChallenge = Boolean(mfaChallengeToken) || search.googleMfa === true;
   const showEmailError = editingEmail && emailTouched && !emailValid;
   const showPasswordError = passwordTouched && password.length < minimumPasswordLength;
 
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      submittingRef.current = false;
+      setLoading(false);
+      setGoogleLoading(null);
+      setGithubLoading(false);
+    };
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, []);
+
   const guard = () => {
-    if (submittingRef.current) return false;
+    if (submittingRef.current || githubLoading) return false;
     clearAuthError();
     submittingRef.current = true;
     setLoading(true);
@@ -413,8 +438,44 @@ function AuthPage() {
     }
   };
 
+  const submitGoogle = async (existing = false) => {
+    if (githubLoading || hasMfaChallenge || magicSent) return;
+    if (!(existing ? existingGoogleAvailable : googleAvailable) || !guard()) return;
+    setGoogleLoading(existing ? "existing" : "google");
+    let redirecting = false;
+    try {
+      if (existing) {
+        const context = await resolveLegacyAuthContext();
+        context.assertCurrent();
+        const { data, error } = await context.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: getOAuthRedirectUri(), skipBrowserRedirect: true },
+        });
+        context.assertCurrent();
+        if (error || !data?.url) throw new Error("hosted_google_redirect_missing");
+        window.location.assign(data.url);
+        redirecting = true;
+      } else {
+        const result = await startGoogleOAuth(
+          useKovaAuth,
+          useKovaAuth ? peekPostAuthRedirect() : undefined,
+        );
+        if (!result.redirected) throw new Error("google_redirect_missing");
+        redirecting = true;
+      }
+    } catch {
+      showAuthError("Google sign in could not start. Please try again.");
+    } finally {
+      if (!redirecting) {
+        setGoogleLoading(null);
+        release();
+      }
+    }
+  };
+
   const submitGitHub = async () => {
-    if (loading || githubLoading || !githubAvailable || hasMfaChallenge) return;
+    if (submittingRef.current || loading || githubLoading || !githubAvailable || hasMfaChallenge)
+      return;
     clearAuthError();
     setGithubLoading(true);
     try {
@@ -518,12 +579,8 @@ function AuthPage() {
         </button>
       </header>
 
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="mx-auto flex w-full max-w-[400px] flex-col px-6 pb-16 pt-6 sm:pt-16"
-      >
-        <div className="mb-8 flex flex-col items-center text-center">
+      <main id="main-content" tabIndex={-1} className="mx-auto flex max-w-[400px] flex-col">
+        <div className="mb-7 flex flex-col items-center text-center">
           <NovaLogo mark className="mb-6 h-8 w-8 text-foreground" />
           <h1 className="text-[32px] font-medium leading-[38px] tracking-[-0.02em]">
             {hasMfaChallenge
@@ -549,49 +606,65 @@ function AuthPage() {
           ) : null}
         </div>
 
-        {useKovaAuth && !isSignUp && !hasMfaChallenge && passkeySupported ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={submitPasskey}
-            className="mb-4 h-12 w-full rounded-full"
-          >
-            Continue with a passkey
-          </Button>
-        ) : null}
-        {!hasMfaChallenge && !magicSent && browserKovaAuthMode() !== "kova" ? (
-          <div className="mb-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading || githubLoading || !githubAvailable}
-              aria-busy={githubLoading}
-              aria-describedby={!githubAvailable ? "kova-github-auth-status" : undefined}
-              onClick={() => void submitGitHub()}
-              className="h-12 w-full rounded-full"
-            >
-              <img
-                src={githubLogo}
-                alt=""
-                aria-hidden="true"
-                className="mr-2 h-5 w-5 dark:invert"
-              />
-              {githubLoading ? "Connecting to GitHub…" : "Continue with GitHub"}
-            </Button>
-            {!githubAvailable ? (
-              <p
-                id="kova-github-auth-status"
-                role="status"
-                className="mt-2 text-xs text-muted-foreground"
+        {!hasMfaChallenge && !magicSent && hasAlternativeSignIn && (
+          <div className="mb-6 grid gap-3">
+            {googleAvailable && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading || githubLoading}
+                aria-busy={googleLoading === "google"}
+                onClick={() => void submitGoogle()}
+                className="h-12 w-full gap-3 rounded-full text-base"
               >
-                {!providers.resolved && !providers.error
-                  ? "Checking GitHub sign-in availability…"
-                  : "GitHub sign-in is not enabled for this deployment. Use email or another sign-in method."}
-              </p>
-            ) : null}
+                <GoogleIcon />
+                {googleLoading === "google" ? "Connecting to Google…" : "Continue with Google"}
+              </Button>
+            )}
+            {existingGoogleAvailable && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading || githubLoading}
+                aria-busy={googleLoading === "existing"}
+                onClick={() => void submitGoogle(true)}
+                className="h-12 w-full gap-3 rounded-full text-base"
+              >
+                <GoogleIcon />
+                {googleLoading === "existing"
+                  ? "Connecting to Google…"
+                  : "Log in with existing Google"}
+              </Button>
+            )}
+            {githubAvailable && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading || githubLoading}
+                aria-busy={githubLoading}
+                onClick={() => void submitGitHub()}
+                className="h-12 w-full gap-3 rounded-full text-base"
+              >
+                <img src={githubLogo} alt="" aria-hidden="true" className="h-5 w-5 dark:invert" />
+                {githubLoading ? "Connecting to GitHub…" : "Continue with GitHub"}
+              </Button>
+            )}
+            {showPasskey && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading || githubLoading}
+                onClick={submitPasskey}
+                className="h-12 w-full rounded-full text-base"
+              >
+                Continue with a passkey
+              </Button>
+            )}
+            <div className="flex items-center gap-3 pt-1 text-sm text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+              or
+            </div>
           </div>
-        ) : null}
+        )}
         {hasMfaChallenge ? (
           <form onSubmit={submitMfa} className="space-y-3">
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">
@@ -686,9 +759,9 @@ function AuthPage() {
             </Button>
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="kova-auth-page-email" className="px-1 text-sm">
+          <form onSubmit={submit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="kova-auth-page-email" className="px-1 text-sm leading-5">
                 Email address
               </Label>
               <div className="relative">
@@ -732,8 +805,8 @@ function AuthPage() {
             </div>
 
             {isSignUp ? (
-              <div className="space-y-2">
-                <Label htmlFor="kova-auth-page-name" className="px-1 text-sm">
+              <div className="grid gap-2">
+                <Label htmlFor="kova-auth-page-name" className="px-1 text-sm leading-5">
                   Name <span className="text-muted-foreground">(optional)</span>
                 </Label>
                 <Input
@@ -749,8 +822,8 @@ function AuthPage() {
               </div>
             ) : null}
 
-            <div className="space-y-2">
-              <Label htmlFor="kova-auth-page-password" className="px-1 text-sm">
+            <div className="grid gap-2">
+              <Label htmlFor="kova-auth-page-password" className="px-1 text-sm leading-5">
                 Password
               </Label>
               <div className="relative">
@@ -810,7 +883,7 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => setForgotOpen(true)}
-                className="inline-flex min-h-11 items-center rounded-lg px-1 text-sm font-medium text-foreground underline underline-offset-2"
+                className="inline-flex min-h-11 w-fit items-center rounded-lg px-1 text-sm font-medium text-foreground underline underline-offset-2"
               >
                 Forgot password?
               </button>
@@ -821,7 +894,7 @@ function AuthPage() {
               disabled={loading || !emailValid || password.length < minimumPasswordLength}
               className="h-12 w-full rounded-full text-base font-medium"
             >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading && !googleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isSignUp ? "Create account" : "Log in"}
             </Button>
 

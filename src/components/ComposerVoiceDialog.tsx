@@ -25,6 +25,12 @@ import { authFetch } from "@/lib/auth-fetch";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import { createVoiceSilenceGate } from "@/lib/voice/speech-pause.mjs";
 import {
+  acquireVoiceSession,
+  endOtherVoiceSession,
+  type VoiceSessionLease,
+  type VoiceSessionNotice,
+} from "@/lib/voice-session";
+import {
   createBrowserSpeechSink,
   createSpeechPlayback,
   stopActiveSpeechPlayback,
@@ -200,6 +206,7 @@ export function ComposerVoiceDialog({
   const [microphoneMuted, setMicrophoneMuted] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState("");
+  const [sessionNotice, setSessionNotice] = useState<VoiceSessionNotice>();
   const [transcript, setTranscript] = useState("");
   const [hasTranscript, setHasTranscript] = useState(false);
   const [canRetryRecording, setCanRetryRecording] = useState(false);
@@ -273,6 +280,7 @@ export function ComposerVoiceDialog({
   const selectedVoice = useRef("");
   const defaultVoice = useRef("");
   const voiceSessionActive = useRef(false);
+  const voiceSessionLease = useRef<VoiceSessionLease | null>(null);
   const voicePlayback = useRef<ReturnType<typeof createSpeechPlayback> | null>(null);
   const resumeRecording = useRef<((continuing?: boolean) => Promise<void>) | null>(null);
   const billingAfterClose = useRef<{
@@ -324,11 +332,17 @@ export function ComposerVoiceDialog({
     objectUrl.current = "";
   }, []);
 
+  const releaseVoiceSession = useCallback(() => {
+    voiceSessionLease.current?.release();
+    voiceSessionLease.current = null;
+    voiceSessionActive.current = false;
+  }, []);
+
   const releaseResources = useCallback(() => {
     // Invalidate pending microphone prompts as well as requests before stopping
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
-    voiceSessionActive.current = false;
+    releaseVoiceSession();
     muted.current = false;
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
@@ -359,7 +373,7 @@ export function ComposerVoiceDialog({
     retainedRecording.current = null;
     phaseRef.current = "idle";
     releasePlayback();
-  }, [clearRecordingTimers, releasePlayback]);
+  }, [clearRecordingTimers, releasePlayback, releaseVoiceSession]);
 
   const isCurrent = useCallback((scope: OperationScope) => {
     const value = current.current;
@@ -373,7 +387,8 @@ export function ComposerVoiceDialog({
       (!value.isStreaming ||
         (value.mode === "voice" && voiceSessionActive.current && phaseRef.current === "chat")) &&
       value.userId === scope.userId &&
-      value.contextKey === scope.contextKey
+      value.contextKey === scope.contextKey &&
+      (voiceSessionLease.current?.current() ?? true)
     );
   }, []);
 
@@ -394,6 +409,7 @@ export function ComposerVoiceDialog({
     setFirstVoice(false);
     setMicrophoneMuted(false);
     setError("");
+    setSessionNotice(undefined);
     setTranscript("");
     setHasTranscript(false);
     setCanRetryRecording(false);
@@ -497,7 +513,7 @@ export function ComposerVoiceDialog({
   }, [releaseResources, updatePhase]);
 
   const failOperation = useCallback(
-    (message: string, noAudio = false) => {
+    (message: string, noAudio = false, notice?: VoiceSessionNotice) => {
       const savedRecording = retainedRecording.current;
       releaseResources();
       retainedRecording.current = savedRecording;
@@ -505,6 +521,8 @@ export function ComposerVoiceDialog({
       updatePhase("idle");
       setAudioUrl("");
       setError(message);
+      setSessionNotice(notice);
+      if (notice) return;
       const eventId = noAudio
         ? "no_audio"
         : /usage|limit|allowance/i.test(message)
@@ -520,6 +538,38 @@ export function ComposerVoiceDialog({
     },
     [releaseResources, updatePhase, mode],
   );
+
+  const startVoiceSession = async (scope: OperationScope) => {
+    if (!isCurrent(scope)) return false;
+    if (voiceSessionLease.current) return true;
+    updatePhase("requesting");
+    const result = await acquireVoiceSession(scope.userId, (reason) => {
+      if (generation.current !== scope.generation || !current.current.open) return;
+      if (reason === "other-tab") closeDialog(false);
+      else
+        failOperation(
+          "Voice reached its one-hour session limit. Start a new session when you are ready.",
+          false,
+          "voice_session_limit",
+        );
+    });
+    if (!isCurrent(scope)) {
+      if (result.status === "active") result.lease.release();
+      return false;
+    }
+    if (result.status === "conflict") {
+      failOperation("Another Voice session is active in this browser.", false, "voice_conflict");
+      return false;
+    }
+    if (result.status !== "active") {
+      failOperation("Voice is unavailable right now. Try again.");
+      return false;
+    }
+    voiceSessionLease.current = result.lease;
+    voiceSessionActive.current = true;
+    setSessionNotice(undefined);
+    return true;
+  };
 
   useLayoutEffect(() => {
     if (mode === "voice") return;
@@ -690,7 +740,7 @@ export function ComposerVoiceDialog({
             void Promise.resolve().then(() => {
               if (!isCurrent(scope) || voicePlayback.current !== playback || ended) return;
               voicePlayback.current = null;
-              voiceSessionActive.current = false;
+              releaseVoiceSession();
               updatePhase("idle");
             });
           }
@@ -706,6 +756,19 @@ export function ComposerVoiceDialog({
       });
     } catch (cause) {
       if (!isCurrent(scope)) return;
+      if (
+        cause &&
+        typeof cause === "object" &&
+        "code" in cause &&
+        (cause.code === "CONTEXT_LIMIT" || cause.code === "too_many_messages")
+      ) {
+        failOperation(
+          "This conversation is full. Return to chat to start a new conversation.",
+          false,
+          "voice_context_full",
+        );
+        return;
+      }
       const code = cause instanceof Error ? cause.message : "";
       failOperation(
         controller.signal.aborted
@@ -800,7 +863,7 @@ export function ComposerVoiceDialog({
     await transcribeRecording(scope, blob);
   };
 
-  const retryTranscription = () => {
+  const retryTranscription = async () => {
     if (!userId || !retainedRecording.current || !capabilities?.stt || phaseRef.current !== "idle")
       return;
     const scope = {
@@ -812,7 +875,7 @@ export function ComposerVoiceDialog({
     if (!isCurrent(scope)) return;
     if (mode === "voice") {
       if (!onVoiceSubmit || !conversationAvailable(capabilities, selectedVoice.current)) return;
-      voiceSessionActive.current = true;
+      if (!(await startVoiceSession(scope)) || !retainedRecording.current) return;
     }
     setError("");
     void transcribeRecording(scope, retainedRecording.current);
@@ -865,8 +928,8 @@ export function ComposerVoiceDialog({
       );
       return;
     }
+    if (mode === "voice" && !(await startVoiceSession(scope))) return;
     stopActiveSpeechPlayback();
-    if (mode === "voice") voiceSessionActive.current = true;
     releasePlayback();
     retainedRecording.current = null;
     muted.current = false;
@@ -1263,6 +1326,7 @@ export function ComposerVoiceDialog({
       microphoneAvailable={capabilities?.stt ?? false}
       replyAvailable={mode === "voice" ? false : (capabilities?.tts ?? false)}
       error={error}
+      sessionNotice={sessionNotice}
       conversationModelControl={conversationModelControl}
       voicePicker={
         !unavailable && !checking && capabilities && capabilities.voices.length > 0 ? (
@@ -1320,7 +1384,11 @@ export function ComposerVoiceDialog({
         ) : undefined
       }
       recordingControl={
-        ready ? (
+        sessionNotice === "voice_context_full" ? (
+          <Button type="button" onClick={() => closeDialog(false)}>
+            Return to chat
+          </Button>
+        ) : ready ? (
           phase === "recording" ? (
             <Button
               type="button"
@@ -1363,11 +1431,26 @@ export function ComposerVoiceDialog({
         ) : undefined
       }
       retryControl={
-        ready && canRetryRecording ? (
+        sessionNotice === "voice_conflict" && userId ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (current.current.userId !== userId) return;
+              setError(
+                endOtherVoiceSession(userId)
+                  ? "End request sent. Start Voice again after the other session closes."
+                  : "Close the other Voice session, then try again.",
+              );
+            }}
+          >
+            End other session
+          </Button>
+        ) : ready && canRetryRecording ? (
           <Button
             type="button"
             variant="ghost"
-            onClick={retryTranscription}
+            onClick={() => void retryTranscription()}
             disabled={busy || !capabilities.stt}
           >
             Retry transcription

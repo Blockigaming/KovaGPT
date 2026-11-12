@@ -111,7 +111,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(openingTag(home, "h1", /id="chat-greeting"/), /id="chat-greeting"/);
   assert.match(home, /id="chat-greeting"[^>]*>\s*\{greeting\}\s*<\/h1>/);
   assert.match(composer, /COMPOSER_TOOLS/);
-  assert.match(composer, /renderComposerActions\(false\)/);
+  assert.match(composer, /renderComposerActions\(isMobileLayout\)/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS\.map/);
 
   // A blocked attachment may explain the blocker, but it must not submit the message.
@@ -346,17 +346,15 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
     ts.forEachChild(node, visit);
   };
   visit(syntax);
-  for (const className of ["kova-composer-menu spec400-attach-menu"]) {
+  for (const className of ["kova-composer-menu spec400-attach-menu kova-composer-full-menu"]) {
     const popover = positionedPopovers.find((props) => props.includes(`className="${className}"`));
     assert.ok(popover, `${className} retains its positioned popover`);
-    assert.match(popover, /side="top"/);
-    assert.match(popover, /sideOffset=\{8\}/);
-    assert.match(popover, /collisionPadding=\{12\}/);
+    assert.match(popover, /side=\{longDraft \? "top" : "bottom"\}/);
+    assert.match(popover, /sideOffset=\{5\}/);
+    assert.match(popover, /collisionPadding=\{8\}/);
   }
   assert.doesNotMatch(composer, /spec400-options-panel|setOptionsOpen/);
-  assert.match(composer, /\{showAddMenu && isMobileLayout && \(\s*<MobileBottomSheet/);
-  assert.match(composer, /ariaLabel="Attach files and tools"/);
-  assert.match(composer, /restoreFocus=\{\s*!contextOpen && !libraryOpen && !signInRequest\s*\}/);
+  assert.match(composer, /aria-label="Attach files and tools"/);
   assert.match(composerStyles, /\.spec400-toolbar-button,[\s\S]*?min-height: 44px;/);
   assert.match(composer, /\["ArrowDown", "ArrowUp", "Home", "End"\]\.includes\(event\.key\)/);
   assert.match(composer, /button:not\(:disabled\),a\[href\]/);
@@ -370,7 +368,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(home, /surface="empty"/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
-  assert.match(starters, /<div className="kova-empty-composer">\{children\}<\/div>/);
+  assert.match(starters, /<div className="kova-empty-composer relative">\s*\{children\}/);
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

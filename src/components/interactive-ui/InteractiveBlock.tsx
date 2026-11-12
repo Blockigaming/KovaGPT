@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -104,9 +105,12 @@ export function InteractiveBlock({
     persist({ submission });
   };
   const saveDraft = (draft: InteractiveSubmission) => {
-    if (submitted) return;
-    setSubmitError(false);
-    persist({ draft });
+    if (submittedRef.current) return;
+    // FormBody already owns the live field state. Persist the draft directly
+    // without forcing the parent to rerender on every pointer/keyboard event.
+    // Parent rerenders during a Radix click can reinitialize its selection.
+    writeStored(storageKey, { draft });
+    if (submitError) setSubmitError(false);
   };
   const headingId = useId();
 
@@ -194,16 +198,20 @@ function FormBody({
   // a render (notably date + radio changes in narrow Firefox layouts).
   const valuesRef = useRef(values);
   const set = (id: string, value: FormValue) => {
+    // Radix may invoke onClick and onValueChange for the same selection.
+    // Ignore duplicate events and merge updates functionally so an earlier
+    // low-priority field update cannot revert a later radio selection.
+    if (Object.is(valuesRef.current[id], value)) return;
     const next = { ...valuesRef.current, [id]: value };
     valuesRef.current = next;
-    setValues(next);
+    setValues((current) => ({ ...current, [id]: value }));
     if (errors[id]) setErrors(({ [id]: _drop, ...rest }) => rest);
     onDraft(next);
   };
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (locked) return;
-    const found = validateFormValues(block, values);
+    const found = validateFormValues(block, valuesRef.current);
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) {
@@ -213,7 +221,9 @@ function FormBody({
     const clean: FormValues = {};
     for (const f of block.fields)
       clean[f.id] =
-        f.kind === "number" && values[f.id] !== "" ? Number(values[f.id]) : values[f.id];
+        f.kind === "number" && valuesRef.current[f.id] !== ""
+          ? Number(valuesRef.current[f.id])
+          : valuesRef.current[f.id];
     onSubmit({ values: clean });
   };
   const hasFields = block.fields.length > 0;
@@ -251,7 +261,7 @@ function FormBody({
             aria-pressed={submittedAction === action.id || undefined}
             className="h-auto min-h-11 max-w-full whitespace-normal sm:min-h-9"
             onPointerDown={preserveActionFocus}
-            onClick={() => !locked && onSubmit({ action: action.id, values })}
+            onClick={() => !locked && onSubmit({ action: action.id, values: valuesRef.current })}
           >
             {action.label}
           </Button>
@@ -386,35 +396,37 @@ function FieldControl({
           <legend id={`${id}-label`} className="mb-2 text-sm font-medium">
             {label}
           </legend>
-          <div
-            role="radiogroup"
+          <RadioGroup
+            value={String(value ?? "")}
+            onValueChange={onChange}
+            disabled={disabled}
             aria-labelledby={`${id}-label`}
             aria-required={field.required || undefined}
             className="grid gap-1"
           >
             {field.options!.map((o) => (
-              <label
+              <div
                 key={o.value}
-                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <input
-                  type="radio"
-                  name={id}
+                <RadioGroupItem
                   value={o.value}
                   aria-label={o.label}
-                  data-slot="radio-group-item"
-                  data-ui-reference="chatgpt.radio-group"
-                  disabled={disabled}
-                  checked={String(value ?? "") === o.value}
-                  onChange={(event) => {
-                    if (event.target.checked) onChange(o.value);
+                  // Capture pointer selection before Radix's focus/roving-tab
+                  // handlers. In short Firefox viewports a pointer click can
+                  // focus the item without firing a controlled change. The
+                  // idempotent form setter handles any subsequent click/change.
+                  onPointerDown={(event) => {
+                    if (!disabled && event.button === 0) onChange(o.value);
                   }}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    if (!disabled) onChange(o.value);
+                  }}
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
-              </label>
+              </div>
             ))}
-          </div>
+          </RadioGroup>
           {field.help && (
             <p id={helpId} className="mt-1 text-xs text-muted-foreground">
               {field.help}
@@ -433,7 +445,7 @@ function FieldControl({
         if (checked) {
           if (!list.includes(option)) onChange([...list, option]);
         } else if (list.includes(option)) {
-          onChange(list.filter((x) => x !== option));
+          onChange(list.filter((item) => item !== option));
         }
       };
       return (
@@ -443,23 +455,19 @@ function FieldControl({
           </legend>
           <div className="grid gap-1">
             {field.options!.map((o, i) => (
-              <label
+              <div
                 key={o.value}
-                className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
+                className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent sm:min-h-9"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   id={i === 0 ? id : undefined}
                   aria-label={o.label}
-                  data-slot="checkbox"
-                  data-ui-reference="chatgpt.checkbox"
                   disabled={disabled}
                   checked={list.includes(o.value)}
-                  onChange={(event) => updateSelection(o.value, event.target.checked)}
-                  className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  onCheckedChange={(checked) => updateSelection(o.value, checked === true)}
                 />
                 <span className="min-w-0 text-sm">{o.label}</span>
-              </label>
+              </div>
             ))}
           </div>
           {field.help && (

@@ -46,9 +46,19 @@ export function chatResponseError(
 ): Promise<ChatRequestError>;
 
 export function chatFailurePresentation(
-  error: Pick<Partial<ChatRequestError>, "category" | "status" | "code" | "retryable">,
+  error: Pick<
+    Partial<ChatRequestError>,
+    "category" | "status" | "code" | "retryable" | "requestId"
+  >,
   details: { raw: string; signedIn: boolean; quotaRejected: boolean; networkFailure: boolean },
-): { sessionExpired: boolean; canManualRetry: boolean; friendly: string };
+): {
+  sessionExpired: boolean;
+  canManualRetry: boolean;
+  friendly: string;
+  detail: string;
+  reference?: string;
+  preservedDraftMessage: string;
+};
 
 export function publishRequestedChatTool(
   tool: string | null | undefined,

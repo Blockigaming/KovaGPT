@@ -345,18 +345,23 @@ export function chatFailurePresentation(error, { raw, signedIn, quotaRejected, n
     error.status !== 403 &&
     error.retryable !== false &&
     (error.retryable === true || retryableCategory);
+  const friendly = describeChatFailure({
+    raw,
+    category,
+    sessionExpired,
+    signedIn,
+    canManualRetry,
+    retryable: error.retryable,
+    networkFailure,
+  });
+  const requestId = error.requestId;
   return {
     sessionExpired,
     canManualRetry,
-    friendly: describeChatFailure({
-      raw,
-      category,
-      sessionExpired,
-      signedIn,
-      canManualRetry,
-      retryable: error.retryable,
-      networkFailure,
-    }),
+    friendly,
+    detail: requestId ? `${friendly} (ref: ${requestId})` : friendly,
+    reference: requestId ? `Reference ID: ${requestId}` : undefined,
+    preservedDraftMessage: "Your draft and any partial response are preserved.",
   };
 }
 

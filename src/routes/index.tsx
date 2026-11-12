@@ -37,7 +37,7 @@ import {
   markChatHistoryDirty,
   chatHistoryView,
   chatHistorySnapshot,
-  CHAT_HISTORY_CHANGED_EVENT,
+  subscribeChatHistoryOwner,
 } from "@/lib/chat-history-bridge";
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
@@ -74,11 +74,20 @@ import {
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
 
-import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
+import {
+  type Settings,
+  chatSettingsUseDialog,
+  DEFAULT_SETTINGS,
+  rememberSettingsReturnPath,
+  settingsSectionForTab,
+} from "@/lib/settings-types";
 
 const loadChatRecoveryPanels = () => import("@/components/ChatRecoveryPanels");
 const ChatRequestStatus = lazy(() =>
   loadChatRecoveryPanels().then((module) => ({ default: module.ChatRequestStatus })),
+);
+const ContinueChatPanel = lazy(() =>
+  loadChatRecoveryPanels().then((module) => ({ default: module.ContinueChatPanel })),
 );
 const NextPromptPanel = lazy(() =>
   loadChatRecoveryPanels().then((module) => ({ default: module.NextPromptPanel })),
@@ -191,12 +200,14 @@ import {
   type Conversation,
   type Message,
   type TemporaryChatContext,
+  TEMPORARY_CHAT_NOTICE_COPY,
   type ConversationWorkflowSkill,
   chatStoragePrincipal,
   clearDraft,
   clearPendingActive,
   draftStorageKey,
   loadDraft,
+  emptyNewChatDraftKey,
   loadConversations,
   subscribeToConversationChanges,
   loadArchivedConversations,
@@ -227,7 +238,7 @@ import {
 const USER_STOP_REASON = "kova_user_stopped_generation";
 type ChatRequestNotice = {
   scope: NextPromptScope;
-  kind: "session-expired";
+  kind: "session-expired" | "context-limit";
   signedIn: boolean;
 };
 type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
@@ -530,11 +541,7 @@ function KovaGPT() {
     (tab?: string) => {
       // Keep Settings above the mobile drawer and preserve in-memory chat work.
       if (
-        window.matchMedia("(max-width: 1023px)").matches ||
-        attachments.length ||
-        tempChat ||
-        isStreaming ||
-        result
+        chatSettingsUseDialog(Boolean(attachments.length), tempChat, isStreaming, Boolean(result))
       ) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -546,13 +553,7 @@ function KovaGPT() {
         saveDraft(userKey, activeId, input);
         if (activeId) savePendingActive(userKey, activeId);
       }
-      try {
-        const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        if (!returnTo.startsWith("/settings/"))
-          window.sessionStorage.setItem("kova-settings-return-to", returnTo);
-      } catch {
-        // Settings remains reachable when browser storage is unavailable.
-      }
+      rememberSettingsReturnPath();
       void navigate({ to: "/settings/$section", params: { section: settingsSectionForTab(tab) } });
     },
     [
@@ -1641,10 +1642,7 @@ function KovaGPT() {
       publishKovaNotice({
         id: "temporary_chat",
         title: "Temporary chat on",
-        message:
-          context === "personalized"
-            ? "No history or new memory. Your enabled context and connected apps may be used."
-            : "No history or memory. Profile, instructions, personality and connected apps stay off.",
+        message: TEMPORARY_CHAT_NOTICE_COPY[context],
       });
     },
     [activeId, attachments, chatStarted, input, newChat, storagePrincipal, userKey],
@@ -1669,8 +1667,8 @@ function KovaGPT() {
       setTempChatContext("clean");
       toast.message("Temporary chat off", {
         description: settings.rememberAcross
-          ? "New chats save on this device and may use saved memory."
-          : "New chats save on this device. Saved memory stays off.",
+          ? TEMPORARY_CHAT_NOTICE_COPY.historyWithMemory
+          : TEMPORARY_CHAT_NOTICE_COPY.historyWithoutMemory,
       });
     },
     [attachments, chatStarted, input, newChat, settings.rememberAcross, storagePrincipal, tempChat],
@@ -2156,12 +2154,8 @@ function KovaGPT() {
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
-        const {
-          createChatHistoryPayload,
-          fetchForPrincipal,
-          chatRequestProfile,
-          withResponsePresentation,
-        } = await import("@/lib/chat-summary-snapshot.mjs");
+        const { createChatHistoryPayload, fetchForPrincipal, chatUserProfile } =
+          await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2198,18 +2192,11 @@ function KovaGPT() {
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            user:
-              tempChat && tempChatContext === "clean"
-                ? requestWebSearch === undefined
-                  ? undefined
-                  : { webSearch: requestWebSearch }
-                : withResponsePresentation(
-                    chatRequestProfile({
-                      ...settings,
-                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
-                    }),
-                    settings,
-                  ),
+            user: chatUserProfile(
+              settings,
+              tempChat && tempChatContext === "clean",
+              requestWebSearch,
+            ),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
             personality:
@@ -2409,7 +2396,14 @@ function KovaGPT() {
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
             e instanceof TypeError;
-          const { sessionExpired, canManualRetry, friendly } = chatFailurePresentation(err, {
+          const {
+            sessionExpired,
+            canManualRetry,
+            friendly,
+            detail,
+            reference,
+            preservedDraftMessage,
+          } = chatFailurePresentation(err, {
             raw,
             signedIn: isSignedIn,
             quotaRejected,
@@ -2423,20 +2417,22 @@ function KovaGPT() {
           // A failed transport/stream may already have generated billable output.
           // Keep the partial response and require an explicit Retry action;
           // silently replaying with a new message ID can duplicate generation.
-          const requestId = err.requestId;
-          const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
-
+          const failureEvent = chatFailureNoticeId(err, {
+            signedIn: isSignedIn,
+            networkFailure: isNetwork,
+          });
+          const contextLimit = failureEvent === "conversation_full";
           if (isCurrentRetryScope()) {
-            const failureEvent = chatFailureNoticeId(err, {
-              signedIn: isSignedIn,
-              networkFailure: isNetwork,
-            });
-            publishKovaNotice({
-              id: failureEvent,
-              title: friendly,
-              message: "Your draft and any partial response are preserved.",
-            });
+            if (contextLimit && userKey && !tempChat)
+              updateRequestNotice({ scope: requestScope, kind: "context-limit", signedIn: true });
+            else
+              publishKovaNotice({
+                id: failureEvent,
+                title: friendly,
+                message: preservedDraftMessage,
+              });
           }
+          if (voiceRequest && contextLimit) throw e;
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           if (sessionExpired && isCurrentRetryScope())
             updateRequestNotice({
@@ -2444,9 +2440,9 @@ function KovaGPT() {
               kind: "session-expired",
               signedIn: isSignedIn,
             });
-          if (isCurrentRetryScope() && !quotaRejected)
+          if (isCurrentRetryScope() && !quotaRejected && !contextLimit)
             toast.error(friendly, {
-              description: requestId ? `Reference ID: ${requestId}` : undefined,
+              description: reference,
               action: canManualRetry
                 ? {
                     label: "Retry",
@@ -2756,34 +2752,63 @@ function KovaGPT() {
       getConversations: () => voiceConversationsRef.current,
       saveConversations: (items) => saveConversations(turn.ownerId, items),
       loadHistoryState: () => loadChatHistoryDevice(turn.ownerId),
-      subscribeHistory: (notify) => {
-        const changed = (event: Event) => {
-          if ((event as CustomEvent).detail?.ownerId === turn.ownerId) notify();
-        };
-        window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
-        return () => window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
-      },
+      subscribeHistory: (notify) => subscribeChatHistoryOwner(turn.ownerId, notify),
     });
   };
 
-  const requestStatusPanel = (hasPendingMessage: boolean) =>
-    visibleRequestNotice ? (
+  const requestStatusPanel = (hasPendingMessage: boolean) => {
+    if (!visibleRequestNotice) return null;
+    const isCurrent = () =>
+      nextPromptMountedRef.current &&
+      requestNoticeRef.current === visibleRequestNotice &&
+      sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current);
+    const canUseDraft = () =>
+      isCurrent() &&
+      !hasPendingMessage &&
+      !nextPromptRef.current &&
+      !composerDraftRef.current.text &&
+      !composerDraftRef.current.attachments.length;
+    return (
       <Suspense fallback={null}>
-        <ChatRequestStatus
-          signedIn={visibleRequestNotice.signedIn}
-          draftProtected={hasPendingMessage || Boolean(nextPromptRef.current)}
-          canSignIn={() =>
-            nextPromptMountedRef.current &&
-            requestNoticeRef.current === visibleRequestNotice &&
-            !hasPendingMessage &&
-            !composerDraftRef.current.text.length &&
-            !composerDraftRef.current.attachments.length &&
-            !nextPromptRef.current &&
-            sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current)
-          }
-        />
+        {visibleRequestNotice.kind === "context-limit" && userKey && activeId ? (
+          <ContinueChatPanel
+            key={`${userKey}:${activeId}`}
+            ownerId={userKey}
+            chatId={activeId}
+            canUseMemory={settingsReady && settings.rememberAcross}
+            draftProtected={hasPendingMessage || Boolean(nextPromptRef.current || editingMessage)}
+            onDismiss={() => {
+              if (isCurrent()) updateRequestNotice(null);
+            }}
+            onContinue={(draft) => {
+              if (
+                !canUseDraft() ||
+                !settings.rememberAcross ||
+                inFlightRef.current ||
+                editingMessage ||
+                composerDraftRef.current.tool
+              )
+                return false;
+              const key = emptyNewChatDraftKey(userKey, attachmentDraftsRef.current);
+              if (!key) return false;
+              lastLoadedDraftRef.current = key;
+              pendingDraftLoadRef.current = null;
+              newChat();
+              setInput(draft);
+              updateRequestNotice(null);
+              return true;
+            }}
+          />
+        ) : visibleRequestNotice.kind === "session-expired" ? (
+          <ChatRequestStatus
+            signedIn={visibleRequestNotice.signedIn}
+            draftProtected={hasPendingMessage || Boolean(nextPromptRef.current)}
+            canSignIn={canUseDraft}
+          />
+        ) : null}
       </Suspense>
-    ) : null;
+    );
+  };
   const visibleNextPrompt =
     principalReady && nextPrompt?.scope.principal === storagePrincipal ? nextPrompt : null;
   const nextPromptInCurrentChat = Boolean(
@@ -3445,7 +3470,7 @@ function KovaGPT() {
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
                     onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Ask KovaGPT anything..."
+                    placeholder="Work with KovaGPT"
                     responseSettings={settings}
                     onResponseSettingsChange={(change) =>
                       setSettings((previous) => ({ ...previous, ...change }))
@@ -3584,7 +3609,7 @@ function KovaGPT() {
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
                     onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Ask KovaGPT anything..."
+                    placeholder="Work with KovaGPT"
                     responseSettings={settings}
                     onResponseSettingsChange={(change) =>
                       setSettings((previous) => ({ ...previous, ...change }))

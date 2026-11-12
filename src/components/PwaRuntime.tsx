@@ -7,10 +7,13 @@ export function PwaRuntime() {
     ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   useEffect(watchInstallPrompt, []);
   useEffect(() => {
-    void registerPwa().catch(() => {});
-  }, []);
-  useEffect(() => {
-    if (isLoaded) void setPwaOwner(ownerId).catch(() => {});
+    const configure = () => {
+      void registerPwa().catch(() => {});
+      if (isLoaded) void setPwaOwner(ownerId).catch(() => {});
+    };
+    configure();
+    window.addEventListener("online", configure);
+    return () => window.removeEventListener("online", configure);
   }, [isLoaded, ownerId]);
   return null;
 }

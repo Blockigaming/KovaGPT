@@ -364,7 +364,7 @@ function fixture(initial = {}, options = {}) {
   });
   modules["@/components/ComposerDictationView"] = inlineViewExports;
   const exports = {};
-  vm.runInNewContext(compiled, {
+  const globals = {
     exports,
     require(name) {
       assert.ok(name in modules, `Unexpected import: ${name}`);
@@ -394,6 +394,7 @@ function fixture(initial = {}, options = {}) {
     },
     MediaRecorder: options.unsupported ? undefined : FakeRecorder,
     navigator: {
+      locks: options.voiceLocks,
       mediaDevices: {
         getUserMedia(constraints) {
           options.onMicrophoneRequest?.();
@@ -429,7 +430,19 @@ function fixture(initial = {}, options = {}) {
     clearInterval(id) {
       timers.delete(id);
     },
-  });
+  };
+  modules["@/lib/voice-session"] = loadUiModule(
+    "src/lib/voice-session.ts",
+    {},
+    {
+      navigator: globals.navigator,
+      document: { addEventListener() {}, removeEventListener() {} },
+      Date: globals.Date,
+      setTimeout: globals.setTimeout,
+      clearTimeout: globals.clearTimeout,
+    },
+  );
+  vm.runInNewContext(compiled, globals);
   function render() {
     cursor = 0;
     dirty = false;
@@ -1394,6 +1407,23 @@ async function voiceTurn(f) {
   assert.equal(f.voiceSubmissions.length, 1);
   return { acquired, submission: f.voiceSubmissions[0] };
 }
+
+test("a Voice turn context failure returns to chat without replaying or changing the draft", async () => {
+  const f = fixture({ mode: "voice" });
+  const { submission } = await voiceTurn(f);
+  submission.reject(
+    Object.assign(new Error("Conversation context limit"), { code: "CONTEXT_LIMIT" }),
+  );
+  await f.flush();
+  assert.ok(f.nodes().some((node) => node.props["data-kova-notice-id"] === "voice_context_full"));
+  assert.equal(f.submitted.length, 0);
+  assert.equal(f.voiceSubmissions.length, 1);
+  assert.equal(f.playbackSinks.length, 0);
+  await f.click("Return to chat");
+  assert.deepEqual(f.closed, [false]);
+  f.unmount();
+});
+
 async function voiceReply(f) {
   const turn = await voiceTurn(f);
   turn.submission.resolve(savedVoiceReply());
@@ -1455,6 +1485,42 @@ test("Voice mute disables capture tracks and suppresses automatic turns until un
   await f.speechLevelAt(0.03, 4_500);
   await f.speechLevelAt(0.001, 5_700);
   assert.equal(f.requests[1]?.init?.method, "POST");
+  f.unmount();
+});
+
+test("Voice ends the active recording at the session deadline without submitting a turn", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true });
+  await f.ready();
+  const stream = await f.acquire();
+  await f.timer(60 * 60 * 1000);
+  assert.ok(stream.tracks.every((track) => track.stopped === 1));
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.voiceSubmissions.length, 0);
+  assert.ok(f.nodes().some((node) => node.props["data-kova-notice-id"] === "voice_session_limit"));
+  await f.click("Start");
+  assert.equal(f.microphoneRequests.length, 2);
+  f.unmount();
+});
+
+test("a held browser lease shows the Voice conflict before requesting the microphone", async () => {
+  const f = fixture(
+    { mode: "voice", autoStartVoice: true },
+    {
+      voiceLocks: {
+        request: async (name, options, callback) => {
+          assert.match(name, /^kova-voice-session:/);
+          assert.equal(options.ifAvailable, true);
+          return callback(null);
+        },
+      },
+    },
+  );
+  await f.ready();
+  assert.equal(f.microphoneRequests.length, 0);
+  assert.equal(f.voiceSubmissions.length, 0);
+  assert.ok(f.nodes().some((node) => node.props["data-kova-notice-id"] === "voice_conflict"));
+  await f.click("End other session");
+  assert.match(f.text(), /Close the other Voice session/);
   f.unmount();
 });
 

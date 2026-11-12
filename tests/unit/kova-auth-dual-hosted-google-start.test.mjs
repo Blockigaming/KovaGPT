@@ -16,6 +16,7 @@ const compile = (path) =>
 const sources = {
   browser: compile("src/lib/kova-auth-browser.ts"),
   client: compile("src/integrations/supabase/client.ts"),
+  google: compile("src/lib/google-oauth-browser.ts"),
   dialog: compile("src/components/auth/AuthDialog.tsx"),
 };
 const jsx = (type, props) => ({ type, props: props ?? {} });
@@ -77,6 +78,7 @@ function fixture({
     "@/components/ui/button": { Button: "button" },
     "@/assets/plugins/github.svg": { default: "github.svg" },
     "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
+    "@/components/auth/GoogleIcon": { GoogleIcon: "google-icon" },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "lucide-react": Object.fromEntries(
       ["AlertTriangle", "ArrowLeft", "KeyRound", "Loader2"].map((name) => [name, name]),
@@ -177,6 +179,7 @@ function fixture({
   const browser = load(sources.browser);
   modules["@/lib/kova-auth-browser"] = browser;
   modules["@/integrations/supabase/client"] = load(sources.client);
+  modules["@/lib/google-oauth-browser"] = load(sources.google);
   const dialog = load(sources.dialog).AuthDialog;
   const tree = dialog({ open: true, mode: dialogMode, onOpenChange: () => {}, inline });
   const renderedButtons = buttons(tree);

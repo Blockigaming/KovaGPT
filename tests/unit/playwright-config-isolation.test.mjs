@@ -140,6 +140,7 @@ test("auth visual preview uses tracked candidate edits without copying local sec
     source,
     /\["-c", `safe\.directory=\$\{sourceRoot\}`, "ls-files", "-z", "--cached"\]/u,
   );
+  assert.doesNotMatch(source, /safe\.directory=\*/u);
   assert.match(source, /await copyFile\(source, destination\)/u);
   assert.match(source, /baseName\.startsWith\("\.env"\)/u);
   assert.match(source, /excludedTreePrefixes/u);

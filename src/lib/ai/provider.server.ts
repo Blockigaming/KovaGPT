@@ -39,7 +39,11 @@ export type ProviderCapability =
   | "file_analysis";
 
 export type ProviderErrorCode =
-  "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
+  | "provider_timeout"
+  | "provider_rate_limited"
+  | "provider_unavailable"
+  | "provider_bad_response"
+  | "provider_context_limit";
 
 export type ProviderErrorEnvelope = {
   error: string;
@@ -544,6 +548,28 @@ export async function providerErrorFromResponse(response: Response): Promise<AiP
     retryable: false,
     status: 502,
   });
+}
+
+export async function chatProviderErrorFromResponse(response: Response, signal?: AbortSignal) {
+  if (response.status === 400) {
+    try {
+      const bytes = await readResponseBytesBounded(response, 8 * 1024, {
+        signal,
+        timeoutMs: 1_200,
+      });
+      const body = JSON.parse(new TextDecoder().decode(bytes));
+      if (body?.error?.code === "context_length_exceeded")
+        return new AiProviderError({
+          error: "This conversation reached its context limit. Start a new chat to continue.",
+          code: "provider_context_limit",
+          retryable: false,
+          status: 400,
+        });
+    } catch {
+      // An unrecognized or unreadable provider body uses the normal safe error.
+    }
+  }
+  return providerErrorFromResponse(response);
 }
 
 function providerOutcomeCode(outcome: DeadlineOutcome): string {

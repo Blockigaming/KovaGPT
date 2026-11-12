@@ -194,7 +194,33 @@ export const Route = createFileRoute("/api/memory")({
         if (authorized instanceof Response) return authorized;
 
         try {
-          const contextChatId = new URL(request.url).searchParams.get("contextChatId");
+          const params = new URL(request.url).searchParams;
+          const continuationChatId = params.get("continuationChatId");
+          if (continuationChatId !== null) {
+            const { auth } = authorized;
+            if (request.headers.get("X-Kova-Owner") !== auth.userId)
+              return jsonError("Your account changed. Reopen the conversation.", 409);
+            if (!/^[a-z0-9_-]{1,100}$/iu.test(continuationChatId))
+              return jsonError("Invalid chat ID.", 400);
+            const result = await tbl(auth)
+              .select("user_id,chat_id,summary")
+              .eq("user_id", auth.userId)
+              .eq("chat_id", continuationChatId)
+              .limit(1);
+            const row = assertDatabaseSuccess(result, "memory_continuation")?.[0] as
+              { user_id?: unknown; chat_id?: unknown; summary?: unknown } | undefined;
+            const summary =
+              row?.user_id === auth.userId &&
+              row.chat_id === continuationChatId &&
+              typeof row.summary === "string"
+                ? row.summary.trim().slice(0, REQUEST_LIMITS.maxContentChars)
+                : "";
+            return Response.json(
+              { summary: summary || null },
+              { headers: { "Cache-Control": "no-store" } },
+            );
+          }
+          const contextChatId = params.get("contextChatId");
           if (contextChatId !== null) {
             if (
               !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
