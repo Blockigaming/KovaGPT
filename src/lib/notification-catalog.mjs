@@ -393,8 +393,10 @@ const REQUIRE_ACTUAL_STATE = new Set([
   "subscription_updated",
   "upload_completed",
   "image_ready",
+  "reference_saved",
   "animation_ready",
   "connection_success",
+  "privacy_updated",
 ]);
 export function notificationDefinition(id) {
   if (!NOTIFICATION_IDS.includes(id)) return null;

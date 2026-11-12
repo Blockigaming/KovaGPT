@@ -40,6 +40,7 @@ export function HomeWelcome({
   chatId,
   conversations,
   historyReady,
+  historyComplete,
   onSelect,
   children,
 }: {
@@ -48,6 +49,7 @@ export function HomeWelcome({
   chatId: string | null;
   conversations: Conversation[];
   historyReady: boolean;
+  historyComplete: boolean;
   onSelect: (id: string) => void;
   children: ReactNode;
 }) {
@@ -99,7 +101,7 @@ export function HomeWelcome({
       <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
         <div
           data-ui-reference="claude.greeting"
-          className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
+          className="kova-greeting relative mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
         >
           <h1
             id="chat-greeting"
@@ -110,8 +112,11 @@ export function HomeWelcome({
           >
             {greeting}
           </h1>
-          {owner && historyReady && !hasHistory && (
-            <p data-kova-notice-id="first_conversation" className="text-sm text-muted-foreground">
+          {owner && historyReady && historyComplete && !hasHistory && (
+            <p
+              data-kova-notice-id="first_conversation"
+              className="absolute inset-x-0 top-full truncate px-2 text-center text-xs leading-4 text-muted-foreground"
+            >
               Start your first conversation below.
             </p>
           )}

@@ -33,15 +33,23 @@ export async function workExecutionReadiness(caller: AuthedCaller) {
   } catch {
     permitted = false;
   }
-  const options = workModelOptions({
-    capabilities: runnerReady(runner) ? (runner?.modelCapabilities ?? []) : [],
+  const ready = runnerReady(runner);
+  const modelConfig = {
+    capabilities: ready ? (runner?.modelCapabilities ?? []) : [],
     models: WORK_TEXT_MODELS,
     roles: activeModelConfig(),
-    plan: tier,
-  });
-  const available = permitted && runnerReady(runner) && options.some((item) => item.available);
+  };
+  const options = workModelOptions({ ...modelConfig, plan: tier });
+  const available = permitted && ready && options.some((item) => item.available);
+  const minimumExecutionPlan =
+    permitted && ready && tier === null
+      ? (["plus", "pro"] as const).find((plan) =>
+          workModelOptions({ ...modelConfig, plan }).some((item) => item.available),
+        )
+      : undefined;
   return {
     available,
+    minimumExecutionPlan: minimumExecutionPlan ?? null,
     reason: available
       ? null
       : "Work execution is unavailable for this account or provider configuration. You can prepare and save work.",

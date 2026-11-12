@@ -48,6 +48,7 @@ function renderList(state = {}) {
     tasks: [],
     visibleTasks: [],
     loadError: null,
+    dataReady: true,
     executionAvailable: false,
     Calendar: "calendar",
     Clock: "clock",
@@ -68,6 +69,8 @@ function renderList(state = {}) {
 
 test("failed task reads never assert that the account is empty", () => {
   assert.equal(renderList({ loadError: "Unavailable" }), null);
+  assert.equal(renderList({ dataReady: false }), null);
+  assert.equal(renderList({ executionAvailable: true }).props["data-kova-notice-id"], "first_task");
   assert.match(text(renderList()), /Nothing scheduled yet.*No historical task records/);
   assert.doesNotMatch(
     text(renderList({ loading: true, loadError: "Unavailable" })),

@@ -3395,6 +3395,7 @@ function KovaGPT() {
                   chatId={activeId}
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
                   historyReady={principalReady && historyReady && !tempChat}
+                  historyComplete={chatHistoryView(userKey)?.complete === true}
                   onSelect={setActiveId}
                 >
                   <ChatInput

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { fromJSON } from "seroval";
 import { NOTIFICATION_ACCEPTANCE_PROJECTS } from "../../src/lib/notification-acceptance-evidence.mjs";
-import { fixture, functionNames } from "./actual-app-fixture";
+import { fixture, functionNames, owner } from "./actual-app-fixture";
 import { chooseSettingsSection, openCurrentSettings } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
@@ -235,4 +236,128 @@ test("[notice:no_matching_files] filters show no matching files only after a sea
   });
   await search.clear();
   await expect(emptyResult).toHaveCount(0);
+});
+
+test("[contract:reference_saved] a named image reference is acknowledged only after Library saves it", async ({
+  page,
+}, testInfo) => {
+  const imageUrl =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X01cAAAAASUVORK5CYII=";
+  const itemId = "550e8400-e29b-41d4-a716-446655440001";
+  const writes: Record<string, unknown>[] = [];
+  let savedTitle = "";
+  await page.route("**/api/generate-image**", async (route) => {
+    if (route.request().method() === "POST") return route.fulfill({ json: { imageUrl } });
+    return route.fulfill({
+      json: {
+        editingEnabled: true,
+        images: savedTitle ? [{ id: itemId, title: savedTitle, file_type: "image/png" }] : [],
+      },
+    });
+  });
+  await page.route("**/_serverFn/**", async (route) => {
+    if (!serverFunctionName(route.request().url()).startsWith("saveImageToLibrary_"))
+      return route.fallback();
+    const request = fromJSON(route.request().postDataJSON()) as { data: Record<string, unknown> };
+    writes.push(request.data);
+    if (writes.length === 1) return route.abort("failed");
+    savedTitle = String(request.data.title);
+    return route.fulfill({ json: { result: { id: itemId }, context: {} } });
+  });
+  await page.goto("/images");
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Describe the image to generate" }).fill("A paper bird");
+  await page.getByRole("button", { name: "Generate", exact: true }).click();
+  const openReference = page.getByRole("button", { name: "Save as reference", exact: true });
+  await openReference.click();
+  const dialog = page.getByRole("dialog", { name: "Save reference image" });
+  const name = dialog.getByRole("textbox", { name: "Reference name" });
+  const save = dialog.getByRole("button", { name: "Save reference", exact: true });
+  await save.click();
+  await expect(dialog.getByRole("alert")).toHaveText("Enter a reference name.");
+  await expect(name).toBeFocused();
+  expect(writes).toHaveLength(0);
+
+  await name.fill("Paper bird");
+  await save.click();
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "The reference could not be saved. Try again.",
+  );
+  await expect(page.getByText("Reference saved", { exact: true })).toHaveCount(0);
+  await expect(name).toHaveValue("Paper bird");
+  await save.click();
+  await expect(dialog).toBeHidden();
+  await expect(openReference).toBeFocused();
+  const confirmation = page.locator("[data-sonner-toast]").filter({ hasText: "Reference saved" });
+  await expect(confirmation).toBeVisible();
+  expect(writes).toHaveLength(2);
+  expect(writes[0]).toMatchObject({ title: "Paper bird", expectedOwnerId: owner, imageUrl });
+  expect(writes[0].idempotencyKey).toEqual(expect.any(String));
+  expect(writes[1]).toEqual(writes[0]);
+  await testInfo.attach("named-reference-" + testInfo.project.name, {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+  await confirmation.getByRole("button", { name: "Close toast" }).click();
+  await expect(confirmation).toBeHidden();
+
+  await page.reload();
+  await waitForKovaHydration(page);
+  await page.getByRole("button", { name: "Edit an image from Library" }).click();
+  await page.getByRole("combobox", { name: "Original image" }).click();
+  await page.getByRole("option", { name: "Paper bird", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Describe the image edit" })).toBeVisible();
+});
+
+test("[contract:privacy_updated] saving browser privacy rules uses the current account and confirms the write", async ({
+  page,
+}, testInfo) => {
+  let writes = 0;
+  let rules: { sites: { origin: string; access: "ask" | "block" }[] } = { sites: [] };
+  await page.route("**/api/work/browser?**", async (route) => {
+    const request = route.request();
+    const query = new URL(request.url()).searchParams;
+    if (query.get("scope") !== "permissions") return route.fallback();
+    expect(query.get("expectedUserId")).toBe(owner);
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: { rules, readiness: { available: true, origins: [], siteRulesEnforced: true } },
+      });
+    expect(request.postDataJSON()).toEqual({
+      expectedUserId: owner,
+      rules: { sites: [{ origin: "https://example.com", access: "block" }] },
+    });
+    if (++writes === 1)
+      return route.fulfill({ status: 409, json: { error: "work_browser_action_unconfirmed" } });
+    rules = request.postDataJSON().rules;
+    return route.fulfill({ json: { rules } });
+  });
+  await page.goto("/settings/cloud-browser");
+  await waitForKovaHydration(page);
+  const form = page.getByRole("region", { name: "Cloud Browser settings" });
+  const title = "Cloud Browser privacy settings updated";
+  const update = async () => {
+    await form.getByRole("textbox", { name: "Website" }).fill("https://example.com");
+    await form.getByRole("combobox", { name: "Rule" }).selectOption("block");
+    await form.getByRole("button", { name: "Save site rule" }).click();
+  };
+  await update();
+  await expect(form.getByRole("alert")).toContainText("Permissions were not confirmed saved");
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  await page.reload();
+  await waitForKovaHydration(page);
+  await update();
+  const toast = page.locator("[data-sonner-toast]").filter({ hasText: title });
+  await expect(toast).toBeVisible();
+  expect(writes).toBe(2);
+  await testInfo.attach("browser-privacy-rules-" + testInfo.project.name, {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+  await toast.getByRole("button", { name: "Close toast" }).click();
+  await expect(toast).toBeHidden();
+  await page.reload();
+  await waitForKovaHydration(page);
+  await expect(form.getByText("https://example.com", { exact: true })).toBeVisible();
+  await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 });

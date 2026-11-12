@@ -7,6 +7,7 @@ import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
 import "@/styles/images-collection.css";
 import { imageApiRequest } from "@/lib/image-api-client";
 import ImageEditControls, { type ImageEditSelection } from "@/components/ImageEditControls";
+import { ImageReferenceDialog } from "@/components/ImageReferenceDialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
@@ -412,6 +413,12 @@ function ImagesPage() {
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
   const [firstImageOwner, setFirstImageOwner] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
+  const [referenceItem, setReferenceItem] = useState<{
+    prompt: string;
+    imageUrl: string;
+    ownerId: string;
+    trigger: HTMLButtonElement;
+  } | null>(null);
   const [savingImage, setSavingImage] = useState(false);
   const openSettings = useCallback(
     (tab?: string) => {
@@ -665,6 +672,7 @@ function ImagesPage() {
     setHistory([]);
     setFirstImageOwner(null);
     setLightbox(null);
+    setReferenceItem(null);
   }, [clearResultReveal]);
 
   useEffect(() => {
@@ -697,6 +705,7 @@ function ImagesPage() {
     setResult(null);
     setResultPrompt("");
     setLightbox(null);
+    setReferenceItem(null);
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
@@ -772,37 +781,68 @@ function ImagesPage() {
     }
   }
 
-  async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
+  function openReferenceDialog(
+    item: { prompt: string; imageUrl: string },
+    trigger: HTMLButtonElement,
+  ) {
     if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
-    if (savePendingRef.current) return;
+    setReferenceItem({ ...item, ownerId: userKey, trigger });
+  }
+
+  async function saveGeneratedImage(
+    item: { prompt: string; imageUrl: string },
+    reference?: { title: string; idempotencyKey: string },
+  ): Promise<boolean> {
+    if (!isSignedIn || !userKey) {
+      setLoginOpen(true);
+      return false;
+    }
+    if (savePendingRef.current) return false;
     savePendingRef.current = true;
     const ownerId = userKey;
     const generation = saveGenerationRef.current;
+    const isCurrent = () =>
+      generation === saveGenerationRef.current && resultOwnerRef.current === ownerId;
     setSavingImage(true);
     try {
       const imageUrl = await imageUrlForLibrary(item.imageUrl);
-      if (generation !== saveGenerationRef.current) return;
-      await saveImage({
+      if (!isCurrent()) return false;
+      const saved = await saveImage({
         data: {
           expectedOwnerId: ownerId,
-          title: item.prompt.slice(0, 100) || "Generated image",
+          title: reference?.title ?? (item.prompt.slice(0, 100) || "Generated image"),
+          idempotencyKey: reference?.idempotencyKey,
           prompt: item.prompt,
           imageUrl,
         },
       });
-      if (generation === saveGenerationRef.current)
-        publishKovaNotice({ id: "file_saved", title: "Image saved to Library", confirmed: true });
-    } catch (error) {
-      if (generation === saveGenerationRef.current)
+      if (!isCurrent()) return false;
+      if (!saved?.id) throw new Error("The Library save could not be confirmed.");
+      if (reference) {
         publishKovaNotice({
-          id: "image_save_failed",
-          title: error instanceof Error ? error.message : "Could not save image",
+          id: "reference_saved",
+          key: `reference-saved:${saved.id}`,
+          title: "Reference saved",
+          message: "Find this image by name in Library.",
+          confirmed: true,
         });
+      } else {
+        publishKovaNotice({ id: "file_saved", title: "Image saved to Library", confirmed: true });
+      }
+      return true;
+    } catch (error) {
+      if (!isCurrent()) return false;
+      if (reference) throw error;
+      publishKovaNotice({
+        id: "image_save_failed",
+        title: error instanceof Error ? error.message : "Could not save image",
+      });
+      return false;
     } finally {
-      if (generation === saveGenerationRef.current) {
+      if (isCurrent()) {
         savePendingRef.current = false;
         setSavingImage(false);
       }
@@ -1280,6 +1320,19 @@ function ImagesPage() {
                       <Button
                         variant="outline"
                         type="button"
+                        onClick={(event) =>
+                          openReferenceDialog(
+                            { prompt: resultPrompt, imageUrl: result },
+                            event.currentTarget,
+                          )
+                        }
+                        disabled={savingImage}
+                      >
+                        Save as reference
+                      </Button>
+                      <Button
+                        variant="outline"
+                        type="button"
                         onClick={() => generate(resultPrompt)}
                         disabled={loading}
                         className="inline-flex items-center gap-2 border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
@@ -1529,6 +1582,15 @@ function ImagesPage() {
                 >
                   <Bookmark className="h-4 w-4" /> Save
                 </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={(event) => openReferenceDialog(lightbox, event.currentTarget)}
+                  disabled={savingImage}
+                  className="bg-white/10 text-white hover:bg-white/20"
+                >
+                  Save as reference
+                </Button>
                 <a
                   href={lightbox.imageUrl}
                   download={`kovagpt-${lightbox.id}.png`}
@@ -1551,6 +1613,21 @@ function ImagesPage() {
           </DialogContent>
         )}
       </Dialog>
+      {isSignedIn && referenceItem && referenceItem.ownerId === userKey && (
+        <ImageReferenceDialog
+          onClose={() => setReferenceItem(null)}
+          onReturnFocus={() => {
+            if (
+              resultOwnerRef.current === referenceItem.ownerId &&
+              referenceItem.trigger.isConnected
+            )
+              referenceItem.trigger.focus();
+          }}
+          onSave={(title, idempotencyKey) =>
+            saveGeneratedImage(referenceItem, { title, idempotencyKey })
+          }
+        />
+      )}
     </div>
   );
 }

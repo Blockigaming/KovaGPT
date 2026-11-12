@@ -1196,10 +1196,10 @@ function ScheduledTasksPage() {
                       </li>
                     ))}
                   </ul>
-                ) : tasks.length === 0 && loadError ? null : tasks.length === 0 ? (
+                ) : tasks.length === 0 && (loadError || !dataReady) ? null : tasks.length === 0 ? (
                   <div
                     className="kova-empty-state"
-                    data-kova-notice-id={dataReady && executionAvailable ? "first_task" : undefined}
+                    data-kova-notice-id={executionAvailable ? "first_task" : undefined}
                   >
                     <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                       <Calendar className="w-5 h-5 text-muted-foreground" />

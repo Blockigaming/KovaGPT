@@ -93,7 +93,8 @@ function saveFixture() {
   let resolveSave, rejectSave;
   const state = { busy: false, saves: 0, notices: [] };
   const saveEpoch = { current: 1 },
-    pending = { current: false };
+    pending = { current: false },
+    owner = { current: "owner" };
   const block = source.slice(
     source.indexOf("  async function saveGeneratedImage("),
     source.indexOf("  async function copyGeneratedImage("),
@@ -104,6 +105,7 @@ function saveFixture() {
   const dependencies = {
     isSignedIn: true,
     userKey: "owner",
+    resultOwnerRef: owner,
     saveGenerationRef: saveEpoch,
     savePendingRef: pending,
     setLoginOpen() {},
@@ -111,15 +113,17 @@ function saveFixture() {
       state.busy = value;
     },
     imageUrlForLibrary: async (url) => url,
-    saveImage: () => {
+    saveImage: ({ data }) => {
       state.saves++;
+      state.request = data;
       return new Promise((resolve, reject) => {
         resolveSave = resolve;
         rejectSave = reject;
       });
     },
     publishKovaNotice: (notice) => {
-      if (notice.id === "file_saved") assert.equal(notice.confirmed, true);
+      if (["file_saved", "reference_saved"].includes(notice.id))
+        assert.equal(notice.confirmed, true);
       state.notices.push(notice.id);
     },
   };
@@ -130,8 +134,9 @@ function saveFixture() {
     state,
     saveEpoch,
     pending,
+    owner,
     save,
-    finish: () => resolveSave(),
+    finish: (receipt = { id: "saved-image" }) => resolveSave(receipt),
     fail: () => rejectSave(new Error("Library unavailable")),
   };
 }
@@ -171,6 +176,27 @@ test("image save failure emits once for the current account and never for a stal
     await result;
     assert.deepEqual(f.state.notices, stale ? [] : ["image_save_failed"]);
     if (!stale) assert.equal(f.pending.current, false);
+  }
+});
+
+test("a named reference uses the expected account and reports only a confirmed Library save", async () => {
+  const item = { prompt: "draft", imageUrl: "data:image/png;base64,test" };
+  const reference = { title: "Paper bird", idempotencyKey: crypto.randomUUID() };
+  for (const outcome of ["saved", "missing", "switched"]) {
+    const f = saveFixture();
+    const result = f.save(item, reference);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(f.state.request, {
+      ...item,
+      ...reference,
+      expectedOwnerId: "owner",
+    });
+    assert.deepEqual(f.state.notices, []);
+    if (outcome === "switched") f.owner.current = "next-owner";
+    f.finish(outcome === "missing" ? {} : undefined);
+    if (outcome === "missing") await assert.rejects(result, /could not be confirmed/);
+    else assert.equal(await result, outcome === "saved");
+    assert.deepEqual(f.state.notices, outcome === "saved" ? ["reference_saved"] : []);
   }
 });
 

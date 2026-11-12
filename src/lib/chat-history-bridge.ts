@@ -2,6 +2,7 @@ import type { Conversation } from "./chat-store";
 export const CHAT_HISTORY_CHANGED_EVENT = "kova:chat-history-changed";
 export type ChatHistoryView = {
   ready: boolean;
+  complete: boolean;
   writable: boolean;
   dirty: boolean;
   active: Conversation[];

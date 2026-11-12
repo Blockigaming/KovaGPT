@@ -149,6 +149,7 @@ export function ChatHistorySyncRuntime() {
     };
     const view: ChatHistoryView = {
       ready: false,
+      complete: false,
       writable: false,
       dirty: false,
       active: [],
@@ -267,6 +268,7 @@ export function ChatHistorySyncRuntime() {
           view.active = active;
           view.archived = archived;
           view.ready = true;
+          view.complete = controller?.getState()?.complete === true;
           view.dirty = dirty;
           notifyChatHistoryChanged(ownerId, source);
           channel?.postMessage({ ownerId });
