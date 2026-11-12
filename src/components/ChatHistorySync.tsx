@@ -381,6 +381,10 @@ export function ChatHistorySyncStatus() {
   if (!visible) return null;
   const labelPhase =
     state.migration > 0 && !critical ? "local" : (state.recoveryPhase ?? state.phase);
+  const manualRetryRequired =
+    state.recoveryPhase === "device_error" ||
+    state.recoveryPhase === "blocked" ||
+    state.recoveryPhase === "auth_required";
   async function act(action: () => Promise<void> | undefined) {
     setBusy(true);
     try {
@@ -418,7 +422,7 @@ export function ChatHistorySyncStatus() {
           </Button>
         </div>
       )}
-      {state.recoveryPhase && critical && (
+      {manualRetryRequired && (
         <Button
           data-ui-reference="chatgpt.chat-history.control"
           variant="outline"

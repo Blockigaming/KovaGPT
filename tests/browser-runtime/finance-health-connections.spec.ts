@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE)
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
 const root = process.cwd();
@@ -48,7 +48,7 @@ const bundled = await build({
             : {
                 path: ["", ".ts", ".tsx", ".mjs"]
                   .map((ext) => path.join(root, "src", args.path.slice(2)) + ext)
-                  .find(existsSync)!,
+                  .find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile())!,
               },
         );
         builder.onResolve({ filter: /^@tanstack\/react-start$/ }, (args) => ({
