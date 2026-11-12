@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import type { GoogleStatus } from "../../src/lib/google-client";
 import type { AccountStatus } from "../../src/hooks/use-connected-accounts";
 import { MASTER_CONNECTORS } from "../../src/lib/connector-master-list.mjs";
@@ -50,7 +50,7 @@ const result = await build({
             : {
                 path: ["", ".ts", ".tsx", ".mjs"]
                   .map((extension) => path.join(root, "src", args.path.slice(2)) + extension)
-                  .find((candidate) => existsSync(candidate))!,
+                  .find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile())!,
               },
         );
         builder.onResolve({ filter: /^(@tanstack\/react-(router|start)|sonner)$/ }, (args) => ({
