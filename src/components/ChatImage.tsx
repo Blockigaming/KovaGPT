@@ -5,10 +5,9 @@ import {
   ExternalLink,
   EyeOff,
   ImagePlus,
-  Images,
-  PanelRight,
+  Image,
+  PanelRightOpen,
   Maximize2,
-  Minimize2,
 } from "lucide-react";
 import { AttachmentPreviewMobileHeader } from "./AttachmentPreviewMobile";
 import {
@@ -370,7 +369,7 @@ export function ChatImage({
           />
           <div className="kova-image-viewer-toolbar">
             <span className="kova-preview-action kova-image-viewer-badge">
-              <Images aria-hidden="true" /> Image
+              <Image aria-hidden="true" /> Image
             </span>
             <div className="kova-image-viewer-tools">
               <select
@@ -402,7 +401,7 @@ export function ChatImage({
                 className="kova-preview-action"
                 onClick={() => setSidePanel((value) => !value)}
               >
-                <PanelRight aria-hidden="true" />
+                <PanelRightOpen aria-hidden="true" />
                 {sidePanel ? "Full screen" : "Open in side panel"}
               </button>
               <DialogClose className="kova-preview-action" aria-label="Close image preview">
@@ -444,7 +443,7 @@ export function ChatImage({
             )}
             <button type="button" onClick={() => setActualSize((value) => !value)}>
               <span className="kova-preview-circle">
-                {actualSize ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+                {actualSize ? <Maximize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
               </span>
               {actualSize ? "Fit to screen" : "Actual size"}
             </button>

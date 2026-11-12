@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ArrowUp, Download, Ellipsis, FileArchive, FileText, X } from "lucide-react";
+import { ArrowUp, Download, Ellipsis, Archive, FileText, X } from "lucide-react";
 import { DialogClose } from "./ui/dialog";
 import { formatStorageBytes } from "@/lib/storage-display";
 
@@ -52,7 +52,7 @@ export function AttachmentPreviewMobileHeader({
 
 export function AttachmentPreviewFileInfo({ name, size }: { name: string; size?: number | null }) {
   const extension = name.split(".").length > 1 ? name.split(".").at(-1)?.toUpperCase() : undefined;
-  const Icon = extension === "ZIP" ? FileArchive : FileText;
+  const Icon = extension === "ZIP" ? Archive : FileText;
   return (
     <div className="kova-preview-file-info">
       <div className="kova-preview-file-icon" aria-hidden="true">
