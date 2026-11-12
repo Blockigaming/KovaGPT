@@ -779,3 +779,82 @@
 :root[data-kova-motion="reduced"] .kova-inline-dictation-wave i {
   animation: none !important;
 }
+
+.spec400-chat-input:has(> .kova-live-voice) > :not(.kova-live-voice) {
+  display: none;
+}
+
+.kova-live-voice {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 5rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  color: var(--foreground);
+}
+
+.kova-live-voice::before {
+  position: absolute;
+  z-index: -1;
+  inset: -120% -12%;
+  content: "";
+  background:
+    radial-gradient(ellipse at 39% 49%, #d68f5b 0%, transparent 26%),
+    radial-gradient(ellipse at 58% 55%, #e6e4df 0%, transparent 30%),
+    radial-gradient(ellipse at 59% 38%, #77869c 0%, transparent 32%);
+  filter: blur(34px);
+  opacity: 0.19;
+  animation: kova-live-voice-drift 24s ease-in-out infinite alternate;
+  transition: opacity 300ms ease;
+}
+
+.kova-live-voice[data-phase="recording"]::before {
+  opacity: 0.26;
+}
+.kova-live-voice[data-phase="speaking"]::before {
+  opacity: 0.37;
+}
+
+@keyframes kova-live-voice-drift {
+  from {
+    transform: rotate(-7deg) scale(0.95);
+  }
+  to {
+    transform: rotate(8deg) scale(1.08);
+  }
+}
+
+.kova-live-voice button,
+.kova-live-voice-mark {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #f6f5f3;
+  color: #222;
+}
+
+.kova-live-voice button:hover {
+  background: #e5e2dd;
+}
+.kova-live-voice button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.kova-live-voice-error {
+  max-width: min(60%, 26rem);
+  font-size: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-live-voice::before {
+    animation: none;
+    transition: none;
+  }
+}

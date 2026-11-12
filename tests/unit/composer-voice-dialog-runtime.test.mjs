@@ -343,6 +343,10 @@ function fixture(initial = {}, options = {}) {
       },
     },
   };
+  modules["@/lib/voice/preference"] = loadUiModule("src/lib/voice/preference.ts", modules);
+  modules["@/lib/voice/realtime-client"] = {
+    listenForVoiceTurn: options.listenForVoiceTurn ?? (() => assert.fail("Unexpected live voice")),
+  };
   const viewExports = {};
   vm.runInNewContext(compiledView, {
     exports: viewExports,

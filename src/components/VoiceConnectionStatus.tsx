@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { authFetch } from "@/lib/auth-fetch";
+import { principalScopedStorageKey, safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
+import {
+  VOICE_PREFERENCE_KEY,
+  preferredVoice,
+  readVoiceChoices,
+  type VoiceChoice,
+} from "@/lib/voice/preference";
 import { Button } from "@/components/ui/button";
 
 export function VoiceConnectionStatus() {
@@ -12,6 +19,8 @@ export function VoiceConnectionStatus() {
     owner: string;
     stt: boolean;
     conversation: boolean;
+    voices: VoiceChoice[];
+    voiceId: string;
   } | null>(null);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -43,12 +52,33 @@ export function VoiceConnectionStatus() {
       if (!active()) return;
       if (!response.ok || typeof value.stt !== "boolean" || typeof value.conversation !== "boolean")
         throw new Error("Voice status couldn't be checked. Try again.");
-      setResult({ owner, stt: value.stt, conversation: value.conversation });
+      const voices = readVoiceChoices(value.voices).filter((voice) => voice.available);
+      setResult({
+        owner,
+        stt: value.stt,
+        conversation: value.conversation,
+        voices,
+        voiceId: preferredVoice(owner, voices, value.defaultVoiceId),
+      });
     } catch {
       if (active()) setError("Voice status couldn't be checked. Try again.");
     } finally {
       if (request.current.generation === token) pending.current = false;
       if (active()) setBusy(false);
+    }
+  };
+  const changeVoice = (voiceId: string) => {
+    if (!owner || result?.owner !== owner || !result.voices.some((voice) => voice.id === voiceId))
+      return;
+    const key = principalScopedStorageKey(VOICE_PREFERENCE_KEY, owner);
+    const storage = safeBrowserStorage("localStorage");
+    try {
+      if (!key || !storage) throw new Error();
+      storage.setItem(key, voiceId);
+      setResult({ ...result, voiceId });
+      setError("");
+    } catch {
+      setError("Your browser couldn't save the selected voice.");
     }
   };
   return (
@@ -77,6 +107,22 @@ export function VoiceConnectionStatus() {
             playback.
           </p>
         </div>
+      ) : null}
+      {result?.owner === owner && result?.voices.length ? (
+        <label className="block space-y-2 text-sm">
+          <span className="block">Reply voice</span>
+          <select
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3"
+            value={result.voiceId}
+            onChange={(event) => changeVoice(event.target.value)}
+          >
+            {result.voices.map((voice) => (
+              <option key={voice.id} value={voice.id}>
+                {voice.label}
+              </option>
+            ))}
+          </select>
+        </label>
       ) : null}
       {error ? (
         <p role="alert" className="text-sm text-destructive">

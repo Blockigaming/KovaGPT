@@ -49,6 +49,7 @@ export function voiceConfiguration(env, tier = "free") {
     sts: output && audioEnabled,
     // Voice conversations use STT, chat, and saved-message /api/speech output.
     // This signals only known configuration gates, never provider readiness.
+    realtime: env("KOVA_VOICE_REALTIME_ENABLED") === "true" && catalog.entries.length >= 3,
     conversation: stt && output && env("KOVA_SPEECH_ENABLED") === "true" && modelPolicy.valid,
   };
 }
@@ -62,6 +63,7 @@ export function publicVoiceConfiguration(config) {
     tts: config.tts,
     sts: config.sts,
     conversation: config.conversation,
+    ...(config.realtime ? { realtime: true } : {}),
     voices: publicVoiceCatalog(config.catalog),
     defaultVoiceId: config.catalog.defaultVoiceId,
   };
@@ -125,6 +127,7 @@ export async function parseVoiceRequest(request) {
     } catch {
       throw new VoiceError("invalid_json", 400);
     }
+    if (body?.action === "realtime") return { action: "realtime" };
     if (!body || body.action !== "tts" || typeof body.text !== "string" || !body.text.trim())
       throw new VoiceError("invalid_text", 400);
     if (body.text.length > MAX_TEXT_CHARACTERS) throw new VoiceError("request_too_large", 413);
@@ -185,7 +188,9 @@ export async function executeVoice(
     const headers = { "xi-api-key": config.apiKey };
     let path;
     let body;
-    if (input.action === "tts") {
+    if (input.action === "realtime") {
+      path = "/v1/single-use-token/realtime_scribe";
+    } else if (input.action === "tts") {
       path = `/v1/text-to-speech/${encodeURIComponent(config.voiceId)}?output_format=mp3_44100_128`;
       headers["Content-Type"] = "application/json";
       body = JSON.stringify({ text: input.text, model_id: config.modelId });
@@ -217,6 +222,17 @@ export async function executeVoice(
       );
     }
     const bytes = await boundedBytes(upstream.body, MAX_RESPONSE_BYTES, controller.signal);
+    if (input.action === "realtime") {
+      let result;
+      try {
+        result = JSON.parse(new TextDecoder().decode(bytes));
+      } catch {
+        throw new VoiceError("voice_invalid_response", 502);
+      }
+      if (typeof result?.token !== "string" || !result.token || result.token.length > 4096)
+        throw new VoiceError("voice_invalid_response", 502);
+      return Response.json({ token: result.token }, { headers: { "Cache-Control": "no-store" } });
+    }
     if (input.action === "stt") {
       let result;
       try {

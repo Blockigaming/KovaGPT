@@ -24,7 +24,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com https://tiles.openfreemap.org https://server.arcgisonline.com https://s3.amazonaws.com",
+    "connect-src 'self' wss://api.elevenlabs.io https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://checkout.stripe.com https://link.com https://*.link.com https://tiles.openfreemap.org https://server.arcgisonline.com https://s3.amazonaws.com",
     "frame-src https://checkout.stripe.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://link.com https://*.link.com",
     "worker-src 'self' blob:",
     "media-src 'self' blob:",

@@ -1,6 +1,6 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
+import { AudioLines, X, ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { DialogContent } from "@/components/ui/dialog";
@@ -22,6 +22,13 @@ import {
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
+import {
+  VOICE_PREFERENCE_KEY,
+  preferredVoice,
+  readVoiceChoices,
+  type VoiceChoice,
+} from "@/lib/voice/preference";
+import { listenForVoiceTurn } from "@/lib/voice/realtime-client";
 import { createVoiceSilenceGate } from "@/lib/voice/speech-pause.mjs";
 import {
   createBrowserSpeechSink,
@@ -36,43 +43,16 @@ const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
 const MAX_REPLY_CHARACTERS = 4_000;
 const REQUEST_TIMEOUT_MS = 60_000;
 
-const VOICE_PREFERENCE_KEY = "kova-voice-selection-v1";
-type VoiceChoice = { id: string; label: string; available: boolean };
 type VoiceCapabilities = {
   configured: boolean;
   stt: boolean;
   tts: boolean;
   sts: boolean;
   conversation: boolean;
+  realtime?: boolean;
   voices: VoiceChoice[];
   defaultVoiceId: string | null;
 };
-
-function readVoiceChoices(value: unknown): VoiceChoice[] {
-  if (!Array.isArray(value) || value.length > 32) return [];
-  const choices: VoiceChoice[] = [];
-  const ids = new Set<string>();
-  for (const choice of value) {
-    if (
-      !choice ||
-      typeof choice !== "object" ||
-      typeof choice.id !== "string" ||
-      !/^[a-zA-Z0-9_-]{1,64}$/.test(choice.id) ||
-      ids.has(choice.id) ||
-      typeof choice.label !== "string" ||
-      !choice.label.trim() ||
-      choice.label.length > 80 ||
-      Array.from(choice.label as string).some(
-        (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
-      ) ||
-      typeof choice.available !== "boolean"
-    )
-      return [];
-    ids.add(choice.id);
-    choices.push({ id: choice.id, label: choice.label.trim(), available: choice.available });
-  }
-  return choices;
-}
 
 function conversationAvailable(capabilities: VoiceCapabilities | null, voiceId: string): boolean {
   return Boolean(
@@ -81,23 +61,6 @@ function conversationAvailable(capabilities: VoiceCapabilities | null, voiceId: 
   );
 }
 
-function preferredVoice(userId: string, voices: VoiceChoice[], defaultId: string | null): string {
-  const fallback =
-    voices.find((voice) => voice.available && voice.id === defaultId)?.id ??
-    voices.find((voice) => voice.available)?.id ??
-    "";
-  const storage = safeBrowserStorage("localStorage");
-  const key = principalScopedStorageKey(VOICE_PREFERENCE_KEY, userId);
-  if (!storage || !key) return fallback;
-  try {
-    const saved = storage.getItem(key);
-    if (saved && voices.some((voice) => voice.id === saved && voice.available)) return saved;
-    if (saved !== null) storage.removeItem(key);
-  } catch {
-    // Sandboxed or full storage must not prevent using the server's catalog.
-  }
-  return fallback;
-}
 type Phase =
   | "idle"
   | "requesting"
@@ -415,6 +378,7 @@ export function ComposerVoiceDialog({
             tts: result.tts === true,
             sts: result.sts === true,
             conversation: result.conversation === true,
+            realtime: result.realtime === true,
           });
         } catch (cause) {
           if (isCurrent(scope)) {
@@ -794,7 +758,11 @@ export function ComposerVoiceDialog({
       voiceId: selectedVoice.current,
     };
     if (!isCurrent(scope)) return;
-    if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    const realtime = mode === "voice" && capabilities.realtime;
+    if (
+      !realtime &&
+      (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia)
+    ) {
       setError(
         "This browser does not support microphone recording. Try a supported browser on a secure connection, or keep typing.",
       );
@@ -809,6 +777,50 @@ export function ComposerVoiceDialog({
     setError("");
     setElapsed(0);
     updatePhase("requesting");
+    if (realtime) {
+      const controller = new AbortController();
+      request.current = controller;
+      try {
+        const text = await listenForVoiceTurn({
+          signal: controller.signal,
+          getToken: async () => {
+            const response = await authFetch("/api/voice", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Kova-Voice-Owner": scope.userId,
+              },
+              body: JSON.stringify({ action: "realtime" }),
+              signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
+            });
+            if (!response.ok)
+              throw new Error(await voiceError(response, "Live Voice could not connect."));
+            const { token } = await response.json();
+            if (typeof token !== "string" || !token)
+              throw new Error("Live Voice could not connect.");
+            return token;
+          },
+          onListening: () => {
+            if (isCurrent(scope)) updatePhase("recording");
+          },
+        });
+        finishRequest(controller);
+        if (isCurrent(scope)) await submitVoiceTurn(scope, text);
+      } catch (cause) {
+        if (isCurrent(scope) && !controller.signal.aborted) {
+          failOperation(
+            cause instanceof Error && cause.name === "NotAllowedError"
+              ? "Allow microphone access in your browser to use Voice."
+              : cause instanceof Error && cause.name === "Error"
+                ? cause.message
+                : "Live Voice could not connect. Try again.",
+          );
+        }
+      } finally {
+        finishRequest(controller);
+      }
+      return;
+    }
     let acquired: MediaStream | null = null;
     try {
       // Capture starts only after explicit Start, or after actual playback ends
@@ -1146,6 +1158,44 @@ export function ComposerVoiceDialog({
 
   const VoiceView =
     inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
+
+  if (open && mode === "voice" && checking && autoStartVoice) return null;
+
+  if (open && mode === "voice" && capabilities?.realtime && conversationReady && !disabled) {
+    const listening = phase === "recording";
+    const speaking = phase === "speaking";
+    return (
+      <section
+        className="kova-live-voice"
+        aria-label="Live Voice"
+        data-phase={phase}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") closeDialog(false);
+        }}
+      >
+        <span className="sr-only" role="status">
+          {listening ? "Listening" : speaking ? "Speaking" : status}
+        </span>
+        {error && (
+          <p role="alert" className="kova-live-voice-error">
+            {error}
+          </p>
+        )}
+        {phase === "idle" ? (
+          <button type="button" onClick={() => void startRecording()} aria-label="Restart Voice">
+            <AudioLines aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="kova-live-voice-mark" aria-hidden="true">
+            <AudioLines />
+          </span>
+        )}
+        <button type="button" onClick={() => closeDialog(false)} aria-label="End Voice">
+          <X aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
 
   return (
     <VoiceView

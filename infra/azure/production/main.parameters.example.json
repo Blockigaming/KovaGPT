@@ -146,6 +146,9 @@
     "voiceAudioEnabled": {
       "value": false
     },
+    "voiceRealtimeEnabled": {
+      "value": false
+    },
     "voiceDailyRequestLimit": {
       "value": 0
     },

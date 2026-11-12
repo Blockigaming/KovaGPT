@@ -25,6 +25,7 @@ export function createVoiceHandler({
   assertFeatureEnabled,
   enforceQuota,
   getCallerTier,
+  limitRealtime,
   env,
   execute = executeVoice,
 }) {
@@ -71,6 +72,7 @@ export function createVoiceHandler({
       const input = await parseVoiceRequest(request);
       if (
         input.action !== "stt" &&
+        input.action !== "realtime" &&
         (input.voiceId !== undefined || config.catalog.defaultVoiceId !== null)
       ) {
         const selected = selectCatalogVoice(config.catalog, input.voiceId);
@@ -78,7 +80,8 @@ export function createVoiceHandler({
         config.voiceId = selected.providerVoiceId;
         config.modelId = selected.modelId;
       }
-      if (!config[input.action]) throw new VoiceError("voice_not_configured", 503);
+      if (!config[input.action] || (input.action === "realtime" && !config.conversation))
+        throw new VoiceError("voice_not_configured", 503);
       request.signal.throwIfAborted();
       // Parsing an upload can outlive the session that admitted its headers.
       // Revalidate before reserving quota or starting a billable operation.
@@ -88,8 +91,14 @@ export function createVoiceHandler({
           { status: 401, headers: { "Cache-Control": "no-store" } },
         );
       request.signal.throwIfAborted();
-      const quota = await enforceQuota(auth, "voice", config.dailyLimit, 1, request.signal);
-      if (quota) return quota;
+      if (input.action === "realtime") {
+        const limited = await limitRealtime?.(auth);
+        if (limited) return limited;
+      }
+      if (input.action !== "realtime" || tier !== "pro") {
+        const quota = await enforceQuota(auth, "voice", config.dailyLimit, 1, request.signal);
+        if (quota) return quota;
+      }
       request.signal.throwIfAborted();
       response = await execute(input, config, { signal: request.signal });
       request.signal.throwIfAborted();

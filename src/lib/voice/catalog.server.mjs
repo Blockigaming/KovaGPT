@@ -74,6 +74,15 @@ export function readVoiceCatalog(env, tier) {
           ]
         : [];
   }
+  if (env("KOVA_VOICE_REALTIME_ENABLED") === "true") {
+    const count =
+      tier === "free"
+        ? 3
+        : tier === "plus"
+          ? Math.max(3, Math.ceil(entries.length / 2))
+          : entries.length;
+    entries = entries.map((entry, index) => ({ ...entry, available: index < count }));
+  }
   const preferred = env("KOVA_VOICE_DEFAULT_ID");
   if (preferred !== undefined && !entries.some((entry) => entry.id === preferred))
     return { valid: false, entries: [], defaultVoiceId: null };

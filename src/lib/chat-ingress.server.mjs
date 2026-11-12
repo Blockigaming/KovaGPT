@@ -406,6 +406,8 @@ export function normalizeChatPayload(value) {
   if (value.historyOffset !== undefined) payload.historyOffset = historyOffset;
   if (personality !== undefined) payload.personality = personality;
   if (projectId !== undefined) payload.projectId = projectId;
+  const voice = optionalBoolean(value.voice, "voice");
+  if (voice === true) payload.voice = true;
   if (temporary !== undefined) payload.temporary = temporary;
   if (temporaryContext !== undefined) payload.temporaryContext = temporaryContext;
   if (clientTool !== undefined) payload.clientTool = clientTool;

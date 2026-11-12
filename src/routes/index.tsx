@@ -1972,6 +1972,7 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
+            ...(voiceRequest ? { voice: true } : {}),
             ...(selectedWorkflowSkill ? { skill: selectedWorkflowSkill } : {}),
           };
           return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
@@ -2177,6 +2178,7 @@ function KovaGPT() {
                 : withResponsePresentation(
                     chatRequestProfile({
                       ...settings,
+                      ...(voiceRequest ? { responseLength: "short" as const } : {}),
                       ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
                     }),
                     settings,
