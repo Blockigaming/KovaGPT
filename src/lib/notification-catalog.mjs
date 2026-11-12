@@ -260,7 +260,7 @@ NOTIFICATION_GROUPS.collaboration.push("project_comment_posted", "project_commen
 export const NOTIFICATION_IDS = Object.freeze(Object.values(NOTIFICATION_GROUPS).flat());
 const surfaces = {
   popover: ["try_feature", "check_this_out", "quick_tip", "did_you_know"],
-  banner: ["app_update", "feature_changing", "feature_retired"],
+  banner: ["update_required", "app_update", "feature_changing", "feature_retired"],
   modal: [
     "sketch_unsaved",
     "confirm_file_delete",
@@ -387,6 +387,7 @@ const CONFIRMATION = new Set([
 const ERROR_WORDS =
   /(?:failed|unavailable|expired|invalid|blocked|timeout|offline|denied|restricted|error)$/;
 const REQUIRE_ACTUAL_STATE = new Set([
+  "update_required",
   "offer_available",
   "offer_claimed",
   "workspace_join_requested",
@@ -426,7 +427,7 @@ export function notificationDefinition(id) {
           ? 9
           : 8,
     requiresEvidence: REQUIRE_ACTUAL_STATE.has(id),
-    dismissible: true,
+    dismissible: id !== "update_required",
     exclusive: CONFIRMATION.has(id) || surface === "modal" || surface === "sheet",
     liveRegion: id !== "workspace_join_denied" && ERROR_WORDS.test(id) ? "assertive" : "polite",
   });

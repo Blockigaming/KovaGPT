@@ -843,3 +843,55 @@ test("[contract:privacy_updated] saving browser privacy rules uses the current a
   await expect(form.getByText("https://example.com", { exact: true })).toBeVisible();
   await expect(page.getByText(title, { exact: true })).toHaveCount(0);
 });
+
+test("[notice:update_required] the supported app stays open until the release server retires its build", async ({
+  page,
+}) => {
+  test.skip(
+    !/^[a-f0-9]{40}$/.test(process.env.KOVA_BUILD_SHA || process.env.GITHUB_SHA || ""),
+    "The preview must be built with a release SHA.",
+  );
+  let requiresUpdate = false;
+  let reportedClientBuild: string | undefined;
+  await page.route("**/api/version", async (route) => {
+    reportedClientBuild = route.request().headers()["x-kova-client-build"];
+    const replacementBuild =
+      reportedClientBuild === "a".repeat(40) ? "b".repeat(40) : "a".repeat(40);
+    await route.fulfill({
+      json: { sha: replacementBuild, ...(requiresUpdate ? { updateRequired: true } : {}) },
+    });
+  });
+  const versionChecked = page.waitForResponse((response) =>
+    response.url().endsWith("/api/version"),
+  );
+  await page.reload();
+  await versionChecked;
+  expect(reportedClientBuild).toMatch(/^[a-f0-9]{40}$/);
+  const notice = page
+    .locator('.kova-notice-panel[data-surface="banner"]')
+    .filter({ has: page.getByRole("heading", { name: "An app update is required" }) });
+  await expect(notice).toHaveCount(0);
+
+  requiresUpdate = true;
+  await expect(async () => {
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect(notice).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 5_000 });
+  await expect(notice.getByRole("button", { name: "Reload" })).toBeVisible();
+  await expect(notice.getByRole("button", { name: "Close notification" })).toHaveCount(0);
+  const composer = page.locator(".spec400-composer");
+  await expect
+    .poll(async () => {
+      const [banner, dock] = await Promise.all([notice.boundingBox(), composer.boundingBox()]);
+      return Boolean(banner && dock && banner.y + banner.height <= dock.y);
+    })
+    .toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(notice).toBeVisible();
+
+  requiresUpdate = false;
+  const navigation = page.waitForEvent("framenavigated", (frame) => frame === page.mainFrame());
+  await notice.getByRole("button", { name: "Reload" }).click();
+  await navigation;
+  await expect(notice).toHaveCount(0);
+});

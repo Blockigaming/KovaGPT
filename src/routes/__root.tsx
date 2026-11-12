@@ -368,15 +368,20 @@ function RootNotificationCenter() {
         onPrimary: () => window.location.reload(),
       });
     };
+    const updateCheck = new AbortController();
+    void import("@/lib/client-update-notice")
+      .then(({ watchRequiredClientUpdate }) => watchRequiredClientUpdate(updateCheck.signal))
+      .catch(() => {});
     window.addEventListener("offline", offline);
     window.addEventListener("online", online);
     workers?.addEventListener("controllerchange", controllerChanged);
     return () => {
+      updateCheck.abort();
       window.removeEventListener("offline", offline);
       window.removeEventListener("online", online);
       workers?.removeEventListener("controllerchange", controllerChanged);
     };
-  }, [isLoaded]);
+  }, [isLoaded, user?.id]);
   return isLoaded ? (
     <>
       <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />

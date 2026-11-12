@@ -185,6 +185,7 @@ export function KovaNotificationPanel({
         aria-labelledby="kova-notice-title"
         aria-describedby={active.message ? "kova-notice-body" : undefined}
         data-surface={definition.surface}
+        data-notice-id={active.id}
         data-group={definition.group}
         data-visual={visual}
         style={
