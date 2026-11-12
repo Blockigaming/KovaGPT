@@ -1162,6 +1162,7 @@ export const Route = createFileRoute("/api/chat")({
             const acceptanceFlag = runtimeEnv("KOVA_GENERATION_ACCEPTANCE_ENABLED");
             const freeChat =
               callerTier === "free" &&
+              runtimeEnv("KOVA_HOSTED_INFERENCE_ENABLED") === "true" &&
               !capture &&
               (!acceptanceFlag || acceptanceFlag === "false") &&
               !explicitHostedTool &&
