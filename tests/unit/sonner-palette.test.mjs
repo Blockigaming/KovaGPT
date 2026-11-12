@@ -6,8 +6,14 @@ import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 let mobile = false;
+let short = false;
+let clearance = 0;
 const { Toaster } = loadUiModule("src/components/ui/sonner.tsx", {
   sonner: { Toaster: "Sonner" },
+  react: {
+    useState: (initial) => [typeof initial === "boolean" ? short : clearance, () => {}],
+    useEffect: () => {},
+  },
   "@/hooks/use-mobile": { useIsMobile: () => mobile },
 });
 const styles = postcss.parse(read("src/styles/visual-tokens.css"));
@@ -55,12 +61,25 @@ test("mobile toasts move above the composer while desktop keeps its corner", () 
   mobile = true;
   try {
     const { props } = Toaster({});
-    assert.equal(props.position, "top-center");
+    assert.equal(props.position, "bottom-center");
     assert.equal(props.mobileOffset.top, "calc(72px + env(safe-area-inset-top))");
+    assert.equal(props.mobileOffset.bottom, "calc(88px + env(safe-area-inset-bottom))");
     assert.equal(props.mobileOffset.left, 16);
     assert.equal(props.mobileOffset.right, 16);
+    clearance = 186;
+    assert.equal(
+      Toaster({}).props.mobileOffset.bottom,
+      "max(calc(88px + env(safe-area-inset-bottom)), 186px)",
+    );
+    mobile = false;
+    assert.equal(Toaster({}).props.offset.bottom, 186);
+    short = true;
+    assert.equal(Toaster({}).props.position, "top-center");
+    assert.equal(Toaster({}).props.visibleToasts, 1);
   } finally {
     mobile = false;
+    clearance = 0;
+    short = false;
   }
   assert.equal(Toaster({}).props.position, "bottom-right");
 });
@@ -76,5 +95,5 @@ test("caller styles merge without discarding palette bindings and normal toast b
   assert.equal(props.duration, 2000);
   assert.equal(props.position, "bottom-right");
   assert.equal(props.closeButton, true);
-  assert.equal(props.visibleToasts, 4);
+  assert.equal(props.visibleToasts, 3);
 });

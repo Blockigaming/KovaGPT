@@ -179,7 +179,21 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   );
   assert.match(finalToolContext, /\[\.\.\.finalMessages, \.\.\.finalToolMessages\]/u);
   assert.match(chat, /normalizeChatPreflightFailure\("selected_context", error\)/u);
-  assert.match(chat, /if \(contextFailure\) throw error;[\s\S]{0,100}mapProviderError\(error\)/u);
+  const providerFailureStart = chat.indexOf(
+    "const contextFailure = error instanceof ChatPreflightError",
+  );
+  const providerFailure = chat.slice(
+    providerFailureStart,
+    chat.indexOf("if (!upstream.ok)", providerFailureStart),
+  );
+  const contextRethrow = providerFailure.indexOf("if (contextFailure) throw error;");
+  const mappedProviderError = providerFailure.indexOf(
+    "const providerError = mapProviderError(error);",
+  );
+  assert.ok(
+    contextRethrow >= 0 && mappedProviderError > contextRethrow,
+    "selected context failures must retain their own error before provider error mapping",
+  );
   assert.match(home, /skill: undefined, updatedAt: Date\.now\(\)/u);
   const clearSkill = home.slice(
     home.indexOf("const clearWorkflowSkill"),

@@ -37,13 +37,18 @@ import {
   markChatHistoryDirty,
   chatHistoryView,
   chatHistorySnapshot,
-  CHAT_HISTORY_CHANGED_EVENT,
+  subscribeChatHistoryOwner,
 } from "@/lib/chat-history-bridge";
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
+import {
+  chatResponseError,
+  consumeChatSse,
+  chatFailurePresentation,
+  publishRequestedChatTool,
+} from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -69,8 +74,24 @@ import {
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
 
-import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
+import {
+  type Settings,
+  chatSettingsUseDialog,
+  DEFAULT_SETTINGS,
+  rememberSettingsReturnPath,
+  settingsSectionForTab,
+} from "@/lib/settings-types";
 
+const loadChatRecoveryPanels = () => import("@/components/ChatRecoveryPanels");
+const ChatRequestStatus = lazy(() =>
+  loadChatRecoveryPanels().then((module) => ({ default: module.ChatRequestStatus })),
+);
+const ContinueChatPanel = lazy(() =>
+  loadChatRecoveryPanels().then((module) => ({ default: module.ContinueChatPanel })),
+);
+const NextPromptPanel = lazy(() =>
+  loadChatRecoveryPanels().then((module) => ({ default: module.NextPromptPanel })),
+);
 const FreeOfferButton = lazy(() =>
   import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
 );
@@ -167,8 +188,6 @@ import {
   memoryWriteBlockStorageKey,
 } from "@/lib/memory-write-coordinator.mjs";
 
-import { getUsage } from "@/lib/limits";
-
 import {
   useUser,
   useClerkSafe,
@@ -181,12 +200,14 @@ import {
   type Conversation,
   type Message,
   type TemporaryChatContext,
+  TEMPORARY_CHAT_NOTICE_COPY,
   type ConversationWorkflowSkill,
   chatStoragePrincipal,
   clearDraft,
   clearPendingActive,
   draftStorageKey,
   loadDraft,
+  emptyNewChatDraftKey,
   loadConversations,
   subscribeToConversationChanges,
   loadArchivedConversations,
@@ -203,6 +224,8 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { chatFailureNoticeId } from "@/lib/chat-notice-policy.mjs";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
@@ -215,7 +238,7 @@ import {
 const USER_STOP_REASON = "kova_user_stopped_generation";
 type ChatRequestNotice = {
   scope: NextPromptScope;
-  kind: "session-expired";
+  kind: "session-expired" | "context-limit";
   signedIn: boolean;
 };
 type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
@@ -518,11 +541,7 @@ function KovaGPT() {
     (tab?: string) => {
       // Keep Settings above the mobile drawer and preserve in-memory chat work.
       if (
-        window.matchMedia("(max-width: 1023px)").matches ||
-        attachments.length ||
-        tempChat ||
-        isStreaming ||
-        result
+        chatSettingsUseDialog(Boolean(attachments.length), tempChat, isStreaming, Boolean(result))
       ) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -534,6 +553,7 @@ function KovaGPT() {
         saveDraft(userKey, activeId, input);
         if (activeId) savePendingActive(userKey, activeId);
       }
+      rememberSettingsReturnPath();
       void navigate({ to: "/settings/$section", params: { section: settingsSectionForTab(tab) } });
     },
     [
@@ -619,6 +639,8 @@ function KovaGPT() {
     open: boolean;
     kind: "image" | "chat" | "upload";
     message?: string;
+    resetsAt?: number;
+    usageKind?: "thinking" | "regular";
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightTargetRef = useRef<{
@@ -1617,11 +1639,10 @@ function KovaGPT() {
       setTempChatStartOpen(false);
       setTempChatConfirmed(true);
       window.setTimeout(() => setTempChatConfirmed(false), 1400);
-      toast.success("Temporary chat on", {
-        description:
-          context === "personalized"
-            ? "No history or new memory. Your enabled context and connected apps may be used."
-            : "No history or memory. Profile, instructions, personality and connected apps stay off.",
+      publishKovaNotice({
+        id: "temporary_chat",
+        title: "Temporary chat on",
+        message: TEMPORARY_CHAT_NOTICE_COPY[context],
       });
     },
     [activeId, attachments, chatStarted, input, newChat, storagePrincipal, userKey],
@@ -1646,8 +1667,8 @@ function KovaGPT() {
       setTempChatContext("clean");
       toast.message("Temporary chat off", {
         description: settings.rememberAcross
-          ? "New chats save on this device and may use saved memory."
-          : "New chats save on this device. Saved memory stays off.",
+          ? TEMPORARY_CHAT_NOTICE_COPY.historyWithMemory
+          : TEMPORARY_CHAT_NOTICE_COPY.historyWithoutMemory,
       });
     },
     [attachments, chatStarted, input, newChat, settings.rememberAcross, storagePrincipal, tempChat],
@@ -1666,8 +1687,10 @@ function KovaGPT() {
     const nextConversations = await persistTemporaryConversation(userKey, active, conversations);
     if (generation !== storageGenerationRef.current) return;
     if (!nextConversations) {
-      toast.error("This chat could not be saved", {
-        description: "Storage is unavailable or full. Free space and retry.",
+      publishKovaNotice({
+        id: "save_failed",
+        title: "This chat could not be saved",
+        message: "Storage is unavailable or full. Free space and retry.",
       });
       return;
     }
@@ -1684,8 +1707,11 @@ function KovaGPT() {
     setConversations(nextConversations);
     setTempChat(false);
     setTempChatContext("clean");
-    toast.success("Chat saved to history", {
-      description: "Regular chat continues. Earlier temporary turns stay out of memory.",
+    publishKovaNotice({
+      id: "saved",
+      title: "Chat saved to history",
+      confirmed: true,
+      message: "Regular chat continues. Earlier temporary turns stay out of memory.",
     });
   }, [active, conversations, isStreaming, setConversations, userKey]);
 
@@ -2123,16 +2149,13 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
+      let reportedWebSources = false;
 
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
-        const {
-          createChatHistoryPayload,
-          fetchForPrincipal,
-          chatRequestProfile,
-          withResponsePresentation,
-        } = await import("@/lib/chat-summary-snapshot.mjs");
+        const { createChatHistoryPayload, fetchForPrincipal, chatUserProfile } =
+          await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2147,7 +2170,7 @@ function KovaGPT() {
           },
         );
 
-        const resp = await authFetch("/api/chat", {
+        const pendingResponse = authFetch("/api/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2169,18 +2192,11 @@ function KovaGPT() {
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            user:
-              tempChat && tempChatContext === "clean"
-                ? requestWebSearch === undefined
-                  ? undefined
-                  : { webSearch: requestWebSearch }
-                : withResponsePresentation(
-                    chatRequestProfile({
-                      ...settings,
-                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
-                    }),
-                    settings,
-                  ),
+            user: chatUserProfile(
+              settings,
+              tempChat && tempChatContext === "clean",
+              requestWebSearch,
+            ),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
             personality:
@@ -2194,6 +2210,8 @@ function KovaGPT() {
           }),
           signal: controller.signal,
         });
+        if (isCurrentRequest()) publishRequestedChatTool(activeTool, publishKovaNotice);
+        const resp = await pendingResponse;
         if (!isCurrentRequest()) {
           void resp.body?.cancel().catch(() => undefined);
           return;
@@ -2236,6 +2254,10 @@ function KovaGPT() {
             }
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
+              if (sources && !reportedWebSources) {
+                reportedWebSources = true;
+                publishKovaNotice({ id: "search_completed", title: "Web sources found" });
+              }
               updateAssistantMessage((message) => ({
                 ...message,
                 ...(sources ? { sources } : {}),
@@ -2333,6 +2355,8 @@ function KovaGPT() {
             status?: number;
             code?: string;
             retryAfter?: number;
+            usageKind?: "thinking" | "regular";
+            resetAtMs?: number;
           };
           const raw = err.message || "Something went wrong";
           const quotaRejected = err.status === 429 && err.category === "quota_exceeded";
@@ -2355,32 +2379,36 @@ function KovaGPT() {
                   rejectedDraft,
                 ]);
             }
-            const kind: "image" | "chat" | "upload" = /image/i.test(raw)
-              ? "image"
-              : /upload|file/i.test(raw)
-                ? "upload"
-                : "chat";
-            setLimitDialog({ open: true, kind, message: raw });
+            const kind =
+              err.code === "image_generation_limit"
+                ? "image"
+                : err.code === "file_upload_limit"
+                  ? "upload"
+                  : "chat";
+            setLimitDialog({
+              open: true,
+              kind,
+              message: raw,
+              resetsAt: err.resetAtMs,
+              usageKind: err.usageKind,
+            });
           }
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
             e instanceof TypeError;
-          const category = err.category || (isNetwork ? "network_failure" : undefined);
-          const retryableCategory =
-            category === "model_timeout" ||
-            category === "streaming_interruption" ||
-            category === "network_failure" ||
-            category === "model_provider_failure";
-          // Respect the server's retryability signal. Configuration and
-          // authentication failures cannot heal through repeated requests and
-          // previously made the composer look stuck while it silently retried.
-          const sessionExpired = err.status === 401 || err.code === "authentication_required";
-          const canManualRetry =
-            !quotaRejected &&
-            !sessionExpired &&
-            err.status !== 403 &&
-            err.retryable !== false &&
-            (err.retryable === true || retryableCategory);
+          const {
+            sessionExpired,
+            canManualRetry,
+            friendly,
+            detail,
+            reference,
+            preservedDraftMessage,
+          } = chatFailurePresentation(err, {
+            raw,
+            signedIn: isSignedIn,
+            quotaRejected,
+            networkFailure: isNetwork,
+          });
           const failedResponseKey = JSON.stringify([requestPrincipal, nextConvId, assistantMsg.id]);
           if (canManualRetry) retryableFailedResponsesRef.current.add(failedResponseKey);
           else retryableFailedResponsesRef.current.delete(failedResponseKey);
@@ -2389,30 +2417,22 @@ function KovaGPT() {
           // A failed transport/stream may already have generated billable output.
           // Keep the partial response and require an explicit Retry action;
           // silently replaying with a new message ID can duplicate generation.
-          const requestId = err.requestId;
-          const friendly = sessionExpired
-            ? isSignedIn
-              ? "Your session could not be verified. Sign in again to continue."
-              : "Sign in is required for this request."
-            : !canManualRetry
-              ? raw
-              : category === "rate_limit"
-                ? "You're going a bit fast — try again in a moment."
-                : category === "quota_exceeded"
-                  ? "You've hit your plan's limit. Try again later or upgrade."
-                  : category === "model_timeout"
-                    ? "The model took too long to respond. Tap retry."
-                    : category === "model_provider_failure"
-                      ? err.retryable === false
-                        ? raw
-                        : "KovaGPT is temporarily unavailable. Tap retry."
-                      : category === "streaming_interruption"
-                        ? "The connection dropped mid-response. Tap retry."
-                        : isNetwork
-                          ? "Connection lost while generating a response. Check your internet and tap retry."
-                          : raw;
-          const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
-
+          const failureEvent = chatFailureNoticeId(err, {
+            signedIn: isSignedIn,
+            networkFailure: isNetwork,
+          });
+          const contextLimit = failureEvent === "conversation_full";
+          if (isCurrentRetryScope()) {
+            if (contextLimit && userKey && !tempChat)
+              updateRequestNotice({ scope: requestScope, kind: "context-limit", signedIn: true });
+            else
+              publishKovaNotice({
+                id: failureEvent,
+                title: friendly,
+                message: preservedDraftMessage,
+              });
+          }
+          if (voiceRequest && contextLimit) throw e;
           const retryActionEpoch = retryActionEpochRef.current.get(nextConvId) ?? 0;
           if (sessionExpired && isCurrentRetryScope())
             updateRequestNotice({
@@ -2420,9 +2440,9 @@ function KovaGPT() {
               kind: "session-expired",
               signedIn: isSignedIn,
             });
-          if (isCurrentRetryScope() && !quotaRejected)
+          if (isCurrentRetryScope() && !quotaRejected && !contextLimit)
             toast.error(friendly, {
-              description: requestId ? `Reference ID: ${requestId}` : undefined,
+              description: reference,
               action: canManualRetry
                 ? {
                     label: "Retry",
@@ -2443,6 +2463,7 @@ function KovaGPT() {
                       retryTimerRef.current = window.setTimeout(() => {
                         if (!isCurrentRetryScope() || activeIdRef.current !== nextConvId) return;
                         retryTimerRef.current = null;
+                        publishKovaNotice({ id: "retrying", title: "Retrying response" });
                         send(text, atts, retryTool, 0, nextConvId, priorMessages, userMsg.id);
                       }, 100);
                     },
@@ -2683,6 +2704,7 @@ function KovaGPT() {
     if (!composerDraftRef.current.text && !composerDraftRef.current.attachments.length)
       setSelectedTool(null);
     if (!target) return;
+    publishKovaNotice({ id: "request_canceled", title: "Generation stopped" });
     setConversations((previous) =>
       previous.map((conversation) => {
         if (conversation.id !== target.conversationId) return conversation;
@@ -2730,63 +2752,63 @@ function KovaGPT() {
       getConversations: () => voiceConversationsRef.current,
       saveConversations: (items) => saveConversations(turn.ownerId, items),
       loadHistoryState: () => loadChatHistoryDevice(turn.ownerId),
-      subscribeHistory: (notify) => {
-        const changed = (event: Event) => {
-          if ((event as CustomEvent).detail?.ownerId === turn.ownerId) notify();
-        };
-        window.addEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
-        return () => window.removeEventListener(CHAT_HISTORY_CHANGED_EVENT, changed);
-      },
+      subscribeHistory: (notify) => subscribeChatHistoryOwner(turn.ownerId, notify),
     });
   };
 
-  const requestStatusPanel = (hasPendingMessage: boolean) =>
-    visibleRequestNotice ? (
-      <section
-        className="mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm"
-        role="status"
-        data-testid="chat-request-status"
-      >
-        <>
-          <p>
-            {visibleRequestNotice.signedIn
-              ? "Your session could not be verified. Sign in again to continue."
-              : "Sign in is required for this request."}{" "}
-            Signing in does not resend a message. It may change the current account.
-          </p>
-          {(hasPendingMessage || Boolean(nextPromptRef.current)) && (
-            <p>
-              Save or copy your current message and attachments, then clear them before signing in.
-              Cancel or save any next message too. Drafts are not transferred between accounts.
-            </p>
-          )}
-          <SignInButton mode="modal">
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={hasPendingMessage || Boolean(nextPromptRef.current)}
-              onClick={(event) => {
-                if (
-                  !nextPromptMountedRef.current ||
-                  requestNoticeRef.current !== visibleRequestNotice ||
-                  hasPendingMessage ||
-                  Boolean(
-                    composerDraftRef.current.text.length ||
-                    composerDraftRef.current.attachments.length,
-                  ) ||
-                  Boolean(nextPromptRef.current) ||
-                  !sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current)
-                )
-                  event.preventDefault();
-              }}
-            >
-              Sign in
-            </Button>
-          </SignInButton>
-        </>
-      </section>
-    ) : null;
+  const requestStatusPanel = (hasPendingMessage: boolean) => {
+    if (!visibleRequestNotice) return null;
+    const isCurrent = () =>
+      nextPromptMountedRef.current &&
+      requestNoticeRef.current === visibleRequestNotice &&
+      sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current);
+    const canUseDraft = () =>
+      isCurrent() &&
+      !hasPendingMessage &&
+      !nextPromptRef.current &&
+      !composerDraftRef.current.text &&
+      !composerDraftRef.current.attachments.length;
+    return (
+      <Suspense fallback={null}>
+        {visibleRequestNotice.kind === "context-limit" && userKey && activeId ? (
+          <ContinueChatPanel
+            key={`${userKey}:${activeId}`}
+            ownerId={userKey}
+            chatId={activeId}
+            canUseMemory={settingsReady && settings.rememberAcross}
+            draftProtected={hasPendingMessage || Boolean(nextPromptRef.current || editingMessage)}
+            onDismiss={() => {
+              if (isCurrent()) updateRequestNotice(null);
+            }}
+            onContinue={(draft) => {
+              if (
+                !canUseDraft() ||
+                !settings.rememberAcross ||
+                inFlightRef.current ||
+                editingMessage ||
+                composerDraftRef.current.tool
+              )
+                return false;
+              const key = emptyNewChatDraftKey(userKey, attachmentDraftsRef.current);
+              if (!key) return false;
+              lastLoadedDraftRef.current = key;
+              pendingDraftLoadRef.current = null;
+              newChat();
+              setInput(draft);
+              updateRequestNotice(null);
+              return true;
+            }}
+          />
+        ) : visibleRequestNotice.kind === "session-expired" ? (
+          <ChatRequestStatus
+            signedIn={visibleRequestNotice.signedIn}
+            draftProtected={hasPendingMessage || Boolean(nextPromptRef.current)}
+            canSignIn={canUseDraft}
+          />
+        ) : null}
+      </Suspense>
+    );
+  };
   const visibleNextPrompt =
     principalReady && nextPrompt?.scope.principal === storagePrincipal ? nextPrompt : null;
   const nextPromptInCurrentChat = Boolean(
@@ -2800,117 +2822,55 @@ function KovaGPT() {
       matchesNextPromptDraft(visibleNextPrompt, composerDraftRef.current)),
   );
   const nextPromptPanel = visibleNextPrompt ? (
-    <section
-      aria-label="Next message"
-      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
-      data-testid="next-prompt-panel"
-    >
-      <p role="status" className="font-medium">
-        {visibleNextPrompt.status === "held"
-          ? "Next message kept, not queued"
-          : "Next message queued"}
-      </p>
-      <p className="whitespace-pre-wrap break-words max-h-32 overflow-auto">
-        {visibleNextPrompt.text || "Attached material"}
-      </p>
-      {visibleNextPrompt.attachments.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {visibleNextPrompt.attachments.map((file) => file.name).join(", ")}
-        </p>
-      )}
-      {visibleNextPrompt.tool && (
-        <p className="text-xs text-muted-foreground">Tool: {visibleNextPrompt.tool}</p>
-      )}
-      <p className="text-xs text-muted-foreground">
-        {visibleNextPrompt.reason ??
-          "Only this version will be sent after the current response finishes. Later edits stay in your draft. Kept in this tab only."}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          data-next-prompt-cancel
-          onClick={(event) => {
-            if (
-              nextPromptRef.current === visibleNextPrompt &&
-              storagePrincipalRef.current === visibleNextPrompt.scope.principal
-            ) {
-              updateNextPrompt(null);
-              scheduleNextPromptFocus(event?.currentTarget, "composer", null);
-            }
-          }}
-        >
-          Cancel next message
-        </Button>
-        {nextPromptInCurrentChat ? (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            disabled={!canEditNextPrompt}
-            onClick={() => {
-              if (
-                !canEditNextPrompt ||
-                nextPromptRef.current !== visibleNextPrompt ||
-                !sameNextPromptContext(visibleNextPrompt.scope, nextPromptScopeRef.current)
-              )
-                return;
-              setInput(visibleNextPrompt.text);
-              setAttachments(visibleNextPrompt.attachments.map((file) => ({ ...file })));
-              setSelectedTool(visibleNextPrompt.tool);
-              updateNextPrompt(null);
-            }}
-          >
-            Edit next message
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={() => {
-              if (
-                storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
-                visibleNextPrompt.scope.conversationId &&
-                conversations.some((chat) => chat.id === visibleNextPrompt.scope.conversationId)
-              )
-                setActiveId(visibleNextPrompt.scope.conversationId);
-            }}
-          >
-            Open original chat
-          </Button>
-        )}
-      </div>
-      {nextPromptInCurrentChat && !canEditNextPrompt && (
-        <p className="text-xs text-muted-foreground">
-          Keep or clear your newer draft before editing this saved version.
-        </p>
-      )}
-    </section>
+    <Suspense fallback={null}>
+      <NextPromptPanel
+        prompt={visibleNextPrompt}
+        inCurrentChat={nextPromptInCurrentChat}
+        canEdit={canEditNextPrompt}
+        onCancel={(event) => {
+          if (
+            nextPromptRef.current === visibleNextPrompt &&
+            storagePrincipalRef.current === visibleNextPrompt.scope.principal
+          ) {
+            updateNextPrompt(null);
+            scheduleNextPromptFocus(event?.currentTarget, "composer", null);
+          }
+        }}
+        onEdit={() => {
+          if (
+            !canEditNextPrompt ||
+            nextPromptRef.current !== visibleNextPrompt ||
+            !sameNextPromptContext(visibleNextPrompt.scope, nextPromptScopeRef.current)
+          )
+            return;
+          setInput(visibleNextPrompt.text);
+          setAttachments(visibleNextPrompt.attachments.map((file) => ({ ...file })));
+          setSelectedTool(visibleNextPrompt.tool);
+          updateNextPrompt(null);
+        }}
+        onOpenOriginal={() => {
+          if (
+            storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
+            visibleNextPrompt.scope.conversationId &&
+            conversations.some((chat) => chat.id === visibleNextPrompt.scope.conversationId)
+          )
+            setActiveId(visibleNextPrompt.scope.conversationId);
+        }}
+      />
+    </Suspense>
   ) : undefined;
 
   const visibleQuotaRejectedDrafts = principalReady
     ? quotaRejectedDrafts.filter((draft) => sameNextPromptScope(draft.scope, nextPromptScope))
     : [];
   const quotaRejectedDraftPanel = visibleQuotaRejectedDrafts.map((draft) => (
-    <section
-      key={draft.id}
-      aria-label="Message kept after usage limit"
-      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
-      data-testid="quota-rejected-draft"
-    >
-      <Suspense fallback={null}>
-        <QuotaRejectedDraftPreview draft={draft} />
-      </Suspense>
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        disabled={Boolean(
+    <Suspense key={draft.id} fallback={null}>
+      <QuotaRejectedDraftPreview
+        draft={draft}
+        restoreDisabled={Boolean(
           input || attachments.length || selectedTool || isStreaming || editingMessage,
         )}
-        onClick={(event) => {
+        onRestore={(event) => {
           if (
             !nextPromptMountedRef.current ||
             !quotaRejectedDraftsRef.current.includes(draft) ||
@@ -2932,14 +2892,7 @@ function KovaGPT() {
           );
           scheduleNextPromptFocus(event.currentTarget, "composer", nextPromptRef.current);
         }}
-      >
-        Restore message
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        onClick={(event) => {
+        onDiscard={(event) => {
           if (
             !nextPromptMountedRef.current ||
             !quotaRejectedDraftsRef.current.includes(draft) ||
@@ -2952,10 +2905,8 @@ function KovaGPT() {
           );
           scheduleNextPromptFocus(event.currentTarget, "composer", nextPromptRef.current);
         }}
-      >
-        Discard kept version
-      </Button>
-    </section>
+      />
+    </Suspense>
   ));
 
   const composerPromptPanel = quotaRejectedDraftPanel.length ? (
@@ -3195,10 +3146,10 @@ function KovaGPT() {
       <ArrowDown className="h-5 w-5" aria-hidden="true" />
     </Button>
   ) : null;
-  const freeOfferButton =
+  const freeOfferButton = (narrow: boolean) =>
     isLoaded && isSignedIn && tier === "free" ? (
       <Suspense fallback={null}>
-        <FreeOfferButton />
+        <FreeOfferButton narrow={narrow} />
       </Suspense>
     ) : null;
 
@@ -3246,7 +3197,7 @@ function KovaGPT() {
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {jumpToLatestButton}
-          {freeOfferButton}
+          {freeOfferButton(false)}
           {conversationActions()}
           {isLoaded && isSignedIn && !chatStarted && (
             <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
@@ -3356,7 +3307,7 @@ function KovaGPT() {
           conversationActions={
             <>
               {jumpToLatestButton}
-              {freeOfferButton}
+              {freeOfferButton(true)}
               {conversationActions(true)}
             </>
           }
@@ -3468,6 +3419,8 @@ function KovaGPT() {
                   firstName={user?.firstName}
                   chatId={activeId}
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
+                  historyReady={principalReady && historyReady && !tempChat}
+                  historyComplete={chatHistoryView(userKey)?.complete === true}
                   onSelect={setActiveId}
                 >
                   <ChatInput
@@ -3824,8 +3777,9 @@ function KovaGPT() {
             open={limitDialog.open}
             onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
             kind={limitDialog.kind}
+            usageKind={limitDialog.usageKind}
             message={limitDialog.message}
-            resetsAt={getUsage().resetsAt}
+            resetsAt={limitDialog.resetsAt}
           />
         )}
       </Suspense>

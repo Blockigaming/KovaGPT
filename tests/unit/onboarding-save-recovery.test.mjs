@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
@@ -42,6 +43,7 @@ function fixture() {
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     react: {
       useState(initial) {
         const index = cursor++;

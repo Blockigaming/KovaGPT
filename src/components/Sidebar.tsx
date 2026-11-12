@@ -35,12 +35,14 @@ import {
   Trash2,
   X,
   UserRound,
+  Users,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import type { AvailableWorkspace } from "@/lib/workspace-join.functions";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
@@ -88,9 +90,19 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   settings: SettingsGlyph,
   notifications: Bell,
 };
+const FreeOfferButton = lazy(() =>
+  import("@/components/FreeOfferButton").then((module) => ({
+    default: module.FreeOfferButton,
+  })),
+);
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
     default: module.ChatProjectDialog,
+  })),
+);
+const WorkspaceJoinDialog = lazy(() =>
+  import("@/components/WorkspaceJoinDialog").then((module) => ({
+    default: module.WorkspaceJoinDialog,
   })),
 );
 
@@ -292,6 +304,48 @@ export function Sidebar({
   } | null>(null);
   const [resizing, setResizing] = useState(false);
   const signedIn = isLoaded && isSignedIn;
+  const verifiedWorkspaceEmail = user?.primaryEmailAddress?.verification?.status === "verified";
+  const workspaceOwner = signedIn && verifiedWorkspaceEmail ? (user?.id ?? null) : null;
+  const [workspaceMatches, setWorkspaceMatches] = useState<{
+    owner: string;
+    items: AvailableWorkspace[];
+  } | null>(null);
+  const [workspaceJoinOwner, setWorkspaceJoinOwner] = useState<string | null>(null);
+  const availableWorkspaces =
+    workspaceMatches?.owner === workspaceOwner ? workspaceMatches.items : [];
+  const workspaceJoinOpen = workspaceOwner !== null && workspaceJoinOwner === workspaceOwner;
+  useEffect(() => {
+    let cancelled = false;
+    setWorkspaceMatches(null);
+    setWorkspaceJoinOwner(null);
+    if (!workspaceOwner) return;
+    const accountId = workspaceOwner;
+    void import("@/lib/workspace-join.functions")
+      .then(({ findAvailableWorkspaces }) =>
+        cancelled ? [] : findAvailableWorkspaces({ data: { expectedUserId: accountId } }),
+      )
+      .then((results) => {
+        if (cancelled) return;
+        setWorkspaceMatches({ owner: accountId, items: results });
+        if (!results.length) return;
+        // One introductory prompt per account and browser. The server is still
+        // the sole authority for matching domain and available workspaces.
+        const key = "kova:workspace-join-intro:" + accountId;
+        try {
+          if (window.localStorage.getItem(key)) return;
+          window.localStorage.setItem(key, "shown");
+        } catch {
+          /* A blocked storage API should not prevent a useful prompt. */
+        }
+        setWorkspaceJoinOwner(accountId);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkspaceMatches(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceOwner]);
   const railOwner = signedIn ? user?.id : undefined;
   const layout =
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
@@ -1160,6 +1214,17 @@ export function Sidebar({
           {tierStatus === "ready" && tier === "pro" ? "View plans" : "Upgrade plan"}
         </Link>
       </DropdownMenuItem>
+      {availableWorkspaces.length > 0 && (
+        <DropdownMenuItem
+          onSelect={() => {
+            cancelPendingSelection();
+            setWorkspaceJoinOwner(workspaceOwner);
+          }}
+        >
+          <Users aria-hidden="true" />
+          Find workspaces
+        </DropdownMenuItem>
+      )}
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
@@ -1211,6 +1276,29 @@ export function Sidebar({
 
   return (
     <>
+      {workspaceOwner && availableWorkspaces.length > 0 && (
+        <Suspense fallback={null}>
+          <WorkspaceJoinDialog
+            key={workspaceOwner}
+            ownerId={workspaceOwner}
+            open={workspaceJoinOpen}
+            workspaces={availableWorkspaces}
+            onClose={() => setWorkspaceJoinOwner(null)}
+            onRequested={(teamId, status) => {
+              setWorkspaceMatches((current) =>
+                current?.owner === workspaceOwner
+                  ? {
+                      ...current,
+                      items: current.items.map((item) =>
+                        item.team_id === teamId ? { ...item, request_status: status } : item,
+                      ),
+                    }
+                  : current,
+              );
+            }}
+          />
+        </Suspense>
+      )}
       {signedIn && (
         <LogoutConfirmDialog
           open={logoutConfirmOpen}
@@ -1859,6 +1947,16 @@ export function Sidebar({
           </div>
 
           <footer className="kova-sidebar-footer">
+            {signedIn && availableWorkspaces.length > 0 && (
+              <button
+                type="button"
+                className="mb-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm hover:bg-accent"
+                onClick={() => setWorkspaceJoinOwner(workspaceOwner)}
+              >
+                <Users className="h-5 w-5" aria-hidden="true" />
+                <span>Find workspaces</span>
+              </button>
+            )}
             {signedIn ? (
               <>
                 <DropdownMenu modal={false}>
@@ -1880,6 +1978,11 @@ export function Sidebar({
                   </DropdownMenuTrigger>
                   {renderAccountMenu()}
                 </DropdownMenu>
+                {tierStatus === "ready" && tier === "free" && (
+                  <Suspense fallback={null}>
+                    <FreeOfferButton variant="sidebar" />
+                  </Suspense>
+                )}
               </>
             ) : isLoaded ? (
               <div className="w-full">

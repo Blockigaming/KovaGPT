@@ -1,12 +1,19 @@
 import { GuidedHelp } from "@/components/GuidedHelp";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronDown, LifeBuoy, Mail, Plus, Search, X } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HelpSupportForm as SupportForm } from "@/components/HelpSupportForm";
+import { HelpExperienceRating } from "@/components/HelpExperienceRating";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { HELP_CATEGORIES, HELP_FAQS, type HelpFaq } from "@/lib/help-center-data";
+import {
+  noticeIsDismissed,
+  rememberNoticeDismissal,
+} from "@/lib/notification-dismissal-policy.mjs";
+import { safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/help")({
   head: () => ({
@@ -146,11 +153,13 @@ function FaqRow({
   faq,
   open,
   query,
+  ratingOwner,
   onToggle,
 }: {
   faq: HelpFaq;
   open: boolean;
   query: string;
+  ratingOwner?: string | null;
   onToggle: () => void;
 }) {
   const panelId = `answer-${faq.id}`;
@@ -192,17 +201,89 @@ function FaqRow({
         className="px-5 pb-5 text-[15px] leading-7 text-muted-foreground sm:px-6 sm:pb-6"
       >
         <Highlight text={faq.answer} query={query} />
+        {open && ratingOwner && (
+          <HelpExperienceRating
+            key={ratingOwner}
+            ownerId={ratingOwner}
+            questionId={`question-${faq.id}`}
+          />
+        )}
       </div>
     </article>
   );
 }
 
+function HelpSearchFeedback({ ownerId }: { ownerId: string }) {
+  const [visible, setVisible] = useState(false);
+  const id = "feedback_requested";
+  const group = "feedback";
+  const campaignId = "help-search-v1";
+  useEffect(() => {
+    const storage = safeBrowserStorage("localStorage");
+    setVisible(
+      Boolean(
+        storage && !noticeIsDismissed(storage, { accountId: ownerId, id, group, campaignId }),
+      ),
+    );
+  }, [ownerId]);
+  if (!visible) return null;
+  const dismiss = () => {
+    rememberNoticeDismissal(safeBrowserStorage("localStorage"), {
+      accountId: ownerId,
+      id,
+      group,
+      campaignId,
+    });
+    setVisible(false);
+  };
+  return (
+    <aside
+      aria-labelledby="help-search-feedback-title"
+      data-kova-notice-id="feedback_requested"
+      className="mt-5 rounded-2xl border border-border bg-card p-4 text-left sm:mx-auto sm:max-w-[23rem]"
+    >
+      <h3 id="help-search-feedback-title" className="text-sm font-semibold">
+        Share your feedback
+      </h3>
+      <p className="mt-1 text-sm text-muted-foreground">Tell us what you were looking for.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            dismiss();
+            const message = document.getElementById("support-message");
+            if (message) message.focus();
+            else document.getElementById("support-form")?.scrollIntoView();
+          }}
+        >
+          Write feedback
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            dismiss();
+            document.getElementById("help-search")?.focus();
+          }}
+        >
+          Later
+        </Button>
+      </div>
+    </aside>
+  );
+}
+
 function HelpPage() {
+  const { isLoaded, isSignedIn, user } = useUser();
+  const feedbackOwner = isLoaded && isSignedIn ? user?.id : null;
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(24);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
+  const lastOpenedId = Array.from(openIds).at(-1);
   const results = useMemo(() => {
     const filtered = activeCategory
       ? HELP_FAQS.filter((faq) => faq.category === activeCategory)
@@ -258,6 +339,7 @@ function HelpPage() {
               className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
             />
             <Input
+              id="help-search"
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -308,6 +390,7 @@ function HelpPage() {
                   faq={faq}
                   query={query}
                   open={openIds.has(faq.id)}
+                  ratingOwner={faq.id === lastOpenedId ? feedbackOwner : null}
                   onToggle={() => toggle(faq.id)}
                 />
               ))}
@@ -331,6 +414,9 @@ function HelpPage() {
               >
                 Clear search
               </Button>
+              {feedbackOwner && query.trim() && (
+                <HelpSearchFeedback key={feedbackOwner} ownerId={feedbackOwner} />
+              )}
             </div>
           )}
         </section>

@@ -178,6 +178,7 @@ function PricingPage() {
           <>
             <section
               aria-label="KovaGPT plans"
+              data-kova-notice-id="choose_subscription"
               className="mt-12 grid items-stretch gap-5 md:grid-cols-3"
             >
               <PlanCard

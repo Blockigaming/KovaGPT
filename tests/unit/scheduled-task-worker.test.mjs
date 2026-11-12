@@ -20,12 +20,14 @@ function worker({
   providerFailure = false,
   ready = true,
   eventPumpFailure = false,
+  reminder = false,
 } = {}) {
   const calls = [],
     exports = {},
     task = {
       id: randomUUID(),
       user_id: randomUUID(),
+      task_kind: reminder ? "reminder" : "prompt",
       title: "Task",
       prompt: "Summarize this saved prompt.",
       run_at: new Date().toISOString(),
@@ -41,7 +43,7 @@ function worker({
       const data =
         name === "scheduled_task_heartbeat"
           ? true
-          : name === "claim_due_scheduled_tasks"
+          : name === "claim_due_scheduled_tasks_with_reminders"
             ? [task]
             : name === "begin_scheduled_task_run"
               ? { task, plan: "plus", event: null, connectionGrants: [] }
@@ -141,7 +143,9 @@ test("worker reserves consumer usage before provider dispatch and finalizes befo
   const result = await run();
   assert.equal(result.complete, 1);
   const names = calls.map((call) => call.name);
-  assert.ok(names.indexOf("event-pump") < names.indexOf("claim_due_scheduled_tasks"));
+  assert.ok(
+    names.indexOf("event-pump") < names.indexOf("claim_due_scheduled_tasks_with_reminders"),
+  );
   assert.equal(calls.find((call) => call.name === "event-pump").limit, 3);
   assert.ok(names.indexOf("acquire") < names.indexOf("provider"));
   assert.ok(names.indexOf("finalize") < names.indexOf("settle_scheduled_task_success"));
@@ -150,7 +154,10 @@ test("worker reserves consumer usage before provider dispatch and finalizes befo
   assert.equal(acquisition.mode, "medium");
   assert.equal(acquisition.premium, false);
   assert.ok(acquisition.reservedTokens > acquisition.estimatedInputTokens);
-  assert.equal(calls.find((call) => call.name === "claim_due_scheduled_tasks").args.p_limit, 1);
+  assert.equal(
+    calls.find((call) => call.name === "claim_due_scheduled_tasks_with_reminders").args.p_limit,
+    1,
+  );
   assert.equal(calls.find((call) => call.name === "finalize").args.inputTokens, 41);
 });
 test("usage rejection never calls the provider and retains normal failure settlement", async () => {
@@ -247,4 +254,18 @@ test("native event intake failure leaves durable inbox retries and time schedule
   const { run, calls } = worker({ eventPumpFailure: true });
   assert.equal((await run()).complete, 1);
   assert.equal(calls.filter((call) => call.name === "provider").length, 1);
+});
+
+test("the worker delivers a reminder verbatim without generation or connector access", async () => {
+  const { run, calls } = worker({ reminder: true, rejectUsage: true });
+  assert.equal((await run()).complete, 1);
+  assert.ok(
+    !calls.some(({ name }) =>
+      ["acquire", "provider", "read_scheduled_task_saved_context"].includes(name),
+    ),
+  );
+  assert.equal(
+    calls.find(({ name }) => name === "settle_scheduled_task_success").args.p_result,
+    "Summarize this saved prompt.",
+  );
 });

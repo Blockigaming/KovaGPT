@@ -93,6 +93,6 @@ for (const boundary of ["reopen", "account", "conversation"]) {
     f.requests.at(-1).resolve(response("b"));
     await f.flush();
     assert.deepEqual(f.copies, [`https://kovagpt.com/share/${"b".repeat(64)}`]);
-    assert.equal(f.messages.filter(([type]) => type === "success").length, 1);
+    assert.equal(f.notices.filter((notice) => notice.id === "sharing_link_copied").length, 1);
   });
 }

@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -67,8 +68,15 @@ import {
 
 export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
-  validateSearch: (search: Record<string, unknown>): { taskId?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { taskId?: string; offerId?: string } => ({
     taskId: typeof search.taskId === "string" ? search.taskId : undefined,
+    offerId:
+      search.offerId === undefined
+        ? undefined
+        : typeof search.offerId === "string" &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search.offerId)
+          ? search.offerId.toLowerCase()
+          : "",
   }),
   head: () => ({
     meta: [
@@ -108,9 +116,10 @@ const taskActionLabels: Record<TaskAction, string> = {
 function ScheduledTasksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const { tier, status: tierStatus } = useTier();
-  const { taskId: requestedTaskId } = Route.useSearch();
+  const { taskId: requestedTaskId, offerId } = Route.useSearch();
   const openedTaskLink = useRef<string | null>(null);
   const taskListLoaded = useRef(false);
+  const observedRunStates = useRef(new Map<string, { status: string; lastRun: string | null }>());
   const [taskLinkError, setTaskLinkError] = useState<string | null>(null);
   const userKey = user?.id ?? null;
   const timeFormat = useTimeFormatPreference(userKey, isLoaded);
@@ -199,6 +208,7 @@ function ScheduledTasksPage() {
     setAccessState("loading");
     setTasks([]);
     taskListLoaded.current = false;
+    observedRunStates.current.clear();
     openedTaskLink.current = null;
     setTaskLinkError(null);
     setCreatedTask(null);
@@ -284,6 +294,45 @@ function ScheduledTasksPage() {
           request !== listRequestRef.current
         )
           return;
+        const previouslyLoaded = taskListLoaded.current;
+        const previouslyObserved = observedRunStates.current;
+        const newest = new Map<string, { status: string; lastRun: string | null }>();
+        for (const item of next) {
+          newest.set(item.id, { status: item.status, lastRun: item.last_run_at });
+        }
+        if (previouslyLoaded) {
+          let shown = 0;
+          for (const item of next) {
+            const prior = previouslyObserved.get(item.id);
+            // Only a fresh server-observed status transition is a real task
+            // lifecycle event. Initial historical rows must not trigger popups.
+            if (!prior || prior.status === item.status || shown >= 2) continue;
+            if (item.status === "running") {
+              publishKovaNotice({ id: "task_started", title: "Task started", message: item.title });
+              shown++;
+            } else if (
+              item.status === "completed" &&
+              item.last_run_at &&
+              item.task_kind !== "reminder"
+            ) {
+              publishKovaNotice({
+                id: "task_completed",
+                title: "Task completed",
+                message: item.title,
+                confirmed: true,
+              });
+              shown++;
+            } else if (item.status === "failed") {
+              publishKovaNotice({
+                id: "task_failed",
+                title: "Task failed",
+                message: "Open its run history to review the error.",
+              });
+              shown++;
+            }
+          }
+        }
+        observedRunStates.current = newest;
         taskListLoaded.current = true;
         if (availability) setExecutionAvailable(availability.executionAvailable);
         setTasks(next);
@@ -344,7 +393,7 @@ function ScheduledTasksPage() {
     openedTaskLink.current = requestedTaskId;
     const selected = tasks.find((task) => task.id === requestedTaskId);
     if (selected) {
-      openTaskEditor(selected, "settings", null);
+      openTaskEditor(selected, selected.task_kind === "reminder" ? "history" : "settings", null);
       setTaskLinkError(null);
     } else
       setTaskLinkError("This scheduled task is unavailable or is not accessible to this account.");
@@ -611,6 +660,27 @@ function ScheduledTasksPage() {
           current.map((item) => (item.id === task.id ? (updated as ScheduledTask) : item)),
         );
       }
+      publishKovaNotice({
+        id:
+          action === "delete"
+            ? "task_deleted"
+            : action === "paused"
+              ? "task_paused"
+              : action === "retry"
+                ? "task_updated"
+                : "task_resumed",
+        title:
+          action === "delete"
+            ? "Task deleted"
+            : action === "paused"
+              ? "Task paused"
+              : action === "retry"
+                ? "Task queued to retry"
+                : "Task resumed",
+        message: task.title,
+        confirmed: true,
+        key: "task-action:" + task.id + ":" + action,
+      });
       const message =
         action === "delete"
           ? `“${task.title}” deleted.`
@@ -632,6 +702,11 @@ function ScheduledTasksPage() {
       if (generation === generationRef.current && principalRef.current === principal) {
         const detail = error instanceof Error ? error.message : "The response was interrupted.";
         const message = `Couldn’t confirm ${taskActionLabels[action]} for “${task.title}”. ${detail}`;
+        if (action === "scheduled")
+          publishKovaNotice({
+            id: "task_activation_failed",
+            title: "Task resumption could not be confirmed",
+          });
         setTaskFeedback((current) => ({
           ...current,
           [task.id]: { ...feedback, state: "error", message },
@@ -837,6 +912,7 @@ function ScheduledTasksPage() {
                   tasks={tasks}
                   userKey={userKey}
                   eligible={visibleAccess === "eligible"}
+                  linkedOfferId={offerId}
                   onChanged={() => void loadTasks()}
                 />
               )}
@@ -1135,8 +1211,11 @@ function ScheduledTasksPage() {
                       </li>
                     ))}
                   </ul>
-                ) : tasks.length === 0 && loadError ? null : tasks.length === 0 ? (
-                  <div className="kova-empty-state">
+                ) : tasks.length === 0 && (loadError || !dataReady) ? null : tasks.length === 0 ? (
+                  <div
+                    className="kova-empty-state"
+                    data-kova-notice-id={executionAvailable ? "first_task" : undefined}
+                  >
                     <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
                     </div>

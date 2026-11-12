@@ -6,6 +6,8 @@ import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { activeScheduledExecutionReadiness } from "@/lib/scheduled-execution-readiness.server";
 import {
+  TASK_CAPACITY_MESSAGE,
+  TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
   parseTaskPayload,
   type TaskContextRef,
   type TaskTrigger,
@@ -14,6 +16,7 @@ import { runtimeEnv } from "@/lib/runtime-env.server";
 import { z } from "zod";
 export type ScheduledTask = {
   id: string;
+  task_kind: "prompt" | "reminder";
   title: string;
   prompt: string;
   run_at: string;
@@ -36,6 +39,7 @@ type Result = { data: unknown; error: { code?: string; message?: string } | null
 type Query = PromiseLike<Result> & {
   select(value: string): Query;
   eq(key: string, value: unknown): Query;
+  in(key: string, values: string[]): Query;
   order(key: string, options?: { ascending: boolean }): Query;
   limit(value: number): Query;
   is(key: string, value: null): Query;
@@ -46,7 +50,7 @@ type Query = PromiseLike<Result> & {
 };
 type Admin = { rpc(name: string, args: Record<string, unknown>): Query; from(name: string): Query };
 const fields =
-  "id,title,prompt,run_at,repeat,status,last_run_at,next_run_at,last_result,created_at,updated_at,revision,timezone,schedule_local,trigger_mode,context_refs,event_triggers,last_error";
+  "id,task_kind,title,prompt,run_at,repeat,status,last_run_at,next_run_at,last_result,created_at,updated_at,revision,timezone,schedule_local,trigger_mode,context_refs,event_triggers,last_error";
 function safeTaskError(code?: string, message?: string): Error {
   if (message === "task_execution_unavailable")
     return new Error("Background execution is not ready. Your task was not started.");
@@ -56,6 +60,8 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error("That recipient is unavailable. Choose an existing verified account.");
   if (code === "40001")
     return new Error("This task changed. Refresh it before applying this action.");
+  if (code === "54000" && (message === "task_capacity" || message === "task_total_capacity"))
+    return new Error(TASK_CAPACITY_MESSAGE);
   if (code === "54000")
     return new Error(
       "The task or pending invitation limit was reached. Remove an unused item and retry.",
@@ -64,6 +70,8 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error(
       "Task access or a required connection is unavailable. Refresh your permissions.",
     );
+  if (code === "22023" && message === "task_schedule_invalid")
+    return new Error(TASK_SCHEDULE_UNSUPPORTED_MESSAGE);
   if (code === "22023" || code === "23514")
     return new Error("Check the task schedule, context, and trigger settings.");
   return new Error("Tasks are temporarily unavailable. Please retry.");
@@ -296,27 +304,34 @@ export const decideScheduledTaskCopy = createServerFn({ method: "POST" })
   });
 export const listScheduledTaskOffers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((value: unknown) => taskReadIdentity.parse(value))
+  .validator((value: unknown) =>
+    taskReadIdentity.extend({ linkedOfferId: z.string().uuid().optional() }).parse(value),
+  )
   .handler(async ({ data, context }) => {
     assertTaskPrincipal(data, context.userId);
     const { admin, signal } = await access(context.userId);
-    const [sent, received] = await Promise.all(
-      ["owner_id", "recipient_id"].map((column) =>
-        admin
-          .from("scheduled_task_copy_offers")
-          .select(
-            "id,source_task_id,owner_id,recipient_id,title,prompt,repeat,timezone,state,expires_at,created_at",
-          )
-          .eq(column, context.userId)
-          .eq("state", "pending")
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(100)
-          .abortSignal(signal),
-      ),
-    );
-    if (sent.error || received.error) throw safeTaskError();
-    return { sent: sent.data ?? [], received: received.data ?? [] };
+    const now = new Date().toISOString();
+    const pendingOffers = (column: "owner_id" | "recipient_id") =>
+      admin
+        .from("scheduled_task_copy_offers")
+        .select("id,source_task_id,title,prompt,repeat,timezone,expires_at")
+        .eq(column, context.userId)
+        .eq("state", "pending")
+        .gt("expires_at", now);
+    const newest = (query: Query) =>
+      query.order("created_at", { ascending: false }).limit(100).abortSignal(signal);
+    const [sent, received, linked] = await Promise.all([
+      newest(pendingOffers("owner_id")),
+      newest(pendingOffers("recipient_id")),
+      data.linkedOfferId
+        ? pendingOffers("recipient_id")
+            .eq("id", data.linkedOfferId)
+            .maybeSingle()
+            .abortSignal(signal)
+        : null,
+    ]);
+    if (sent.error || received.error || linked?.error) throw safeTaskError();
+    return { sent: sent.data ?? [], received: received.data ?? [], linked: linked?.data ?? null };
   });
 export const listScheduledTaskRuns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -345,7 +360,35 @@ export const listScheduledTaskRuns = createServerFn({ method: "POST" })
     if (data.before) query = query.lt("scheduled_for", data.before);
     const result = await query.abortSignal(signal);
     if (result.error) throw safeTaskError(result.error.code);
-    return result.data ?? [];
+    const runs = Array.isArray(result.data) ? result.data : [];
+    const completed = runs.flatMap((run) =>
+      run?.status === "complete" && typeof run.scheduled_for === "string"
+        ? [run.scheduled_for]
+        : [],
+    );
+    if (!completed.length) return runs;
+    // Event and run timestamps are assigned together when the worker claims a match.
+    const events = await admin
+      .from("scheduled_task_events")
+      .select("scheduled_for")
+      .eq("user_id", context.userId)
+      .eq("task_id", data.taskId)
+      .eq("state", "completed")
+      .in("scheduled_for", completed)
+      .abortSignal(signal);
+    if (events.error) {
+      console.warn("[scheduled task event receipts]", events.error.code ?? "unavailable");
+      return runs;
+    }
+    if (!Array.isArray(events.data) || !events.data.length) return runs;
+    const matched = new Set(events.data.map((event) => event?.scheduled_for));
+    return runs.map((run) =>
+      run?.status === "complete" &&
+      typeof run.scheduled_for === "string" &&
+      matched.has(run.scheduled_for)
+        ? { ...run, matched_connected_event: true }
+        : run,
+    );
   });
 
 export type TaskConnectionOption = {

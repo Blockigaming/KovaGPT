@@ -6,6 +6,12 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
+import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
+import {
+  chatFailurePresentation,
+  publishRequestedChatTool,
+} from "../../src/lib/chat-sse-client.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 
 const parse = (path) =>
   ts.createSourceFile(
@@ -71,6 +77,10 @@ globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
+  chatFailureNoticeId,
+  chatFailurePresentation,
+  publishRequestedChatTool,
+  notificationDeliveryStub,
   React,
   // This reused send fixture does not render controls; keep its transparent
   // shared Button dependency bound while exercising the actual chat callbacks.
@@ -269,7 +279,7 @@ function bridgeFixture({ active = null } = {}) {
       return true;
     },
     loadChatHistoryDevice: async (owner) => ({ ownerId: owner }),
-    CHAT_HISTORY_CHANGED_EVENT: "history-changed",
+    subscribeChatHistoryOwner: () => () => {},
     scheduleDialogFocusReturn() {},
     window: {
       location: { href: "https://local.invalid/" },

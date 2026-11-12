@@ -27,13 +27,20 @@ test("major workspaces share one accessible page header contract", async () => {
 test("toast presentation uses one mobile-safe launch candidate configuration", async () => {
   const source = await read("src/components/ui/sonner.tsx");
   assert.match(source, /const mobile = useIsMobile\(\)/);
-  assert.match(source, /position=\{mobile \? "top-center" : "bottom-right"\}/);
+  assert.match(
+    source,
+    /position=\{shortViewport \? "top-center" : mobile \? "bottom-center" : "bottom-right"\}/,
+  );
+  assert.match(source, /window\.matchMedia\("\(max-height: 560px\)"\)/);
   assert.match(source, /closeButton/);
   assert.match(
     source,
-    /mobileOffset=\{\{ top: "calc\(72px \+ env\(safe-area-inset-top\)\)", left: 16, right: 16 \}\}/,
+    /mobileOffset=\{\{\s*top: "calc\(72px \+ env\(safe-area-inset-top\)\)",\s*bottom: composerClearance/,
   );
-  assert.match(source, /visibleToasts=\{4\}/);
+  assert.match(source, /env\(safe-area-inset-bottom\)/);
+  assert.match(source, /left: 16,\s*right: 16,/);
+  assert.match(source, /bottom: Math\.max\(32, composerClearance\)/);
+  assert.match(source, /visibleToasts=\{shortViewport \? 1 : mobile \? 2 : 3\}/);
 });
 
 test("route error references stay stable without logging private errors in render", async () => {

@@ -12,6 +12,17 @@ concurrency:
   group: public-foundation-${{ github.ref }}
   cancel-in-progress: true
 
+# Trust only this job's checked-out working tree. Containers can have a
+# different UID from the mounted GitHub workspace; all tests remain active.
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   contracts:
     runs-on: ubuntu-latest
@@ -64,12 +75,15 @@ jobs:
 
   browsers:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
@@ -79,7 +93,7 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npx --no-install vite build --config tests/ui-foundations/vite.config.ts
-      - run: npx --no-install playwright install --with-deps "${{ matrix.browser }}"
+      - run: bash scripts/ci/install-playwright-browsers.sh "${{ matrix.browser }}"
       - name: Complete shared UI and public template matrix
         run: npx --no-install playwright test --config playwright.ui-foundations.config.ts --project "${{ matrix.browser }}"
       - name: Record source

@@ -39,6 +39,7 @@ import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import type { Settings } from "@/components/SettingsDialog";
 import { ComposerPdfPages } from "@/components/ComposerPdfPages";
 import {
+  DocumentExtractionLimitError,
   PdfTextUnavailableError,
   pdfDocumentText,
   selectPdfPages,
@@ -66,6 +67,7 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
@@ -1005,7 +1007,11 @@ export function ChatInput({
     const availableSlots = Math.max(0, 2 - attachments.length);
     if (availableSlots === 0) {
       setUploadAnnouncement("Remove an attachment before adding another.");
-      toast.error("You can attach up to 2 files per message.");
+      publishKovaNotice({
+        id: "attachments_limit",
+        title: "Attachment limit reached",
+        message: "Remove an attachment before adding another.",
+      });
       return false;
     }
     if (files.length > availableSlots) {
@@ -1036,6 +1042,11 @@ export function ChatInput({
           };
           nextAttachments = [...nextAttachments, failed];
           setUploadAnnouncement(`${f.name}: unsupported file type`);
+          publishKovaNotice({
+            id: "unsupported_file",
+            title: "Unsupported file type",
+            message: f.name,
+          });
           continue;
         }
 
@@ -1060,6 +1071,7 @@ export function ChatInput({
               },
             ];
             setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
+            publishKovaNotice({ id: "image_too_large", title: "Image too large", message: f.name });
             continue;
           }
           const uploading: PendingAttachment = {
@@ -1090,6 +1102,7 @@ export function ChatInput({
             void attachmentAutoSave.save(completed, readScope);
             seen.add(duplicateKey);
             setUploadAnnouncement(`${f.name} attached`);
+            publishKovaNotice({ id: "file_selected", title: "Image attached", message: f.name });
           } catch (error) {
             if (!currentRead()) return false;
             nextAttachments = composerStateRef.current.attachments.map((a) =>
@@ -1102,6 +1115,11 @@ export function ChatInput({
                 : a,
             );
             setUploadAnnouncement(`${f.name}: upload failed`);
+            publishKovaNotice({
+              id: "upload_failed",
+              title: "Image could not be attached",
+              message: f.name,
+            });
           }
           updateAttachments(nextAttachments);
         } else {
@@ -1121,6 +1139,11 @@ export function ChatInput({
               },
             ];
             setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
+            publishKovaNotice({
+              id: "file_too_large",
+              title: "Document exceeds the allowed size",
+              message: f.name,
+            });
             continue;
           }
           const uploading: PendingAttachment = {
@@ -1183,6 +1206,11 @@ export function ChatInput({
             void attachmentAutoSave.save(completed, readScope, isDocument ? f : undefined);
             seen.add(duplicateKey);
             setUploadAnnouncement(`${f.name} ready for analysis`);
+            publishKovaNotice({
+              id: "file_selected",
+              title: "Document ready for analysis",
+              message: f.name,
+            });
           } catch (error) {
             if (!currentRead() || (error instanceof DOMException && error.name === "AbortError"))
               return false;
@@ -1197,6 +1225,18 @@ export function ChatInput({
                 : attachment,
             );
             setUploadAnnouncement(`${f.name}: file could not be read`);
+            publishKovaNotice({
+              id:
+                error instanceof DocumentExtractionLimitError
+                  ? error.limit === "workbook"
+                    ? "spreadsheet_too_large"
+                    : "document_too_long"
+                  : isDocument
+                    ? "file_processing_failed"
+                    : "upload_failed",
+              title: "Document could not be attached",
+              message: f.name,
+            });
           }
           updateAttachments(nextAttachments);
         }
@@ -1247,11 +1287,17 @@ export function ChatInput({
 
   const removeAttachment = (index: number) => {
     const attachment = attachments[index];
-    const id = attachment?.clientId;
+    if (!attachment) return;
+    const id = attachment.clientId;
     if (attachment?.localPaste) setRemovedPaste(attachment);
     if (id) documentReadIdsRef.current.get(id)?.abort();
     setUploadAnnouncement(`${attachments[index]?.name ?? "Attachment"} removed`);
     updateAttachments(attachments.filter((_, position) => position !== index));
+    publishKovaNotice({
+      id: "file_removed",
+      title: "Attachment removed",
+      message: attachment.name,
+    });
     window.requestAnimationFrame(() => {
       if (attachment?.localPaste) undoPasteButtonRef.current?.focus();
       else ref.current?.focus();
@@ -1300,6 +1346,7 @@ export function ChatInput({
     setUploadAnnouncement(
       "Pasted text attached locally. Nothing has been uploaded. Inspect the chip to put it back into the message.",
     );
+    publishKovaNotice({ id: "paste_converted", title: "Pasted text attached to draft" });
     return true;
   };
 

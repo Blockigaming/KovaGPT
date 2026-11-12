@@ -523,13 +523,15 @@ export const updateMemberRole = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase
+    const { data: updated, error } = await context.supabase
       .from("project_members")
       .update({ role: data.role })
       .eq("project_id", data.project_id)
-      .eq("user_id", data.user_id);
-    if (error) {
-      console.error("[updateMemberRole]", error.message);
+      .eq("user_id", data.user_id)
+      .select("user_id,role")
+      .maybeSingle();
+    if (error || updated?.user_id !== data.user_id || updated.role !== data.role) {
+      if (error) console.error("[updateMemberRole]", error.message);
       throw new Error("Failed to update role");
     }
     return { ok: true };

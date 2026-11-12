@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import { formatDisplayDateTime } from "../../src/lib/time-format.ts";
+import { planUsageHasNewCapacity } from "../../src/lib/plan-usage-policy.mjs";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
 
 const source = readFileSync("src/components/SettingsDialog.tsx", "utf8");
@@ -98,6 +99,9 @@ function fixture() {
       current: { epoch: 0, open: true, tab: "usage", loggedIn: true, userKey: "owner-a" },
     },
     currentAuthUserKeyRef: { current: "owner-a" },
+    usageEvidence: { current: null },
+    planUsageHasNewCapacity,
+    publishKovaNotice: (notice) => calls.push(["notice", notice.id]),
     userKey: "owner-a",
     open: true,
     tab: "usage",
@@ -153,6 +157,42 @@ function fixture() {
     render: () => compile(`return (${summary});`, { ...deps, ...state }),
   };
 }
+
+test("Usage announces a restored allowance only after an authoritative reset", async () => {
+  const f = fixture();
+  const snapshot = (resetsAt, regularUsed, costPercentUsed = 70) => ({
+    tier: "free",
+    windows: [
+      {
+        id: "five_hour",
+        regularLimit: 50,
+        regularUsed,
+        thinkingLimit: 10,
+        thinkingUsed: 1,
+        costPercentUsed,
+        resetsAt,
+      },
+    ],
+  });
+  const initial = snapshot("2026-11-12T01:00:00Z", 50);
+  const correction = snapshot("2026-11-12T01:00:00Z", 49);
+  const refreshed = snapshot("2026-11-12T02:00:00Z", 12);
+  assert.equal(planUsageHasNewCapacity(initial, correction), false);
+  assert.equal(planUsageHasNewCapacity(initial, { ...refreshed, tier: "pro" }), false);
+  assert.equal(planUsageHasNewCapacity(initial, snapshot("2026-11-12T02:00:00Z", 12, 100)), false);
+  f.request();
+  f.pending[0].resolve(initial);
+  await settle();
+  assert.deepEqual(f.calls, []);
+  f.request();
+  f.pending[1].resolve(refreshed);
+  await settle();
+  assert.deepEqual(f.calls, [["notice", "usage_restored"]]);
+  f.request();
+  f.pending[2].resolve(refreshed);
+  await settle();
+  assert.deepEqual(f.calls, [["notice", "usage_restored"]]);
+});
 
 test("Usage status remains named and focusable across loading, unavailable and successful states", () => {
   const f = fixture();

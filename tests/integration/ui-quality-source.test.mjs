@@ -368,7 +368,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(home, /surface="empty"/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
-  assert.match(starters, /<div className="kova-empty-composer">\{children\}<\/div>/);
+  assert.match(starters, /<div className="kova-empty-composer relative">\s*\{children\}/);
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

@@ -1344,6 +1344,21 @@ export async function handleKovaRefresh(request: Request): Promise<Response> {
   }
 }
 
+function verificationPage(title: string, content: string, status = 200): Response {
+  return new Response(
+    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>:root{color-scheme:light dark;--background:#ffffff;--foreground:#0d0d0d;--muted-foreground:#5d5d5d;--border:#00000014;--primary:#0d0d0d;--primary-foreground:#ffffff;--ring:#0285ff}*{box-sizing:border-box}body{font:16px/1.5 ui-sans-serif,-apple-system,system-ui,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;background:var(--background);color:var(--foreground);margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}main{width:100%;max-width:420px;padding:32px;border:1px solid var(--border);border-radius:24px;background:var(--background);overflow-wrap:anywhere}h1{margin:0;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-0.02em}p{margin:12px 0 24px;color:var(--muted-foreground);font-size:14px;line-height:20px}form{margin:0}button{display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-height:48px;padding:12px 16px;border:0;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);font:inherit;font-weight:500;line-height:24px;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background-color 150ms ease}button:hover{background:color-mix(in srgb,var(--primary) 90%,transparent)}a{color:inherit;text-underline-offset:3px}:is(a,button):focus-visible{outline:2px solid var(--ring);outline-offset:2px}@media(prefers-color-scheme:dark){:root{--background:#212121;--foreground:#ffffff;--muted-foreground:#afafaf;--border:#ffffff1f;--primary:#ffffff;--primary-foreground:#0d0d0d;--ring:#339cff}}@media(max-width:480px){main{padding:24px}h1{font-size:28px;line-height:34px}}@media(prefers-reduced-motion:reduce){button{transition:none}}</style>${content}</html>`,
+    {
+      status,
+      headers: noStoreHeaders({
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy":
+          "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'unsafe-inline'",
+        "X-Frame-Options": "DENY",
+      }),
+    },
+  );
+}
+
 export async function handleKovaVerification(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
@@ -1360,15 +1375,9 @@ export async function handleKovaVerification(request: Request): Promise<Response
     if (tokens.length !== 1 || !/^[A-Za-z0-9_-]{43,128}$/u.test(tokens[0])) return invalid();
     // Mail scanners may follow GET links. The token remains unconsumed until
     // the recipient explicitly submits this form on the public origin.
-    const headers = noStoreHeaders({
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Security-Policy":
-        "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'unsafe-inline'",
-      "X-Frame-Options": "DENY",
-    });
-    return new Response(
-      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Verify your KovaGPT email</title><style>:root{color-scheme:light dark;--background:#ffffff;--foreground:#0d0d0d;--muted-foreground:#5d5d5d;--border:#00000014;--primary:#0d0d0d;--primary-foreground:#ffffff;--ring:#0285ff}*{box-sizing:border-box}body{font:16px/1.5 ui-sans-serif,-apple-system,system-ui,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;background:var(--background);color:var(--foreground);margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}main{width:100%;max-width:420px;padding:32px;border:1px solid var(--border);border-radius:24px;background:var(--background);overflow-wrap:anywhere}h1{margin:0;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-0.02em}p{margin:12px 0 24px;color:var(--muted-foreground);font-size:14px;line-height:20px}form{margin:0}button{display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-height:48px;padding:12px 16px;border:0;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);font:inherit;font-weight:500;line-height:24px;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background-color 150ms ease}button:hover{background:color-mix(in srgb,var(--primary) 90%,transparent)}a{color:inherit;text-underline-offset:3px}:is(a,button):focus-visible{outline:2px solid var(--ring);outline-offset:2px}@media(prefers-color-scheme:dark){:root{--background:#212121;--foreground:#ffffff;--muted-foreground:#afafaf;--border:#ffffff1f;--primary:#ffffff;--primary-foreground:#0d0d0d;--ring:#339cff}}@media(max-width:480px){main{padding:24px}h1{font-size:28px;line-height:34px}}@media(prefers-reduced-motion:reduce){button{transition:none}}</style><main><h1>Verify your email</h1><p>Confirm your KovaGPT email address to finish creating your account.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${tokens[0]}"><button type="submit">Verify email</button></form></main></html>`,
-      { headers },
+    return verificationPage(
+      "Verify your KovaGPT email",
+      `<main><h1>Verify your email</h1><p>Confirm your KovaGPT email address to finish creating your account.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${tokens[0]}"><button type="submit">Verify email</button></form></main>`,
     );
   }
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
@@ -1411,12 +1420,10 @@ export async function handleKovaVerification(request: Request): Promise<Response
         error: error instanceof Error ? error.name : "unknown_error",
       });
     }
-    target.searchParams.set("verified", "1");
-    target.searchParams.set("sign-in", "1");
-    return new Response(null, {
-      status: 303,
-      headers: noStoreHeaders({ Location: target.toString() }),
-    });
+    return verificationPage(
+      "Email verified",
+      '<main data-kova-notice-id="email_verified"><h1>Email verified</h1><p>Your KovaGPT email address is confirmed.</p><a href="/?sign-in=1">Continue to sign in</a></main>',
+    );
   } catch (error) {
     if (
       error instanceof KovaAuthStoreError &&
@@ -1426,15 +1433,10 @@ export async function handleKovaVerification(request: Request): Promise<Response
       return invalid();
     // The verification transaction may have committed before its reply was lost.
     // Keep a user-controlled retry, without claiming the action was rolled back.
-    const headers = noStoreHeaders({
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Security-Policy":
-        "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'unsafe-inline'",
-      "X-Frame-Options": "DENY",
-    });
-    return new Response(
-      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Confirm your KovaGPT verification</title><style>:root{color-scheme:light dark;--background:#ffffff;--foreground:#0d0d0d;--muted-foreground:#5d5d5d;--border:#00000014;--primary:#0d0d0d;--primary-foreground:#ffffff;--ring:#0285ff}*{box-sizing:border-box}body{font:16px/1.5 ui-sans-serif,-apple-system,system-ui,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;background:var(--background);color:var(--foreground);margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}main{width:100%;max-width:420px;padding:32px;border:1px solid var(--border);border-radius:24px;background:var(--background);overflow-wrap:anywhere}h1{margin:0;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-0.02em}p{margin:12px 0 24px;color:var(--muted-foreground);font-size:14px;line-height:20px}form{margin:0}button{display:flex;align-items:center;justify-content:center;width:100%;max-width:100%;min-height:48px;padding:12px 16px;border:0;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);font:inherit;font-weight:500;line-height:24px;white-space:normal;overflow-wrap:anywhere;cursor:pointer;transition:background-color 150ms ease}button:hover{background:color-mix(in srgb,var(--primary) 90%,transparent)}a{color:inherit;text-underline-offset:3px}:is(a,button):focus-visible{outline:2px solid var(--ring);outline-offset:2px}@media(prefers-color-scheme:dark){:root{--background:#212121;--foreground:#ffffff;--muted-foreground:#afafaf;--border:#ffffff1f;--primary:#ffffff;--primary-foreground:#0d0d0d;--ring:#339cff}}@media(max-width:480px){main{padding:24px}h1{font-size:28px;line-height:34px}}@media(prefers-reduced-motion:reduce){button{transition:none}}</style><main><h1>Verification could not be confirmed</h1><p>Your email may already be verified. <a href="/?sign-in=1">Try signing in</a>, or explicitly retry verification below. If this link was already used or expired, request a new one from the sign-in screen.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${rawToken}"><button type="submit">Retry verification</button></form></main></html>`,
-      { status: 503, headers },
+    return verificationPage(
+      "Confirm your KovaGPT verification",
+      `<main><h1>Verification could not be confirmed</h1><p>Your email may already be verified. <a href="/?sign-in=1">Try signing in</a>, or explicitly retry verification below. If this link was already used or expired, request a new one from the sign-in screen.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${rawToken}"><button type="submit">Retry verification</button></form></main>`,
+      503,
     );
   }
 }

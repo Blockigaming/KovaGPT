@@ -77,4 +77,10 @@ export function chatRequestProfile(
   settings: import("../components/SettingsDialog").Settings,
 ): Record<string, unknown>;
 
+export function chatUserProfile(
+  settings: import("./settings-types").Settings,
+  cleanTemporaryChat: boolean,
+  requestedWebSearch?: boolean,
+): Record<string, unknown> | undefined;
+
 export { withResponsePresentation } from "./spec400-response-preferences.mjs";

@@ -9,11 +9,18 @@ const migration = await readFile(
   ),
   "utf8",
 );
+const projectPreferencesMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20261112054900_kova_project_member_push_preferences.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const owner = "11111111-1111-4111-8111-111111111111",
   other = "22222222-2222-4222-8222-222222222222",
   configId = "a".repeat(64),
   deviceHash = "b".repeat(64);
-async function fixture() {
+async function fixture({ applyProjectPreferences = true } = {}) {
   const db = new PGlite();
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema kova_private;grant usage on schema kova_private to service_role;
  create table auth.users(id uuid primary key,deleted_at timestamptz,email_confirmed_at timestamptz default now(),is_anonymous boolean default false,banned_until timestamptz);
@@ -24,6 +31,7 @@ async function fixture() {
  create table public.agent_notifications(id uuid primary key default gen_random_uuid(),owner_id uuid references auth.users on delete cascade,created_at timestamptz default now(),read_at timestamptz,expires_at timestamptz default now()+interval '1 day');
  grant all on all tables in schema public to service_role;`);
   await db.exec(migration);
+  if (applyProjectPreferences) await db.exec(projectPreferencesMigration);
   const rpc = async (op, data = {}, user = owner) => {
     await db.exec("set role service_role");
     try {
@@ -61,6 +69,48 @@ async function fixture() {
     db.exec("update public.web_push_subscriptions set next_attempt_at=now()-interval '1 second'");
   return { db, rpc, subscribe, event, due };
 }
+
+test("project-member pushes honor Projects preferences for existing and new leases", async () => {
+  const { db, rpc, subscribe, due } = await fixture({ applyProjectPreferences: false });
+  try {
+    await rpc("heartbeat");
+    const id = await subscribe();
+    await db.query(
+      "update web_push_subscriptions set consented_at=now()-interval '5 seconds',cursor_at=now()-interval '5 seconds' where id=$1",
+      [id],
+    );
+    await db.query("insert into notification_preferences values($1,true,$2)", [
+      owner,
+      { projects: false, security: true },
+    ]);
+    const createMemberEvent = async (secondsAgo) =>
+      (
+        await db.query(
+          "insert into app_notifications(owner_id,type,created_at) values($1,'project_member_joined',now()-$2::integer*interval '1 second') returning id",
+          [owner, secondsAgo],
+        )
+      ).rows[0].id;
+    const previousEvent = await createMemberEvent(2);
+    const workerId = crypto.randomUUID();
+    const claim = { id, workerId, revision: 1 };
+    assert.equal((await rpc("claim", { workerId })).eventId, previousEvent);
+    assert.equal((await rpc("check", claim)).eligible, true);
+
+    await db.exec(projectPreferencesMigration);
+    assert.deepEqual(await rpc("check", claim), { eligible: false, skip: true });
+    await rpc("settle", { ...claim, result: "skip" });
+    await due();
+    await db.query("update notification_preferences set categories=$2 where user_id=$1", [
+      owner,
+      { projects: true, security: false },
+    ]);
+    const nextEvent = await createMemberEvent(0);
+    assert.equal((await rpc("claim", { workerId })).eventId, nextEvent);
+    assert.equal((await rpc("check", claim)).eligible, true);
+  } finally {
+    await db.close();
+  }
+});
 test("push requires configured runtime and current consent; credentials and RPC are service-only", async () => {
   const { db, rpc, subscribe } = await fixture();
   try {

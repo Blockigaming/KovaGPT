@@ -34,6 +34,7 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
       };
     if (id === "@/components/auth/ClerkSafe")
       return { useUser: () => ({ isSignedIn: signedIn, isLoaded: loaded }) };
+    if (id === "@/components/KovaNotificationSurface") return { publishKovaNotice() {} };
     if (id === "@/components/MobileBottomSheet")
       return { MobileBottomSheet: ({ open, children }) => (open ? children : null) };
     if (id === "@/components/ui/popover")

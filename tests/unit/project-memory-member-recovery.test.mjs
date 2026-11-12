@@ -37,6 +37,7 @@ function fixture(kind = "memory") {
   const slots = [],
     effects = [],
     requests = {},
+    notices = [],
     writes = [],
     focused = [],
     dom = new Map();
@@ -154,6 +155,7 @@ function fixture(kind = "memory") {
       throw new Error("Unexpected chat Move in member recovery fixture");
     },
     callServerFnDirect: (fn, args) => fn(args),
+    publishKovaNotice: (notice) => notices.push(notice.id),
     require: (name) => {
       assert.equal(name, "@/lib/projects.functions");
       return services;
@@ -199,6 +201,7 @@ function fixture(kind = "memory") {
     props,
     auth,
     requests,
+    notices,
     writes,
     focused,
     document,
@@ -467,6 +470,7 @@ for (const kind of ["remove", "revoke"]) {
     assert.ok(f.button("Cancel").props.disabled);
     await f.finish(kind, 1, { ok: true });
     assert.equal(count(f), before - 1);
+    assert.deepEqual(f.notices, kind === "remove" ? ["member_removed"] : []);
     assert.doesNotMatch(f.text(), /member service offline/);
     assert.match(f.text(), kind === "remove" ? /removed from this project/ : /Invitation revoked/);
     assert.equal(f.focused.at(-1), "member-feedback");

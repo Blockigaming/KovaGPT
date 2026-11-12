@@ -80,6 +80,7 @@ function fixture({ loaded = true } = {}) {
         "Sparkles",
         "Wand2",
       ]),
+      "@/components/KovaNotificationSurface": { publishKovaNotice() {} },
       sonner: {
         toast: Object.fromEntries(
           ["success", "error", "message"].map((kind) => [

@@ -20,13 +20,19 @@ const WorkBrowserPanel = lazy(() =>
   import("@/components/WorkBrowserPanel").then((module) => ({ default: module.WorkBrowserPanel })),
 );
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { requestWorkSync } from "@/lib/work-sync-client";
 import { WORK_TERMINAL, type WorkRun } from "@/lib/work-execution-protocol.mjs";
 import { resolveKovaModelAlias } from "@/lib/ai/kova-model-migration.mjs";
 
 type Snapshot = {
-  readiness: { available: boolean; reason: string | null; modelOptions?: WorkModelOption[] };
+  readiness: {
+    available: boolean;
+    reason: string | null;
+    modelOptions?: WorkModelOption[];
+    minimumExecutionPlan?: "plus" | "pro" | null;
+  };
   runs: WorkRun[];
   nextCursor: string | null;
 };
@@ -161,6 +167,7 @@ export function WorkExecutionPanel({
     selectedModel?.available === true &&
     (reasoningEffort === null || selectedModel.reasoningEfforts.includes(reasoningEffort));
   const available = snapshot?.readiness.available === true && selectedSupported;
+  const requiredPlan = snapshot?.readiness.minimumExecutionPlan;
   const locked = busy || Boolean(pending);
   const command = (value: Record<string, unknown>) =>
     run &&
@@ -201,13 +208,27 @@ export function WorkExecutionPanel({
           Refresh execution status
         </Button>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground" role="status">
-        {available
-          ? "A connected runner is available. Review each consequential action before it runs."
-          : selectedModel?.reason ||
-            snapshot?.readiness.reason ||
-            "Checking execution availability. You can prepare a plan while this loads."}
-      </p>
+      {requiredPlan === "plus" || requiredPlan === "pro" ? (
+        <div
+          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-3 text-sm"
+          data-kova-notice-id="restricted_tool"
+        >
+          <p role="status">
+            Work execution requires {requiredPlan === "plus" ? "Plus or Pro" : "Pro"}.
+          </p>
+          <Button asChild variant="outline" className="min-h-11">
+            <Link to="/pricing">View plans</Link>
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground" role="status">
+          {available
+            ? "A connected runner is available. Review each consequential action before it runs."
+            : selectedModel?.reason ||
+              snapshot?.readiness.reason ||
+              "Checking execution availability. You can prepare a plan while this loads."}
+        </p>
+      )}
       <label className="mt-3 block text-sm">
         Objective
         <Textarea
@@ -378,9 +399,26 @@ export function WorkExecutionPanel({
               <ol className="mt-2 space-y-2">
                 {(run.specialists ?? []).map((specialist) => (
                   <li key={specialist.id} className="text-sm">
-                    <p>
-                      <span className="font-medium">{specialist.role}</span> ·{" "}
-                      {specialist.status.replaceAll("_", " ")}
+                    <p
+                      role={specialist.role === "research" ? "status" : undefined}
+                      data-kova-notice-id={
+                        specialist.role !== "research"
+                          ? undefined
+                          : specialist.status === "queued"
+                            ? "research_started"
+                            : specialist.status === "running"
+                              ? "research_running"
+                              : specialist.status === "completed" && specialist.result
+                                ? "research_completed"
+                                : specialist.status === "failed"
+                                  ? "research_failed"
+                                  : undefined
+                      }
+                    >
+                      <span className="font-medium">
+                        {specialist.role === "research" ? "Research" : specialist.role}
+                      </span>{" "}
+                      · {specialist.status.replaceAll("_", " ")}
                     </p>
                     <p className="whitespace-pre-wrap">{specialist.objective}</p>
                     {specialist.result && (
@@ -488,7 +526,10 @@ export function WorkExecutionPanel({
             </div>
           ))}
           {run.approval && run.status === "approval_required" && (
-            <div className="rounded-3xl border bg-muted/40 p-5 space-y-3">
+            <div
+              className="rounded-3xl border bg-muted/40 p-5 space-y-3"
+              data-kova-notice-id="task_needs_approval"
+            >
               <p className="font-medium">Kova needs your permission</p>
               <p className="text-sm">{run.approval.action.replaceAll("_", " ")}</p>
               <p className="text-sm">

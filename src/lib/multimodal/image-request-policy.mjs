@@ -1,8 +1,9 @@
 import { IMAGE_SHAPES, validCustomImageSize } from "./image-size-policy.mjs";
 export class ImageInputError extends Error {
-  constructor(message, status = 400) {
+  constructor(message, status = 400, code) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 const SIZES = Object.fromEntries(IMAGE_SHAPES.map((shape) => [shape.id, shape.size]));

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  TASK_CAPACITY_MESSAGE,
+  TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
+} from "../../src/lib/scheduled-task-policy.mjs";
+import {
   createHookHarness,
   deferred,
   elements,
@@ -451,6 +455,7 @@ test("mocked deletion failure remains inside confirmation and the same request r
 function editorFixture() {
   const f = environment(),
     calls = [];
+  let nextId = 0;
   const mutate = (args) => {
     const p = deferred();
     calls.push({ args, ...p });
@@ -492,8 +497,12 @@ function editorFixture() {
         taskRunFailureLabel: () => "",
       },
       "@/lib/scheduled-task-draft-validation": { validateScheduledTaskDraft: () => [] },
+      "@/lib/scheduled-task-policy.mjs": {
+        TASK_CAPACITY_MESSAGE,
+        TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
+      },
     },
-    f.globals,
+    { ...f.globals, crypto: { randomUUID: () => `operation-${++nextId}` } },
   );
   const props = {
     userKey: "owner-a",
@@ -566,6 +575,33 @@ test("an unmounted editor does not focus late create failure", async () => {
   f.framesNow();
   assert.equal(f.document.activeElement, other);
   assert.equal(f.scrolls.length, 0);
+});
+
+test("an authoritative task cap stays alongside the unsaved schedule", async () => {
+  const f = editorFixture();
+  await f.flush();
+  f.submit();
+  f.calls[0].reject(new Error(TASK_CAPACITY_MESSAGE));
+  await f.flush();
+  const error = f.byLabel("Scheduled task action failed");
+  assert.equal(error.props["data-kova-notice-id"], "task_limit");
+  assert.ok(text(error).includes(TASK_CAPACITY_MESSAGE));
+});
+
+test("an authoritatively rejected schedule can be edited without retrying the rejected request", async () => {
+  const f = editorFixture();
+  await f.flush();
+  f.submit();
+  f.calls[0].reject(new Error(TASK_SCHEDULE_UNSUPPORTED_MESSAGE));
+  await f.flush();
+  const error = f.byLabel("Scheduled task action failed");
+  assert.equal(error.props["data-kova-notice-id"], "schedule_unsupported");
+  assert.equal(f.document.activeElement, error.node);
+  assert.equal(f.find("fieldset").props.disabled, false);
+  assert.match(text(error), /choose another date/i);
+  assert.doesNotMatch(text(error), /Couldn’t confirm|safe retry/);
+  f.submit();
+  assert.notEqual(f.calls[1].args.data.mutationId, f.calls[0].args.data.mutationId);
 });
 
 test("completed results are bounded and dismissible without evicting pending or failed work", async () => {

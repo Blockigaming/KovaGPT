@@ -59,8 +59,9 @@ function NotificationsRoute() {
     setItemsOwner(expectedPrincipal);
     setLoading(true);
     setError(null);
+    setBusy(null);
     try {
-      const nextItems = await list();
+      const nextItems = await list({ data: { expectedOwnerId: expectedPrincipal } });
       if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)
         return;
       if (!Array.isArray(nextItems)) throw new Error();
@@ -112,39 +113,52 @@ function NotificationsRoute() {
   );
   async function read(item?: CenterNotification) {
     const expectedPrincipal = principalId;
-    if (!expectedPrincipal) return;
+    if (!expectedPrincipal || itemsOwner !== expectedPrincipal) return;
+    const generation = generationRef.current;
+    const isCurrent = () =>
+      generation === generationRef.current && activePrincipalRef.current === expectedPrincipal;
     setBusy(item?.id ?? "all");
     try {
-      await markRead({ data: item ? { ids: [item.id], source: item.source } : { source: "all" } });
-      if (activePrincipalRef.current !== expectedPrincipal) return;
+      await markRead({
+        data: {
+          expectedOwnerId: expectedPrincipal,
+          ...(item ? { ids: [item.id], source: item.source } : { source: "all" }),
+        },
+      });
+      if (!isCurrent()) return;
       const now = new Date().toISOString();
       setItems((current) =>
         current.map((candidate) =>
-          !item || candidate.id === item.id
+          !item || (candidate.id === item.id && candidate.source === item.source)
             ? { ...candidate, readAt: candidate.readAt ?? now }
             : candidate,
         ),
       );
     } catch {
-      if (activePrincipalRef.current === expectedPrincipal)
-        toast.error("Could not mark notifications as read.");
+      if (isCurrent()) toast.error("Could not mark notifications as read.");
     } finally {
-      if (activePrincipalRef.current === expectedPrincipal) setBusy(null);
+      if (isCurrent()) setBusy(null);
     }
   }
   async function discard(item: CenterNotification) {
     const expectedPrincipal = principalId;
-    if (!expectedPrincipal) return;
+    if (!expectedPrincipal || itemsOwner !== expectedPrincipal) return;
+    const generation = generationRef.current;
+    const isCurrent = () =>
+      generation === generationRef.current && activePrincipalRef.current === expectedPrincipal;
     setBusy(item.id);
     try {
-      await remove({ data: { ids: [item.id], source: item.source } });
-      if (activePrincipalRef.current !== expectedPrincipal) return;
-      setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      await remove({
+        data: { ids: [item.id], source: item.source, expectedOwnerId: expectedPrincipal },
+      });
+      if (!isCurrent()) return;
+      setItems((current) =>
+        current.filter((candidate) => candidate.id !== item.id || candidate.source !== item.source),
+      );
     } catch {
-      if (activePrincipalRef.current === expectedPrincipal)
-        toast.error("Could not delete the notification.");
+      if (isCurrent()) toast.error("Could not delete the notification.");
     } finally {
-      if (activePrincipalRef.current === expectedPrincipal) setBusy(null);
+      if (isCurrent()) setBusy(null);
     }
   }
   return (

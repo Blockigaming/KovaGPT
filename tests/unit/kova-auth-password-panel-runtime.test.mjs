@@ -30,7 +30,8 @@ function fixture(options = {}) {
   const state = [],
     effects = [],
     calls = [],
-    messages = [];
+    messages = [],
+    notices = [];
   let cursor = 0,
     tree;
   const jsx = (type, props) => ({ type, props: props ?? {} });
@@ -59,6 +60,12 @@ function fixture(options = {}) {
     },
   };
   const modules = {
+    "@/components/KovaNotificationSurface": {
+      publishKovaNotice: (notice) => {
+        assert.ok(notice && typeof notice.id === "string");
+        notices.push(notice);
+      },
+    },
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},
@@ -135,6 +142,7 @@ function fixture(options = {}) {
     render,
     calls,
     messages,
+    notices,
     get tree() {
       return tree;
     },
@@ -179,7 +187,8 @@ test("password form submits only the current/new values, clears them and invalid
     { currentPassword: "test original password", newPassword: "test replacement password" },
   ]);
   assert.ok(f.calls.some(([method]) => method === "clear-cache"));
-  assert.equal(f.messages.at(-1)[0], "success");
+  assert.equal(f.notices.at(-1)?.id, "password_updated");
+  assert.equal(f.notices.at(-1)?.confirmed, true);
   assert.equal(nodes(f.tree).filter((node) => node.type === "input").length, 0);
   await f.click("Change password");
   assert.ok(

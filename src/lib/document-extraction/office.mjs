@@ -5,9 +5,14 @@ export const DOCUMENT_INPUT_BYTES = 10 * 1024 * 1024;
 export const DOCUMENT_TEXT_CHARS = 80_000;
 const PART_BYTES = 2 * 1024 * 1024;
 const EXPANDED_BYTES = 12 * 1024 * 1024;
-export class DocumentExtractionError extends Error {}
-const fail = (message) => {
-  throw new DocumentExtractionError(message);
+export class DocumentExtractionError extends Error {
+  constructor(message, limit) {
+    super(message);
+    this.limit = limit;
+  }
+}
+const fail = (message, limit) => {
+  throw new DocumentExtractionError(message, limit);
 };
 
 // Untrusted archives are streamed in small compressed chunks. Never allocate an
@@ -168,7 +173,10 @@ function relationships(files, path, base) {
 export function boundedDocumentText(sections) {
   const value = sections.join("\n\n");
   if (value.length > DOCUMENT_TEXT_CHARS || new TextEncoder().encode(value).length > 200_000)
-    fail("Extracted text exceeds 80,000 characters or 200 KB. Split the document and try again.");
+    fail(
+      "Extracted text exceeds 80,000 characters or 200 KB. Split the document and try again.",
+      "text",
+    );
   if (!value.trim()) fail("This document contains no extractable text.");
   return value;
 }
@@ -237,7 +245,7 @@ export function extractOfficeDocument(bytes, extension) {
       : [];
     const sheets = nodes(workbook, "sheet");
     if (sheets.length > 50 || shared.length > 50_000)
-      fail("The workbook exceeds extraction limits.");
+      fail("The workbook exceeds extraction limits.", "workbook");
     let cellCount = 0;
     for (const sheet of sheets) {
       const attr = sheet[":@"] ?? {},
@@ -248,7 +256,8 @@ export function extractOfficeDocument(bytes, extension) {
       for (const row of nodes(part(files, path), "row")) {
         const values = [];
         for (const cell of nodes(row.row, "c")) {
-          if (++cellCount > 25_000) fail("Workbook extraction supports up to 25,000 cells.");
+          if (++cellCount > 25_000)
+            fail("Workbook extraction supports up to 25,000 cells.", "workbook");
           const type = cell[":@"]?.["@_t"];
           const raw = nodes(cell.c, "v")
             .map((node) => text(node.v))

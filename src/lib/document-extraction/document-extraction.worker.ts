@@ -28,6 +28,7 @@ self.onmessage = async (event: MessageEvent<{ bytes: ArrayBuffer; extension: str
       ...(pdf ? { pdf } : {}),
       kind: "document-extraction-result",
       ok: false,
+      limit: error instanceof DocumentExtractionError ? error.limit : undefined,
       error:
         error instanceof DocumentExtractionError
           ? error.message

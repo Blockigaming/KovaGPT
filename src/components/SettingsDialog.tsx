@@ -77,6 +77,8 @@ import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
+  lazy,
+  Suspense,
   useEffect,
   useCallback,
   useContext,
@@ -88,7 +90,9 @@ import {
   type ComponentProps,
 } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { getMyPlanUsage, type PlanUsageDto } from "@/utils/usage.functions";
+import { planUsageHasNewCapacity } from "@/lib/plan-usage-policy.mjs";
 import {
   createPortalSession,
   getSubscriptionSummary,
@@ -146,6 +150,12 @@ import {
 // Preserve the existing component-module API for code that imports this view.
 export { DEFAULT_SETTINGS, SETTINGS_SECTIONS, settingsSectionForTab } from "@/lib/settings-types";
 export type { Mood, Settings } from "@/lib/settings-types";
+
+const WorkspaceDiscoverySettings = lazy(() =>
+  import("@/components/WorkspaceDiscoverySettings").then((module) => ({
+    default: module.WorkspaceDiscoverySettings,
+  })),
+);
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
@@ -353,6 +363,9 @@ export function SettingsDialog({
   const [settingsQuery, setSettingsQuery] = useState("");
   const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<PlanUsageDto | null>(null);
+  const usageEvidence = useRef<{ ownerId: string; snapshot: PlanUsageDto } | null>(null);
+  if (usageEvidence.current && usageEvidence.current.ownerId !== userKey)
+    usageEvidence.current = null;
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageLoaded, setUsageLoaded] = useState(false);
   const [usageRetry, setUsageRetry] = useState(0);
@@ -553,7 +566,21 @@ export function SettingsDialog({
     setUsageLoading(true);
     getMyPlanUsage({ data: { ownerId: userKey } })
       .then((u) => {
-        if (!cancelled) setUsage(Array.isArray(u?.windows) && u.windows.length > 0 ? u : null);
+        if (cancelled || currentAuthUserKeyRef.current !== userKey) return;
+        if (!Array.isArray(u?.windows) || !u.windows.length) {
+          setUsage(null);
+          return;
+        }
+        const previous = usageEvidence.current;
+        if (previous?.ownerId === userKey && planUsageHasNewCapacity(previous.snapshot, u))
+          publishKovaNotice({
+            id: "usage_restored",
+            title: "Message allowance available",
+            message: "Your usage refreshed. You can return to chat to retry.",
+            confirmed: true,
+          });
+        usageEvidence.current = { ownerId: userKey, snapshot: u };
+        setUsage(u);
       })
       .catch(() => {
         if (!cancelled) setUsage(null);
@@ -1903,6 +1930,11 @@ export function SettingsDialog({
                         Manage apps and permissions
                       </Link>
                     </Button>
+                    {userKey && (
+                      <Suspense fallback={null}>
+                        <WorkspaceDiscoverySettings key={userKey} ownerId={userKey} />
+                      </Suspense>
+                    )}
                   </section>
                 )}
               </TabsContent>
@@ -2741,6 +2773,11 @@ export function SettingsDialog({
         }}
       >
         <AlertDialogContent
+          data-kova-notice-id={
+            deletionDialogCurrent && !deletionDialogView.pending && !deletionDialogView.recoverable
+              ? "confirm_account_delete"
+              : undefined
+          }
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             const previous = deleteAccountReturnRef.current;

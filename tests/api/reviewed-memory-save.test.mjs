@@ -30,6 +30,57 @@ const request = (body = payload, owner = "owner") =>
     headers: { "X-Kova-Owner": owner },
     body: JSON.stringify(body),
   });
+
+test("continuation reads only an exact owned saved summary and never writes memory", async () => {
+  const queried = [];
+  let row = { user_id: "owner", chat_id: chatId, summary: "  A saved summary.  " };
+  const query = {
+    select(columns) {
+      queried.push(["select", columns]);
+      return query;
+    },
+    eq(column, value) {
+      queried.push(["eq", column, value]);
+      return query;
+    },
+    async limit(count) {
+      assert.equal(count, 1);
+      return { data: [row], error: null };
+    },
+  };
+  const { calls, handlers } = memoryHandlerFixture({
+    db: {
+      from(table) {
+        assert.equal(table, "chat_memories");
+        return query;
+      },
+    },
+  });
+  const get = (id, owner) =>
+    handlers.GET({
+      request: new Request(
+        `https://kova.invalid/api/memory?continuationChatId=${encodeURIComponent(id)}`,
+        { headers: { "X-Kova-Owner": owner } },
+      ),
+    });
+  assert.equal((await get(chatId, "changed-owner")).status, 409);
+  assert.equal((await get("../other", "owner")).status, 400);
+  assert.deepEqual(queried, []);
+  const response = await get(chatId, "owner");
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  assert.deepEqual(await response.json(), { summary: "A saved summary." });
+  assert.deepEqual(queried, [
+    ["select", "user_id,chat_id,summary"],
+    ["eq", "user_id", "owner"],
+    ["eq", "chat_id", chatId],
+  ]);
+  row = { ...row, user_id: "another-owner" };
+  assert.deepEqual(await (await get(chatId, "owner")).json(), { summary: null });
+  row = { ...row, user_id: "owner", chat_id: "different-chat" };
+  assert.deepEqual(await (await get(chatId, "owner")).json(), { summary: null });
+  assert.deepEqual(calls, []);
+});
+
 function setup(options = {}) {
   const queried = [];
   const row = {

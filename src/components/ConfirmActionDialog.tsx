@@ -17,6 +17,7 @@ export function ConfirmActionDialog({
   title,
   description,
   confirmLabel,
+  noticeId,
   onConfirm,
   destructive = false,
   disabled = false,
@@ -28,6 +29,7 @@ export function ConfirmActionDialog({
   title: string;
   description: string;
   confirmLabel: string;
+  noticeId?: string;
   onConfirm: () => void;
   destructive?: boolean;
   disabled?: boolean;
@@ -37,6 +39,7 @@ export function ConfirmActionDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent
+        data-kova-notice-id={open ? noticeId : undefined}
         className="max-w-md bg-popover text-popover-foreground"
         onCloseAutoFocus={onCloseAutoFocus}
       >

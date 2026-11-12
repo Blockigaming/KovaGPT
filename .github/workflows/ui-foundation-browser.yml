@@ -35,6 +35,17 @@ concurrency:
   group: ui-foundation-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Trust only this job's checked-out working tree. Containers can have a
+# different UID from the mounted GitHub workspace; all tests remain active.
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   browser:
     name: Shared UI (${{ matrix.browser }})
@@ -47,9 +58,6 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble@sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
       options: --user 1001
-    defaults:
-      run:
-        shell: bash
     timeout-minutes: 15
     env:
       AI_GENERATION_ENABLED: "false"

@@ -1,5 +1,6 @@
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import assert from "node:assert/strict";
@@ -105,6 +106,7 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
     "@/lib/link-preview.mjs": linkPreview,
     "@/lib/document-extraction/client": {

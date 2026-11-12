@@ -2,10 +2,11 @@ import { readResponseBytesBounded } from "../endpoint-reliability.mjs";
 import { waitForPromiseWithSignal } from "../ai/provider-transport.server.mjs";
 import { inspectImageBytes } from "./image-bytes.mjs";
 import { ImageInputError } from "./image-request-policy.mjs";
-const unavailable = () => {
+const unavailable = (code) => {
   throw new ImageInputError(
     "The source image is no longer available. Choose an image from your Library.",
     409,
+    code,
   );
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -67,6 +68,7 @@ export async function loadOwnedImageSource(
       .maybeSingle();
   const result = await lookup(),
     row = result.data;
+  if (!result.error && !row) unavailable("image_reference_missing");
   const pathPattern = new RegExp(`^${auth.userId}/[0-9a-f-]{36}\\.(?:png|jpe?g|webp)$`, "i");
   if (
     result.error ||
@@ -110,7 +112,7 @@ export async function loadOwnedImageSource(
   });
   if (!response.ok) {
     void response.body?.cancel().catch(() => undefined);
-    unavailable();
+    unavailable(response.status === 404 ? "image_reference_missing" : undefined);
   }
   const bytes = await readResponseBytesBounded(response, (mask ? 4 : 8) * 1024 * 1024, {
     signal,
@@ -125,6 +127,7 @@ export async function loadOwnedImageSource(
   const fingerprint = JSON.stringify([row.file_url, row.file_type, row.file_size, row.metadata]);
   const recheck = async () => {
     const current = await lookup();
+    if (!current.error && !current.data) unavailable("image_reference_missing");
     if (
       current.error ||
       !current.data ||

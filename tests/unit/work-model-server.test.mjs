@@ -175,6 +175,18 @@ test("actual admission refuses unavailable effort and premium mode before commit
     "sol",
   );
 });
+test("Work readiness offers a plan only when it can unlock a configured execution model", async () => {
+  const f = fixture();
+  assert.equal((await f.api.workExecutionReadiness(f.caller)).minimumExecutionPlan, null);
+  f.plan(null);
+  const locked = await f.api.workExecutionReadiness(f.caller);
+  assert.equal(locked.available, false);
+  assert.equal(locked.minimumExecutionPlan, "plus");
+  f.roles({ ...roles, DEFAULT_CHAT: "unknown", ADVANCED_REASONING: "unknown" });
+  assert.equal((await f.api.workExecutionReadiness(f.caller)).minimumExecutionPlan, "pro");
+  f.disable();
+  assert.equal((await f.api.workExecutionReadiness(f.caller)).minimumExecutionPlan, null);
+});
 test("actual Work admission and reauthorization retain all three Kova models and paid-plan gates", async () => {
   const f = fixture({ hosted: true });
   const ready = await f.api.workExecutionReadiness(f.caller);

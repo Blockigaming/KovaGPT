@@ -151,6 +151,11 @@ test("image source rejects another owner, missing rows, traversal, external sign
     await assert.rejects(loadOwnedImageSource(auth, id, options));
     assert.equal(state.fetches, 0);
   }
+  const { state, auth, options } = fixture();
+  state.row = null;
+  await assert.rejects(loadOwnedImageSource(auth, id, options), {
+    code: "image_reference_missing",
+  });
 });
 test("fenced, removed and unverified principals cannot consume source bytes; masks need alpha", async () => {
   for (const change of [

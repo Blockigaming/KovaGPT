@@ -17,6 +17,7 @@ import { INTERACTIVE_UI_INSTRUCTIONS } from "@/lib/interactive-ui.mjs";
 import {
   assertFeatureEnabled,
   assertNotBanned,
+  dailyFeatureLimit,
   enforceQuota,
   getCallerTier,
   optionalUser,
@@ -36,7 +37,7 @@ import {
   imageModel,
   missingAiProviderResponse,
   prepareChatResponsesRequest,
-  providerErrorFromResponse,
+  chatProviderErrorFromResponse,
   providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
 import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
@@ -1061,11 +1062,7 @@ export const Route = createFileRoute("/api/chat")({
                   signal,
                 ),
               );
-              if (!uploadAllowed)
-                return Response.json(
-                  { error: "Daily file upload limit reached. Resets at midnight UTC." },
-                  { status: 429 },
-                );
+              if (!uploadAllowed) return dailyFeatureLimit("uploads");
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
@@ -1227,6 +1224,15 @@ export const Route = createFileRoute("/api/chat")({
                       required: false,
                       timeoutMs: 8_000,
                     });
+                if (explicitWebSearch && result?.status === "empty" && result.query)
+                  return Response.json(
+                    {
+                      error: "No web sources were returned. Try changing your search.",
+                      code: "web_search_no_results",
+                      retryable: false,
+                    },
+                    { status: 422, headers: { "Cache-Control": "no-store" } },
+                  );
                 if (explicitWebSearch && result?.status !== "ok")
                   return Response.json(
                     {
@@ -2520,6 +2526,29 @@ export const Route = createFileRoute("/api/chat")({
               }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
               if (contextFailure) throw error;
+              if (
+                selectedHostedTool &&
+                error instanceof Error &&
+                error.name === "OpenAiServiceError" &&
+                ["analysis_limit", "analysis_failed", "tool_limit"].includes(error.message)
+              ) {
+                const limited = error.message !== "analysis_failed";
+                return Response.json(
+                  {
+                    error:
+                      error.message === "tool_limit"
+                        ? "File analysis has reached its current request limit. Try again later."
+                        : limited
+                          ? "Data analysis has reached its current request limit. Try again later."
+                          : "Data analysis could not finish. Retry to run the analysis again.",
+                    code: error.message,
+                    category: limited ? "tool_limit" : "model_provider_failure",
+                    retryable: !limited,
+                    requestId,
+                  },
+                  { status: limited ? 429 : 502, headers: { "Cache-Control": "no-store" } },
+                );
+              }
               const providerError = mapProviderError(error);
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
                 status: providerError.status,
@@ -2542,7 +2571,9 @@ export const Route = createFileRoute("/api/chat")({
 
             if (!upstream.ok) {
               freeConnectorBudget?.rejectFinal(upstream.status);
-              const providerError = mapProviderError(await providerErrorFromResponse(upstream));
+              const providerError = mapProviderError(
+                await chatProviderErrorFromResponse(upstream, request.signal),
+              );
               const errMsg = providerError.message;
               const status = providerError.status;
               await finalizeGeneration({

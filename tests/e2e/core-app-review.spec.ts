@@ -223,7 +223,7 @@ test("dark task filter keeps a readable selected label", async ({ page }, info) 
   await capture(page, info, "task-filter-dark");
 });
 
-test("project sections and account settings remain navigable and cancel safely", async ({
+test("[notice:confirm_account_delete] project sections and account settings remain navigable and cancel safely", async ({
   page,
 }, info) => {
   // This compound journey uses the same budget as the dedicated core review lane.
@@ -287,7 +287,7 @@ test("project sections and account settings remain navigable and cancel safely",
   }
   await settings.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   const deletion = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
-  await expect(deletion).toBeVisible();
+  await expect(deletion).toHaveAttribute("data-kova-notice-id", "confirm_account_delete");
   await expect(
     deletion.getByRole("button", { name: "Schedule deletion", exact: true }),
   ).toBeDisabled();

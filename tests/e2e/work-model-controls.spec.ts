@@ -39,6 +39,7 @@ async function workFixture(
         readiness: {
           available: tier !== "free",
           reason: tier === "free" ? "Work requires Plus or Pro." : null,
+          minimumExecutionPlan: tier === "free" ? "plus" : null,
           modelOptions: workModelOptions({
             capabilities,
             models: KOVA_HOSTED_TEXT_MODELS,
@@ -104,8 +105,17 @@ for (const tier of ["free", "plus", "pro"] as const) {
       panel.getByRole("combobox", { name: "Work model mode", exact: true }),
     ).toContainText("Kova Argon 4.6");
     await expect(panel.getByRole("status")).toContainText(
-      tier === "free" ? "Work requires Plus or Pro." : "A connected runner is available.",
+      tier === "free" ? "Work execution requires Plus or Pro." : "A connected runner is available.",
     );
+    const restriction = panel.locator('[data-kova-notice-id="restricted_tool"]');
+    if (tier === "free") {
+      await expect(restriction.getByRole("link", { name: "View plans" })).toHaveAttribute(
+        "href",
+        "/pricing",
+      );
+    } else {
+      await expect(restriction).toHaveCount(0);
+    }
     await panel.getByRole("textbox", { name: "Objective", exact: true }).fill("Synthetic task");
     await expect(panel.getByRole("button", { name: "Start work", exact: true })).toBeDisabled();
     expect(commands).toEqual([]);

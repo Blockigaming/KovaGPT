@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,13 @@ import {
   taskRunDeliveryLabel,
   taskRunFailureLabel,
 } from "@/lib/scheduled-task-run-labels";
-import type { TaskContextRef, TaskTrigger, TaskProvider } from "@/lib/scheduled-task-policy.mjs";
+import {
+  TASK_CAPACITY_MESSAGE,
+  TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
+  type TaskContextRef,
+  type TaskTrigger,
+  type TaskProvider,
+} from "@/lib/scheduled-task-policy.mjs";
 import {
   validateScheduledTaskDraft,
   type ScheduledTaskValidationField,
@@ -113,6 +120,7 @@ function ScheduledTaskEditorBody({
   const dateSeparator = localTime.indexOf("T");
   const localDate = dateSeparator === -1 ? localTime : localTime.slice(0, dateSeparator);
   const localClock = dateSeparator === -1 ? "" : localTime.slice(dateSeparator + 1);
+  const [reminder, setReminder] = useState(task?.task_kind === "reminder");
   const [mode, setMode] = useState<"time" | "event">(task?.trigger_mode ?? "time");
   const [refs, setRefs] = useState<TaskContextRef[]>(task?.context_refs ?? []),
     [triggers, setTriggers] = useState<TaskTrigger[]>(task?.event_triggers ?? []);
@@ -234,11 +242,11 @@ function ScheduledTaskEditorBody({
       setError(reason instanceof Error ? reason.message : "The action could not be confirmed.");
   };
   const initialDraft = useRef(
-    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers }),
+    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers, reminder }),
   );
   const dirty =
     initialDraft.current !==
-    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers });
+    JSON.stringify({ title, prompt, timezone, localTime, repeat, mode, refs, triggers, reminder });
   function closeEditor(force = false) {
     if (!force && (busyRef.current || discardDecisionRef.current !== "closed")) return;
     if (!force && dirty) {
@@ -345,16 +353,34 @@ function ScheduledTaskEditorBody({
         const persistedTask = await create({
           data: { ...operation.data, expectedUserId: userKey },
         });
-        if (active.current) onCreated?.(persistedTask);
-      } else if (operation.kind === "update")
+        if (active.current) {
+          onCreated?.(persistedTask);
+          publishKovaNotice({
+            id: "task_created",
+            title: "Scheduled task created",
+            message: persistedTask.title,
+            confirmed: true,
+          });
+        }
+      } else if (operation.kind === "update") {
         await update({ data: { ...operation.data, expectedUserId: userKey } });
-      else await share({ data: { ...operation.data, expectedUserId: userKey } });
+        if (active.current)
+          publishKovaNotice({
+            id: "task_updated",
+            title: "Scheduled task updated",
+            confirmed: true,
+          });
+      } else await share({ data: { ...operation.data, expectedUserId: userKey } });
       if (!active.current) return;
       pending.current = null;
       onSaved();
       closeEditor(true);
     } catch (reason) {
       failed = true;
+      if (reason instanceof Error && reason.message === TASK_SCHEDULE_UNSUPPORTED_MESSAGE) {
+        pending.current = null;
+        operationIds.current.delete("save");
+      }
       fail(reason);
     } finally {
       busyRef.current = false;
@@ -365,13 +391,7 @@ function ScheduledTaskEditorBody({
       } else {
         focus.reveal = () => {
           if (mutationFocusRef.current !== focus) return;
-          if (
-            failed &&
-            active.current &&
-            saveAttemptRef.current === attempt &&
-            pending.current === operation &&
-            !focusMoved
-          ) {
+          if (failed && active.current && saveAttemptRef.current === attempt && !focusMoved) {
             const target = mutationErrorRef.current;
             restoreDialogFocus(target, openedUrl);
             // The footer can be well below the persistent recovery controls.
@@ -415,6 +435,7 @@ function ScheduledTaskEditorBody({
       repeat: mode === "event" ? "none" : repeat,
       triggerMode: mode,
       contextRefs: refs,
+      ...(reminder && !task ? { taskKind: "reminder" as const } : {}),
       eventTriggers: mode === "event" ? triggers : [],
       ...(mode === "time" ? { localTime } : {}),
     };
@@ -553,6 +574,13 @@ function ScheduledTaskEditorBody({
               tabIndex={-1}
               role="alert"
               aria-label="Scheduled task action failed"
+              data-kova-notice-id={
+                error === TASK_CAPACITY_MESSAGE
+                  ? "task_limit"
+                  : error === TASK_SCHEDULE_UNSUPPORTED_MESSAGE
+                    ? "schedule_unsupported"
+                    : undefined
+              }
               className="rounded-lg border border-destructive p-3 text-sm"
             >
               {!task && pending.current?.kind === "create" && (
@@ -585,6 +613,17 @@ function ScheduledTaskEditorBody({
             className="space-y-3"
           >
             <h3 className="text-base font-semibold">What should Kova do?</h3>
+            {!task && !draft && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  className="kova-native-check"
+                  type="checkbox"
+                  checked={reminder}
+                  onChange={(event) => setReminder(event.target.checked)}
+                />
+                Send a reminder
+              </label>
+            )}
             <label className="block text-sm">
               Title
               <Input
@@ -598,12 +637,14 @@ function ScheduledTaskEditorBody({
               {validationFeedback("title")}
             </label>
             <label className="block text-sm">
-              Prompt
+              {reminder ? "Reminder message" : "Prompt"}
               <Textarea
                 {...validationProps("prompt")}
                 className={`${control} min-h-[120px]`}
                 value={prompt}
-                placeholder="What would you like Kova to do?"
+                placeholder={
+                  reminder ? "What should we remind you about?" : "What would you like Kova to do?"
+                }
                 maxLength={4000}
                 onChange={(event) => setPrompt(event.target.value)}
               />
@@ -781,7 +822,9 @@ function ScheduledTaskEditorBody({
               />
               {task
                 ? "Save these settings in a paused state. I will review and resume the task separately."
-                : "Run this prompt in the background using my account usage allowance."}
+                : reminder
+                  ? "Deliver this reminder at the scheduled time."
+                  : "Run this prompt in the background using my account usage allowance."}
             </label>
             {validationFeedback("consent")}
           </fieldset>

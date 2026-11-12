@@ -15,24 +15,46 @@ function load({
   plan = "plus",
   authenticated = true,
   accountAvailable = true,
+  offers = [],
+  runs,
+  events = [],
 } = {}) {
   const calls = [],
     rpcCalls = [],
     exports = {};
   const task = { id: taskId, status: "scheduled" };
-  const taskQuery = () => {
+  const taskQuery = (table) => {
     let single = false;
+    const fixtureRows = {
+      scheduled_task_copy_offers: offers,
+      scheduled_task_runs: runs,
+      scheduled_task_events: events,
+    }[table];
+    let rows = fixtureRows ?? [];
     const query = {
       select: () => query,
-      eq: () => query,
-      gt: () => query,
+      eq: (column, value) => {
+        rows = rows.filter((row) => row[column] === value);
+        return query;
+      },
+      in: (column, values) => {
+        rows = rows.filter((row) => values.includes(row[column]));
+        return query;
+      },
+      gt: (column, value) => {
+        rows = rows.filter((row) => row[column] > value);
+        return query;
+      },
       order: () => query,
       limit: () => query,
       maybeSingle: () => {
         single = true;
         return query;
       },
-      abortSignal: async () => ({ data: single ? task : [task], error: null }),
+      abortSignal: async () => ({
+        data: fixtureRows ? (single ? (rows[0] ?? null) : rows) : single ? task : [task],
+        error: null,
+      }),
     };
     return query;
   };
@@ -100,6 +122,33 @@ const data = () => ({
   status: "scheduled",
   retry: true,
 });
+
+test("run history identifies only a completed event for the same account, task and run", async () => {
+  const first = "2026-11-12T12:00:00Z";
+  const second = "2026-11-12T13:00:00Z";
+  const scope = { user_id: owner, task_id: taskId };
+  const { api } = load({
+    runs: [
+      { ...scope, status: "complete", scheduled_for: first },
+      { ...scope, status: "complete", scheduled_for: second },
+      { ...scope, status: "failed", scheduled_for: first },
+    ],
+    events: [
+      { ...scope, state: "completed", scheduled_for: first },
+      { ...scope, state: "pending", scheduled_for: second },
+      { ...scope, state: "completed", scheduled_for: second, user_id: taskId },
+      { ...scope, state: "completed", scheduled_for: second, task_id: owner },
+    ],
+  });
+  const history = await api.listScheduledTaskRuns({
+    data: { expectedUserId: owner, taskId },
+    context: { userId: owner },
+  });
+  assert.equal(history.length, 3);
+  assert.equal(history[0].matched_connected_event, true);
+  assert.equal(history[1].matched_connected_event, undefined);
+  assert.equal(history[2].matched_connected_event, undefined);
+});
 test("retry dispatches the exact revision and mutation identity to atomic service-only admission", async () => {
   const { update, calls } = load(),
     input = data();
@@ -128,6 +177,55 @@ test("stale revision is definitive and retry cannot be combined with edited sett
   assert.throws(
     () => update({ data: { ...data(), status: "paused" }, context: { userId: owner } }),
     /Retry must schedule/,
+  );
+});
+
+test("task capacity is identified separately from a general database limit", async () => {
+  for (const message of ["task_capacity", "task_total_capacity", "task_receipt_capacity"]) {
+    const { update } = load({ rpcError: { code: "54000", message } });
+    await assert.rejects(update({ data: data(), context: { userId: owner } }), {
+      message:
+        message === "task_receipt_capacity"
+          ? "The task or pending invitation limit was reached. Remove an unused item and retry."
+          : policy.TASK_CAPACITY_MESSAGE,
+    });
+  }
+});
+
+test("invalid schedule parameters have a distinct safe correction path", async () => {
+  const { update } = load({ rpcError: { code: "22023", message: "task_schedule_invalid" } });
+  await assert.rejects(update({ data: data(), context: { userId: owner } }), {
+    message: policy.TASK_SCHEDULE_UNSUPPORTED_MESSAGE,
+  });
+});
+
+test("task copy links require the named verified recipient and an active offer", async () => {
+  const offer = {
+    id: "33333333-3333-4333-8333-333333333333",
+    owner_id: owner,
+    recipient_id: taskId,
+    state: "pending",
+    expires_at: "2099-01-01T00:00:00Z",
+  };
+  for (const [principal, row, eligible] of [
+    [taskId, offer, true],
+    [owner, offer, false],
+    [taskId, { ...offer, state: "revoked" }, false],
+    [taskId, { ...offer, expires_at: "2000-01-01T00:00:00Z" }, false],
+  ]) {
+    const { api } = load({ principal, offers: [row] });
+    const result = await api.listScheduledTaskOffers({
+      data: { expectedUserId: principal, linkedOfferId: offer.id },
+      context: { userId: principal },
+    });
+    assert.equal(result.linked, eligible ? offer : null);
+  }
+  const { api } = load({ principal: owner, offers: [offer] });
+  await assert.rejects(
+    api.listScheduledTaskOffers({
+      data: { expectedUserId: taskId, linkedOfferId: offer.id },
+      context: { userId: owner },
+    }),
   );
 });
 

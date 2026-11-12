@@ -16,6 +16,7 @@ async function rpc(admin, name, args, signal) {
       throw new LibraryOriginalError(
         "Library can retain up to 1,000 original documents. Remove an original file and try again.",
         429,
+        code,
       );
     if (code === "library_upload_limit" || code === "library_storage_limit")
       throw new LibraryOriginalError(
@@ -23,6 +24,7 @@ async function rpc(admin, name, args, signal) {
           ? "Your daily upload limit has been reached."
           : "Your account storage limit has been reached.",
         429,
+        code,
       );
     throw new LibraryOriginalError();
   }

@@ -244,12 +244,14 @@ export const COMMANDS: CommandDefinition[] = [
 ];
 
 export type NotificationType =
+  | "reminder_ready"
   | "task_result"
   | "task_failure"
   | "connector_reauth"
   | "shared_chat"
   | "project_invitation"
   | "project_role_change"
+  | "project_member_joined"
   | "billing_issue"
   | "usage_threshold"
   | "file_processing"

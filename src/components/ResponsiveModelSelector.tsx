@@ -9,6 +9,7 @@ import {
 } from "@/lib/modes";
 import { modeDisplayLabel } from "@/lib/mode-display-label";
 import { useLayout } from "@/hooks/use-mobile";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -99,6 +100,16 @@ export function ResponsiveModelSelector({
         (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
         (compact ? "px-3 text-sm" : "px-4 text-[15px]"));
 
+  const chooseMode = (next: (typeof MODES)[number]) => {
+    if (next.id === mode || !isModeAllowedForTier(userTier, next.id)) return;
+    onChange(next.id);
+    publishKovaNotice({
+      id: "mode_changed",
+      title: "Response effort changed",
+      message: modeDisplayLabel(next),
+    });
+  };
+
   const renderOption = (availableMode: (typeof MODES)[number]) => {
     const selected = availableMode.id === mode;
     return (
@@ -109,7 +120,7 @@ export function ResponsiveModelSelector({
         data-kova-button-shape="preserve"
         aria-pressed={selected}
         onClick={() => {
-          onChange(availableMode.id);
+          chooseMode(availableMode);
           closeAndRestoreFocus();
         }}
         className="min-h-11 w-full rounded-[var(--kova-radius-compact)] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring [font-family:var(--font-ui,var(--font-sans))]"
@@ -157,7 +168,7 @@ export function ResponsiveModelSelector({
           className="mt-3 min-h-11 w-full accent-foreground"
           onChange={(event) => {
             const next = availableModes[Number(event.target.value)];
-            if (next && isModeAllowedForTier(userTier, next.id)) onChange(next.id);
+            if (next) chooseMode(next);
           }}
         />
         <p className="text-xs text-muted-foreground">
@@ -201,7 +212,12 @@ export function ResponsiveModelSelector({
             : "Thinking uses Argon Medium. Normal chat uses Argon Lite."
         }
         className="kova-thinking-toggle"
-        onClick={() => onChange(mode === "thinking" ? "instant" : "thinking")}
+        onClick={() => {
+          const next = MODES.find(
+            ({ id }) => id === (mode === "thinking" ? "instant" : "thinking"),
+          );
+          if (next) chooseMode(next);
+        }}
       >
         <Brain aria-hidden="true" />
         <span>Thinking</span>

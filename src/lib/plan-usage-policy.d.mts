@@ -30,3 +30,17 @@ export function chatUsageWindows(
 }[];
 
 export function isUnlimitedBasicChat(tier: string, modelId: string, mode: string): boolean;
+
+type PlanUsageSnapshot = {
+  tier: "free" | "plus" | "pro";
+  usageMultiplier?: 1 | 5;
+  windows: (ReturnType<typeof chatUsageWindows>[number] & {
+    regularUsed: number;
+    thinkingUsed: number;
+    costPercentUsed: number;
+  })[];
+};
+export function planUsageHasNewCapacity(
+  before: PlanUsageSnapshot | undefined,
+  after: PlanUsageSnapshot,
+): boolean;

@@ -1,12 +1,10 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
+import { PwaRuntime } from "@/components/PwaRuntime";
 import { platformEvents } from "@/platform/events";
 import { recordMetric } from "@/platform/observability";
 const WorkSyncRuntime = lazy(() =>
   import("@/components/WorkSyncStatus").then((module) => ({ default: module.WorkSyncRuntime })),
-);
-const PwaRuntime = lazy(() =>
-  import("@/components/PwaRuntime").then((module) => ({ default: module.PwaRuntime })),
 );
 const ChatHistoryRuntime = lazy(() =>
   import("./ChatHistorySync").then((m) => ({ default: m.ChatHistorySyncRuntime })),
@@ -51,10 +49,10 @@ export function PlatformRuntime() {
   }, []);
   return (
     <>
+      <PwaRuntime />
       <Suspense fallback={null}>
         <WorkSyncRuntime />
         <ChatHistoryRuntime />
-        <PwaRuntime />
       </Suspense>
       {DeveloperConsole ? (
         <Suspense fallback={null}>

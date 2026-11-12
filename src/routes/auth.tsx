@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate, useSearch } from "@tanstack/rea
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,13 +181,26 @@ function AuthPage() {
     feedback.toastId = undefined;
     feedback.field = undefined;
   };
-  const showAuthError = (message: string, revision?: number, field?: "password") => {
+  const showAuthError = (
+    message: string,
+    revision?: number,
+    field?: "password",
+    reason?: "credentials" | "rate-limit",
+  ) => {
     const feedback = authFeedbackRef.current;
     if (!feedback.active || (revision !== undefined && revision !== feedback.revision)) return;
     // Synchronous validation replaces the previous attempt, just like an accepted retry.
     if (revision === undefined) feedback.revision += 1;
     feedback.field = field;
-    feedback.toastId = toast.error(message, {
+    const title =
+      reason === "credentials" ? (
+        <span data-kova-notice-id="invalid_credentials">{message}</span>
+      ) : reason === "rate-limit" ? (
+        <span data-kova-notice-id="sign_in_rate_limit">{message}</span>
+      ) : (
+        message
+      );
+    feedback.toastId = toast.error(title, {
       id: feedback.toastId,
       duration: Infinity,
       closeButton: true,
@@ -291,11 +305,24 @@ function AuthPage() {
               ? payload.error
               : "Authentication could not be completed. Please try again.",
             feedbackRevision,
+            undefined,
+            isSignUp
+              ? undefined
+              : response.status === 429
+                ? "rate-limit"
+                : response.status === 401
+                  ? "credentials"
+                  : undefined,
           );
           return;
         }
         if (isSignUp) {
           toast.success("If this address can be registered, check your inbox to continue.");
+          publishKovaNotice({
+            id: "email_verification_required",
+            title: "Check your inbox",
+            message: "If this address can be registered, check your email to continue.",
+          });
           void navigate({ to: "/" });
           return;
         }
@@ -320,10 +347,21 @@ function AuthPage() {
         if (error) throw error;
         if (data.session) {
           toast.success("Welcome to KovaGPT.");
+          publishKovaNotice({
+            id: "welcome",
+            title: "Welcome to KovaGPT",
+            message: "Your account is ready.",
+            confirmed: true,
+          });
           window.location.replace(getSafePostAuthRedirect());
           return;
         }
         toast.success("If this address can be registered, check your inbox to continue.");
+        publishKovaNotice({
+          id: "email_verification_required",
+          title: "Check your inbox",
+          message: "If this address can be registered, check your email to continue.",
+        });
         void navigate({ to: "/" });
         return;
       }
@@ -335,7 +373,21 @@ function AuthPage() {
         console.error("[KovaAuth] Password authentication was rejected", {
           error: error.name || "auth_error",
         });
-        showAuthError("That email and password could not be verified.", feedbackRevision);
+        if (error.status === 429) {
+          showAuthError(
+            "Too many attempts. Please try again later.",
+            feedbackRevision,
+            undefined,
+            "rate-limit",
+          );
+        } else {
+          showAuthError(
+            "That email and password could not be verified.",
+            feedbackRevision,
+            undefined,
+            error.code === "invalid_credentials" ? "credentials" : undefined,
+          );
+        }
         return;
       }
       toast.success("Welcome back.");
@@ -367,6 +419,8 @@ function AuthPage() {
             ? payload.error
             : "Two-factor verification could not be completed.",
           feedbackRevision,
+          undefined,
+          response.status === 429 ? "rate-limit" : undefined,
         );
         return;
       }
@@ -612,7 +666,12 @@ function AuthPage() {
           </div>
         )}
         {hasMfaChallenge ? (
-          <form onSubmit={submitMfa} className="space-y-3">
+          <form
+            onSubmit={submitMfa}
+            className="space-y-3"
+            aria-label="Two-factor verification"
+            data-kova-notice-id="security_check"
+          >
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">
               {mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
             </Label>

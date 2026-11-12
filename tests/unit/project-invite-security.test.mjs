@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
+import { persistedNoticeKind } from "../../src/lib/persisted-notification-policy.mjs";
 
 const migrations = new URL("../../supabase/migrations/", import.meta.url);
 
@@ -23,11 +24,29 @@ async function createDatabase() {
     CREATE ROLE outsider;
 
     CREATE SCHEMA auth;
+    CREATE SCHEMA kova_private;
     CREATE TABLE auth.users (
       id uuid PRIMARY KEY,
       email text,
-      email_confirmed_at timestamptz
+      email_confirmed_at timestamptz,
+      deleted_at timestamptz,
+      raw_app_meta_data jsonb
     );
+    CREATE TABLE kova_private.auth_accounts (
+      id uuid PRIMARY KEY,
+      primary_email text NOT NULL,
+      legacy_supabase_user_id uuid,
+      email_verified_at timestamptz,
+      suspended_until timestamptz,
+      deleted_at timestamptz
+    );
+    CREATE TABLE kova_private.auth_identities (
+      account_id uuid NOT NULL,
+      normalized_email text NOT NULL,
+      verified_at timestamptz,
+      disabled_at timestamptz
+    );
+    CREATE TABLE public.account_deletion_fences (user_id uuid PRIMARY KEY);
     CREATE FUNCTION auth.uid()
     RETURNS uuid
     LANGUAGE sql
@@ -58,6 +77,33 @@ async function createDatabase() {
     );
   `);
   await database.exec(await loadMigration());
+  await database.exec(
+    await readFile(
+      new URL("20260923001500_kova_owned_directory_authority.sql", migrations),
+      "utf8",
+    ),
+  );
+  const completeness = await readFile(
+    new URL("20260722130000_product_completeness_reliability.sql", migrations),
+    "utf8",
+  );
+  const notificationTables = completeness.slice(
+    completeness.indexOf("create table if not exists public.app_notifications"),
+    completeness.indexOf("create table if not exists public.support_tickets"),
+  );
+  await database.exec(notificationTables);
+  await database.exec(
+    await readFile(
+      new URL("20261112031000_kova_project_invitation_notifications.sql", migrations),
+      "utf8",
+    ),
+  );
+  await database.exec(
+    await readFile(
+      new URL("20261112190309_kova_project_role_change_notifications.sql", migrations),
+      "utf8",
+    ),
+  );
   return database;
 }
 
@@ -85,10 +131,110 @@ async function setUser(database, userId) {
   await database.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [userId]);
 }
 
+async function activeNotices(database) {
+  return (
+    await database.query(
+      "SELECT owner_id::text, type, source_entity FROM public.app_notifications WHERE expires_at IS NULL ORDER BY type, source_entity",
+    )
+  ).rows;
+}
+
+test("project role changes deliver one owner-bound notice for each committed change", async () => {
+  const database = await createDatabase();
+  try {
+    await seed(database);
+    await database.query(
+      "INSERT INTO public.project_members(project_id,user_id,role) VALUES ($1,$2,'viewer')",
+      [projectId, inviteeId],
+    );
+    const rolePolicyMigration = await readFile(
+      new URL("20260712011732_d735f53a-21fb-4543-8ecb-456c04bade12.sql", migrations),
+      "utf8",
+    );
+    const updatePolicy = rolePolicyMigration.match(
+      /CREATE POLICY "owner can update members"[^;]+;/u,
+    )?.[0];
+    assert.ok(updatePolicy);
+    await database.exec(`
+      GRANT USAGE ON SCHEMA auth TO authenticated;
+      GRANT SELECT ON public.projects TO authenticated;
+      GRANT SELECT, UPDATE ON public.project_members TO authenticated;
+      ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
+      CREATE POLICY "fixture member visibility" ON public.project_members FOR SELECT TO authenticated
+        USING (user_id = auth.uid() OR EXISTS (
+          SELECT 1 FROM public.projects WHERE id = project_id AND owner_id = auth.uid()
+        ));
+      ${updatePolicy}
+    `);
+    const change = async (actor, role, rollback = false) => {
+      await setUser(database, actor);
+      if (rollback) await database.exec("BEGIN");
+      await database.exec("SET ROLE authenticated");
+      try {
+        const result = await database.query(
+          "UPDATE public.project_members SET role=$1 WHERE project_id=$2 AND user_id=$3 RETURNING role",
+          [role, projectId, inviteeId],
+        );
+        return result.rows;
+      } finally {
+        if (rollback) await database.exec("ROLLBACK");
+        await database.exec("RESET ROLE");
+      }
+    };
+    const readNotices = async () =>
+      (
+        await database.query(`SELECT owner_id, type, action_url, delivery_state FROM public.app_notifications
+        WHERE type='project_role_change'`)
+      ).rows;
+
+    assert.deepEqual(await change(attackerId, "editor"), []);
+    assert.deepEqual(await readNotices(), []);
+    assert.deepEqual(await change(ownerId, "editor"), [{ role: "editor" }]);
+    assert.deepEqual(await change(ownerId, "editor"), [{ role: "editor" }]);
+    const notices = await readNotices();
+    assert.deepEqual(notices, [
+      {
+        owner_id: inviteeId,
+        type: "project_role_change",
+        action_url: `/projects/${projectId}`,
+        delivery_state: "delivered",
+      },
+    ]);
+    assert.equal(
+      persistedNoticeKind({ type: notices[0].type, readAt: null }),
+      "permission_changed",
+    );
+
+    assert.deepEqual(await change(ownerId, "viewer", true), [{ role: "viewer" }]);
+    assert.equal((await readNotices()).length, 1, "Rolled back role writes cannot leave a notice");
+    await database.query(
+      `INSERT INTO public.notification_preferences(user_id,in_app_enabled,categories)
+        VALUES ($1,true,'{"projects":false}')`,
+      [inviteeId],
+    );
+    assert.deepEqual(await change(ownerId, "viewer"), [{ role: "viewer" }]);
+    assert.equal((await readNotices()).length, 1, "Projects opt-out suppresses the notice");
+  } finally {
+    await database.close();
+  }
+});
+
 test("invite RPCs are recipient-bound, atomic, and idempotent", async () => {
   const database = await createDatabase();
   try {
     await seed(database);
+    assert.deepEqual(
+      await activeNotices(database),
+      [acceptInviteId, declineInviteId].map((id) => ({
+        owner_id: inviteeId,
+        type: "project_invitation",
+        source_entity: "project-invite:" + id,
+      })),
+    );
+    await database.query("UPDATE public.project_invites SET status = 'pending' WHERE id = $1", [
+      acceptInviteId,
+    ]);
+    assert.equal((await activeNotices(database)).length, 2, "Pending retries do not re-notify");
 
     await setUser(database, attackerId);
     await assert.rejects(
@@ -146,6 +292,13 @@ test("invite RPCs are recipient-bound, atomic, and idempotent", async () => {
       ).rows,
       [{ status: "revoked", accepted_at_cleared: true }],
     );
+    assert.deepEqual(await activeNotices(database), [
+      {
+        owner_id: ownerId,
+        type: "project_member_joined",
+        source_entity: "project-invite:" + acceptInviteId,
+      },
+    ]);
   } finally {
     await database.close();
   }
@@ -173,6 +326,61 @@ test("only authenticated and service roles receive invite RPC execution", async 
         authenticated_decline: true,
       },
     ]);
+  } finally {
+    await database.close();
+  }
+});
+
+test("project invites admit the verified owned email and reject the hosted compatibility address", async () => {
+  const database = await createDatabase();
+  try {
+    await seed(database);
+    const shadow = "shadow+owned-project-user@auth.invalid.kovagpt.com";
+    await database.query(
+      'UPDATE auth.users SET email = $1, raw_app_meta_data = \'{"provider":"kova_shadow"}\' WHERE id = $2',
+      [shadow, inviteeId],
+    );
+    await database.query(
+      "INSERT INTO kova_private.auth_accounts(id, primary_email, email_verified_at) VALUES ($1, $2, now())",
+      [inviteeId, "invitee@example.com"],
+    );
+    await database.query(
+      "INSERT INTO kova_private.auth_identities(account_id, normalized_email, verified_at) VALUES ($1, $2, now())",
+      [inviteeId, "invitee@example.com"],
+    );
+    await setUser(database, inviteeId);
+    assert.deepEqual(
+      (
+        await database.query("SELECT public.accept_project_invite($1) AS project_id", [
+          acceptInviteId,
+        ])
+      ).rows,
+      [{ project_id: projectId }],
+    );
+    await database.query("UPDATE public.project_invites SET email = $1 WHERE id = $2", [
+      shadow,
+      declineInviteId,
+    ]);
+    await assert.rejects(
+      database.query("SELECT public.decline_project_invite($1)", [declineInviteId]),
+      /invite_recipient_mismatch/u,
+    );
+    assert.equal(
+      (await activeNotices(database)).some((row) => row.owner_id === inviteeId),
+      false,
+    );
+    await database.query(
+      "INSERT INTO public.notification_preferences(user_id, categories) VALUES ($1, '{\"projects\":false}')",
+      [inviteeId],
+    );
+    await database.query("UPDATE public.project_invites SET email = $1 WHERE id = $2", [
+      "invitee@example.com",
+      declineInviteId,
+    ]);
+    assert.equal(
+      (await activeNotices(database)).some((row) => row.owner_id === inviteeId),
+      false,
+    );
   } finally {
     await database.close();
   }

@@ -1,4 +1,5 @@
 import {
+  DocumentExtractionLimitError,
   PdfTextUnavailableError,
   validateDocumentExtractionResult,
   validatePdfMetadata,
@@ -53,6 +54,13 @@ export async function extractDocumentFile(
           typeof result?.error === "string" && result.error.length <= 2_000
             ? result.error
             : "Document extraction failed.";
+        if (
+          result?.ok === false &&
+          (result.limit === "text" || (result.limit === "workbook" && extension === "xlsx"))
+        ) {
+          reject(new DocumentExtractionLimitError(message, result.limit));
+          return;
+        }
         const pdf =
           result?.ok === false && extension === "pdf" ? validatePdfMetadata(result.pdf) : undefined;
         reject(

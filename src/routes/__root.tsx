@@ -4,9 +4,11 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
+  CatchBoundary,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 
@@ -14,12 +16,13 @@ import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { KovaNotificationSurface, publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
@@ -27,6 +30,16 @@ import { AppAccountGate } from "@/components/AppAccountGate";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
+const PersistedNoticeBridge = lazy(() =>
+  import("@/components/PersistedNoticeBridge").then((module) => ({
+    default: module.PersistedNoticeBridge,
+  })),
+);
+const AnnouncementCampaignBridge = lazy(() =>
+  import("@/components/AnnouncementCampaignBridge").then((module) => ({
+    default: module.AnnouncementCampaignBridge,
+  })),
+);
 
 // The blocking script runs after the render-blocking app stylesheet, before UI
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
@@ -317,6 +330,101 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
   return <>{children}</>;
 }
 
+function RootNotificationCenter() {
+  const { isLoaded, isSignedIn, user } = useUser();
+  useEffect(() => {
+    if (!isLoaded) return;
+    const offline = () => {
+      if (navigator.onLine === false)
+        publishKovaNotice({
+          id: "network_offline",
+          title: "You're offline",
+          message: "Your unsent text is preserved. Check the connection before retrying.",
+        });
+    };
+    const online = () => {
+      if (navigator.onLine === true)
+        publishKovaNotice({
+          id: "network_restored",
+          title: "Browser connection restored",
+          message: "Network access may still need verification by the active feature.",
+          confirmed: true,
+        });
+    };
+    const workers = import.meta.env.PROD ? navigator.serviceWorker : null;
+    let controller = workers?.controller ?? null;
+    const controllerChanged = () => {
+      const next = workers?.controller ?? null;
+      const replaced = controller && next && controller !== next;
+      controller = next;
+      if (!replaced) return;
+      publishKovaNotice({
+        id: "app_update",
+        title: "An app update is available",
+        message: "Reload to use the latest version. Save anything you're editing first.",
+        confirmed: true,
+        campaignId: import.meta.env.VITE_KOVA_BUILD_SHA || "service-worker",
+        primaryLabel: "Reload",
+        onPrimary: () => window.location.reload(),
+      });
+    };
+    const updateCheck = new AbortController();
+    void import("@/lib/client-update-notice")
+      .then(({ watchRequiredClientUpdate }) => watchRequiredClientUpdate(updateCheck.signal))
+      .catch(() => {});
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    workers?.addEventListener("controllerchange", controllerChanged);
+    return () => {
+      updateCheck.abort();
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+      workers?.removeEventListener("controllerchange", controllerChanged);
+    };
+  }, [isLoaded, user?.id]);
+  return isLoaded ? (
+    <>
+      <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />
+      {isSignedIn && user?.id ? (
+        <CatchBoundary getResetKey={() => user?.id} errorComponent={() => null}>
+          <Suspense key={user.id} fallback={null}>
+            <PersistedNoticeBridge ownerId={user.id} />
+            <AnnouncementCampaignBridge ownerId={user.id} />
+          </Suspense>
+        </CatchBoundary>
+      ) : null}
+    </>
+  ) : null;
+}
+
+function RootRouteContent() {
+  const invalidVerification = useRouterState({
+    select: ({ location }) =>
+      location.pathname === "/" &&
+      new URLSearchParams(location.searchStr).get("auth_error") === "invalid_verification",
+  });
+  if (!invalidVerification) return <Outlet />;
+  return (
+    <main id="main-content" tabIndex={-1} className="kova-state-screen">
+      <section
+        role="alert"
+        aria-labelledby="verification-link-title"
+        className="kova-state-panel"
+        data-kova-notice-id="email_link_expired"
+      >
+        <h1 id="verification-link-title">This verification link has expired or is invalid</h1>
+        <p>Open the sign-in form and select Resend verification email to request a new link.</p>
+        <a
+          href="/?sign-in=1"
+          className="mt-3 inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-5 text-primary-foreground"
+        >
+          Go to sign in
+        </a>
+      </section>
+    </main>
+  );
+}
+
 function RootInputModality() {
   useEffect(() => installInputModality(document), []);
   return null;
@@ -359,9 +467,10 @@ function RootComponent() {
         <RootThemeManager />
         <PlatformRuntime />
         <AppAccountGate>
-          <Outlet />
+          <RootRouteContent />
         </AppAccountGate>
         <Toaster />
+        <RootNotificationCenter />
       </QueryClientProvider>
     </ClerkProvider>
   );

@@ -79,6 +79,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { supabase } from "@/integrations/supabase/client";
@@ -400,7 +401,14 @@ function ProjectDetailPage() {
       // Only the confirmed target changes; a failed refresh cannot wipe other rows or drafts.
       if (kind === "invite")
         setInvites((previous) => previous.filter((invite) => invite.id !== id));
-      else setMembers((previous) => previous.filter((member) => member.user_id !== id));
+      else {
+        setMembers((previous) => previous.filter((member) => member.user_id !== id));
+        publishKovaNotice({
+          id: "member_removed",
+          title: "Project member removed",
+          confirmed: true,
+        });
+      }
       setMemberRemovalError(null);
       setMemberRemovalStatus(
         kind === "invite"
@@ -956,20 +964,22 @@ function ProjectDetailPage() {
               </div>
             )}
             <MembersTab
+              key={requestKey}
               members={members}
               invites={invites}
               isOwner={isOwner && !archived}
               onInvite={async (email, role) => {
+                const invitationRequestKey = requestKey;
                 const fn = (await import("@/lib/projects.functions")).inviteMember;
-                const res = await callServerFnDirect(fn, {
+                if (currentRequestKeyRef.current !== invitationRequestKey) return false;
+                const invitation = await fn({
                   data: { project_id: projectId, email, role },
                 });
-                toast.success(
-                  (res as { auto_accepted: boolean }).auto_accepted
-                    ? "Member added"
-                    : "Invitation sent",
-                );
+                if (currentRequestKeyRef.current !== invitationRequestKey) return false;
+                if (!invitation?.id)
+                  throw new Error("The project invitation could not be confirmed.");
                 await refresh();
+                return currentRequestKeyRef.current === invitationRequestKey;
               }}
               onRevoke={async (id) => {
                 const invite = invites.find((item) => item.id === id);
@@ -1088,6 +1098,7 @@ function ProjectDetailPage() {
         }}
       />
       <ConfirmDialog
+        noticeId="confirm_project_delete"
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`Delete “${project.name}”?`}
@@ -1120,6 +1131,7 @@ function ProjectDetailPage() {
           event.preventDefault();
           restoreDialogFocus(projectActionTriggerRef.current, projectActionUrlRef.current);
         }}
+        noticeId="confirm_leave_project"
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
         title={`Leave “${project.name}”?`}
@@ -2017,7 +2029,7 @@ function FilesTab({
     }
   }
 
-  async function responseError(response: Response): Promise<string> {
+  async function responseError(response: Response) {
     const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
     const code = typeof payload?.error === "string" ? payload.error : "";
     const messages: Record<string, string> = {
@@ -2045,7 +2057,7 @@ function FilesTab({
       project_file_finalize_unavailable:
         "The upload is stored safely but could not be published yet. Retry shortly.",
     };
-    return messages[code] ?? "The file could not be uploaded. Please retry.";
+    return { code, message: messages[code] ?? "The file could not be uploaded. Please retry." };
   }
 
   async function handleFiles(files: FileList | null) {
@@ -2076,7 +2088,18 @@ function FilesTab({
             },
           });
           if (!isCurrent()) return;
-          if (!response.ok) throw new Error(await responseError(response));
+          if (!response.ok) {
+            const { code, message } = await responseError(response);
+            if (!isCurrent()) return;
+            if (response.status === 409 && code === "project_file_limit_reached")
+              publishKovaNotice({ id: "project_file_limit", title: message });
+            else if (response.status === 413 && code === "project_storage_limit_reached")
+              publishKovaNotice({ id: "storage_full", title: message });
+            else if (response.status === 415 && code === "image_signature_required")
+              publishKovaNotice({ id: "unsupported_image", title: message });
+            else toast.error(message);
+            continue;
+          }
           toast.success(`${file.name} uploaded`);
         } catch (error) {
           if (!isCurrent()) return;
@@ -2312,6 +2335,7 @@ function FilesTab({
       )}
 
       <ConfirmDialog
+        noticeId="confirm_file_delete"
         open={!!confirmId}
         onOpenChange={(v) => !v && setConfirmId(null)}
         title={`Delete this ${kind}?`}
@@ -3435,7 +3459,7 @@ function MembersTab({
   members: ProjectMember[];
   invites: ProjectInvite[];
   isOwner: boolean;
-  onInvite: (email: string, role: "editor" | "viewer") => Promise<void>;
+  onInvite: (email: string, role: "editor" | "viewer") => Promise<boolean>;
   onRevoke: (id: string) => Promise<void>;
   onRemove: (userId: string) => Promise<void>;
   onChangeRole: (userId: string, role: "editor" | "viewer") => Promise<void>;
@@ -3443,14 +3467,18 @@ function MembersTab({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"editor" | "viewer">("editor");
   const [busy, setBusy] = useState(false);
+  const [invited, setInvited] = useState(false);
   const pending = invites.filter((i) => i.status === "pending");
+  const shared = members.some((member) => member.role !== "owner");
 
   async function handleInvite() {
     if (!email.trim()) return;
     setBusy(true);
+    setInvited(false);
     try {
-      await onInvite(email.trim(), role);
+      if (!(await onInvite(email.trim(), role))) return;
       setEmail("");
+      setInvited(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
@@ -3460,6 +3488,11 @@ function MembersTab({
 
   return (
     <div className="space-y-6">
+      {shared && (
+        <p data-kova-notice-id="project_shared" className="text-sm text-muted-foreground">
+          Shared with project members
+        </p>
+      )}
       {isOwner && (
         <div className="border rounded-xl p-4">
           <label
@@ -3503,6 +3536,15 @@ function MembersTab({
               )}
             </Button>
           </div>
+          {invited && (
+            <p
+              role="status"
+              data-kova-notice-id="invitation_sent"
+              className="mt-3 text-sm text-muted-foreground"
+            >
+              Invitation created. The recipient can review it in Projects after signing in.
+            </p>
+          )}
         </div>
       )}
 
@@ -3691,6 +3733,7 @@ function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  noticeId,
   destructive,
   onConfirm,
   error,
@@ -3701,6 +3744,7 @@ function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel: string;
+  noticeId?: string;
   destructive?: boolean;
   onConfirm: () => Promise<void> | void;
   error?: string | null;
@@ -3713,7 +3757,10 @@ function ConfirmDialog({
   }, [open, error]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
+      <DialogContent
+        data-kova-notice-id={open ? noticeId : undefined}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

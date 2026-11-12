@@ -94,7 +94,10 @@ test("Images gives every repeated control a single contextual accessible name", 
   assert.match(routes.images, /Image history/);
   assert.match(routes.images, /!isSignedIn \? \([\s\S]*Sign in to generate images/);
   assert.match(routes.images, /role="status"\s+aria-labelledby="image-generating-label"/);
-  assert.match(routes.images, /<span id="image-generating-label"[^>]*>\s*Generating image…/);
+  assert.match(
+    routes.images,
+    /<span id="image-generating-label"[^>]*>\s*\{isGenerationDelayed \? "Still waiting for your image…" : "Generating image…"\}/,
+  );
   assert.doesNotMatch(routes.images, /aria-busy=\{loading \|\| undefined\}/);
   assert.match(
     routes.images,
@@ -102,7 +105,7 @@ test("Images gives every repeated control a single contextual accessible name", 
   );
   assert.match(
     routes.images,
-    /error === IMAGE_GENERATION_UNAVAILABLE\s*\? IMAGE_GENERATION_UNAVAILABLE\s*: error\.startsWith\("Enter valid custom dimensions:"\)\s*\? error\s*: "Image generation failed\. Your prompt is kept here so you can try again\."/,
+    /error === IMAGE_GENERATION_UNAVAILABLE\s*\? IMAGE_GENERATION_UNAVAILABLE\s*: generationError\?\.referenceMissing\s*\|\|\s*error\.startsWith\("Enter valid custom dimensions:"\)\s*\? error\s*: "Image generation failed\. Your prompt is kept here so you can try again\."/,
   );
   assert.doesNotMatch(routes.images, /Check your prompt and try again/);
   assert.doesNotMatch(routes.images, />\s*\{error\}\s*</);

@@ -36,9 +36,31 @@ export type ChatRequestError = Error & {
   requestId?: string;
   retryable: boolean;
   retryAfter?: number;
+  usageKind?: "thinking" | "regular";
+  resetAtMs?: number;
 };
 
 export function chatResponseError(
   response: Response,
   fallbackMessage?: string,
 ): Promise<ChatRequestError>;
+
+export function chatFailurePresentation(
+  error: Pick<
+    Partial<ChatRequestError>,
+    "category" | "status" | "code" | "retryable" | "requestId"
+  >,
+  details: { raw: string; signedIn: boolean; quotaRejected: boolean; networkFailure: boolean },
+): {
+  sessionExpired: boolean;
+  canManualRetry: boolean;
+  friendly: string;
+  detail: string;
+  reference?: string;
+  preservedDraftMessage: string;
+};
+
+export function publishRequestedChatTool(
+  tool: string | null | undefined,
+  publish: (notice: { id: string; title: string }) => void,
+): void;

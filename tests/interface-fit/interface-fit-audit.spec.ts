@@ -245,13 +245,16 @@ if (scope === "public") {
     await page.evaluate(() => document.fonts.ready);
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
     const composer = page.locator(".spec400-composer");
+    const firstConversation = page.locator('[data-kova-notice-id="first_conversation"]');
     await expect(composer).toBeVisible();
     await expect(notice).toHaveCount(0);
+    await expect(firstConversation).toHaveCount(0);
     const beforeTop = (await composer.boundingBox())!.y;
     hold = true;
     try {
       await expect.poll(() => heldRequests, { timeout: 10_000 }).toBeGreaterThan(0);
       await expect(notice).toHaveCount(0);
+      await expect(firstConversation).toHaveCount(0);
       const duringTop = (await composer.boundingBox())!.y;
       expect(Math.abs(duringTop - beforeTop)).toBeLessThanOrEqual(1);
     } finally {

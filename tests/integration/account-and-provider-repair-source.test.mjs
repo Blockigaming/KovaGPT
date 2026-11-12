@@ -72,7 +72,7 @@ test("image and payment webhook parse failures return truthful bounded errors", 
   assert.match(image, /throw new ImageInputError\("Invalid image request JSON\."\)/u);
   assert.match(
     image,
-    /error instanceof ImageInputError\) return json\(\{ error: error\.message \}, error\.status\)/u,
+    /if \(error instanceof ImageInputError\)\s*return json\(\s*\{ error: error\.message, \.\.\.\(error\.code \? \{ code: error\.code \} : \{\}\) \},\s*error\.status,\s*\)/u,
   );
   assert.match(stripe, /maxBodyBytes = 2 \* 1024 \* 1024/);
   assert.match(paymentWebhook, /invalid_environment/);

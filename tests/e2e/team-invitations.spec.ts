@@ -14,7 +14,7 @@ const owner = "11111111-1111-4111-8111-111111111111";
 test.beforeAll(async () => {
   const result = await build({
     stdin: {
-      contents: `import React from 'react';import{createRoot}from'react-dom/client';import{TeamPage}from'./src/routes/team';window.teamFixture={calls:[],failSend:false,added:true,workspace:{invitations:[],teams:[{id:'22222222-2222-4222-8222-222222222222',name:'Design studio',owner:true,status:'active',standard:2,premium:0,paidUntil:'2099-01-01',members:[{user_id:'${owner}',email:'owner@example.invalid',seat:'standard',state:'active'},{user_id:'11111111-1111-4111-8111-111111111112',email:'alex@example.invalid',seat:'standard',state:'active'}],emailInvitations:[]}]}};createRoot(document.getElementById('root')).render(<TeamPage/>);`,
+      contents: `import React from 'react';import{createRoot}from'react-dom/client';import{TeamPage}from'./src/components/TeamWorkspacePage';window.teamFixture={calls:[],failSend:false,added:true,workspace:{invitations:[],teams:[{id:'22222222-2222-4222-8222-222222222222',name:'Design studio',owner:true,status:'active',standard:2,premium:0,paidUntil:'2099-01-01',members:[{user_id:'${owner}',email:'owner@example.invalid',seat:'standard',state:'active'},{user_id:'11111111-1111-4111-8111-111111111112',email:'alex@example.invalid',seat:'standard',state:'active'}],emailInvitations:[]}]}};createRoot(document.getElementById('root')).render(<TeamPage/>);`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -44,6 +44,14 @@ test.beforeAll(async () => {
             path: "functions",
             namespace: "fixture",
           }));
+          builder.onResolve({ filter: /team-domains\.functions$/ }, () => ({
+            path: "domains",
+            namespace: "fixture",
+          }));
+          builder.onResolve({ filter: /workspace-join\.functions$/ }, () => ({
+            path: "workspace-requests",
+            namespace: "fixture",
+          }));
           builder.onResolve({ filter: /^lucide-react$/ }, () => ({
             path: process.cwd() + "/src/components/ui/product-icons.tsx",
           }));
@@ -54,10 +62,17 @@ test.beforeAll(async () => {
               args.path === "start"
                 ? "export const useServerFn=f=>f"
                 : args.path === "router"
-                  ? "import React from'react';export const createFileRoute=()=>()=>({});export const Link=({to,children,...props})=><a href={to} {...props}>{children}</a>"
+                  ? "import React from'react';export const CatchBoundary=({children})=>children;export const Link=({to,children,...props})=><a href={to} {...props}>{children}</a>"
                   : args.path === "auth"
-                    ? `export const useUser=()=>({user:{id:'${owner}'},isLoaded:true,isSignedIn:true});export const SignInButton=({children})=>children;`
-                    : `export const getTeamWorkspace=async()=>window.teamFixture.workspace;
+                    ? `export const useUser=()=>({user:{id:'${owner}'},isLoaded:true,isSignedIn:true});export const SignInButton=({children})=>children;export const useClerkSafe=()=>({openSignIn:()=>{}});`
+                    : args.path === "domains"
+                      ? "export const listVerifiedTeamDomains=async()=>[];export const getTeamDomainVerification=async()=>{throw Error('Unexpected domain request')};export const verifyTeamDomain=getTeamDomainVerification;"
+                      : args.path === "workspace-requests"
+                        ? "export const listTeamJoinRequests=async()=>[];export const reviewTeamJoinRequest=async()=>{throw Error('Unexpected workspace review')};"
+                        : `export const getTeamWorkspace=async({data})=>{
+  if(data.expectedUserId!=='${owner}')throw Error('Expected account was not bound to the workspace read');
+  return window.teamFixture.workspace;
+};
  export const reviewTeamInvitation=async({data})=>{const f=window.teamFixture;f.calls.push({name:'review',data});return{id:'33333333-3333-4333-8333-333333333333',state:'draft',quote:{added:f.added,interval:'month',recurring:f.added?2500:0,beforeTax:f.added?1250:0,total:f.added?1328:0}}};
  export const sendTeamInvitation=async({data})=>{const f=window.teamFixture;f.calls.push({name:'send',data});if(f.failSend)throw new Error('Payment needs confirmation. No invitation was sent.');return{ready:true,emailSent:true,paymentUrl:null}};
  export const manageTeamInvitation=async({data})=>{window.teamFixture.calls.push({name:'manage',data});return{ok:true}};

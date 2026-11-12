@@ -15,6 +15,7 @@ export type TaskTrigger = {
   activities?: string[];
 };
 export type TaskPayload = {
+  taskKind?: "reminder";
   title?: string;
   prompt?: string;
   run_at?: string;
@@ -26,6 +27,8 @@ export type TaskPayload = {
   eventTriggers?: TaskTrigger[];
 };
 export const TASK_CONTEXT_MAX_CHARS: number;
+export const TASK_CAPACITY_MESSAGE: string;
+export const TASK_SCHEDULE_UNSUPPORTED_MESSAGE: string;
 export const TASK_PROVIDERS: readonly TaskProvider[];
 export function taskTimezone(value?: unknown): string;
 export function taskResource(provider: unknown, value: unknown): string;

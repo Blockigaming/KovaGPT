@@ -152,7 +152,11 @@ export function InteractiveBlock({
           />
         ))}
       {submitError && !submitted && (
-        <p role="alert" className="mt-3 text-sm text-destructive">
+        <p
+          role="alert"
+          data-kova-notice-id="widget_failed"
+          className="mt-3 text-sm text-destructive"
+        >
           Your response was not sent. Check the chat status, then try again.
         </p>
       )}

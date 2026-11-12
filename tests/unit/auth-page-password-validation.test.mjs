@@ -1,4 +1,5 @@
 import * as authRetry from "../../src/lib/auth-retry-delay.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -24,6 +25,7 @@ function fixture() {
   let cursor = 0;
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     react: {
       useState(initial) {
         const index = cursor++;

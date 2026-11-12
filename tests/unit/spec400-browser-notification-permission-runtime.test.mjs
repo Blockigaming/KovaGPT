@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
@@ -105,6 +106,7 @@ function harness(source, component, dependencies, globals, initialProps) {
     useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
   };
   const modules = {
+    "@/components/KovaNotificationSurface": notificationDeliveryStub,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "@/components/ui/button": { Button: "button" },

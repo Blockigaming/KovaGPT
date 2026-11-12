@@ -2,21 +2,30 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
+import ts from "typescript";
 import { isCrossSiteMutation } from "../../src/lib/auth-security.mjs";
 
 const source = await readFile(
   new URL("../../src/lib/kova-auth-http.server.ts", import.meta.url),
   "utf8",
 );
-const signature = "export async function handleKovaRefresh(request: Request): Promise<Response>";
-const start = source.indexOf(signature);
-const end = source.indexOf("export async function handleKovaVerification(", start);
-assert.ok(start >= 0 && end > start, "The actual exported refresh handler must be present");
-assert.equal(source.indexOf(signature, start + signature.length), -1);
-const handlerSource = source
-  .slice(start, end)
-  .trim()
-  .replace(signature, "async function handleKovaRefresh(request)");
+const parsed = ts.createSourceFile(
+  "kova-auth-http.server.ts",
+  source,
+  ts.ScriptTarget.Latest,
+  true,
+);
+const declarations = parsed.statements.filter(
+  (node) => ts.isFunctionDeclaration(node) && node.name?.text === "handleKovaRefresh",
+);
+assert.equal(declarations.length, 1, "The actual refresh handler must be unique");
+const [refresh] = declarations;
+const modifiers = ts.getModifiers(refresh);
+assert.ok(modifiers.some((node) => node.kind === ts.SyntaxKind.ExportKeyword));
+assert.ok(modifiers.some((node) => node.kind === ts.SyntaxKind.AsyncKeyword));
+const handlerSource = ts.transpileModule(`(${refresh.getText(parsed).replace(/^export\s+/, "")})`, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022 },
+}).outputText;
 
 function harness(options = {}) {
   const events = [];
@@ -24,7 +33,7 @@ function harness(options = {}) {
   return {
     events,
     handle: vm.runInNewContext(
-      `(${handlerSource})`,
+      handlerSource,
       {
         Response,
         isCrossSiteMutation,

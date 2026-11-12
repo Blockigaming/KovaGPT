@@ -35,6 +35,11 @@ function fixture() {
       new Promise((r) => {
         resolveFetch = r;
       }),
+    publishKovaNotice: (notice) => {
+      assert.equal(notice.id, "image_copied");
+      assert.equal(notice.confirmed, true);
+      events.push("success");
+    },
     toast: { success: () => events.push("success"), error: () => events.push("error") },
   };
   const copy = new Function(...Object.keys(dependencies), js + ";return copyGeneratedImage;")(
@@ -85,10 +90,11 @@ test("unmount invalidates generation-scoped image actions", () => {
 });
 
 function saveFixture() {
-  let resolveSave;
+  let resolveSave, rejectSave;
   const state = { busy: false, saves: 0, notices: [] };
   const saveEpoch = { current: 1 },
-    pending = { current: false };
+    pending = { current: false },
+    owner = { current: "owner" };
   const block = source.slice(
     source.indexOf("  async function saveGeneratedImage("),
     source.indexOf("  async function copyGeneratedImage("),
@@ -99,6 +105,7 @@ function saveFixture() {
   const dependencies = {
     isSignedIn: true,
     userKey: "owner",
+    resultOwnerRef: owner,
     saveGenerationRef: saveEpoch,
     savePendingRef: pending,
     setLoginOpen() {},
@@ -106,21 +113,32 @@ function saveFixture() {
       state.busy = value;
     },
     imageUrlForLibrary: async (url) => url,
-    saveImage: () => {
+    saveImage: ({ data }) => {
       state.saves++;
-      return new Promise((resolve) => {
+      state.request = data;
+      return new Promise((resolve, reject) => {
         resolveSave = resolve;
+        rejectSave = reject;
       });
     },
-    toast: {
-      success: (value) => state.notices.push(value),
-      error: (value) => state.notices.push(value),
+    publishKovaNotice: (notice) => {
+      if (["file_saved", "reference_saved"].includes(notice.id))
+        assert.equal(notice.confirmed, true);
+      state.notices.push(notice.id);
     },
   };
   const save = new Function(...Object.keys(dependencies), code + "; return saveGeneratedImage;")(
     ...Object.values(dependencies),
   );
-  return { state, saveEpoch, pending, save, finish: () => resolveSave() };
+  return {
+    state,
+    saveEpoch,
+    pending,
+    owner,
+    save,
+    finish: (receipt = { id: "saved-image" }) => resolveSave(receipt),
+    fail: () => rejectSave(new Error("Library unavailable")),
+  };
 }
 test("image Library save ignores duplicate clicks and releases the pending control", async () => {
   const f = saveFixture();
@@ -134,7 +152,7 @@ test("image Library save ignores duplicate clicks and releases the pending contr
   await first;
   assert.equal(f.state.busy, false);
   assert.equal(f.pending.current, false);
-  assert.equal(f.state.notices.length, 1);
+  assert.deepEqual(f.state.notices, ["file_saved"]);
 });
 test("image Library save cannot report success or clear a new account action", async () => {
   const f = saveFixture();
@@ -146,6 +164,40 @@ test("image Library save cannot report success or clear a new account action", a
   await first;
   assert.deepEqual(f.state.notices, []);
   assert.equal(f.state.busy, true);
+});
+
+test("image save failure emits once for the current account and never for a stale account", async () => {
+  for (const stale of [false, true]) {
+    const f = saveFixture();
+    const result = f.save({ prompt: "draft", imageUrl: "data:image/png;base64,test" });
+    await new Promise((resolve) => setImmediate(resolve));
+    if (stale) f.saveEpoch.current++;
+    f.fail();
+    await result;
+    assert.deepEqual(f.state.notices, stale ? [] : ["image_save_failed"]);
+    if (!stale) assert.equal(f.pending.current, false);
+  }
+});
+
+test("a named reference uses the expected account and reports only a confirmed Library save", async () => {
+  const item = { prompt: "draft", imageUrl: "data:image/png;base64,test" };
+  const reference = { title: "Paper bird", idempotencyKey: crypto.randomUUID() };
+  for (const outcome of ["saved", "missing", "switched"]) {
+    const f = saveFixture();
+    const result = f.save(item, reference);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(f.state.request, {
+      ...item,
+      ...reference,
+      expectedOwnerId: "owner",
+    });
+    assert.deepEqual(f.state.notices, []);
+    if (outcome === "switched") f.owner.current = "next-owner";
+    f.finish(outcome === "missing" ? {} : undefined);
+    if (outcome === "missing") await assert.rejects(result, /could not be confirmed/);
+    else assert.equal(await result, outcome === "saved");
+    assert.deepEqual(f.state.notices, outcome === "saved" ? ["reference_saved"] : []);
+  }
 });
 
 test("image-edit fields keep full-width rounded phone geometry and 44px controls", () => {

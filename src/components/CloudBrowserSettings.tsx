@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Globe2, LockKeyhole, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { Input } from "@/components/ui/input";
 import { requestWorkSync } from "@/lib/work-sync-client";
 import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
@@ -70,9 +71,16 @@ export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
         rules: next,
       })) as { rules: unknown };
       if (signal.aborted) return;
-      setRules(parseCloudBrowserRules(response.rules));
+      const savedRules = parseCloudBrowserRules(response.rules);
+      setRules(savedRules);
       setSite("");
       setMessage("Permissions saved to your account.");
+      if (JSON.stringify(savedRules) !== JSON.stringify(rules))
+        publishKovaNotice({
+          id: "privacy_updated",
+          title: "Cloud Browser privacy settings updated",
+          confirmed: true,
+        });
     } catch {
       if (!signal.aborted)
         setError(

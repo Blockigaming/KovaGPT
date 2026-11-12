@@ -15,6 +15,7 @@ function fixture(options = {}) {
   };
   let closed = 0;
   const calls = [];
+  const notices = [];
   const document = { activeElement: null };
   const rendered = reactFixture(
     "src/components/ReviewedMemoryDialog.tsx",
@@ -22,6 +23,9 @@ function fixture(options = {}) {
     {
       globals: { AbortController, document },
       modules: {
+        "@/components/KovaNotificationSurface": {
+          publishKovaNotice: (notice) => notices.push({ ...notice }),
+        },
         "@/components/ui/checkbox": { Checkbox: "input" },
         "@/components/ui/dialog": Object.fromEntries(
           [
@@ -64,6 +68,7 @@ function fixture(options = {}) {
     rendered,
     document,
     calls,
+    notices,
     get closed() {
       return closed;
     },
@@ -118,8 +123,14 @@ test("Save requires reviewed text and confirmation, and any edit resets that con
   await f.click("Save memory for future chats");
   assert.equal(f.calls.length, 1);
   assert.equal(f.calls[0].text, "For future chats, keep it brief");
+  assert.deepEqual(f.notices, [
+    {
+      id: "memory_updated",
+      title: "Reviewed memory saved for future chats",
+      confirmed: true,
+    },
+  ]);
   assert.equal(f.closed, 1);
-  assert.deepEqual(f.messages, [["success", "Reviewed memory saved for future chats"]]);
 });
 test("same-turn duplicate Save is synchronously blocked and pending Cancel cannot claim rollback", async () => {
   let release;
@@ -157,7 +168,7 @@ test("failure stays visible with exact draft retained and no success", async () 
   assert.match(f.rendered.text(), /Storage unavailable/);
   assert.equal(f.find("textarea").props.value, "Exact text");
   assert.equal(f.closed, 0);
-  assert.equal(f.messages.length, 0);
+  assert.equal(f.notices.length, 0);
 });
 test("ineligible short/unsynced conversation exposes explanation and cannot save", async () => {
   const f = fixture({
@@ -190,7 +201,7 @@ test("owner change or unmount fences a late response and drops private draft", a
   assert.equal(f.find("textarea").props.value, "");
   release();
   await f.flush();
-  assert.equal(f.messages.length, 0);
+  assert.equal(f.notices.length, 0);
   assert.equal(f.closed, 0);
   f.unmount();
 });

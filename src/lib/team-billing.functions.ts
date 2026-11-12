@@ -56,8 +56,11 @@ export type TeamWorkspaceView = {
 };
 export const getTeamWorkspace = createServerFn({ method: "GET" })
   .middleware([verified])
-  .handler(async ({ context }): Promise<TeamWorkspaceView> => {
+  .validator((input: unknown) => z.object({ expectedUserId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<TeamWorkspaceView> => {
     const owner = context.userId;
+    if (data.expectedUserId !== owner)
+      throw new Error("Your account changed. Reload the workspace.");
     const members = await loose(supabaseAdmin)
       .from("team_members")
       .select("team_id, seat, state")

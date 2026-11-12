@@ -21,6 +21,7 @@ const seams = {
     "getCallerTier",
     "assertFeatureEnabled",
     "enforceQuota",
+    "dailyFeatureLimit",
   ],
   "@/lib/account-identity.server.mjs": ["readAccountIdentity"],
   "@/lib/google-tools.server": [
@@ -291,6 +292,7 @@ function fixture(options = {}) {
       getCallerTier: async () => options.tier ?? "free",
       assertFeatureEnabled: noop,
       enforceQuota: noop,
+      dailyFeatureLimit: denied,
     },
     "@/lib/account-identity.server.mjs": { readAccountIdentity: noop },
     "@/lib/google-tools.server": {

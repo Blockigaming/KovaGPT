@@ -1,5 +1,6 @@
 import { Toaster as Sonner } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useState } from "react";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
@@ -23,23 +24,78 @@ const toasterStyle = {
 // The same small ChatGPT pill geometry as Button, overriding native toast actions.
 const toastButtonClassName =
   "group-[.toast]:!h-8 group-[.toast]:!rounded-full group-[.toast]:!px-[15.96px] group-[.toast]:!text-sm group-[.toast]:!font-medium group-[.toast]:!leading-5 group-[.toast]:!transition-[background-color,color,border-color,box-shadow,opacity] group-[.toast]:!duration-150 group-[.toast]:!ease-[ease] group-[.toast]:focus-visible:!outline-none group-[.toast]:focus-visible:!ring-2 group-[.toast]:focus-visible:!ring-ring group-[.toast]:focus-visible:!ring-offset-2 group-[.toast]:focus-visible:!ring-offset-background [@media(pointer:coarse)]:!min-h-11";
+const touchToastCloseButton =
+  "[@media(pointer:coarse)]:!left-1 [@media(pointer:coarse)]:!right-auto [@media(pointer:coarse)]:!top-1 [@media(pointer:coarse)]:!size-11 [@media(pointer:coarse)]:!transform-none [@media(pointer:coarse)]:!border-0 [@media(pointer:coarse)]:!bg-transparent";
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const mobile = useIsMobile();
+  const [shortViewport, setShortViewport] = useState(false);
+  const [composerClearance, setComposerClearance] = useState(0);
+  useEffect(() => {
+    const query = window.matchMedia("(max-height: 560px)");
+    let dock: Element | null = null;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const short = query.matches || (window.visualViewport?.height ?? Infinity) <= 560;
+      setShortViewport(short);
+      const current = document.querySelector(".spec400-composer-dock");
+      if (current !== dock) {
+        if (dock) resize.unobserve(dock);
+        dock = current;
+        if (dock) resize.observe(dock);
+      }
+      const rect = dock?.getBoundingClientRect();
+      const clearance =
+        !short && rect && rect.height > 0 ? Math.max(0, window.innerHeight - rect.top + 12) : 0;
+      setComposerClearance(Math.ceil(clearance));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    const resize = new ResizeObserver(schedule);
+    const mutations = new MutationObserver(() => {
+      if (!dock?.isConnected) schedule();
+    });
+    mutations.observe(document.body, { childList: true, subtree: true });
+    resize.observe(document.documentElement);
+    query.addEventListener("change", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
+    update();
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      mutations.disconnect();
+      resize.disconnect();
+      query.removeEventListener("change", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
+    };
+  }, []);
   return (
     <Sonner
       className="toaster group"
-      position={mobile ? "top-center" : "bottom-right"}
+      position={shortViewport ? "top-center" : mobile ? "bottom-center" : "bottom-right"}
       closeButton
       duration={4_000}
-      visibleToasts={4}
+      visibleToasts={shortViewport ? 1 : mobile ? 2 : 3}
       gap={8}
-      mobileOffset={{ top: "calc(72px + env(safe-area-inset-top))", left: 16, right: 16 }}
+      offset={{
+        top: "calc(32px + env(safe-area-inset-top))",
+        bottom: Math.max(32, composerClearance),
+      }}
+      mobileOffset={{
+        top: "calc(72px + env(safe-area-inset-top))",
+        bottom: composerClearance
+          ? `max(calc(88px + env(safe-area-inset-bottom)), ${composerClearance}px)`
+          : "calc(88px + env(safe-area-inset-bottom))",
+        left: 16,
+        right: 16,
+      }}
       style={{ ...toasterStyle, ...style }}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background",
+            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background [@media(pointer:coarse)]:group-[.toaster]:!pl-14",
+          closeButton: touchToastCloseButton,
           icon: "group-[.toast]:!m-0 group-[.toast]:!size-[20px] group-[.toast]:[&_svg]:!m-0 group-[.toast]:[&_svg]:!size-[20px]",
           content: "group-[.toast]:!min-w-0 group-[.toast]:!flex-1 group-[.toast]:!gap-0",
           title: "group-[.toast]:!font-semibold group-[.toast]:!leading-5 [text-wrap:pretty]",

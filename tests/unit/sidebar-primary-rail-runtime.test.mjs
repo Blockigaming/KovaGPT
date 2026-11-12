@@ -64,6 +64,7 @@ function fixture(options = {}) {
     React,
     SIDEBAR_SHORTCUTS,
     SIDEBAR_ITEMS,
+    availableWorkspaces: [],
     sidebarStyle: {},
     signedIn: true,
     canSchedule: true,

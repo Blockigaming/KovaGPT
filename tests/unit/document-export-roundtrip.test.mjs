@@ -152,7 +152,19 @@ test("Office extraction rejects ZIP bombs, traversal, active content, unsafe XML
   );
   assert.throws(() => extractOfficeDocument(zipSync(original), "xlsx"), /missing/);
   const large = await createDocumentDocx("Title", "x".repeat(80001));
-  assert.throws(() => extractOfficeDocument(large, "docx"), /80,000/);
+  assert.throws(
+    () => extractOfficeDocument(large, "docx"),
+    (error) => error.limit === "text" && /80,000/.test(error.message),
+  );
+  const workbook = unzipSync(await createDocumentXlsx("Title", "Content"));
+  const sheets = Array.from({ length: 51 }, (_, index) => `<sheet name="Sheet ${index}" />`).join(
+    "",
+  );
+  workbook["xl/workbook.xml"] = strToU8(`<workbook><sheets>${sheets}</sheets></workbook>`);
+  assert.throws(
+    () => extractOfficeDocument(zipSync(workbook), "xlsx"),
+    (error) => error.limit === "workbook" && /workbook exceeds/.test(error.message),
+  );
 });
 
 test("DOCX extraction excludes hidden runs, deleted text and field instructions", async () => {

@@ -51,7 +51,8 @@ function fixture(
     attachmentChanges = [],
     choosers = [],
     submissions = [],
-    toolChanges = [];
+    toolChanges = [],
+    notices = [];
   const scopes = new Map();
   const quotaStorage = new Map();
   const actualLimits = {};
@@ -116,6 +117,9 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/KovaNotificationSurface": {
+      publishKovaNotice: (notice) => notices.push(notice.id),
+    },
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
     "@/lib/link-preview.mjs": linkPreview,
     react,
@@ -242,6 +246,7 @@ function fixture(
     choosers,
     submissions,
     toolChanges,
+    notices,
     nodes: () => nodes(tree),
     root: () => tree.props,
     button,
@@ -341,8 +346,10 @@ test("Back to text preserves a newer draft and removal Undo does not use quota a
   await f.flush();
   await f.click("Remove pasted-text.txt");
   assert.equal(f.attachments().length, 0);
+  assert.deepEqual(f.notices, ["paste_converted", "file_removed"]);
   await f.click("Undo removal");
   assert.equal(f.attachments()[0].textContent, exactText);
+  assert.deepEqual(f.notices, ["paste_converted", "file_removed"]);
   assert.deepEqual(f.quotas, []);
   await f.changeDraft("New instructions");
   f.button("Inspect pasted-text.txt").onClick({ currentTarget: {} });

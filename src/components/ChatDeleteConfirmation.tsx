@@ -27,6 +27,7 @@ export function confirmPermanentChat(title: string, temporary: boolean): Promise
       return (
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogContent
+            data-kova-notice-id={open ? "confirm_chat_delete" : undefined}
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               cancelRef.current?.focus();

@@ -22,7 +22,7 @@ async function libraryDelete(page: Page) {
   });
 }
 
-test("review-only Project create and rename preserve failed drafts, then delete safely", async ({
+test("[notice:confirm_project_delete] review-only Project create and rename preserve failed drafts, then delete safely", async ({
   page,
 }) => {
   const state = await recoveryCrudFixture(page);
@@ -76,6 +76,7 @@ test("review-only Project create and rename preserve failed drafts, then delete 
   ).toBeVisible();
   await projectMenu(page, "Renamed recovery project", "Delete");
   const confirmation = page.getByRole("alertdialog", { name: "Delete this project?" });
+  await expect(confirmation).toHaveAttribute("data-kova-notice-id", "confirm_project_delete");
   await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(state.calls.filter((call) => call.operation === "deleteProject")).toHaveLength(0);
   state.failNext.add("deleteProject");
@@ -103,7 +104,7 @@ test("review-only Project create and rename preserve failed drafts, then delete 
   ]);
 });
 
-test("review-only Library preview, delete cancellation and failed-delete retry", async ({
+test("[notice:confirm_file_delete] review-only Library preview, delete cancellation and failed-delete retry", async ({
   page,
 }) => {
   const state = await recoveryCrudFixture(page);
@@ -118,7 +119,9 @@ test("review-only Library preview, delete cancellation and failed-delete retry",
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await preview.getByRole("button", { name: "Close", exact: true }).click();
-  await (await libraryDelete(page)).getByRole("button", { name: "Cancel", exact: true }).click();
+  const confirmation = await libraryDelete(page);
+  await expect(confirmation).toHaveAttribute("data-kova-notice-id", "confirm_file_delete");
+  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(state.calls).toHaveLength(0);
   state.failNext.add("deleteLibraryItem");
   await (

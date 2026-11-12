@@ -24,6 +24,7 @@ function fixture(initial = {}) {
     ...initial,
   };
   const changes = [];
+  const notices = [];
   const frames = [];
   const focused = [];
   const f = reactFixture(
@@ -40,6 +41,9 @@ function fixture(initial = {}) {
       }),
     {
       modules: {
+        "@/components/KovaNotificationSurface": {
+          publishKovaNotice: (notice) => notices.push(notice.id),
+        },
         "@/lib/modes": {
           MODES: modes,
           isModeAllowedForTier,
@@ -75,6 +79,7 @@ function fixture(initial = {}) {
     ...f,
     config,
     changes,
+    notices,
     focused,
     trigger,
     open() {
@@ -155,6 +160,7 @@ test("choosing a paid option preserves its route ID, closes the picker and resto
   await f.flush();
   f.runFrames();
   assert.deepEqual(f.changes, ["thinking"]);
+  assert.deepEqual(f.notices, ["mode_changed"]);
   assert.equal(f.find("popover").props.open, false);
   assert.equal(f.trigger().props["aria-label"], "Choose response effort: Medium");
   assert.deepEqual(
@@ -223,4 +229,5 @@ test("signed-in Free keeps Default and Thinking switchable and resets a stale pa
   await f.flush();
   assert.equal(toggle().props["aria-pressed"], false);
   assert.deepEqual(f.changes, ["instant", "thinking", "instant"]);
+  assert.deepEqual(f.notices, ["mode_changed", "mode_changed"]);
 });

@@ -1,4 +1,8 @@
 export const TASK_CONTEXT_MAX_CHARS = 24_000;
+export const TASK_CAPACITY_MESSAGE =
+  "The scheduled task limit was reached. Remove an unused task and try again.";
+export const TASK_SCHEDULE_UNSUPPORTED_MESSAGE =
+  "This schedule is unavailable. Choose another date, time or time zone and try again.";
 export const TASK_PROVIDERS = Object.freeze(["gmail", "slack", "github"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const plain = (value) => value && typeof value === "object" && !Array.isArray(value);
@@ -158,6 +162,7 @@ export function parseTaskPayload(value, partial = false) {
     "triggerMode",
     "contextRefs",
     "eventTriggers",
+    ...(partial ? [] : ["taskKind"]),
   ]);
   const result = {};
   for (const key of ["title", "prompt"])
@@ -197,6 +202,16 @@ export function parseTaskPayload(value, partial = false) {
   if (value.eventTriggers !== undefined || !partial)
     result.eventTriggers = parseTaskTriggers(value.eventTriggers);
   if (!partial) {
+    if (value.taskKind !== undefined) {
+      if (
+        value.taskKind !== "reminder" ||
+        result.triggerMode !== "time" ||
+        result.contextRefs.length ||
+        result.eventTriggers.length
+      )
+        fail();
+      result.taskKind = "reminder";
+    }
     if (
       result.triggerMode === "time" &&
       ((!result.localTime && !result.run_at) || result.eventTriggers.length)

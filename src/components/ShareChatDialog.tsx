@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   Dialog,
   DialogContent,
@@ -110,7 +111,11 @@ export function ShareChatDialog({
       if (current.current !== expected || controller.signal.aborted) return;
       await navigator.clipboard.writeText(created.url);
       if (current.current !== expected || controller.signal.aborted) return;
-      toast.success("Public link copied", { position: "bottom-right" });
+      publishKovaNotice({
+        id: "sharing_link_copied",
+        title: "Public link copied",
+        confirmed: true,
+      });
       onOpenChange(false);
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted) {
@@ -147,7 +152,7 @@ export function ShareChatDialog({
       if (!response.ok) throw new Error("This link could not be revoked. Try again.");
       if (current.current !== expected || controller.signal.aborted) return;
       setLink(null);
-      toast.success("Share link removed");
+      publishKovaNotice({ id: "sharing_disabled", title: "Share link removed", confirmed: true });
       onOpenChange(false);
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted)

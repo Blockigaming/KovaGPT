@@ -219,3 +219,26 @@ test("worker returns structured pages on success and known no-text errors, but n
     assert.doesNotMatch(JSON.stringify(messages), /PRIVATE/);
   }
 });
+
+test("client preserves structured extraction limits without inferring them from error copy", async () => {
+  for (const [extension, limit, accepted] of [
+    ["docx", "text", true],
+    ["xlsx", "workbook", true],
+    ["docx", "workbook", false],
+    ["xlsx", "unknown", false],
+  ]) {
+    const f = clientFixture();
+    const promise = f.extract(file(`sample.${extension}`));
+    await tick();
+    f.workers[0].onmessage({
+      data: { kind: "document-extraction-result", ok: false, error: "Limit reached", limit },
+    });
+    await assert.rejects(promise, (error) => {
+      assert.equal(error.message, "Limit reached");
+      assert.equal(error instanceof metadata.DocumentExtractionLimitError, accepted);
+      assert.equal(error.limit, accepted ? limit : undefined);
+      return true;
+    });
+    assert.equal(f.workers[0].terminated, 1);
+  }
+});

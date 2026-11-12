@@ -303,6 +303,18 @@ test("rendered last-run labels preserve legacy saved history without inventing a
     lastRunAt: "2026-10-19T13:04:00Z",
     lastResult: "Historical saved result",
   };
+  const event = Component({
+    ...props,
+    preview: {
+      kind: "run",
+      status: "complete",
+      at: props.lastRunAt,
+      summary: null,
+      matchedConnectedEvent: true,
+    },
+  });
+  assert.equal(event.props["data-kova-notice-id"], "monitor_match");
+  assert.match(text(event), /Matched a connected event/);
   const missingHistory = text(Component({ ...props, preview: { kind: "empty" } }));
   assert.match(missingHistory, /status unavailable in run history/);
   assert.match(missingHistory, /Saved task history.*Historical saved result/);

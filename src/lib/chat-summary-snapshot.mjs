@@ -1,6 +1,7 @@
 import { deriveTitle } from "./chat-store.ts";
 import { boundedSummaryText } from "./chat-summary-text.mjs";
 import { enqueueMemoryWrite } from "./memory-write-coordinator.mjs";
+import { withResponsePresentation } from "./spec400-response-preferences.mjs";
 
 async function digestMessages(messages) {
   const bytes = new TextEncoder().encode(
@@ -372,4 +373,15 @@ export function chatRequestProfile(settings) {
   };
 }
 
-export { withResponsePresentation } from "./spec400-response-preferences.mjs";
+export function chatUserProfile(settings, cleanTemporaryChat, requestedWebSearch) {
+  if (cleanTemporaryChat)
+    return requestedWebSearch === undefined ? undefined : { webSearch: requestedWebSearch };
+  return withResponsePresentation(
+    chatRequestProfile(
+      requestedWebSearch === undefined ? settings : { ...settings, webSearch: requestedWebSearch },
+    ),
+    settings,
+  );
+}
+
+export { withResponsePresentation };

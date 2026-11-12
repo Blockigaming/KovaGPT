@@ -5,6 +5,7 @@ import test from "node:test";
 const portability = await readFile("src/lib/device-data-portability.ts", "utf8");
 const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
 const chat = await readFile("src/routes/index.tsx", "utf8");
+const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
 const matrix = await readFile("docs/release/acceptance-ledger.md", "utf8");
 const generatedLedger = JSON.parse(
   await readFile("docs/release/acceptance-ledger.generated.json", "utf8"),
@@ -40,9 +41,10 @@ test("temporary chat never persists an unsent draft", () => {
   assert.match(chat, /if \(tempChat \|\| !principalReady\) return;/);
   assert.match(chat, /clearDraft\(userKey, activeId\)/);
   assert.doesNotMatch(chat, /localStorage\.(?:getItem|setItem|removeItem)\(`kova-draft:/);
-  assert.match(chat, /toast\.success\("Temporary chat on"/);
+  assert.match(chat, /publishKovaNotice\(\{\s*id: "temporary_chat",\s*title: "Temporary chat on"/);
+  assert.match(chat, /message: TEMPORARY_CHAT_NOTICE_COPY\[context\]/);
   assert.match(
-    chat,
+    chatStore,
     /No history or memory\. Profile, instructions, personality and connected apps stay off/,
   );
 });

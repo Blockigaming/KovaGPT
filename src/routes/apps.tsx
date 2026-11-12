@@ -1,3 +1,4 @@
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   Select,
   SelectContent,
@@ -1048,7 +1049,11 @@ function AppsPage() {
       void refreshGoogle().then((status) => {
         if (!status) return;
         if (status.connected && status.state === "connected") {
-          toast.success("Google connection verified");
+          publishKovaNotice({
+            id: "connection_success",
+            title: "Google connection verified",
+            confirmed: true,
+          });
           recordActivity("Google", "Connection verified");
         } else {
           toast.warning(
@@ -1065,7 +1070,10 @@ function AppsPage() {
             : err === "exchange_failed"
               ? "Google sign-in failed, try again"
               : "Google sign-in could not be completed";
-      toast.error(msg);
+      publishKovaNotice({
+        id: err === "access_denied" ? "connection_canceled" : "connection_failed",
+        title: msg,
+      });
     }
     if (ok || err) {
       params.delete("google_connected");
@@ -1571,13 +1579,13 @@ function AppsPage() {
                       </p>
                     )}
                     {visibleGoogleStatus?.state === "reauthorization_required" && (
-                      <p role="status">
+                      <p role="status" data-kova-notice-id="connection_expired">
                         Your connection record is retained, but Google authorization has expired or
                         was revoked. Reconnect to restore access.
                       </p>
                     )}
                     {visibleGoogleStatus?.state === "permission_incomplete" && (
-                      <p role="status">
+                      <p role="status" data-kova-notice-id="source_auth_needed">
                         Some requested permissions are missing. Reconnect and review the required
                         access.
                       </p>

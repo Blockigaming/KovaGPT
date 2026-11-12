@@ -42,6 +42,14 @@ export function reconcileMonthlyIntroCheckout(options: {
   claimId: string;
   sessionId: string;
 }): Promise<void>;
+export function verifyPaidIntroCheckout(options: {
+  stripe: Stripe;
+  supabase: unknown;
+  environment: Environment;
+  userId: string;
+  claimId: string;
+  sessionId: string;
+}): Promise<boolean>;
 export function reconcileAccountMonthlyIntroCheckout(options: {
   stripeFactory: (environment: Environment) => Stripe;
   supabase: unknown;

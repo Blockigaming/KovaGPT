@@ -7,6 +7,7 @@ import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
 import "@/styles/images-collection.css";
 import { imageApiRequest } from "@/lib/image-api-client";
 import ImageEditControls, { type ImageEditSelection } from "@/components/ImageEditControls";
+import { ImageReferenceDialog } from "@/components/ImageReferenceDialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
@@ -17,7 +18,7 @@ import {
   type ImageHistoryItem,
 } from "@/lib/image-history";
 import { safeImageUrl } from "@/lib/safe-image-url";
-import { createImageHistoryLoadGuard } from "@/lib/image-history-load";
+import { createImageHistoryLoadGuard, type ImageHistorySnapshot } from "@/lib/image-history-load";
 import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
@@ -51,12 +52,12 @@ import {
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
-import { getUsage } from "@/lib/limits";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 
 export const Route = createFileRoute("/images")({
   component: ImagesPage,
@@ -341,7 +342,7 @@ function takeLegacyHistory(userKey: string): ImageHistoryItem[] {
   }
 }
 
-async function loadHistory(userKey: string): Promise<ImageHistoryItem[]> {
+async function loadHistory(userKey: string): Promise<ImageHistorySnapshot> {
   const legacy = takeLegacyHistory(userKey);
   const migrationResults = await Promise.allSettled(
     legacy.map((item) => persistImageHistoryItem(userKey, item, HISTORY_LIMIT)),
@@ -352,11 +353,14 @@ async function loadHistory(userKey: string): Promise<ImageHistoryItem[]> {
     const transientLegacy = legacy.filter(
       (item, index) => migrationResults[index]?.status === "rejected" && !persistedIds.has(item.id),
     );
-    return [...persisted, ...transientLegacy]
-      .sort((left, right) => right.createdAt - left.createdAt)
-      .slice(0, HISTORY_LIMIT);
+    return {
+      storageVerified: true,
+      items: [...persisted, ...transientLegacy]
+        .sort((left, right) => right.createdAt - left.createdAt)
+        .slice(0, HISTORY_LIMIT),
+    };
   } catch {
-    return legacy;
+    return { storageVerified: false, items: legacy };
   }
 }
 
@@ -394,14 +398,27 @@ function ImagesPage() {
   const [customHeight, setCustomHeight] = useState("864");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [delayedGeneration, setDelayedGeneration] = useState<number | null>(null);
+  const [generationError, setError] = useState<{
+    message: string;
+    referenceMissing?: boolean;
+  } | null>(null);
+  const error = generationError?.message;
   const [result, setResult] = useState<string | null>(null);
   const [resultPrompt, setResultPrompt] = useState<string>("");
   const [loginOpen, setLoginOpen] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
+  const [limitResetAt, setLimitResetAt] = useState<number | undefined>(undefined);
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
+  const [firstImageOwner, setFirstImageOwner] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
+  const [referenceItem, setReferenceItem] = useState<{
+    prompt: string;
+    imageUrl: string;
+    ownerId: string;
+    trigger: HTMLButtonElement;
+  } | null>(null);
   const [savingImage, setSavingImage] = useState(false);
   const openSettings = useCallback(
     (tab?: string) => {
@@ -454,6 +471,18 @@ function ImagesPage() {
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
+  const isGenerationDelayed = loading && delayedGeneration === generationRef.current;
+
+  useEffect(() => {
+    if (!loading) return;
+    const generation = generationRef.current;
+    const controller = generationControllerRef.current;
+    const timeout = window.setTimeout(() => {
+      if (generation === generationRef.current && controller && !controller.signal.aborted)
+        setDelayedGeneration(generation);
+    }, 20_000);
+    return () => window.clearTimeout(timeout);
+  }, [loading, userKey]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
   const generationStatusRef = useRef<HTMLDivElement>(null);
@@ -641,7 +670,9 @@ function ImagesPage() {
     setResult(null);
     setResultPrompt("");
     setHistory([]);
+    setFirstImageOwner(null);
     setLightbox(null);
+    setReferenceItem(null);
   }, [clearResultReveal]);
 
   useEffect(() => {
@@ -674,17 +705,28 @@ function ImagesPage() {
     setResult(null);
     setResultPrompt("");
     setLightbox(null);
+    setReferenceItem(null);
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
+    setLimitResetAt(undefined);
     setHistory([]);
+    setFirstImageOwner(null);
     if (isLoaded && isSignedIn && userKey) {
+      const historyGeneration = generationRef.current;
       void historyLoadGuard.load(
         () => loadHistory(userKey),
-        (items) => {
+        ({ items, storageVerified }) => {
           const objectUrls = items.filter((item) => item.objectUrl).map((item) => item.imageUrl);
           for (const objectUrl of objectUrls) historyObjectUrls.add(objectUrl);
-          setHistory(items);
+          setHistory((current) => {
+            const currentIds = new Set(current.map((item) => item.id));
+            return [...current, ...items.filter((item) => !currentIds.has(item.id))]
+              .sort((left, right) => right.createdAt - left.createdAt)
+              .slice(0, HISTORY_LIMIT);
+          });
+          if (storageVerified && items.length === 0 && generationRef.current === historyGeneration)
+            setFirstImageOwner(userKey);
         },
       );
     }
@@ -702,6 +744,7 @@ function ImagesPage() {
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
+    setFirstImageOwner(null);
     const item: ImageHistoryItem = {
       id: crypto.randomUUID(),
       prompt: p,
@@ -738,33 +781,68 @@ function ImagesPage() {
     }
   }
 
-  async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
+  function openReferenceDialog(
+    item: { prompt: string; imageUrl: string },
+    trigger: HTMLButtonElement,
+  ) {
     if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
-    if (savePendingRef.current) return;
+    setReferenceItem({ ...item, ownerId: userKey, trigger });
+  }
+
+  async function saveGeneratedImage(
+    item: { prompt: string; imageUrl: string },
+    reference?: { title: string; idempotencyKey: string },
+  ): Promise<boolean> {
+    if (!isSignedIn || !userKey) {
+      setLoginOpen(true);
+      return false;
+    }
+    if (savePendingRef.current) return false;
     savePendingRef.current = true;
     const ownerId = userKey;
     const generation = saveGenerationRef.current;
+    const isCurrent = () =>
+      generation === saveGenerationRef.current && resultOwnerRef.current === ownerId;
     setSavingImage(true);
     try {
       const imageUrl = await imageUrlForLibrary(item.imageUrl);
-      if (generation !== saveGenerationRef.current) return;
-      await saveImage({
+      if (!isCurrent()) return false;
+      const saved = await saveImage({
         data: {
           expectedOwnerId: ownerId,
-          title: item.prompt.slice(0, 100) || "Generated image",
+          title: reference?.title ?? (item.prompt.slice(0, 100) || "Generated image"),
+          idempotencyKey: reference?.idempotencyKey,
           prompt: item.prompt,
           imageUrl,
         },
       });
-      if (generation === saveGenerationRef.current) toast.success("Saved to Library");
+      if (!isCurrent()) return false;
+      if (!saved?.id) throw new Error("The Library save could not be confirmed.");
+      if (reference) {
+        publishKovaNotice({
+          id: "reference_saved",
+          key: `reference-saved:${saved.id}`,
+          title: "Reference saved",
+          message: "Find this image by name in Library.",
+          confirmed: true,
+        });
+      } else {
+        publishKovaNotice({ id: "file_saved", title: "Image saved to Library", confirmed: true });
+      }
+      return true;
     } catch (error) {
-      if (generation === saveGenerationRef.current)
-        toast.error(error instanceof Error ? error.message : "Could not save image");
+      if (!isCurrent()) return false;
+      if (reference) throw error;
+      publishKovaNotice({
+        id: "image_save_failed",
+        title: error instanceof Error ? error.message : "Could not save image",
+      });
+      return false;
     } finally {
-      if (generation === saveGenerationRef.current) {
+      if (isCurrent()) {
         savePendingRef.current = false;
         setSavingImage(false);
       }
@@ -807,7 +885,8 @@ function ImagesPage() {
             });
       if (generation !== generationRef.current) return;
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      if (generation === generationRef.current) toast.success("Image copied");
+      if (generation === generationRef.current)
+        publishKovaNotice({ id: "image_copied", title: "Image copied", confirmed: true });
     } catch (error) {
       if (generation === generationRef.current)
         toast.error(error instanceof Error ? error.message : "Could not copy image");
@@ -818,9 +897,10 @@ function ImagesPage() {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
     if (aspectRatio === "custom" && !validCustomImageSize(`${customWidth}x${customHeight}`)) {
-      setError(
-        "Enter valid custom dimensions: multiples of 16, up to 3840px per edge, 655,360–8,294,400 pixels, and a ratio between 1:3 and 3:1.",
-      );
+      setError({
+        message:
+          "Enter valid custom dimensions: multiples of 16, up to 3840px per edge, 655,360–8,294,400 pixels, and a ratio between 1:3 and 3:1.",
+      });
       return;
     }
     if (!isSignedIn || !userKey) {
@@ -837,6 +917,12 @@ function ImagesPage() {
     generationControllerRef.current = controller;
     setError(null);
     setLoading(true);
+    let quotaNoticeShown = false;
+    let referenceMissing = false;
+    publishKovaNotice({
+      id: editSelection ? "image_edit_started" : "image_started",
+      title: editSelection ? "Image edit requested" : "Image generation requested",
+    });
     try {
       const { response: res, body: data } = await imageApiRequest(
         userKey!,
@@ -858,11 +944,23 @@ function ImagesPage() {
       if (generation !== generationRef.current || controller.signal.aborted) return;
       if (!res.ok) {
         const msg = typeof data.error === "string" ? data.error : "Failed to generate image";
-        if (res.status === 429 && /limit/i.test(msg)) {
+        referenceMissing =
+          Boolean(editSelection) && res.status === 409 && data.code === "image_reference_missing";
+        if (res.status === 429 && data.code === "image_generation_limit") {
           setLimitMessage(msg);
+          const resetAt = typeof data.resetsAt === "string" ? Date.parse(data.resetsAt) : NaN;
+          setLimitResetAt(Number.isFinite(resetAt) ? resetAt : undefined);
           setLimitOpen(true);
+          quotaNoticeShown = true;
+          publishKovaNotice({ id: "image_limit", title: "Image limit reached", message: msg });
         }
-        throw new Error(res.status === 503 ? IMAGE_GENERATION_UNAVAILABLE : msg);
+        throw new Error(
+          referenceMissing
+            ? "An image reference is unavailable. Choose an image from your Library and try again."
+            : res.status === 503
+              ? IMAGE_GENERATION_UNAVAILABLE
+              : msg,
+        );
       }
       const imageUrl = safeImageUrl(data.imageUrl);
       if (!imageUrl) {
@@ -872,6 +970,11 @@ function ImagesPage() {
       if (reveal?.generation === generation) reveal.imageUrl = imageUrl;
       setResult(imageUrl);
       setResultPrompt(trimmed);
+      publishKovaNotice({
+        id: editSelection ? "image_edited" : "image_ready",
+        title: editSelection ? "Image edited" : "Image ready",
+        confirmed: true,
+      });
       addToHistory(trimmed, imageUrl);
       setPrompt((current) => (current.trim() === trimmed ? "" : current));
     } catch (e) {
@@ -879,7 +982,13 @@ function ImagesPage() {
       const message = e instanceof Error ? e.message : "Failed to generate image";
       const reveal = resultRevealRef.current;
       if (reveal?.generation === generation) reveal.error = message;
-      setError(message);
+      setError({ message, referenceMissing });
+      if (!quotaNoticeShown && !referenceMissing)
+        publishKovaNotice({
+          id: editSelection ? "image_edit_failed" : "image_failed",
+          title: "Image generation failed",
+          message: "Your prompt has been preserved.",
+        });
     } finally {
       if (generation === generationRef.current) {
         setLoading(false);
@@ -1010,12 +1119,16 @@ function ImagesPage() {
             {error && (
               <div
                 id="image-generation-error"
+                data-kova-notice-id={
+                  generationError?.referenceMissing ? "reference_missing" : undefined
+                }
                 role="alert"
                 className="mt-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm leading-relaxed text-destructive"
               >
                 {error === IMAGE_GENERATION_UNAVAILABLE
                   ? IMAGE_GENERATION_UNAVAILABLE
-                  : error.startsWith("Enter valid custom dimensions:")
+                  : generationError?.referenceMissing ||
+                      error.startsWith("Enter valid custom dimensions:")
                     ? error
                     : "Image generation failed. Your prompt is kept here so you can try again."}
               </div>
@@ -1160,6 +1273,7 @@ function ImagesPage() {
                     tabIndex={-1}
                     role="status"
                     aria-labelledby="image-generating-label"
+                    data-kova-notice-id={isGenerationDelayed ? "image_delayed" : "image_generating"}
                     className={cn(
                       "mx-auto flex max-w-md items-center justify-center gap-3 rounded-xl border border-border bg-muted text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4",
                       result ? "mb-4 min-h-16 p-4" : "aspect-square",
@@ -1170,7 +1284,7 @@ function ImagesPage() {
                       aria-hidden="true"
                     />
                     <span id="image-generating-label" className="text-sm">
-                      Generating image…
+                      {isGenerationDelayed ? "Still waiting for your image…" : "Generating image…"}
                     </span>
                   </div>
                 )}
@@ -1202,6 +1316,19 @@ function ImagesPage() {
                       >
                         <Bookmark className="h-4 w-4" />{" "}
                         {savingImage ? "Saving…" : "Save to Library"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={(event) =>
+                          openReferenceDialog(
+                            { prompt: resultPrompt, imageUrl: result },
+                            event.currentTarget,
+                          )
+                        }
+                        disabled={savingImage}
+                      >
+                        Save as reference
                       </Button>
                       <Button
                         variant="outline"
@@ -1266,13 +1393,30 @@ function ImagesPage() {
                   </SignInButton>
                 </div>
               ) : history.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-10 text-center">
+                <div
+                  className="rounded-xl border border-dashed border-border p-10 text-center"
+                  data-kova-notice-id={
+                    firstImageOwner && firstImageOwner === userKey ? "first_image" : undefined
+                  }
+                >
                   <div className="mx-auto w-10 h-10 rounded-lg bg-foreground/5 flex items-center justify-center mb-3">
                     <ImageIcon className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Your generated images will appear here. Pick a style or describe an image above.
+                    {firstImageOwner && firstImageOwner === userKey
+                      ? "Create an image to start this browser’s image history."
+                      : "Your generated images will appear here. Pick a style or describe an image above."}
                   </p>
+                  {firstImageOwner && firstImageOwner === userKey && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => inputRef.current?.focus()}
+                    >
+                      Describe an image
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="kova-image-history-grid" data-ui-reference="chatgpt.images.history">
@@ -1367,7 +1511,7 @@ function ImagesPage() {
         onOpenChange={setLimitOpen}
         kind="image"
         message={limitMessage}
-        resetsAt={getUsage().resetsAt}
+        resetsAt={limitResetAt}
       />
 
       <Dialog
@@ -1438,6 +1582,15 @@ function ImagesPage() {
                 >
                   <Bookmark className="h-4 w-4" /> Save
                 </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={(event) => openReferenceDialog(lightbox, event.currentTarget)}
+                  disabled={savingImage}
+                  className="bg-white/10 text-white hover:bg-white/20"
+                >
+                  Save as reference
+                </Button>
                 <a
                   href={lightbox.imageUrl}
                   download={`kovagpt-${lightbox.id}.png`}
@@ -1460,6 +1613,21 @@ function ImagesPage() {
           </DialogContent>
         )}
       </Dialog>
+      {isSignedIn && referenceItem && referenceItem.ownerId === userKey && (
+        <ImageReferenceDialog
+          onClose={() => setReferenceItem(null)}
+          onReturnFocus={() => {
+            if (
+              resultOwnerRef.current === referenceItem.ownerId &&
+              referenceItem.trigger.isConnected
+            )
+              referenceItem.trigger.focus();
+          }}
+          onSave={(title, idempotencyKey) =>
+            saveGeneratedImage(referenceItem, { title, idempotencyKey })
+          }
+        />
+      )}
     </div>
   );
 }

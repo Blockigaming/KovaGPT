@@ -83,7 +83,8 @@ function fixture({ textUnavailable = false } = {}) {
           throw new policy.ImageInputError("Account changed", 409);
       },
       loadOwnedImageSource: async () => {
-        if (state.badSource) throw new policy.ImageInputError("Source unavailable", 409);
+        if (state.badSource)
+          throw new policy.ImageInputError("Source unavailable", 409, "image_reference_missing");
         return {
           bytes: png(),
           contentType: "image/png",
@@ -141,8 +142,11 @@ test("invalid, oversized, unsupported and unavailable image edits consume no quo
   const { state, post } = fixture();
   state.enabled = true;
   state.badSource = true;
-  assert.equal((await post({ prompt: "Edit", operation: "edit", parentImageId: id })).status, 409);
+  const missing = await post({ prompt: "Edit", operation: "edit", parentImageId: id });
+  assert.equal(missing.status, 409);
+  assert.equal((await missing.json()).code, "image_reference_missing");
   assert.equal(state.quota, 0);
+  assert.equal(state.edit, 0);
 });
 test("the configured image provider remains usable when the separate text provider is unavailable", async () => {
   const { state, post } = fixture({ textUnavailable: true });
@@ -171,7 +175,9 @@ test("account revocation during generation withholds private output and malforme
   fixtureValue.state.revokeAt = 3;
   let response = await fixtureValue.post({ prompt: "Lake" });
   assert.equal(response.status, 409);
-  assert.equal((await response.json()).imageUrl, undefined);
+  const revoked = await response.json();
+  assert.equal(revoked.imageUrl, undefined);
+  assert.equal(revoked.code, undefined);
   fixtureValue = fixture();
   fixtureValue.state.returned = { data: [{ url: "https://elsewhere.invalid/private" }] };
   response = await fixtureValue.post({ prompt: "Lake" });

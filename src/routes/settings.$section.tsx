@@ -32,6 +32,28 @@ function SettingsPage() {
           }}
           onOpenChange={(open) => {
             if (open) return;
+            let returnTo: string | null = null;
+            try {
+              returnTo = window.sessionStorage.getItem("kova-settings-return-to");
+              window.sessionStorage.removeItem("kova-settings-return-to");
+            } catch {
+              // Browser storage can be disabled; ordinary navigation still works.
+            }
+            if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
+              const target = new URL(returnTo, window.location.origin);
+              if (
+                target.origin === window.location.origin &&
+                !/^\/settings(?:\/|$)/.test(target.pathname)
+              ) {
+                void navigate({
+                  to: target.pathname as never,
+                  search: Object.fromEntries(target.searchParams) as never,
+                  hash: target.hash,
+                  replace: true,
+                });
+                return;
+              }
+            }
             if (canGoBack) router.history.back();
             else void navigate({ to: "/", replace: true });
           }}

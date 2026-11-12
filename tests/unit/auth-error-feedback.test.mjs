@@ -207,6 +207,29 @@ test("fast failed retries cannot be removed by a queued old dismissal; success s
   assert.deepEqual(f.requests.at(-1), ["owned", "/api/auth/login", { email, password }]);
 });
 
+test("password and rate-limit notices identify only confirmed sign-in outcomes", async () => {
+  let status = 401;
+  const f = fixture({
+    request: () => ({
+      ...response({ error: "Sign-in could not be completed." }, false),
+      status,
+    }),
+  });
+  await f.ready();
+  await f.submit();
+  assertPersistent(f);
+  assert.equal(f.visibleErrors()[0].message.props["data-kova-notice-id"], "invalid_credentials");
+
+  status = 429;
+  await f.submit();
+  assertPersistent(f);
+  assert.equal(f.visibleErrors()[0].message.props["data-kova-notice-id"], "sign_in_rate_limit");
+
+  status = 503;
+  await f.submit();
+  assertPersistent(f, "Sign-in could not be completed.");
+});
+
 test("pending retries are serialized and late failures cannot restore feedback after unmount", async () => {
   const pending = deferred();
   const f = fixture({ request: () => pending.promise });

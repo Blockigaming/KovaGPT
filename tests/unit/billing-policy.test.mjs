@@ -7,6 +7,7 @@ import {
   resolvePolicyCustomer,
   validateMonthlyIntroCoupon,
   validateMonthlyIntroPrice,
+  verifyPaidIntroCheckout,
 } from "../../src/lib/billing-policy.mjs";
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -494,6 +495,34 @@ test("a signed completion must still prove price/coupon/customer before it burns
   await reconcileMonthlyIntroCheckout({ ...f.input, claimId, sessionId: session.id });
   assert.equal(f.db.redeemed, true);
   assert.equal(f.db.claim.state, "completed");
+});
+
+test("an introductory offer receipt requires paid Stripe evidence and leaves billing read-only", async () => {
+  const f = fixture();
+  const session = await createMonthlyIntroCheckout(f.input);
+  const record = f.sessions.get(session.id);
+  const input = { ...f.input, claimId, sessionId: session.id };
+  record.status = "complete";
+  await reconcileMonthlyIntroCheckout(input);
+  const readStart = f.db.calls.length;
+  const writes = f.calls.length;
+  assert.equal(await verifyPaidIntroCheckout(input), false);
+  Object.assign(record, { payment_status: "paid", subscription: "sub_Owner" });
+  assert.equal(await verifyPaidIntroCheckout(input), false);
+  record.total_details = { amount_discount: 1000 };
+  assert.equal(await verifyPaidIntroCheckout(input), true);
+  assert.equal(await verifyPaidIntroCheckout({ ...input, sessionId: "cs_Other" }), false);
+  await assert.rejects(
+    verifyPaidIntroCheckout({ ...input, userId: "44444444-4444-4444-8444-444444444444" }),
+    /identity_mismatch/u,
+  );
+  record.discounts = [{ coupon: "other" }];
+  await assert.rejects(verifyPaidIntroCheckout(input), /identity_mismatch/u);
+  assert.equal(f.calls.length, writes);
+  assert.deepEqual(
+    new Set(f.db.calls.slice(readStart).map(({ name }) => name)),
+    new Set(["kova_policy_checkout_status"]),
+  );
 });
 
 test("tampered Customer, price, coupon, owner and mode cannot settle or reveal a Session secret", async () => {

@@ -51,6 +51,9 @@ const childEnvironment = Object.fromEntries(
     ([name]) => inheritedChildEnvironmentNames.has(name) || name.startsWith("LC_"),
   ),
 );
+childEnvironment.GIT_CONFIG_COUNT = "1";
+childEnvironment.GIT_CONFIG_KEY_0 = "safe.directory";
+childEnvironment.GIT_CONFIG_VALUE_0 = sourceRoot;
 childEnvironment.KOVA_BROWSER_PREVIEW = "node";
 childEnvironment.VITE_SUPABASE_URL = `http://${host}:${port}`;
 childEnvironment.VITE_SUPABASE_PUBLISHABLE_KEY = "auth-visual-public-key";

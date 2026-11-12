@@ -41,6 +41,7 @@ function compile(code, dependencies) {
 function fixture() {
   const uploading = [],
     messages = [],
+    notices = [],
     requests = [],
     refreshes = [];
   const operation = { current: null },
@@ -59,7 +60,8 @@ function fixture() {
     projectFileRequest: (args) =>
       new Promise((resolve, reject) => requests.push({ args, resolve, reject })),
     toast: { success: (value) => messages.push(value), error: (value) => messages.push(value) },
-    responseError: async () => "Upload failed",
+    responseError: async (response) => ({ code: response.code, message: "Upload failed" }),
+    publishKovaNotice: (notice) => notices.push(notice.id),
     refresh: async (isCurrent) => {
       if (isCurrent()) refreshes.push("refresh");
     },
@@ -68,6 +70,7 @@ function fixture() {
     handle: compile(`${handler}; return handleFiles;`, deps),
     uploading,
     messages,
+    notices,
     requests,
     refreshes,
     operation,
@@ -164,4 +167,21 @@ test("upload list refresh ignores results when navigation occurs during the list
     ["loading", true],
     ["error", null],
   ]);
+});
+
+test("project upload notices distinguish confirmed limits from unavailable storage", async () => {
+  for (const [status, code, id] of [
+    [409, "project_file_limit_reached", "project_file_limit"],
+    [413, "project_storage_limit_reached", "storage_full"],
+    [415, "image_signature_required", "unsupported_image"],
+    [503, "project_file_storage_unavailable", null],
+    [503, "project_storage_limit_reached", null],
+  ]) {
+    const f = fixture();
+    const result = f.handle(files);
+    f.requests[0].resolve({ ok: false, status, code });
+    await result;
+    assert.deepEqual(f.notices, id ? [id] : []);
+    assert.deepEqual(f.messages, id ? [] : ["Upload failed"]);
+  }
 });

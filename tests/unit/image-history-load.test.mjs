@@ -18,16 +18,19 @@ test("clearing device history rejects an already pending read and releases its b
   let visible = ["old"];
   const pending = guard.load(
     () => read.promise,
-    (items) => {
-      visible = items;
+    (snapshot) => {
+      visible = snapshot.items;
     },
   );
   guard.invalidate();
   visible = [];
-  read.resolve([
-    { imageUrl: "blob:private-old", objectUrl: true },
-    { imageUrl: "https://example.com/image.png" },
-  ]);
+  read.resolve({
+    items: [
+      { imageUrl: "blob:private-old", objectUrl: true },
+      { imageUrl: "https://example.com/image.png" },
+    ],
+    storageVerified: true,
+  });
   await pending;
   assert.deepEqual(visible, []);
   assert.deepEqual(revoked, ["blob:private-old"]);
@@ -41,19 +44,25 @@ test("an old account read cannot overwrite a newer account history", async (t) =
   let visible = [];
   const pending = guard.load(
     () => old.promise,
-    (items) => {
-      visible = items;
+    (snapshot) => {
+      visible = snapshot;
     },
   );
   guard.invalidate();
-  const current = [{ imageUrl: "blob:current", objectUrl: true }];
+  const current = {
+    items: [{ imageUrl: "blob:current", objectUrl: true }],
+    storageVerified: false,
+  };
   await guard.load(
     async () => current,
-    (items) => {
-      visible = items;
+    (snapshot) => {
+      visible = snapshot;
     },
   );
-  old.resolve([{ imageUrl: "blob:previous", objectUrl: true }]);
+  old.resolve({
+    items: [{ imageUrl: "blob:previous", objectUrl: true }],
+    storageVerified: true,
+  });
   await pending;
   assert.deepEqual(visible, current);
   assert.deepEqual(revoked, ["blob:previous"]);

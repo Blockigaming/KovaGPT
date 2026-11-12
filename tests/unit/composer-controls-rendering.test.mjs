@@ -73,6 +73,8 @@ vm.runInNewContext(output, {
     }
   },
   require(id) {
+    if (id === "@/components/KovaNotificationSurface")
+      return { publishKovaNotice: (notice) => assert.ok(notice?.id) };
     if (id === "@/lib/consumer-model-selection.mjs") return { CONSUMER_MODELS: [] };
     if (id === "@/components/HelpSupportForm") return { HelpSupportForm: empty };
     if (id === "@/lib/document-extraction/pdf-metadata.mjs") return pdfMetadata;

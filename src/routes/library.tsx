@@ -65,6 +65,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { ContextualTip } from "@/components/ContextualTip";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
@@ -698,7 +700,7 @@ function LibraryPage() {
         console.error("[library] load failed");
         setLoadError(e instanceof Error ? e.message : "Could not load your library.");
         setSelected([]);
-        toast.error("Could not load your library.");
+        publishKovaNotice({ id: "library_load_failed", title: "Could not load your library." });
       } finally {
         pageRequests.current.delete(controller);
         if (isCurrent()) setLoading(false);
@@ -1122,7 +1124,7 @@ function LibraryPage() {
             }
           : previous,
       );
-      toast.success("Share revoked.");
+      publishKovaNotice({ id: "access_revoked", title: "Share revoked.", confirmed: true });
     } catch {
       if (isCurrent()) toast.error("Could not revoke this shared snapshot. Please try again.");
     } finally {
@@ -1261,7 +1263,11 @@ function LibraryPage() {
       const loaded = value ? await value(owner!, item, controller.signal) : item;
       if (current()) action(loaded);
     } catch {
-      if (current()) toast.error("This item could not be opened. Refresh Library and try again.");
+      if (!current()) return;
+      const message = "This item could not be opened. Refresh Library and try again.";
+      if (item.file_name || item.file_url)
+        publishKovaNotice({ id: "file_inaccessible", title: message });
+      else toast.error(message);
     } finally {
       pageRequests.current.delete(controller);
     }
@@ -1842,6 +1848,19 @@ function LibraryPage() {
           <LibraryUploadDialog
             key={userKey}
             ownerId={userKey}
+            firstUpload={
+              isSignedIn &&
+              principalReady &&
+              !libraryCleared &&
+              !loading &&
+              !loadError &&
+              !query &&
+              !searchQuery &&
+              filter === "all" &&
+              folderScope === "all" &&
+              !nextPage &&
+              !items.some((item) => item.source === "upload" || item.item_type === "document")
+            }
             onClose={() => setUploadOpen(false)}
             onSaved={() => {
               refreshLibrary();
@@ -1921,6 +1940,14 @@ function LibraryPage() {
                     Source and date filters apply to loaded items. Load more to include older
                     results.
                   </p>
+                  {userKey && isSignedIn && principalReady && !loading && items.length > 0 && (
+                    <ContextualTip
+                      ownerId={userKey}
+                      data-kova-notice-id="did_you_know"
+                      message="Combine a Library search with source and date filters to narrow the results."
+                      onDismiss={() => document.getElementById("library-source-filter")?.focus()}
+                    />
+                  )}
                 </PopoverContent>
               </Popover>
               <div className="spec400-library-display-controls">
@@ -2388,7 +2415,11 @@ function LibraryPage() {
                 ),
               );
               setRenameTarget(null);
-              toast.success("Saved-item title updated");
+              publishKovaNotice({
+                id: "changes_updated",
+                title: "Saved-item title updated",
+                confirmed: true,
+              });
             }}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
@@ -2654,6 +2685,18 @@ function LibraryPage() {
           ) : null}
         </Dialog>
         <ConfirmActionDialog
+          noticeId={
+            visiblePendingDelete?.items.every((item) => item.id.startsWith("chat:"))
+              ? "confirm_chat_delete"
+              : visiblePendingDelete?.items.every(
+                    (item) =>
+                      item.item_type === "upload" ||
+                      item.item_type === "document" ||
+                      item.item_type === "image",
+                  )
+                ? "confirm_file_delete"
+                : undefined
+          }
           open={deleteDialogOpen && visiblePendingDelete !== null}
           onOpenChange={setDeleteDialogOpen}
           title={deleteSummary.title}

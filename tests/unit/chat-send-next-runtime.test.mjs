@@ -6,6 +6,12 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
+import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
+import {
+  chatFailurePresentation,
+  publishRequestedChatTool,
+} from "../../src/lib/chat-sse-client.mjs";
+import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 
 // The real primitive supplies geometry; this transparent boundary preserves
 // the caller's events, disabled state, children and ref in the route fixture.
@@ -72,14 +78,10 @@ const unmountEffect = effects.find((effect) =>
 );
 const cancel = find(
   (node) =>
-    ts.isJsxElement(node) &&
-    node.openingElement.tagName.getText(ast) === "Button" &&
-    node.children.some(
-      (child) => ts.isJsxText(child) && child.text.includes("Cancel next message"),
-    ),
-)
-  .openingElement.attributes.properties.find((prop) => prop.name?.getText(ast) === "onClick")
-  .initializer.expression.getText(ast);
+    ts.isJsxAttribute(node) &&
+    node.name.getText(ast) === "onCancel" &&
+    node.initializer?.getText(ast).includes("scheduleNextPromptFocus"),
+).initializer.expression.getText(ast);
 const sendSource = arrow("send").replace(
   'await import("@/lib/chat-summary-snapshot.mjs")',
   "await summaryModule",
@@ -107,21 +109,40 @@ const keptPreviewDefinition = keptPreviewAst.statements
   .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "QuotaRejectedDraftPreview")
   .getText(keptPreviewAst)
   .replace(/^export /u, "");
+const recoveryAst = ts.createSourceFile(
+  "ChatRecoveryPanels.tsx",
+  readFileSync("src/components/ChatRecoveryPanels.tsx", "utf8"),
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TSX,
+);
+const requestStatusDefinition = recoveryAst.statements
+  .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "ChatRequestStatus")
+  .getText(recoveryAst)
+  .replace(/^export /u, "");
 const compiled = ts.transpileModule(
   `${keptPreviewDefinition}
+  ${requestStatusDefinition}
   globalThis.pendingMessageAttachments = ${pendingAttachmentsDefinition};
   globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
   globalThis.send = ${sendSource};\nglobalThis.queue = ${initializer("queueNextPrompt").getText(ast)};\nglobalThis.dispatch = ${dispatch};\nglobalThis.reconcileScope = ${scopeEffect};\nglobalThis.stop = ${arrow("stop")};\nglobalThis.cancel = ${cancel};\nglobalThis.startLifetime = ${unmountEffect};
   globalThis.reconcileNotice = ${noticeScopeEffect};
   globalThis.readVisibleNotice = () => ${initializer("visibleRequestNotice").getText(ast)};
-  globalThis.renderNotice = (pending = false) => (${initializer("requestStatusPanel").getText(ast)})(pending);
+  globalThis.renderNotice = (pending = false) => {
+    const shell = (${initializer("requestStatusPanel").getText(ast)})(pending);
+    const child = shell?.props.children;
+    return child ? child.type(child.props) : null;
+  };
   globalThis.readResponseRetry = () => ${retryResponse.initializer.expression.getText(ast)};
   globalThis.setInput = ${arrow("setInput")};
   globalThis.setAttachments = ${arrow("setAttachments")};
   globalThis.setSelectedTool = ${arrow("setSelectedTool")};
   globalThis.reconcileQuotaDrafts = ${quotaScopeEffect};
   globalThis.readQuotaDrafts = () => ${initializer("visibleQuotaRejectedDrafts").getText(ast)};
-  globalThis.renderQuotaDrafts = () => ${initializer("quotaRejectedDraftPanel").getText(ast)};
+  globalThis.renderQuotaDrafts = () => (${initializer("quotaRejectedDraftPanel").getText(ast)}).map((shell) => {
+    const child = shell.props.children;
+    return child.type(child.props);
+  });
   globalThis.readComposerPromptPanel = () => ${initializer("composerPromptPanel").getText(ast)};`,
   { compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } },
 ).outputText;
@@ -136,10 +157,18 @@ function fixture() {
     streams = [],
     errors = [],
     timers = [],
-    delays = [];
+    delays = [],
+    notices = [];
   let sequence = 0;
   const context = {
     ...helpers,
+    chatFailureNoticeId,
+    chatFailurePresentation,
+    publishRequestedChatTool,
+    publishKovaNotice(notice) {
+      notificationDeliveryStub.publishKovaNotice(notice);
+      notices.push(notice.id);
+    },
     React,
     Button,
     Suspense: React.Suspense,
@@ -263,7 +292,8 @@ function fixture() {
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
       createChatHistoryPayload: async (messages) => ({ messages }),
-      chatRequestProfile: () => ({}),
+      chatUserProfile: (_settings, _clean, requestedWebSearch) =>
+        requestedWebSearch === undefined ? {} : { webSearch: requestedWebSearch },
       fetchForPrincipal: (principal, url, args) => {
         const d = deferred();
         requests.push({ ...d, principal, url, args });
@@ -315,6 +345,7 @@ function fixture() {
   }
   return {
     context,
+    notices,
     requests,
     streams,
     errors,
@@ -487,6 +518,8 @@ for (const outcome of ["failure", "stop", "confirmation"]) {
     f.context.queue("web_search");
     if (outcome === "stop") {
       f.context.stop();
+      f.context.stop();
+      assert.equal(f.notices.filter((id) => id === "request_canceled").length, 1);
       f.requests[0].reject(new DOMException("Stopped", "AbortError"));
       await settle();
     } else
@@ -729,11 +762,13 @@ test("transient failure keeps partial output and a newer draft until one explici
   assert.equal(f.requests.length, 1, "clicking Retry waits for its guarded dispatch");
   assert.equal(f.timers.length, 1, "the toast action is single-use");
   assert.equal(f.delays[0], 100);
+  assert.ok(!f.notices.includes("retrying"));
   assert.equal(f.context.conversations[0].messages, failedTurn);
   f.timers[0]();
   await settle();
   assert.equal(f.context.requestNotice, null);
   assert.equal(f.requests.length, 2);
+  assert.equal(f.notices.filter((id) => id === "retrying").length, 1);
   assert.equal(f.requests[1].args.headers["Idempotency-Key"], firstRequestId);
   assert.deepEqual(JSON.parse(f.requests[1].args.body), originalPayload);
   const resentTurn = f.context.conversations[0].messages;

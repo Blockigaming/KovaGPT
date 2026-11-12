@@ -16,11 +16,25 @@ permissions:
 concurrency:
   group: public-website-${{ github.event.pull_request.number }}
   cancel-in-progress: true
+# Trust only this job's checked-out working tree. Containers can have a
+# different UID from the mounted GitHub workspace; all tests remain active.
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   preview:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 20
     env:
+      HOME: /root
       KOVA_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -34,7 +48,7 @@ jobs:
       - run: npm run typecheck
       - run: node --test tests/unit/public-website.test.mjs tests/unit/hosted-github-login-redirect.test.mjs
       - run: npm run build:azure
-      - run: npx playwright install chromium
+      - run: bash scripts/ci/install-playwright-browsers.sh chromium
       - run: npx playwright test --config playwright.public-website.config.ts
       - run: npx playwright test --config playwright.public-website-regression.config.ts
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -276,6 +276,22 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
       : `chat_http_${response.status || "error"}`;
   error.category =
     typeof payload.category === "string" && payload.category ? payload.category : undefined;
+  // The message-quota backend supplies an authoritative kind. Preserve it so
+  // Thinking limits are never mislabeled as regular-message exhaustion.
+  error.usageKind =
+    payload.code === "message_window_limit" &&
+    (payload.kind === "thinking" || payload.kind === "regular")
+      ? payload.kind
+      : undefined;
+  error.resetAtMs =
+    ["message_window_limit", "image_generation_limit", "file_upload_limit"].includes(
+      payload.code,
+    ) &&
+    typeof payload.resetsAt === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(payload.resetsAt) &&
+    Number.isFinite(Date.parse(payload.resetsAt))
+      ? Date.parse(payload.resetsAt)
+      : undefined;
   error.requestId =
     typeof payload.requestId === "string" && payload.requestId
       ? payload.requestId
@@ -285,4 +301,73 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
   const retryAfter = response.headers.get("retry-after");
   error.retryAfter = retryAfter && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : undefined;
   return error;
+}
+
+function describeChatFailure({
+  raw,
+  category,
+  sessionExpired,
+  signedIn,
+  canManualRetry,
+  retryable,
+  networkFailure,
+}) {
+  if (sessionExpired)
+    return signedIn
+      ? "Your session could not be verified. Sign in again to continue."
+      : "Sign in is required for this request.";
+  if (!canManualRetry) return raw;
+  if (category === "rate_limit") return "You're going a bit fast — try again in a moment.";
+  if (category === "quota_exceeded")
+    return "You've hit your plan's limit. Try again later or upgrade.";
+  if (category === "model_timeout") return "The model took too long to respond. Tap retry.";
+  if (category === "model_provider_failure")
+    return retryable === false ? raw : "KovaGPT is temporarily unavailable. Tap retry.";
+  if (category === "streaming_interruption")
+    return "The connection dropped mid-response. Tap retry.";
+  return networkFailure
+    ? "Connection lost while generating a response. Check your internet and tap retry."
+    : raw;
+}
+
+export function chatFailurePresentation(error, { raw, signedIn, quotaRejected, networkFailure }) {
+  const category = error.category || (networkFailure ? "network_failure" : undefined);
+  const sessionExpired = error.status === 401 || error.code === "authentication_required";
+  const retryableCategory =
+    category === "model_timeout" ||
+    category === "streaming_interruption" ||
+    category === "network_failure" ||
+    category === "model_provider_failure";
+  // Configuration and authorization failures must not turn into repeated requests.
+  const canManualRetry =
+    !quotaRejected &&
+    !sessionExpired &&
+    error.status !== 403 &&
+    error.retryable !== false &&
+    (error.retryable === true || retryableCategory);
+  const friendly = describeChatFailure({
+    raw,
+    category,
+    sessionExpired,
+    signedIn,
+    canManualRetry,
+    retryable: error.retryable,
+    networkFailure,
+  });
+  const requestId = error.requestId;
+  return {
+    sessionExpired,
+    canManualRetry,
+    friendly,
+    detail: requestId ? `${friendly} (ref: ${requestId})` : friendly,
+    reference: requestId ? `Reference ID: ${requestId}` : undefined,
+    preservedDraftMessage: "Your draft and any partial response are preserved.",
+  };
+}
+
+export function publishRequestedChatTool(tool, publishKovaNotice) {
+  if (tool === "web_search")
+    publishKovaNotice({ id: "search_started", title: "Web search requested" });
+  else if (tool === "data_analysis" || tool === "file_analysis")
+    publishKovaNotice({ id: "analysis_started", title: "Analysis requested" });
 }

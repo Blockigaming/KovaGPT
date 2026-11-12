@@ -16,7 +16,15 @@ test("current Chat packaging stays consistent across server, picker, composer an
   assert.match(entitlements, /"extra_high", "max", "ultra"/);
   assert.match(selector, /if \(userTier === "free"\)/);
   assert.match(selector, /aria-pressed=\{mode === "thinking"\}/);
-  assert.match(selector, /onChange\(mode === "thinking" \? "instant" : "thinking"\)/);
+  assert.match(
+    selector,
+    /\(\{ id \}\) => id === \(mode === "thinking" \? "instant" : "thinking"\)/,
+  );
+  assert.match(selector, /if \(next\) chooseMode\(next\)/);
+  assert.match(
+    selector,
+    /if \(next\.id === mode \|\| !isModeAllowedForTier\(userTier, next\.id\)\) return;\s*onChange\(next\.id\)/,
+  );
   assert.match(chat, /if \(auth && !isOwner\)/);
   assert.match(
     chat,

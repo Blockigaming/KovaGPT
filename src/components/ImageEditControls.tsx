@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ContextualTip } from "@/components/ContextualTip";
 import { ImagePlus, ArrowLeft } from "lucide-react";
 import { imageApiRequest } from "@/lib/image-api-client";
 import {
@@ -29,6 +30,7 @@ export default function ImageEditControls({
     [cursor, setCursor] = useState<string | null>(null);
   const [pageCursor, setPageCursor] = useState(""),
     [error, setError] = useState("");
+  const originalPicker = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const controller = new AbortController();
     setError("");
@@ -97,7 +99,11 @@ export default function ImageEditControls({
                     onChange(source ? { source } : null);
                   }}
                 >
-                  <SelectTrigger aria-label="Original image" className="min-h-11 w-full min-w-0">
+                  <SelectTrigger
+                    aria-label="Original image"
+                    className="min-h-11 w-full min-w-0"
+                    ref={originalPicker}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -113,6 +119,14 @@ export default function ImageEditControls({
                   </SelectContent>
                 </Select>
               </label>
+              {value && (
+                <ContextualTip
+                  ownerId={ownerId}
+                  data-kova-notice-id="quick_tip"
+                  message="An optional transparent PNG mask helps guide which part of the image changes."
+                  onDismiss={() => originalPicker.current?.focus()}
+                />
+              )}
               {value && (
                 <label className="grid min-w-0 gap-2">
                   Optional PNG mask{" "}

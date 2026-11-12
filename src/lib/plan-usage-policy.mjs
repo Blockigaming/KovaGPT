@@ -59,6 +59,36 @@ export function chatUsageWindows(tier, now = new Date(), usageMultiplier = 1) {
   return tier === "pro" ? [weekly] : [hourly, weekly];
 }
 
+/** A server-confirmed rolling-window transition for the same entitlement. */
+export function planUsageHasNewCapacity(before, after) {
+  if (
+    !Array.isArray(before?.windows) ||
+    !Array.isArray(after?.windows) ||
+    before.tier !== after.tier ||
+    (before.usageMultiplier ?? 1) !== (after.usageMultiplier ?? 1) ||
+    before.windows.length === 0 ||
+    before.windows.length !== after.windows.length
+  )
+    return false;
+  return ["regular", "thinking"].some((kind) => {
+    const valid = (window) =>
+      Number.isFinite(window[kind + "Used"]) &&
+      Number.isFinite(window[kind + "Limit"]) &&
+      window[kind + "Limit"] > 0 &&
+      Number.isFinite(window.costPercentUsed);
+    const blocked = (window) =>
+      window[kind + "Used"] >= window[kind + "Limit"] || window.costPercentUsed >= 100;
+    return (
+      after.windows.every((window) => valid(window) && !blocked(window)) &&
+      before.windows.some((window) => {
+        if (!valid(window) || !blocked(window)) return false;
+        const refreshed = after.windows.find((next) => next.id === window.id);
+        return refreshed && Date.parse(refreshed.resetsAt) > Date.parse(window.resetsAt);
+      })
+    );
+  });
+}
+
 /** Only the server-resolved Pro default model is outside the advanced allowance. */
 export function isUnlimitedBasicChat(tier, modelId, mode) {
   return tier === "pro" && modelId === "kova-argon-4.6" && mode === "instant";

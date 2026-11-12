@@ -24,6 +24,12 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
           boundedPercent(window.thinkingUsed, window.thinkingLimit),
           window.costPercentUsed ?? 0,
         );
+        const nearingThinkingLimit =
+          Number.isFinite(window.thinkingUsed) &&
+          Number.isFinite(window.thinkingLimit) &&
+          window.thinkingLimit > 0 &&
+          window.thinkingUsed >= window.thinkingLimit * 0.8 &&
+          window.thinkingUsed < window.thinkingLimit;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
         const resetLabel =
           window.id === "five_hour" ? "Rolling activity · Next hourly refresh" : "Weekly reset";
@@ -46,6 +52,14 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
             <p className="text-xs leading-5 text-muted-foreground">
               {resetLabel} {resetFormat.format(new Date(window.resetsAt))}
             </p>
+            {nearingThinkingLimit && (
+              <p
+                className="text-xs leading-5 text-muted-foreground"
+                data-kova-notice-id="thinking_almost_exhausted"
+              >
+                Thinking usage is nearing this window’s message limit.
+              </p>
+            )}
           </div>
         );
       })}

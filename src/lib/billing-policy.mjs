@@ -400,6 +400,42 @@ export async function reconcileMonthlyIntroCheckout({
   await settleVerifiedSession(options, claim, session);
 }
 
+/** Read a paid introductory Checkout receipt without settling billing or granting access. */
+export async function verifyPaidIntroCheckout({
+  stripe,
+  supabase,
+  userId,
+  environment,
+  claimId,
+  sessionId,
+}) {
+  if (!UUID.test(userId ?? "") || !UUID.test(claimId ?? "") || !id(sessionId, "cs")) return false;
+  const claim = await rpc(
+    supabase,
+    "kova_policy_checkout_status",
+    { p_user: userId, p_environment: environment, p_claim: claimId },
+    true,
+  );
+  if (
+    !claim ||
+    claim.sessionId !== sessionId ||
+    claim.state !== "completed" ||
+    claim.introEligible !== true
+  )
+    return false;
+  const options = { stripe, supabase, userId, environment, customerId: claim.customerId };
+  validateClaim(claim, { ...options, priceId: claim.priceId, returnUrl: claim.returnUrl });
+  const session = await retrieveVerifiedSession(options, claim, sessionId);
+  return (
+    session.id === sessionId &&
+    session.status === "complete" &&
+    session.payment_status === "paid" &&
+    id(session.subscription, "sub") &&
+    Number.isSafeInteger(session.total_details?.amount_discount) &&
+    session.total_details.amount_discount > 0
+  );
+}
+
 /** Cleanup never creates a Customer or Session, and absence from a list never releases a claim. */
 export async function reconcileAccountMonthlyIntroCheckout({ stripeFactory, supabase, userId }) {
   if (!UUID.test(userId ?? "")) fail("billing_policy_identity_invalid");
