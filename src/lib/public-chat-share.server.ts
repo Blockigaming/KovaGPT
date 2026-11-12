@@ -62,7 +62,9 @@ export async function handleShareManagement(request: Request) {
       if (result.error) throw new Error();
       return json({ links: result.data });
     }
-    const body = JSON.parse(await readUtf8BodyBounded(request, 524288));
+    const body = JSON.parse(
+      await readUtf8BodyBounded(request, request.method === "DELETE" ? 1024 : 50 * 1024 * 1024),
+    );
     if (request.method === "DELETE") {
       if (!/^[0-9a-f-]{36}$/iu.test(body?.id ?? ""))
         return json({ error: "Invalid share link." }, 400);
@@ -96,7 +98,7 @@ export async function handleShareManagement(request: Request) {
     if (result.error?.message?.includes("public_share_limit"))
       return json(
         {
-          error: "Your shared snapshots are full. Remove an existing link or share a shorter chat.",
+          error: "Your shared snapshot storage is full. Remove an existing link and try again.",
         },
         409,
       );

@@ -41,7 +41,7 @@ test("navigation opens, contains its controls, and dismisses predictably", async
   await expectNoPageOverflow(page);
 });
 
-test("composer and attachment sheet stay reachable on narrow screens", async ({ page }) => {
+test("composer and attachment menu stay reachable on narrow screens", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const composer = page.locator(".spec400-composer");
@@ -51,10 +51,10 @@ test("composer and attachment sheet stay reachable on narrow screens", async ({ 
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const sheet = page.getByTestId("mobile-bottom-sheet");
+  const sheet = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Close sheet" })).toBeVisible();
-  await sheet.getByRole("button", { name: "Close sheet" }).click();
+  await expect(sheet.getByRole("button", { name: /^Add photos & files/ })).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
 });
 

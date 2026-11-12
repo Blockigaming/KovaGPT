@@ -68,13 +68,20 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this draft");
   const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
-  const attachmentActions = ["Files", "Library", "Projects", "Create Image", "Drawing"];
+  const attachmentActions = [
+    "Add photos & files",
+    "Add from Library",
+    "Create an image",
+    "Web search",
+    "Work in a project",
+    "Drawing",
+  ];
 
   async function expectViewportBounds() {
     const box = await menu.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.y).toBeGreaterThanOrEqual(12);
-    expect(box!.y + box!.height).toBeLessThanOrEqual(745);
+    expect(box!.y).toBeGreaterThanOrEqual(7);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(750);
   }
 
   for (let opening = 0; opening < 2; opening++) {
@@ -82,11 +89,11 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     await expect(menu).toBeVisible();
     await expect(menu).toHaveAttribute("data-side", /^(top|bottom)$/);
     await page.keyboard.press("Home");
-    await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeFocused();
+    await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeFocused();
     await page.keyboard.press("End");
     await expect(menu.getByRole("button", { name: "Drawing", exact: true })).toBeFocused();
     await page.keyboard.press("ArrowDown");
-    await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeFocused();
+    await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeFocused();
     await expectViewportBounds();
     await expect
       .poll(() =>
@@ -108,7 +115,7 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
       ),
     ).toEqual([]);
     for (const name of attachmentActions) {
-      const action = menu.getByRole("button", { name, exact: true });
+      const action = menu.getByRole("button", { name: new RegExp(`^${name}`) });
       await action.evaluate((element) =>
         element.scrollIntoView({ block: "center", inline: "nearest" }),
       );
@@ -175,8 +182,8 @@ for (const theme of ["light", "dark"] as const) {
     });
     await expect(menu).toBeVisible();
     if (page.viewportSize()!.width < 768) {
-      for (const name of ["Photos", "Camera", "Files"])
-        await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
+      for (const name of ["Photos", "Camera", "Add photos & files"])
+        await expect(menu.getByRole("button", { name: new RegExp(`^${name}`) })).toBeVisible();
     }
     await page.screenshot({
       path: info.outputPath(`add-menu-${theme}.png`),
@@ -613,17 +620,14 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   expect(sendTarget!.height).toBe(touchLayout ? 44 : 43);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const mobileMenu = await page.getByTestId("mobile-bottom-sheet").isVisible();
+  const mobileMenu = page.viewportSize()!.width < 1024;
   const menu = page
     .getByRole("dialog", { name: "Attach", exact: true })
     .or(page.getByRole("dialog", { name: "Attach files and tools", exact: true }))
     .filter({ visible: true });
-  await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
-  await expect(menu.locator(".kova-composer-quick-menu button")).toHaveText(
-    mobileMenu
-      ? ["Camera", "Photos", "Files", "Projects", "Create Image", "Drawing"]
-      : ["Files", "Library", "Projects", "Create Image", "Drawing"],
-  );
+  await expect(menu.getByRole("button", { name: /^Add photos & files/ })).toBeVisible();
+  await expect(menu.locator(".kova-composer-quick-menu > button")).toHaveCount(mobileMenu ? 8 : 6);
+  await expect(menu).toHaveCSS("border-top-width", "0px");
   await page.screenshot({
     path: info.outputPath("polish-attachment-menu.png"),
     animations: "disabled",

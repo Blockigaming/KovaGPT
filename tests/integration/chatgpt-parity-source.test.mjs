@@ -183,17 +183,17 @@ test("active chat shares scoped header actions and keeps secondary controls reac
 });
 
 test("compact composer groups actions and preserves message editing and markdown", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask KovaGPT anything..."\}/);
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Work with KovaGPT"\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
   assert.match(chatInput, /role="group" aria-label="Message tools"/);
   for (const label of ["Attach"]) assert.ok(chatInput.includes(`aria-label="${label}"`));
-  assert.match(chatInput, /renderComposerActions\(false\)/);
+  assert.match(chatInput, /renderComposerActions\(isMobileLayout\)/);
   assert.match(chatInput, /section === "files"/);
   assert.match(chatInput, /<ComposerPluginList/);
-  assert.match(chatInput, /<span>Projects<\/span>/);
+  assert.match(chatInput, /<span>Work in a project<\/span>/);
   assert.match(chatInput, /setProjectPickerOpen\(true\)/);
   assert.match(chatInput, /chooseTool\(COMPOSER_TOOLS\.find/);
   assert.match(chatInput, /OpenDesktopAppButton/);

@@ -60,7 +60,7 @@ function interruptDraft(owner: string | null | undefined) {
   });
 }
 
-export function HelpSupportForm() {
+export function HelpSupportForm({ compact = false }: { compact?: boolean } = {}) {
   const { user, isLoaded } = useUser();
   const [draft, setDraft] = useState<SupportDraft>(emptyDraft);
   const draftRef = useRef(draft);
@@ -230,7 +230,10 @@ export function HelpSupportForm() {
     );
   if (status === "sent")
     return (
-      <section id="support-form" className="mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16">
+      <section
+        id="support-form"
+        className={compact ? undefined : "mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16"}
+      >
         <div
           ref={resultRef}
           tabIndex={-1}
@@ -280,19 +283,27 @@ export function HelpSupportForm() {
   return (
     <section
       id="support-form"
-      className="mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16"
-      aria-labelledby="support-heading"
+      className={compact ? undefined : "mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16"}
+      aria-labelledby={compact ? undefined : "support-heading"}
     >
-      <div className="mb-7 text-center">
-        <h2 id="support-heading" className="text-2xl font-semibold sm:text-3xl">
-          Still need help?
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-left text-sm leading-6 text-muted-foreground sm:text-base">
-          Can’t find the answer you’re looking for? Send a message to KovaGPT Support and we’ll
-          reply by email.
-        </p>
-      </div>
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card/70 p-5 sm:p-8">
+      {!compact && (
+        <div className="mb-7 text-center">
+          <h2 id="support-heading" className="text-2xl font-semibold sm:text-3xl">
+            Still need help?
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-left text-sm leading-6 text-muted-foreground sm:text-base">
+            Can’t find the answer you’re looking for? Send a message to KovaGPT Support and we’ll
+            reply by email.
+          </p>
+        </div>
+      )}
+      <div
+        className={
+          compact
+            ? undefined
+            : "mx-auto max-w-3xl rounded-2xl border border-border bg-card/70 p-5 sm:p-8"
+        }
+      >
         <form onSubmit={submit} noValidate className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div>

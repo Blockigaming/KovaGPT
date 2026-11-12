@@ -1,5 +1,5 @@
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
-import type { ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
+import { CONSUMER_MODELS, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import {
   ArrowUp,
   Brain,
@@ -15,6 +15,11 @@ import {
   Globe,
   FileText,
   Camera,
+  BookOpen,
+  Boxes,
+  ChevronRight,
+  MessageSquare,
+  Search,
   LibraryBig,
   Pencil,
   Folder,
@@ -45,7 +50,6 @@ import { ComposerContextPanel } from "@/components/ComposerContextPanel";
 import { ComposerModelStatus } from "@/components/ComposerModelStatus";
 import { ComposerVoiceDialog } from "@/components/ComposerVoiceDialog";
 import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
-import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
 import { useLayout } from "@/hooks/use-mobile";
@@ -63,11 +67,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
-import { type ModeId, type Tier } from "@/lib/modes";
+import { modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 import type { ComposerToolId, Conversation } from "@/lib/chat-store";
 
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Link } from "@tanstack/react-router";
+import { HelpSupportForm } from "@/components/HelpSupportForm";
+import { Popover, PopoverAnchor, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -134,9 +140,30 @@ type ComposerAction = {
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
+  { id: "study", label: "Study", icon: BookOpen },
   { id: "data_analysis", label: "Analyze data", icon: Brain },
   { id: "file_analysis", label: "Analyze files", icon: FileText },
 ];
+
+const SLASH_COMMANDS = [
+  { id: "dictate", label: "Dictate", description: "Convert speech to text", icon: Mic },
+  {
+    id: "feedback",
+    label: "Feedback",
+    description: "Send feedback about this chat",
+    icon: MessageSquare,
+  },
+  { id: "model", label: "Model", description: "Change your model", icon: Boxes, submenu: true },
+  { id: "study", label: "Study", description: "Learn a new concept", icon: BookOpen },
+  {
+    id: "project",
+    label: "Work in a project",
+    description: "Start a chat in a project",
+    icon: Folder,
+    submenu: true,
+  },
+] as const;
+type SlashCommand = (typeof SLASH_COMMANDS)[number]["id"];
 
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
@@ -269,7 +296,7 @@ export function ChatInput({
     change: Partial<Pick<Settings, "responseLength" | "responseFormat" | "responseTone">>,
   ) => void;
 }) {
-  const { isDesktop, interaction } = useLayout();
+  const { isDesktop, isTablet, interaction } = useLayout();
   const { user, isLoaded } = useUser();
   const fileAccountRef = useRef({ isLoaded, userId: user?.id ?? null });
   fileAccountRef.current = { isLoaded, userId: user?.id ?? null };
@@ -342,6 +369,25 @@ export function ChatInput({
   selectedToolRef.current = selectedTool;
 
   const [plusOpen, setPlusOpen] = useState(false);
+  const [longDraft, setLongDraft] = useState(false);
+  const composerAnchorRef = useRef<HTMLDivElement>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashDismissed, setSlashDismissed] = useState(false);
+  const [slashModels, setSlashModels] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const slashListRef = useRef<HTMLDivElement>(null);
+  const dictationTriggerRef = useRef<HTMLButtonElement>(null);
+  const slashQuery = /^\/([a-z-]*)$/iu.exec(value)?.[1]?.toLowerCase();
+  const slashMatches =
+    slashQuery === undefined
+      ? []
+      : SLASH_COMMANDS.filter(
+          (command) =>
+            command.id.startsWith(slashQuery) ||
+            command.label.toLowerCase().replaceAll(" ", "-").startsWith(slashQuery),
+        );
+  const slashOpen =
+    !slashDismissed && !plusOpen && !disabled && !isStreaming && slashMatches.length > 0;
   const [composerFocusOrigin, setComposerFocusOrigin] = useState<"keyboard" | "pointer">(
     "keyboard",
   );
@@ -349,7 +395,9 @@ export function ChatInput({
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
-  const projectTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const projectTriggerRef = useRef<HTMLElement | null>(null);
+  const projectAnchorRef = useRef<HTMLElement | null>(null);
+  const [startProjectChat, setStartProjectChat] = useState(false);
   const projectReturnUrlRef = useRef<string | undefined>(undefined);
   const [signInRequest, setSignInRequest] = useState<{
     description: string;
@@ -533,6 +581,7 @@ export function ChatInput({
       const limit = isMobileLayout ? 144 : 240;
       const minimum = 26;
       if (!el.value) {
+        setLongDraft(false);
         el.dataset.multiline = "false";
         el.style.height = `${minimum}px`;
         el.style.overflowY = "hidden";
@@ -587,6 +636,7 @@ export function ChatInput({
         if (el.dataset.multiline !== multiline) el.dataset.multiline = multiline;
       }
       const contentHeight = el.scrollHeight;
+      setLongDraft(contentHeight >= limit);
       const height = Math.min(Math.max(contentHeight, minimum), limit);
       el.style.height = `${height}px`;
       el.style.overflowY = contentHeight > limit ? "auto" : "hidden";
@@ -651,8 +701,8 @@ export function ChatInput({
   }, [isStreaming, value, attachments.length]);
 
   useEffect(() => {
-    if (disabled || !showAddMenu) setPlusOpen(false);
-  }, [disabled, showAddMenu]);
+    if (disabled || isStreaming || !showAddMenu) setPlusOpen(false);
+  }, [disabled, isStreaming, showAddMenu]);
   useEffect(() => {
     if (disabled || isStreaming || !showAddMenu || isMobileLayout) setUtilityMenu(null);
   }, [disabled, isStreaming, showAddMenu, isMobileLayout]);
@@ -784,8 +834,56 @@ export function ChatInput({
     }
   };
 
+  const selectSlashCommand = (command: SlashCommand, trigger: HTMLElement | null) => {
+    if (command === "model") {
+      setSlashModels(true);
+      requestAnimationFrame(() => slashListRef.current?.querySelector("button")?.focus());
+      return;
+    }
+    if (command === "project" && !requireFileAccount(trigger)) {
+      onChange("");
+      setSlashDismissed(true);
+      return;
+    }
+    onChange("");
+    setSlashDismissed(true);
+    if (command === "dictate" && dictationTriggerRef.current)
+      openVoice("dictate", dictationTriggerRef.current);
+    if (command === "feedback") setFeedbackOpen(true);
+    if (command === "study") {
+      const study = COMPOSER_TOOLS.find((tool) => tool.id === "study");
+      if (study && onToolSelect) chooseTool(study);
+    }
+    if (command === "project") {
+      projectTriggerRef.current = ref.current;
+      projectAnchorRef.current = composerAnchorRef.current;
+      setStartProjectChat(true);
+      projectReturnUrlRef.current = window.location.href;
+      setProjectPickerOpen(true);
+    }
+  };
+
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
+    if (slashOpen && !slashModels && !native.isComposing && !composingRef.current) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSlashDismissed(true);
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const step = e.key === "ArrowDown" ? 1 : -1;
+        setSlashIndex((index) => (index + step + slashMatches.length) % slashMatches.length);
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const command = slashMatches[slashIndex] ?? slashMatches[0];
+        selectSlashCommand(command.id, ref.current);
+        return;
+      }
+    }
     const shouldSubmit = shouldSubmitComposerOnEnter({
       key: e.key,
       keyCode: native.keyCode,
@@ -1264,14 +1362,15 @@ export function ChatInput({
 
   const renderRecentLibraryFiles = () => (
     <div className="kova-composer-library" aria-label="Saved Library files">
-      {recentLibraryFiles.length > 0 ? (
-        <label className="mx-2 mb-1 block">
+      {recentLibraryFiles.length > 0 || !recentLibraryLoading ? (
+        <label className="kova-composer-menu-search">
+          <Search aria-hidden="true" />
           <span className="sr-only">Search Library files</span>
           <input
             value={recentQuery}
             onChange={(event) => setRecentQuery(event.target.value)}
             placeholder="Search Library files..."
-            className="h-10 w-full rounded-[var(--kova-radius-input)] border border-border bg-[var(--surface-input)] px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full bg-transparent text-sm"
           />
         </label>
       ) : null}
@@ -1371,64 +1470,61 @@ export function ChatInput({
           authLoaded={isLoaded}
           conversations={user ? savedConversations : []}
           navigationBlocked={Boolean(value.length || attachments.length || isStreaming || disabled)}
-          onRequireSignIn={(pluginId) => {
+          onRequireSignIn={() => {
             closeActions();
-            setSignInRequest({ description: "Sign in to manage your plugins.", pluginId, trigger });
+            setSignInRequest({ description: "Sign in to manage your plugins.", trigger });
           }}
           onNavigate={closeActions}
         />
       );
     }
-    if (section === "files") return renderRecentLibraryFiles();
+    if (section === "files")
+      return (
+        <>
+          {renderRecentLibraryFiles()}
+          <Link
+            to="/library"
+            target={value || attachments.length ? "_blank" : undefined}
+            className="kova-composer-action"
+            onClick={closeActions}
+          >
+            <LibraryBig aria-hidden="true" /> Browse all
+          </Link>
+        </>
+      );
     return (
       <div className="kova-composer-quick-menu">
-        {mobile && (
-          <>
-            <button
-              type="button"
-              className="kova-composer-action"
-              onClick={() => pickFile(cameraRef)}
-            >
-              <Camera aria-hidden="true" />
-              <span>Camera</span>
-            </button>
-            <button
-              type="button"
-              className="kova-composer-action"
-              onClick={() => pickFile(photoRef)}
-            >
-              <ImageIcon aria-hidden="true" />
-              <span>Photos</span>
-            </button>
-          </>
-        )}
-        <button type="button" className="kova-composer-action" onClick={() => pickFile(fileRef)}>
-          <Paperclip aria-hidden="true" />
-          <span>Files</span>
-        </button>
-        {!mobile && (
-          <button type="button" className="kova-composer-action" onClick={openLibrary}>
-            <LibraryBig aria-hidden="true" />
-            <span>Library</span>
-          </button>
-        )}
         <button
           type="button"
+          aria-label="Add photos & files"
           className="kova-composer-action"
-          disabled={!isLoaded || disabled || isStreaming}
-          onClick={() => {
-            closeActions();
-            if (!requireFileAccount(trigger)) return;
-            projectTriggerRef.current = trigger as HTMLButtonElement | null;
-            projectReturnUrlRef.current = window.location.href;
-            setProjectPickerOpen(true);
-          }}
+          onClick={() => pickFile(fileRef)}
         >
-          <Folder aria-hidden="true" />
-          <span>Projects</span>
+          <Paperclip aria-hidden="true" />
+          <span>Add photos &amp; files</span>
+          <small>
+            {mobile
+              ? isTablet
+                ? "Upload from your tablet"
+                : "Upload from your phone"
+              : "Upload from your computer"}
+          </small>
         </button>
         <button
           type="button"
+          aria-label="Add from Library"
+          className="kova-composer-action"
+          onClick={openLibrary}
+        >
+          <span className="kova-composer-library-glyph" aria-hidden="true">
+            <FileText />
+          </span>
+          <span>Add from Library</span>
+          <small>Add photos and files saved in your Library</small>
+        </button>
+        <button
+          type="button"
+          aria-label="Create an image"
           className="kova-composer-action"
           disabled={!isLoaded || (Boolean(user) && !onToolSelect) || disabled || isStreaming}
           aria-pressed={selectedTool === "image"}
@@ -1438,8 +1534,42 @@ export function ChatInput({
             chooseTool(COMPOSER_TOOLS.find((tool) => tool.id === "image")!);
           }}
         >
-          <ImagePlus aria-hidden="true" />
-          <span>Create Image</span>
+          <span className="kova-composer-image-glyph" aria-hidden="true">
+            <ImageIcon />
+          </span>
+          <span>Create an image</span>
+          <small>Visualize anything</small>
+        </button>
+        <button
+          type="button"
+          aria-label="Web search"
+          className="kova-composer-action"
+          disabled={!onToolSelect || disabled || isStreaming}
+          aria-pressed={selectedTool === "web_search"}
+          onClick={() => chooseTool(COMPOSER_TOOLS.find((tool) => tool.id === "web_search")!)}
+        >
+          <Globe aria-hidden="true" className="kova-composer-web-glyph" />
+          <span>Web search</span>
+          <small>Search real-time data and analytics</small>
+        </button>
+        <button
+          type="button"
+          aria-label="Work in a project"
+          className="kova-composer-action"
+          disabled={!isLoaded || disabled || isStreaming}
+          onClick={() => {
+            closeActions();
+            if (!requireFileAccount(trigger)) return;
+            projectTriggerRef.current = trigger;
+            projectAnchorRef.current = composerAnchorRef.current;
+            setStartProjectChat(true);
+            projectReturnUrlRef.current = window.location.href;
+            setProjectPickerOpen(true);
+          }}
+        >
+          <Folder aria-hidden="true" />
+          <span>Work in a project</span>
+          <small>Start a new chat in an existing project</small>
         </button>
         <button
           type="button"
@@ -1454,6 +1584,34 @@ export function ChatInput({
           <Pencil aria-hidden="true" />
           <span>Drawing</span>
         </button>
+        {mobile ? (
+          <button
+            type="button"
+            className="kova-composer-action"
+            onClick={() => pickFile(cameraRef)}
+          >
+            <Camera aria-hidden="true" />
+            <span>Camera</span>
+          </button>
+        ) : null}
+        {mobile ? (
+          <button type="button" className="kova-composer-action" onClick={() => pickFile(photoRef)}>
+            <ImageIcon aria-hidden="true" />
+            <span>Photos</span>
+          </button>
+        ) : null}
+        {user ? (
+          <ComposerPluginList
+            userId={user.id}
+            authLoaded={isLoaded}
+            conversations={savedConversations}
+            navigationBlocked={Boolean(
+              value.length || attachments.length || isStreaming || disabled,
+            )}
+            onNavigate={closeActions}
+            inline
+          />
+        ) : null}
       </div>
     );
   };
@@ -1574,11 +1732,13 @@ export function ChatInput({
         </p>
       )}
       <div
+        ref={composerAnchorRef}
         className="spec400-composer"
         hidden={activeVoiceMode === "dictate"}
         data-chat-image-context={attachmentContext}
         data-ui-reference="chatgpt-composer"
         data-has-draft={hasDraft ? "true" : "false"}
+        data-long-draft={longDraft || undefined}
         data-focus-origin={composerFocusOrigin}
         onPointerDownCapture={() => setComposerFocusOrigin("pointer")}
         onKeyDownCapture={(event) => {
@@ -1677,16 +1837,21 @@ export function ChatInput({
           <textarea
             ref={ref}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
-            disabled={disabled}
+            onChange={(event) => {
+              setSlashDismissed(false);
+              setSlashModels(false);
+              setSlashIndex(0);
+              onChange(event.target.value);
+            }}
             onKeyDown={handleKey}
+            disabled={disabled}
             onCompositionStart={() => {
               composingRef.current = true;
             }}
             onCompositionEnd={() => {
               composingRef.current = false;
             }}
-            placeholder={placeholder ?? "Ask KovaGPT anything..."}
+            placeholder={placeholder ?? "Work with KovaGPT"}
             rows={1}
             spellCheck
             autoComplete="off"
@@ -1766,47 +1931,54 @@ export function ChatInput({
               onChange={onFileChange}
             />
             {showAddMenu && (
-              <Popover open={plusOpen && !isMobileLayout} onOpenChange={setPlusOpen}>
+              <Popover
+                open={plusOpen}
+                onOpenChange={(next) => {
+                  setPlusOpen(next);
+                  if (next) setSlashDismissed(true);
+                }}
+              >
+                <PopoverAnchor virtualRef={composerAnchorRef} />
                 <PopoverTrigger asChild>
                   <button
                     ref={plusTriggerRef}
                     type="button"
                     disabled={disabled || isStreaming}
-                    className="spec400-toolbar-button spec400-toolbar-icon"
+                    className="spec400-toolbar-button spec400-toolbar-icon kova-composer-plus"
                     aria-label="Attach"
                     title="Add files and tools"
                     aria-haspopup="dialog"
                     aria-expanded={plusOpen}
-                    onClick={isMobileLayout ? () => setPlusOpen(true) : undefined}
                   >
                     <Plus aria-hidden="true" />
                     <span className="sr-only">Attach</span>
                   </button>
                 </PopoverTrigger>
-                {!isMobileLayout && (
-                  <PopoverContent
-                    role="dialog"
-                    aria-label="Attach files and tools"
-                    className="kova-composer-menu spec400-attach-menu"
-                    side="top"
-                    align="start"
-                    sideOffset={8}
-                    collisionPadding={12}
-                    onKeyDown={handleMenuKeyDown}
-                    onCloseAutoFocus={(event) => {
-                      if (
-                        libraryOpen ||
-                        drawingOpen ||
-                        signInRequest ||
-                        contextOpen ||
-                        projectPickerOpen
-                      )
-                        event.preventDefault();
-                    }}
-                  >
-                    {renderComposerActions(false)}
-                  </PopoverContent>
-                )}
+                <PopoverContent
+                  role="dialog"
+                  aria-label="Attach files and tools"
+                  className="kova-composer-menu spec400-attach-menu kova-composer-full-menu"
+                  side={longDraft ? "top" : "bottom"}
+                  align="start"
+                  sideOffset={5}
+                  collisionPadding={8}
+                  onKeyDown={handleMenuKeyDown}
+                  onOpenAutoFocus={(event) => {
+                    if (isMobileLayout) event.preventDefault();
+                  }}
+                  onCloseAutoFocus={(event) => {
+                    if (
+                      libraryOpen ||
+                      drawingOpen ||
+                      signInRequest ||
+                      contextOpen ||
+                      projectPickerOpen
+                    )
+                      event.preventDefault();
+                  }}
+                >
+                  {renderComposerActions(isMobileLayout)}
+                </PopoverContent>
               </Popover>
             )}
           </div>
@@ -1826,6 +1998,7 @@ export function ChatInput({
             )}
             <button
               type="button"
+              ref={dictationTriggerRef}
               data-testid="dictate-button"
               className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
               aria-label="Type with voice"
@@ -1908,6 +2081,88 @@ export function ChatInput({
           </div>
         </div>
       </div>
+      <Popover
+        open={slashOpen && !projectPickerOpen}
+        onOpenChange={(next) => {
+          if (!next) setSlashDismissed(true);
+        }}
+      >
+        <PopoverAnchor virtualRef={composerAnchorRef} />
+        <PopoverContent
+          ref={slashListRef}
+          className="kova-composer-menu kova-composer-full-menu"
+          aria-label={slashModels ? "Choose Kova model" : "Chat commands"}
+          role="group"
+          side={surface === "conversation" || longDraft ? "top" : "bottom"}
+          align="start"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          onInteractOutside={(event) => {
+            if (event.target === ref.current) event.preventDefault();
+          }}
+          onEscapeKeyDown={() => ref.current?.focus()}
+          onKeyDown={handleMenuKeyDown}
+        >
+          {slashModels
+            ? userTier === "free"
+              ? modesForTier(userTier).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="kova-composer-action"
+                    aria-pressed={mode === item.id}
+                    disabled={!canChangeAgent || !onModeChange}
+                    onClick={() => {
+                      onModeChange?.(item.id);
+                      onChange("");
+                      setSlashModels(false);
+                      ref.current?.focus();
+                    }}
+                  >
+                    <Boxes aria-hidden="true" />
+                    {item.id === "instant"
+                      ? "KovaGPT Chat"
+                      : item.id === "thinking"
+                        ? "KovaGPT Thinking 4.2"
+                        : item.label}
+                  </button>
+                ))
+              : CONSUMER_MODELS.filter((item) => item.tiers.includes(userTier)).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="kova-composer-action"
+                    aria-pressed={hostedModel === item.id}
+                    disabled={!canChangeAgent || !onHostedModelChange}
+                    onClick={() => {
+                      onHostedModelChange?.(item.id);
+                      onChange("");
+                      setSlashModels(false);
+                      ref.current?.focus();
+                    }}
+                  >
+                    <Boxes aria-hidden="true" />
+                    {item.label}
+                  </button>
+                ))
+            : slashMatches.map(({ id, label, description, icon: Icon, ...option }, index) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="kova-composer-action"
+                  data-highlighted={index === slashIndex || undefined}
+                  onClick={(event) => selectSlashCommand(id, event.currentTarget)}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                  <small>{description}</small>
+                  {"submenu" in option ? (
+                    <ChevronRight aria-hidden="true" className="ml-auto" />
+                  ) : null}
+                </button>
+              ))}
+        </PopoverContent>
+      </Popover>
       <div
         className="kova-composer-tray"
         hidden={!showResources || activeVoiceMode === "dictate"}
@@ -1919,9 +2174,13 @@ export function ChatInput({
           <button
             type="button"
             className="kova-composer-tray-action"
+            aria-expanded={projectPickerOpen && !startProjectChat}
+            aria-haspopup="dialog"
             disabled={!user || disabled || isStreaming}
             onClick={(event) => {
               projectTriggerRef.current = event.currentTarget;
+              projectAnchorRef.current = event.currentTarget;
+              setStartProjectChat(false);
               projectReturnUrlRef.current = window.location.href;
               setProjectPickerOpen(true);
             }}
@@ -1950,7 +2209,7 @@ export function ChatInput({
                     aria-haspopup="dialog"
                   >
                     {section === "files" ? (
-                      <Paperclip aria-hidden="true" />
+                      <LibraryBig aria-hidden="true" />
                     ) : (
                       <Plug aria-hidden="true" />
                     )}
@@ -2070,17 +2329,20 @@ export function ChatInput({
             : "Your next draft is kept here. Send it when this response finishes."}
         </p>
       )}
-      {showAddMenu && isMobileLayout && (
-        <MobileBottomSheet
-          open={plusOpen}
-          onOpenChange={setPlusOpen}
-          title="Attach"
-          ariaLabel="Attach files and tools"
-          restoreFocus={!contextOpen && !libraryOpen && !signInRequest}
+      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            ref.current?.focus();
+          }}
         >
-          <div className="spec400-attach-menu">{renderComposerActions(true)}</div>
-        </MobileBottomSheet>
-      )}
+          <DialogHeader>
+            <DialogTitle>Feedback</DialogTitle>
+            <DialogDescription>Tell us what happened in this chat.</DialogDescription>
+          </DialogHeader>
+          <HelpSupportForm compact />
+        </DialogContent>
+      </Dialog>
       <Dialog open={expanded} onOpenChange={setExpanded}>
         <DialogContent
           className="spec400-expanded-input"
@@ -2393,6 +2655,9 @@ export function ChatInput({
               value.length || attachments.length || isStreaming || disabled,
             )}
             navigationBlockedReason="Send or clear this message and its attachments before opening a project. Your current chat will not be moved."
+            anchorRef={projectAnchorRef}
+            startChat={startProjectChat}
+            side={startProjectChat && (surface === "conversation" || longDraft) ? "top" : "bottom"}
             returnFocusTarget={projectTriggerRef.current}
             returnFocusUrl={projectReturnUrlRef.current}
           />

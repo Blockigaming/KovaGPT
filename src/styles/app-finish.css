@@ -321,7 +321,7 @@
   gap: 8px;
   padding: 8px 10px;
   min-height: 38px;
-  border-radius: 11px;
+  border-radius: 999px;
   color: var(--muted-foreground);
   font-size: 13px;
   transition:
@@ -332,7 +332,8 @@
   width: 18px;
   height: 18px;
 }
-.kova-composer-tray-action:hover {
+.kova-composer-tray-action:hover,
+.kova-composer-tray-action[aria-expanded="true"] {
   color: var(--foreground);
   background: var(--accent);
 }
@@ -653,12 +654,6 @@
 .kova-share-secondary svg {
   width: 15px;
   height: 15px;
-}
-[data-sonner-toast].kova-share-success {
-  background: #102f27 !important;
-  color: #c7f7df !important;
-  border: 1px solid #235d49 !important;
-  border-radius: 14px;
 }
 .kova-public-share {
   min-height: 100dvh;
@@ -1113,5 +1108,26 @@
 @media (max-width: 1023px) {
   .kova-open-desktop-app {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kova-checkout-wave {
+    background: linear-gradient(
+        105deg,
+        var(--foreground) 30%,
+        var(--muted-foreground) 50%,
+        var(--foreground) 70%
+      )
+      100% center / 240% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: kova-checkout-wave 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes kova-checkout-wave {
+  to {
+    background-position: 0 center;
   }
 }
