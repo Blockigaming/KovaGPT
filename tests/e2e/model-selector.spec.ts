@@ -121,7 +121,9 @@ test.describe("short desktop model picker", () => {
     const lastOption = picker.getByTestId("model-option-ultra");
     await expect(lastOption).toBeInViewport({ ratio: 1 });
     const rail = (await slider.boundingBox())!;
-    await slider.click({ position: { x: rail.width - 3, y: rail.height / 2 } });
+    // Hit the upper portion of the range so the centered preset buttons
+    // cannot intercept this track click as the popover finishes animating.
+    await slider.click({ position: { x: rail.width - 3, y: rail.height / 5 } });
     await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
     const fill = picker.locator('[data-slot="effort-fill"]');
     const fillStyle = await fill.evaluate((element) => {
