@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { loadArchivedConversations, type Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
+import { ChatGuidedTour } from "@/components/ChatGuidedTour";
 export function ContinueWorking({
   conversations,
   onSelect,
@@ -60,6 +61,7 @@ export function HomeWelcome({
       loadArchivedConversations(owner).some((conversation) => conversation.messages.length > 0)),
   );
   const greeting = useHomeGreeting(hasHistory ? owner : null, firstName, chatId);
+  const firstConversation = Boolean(owner && historyReady && historyComplete && !hasHistory);
   const homeScrollRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -112,7 +114,7 @@ export function HomeWelcome({
           >
             {greeting}
           </h1>
-          {owner && historyReady && historyComplete && !hasHistory && (
+          {firstConversation && (
             <p
               data-kova-notice-id="first_conversation"
               className="absolute inset-x-0 top-full truncate px-2 text-center text-xs leading-4 text-muted-foreground"
@@ -121,7 +123,14 @@ export function HomeWelcome({
             </p>
           )}
         </div>
-        <div className="kova-empty-composer">{children}</div>
+        <div className="kova-empty-composer relative">
+          {children}
+          {firstConversation && !conversations.length && (
+            <div className="absolute inset-x-0 top-full flex justify-center pt-1">
+              <ChatGuidedTour key={owner} />
+            </div>
+          )}
+        </div>
         {conversations.length ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null}

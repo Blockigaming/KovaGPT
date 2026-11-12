@@ -5,7 +5,7 @@
  */
 export function selectEligibleCampaignRows(
   rows,
-  { tier, dismissedIds, allowedEventIds, safeActionUrl },
+  { tier, dismissedIds = new Set(), allowedEventIds, safeActionUrl },
 ) {
   if (!Array.isArray(rows) || !["free", "plus", "pro"].includes(tier)) return [];
   return rows

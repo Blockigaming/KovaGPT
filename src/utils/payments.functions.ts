@@ -1,5 +1,6 @@
 import { subscriptionPortalFlow } from "@/lib/subscription-portal-flow.mjs";
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { loose } from "@/lib/supabase-loose";
 import {
   type StripeEnv,
@@ -16,9 +17,10 @@ import {
   BillingPolicyError,
   createMonthlyIntroCheckout,
   requireMonthlyIntroReadiness,
+  verifyPaidIntroCheckout,
 } from "@/lib/billing-policy.mjs";
 
-type CheckoutSessionResult = { url: string } | { error: string };
+type CheckoutSessionResult = { url: string; sessionId: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
 // browser is never trusted to select Stripe credentials or subscription rows.
 
@@ -76,7 +78,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       if (!session.url || new URL(session.url).origin !== "https://checkout.stripe.com")
         throw new Error("Secure checkout URL missing");
-      return { url: session.url };
+      return { url: session.url, sessionId: session.id };
     } catch (error) {
       if (error instanceof BillingPolicyError && error.code.includes("active_subscription")) {
         return { error: "You already have an open subscription. Manage it from Billing." };
@@ -95,6 +97,43 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   });
 
 type PortalResult = { url: string } | { error: string };
+
+export const getCheckoutIntroOfferStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) =>
+    z
+      .object({
+        expectedOwnerId: z.string().uuid(),
+        sessionId: z.string().regex(/^cs_(?:live|test)_[A-Za-z0-9]{16,192}$/u),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<{ applied: boolean }> => {
+    if (data.expectedOwnerId !== context.userId || !monthlyIntroBillingEnabled())
+      return { applied: false };
+    try {
+      const redemption = await loose(supabaseAdmin)
+        .from("kova_policy_intro_redemptions")
+        .select("claim_id")
+        .eq("user_id", context.userId)
+        .abortSignal(AbortSignal.timeout(10000))
+        .maybeSingle();
+      const claimId = redemption.data?.claim_id;
+      if (redemption.error || typeof claimId !== "string") return { applied: false };
+      return {
+        applied: await verifyPaidIntroCheckout({
+          stripe: createStripeClient(BILLING_ENV),
+          supabase: supabaseAdmin,
+          environment: BILLING_ENV,
+          userId: context.userId,
+          claimId,
+          sessionId: data.sessionId,
+        }),
+      };
+    } catch {
+      return { applied: false };
+    }
+  });
 
 // Opens an explicitly configured Stripe Billing Portal. The internal mapping,
 // not an email or browser-provided value, is the customer identity authority.

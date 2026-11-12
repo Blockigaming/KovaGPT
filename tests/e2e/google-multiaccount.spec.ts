@@ -117,6 +117,8 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
   const appOrigin = new URL(page.url()).origin;
   const panel = await openGoogleAccounts(page);
   await expect(panel.getByText("first@example.test", { exact: true })).toBeVisible();
+  const reauthorizationNotice = panel.locator('[data-kova-notice-id="connection_expired"]');
+  await expect(reauthorizationNotice).toHaveCount(0);
   await panel.getByRole("button", { name: "Use second@example.test for new requests" }).click();
   await expect.poll(() => calls.length).toBe(1);
   expect(calls[0].body).toEqual({ connectionId: accountB, expectedRevision: 7 });
@@ -157,6 +159,7 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
     10,
   );
   await panel.getByRole("button", { name: "Refresh status", exact: true }).click();
+  await expect(reauthorizationNotice).toContainText("Reconnect to restore access.");
   await panel.getByRole("button", { name: "Reconnect first@example.test" }).click();
   await expect(page).toHaveURL(/accounts\.google\.com/u);
   const cookies = await context.cookies(appOrigin);

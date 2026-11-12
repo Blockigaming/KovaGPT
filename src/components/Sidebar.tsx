@@ -1154,7 +1154,10 @@ export function Sidebar({
         </span>
         <span className="min-w-0">
           <strong className="block truncate">{displayName}</strong>
-          <small className="block truncate text-muted-foreground">{planLabel}</small>
+          <small className="block truncate text-foreground">{planLabel}</small>
+          <small className="block truncate text-foreground">
+            {accountEmail || "Email unavailable"}
+          </small>
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
@@ -1204,7 +1207,7 @@ export function Sidebar({
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
-          onOpenSettings("general");
+          onOpenSettings("appearance");
         }}
       >
         <SettingsIcon aria-hidden="true" />

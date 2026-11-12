@@ -372,6 +372,7 @@ surfaces.inline.push(
   "model_unavailable",
   "request_timeout",
   "generic_failure",
+  "offer_ineligible",
 );
 surfaces.toast.push("connection_failed", "connection_canceled", "network_offline");
 const CONFIRMATION = new Set([

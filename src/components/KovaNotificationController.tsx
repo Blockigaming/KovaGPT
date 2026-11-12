@@ -148,7 +148,7 @@ export function KovaNotificationController({
         const notificationToast =
           definition.liveRegion === "assertive"
             ? toast.error
-            : /(?:_completed|_created|_updated|_sent|_verified|_success|_ready|_restored|_saved|_disconnected)$/.test(
+            : /(?:_claimed|_completed|_created|_updated|_sent|_verified|_success|_ready|_restored|_saved|_disconnected)$/.test(
                   notice.id,
                 )
               ? toast.success

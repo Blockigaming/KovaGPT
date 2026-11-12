@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   checkoutOriginKey,
+  checkoutIntroOfferOriginKey,
   activeCheckoutOrigin,
   CHECKOUT_ORIGIN_MAX_AGE_MS,
 } from "../../src/lib/checkout-notice-policy.mjs";
@@ -38,9 +39,21 @@ test("checkout initiation never announces a successful payment", () => {
   assert.match(src, /id: "checkout_started"/);
   assert.doesNotMatch(src, /id: "subscription_updated"/);
 });
+test("discount confirmation receipt is restricted to the originating owner and Stripe session", () => {
+  const session = `cs_live_${"Ab12".repeat(4)}`;
+  const key = checkoutIntroOfferOriginKey(owner, session);
+  assert.equal(key, `${checkoutOriginKey(owner)}:offer:${session}`);
+  assert.notEqual(checkoutIntroOfferOriginKey(owner, session + "a"), key);
+  assert.notEqual(
+    checkoutIntroOfferOriginKey("650e8400-e29b-41d4-a716-446655440001", session),
+    key,
+  );
+  assert.equal(checkoutIntroOfferOriginKey(owner, "cs_live_short"), null);
+  assert.equal(checkoutIntroOfferOriginKey("invalid", session), null);
+});
 test("checkout return confirms subscription only after authenticated server summary", () => {
   const src = readFileSync("src/routes/checkout.return.tsx", "utf8");
-  const i = src.indexOf('publishKovaNotice({\n            id: "subscription_updated"');
+  const i = src.search(/publishKovaNotice\(\{\s*id: "subscription_updated"/u);
   assert.ok(i > 0);
   assert.ok(src.indexOf("getSubscriptionSummary(") < i);
   assert.ok(src.indexOf('resolved.kind !== "active"') < i);

@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { fromJSON } from "seroval";
+import { checkoutIntroOfferOriginKey } from "../../src/lib/checkout-notice-policy.mjs";
 import { NOTIFICATION_ACCEPTANCE_PROJECTS } from "../../src/lib/notification-acceptance-evidence.mjs";
 import { fixture, functionNames, owner } from "./actual-app-fixture";
+import { reviewItems } from "./core-app-fixture";
 import { chooseSettingsSection, openCurrentSettings } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
@@ -12,7 +14,9 @@ const supportedProjects = new Set(NOTIFICATION_ACCEPTANCE_PROJECTS);
 // evidence, not a claim about production mail, billing, or notification delivery.
 test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name));
-  await fixture(page, "dark", true, testInfo.title.includes("[notice:network_offline]"));
+  await fixture(page, "dark", true, testInfo.title.includes("[notice:network_offline]"), "free", {
+    preserveStorageOnReload: testInfo.title.includes("[contract:did_you_know]"),
+  });
   await page.goto("/");
   await waitForKovaHydration(page);
 });
@@ -86,6 +90,57 @@ test("[notice:first_conversation] empty synchronized history offers the first co
   });
 });
 
+test("[notice:guided_tour][notice:tour_finished] the optional tour highlights actual chat controls and restores focus", async ({
+  page,
+}, testInfo) => {
+  const trigger = page.getByRole("button", { name: "Take a quick tour", exact: true });
+  const tour = page.getByRole("dialog", { name: "KovaGPT quick tour" });
+  const spotlight = page.locator("[data-tour-spotlight]");
+  await expect(tour).toBeHidden();
+  await trigger.click();
+  for (const [index, title] of [
+    "Write a message",
+    "Explore your tools",
+    "Choose how Kova responds",
+    "Meet the sidebar",
+  ].entries()) {
+    await expect(tour.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    await expect(tour.getByText(`Step ${index + 1} of 4`)).toBeVisible();
+    await expect(spotlight).toBeVisible();
+    await expect
+      .poll(async () => {
+        const rect = await tour.boundingBox();
+        const viewport = page.viewportSize();
+        return !!(
+          rect &&
+          viewport &&
+          rect.x >= -1 &&
+          rect.y >= -1 &&
+          rect.x + rect.width <= viewport.width + 1 &&
+          rect.y + rect.height <= viewport.height + 1
+        );
+      })
+      .toBe(true);
+    if (index === 1)
+      await testInfo.attach("chat-tour-tools-" + testInfo.project.name, {
+        body: await page.screenshot(),
+        contentType: "image/png",
+      });
+    await tour.getByRole("button", { name: "Next", exact: true }).click();
+  }
+  await expect(tour).toHaveAttribute("data-kova-notice-id", "tour_finished");
+  await expect(tour.getByRole("heading", { name: "You’re all set" })).toBeVisible();
+  await expect(spotlight).toHaveCount(0);
+  await tour.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(tour).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await tour.getByRole("button", { name: "Skip tour" }).click();
+  await expect(tour).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Continue typing.");
+});
+
 test("[notice:shared_task_unavailable] an inaccessible task-copy link offers a safe return", async ({
   page,
 }, testInfo) => {
@@ -119,16 +174,22 @@ test("[notice:shared_task_unavailable] an inaccessible task-copy link offers a s
   await expect(notice).toHaveCount(0);
 });
 
-test("[contract:offer_available] a server-eligible account receives the offer and details", async ({
+test("[contract:offer_available][contract:offer_ineligible] verified offer details recheck eligibility before continuing", async ({
   page,
 }, testInfo) => {
   let eligibilityCalls = 0;
+  let eligible = true;
+  let checkoutCalls = 0;
   await page.route("**/_serverFn/**", async (route) => {
-    if (!serverFunctionName(route.request().url()).startsWith("getFreeOfferEligibility_")) {
+    const name = serverFunctionName(route.request().url());
+    if (name.startsWith("createCheckoutSession_")) checkoutCalls++;
+    if (!name.startsWith("getFreeOfferEligibility_")) {
       return route.fallback();
     }
     eligibilityCalls++;
-    return route.fulfill({ json: { result: { eligible: true }, context: {} } });
+    return route.fulfill({
+      json: { result: eligible ? { eligible } : { eligible, reason: "ineligible" }, context: {} },
+    });
   });
   await page.reload();
   await waitForKovaHydration(page);
@@ -140,7 +201,7 @@ test("[contract:offer_available] a server-eligible account receives the offer an
     contentType: "image/png",
   });
   await notice.getByRole("button", { name: "Not now" }).click();
-  const offerButton = page.locator('[data-free-introductory-offer="true"]').first();
+  const offerButton = page.getByRole("button", { name: "Free offer: 50% off your first month" });
   await expect(offerButton).toBeVisible();
   await offerButton.click();
   const details = page.getByRole("dialog", { name: "50% off your first month of Plus" });
@@ -157,6 +218,66 @@ test("[contract:offer_available] a server-eligible account receives the offer an
     body: await page.screenshot(),
     contentType: "image/png",
   });
+  eligible = false;
+  await details.getByRole("button", { name: "Get 50% off Plus" }).click();
+  const unavailable = page.getByRole("dialog", { name: "This offer is unavailable" });
+  await expect(unavailable.getByRole("status")).toContainText(
+    "This introductory offer is unavailable for your account.",
+  );
+  expect(checkoutCalls).toBe(0);
+  await expect(page).toHaveURL(/\/$/u);
+  await unavailable.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(unavailable).toBeHidden();
+  await expect(offerButton).toBeHidden();
+  await expect(page.getByRole("main")).toBeFocused();
+});
+
+test("[contract:offer_claimed] a paid matching Stripe receipt recovers on return and confirms once", async ({
+  page,
+}) => {
+  const sessionId = `cs_live_${"Ab12".repeat(6)}`;
+  const offerKey = checkoutIntroOfferOriginKey(owner, sessionId)!;
+  let checks = 0;
+  let applied = false;
+  await page.route("**/_serverFn/**", async (route) => {
+    const name = serverFunctionName(route.request().url());
+    if (name.startsWith("getSubscriptionSummary_")) {
+      return route.fulfill({ json: { result: { tier: "plus" }, context: {} } });
+    }
+    if (name.startsWith("getCheckoutIntroOfferStatus_")) {
+      checks++;
+      return route.fulfill({ json: { result: { applied }, context: {} } });
+    }
+    return route.fallback();
+  });
+  await page.goto(`/checkout/return?session_id=${sessionId}`);
+  const confirmedPlan = page.getByRole("heading", { name: "Current subscription confirmed" });
+  const notice = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Introductory offer applied" });
+  await expect(confirmedPlan).toBeVisible();
+  expect(checks).toBe(0);
+  await expect(notice).toBeHidden();
+
+  await page.evaluate(
+    ([key, ownerId]) =>
+      sessionStorage.setItem(key, JSON.stringify({ ownerId, startedAt: Date.now() })),
+    [offerKey, owner],
+  );
+  await page.reload();
+  await expect.poll(() => checks).toBe(1);
+  await expect(confirmedPlan).toBeVisible();
+  await expect(notice).toBeHidden();
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), offerKey)).not.toBeNull();
+
+  applied = true;
+  await page.reload();
+  await expect(notice).toBeVisible();
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), offerKey)).toBeNull();
+  await page.reload();
+  await expect(confirmedPlan).toBeVisible();
+  expect(checks).toBe(2);
+  await expect(notice).toBeHidden();
 });
 
 test("[contract:whats_new] server-approved campaign renders and saves dismissal", async ({
@@ -238,7 +359,7 @@ test("[notice:no_matching_files] filters show no matching files only after a sea
   await expect(emptyResult).toHaveCount(0);
 });
 
-test("[contract:reference_saved] a named image reference is acknowledged only after Library saves it", async ({
+test("[contract:reference_saved][contract:quick_tip] a named image reference is acknowledged only after Library saves it", async ({
   page,
 }, testInfo) => {
   const imageUrl =
@@ -307,6 +428,40 @@ test("[contract:reference_saved] a named image reference is acknowledged only af
   await page.getByRole("combobox", { name: "Original image" }).click();
   await page.getByRole("option", { name: "Paper bird", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Describe the image edit" })).toBeVisible();
+  const tip = page.locator('[data-kova-notice-id="quick_tip"]');
+  await expect(tip).toContainText("optional transparent PNG mask");
+  await tip.getByRole("button", { name: "Got it" }).click();
+  await expect(tip).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Original image" })).toBeFocused();
+  await page.getByRole("button", { name: "Generate a new image instead" }).click();
+  await page.getByRole("button", { name: "Edit an image from Library" }).click();
+  await page.getByRole("combobox", { name: "Original image" }).click();
+  await page.getByRole("option", { name: "Paper bird", exact: true }).click();
+  await expect(tip).toHaveCount(0);
+});
+
+test("[contract:did_you_know] Library filter discovery stays dismissed after reload", async ({
+  page,
+}) => {
+  await page.route("**/api/library/items**", (route) =>
+    route.fulfill({ json: { items: reviewItems, cursor: null, hasMore: false } }),
+  );
+  await page.goto("/library");
+  await waitForKovaHydration(page);
+  const tip = page.locator('[data-kova-notice-id="did_you_know"]');
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
+  await expect(page.getByText("Release notes", { exact: true })).toBeVisible();
+  await expect(tip).toHaveCount(0);
+  await filters.click();
+  await expect(tip).toContainText("Combine a Library search");
+  await tip.getByRole("button", { name: "Got it" }).click();
+  await expect(tip).toHaveCount(0);
+  await page.reload();
+  await waitForKovaHydration(page);
+  await expect(page.getByText("Release notes", { exact: true })).toBeVisible();
+  await filters.click();
+  await expect(page.getByText("Filter loaded items", { exact: true })).toBeVisible();
+  await expect(tip).toHaveCount(0);
 });
 
 test("[contract:privacy_updated] saving browser privacy rules uses the current account and confirms the write", async ({

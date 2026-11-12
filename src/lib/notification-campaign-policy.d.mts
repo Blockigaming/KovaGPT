@@ -12,7 +12,7 @@ export declare function selectEligibleCampaignRows<T extends EligibleCampaignRow
   rows: T[],
   options: {
     tier: string;
-    dismissedIds: ReadonlySet<string>;
+    dismissedIds?: ReadonlySet<string>;
     allowedEventIds: ReadonlySet<string>;
     safeActionUrl: (value: string) => string | null;
   },

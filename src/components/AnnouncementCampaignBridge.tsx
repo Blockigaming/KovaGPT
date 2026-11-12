@@ -14,7 +14,7 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
   useEffect(() => {
     if (!ownerId) return;
     let cancelled = false;
-    void list()
+    void list({ data: { expectedOwnerId: ownerId } })
       .then((campaigns) => {
         if (cancelled || !Array.isArray(campaigns)) return;
         // Never stack multiple marketing prompts in the same session.
@@ -32,7 +32,7 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
             } catch {
               // Browser storage may be unavailable; the server remains authoritative.
             }
-            recorded ??= dismiss({ data: { campaignId: campaign.id } })
+            recorded ??= dismiss({ data: { campaignId: campaign.id, expectedOwnerId: ownerId } })
               .then(() => undefined)
               .catch(() => undefined);
             return recorded;

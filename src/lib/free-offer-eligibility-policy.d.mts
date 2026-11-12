@@ -13,4 +13,8 @@ export declare function canDisplayFreeIntroOffer(input?: {
   billingEnabled?: boolean | null;
   couponConfigured?: boolean | null;
 }): boolean;
+export declare function isConfirmedIntroOfferIneligible(
+  summary: IntroOfferSummary | null,
+  redeemed: boolean,
+): boolean;
 export declare function isVerifiedFirstMonthCoupon(coupon: unknown, nowSeconds?: number): boolean;

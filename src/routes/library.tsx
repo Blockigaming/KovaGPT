@@ -66,6 +66,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
+import { ContextualTip } from "@/components/ContextualTip";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
@@ -1939,6 +1940,14 @@ function LibraryPage() {
                     Source and date filters apply to loaded items. Load more to include older
                     results.
                   </p>
+                  {userKey && isSignedIn && principalReady && !loading && items.length > 0 && (
+                    <ContextualTip
+                      ownerId={userKey}
+                      data-kova-notice-id="did_you_know"
+                      message="Combine a Library search with source and date filters to narrow the results."
+                      onDismiss={() => document.getElementById("library-source-filter")?.focus()}
+                    />
+                  )}
                 </PopoverContent>
               </Popover>
               <div className="spec400-library-display-controls">

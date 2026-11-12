@@ -3,7 +3,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { BillingPortalButton } from "@/components/BillingPortalButton";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { checkoutOriginKey } from "@/lib/checkout-notice-policy.mjs";
+import { checkoutIntroOfferOriginKey, checkoutOriginKey } from "@/lib/checkout-notice-policy.mjs";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { createCheckoutSession, createPortalSession } from "@/utils/payments.functions";
 const CHECKOUT_ERROR_MESSAGE = "Secure checkout could not open. Try again.";
@@ -70,13 +70,10 @@ export function StripeEmbeddedCheckout({
       const receiptKey = checkoutOriginKey(owner);
       if (receiptKey) {
         try {
-          sessionStorage.setItem(
-            receiptKey,
-            JSON.stringify({
-              ownerId: owner,
-              startedAt: Date.now(),
-            }),
-          );
+          const receipt = JSON.stringify({ ownerId: owner, startedAt: Date.now() });
+          sessionStorage.setItem(receiptKey, receipt);
+          const offerKey = checkoutIntroOfferOriginKey(owner, result.sessionId);
+          if (offerKey) sessionStorage.setItem(offerKey, receipt);
         } catch {
           // Storage restrictions must not prevent checkout.
         }

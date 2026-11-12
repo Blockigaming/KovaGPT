@@ -26,6 +26,25 @@ export function canDisplayFreeIntroOffer({
   );
 }
 
+export function isConfirmedIntroOfferIneligible(summary, redeemed) {
+  if (redeemed === true) return true;
+  if (
+    !summary ||
+    summary.billingConflict !== false ||
+    summary.billingSetupIncomplete === true ||
+    !["free", "plus", "pro"].includes(summary.tier) ||
+    !["free", "plus", "pro"].includes(summary.effectiveTier)
+  )
+    return false;
+  return (
+    summary.tier !== "free" ||
+    summary.effectiveTier !== "free" ||
+    (Number.isSafeInteger(summary.activeSubscriptionCount) &&
+      summary.activeSubscriptionCount > 0) ||
+    summary.trialing === true
+  );
+}
+
 /** A configured coupon ID is not proof of a redeemable first-month offer. */
 export function isVerifiedFirstMonthCoupon(coupon, nowSeconds = Math.floor(Date.now() / 1000)) {
   if (!coupon || typeof coupon !== "object" || coupon.deleted === true) return false;

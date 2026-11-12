@@ -1,13 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CircleAlert, Clock3, Loader2, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { BILLING_ENV } from "@/lib/billing-plans";
-import { getSubscriptionSummary, type SubscriptionSummary } from "@/utils/payments.functions";
+import {
+  getCheckoutIntroOfferStatus,
+  getSubscriptionSummary,
+  type SubscriptionSummary,
+} from "@/utils/payments.functions";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { checkoutOriginKey, activeCheckoutOrigin } from "@/lib/checkout-notice-policy.mjs";
+import {
+  activeCheckoutOrigin,
+  checkoutIntroOfferOriginKey,
+  checkoutOriginKey,
+} from "@/lib/checkout-notice-policy.mjs";
 
 type VerificationState =
   | { kind: "checking" }
@@ -56,17 +64,21 @@ function CheckoutReturn() {
   const { session_id } = Route.useSearch();
   const { isLoaded, isSignedIn, user } = useUser();
   const ownerId = user?.id ?? null;
+  const scope = isLoaded && isSignedIn && ownerId && session_id ? `${ownerId}:${session_id}` : null;
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
   const { openSignIn } = useClerkSafe();
   const [attempt, setAttempt] = useState(0);
   const [verification, setVerification] = useState<VerificationState>({ kind: "checking" });
 
   useEffect(() => {
-    if (!session_id || !isLoaded || !isSignedIn) return;
+    if (!session_id || !scope) return;
     let cancelled = false;
+    const current = () => !cancelled && currentScope.current === scope;
     setVerification({ kind: "checking" });
     void getSubscriptionSummary({ data: { environment: BILLING_ENV } })
       .then((summary) => {
-        if (cancelled) return;
+        if (!current()) return;
         const resolved = checkoutVerificationForTier(summary.tier);
         setVerification(resolved);
         if (resolved.kind !== "active" || !ownerId) return;
@@ -74,29 +86,52 @@ function CheckoutReturn() {
         if (!receiptKey) return;
         try {
           const stored = JSON.parse(sessionStorage.getItem(receiptKey) ?? "null");
-          if (!activeCheckoutOrigin(stored, ownerId)) return;
-          sessionStorage.removeItem(receiptKey);
-          publishKovaNotice({
-            id: "subscription_updated",
-            key: "checkout-confirmed:" + session_id,
-            title: "Subscription confirmed",
-            message:
-              "Your " +
-              (resolved.tier === "pro" ? "Pro" : "Plus") +
-              " plan is active for this account.",
-            confirmed: true,
-          });
+          if (activeCheckoutOrigin(stored, ownerId)) {
+            sessionStorage.removeItem(receiptKey);
+            publishKovaNotice({
+              id: "subscription_updated",
+              key: "checkout-confirmed:" + session_id,
+              title: "Subscription confirmed",
+              message:
+                "Your " +
+                (resolved.tier === "pro" ? "Pro" : "Plus") +
+                " plan is active for this account.",
+              confirmed: true,
+            });
+          }
+          const offerKey = checkoutIntroOfferOriginKey(ownerId, session_id);
+          if (!offerKey) return;
+          const offerOrigin = JSON.parse(sessionStorage.getItem(offerKey) ?? "null");
+          if (!activeCheckoutOrigin(offerOrigin, ownerId)) {
+            sessionStorage.removeItem(offerKey);
+            return;
+          }
+          void getCheckoutIntroOfferStatus({
+            data: { expectedOwnerId: ownerId, sessionId: session_id },
+          })
+            .then((offer) => {
+              if (!current() || offer.applied !== true) return;
+              sessionStorage.removeItem(offerKey);
+              publishKovaNotice({
+                id: "offer_claimed",
+                key: "introductory-offer:" + session_id,
+                title: "Introductory offer applied",
+                message: "Your first-month discount was confirmed at checkout.",
+                confirmed: true,
+              });
+            })
+            .catch(() => undefined);
         } catch {
           // A blocked or malformed browser receipt cannot grant access.
         }
       })
       .catch(() => {
-        if (!cancelled) setVerification({ kind: "error" });
+        if (current()) setVerification({ kind: "error" });
       });
     return () => {
       cancelled = true;
     };
-  }, [attempt, isLoaded, isSignedIn, ownerId, session_id]);
+  }, [attempt, ownerId, scope, session_id]);
 
   const status = (() => {
     if (!session_id) {

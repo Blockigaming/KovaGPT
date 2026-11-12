@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   canDisplayFreeIntroOffer,
+  isConfirmedIntroOfferIneligible,
   isVerifiedFirstMonthCoupon,
 } from "../../src/lib/free-offer-eligibility-policy.mjs";
 
@@ -40,6 +41,26 @@ test("offer requires a verified unambiguous free account and real coupon", () =>
 test("unknown billing fields fail closed", () => {
   assert.equal(canDisplayFreeIntroOffer({ ...base, summary: { tier: "free" } }), false);
   assert.equal(canDisplayFreeIntroOffer({ ...base, redeemed: undefined }), false);
+});
+test("only verified account billing state produces an ineligible decision", () => {
+  assert.equal(isConfirmedIntroOfferIneligible(null, true), true);
+  for (const update of [
+    { tier: "plus" },
+    { effectiveTier: "pro" },
+    { activeSubscriptionCount: 1 },
+    { trialing: true },
+  ]) {
+    assert.equal(isConfirmedIntroOfferIneligible({ ...base.summary, ...update }, false), true);
+  }
+  for (const summary of [
+    null,
+    base.summary,
+    { tier: "plus" },
+    { ...base.summary, tier: "plus", billingConflict: true },
+    { ...base.summary, effectiveTier: "pro", billingSetupIncomplete: true },
+  ]) {
+    assert.equal(isConfirmedIntroOfferIneligible(summary, false), false);
+  }
 });
 test("user-visible offer requires server precheck, never bare free-tier status", () => {
   const source = readFileSync("src/components/FreeOfferButton.tsx", "utf8");

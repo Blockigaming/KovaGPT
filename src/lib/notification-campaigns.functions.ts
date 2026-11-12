@@ -26,6 +26,7 @@ type CampaignRow = {
   action_path: string | null;
   allowed_tiers: string[];
 };
+const campaignOwnerSchema = z.object({ expectedOwnerId: z.string().uuid() }).strict();
 
 /**
  * This is a read-only discovery endpoint. Announcement campaigns must already
@@ -34,38 +35,28 @@ type CampaignRow = {
  */
 export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<AnnouncementCampaign[]> => {
+  .validator((input: unknown) => campaignOwnerSchema.parse(input))
+  .handler(async ({ data, context }): Promise<AnnouncementCampaign[]> => {
     const userId = context.userId;
+    if (data.expectedOwnerId !== userId) return [];
     const db = loose(supabaseAdmin);
     const now = new Date().toISOString();
     const monthly = monthlyIntroBillingEnabled();
     try {
-      const [status, campaigns] = await Promise.all([
-        db
-          .rpc(
-            monthly ? "kova_monthly_subscription_summary" : "user_subscription_summary",
-            monthly
-              ? {
-                  p_user: userId,
-                  p_plus_price: BILLING_PLANS.plus_monthly.livePriceId,
-                  p_pro_price: BILLING_PLANS.pro_monthly.livePriceId,
-                }
-              : { _user_id: userId },
-          )
-          .abortSignal(AbortSignal.timeout(10000)),
-        db
-          .from("kova_notification_campaigns")
-          .select("id,event_id,release_id,title,body,action_path,allowed_tiers")
-          .eq("enabled", true)
-          .lte("starts_at", now)
-          .gt("ends_at", now)
-          .order("starts_at", { ascending: false })
-          .limit(20)
-          .abortSignal(AbortSignal.timeout(10000)),
-      ]);
+      const status = await db
+        .rpc(
+          monthly ? "kova_monthly_subscription_summary" : "user_subscription_summary",
+          monthly
+            ? {
+                p_user: userId,
+                p_plus_price: BILLING_PLANS.plus_monthly.livePriceId,
+                p_pro_price: BILLING_PLANS.pro_monthly.livePriceId,
+              }
+            : { _user_id: userId },
+        )
+        .abortSignal(AbortSignal.timeout(10000));
       if (
         status.error ||
-        campaigns.error ||
         !status.data ||
         typeof status.data !== "object" ||
         Array.isArray(status.data)
@@ -79,25 +70,27 @@ export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" 
       )
         return [];
       const tier = String(summary.effectiveTier);
-      const rows = Array.isArray(campaigns.data) ? (campaigns.data as CampaignRow[]) : [];
-      if (!rows.length) return [];
-      const dismissed = await db
-        .from("kova_notification_campaign_dismissals")
-        .select("campaign_id")
-        .eq("user_id", userId)
-        .in(
-          "campaign_id",
-          rows.map((row) => row.id),
+      // Exclude this account's dismissals and other tiers before limiting results.
+      const campaigns = await db
+        .from("kova_notification_campaigns")
+        .select(
+          "id,event_id,release_id,title,body,action_path,allowed_tiers,dismissed:kova_notification_campaign_dismissals()",
         )
+        .eq("enabled", true)
+        .lte("starts_at", now)
+        .gt("ends_at", now)
+        .contains("allowed_tiers", [tier])
+        .eq("dismissed.user_id", userId)
+        .is("dismissed", null)
+        .order("starts_at", { ascending: false })
+        .order("id", { ascending: true })
+        .limit(20)
         .abortSignal(AbortSignal.timeout(10000));
-      if (dismissed.error) return [];
-      const excluded = new Set<string>(
-        (dismissed.data ?? []).map((row: { campaign_id: string }) => row.campaign_id),
-      );
+      if (campaigns.error || !Array.isArray(campaigns.data)) return [];
+      const rows = campaigns.data as CampaignRow[];
       const announcementIDs = new Set(NOTIFICATION_GROUPS.announcements);
       return selectEligibleCampaignRows(rows, {
         tier,
-        dismissedIds: excluded,
         allowedEventIds: announcementIDs,
         safeActionUrl: safePersistedNoticeActionUrl,
       }).map((row) => ({
@@ -115,15 +108,19 @@ export const listEligibleAnnouncementCampaigns = createServerFn({ method: "GET" 
 
 export const dismissAnnouncementCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) => z.object({ campaignId: z.string().uuid() }).strict().parse(input))
+  .validator((input: unknown) =>
+    campaignOwnerSchema.extend({ campaignId: z.string().uuid() }).parse(input),
+  )
   .handler(async ({ data, context }) => {
+    if (data.expectedOwnerId !== context.userId) throw new Error("Announcement account changed.");
     const db = loose(supabaseAdmin);
     const result = await db
       .from("kova_notification_campaign_dismissals")
       .upsert(
         { campaign_id: data.campaignId, user_id: context.userId },
-        { onConflict: "campaign_id,user_id" },
-      );
+        { onConflict: "campaign_id,user_id", ignoreDuplicates: true },
+      )
+      .abortSignal(AbortSignal.timeout(10000));
     if (result.error) throw new Error("Announcement dismissal could not be saved.");
     return { ok: true as const };
   });

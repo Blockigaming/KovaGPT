@@ -5,7 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { fixtureElement, nativeControlModules } from "./native-control-bindings.mjs";
 import { notificationDeliveryStub } from "./notification-test-double.mjs";
-import { checkoutOriginKey, activeCheckoutOrigin } from "../../src/lib/checkout-notice-policy.mjs";
+import * as checkoutNoticePolicy from "../../src/lib/checkout-notice-policy.mjs";
 
 export const jsxRuntime = {
   jsx: (type, props, key) => fixtureElement(type, props ?? {}, key),
@@ -32,8 +32,7 @@ export function loadUiModule(path, dependencies, globals = {}) {
       if (id === "react/jsx-runtime") return jsxRuntime;
       if (Object.hasOwn(dependencies, id)) return dependencies[id];
       if (id === "@/components/KovaNotificationSurface") return notificationDeliveryStub;
-      if (id === "@/lib/checkout-notice-policy.mjs")
-        return { checkoutOriginKey, activeCheckoutOrigin };
+      if (id === "@/lib/checkout-notice-policy.mjs") return checkoutNoticePolicy;
       if (Object.hasOwn(nativeControlModules, id)) return nativeControlModules[id];
       throw new Error(`Unexpected dependency ${id} in ${path}`);
     },

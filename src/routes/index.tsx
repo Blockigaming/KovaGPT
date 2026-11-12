@@ -3121,10 +3121,10 @@ function KovaGPT() {
       <ArrowDown className="h-5 w-5" aria-hidden="true" />
     </Button>
   ) : null;
-  const freeOfferButton =
+  const freeOfferButton = (narrow: boolean) =>
     isLoaded && isSignedIn && tier === "free" ? (
       <Suspense fallback={null}>
-        <FreeOfferButton />
+        <FreeOfferButton narrow={narrow} />
       </Suspense>
     ) : null;
 
@@ -3172,7 +3172,7 @@ function KovaGPT() {
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {jumpToLatestButton}
-          {freeOfferButton}
+          {freeOfferButton(false)}
           {conversationActions()}
           {isLoaded && isSignedIn && !chatStarted && (
             <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
@@ -3282,7 +3282,7 @@ function KovaGPT() {
           conversationActions={
             <>
               {jumpToLatestButton}
-              {freeOfferButton}
+              {freeOfferButton(true)}
               {conversationActions(true)}
             </>
           }

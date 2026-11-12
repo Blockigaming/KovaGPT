@@ -1567,7 +1567,7 @@ function AppsPage() {
                       </p>
                     )}
                     {visibleGoogleStatus?.state === "reauthorization_required" && (
-                      <p role="status">
+                      <p role="status" data-kova-notice-id="connection_expired">
                         Your connection record is retained, but Google authorization has expired or
                         was revoked. Reconnect to restore access.
                       </p>

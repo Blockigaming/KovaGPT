@@ -11,6 +11,14 @@ export function checkoutOriginKey(userId) {
     ? "kova:checkout-origin:" + userId
     : null;
 }
+export function checkoutIntroOfferOriginKey(userId, sessionId) {
+  const ownerKey = checkoutOriginKey(userId);
+  return ownerKey &&
+    typeof sessionId === "string" &&
+    /^cs_(?:live|test)_[A-Za-z0-9]{16,192}$/u.test(sessionId)
+    ? `${ownerKey}:offer:${sessionId}`
+    : null;
+}
 export function activeCheckoutOrigin(value, ownerId, now = Date.now()) {
   if (!value || typeof value !== "object" || !checkoutOriginKey(ownerId)) return false;
   return (
