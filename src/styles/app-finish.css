@@ -172,11 +172,14 @@
   filter: drop-shadow(0 0 5px #3b82f640);
 }
 
-/* A field has one soft edge. Nested textarea/input outlines never draw a second box. */
+/* A typing caret never adds a surrounding border, bezel, glow or outline.
+   Actual buttons still retain independent keyboard focus indicators. */
 .spec400-composer[data-focus-origin="keyboard"]:focus-within,
 .spec400-composer[data-focus-origin="pointer"]:focus-within {
   outline: none !important;
-  border-color: color-mix(in srgb, var(--foreground) 36%, transparent) !important;
+  outline-offset: 0;
+  box-shadow: none !important;
+  border-color: var(--composer-border, transparent) !important;
 }
 .spec400-composer .spec400-composer-input,
 .kova-page :is(input, textarea):not([type="checkbox"]):not([type="radio"]):focus-visible {

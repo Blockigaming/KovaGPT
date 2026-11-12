@@ -262,12 +262,8 @@ test("settings navigation is centralized and routes every rendered category", ()
     SETTINGS_SECTIONS: sections,
   });
   const pageTabs = categories("destinationGroups");
-  const primaryCalls = matching(
-    variable("pageGroups"),
-    (node) => ts.isCallExpression(node) && node.expression.getText(parsed) === "destination",
-  );
-  assert.equal(primaryCalls.length, 10);
-  assert.equal(new Set(primaryCalls.map((node) => node.arguments[0].text)).size, 10);
+  assert.match(settingsSource, /const groups = destinationGroups;/);
+  assert.doesNotMatch(settingsSource, /const secondaryParents:|matchingSecondaryTabs/);
   assert.deepEqual(
     pageTabs.map((tab) => [sectionForTab(tab.value), tab.label]),
     [
@@ -403,9 +399,9 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     settingsStylesSource,
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ).declarations;
-  assert.equal(auth.width, "min(1100px, calc(100vw - 64px))");
-  assert.equal(auth.height, "min(820px, calc(100dvh - 64px))");
-  assert.equal(auth["max-height"], "calc(100dvh - 64px)");
+  assert.equal(auth.width, "min(980px, calc(100vw - 48px))");
+  assert.equal(auth.height, "min(760px, calc(100dvh - 48px))");
+  assert.equal(auth["max-height"], "calc(100dvh - 48px)");
   assert.match(settingsSource, /const Surface = page \? SettingsPageContent : DialogContent/);
   assert.match(settingsSource, /loggedIn \? "is-authenticated" : "is-guest"/);
   const page = styleRule(
