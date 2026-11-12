@@ -6,7 +6,7 @@ import {
   CreditCard,
   Globe2,
   PackageOpen,
-} from "@/components/ui/product-icons";
+} from "./ui/product-icons.tsx";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";

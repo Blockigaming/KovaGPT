@@ -9,7 +9,10 @@ const mocks: Record<string, string> = {
   "@tanstack/react-start": "export const createClientOnlyFn=fn=>fn;",
   "@/lib/auth-fetch": `export const fetchWithTimeoutAuthenticated=async(url,init={})=>{
     const body=init.body?JSON.parse(init.body):null;
-    if(url==='/api/finances/manage'&&!body)return Response.json(window.financeStatus);
+    if(url==='/api/finances/manage'&&!body){
+      window.financeStatusRequests++;
+      return Response.json(window.financeStatus);
+    }
     window.operations.push([url,body,init.headers['X-Kova-Expected-Owner']]);
     if(url==='/api/finances/link-token')return Response.json({link_token:'link-production-fixture',expiration:new Date(Date.now()+600000).toISOString()});
     if(url==='/api/finances/exchange'){window.financeStatus.connections=[{id:'00000000-0000-4000-8000-000000000004',status:'connected'}];return Response.json({id:'00000000-0000-4000-8000-000000000004'},{status:201})}
@@ -64,6 +67,7 @@ const bundled = await build({
 const script = bundled.outputFiles.find((file) => file.path.endsWith(".js"))!.text;
 type StateWindow = Window & {
   operations: unknown[][];
+  financeStatusRequests: number;
   finishLink: (token?: string) => void;
   owner: string | null;
   renderPanels: () => void;
@@ -87,6 +91,7 @@ async function boot(
     Object.assign(window, {
       owner: "00000000-0000-4000-8000-000000000001",
       operations: [],
+      financeStatusRequests: 0,
       financeStatus: {
         configured: configured !== false,
         connections: connection
@@ -146,6 +151,9 @@ async function boot(
       "*{box-sizing:border-box}body{font:16px Arial;margin:24px}div[role=img]{height:256px}button{padding:10px;margin:4px}table{width:100%}td,th{padding:8px;text-align:left}[role=alertdialog]{position:fixed;inset:15%;background:white;border:1px solid;padding:20px}",
   });
   await page.addScriptTag({ content: script });
+  await expect
+    .poll(() => page.evaluate(() => (window as StateWindow).financeStatusRequests))
+    .toBe(1);
   await expect(
     page.getByRole("heading", { name: options.connection ? "Bank accounts" : "Spending" }),
   ).toBeVisible();
@@ -194,6 +202,7 @@ test("unconfigured finance and health stay disabled and never fetch private data
   page,
 }) => {
   await boot(page, { configured: false });
+  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
@@ -226,6 +235,7 @@ test("switching account hides a pending bank read", async ({ page }) => {
     (window as StateWindow).renderPanels();
   });
   await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
   await page.evaluate(() => (window as StateWindow).resolveRead());
   await expect(page.getByText("Fixture checking")).toHaveCount(0);
 });
@@ -241,6 +251,7 @@ test("an old Plaid success callback cannot exchange its token after account swit
     (window as StateWindow).renderPanels();
   });
   await expect(page.getByRole("button", { name: "Link a bank", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
   await page.evaluate(() => (window as StateWindow).finishLink());
   expect(
     (await page.evaluate(() => (window as StateWindow).operations)).some(
