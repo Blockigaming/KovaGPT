@@ -5,11 +5,20 @@ import {
   ExternalLink,
   EyeOff,
   ImagePlus,
+  Images,
+  PanelRight,
   Maximize2,
   Minimize2,
 } from "lucide-react";
 import { AttachmentPreviewMobileHeader } from "./AttachmentPreviewMobile";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import {
+  DialogClose,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
@@ -83,7 +92,11 @@ export function ChatImage({
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
   const [previewMarker, setPreviewMarker] = useState<string | null>(null);
+  const previewOpenRef = useRef(false);
+  const [sidePanel, setSidePanel] = useState(false);
+  const [zoom, setZoom] = useState<number | null>(null);
   const [actualSize, setActualSize] = useState(false);
+  previewOpenRef.current = previewMarker === marker;
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -316,22 +329,24 @@ export function ChatImage({
         {children}
       </span>
       <Dialog
-        attachmentPreview
+        attachmentPreview={sidePanel ? true : "fullscreen"}
         open={previewMarker === marker}
         onOpenChange={(open) => {
           if (!open) {
             setPreviewMarker(null);
             setActualSize(false);
+            setSidePanel(false);
+            setZoom(null);
           }
         }}
       >
         <DialogContent
-          attachmentPreview
+          attachmentPreview={sidePanel ? true : "fullscreen"}
           className="spec400-attachment-preview kova-preview-mobile-image"
           closeLabel="Close image preview"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            imageRef.current?.focus({ preventScroll: true });
+            if (!previewOpenRef.current) imageRef.current?.focus({ preventScroll: true });
           }}
         >
           <DialogHeader className="kova-preview-mobile-description">
@@ -353,7 +368,49 @@ export function ChatImage({
               </button>
             }
           />
-          <div className="kova-preview-desktop-actions flex flex-wrap gap-2">
+          <div className="kova-image-viewer-toolbar">
+            <span className="kova-preview-action kova-image-viewer-badge">
+              <Images aria-hidden="true" /> Image
+            </span>
+            <div className="kova-image-viewer-tools">
+              <select
+                className="kova-preview-action"
+                aria-label="Image zoom"
+                value={zoom ?? "fit"}
+                onChange={(event) =>
+                  setZoom(event.target.value === "fit" ? null : Number(event.target.value))
+                }
+              >
+                <option value="fit">Fit</option>
+                {[25, 50, 75, 100, 150, 200].map((value) => (
+                  <option key={value} value={value}>
+                    {value}%
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="kova-preview-action"
+                aria-label="Download image"
+                disabled={busy}
+                onClick={downloadImage}
+              >
+                <Download aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="kova-preview-action"
+                onClick={() => setSidePanel((value) => !value)}
+              >
+                <PanelRight aria-hidden="true" />
+                {sidePanel ? "Full screen" : "Open in side panel"}
+              </button>
+              <DialogClose className="kova-preview-action" aria-label="Close image preview">
+                ✕
+              </DialogClose>
+            </div>
+          </div>
+          <div className="kova-preview-desktop-actions kova-image-viewer-footer">
             <button
               type="button"
               className="kova-preview-action"
@@ -362,20 +419,17 @@ export function ChatImage({
             >
               Copy image
             </button>
-            <button
-              type="button"
-              className="kova-preview-action"
-              disabled={busy}
-              onClick={downloadImage}
-            >
-              Download image
-            </button>
           </div>
-          <div className="kova-preview-image-stage" data-actual-size={actualSize || undefined}>
+          <div
+            className="kova-preview-image-stage"
+            data-actual-size={actualSize || undefined}
+            data-zoomed={zoom !== null || undefined}
+          >
             <img
               src={src}
               alt={alt}
               referrerPolicy="no-referrer"
+              style={zoom === null ? undefined : { zoom: zoom / 100 }}
               className="max-w-full self-center object-contain"
             />
           </div>

@@ -13,9 +13,11 @@ export function HistoricalLibraryAttachment({
   attachment,
   ownerId,
   onAsk,
+  onOpenPane,
 }: {
   attachment: Extract<Attachment, { kind: "library_file" }>;
   ownerId: string | null;
+  onOpenPane?: () => void;
   onAsk?: (prompt: string) => boolean;
 }) {
   const { elementRef, status, retry } = useHistoricalLibraryAvailability(
@@ -45,7 +47,10 @@ export function HistoricalLibraryAttachment({
         className="inline-flex min-h-11 min-w-0 items-center gap-2"
         aria-haspopup="dialog"
         data-attachment-preview-trigger=""
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          onOpenPane?.();
+          setOpen(true);
+        }}
       >
         <FileText className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="max-w-48 truncate">{attachment.name}</span>

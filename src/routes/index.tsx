@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+import { WorkspacePaneDivider } from "@/components/WorkspacePaneDivider";
 import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
@@ -91,11 +93,6 @@ const ActiveChatTranscript = lazy(() =>
 const QuotaRejectedDraftPreview = lazy(() =>
   import("@/components/QuotaRejectedDraftPreview").then((module) => ({
     default: module.QuotaRejectedDraftPreview,
-  })),
-);
-const WorkspaceResultDivider = lazy(() =>
-  import("@/components/WorkspaceResultContent").then((module) => ({
-    default: module.WorkspaceResultDivider,
   })),
 );
 const WorkspaceResultContent = lazy(() =>
@@ -764,6 +761,12 @@ function KovaGPT() {
   };
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
   const [paneRatio, setPaneRatio] = useState(0.45);
+  const openAttachmentSidebar = () => {
+    if (window.matchMedia("(min-width: 1024px)").matches) setSidebarOpen(true);
+  };
+  const [attachmentPaneRatio, setAttachmentPaneRatio] = useState(0.4);
+  const resizeAttachmentPane = (next: number) =>
+    setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
@@ -3084,6 +3087,7 @@ function KovaGPT() {
             }),
           );
         }}
+        onOpenAttachmentPane={openAttachmentSidebar}
         onAskAttachment={
           canAskAboutAttachment
             ? (prompt, attachment) =>
@@ -3444,11 +3448,14 @@ function KovaGPT() {
           className={`spec400-chat-workspace${result ? " has-result" : ""}`}
           data-split={Boolean(result && wideResult)}
           style={
-            result && wideResult
-              ? {
-                  gridTemplateColumns: `minmax(420px, ${paneRatio}fr) 12px minmax(420px, ${1 - paneRatio}fr)`,
-                }
-              : undefined
+            {
+              "--attachment-chat-width": `${attachmentPaneRatio}fr`,
+              "--attachment-preview-width": `${1 - attachmentPaneRatio}fr`,
+              gridTemplateColumns:
+                result && wideResult
+                  ? `minmax(420px, ${paneRatio}fr) 12px minmax(420px, ${1 - paneRatio}fr)`
+                  : undefined,
+            } as CSSProperties
           }
         >
           {result && !wideResult && (
@@ -3714,7 +3721,8 @@ function KovaGPT() {
           </div>
           {result && wideResult && (
             <Suspense fallback={<div className="spec400-pane-divider" aria-hidden="true" />}>
-              <WorkspaceResultDivider
+              <WorkspacePaneDivider
+                label="Resize conversation and result"
                 workspaceRef={workspaceRef}
                 paneRatio={paneRatio}
                 setLayoutRatio={setLayoutRatio}
@@ -3752,6 +3760,16 @@ function KovaGPT() {
               </Suspense>
             </section>
           )}
+          <WorkspacePaneDivider
+            label="Resize conversation and attachment preview"
+            className="spec400-pane-divider kova-attachment-preview-divider"
+            workspaceRef={workspaceRef}
+            paneRatio={attachmentPaneRatio}
+            minimum={30}
+            maximum={70}
+            setLayoutRatio={resizeAttachmentPane}
+            setPaneRatio={setAttachmentPaneRatio}
+          />
           <div id="chat-attachment-preview-dock" className="kova-attachment-preview-dock" />
         </div>
       </main>

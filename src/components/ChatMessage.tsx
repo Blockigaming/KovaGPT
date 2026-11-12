@@ -254,6 +254,7 @@ function ChatMessageInner({
   onOpenResult,
   onOpenCanvas,
   onAskAttachment,
+  onOpenAttachmentPane,
   onSelectSuggestion,
   showAdvertisement = false,
 }: {
@@ -288,6 +289,7 @@ function ChatMessageInner({
     trigger?: HTMLElement,
   ) => void;
   onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
+  onOpenAttachmentPane?: () => void;
   onAskAttachment?: (
     prompt: string,
     attachment: Exclude<NonNullable<Message["attachments"]>[number], { kind: "image" }>,
@@ -893,12 +895,14 @@ function ChatMessageInner({
                         key={attachment.libraryItemId}
                         attachment={attachment}
                         ownerId={principalResolved && isSignedIn ? userKey : null}
+                        onOpenPane={onOpenAttachmentPane}
                         onAsk={onAskAttachment && ((prompt) => onAskAttachment(prompt, attachment))}
                       />
                     ) : (
                       <ChatTextAttachment
                         key={`${attachment.name}:${attachment.size ?? 0}`}
                         attachment={attachment}
+                        onOpenPane={onOpenAttachmentPane}
                         onAsk={onAskAttachment && ((prompt) => onAskAttachment(prompt, attachment))}
                       />
                     ),

@@ -8,19 +8,20 @@ function subscribe(callback: () => void) {
   return () => media.removeEventListener("change", callback);
 }
 
-function getDock() {
-  return window.matchMedia(desktopPreview).matches
-    ? document.getElementById("chat-attachment-preview-dock")
-    : null;
-}
-
 const noDock = () => null;
 const noSubscription = () => () => {};
 
-export function useAttachmentPreviewDock(enabled: boolean) {
+export function useAttachmentPreviewDock(enabled: boolean, library = false) {
   return useSyncExternalStore(
     enabled ? subscribe : noSubscription,
-    enabled ? getDock : noDock,
+    enabled
+      ? () =>
+          window.matchMedia(desktopPreview).matches
+            ? document.getElementById(
+                library ? "library-attachment-preview-dock" : "chat-attachment-preview-dock",
+              )
+            : null
+      : noDock,
     noDock,
   );
 }

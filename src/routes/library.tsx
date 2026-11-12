@@ -1,3 +1,6 @@
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { AttachmentPreviewAsk } from "@/components/AttachmentPreviewMobile";
 import "@/styles/file-directories.css";
 import "@/styles/spec400-management.css";
 import { LibraryRenameDialog } from "@/components/LibraryRenameDialog";
@@ -493,6 +496,17 @@ function LibraryPage() {
   );
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
   const visiblePreviewItem = detailKey ? detail.item : principalReady ? previewItem : null;
+  const textWorkspaceItem =
+    visiblePreviewItem &&
+    !isImageItem(visiblePreviewItem) &&
+    !visiblePreviewItem.original_generation &&
+    !visiblePreviewItem.file_url &&
+    visiblePreviewItem.content_text?.trim() &&
+    (visiblePreviewItem.content_text.length >= 1_000 ||
+      /\.(?:md|markdown)$/iu.test(visiblePreviewItem.file_name ?? "") ||
+      visiblePreviewItem.file_type === "text/markdown")
+      ? visiblePreviewItem
+      : null;
   const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const librarySearchRef = useRef<HTMLInputElement | null>(null);
   const libraryRootRef = useRef<HTMLElement | null>(null);
@@ -1302,18 +1316,19 @@ function LibraryPage() {
       if (ownerIdRef.current === owner) toast.error("The link could not be copied. Try again.");
     }
   };
-  const reuseInChat = (item: LibItem) => {
+  const reuseInChat = (item: LibItem, question?: string) => {
     const context = item.content_text?.trim()
       ? `Use this saved Library item as context:\n\n${item.content_text.slice(0, 20_000)}`
       : `Help me work with this saved Library item: ${item.title}`;
     try {
-      saveDraft(userKey, null, context);
+      saveDraft(userKey, null, question ? `${question}\n\n${context}` : context);
       clearPendingActive(userKey);
     } catch {
       toast.error("Could not prepare this item for chat.");
-      return;
+      return false;
     }
     window.location.href = "/";
+    return true;
   };
 
   const folderItems = useMemo(
@@ -2404,15 +2419,20 @@ function LibraryPage() {
           />
         ) : null}
 
+        <div id="library-attachment-preview-dock" />
         <Dialog
           open={Boolean(detailKey || visiblePreviewItem)}
+          attachmentPreview={textWorkspaceItem ? "library" : undefined}
           onOpenChange={(open) => {
             if (!open) closeItemPreview();
           }}
         >
           {detailKey || visiblePreviewItem ? (
             <DialogContent
-              className="spec400-library-inspector"
+              attachmentPreview={textWorkspaceItem ? "library" : undefined}
+              className={
+                textWorkspaceItem ? "kova-library-text-viewer" : "spec400-library-inspector"
+              }
               onCloseAutoFocus={(event) => {
                 event.preventDefault();
                 const trigger = previewReturnFocusRef.current;
@@ -2431,7 +2451,58 @@ function LibraryPage() {
                 detailHistoryRef.current = null;
               }}
             >
-              {visiblePreviewItem ? (
+              {textWorkspaceItem ? (
+                <>
+                  <header className="kova-library-text-header">
+                    <DialogTitle className="truncate">{textWorkspaceItem.title}</DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Saved text in your Library
+                    </DialogDescription>
+                    <button
+                      type="button"
+                      className="kova-preview-action"
+                      onClick={() => {
+                        const url = URL.createObjectURL(
+                          new Blob([textWorkspaceItem.content_text ?? ""], { type: "text/plain" }),
+                        );
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download =
+                          textWorkspaceItem.file_name || `${textWorkspaceItem.title}.txt`;
+                        link.click();
+                        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+                      }}
+                    >
+                      Download text
+                    </button>
+                    {detailKey && (
+                      <button
+                        type="button"
+                        className="kova-preview-action"
+                        onClick={() => void copyItemLink(textWorkspaceItem)}
+                      >
+                        Copy link
+                      </button>
+                    )}
+                  </header>
+                  <div className="kova-library-text-stage">
+                    {/\.(?:md|markdown)$/iu.test(textWorkspaceItem.file_name ?? "") ||
+                    textWorkspaceItem.file_type === "text/markdown" ? (
+                      <article className="kova-library-markdown">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} disallowedElements={["img"]}>
+                          {textWorkspaceItem.content_text}
+                        </ReactMarkdown>
+                      </article>
+                    ) : (
+                      <pre>{textWorkspaceItem.content_text}</pre>
+                    )}
+                  </div>
+                  <AttachmentPreviewAsk
+                    placeholder="Ask about this file"
+                    onAsk={(prompt) => reuseInChat(textWorkspaceItem, prompt)}
+                  />
+                </>
+              ) : visiblePreviewItem ? (
                 <>
                   <header className="spec400-library-inspector-header shrink-0 border-b border-border">
                     <div className="spec400-library-inspector-title">

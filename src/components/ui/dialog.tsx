@@ -12,8 +12,13 @@ function Dialog({
   attachmentPreview,
   modal,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root> & { attachmentPreview?: boolean }) {
-  const dock = useAttachmentPreviewDock(Boolean(attachmentPreview));
+}: React.ComponentProps<typeof DialogPrimitive.Root> & {
+  attachmentPreview?: boolean | "fullscreen" | "library";
+}) {
+  const dock = useAttachmentPreviewDock(
+    Boolean(attachmentPreview && attachmentPreview !== "fullscreen"),
+    attachmentPreview === "library",
+  );
   return <DialogPrimitive.Root {...props} modal={attachmentPreview && dock ? false : modal} />;
 }
 
@@ -45,7 +50,7 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<
 > {
   constrainToViewport?: boolean;
   closeLabel?: string;
-  attachmentPreview?: boolean;
+  attachmentPreview?: boolean | "fullscreen" | "library";
 }
 
 const DialogContent = React.forwardRef<
@@ -63,7 +68,10 @@ const DialogContent = React.forwardRef<
     },
     ref,
   ) => {
-    const dock = useAttachmentPreviewDock(Boolean(attachmentPreview));
+    const dock = useAttachmentPreviewDock(
+      Boolean(attachmentPreview && attachmentPreview !== "fullscreen"),
+      attachmentPreview === "library",
+    );
     const panel = attachmentPreview ? dock : null;
     return (
       <DialogPortal container={panel ?? undefined}>
@@ -72,7 +80,15 @@ const DialogContent = React.forwardRef<
           data-slot="dialog-content"
           data-ui-reference="chatgpt.dialog.centered"
           data-kova-dialog-surface={constrainToViewport && !attachmentPreview ? "" : undefined}
-          data-attachment-preview={attachmentPreview ? (panel ? "docked" : "full") : undefined}
+          data-attachment-preview={
+            attachmentPreview
+              ? panel
+                ? attachmentPreview === "library"
+                  ? "library"
+                  : "docked"
+                : "full"
+              : undefined
+          }
           ref={ref}
           className={cn(
             "font-[family-name:var(--font-ui)] fixed left-1/2 top-1/2 z-50 flex min-w-0 w-[calc(100%-2rem)] max-w-[450px] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-popover p-5 text-popover-foreground shadow-[var(--shadow-floating)] duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] [overflow-wrap:anywhere] data-[state=closed]:pointer-events-none",

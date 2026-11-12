@@ -65,7 +65,13 @@ export function AttachmentPreviewFileInfo({ name, size }: { name: string; size?:
   );
 }
 
-export function AttachmentPreviewAsk({ onAsk }: { onAsk: (prompt: string) => boolean }) {
+export function AttachmentPreviewAsk({
+  onAsk,
+  placeholder = "Ask KovaGPT",
+}: {
+  onAsk: (prompt: string) => boolean;
+  placeholder?: string;
+}) {
   const [prompt, setPrompt] = useState("");
   return (
     <form
@@ -76,8 +82,8 @@ export function AttachmentPreviewAsk({ onAsk }: { onAsk: (prompt: string) => boo
       }}
     >
       <input
-        aria-label="Ask KovaGPT"
-        placeholder="Ask KovaGPT"
+        aria-label={placeholder}
+        placeholder={placeholder}
         value={prompt}
         onChange={(event) => setPrompt(event.target.value)}
       />

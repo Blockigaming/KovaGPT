@@ -13,8 +13,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 export function ChatTextAttachment({
   attachment,
   onAsk,
+  onOpenPane,
 }: {
   attachment: Extract<Attachment, { kind: "text_file" }>;
+  onOpenPane?: () => void;
   onAsk?: (prompt: string) => boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -67,6 +69,7 @@ export function ChatTextAttachment({
         data-attachment-preview-trigger=""
         className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-[var(--kova-radius-panel)] border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground hover:bg-muted"
         onClick={() => {
+          onOpenPane?.();
           setOffset(0);
           setOpen(true);
         }}
@@ -93,7 +96,7 @@ export function ChatTextAttachment({
             </DialogDescription>
           </DialogHeader>
           <AttachmentPreviewMobileHeader title={title} actions={actions} />
-          <div className="kova-preview-desktop-actions flex flex-wrap gap-2">{actions}</div>
+          <div className="kova-preview-desktop-actions kova-text-viewer-tools">{actions}</div>
           <div className="kova-preview-file-stage">
             {attachment.name !== "pasted-text.txt" && (
               <AttachmentPreviewFileInfo name={attachment.name} size={attachment.size} />
@@ -103,7 +106,7 @@ export function ChatTextAttachment({
                 Characters {preview.start + 1}–{preview.end} of {preview.total.toLocaleString()}
               </p>
             )}
-            <pre className="spec400-bounded-preview" tabIndex={0}>
+            <pre className="spec400-bounded-preview kova-preview-paginated-text" tabIndex={0}>
               {preview.text}
             </pre>
             {preview.total > 4_000 && (
@@ -126,6 +129,9 @@ export function ChatTextAttachment({
                 </button>
               </div>
             )}
+            <pre className="kova-preview-continuous-text" tabIndex={0}>
+              {attachment.content}
+            </pre>
           </div>
           {onAsk && (
             <AttachmentPreviewAsk

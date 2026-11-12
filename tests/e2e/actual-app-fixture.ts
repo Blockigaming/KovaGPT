@@ -1,3 +1,4 @@
+import type { Message } from "../../src/lib/chat-store";
 import type { Page } from "@playwright/test";
 import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
@@ -31,7 +32,7 @@ export async function fixture(
   signedIn = true,
   saved = false,
   tier: "free" | "plus" | "pro" = "free",
-  options: { preserveStorageOnReload?: boolean } = {},
+  options: { preserveStorageOnReload?: boolean; savedMessages?: Message[] } = {},
 ) {
   await page.context().route("**/*", async (route) => {
     const url = new URL(route.request().url());
@@ -51,7 +52,7 @@ export async function fixture(
   await page.context().routeWebSocket("**/*", (socket) => socket.close());
   if (signedIn) await installAuthenticatedFixture(page, { tier, ...options });
   await page.addInitScript(
-    ({ theme, owner, saved, chatA, chatB }) => {
+    ({ theme, owner, saved, chatA, chatB, savedMessages }) => {
       localStorage.setItem("kova-theme-mode", theme);
       if (saved) {
         const conversations = [chatA, chatB].map((id, index) => ({
@@ -62,7 +63,7 @@ export async function fixture(
           updatedAt: Date.now(),
           messages: index
             ? []
-            : [
+            : (savedMessages ?? [
                 { id: "prompt-a", role: "user", content: "Draft a release checklist." },
                 {
                   id: "answer-a",
@@ -70,7 +71,7 @@ export async function fixture(
                   content:
                     "A practical release checklist:\n\n1. Review the draft.\n2. Verify the interaction.\n3. Record the result.",
                 },
-              ],
+              ]),
         }));
         localStorage.setItem(
           `nova-gpt-conversations-v3:user:${owner}`,
@@ -87,7 +88,7 @@ export async function fixture(
         },
       });
     },
-    { theme, owner, saved, chatA, chatB },
+    { theme, owner, saved, chatA, chatB, savedMessages: options.savedMessages },
   );
   await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
   await page.route("**/api/chat/history**", (route) =>

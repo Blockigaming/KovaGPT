@@ -1,29 +1,26 @@
 import { expect, test } from "@playwright/test";
 import { png } from "../helpers/image-fixture.mjs";
-import { fixture, owner, chatA } from "./actual-app-fixture";
+import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 test("chat attachments open in the workspace preview without downloading", async ({ page }) => {
-  await fixture(page, "dark", true, true, "free", { preserveStorageOnReload: true });
-  await page.addInitScript(
-    ({ owner, chatA, image }) => {
-      const key = `nova-gpt-conversations-v3:user:${owner}`;
-      const chats = JSON.parse(localStorage.getItem(key)!);
-      chats.find((chat: { id: string }) => chat.id === chatA).messages = [
-        {
-          id: "preview-attachments",
-          role: "user",
-          content: "Preview my attachments.",
-          attachments: [
-            { kind: "image", dataUrl: image },
-            { kind: "text_file", name: "review.txt", content: "Chemical bonding study notes." },
-          ],
-        },
-      ];
-      localStorage.setItem(key, JSON.stringify(chats));
-    },
-    { owner, chatA, image: `data:image/png;base64,${png(120, 80, false).toString("base64")}` },
-  );
+  await fixture(page, "dark", true, true, "free", {
+    preserveStorageOnReload: true,
+    savedMessages: [
+      {
+        id: "preview-attachments",
+        role: "user",
+        content: "Preview my attachments.",
+        attachments: [
+          {
+            kind: "image",
+            dataUrl: `data:image/png;base64,${png(120, 80, false).toString("base64")}`,
+          },
+          { kind: "text_file", name: "review.txt", content: "Chemical bonding study notes." },
+        ],
+      },
+    ],
+  });
   await page.goto("/");
   await waitForKovaHydration(page);
   const message = page.locator('[data-message-id="preview-attachments"]');
@@ -31,11 +28,11 @@ test("chat attachments open in the workspace preview without downloading", async
   const openImage = message.locator("[data-chat-image] > img");
   const wide = page.viewportSize()!.width >= 1024;
 
-  const checkGeometry = async (name: string) => {
+  const checkGeometry = async (name: string, docked = wide) => {
     const preview = page.getByRole("dialog", { name, exact: true });
     await expect(preview).toBeVisible();
-    await expect(preview).toHaveAttribute("data-attachment-preview", wide ? "docked" : "full");
-    if (wide) {
+    await expect(preview).toHaveAttribute("data-attachment-preview", docked ? "docked" : "full");
+    if (docked) {
       const chat = await page.locator("#conversation-pane").boundingBox();
       const dock = await preview.boundingBox();
       expect(chat!.x + chat!.width).toBeLessThanOrEqual(dock!.x);
@@ -60,21 +57,43 @@ test("chat attachments open in the workspace preview without downloading", async
 
   await openText.click();
   const textPreview = await checkGeometry("review.txt");
-  await expect(textPreview.getByText("Chemical bonding study notes.")).toBeVisible();
+  await expect(
+    textPreview.getByText("Chemical bonding study notes.").filter({ visible: true }),
+  ).toBeVisible();
   if (!wide) {
     await expect(textPreview.getByRole("textbox", { name: "Ask KovaGPT" })).toBeVisible();
     await textPreview.getByLabel("More options").click();
   }
   await expect(textPreview.getByRole("button", { name: "Copy text" })).toBeVisible();
   await expect(textPreview.getByRole("button", { name: "Download text" })).toBeVisible();
+  if (wide) {
+    const divider = page.getByRole("separator", {
+      name: "Resize conversation and attachment preview",
+    });
+    const handle = (await divider.boundingBox())!;
+    const previousWidth = (await textPreview.boundingBox())!.width;
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + 100, handle.y + 100, { steps: 6 });
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await textPreview.boundingBox())!.width)
+      .toBeLessThan(previousWidth);
+    await expect(page.locator("main[data-sidebar]")).toHaveAttribute("data-sidebar", "open");
+  }
   await page.keyboard.press("Escape");
   await expect(textPreview).toBeHidden();
   await expect(openText).toBeFocused();
 
   await openImage.click();
-  const imagePreview = await checkGeometry("Image preview");
+  const imagePreview = await checkGeometry("Image preview", false);
   await expect(imagePreview.getByRole("img")).toBeVisible();
   await expect(imagePreview.getByRole("button", { name: "Download image" })).toBeVisible();
+  if (wide) {
+    await expect(imagePreview.getByText("Image", { exact: true })).toBeVisible();
+    await imagePreview.getByRole("button", { name: "Open in side panel" }).click();
+    await expect(imagePreview).toHaveAttribute("data-attachment-preview", "docked");
+  }
   await imagePreview
     .getByRole("button", { name: wide ? "Close image preview" : "Close preview" })
     .click();
