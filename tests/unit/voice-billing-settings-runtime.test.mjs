@@ -49,6 +49,7 @@ function fixture(kind) {
   const name = kind === "voice" ? "VoiceConnectionStatus" : "BillingPortalButton";
   const module = loadUiModule(`src/components/${name}.tsx`, deps, {
     window: { location: { assign: (url) => redirects.push(url) } },
+    AbortSignal,
   });
   let tree;
   const render = () => (tree = hooks.render(module[name], { priceId }));
@@ -77,6 +78,7 @@ function fixture(kind) {
 }
 test("voice configuration probe is authenticated and consumes no provider request", async () => {
   const f = fixture("voice");
+  assert.equal(f.requests.length, 1);
   f.click();
   f.click();
   assert.equal(f.requests.length, 1);

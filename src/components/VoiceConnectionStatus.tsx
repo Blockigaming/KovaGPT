@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { authFetch } from "@/lib/auth-fetch";
 import { principalScopedStorageKey, safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
@@ -47,16 +47,18 @@ export function VoiceConnectionStatus() {
       lifetime.generation++;
     };
   }, [owner]);
-  const check = async () => {
+  const check = useCallback(async () => {
     if (!owner || pending.current) return;
     pending.current = true;
     const token = ++request.current.generation;
     const active = () => current.current === owner && request.current.generation === token;
     setBusy(true);
     setError("");
+    const deadline = AbortSignal.timeout(15_000);
     try {
       const response = await authFetch("/api/voice", {
         cache: "no-store",
+        signal: deadline,
         headers: { "X-Kova-Voice-Owner": owner },
       });
       const value = await response.json();
@@ -77,7 +79,10 @@ export function VoiceConnectionStatus() {
       if (request.current.generation === token) pending.current = false;
       if (active()) setBusy(false);
     }
-  };
+  }, [owner]);
+  useEffect(() => {
+    void check();
+  }, [check]);
   const changeVoice = (voiceId: string) => {
     if (!owner || result?.owner !== owner || !result.voices.some((voice) => voice.id === voiceId))
       return;
