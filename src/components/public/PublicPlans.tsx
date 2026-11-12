@@ -92,11 +92,10 @@ export function PublicPlans() {
       </div>
       {group === "individual" ? (
         <div className="public-plan-grid">
-          {(["free", "plus", "pro"] as const).map((tier, index) => {
+          {(["free", "plus", "pro"] as const).map((tier) => {
             const plan = CAPABILITY_REGISTRY.plans[tier];
             return (
               <article className="public-plan-card" key={tier}>
-                <PlanGlyph level={index + 1} />
                 <h3>{tier === "free" ? "Free" : `Kova ${plan.name}`}</h3>
                 <p className="public-plan-description">
                   {tier === "free"
@@ -148,7 +147,6 @@ export function PublicPlans() {
         <div className="public-plan-grid public-business-plans">
           {(["Team", "Enterprise"] as const).map((name) => (
             <article className="public-plan-card" key={name}>
-              <PlanGlyph level={name === "Team" ? 2 : 3} />
               <p className="public-plan-badge">Coming soon</p>
               <h3>{name}</h3>
               <p className="public-plan-description">
@@ -202,40 +200,5 @@ export function PublicPlans() {
       )}
       <EnterpriseContactDialog open={contactOpen} onOpenChange={setContactOpen} />
     </section>
-  );
-}
-
-function PlanGlyph({ level }: { level: number }) {
-  return (
-    <svg
-      className="public-plan-glyph"
-      width="58"
-      height="64"
-      viewBox="0 0 58 64"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      aria-hidden="true"
-    >
-      <circle cx="29" cy="13" r="10" />
-      <circle cx="29" cy="13" r="4" />
-      <path d="M29 17v43M29 43 12 33m17 10 17-10" />
-      <circle cx="11" cy="32" r="4" />
-      <circle cx="47" cy="32" r="4" />
-      {level > 1 && (
-        <>
-          <path d="m29 57-17-9m17 9 17-9" />
-          <circle cx="11" cy="47" r="4" />
-          <circle cx="47" cy="47" r="4" />
-        </>
-      )}
-      {level > 2 && (
-        <>
-          <path d="m29 29-14-7m14 7 14-7" />
-          <circle cx="12" cy="21" r="3" />
-          <circle cx="46" cy="21" r="3" />
-        </>
-      )}
-    </svg>
   );
 }

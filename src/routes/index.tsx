@@ -379,6 +379,7 @@ function KovaGPT() {
   }, [activeId, storagePrincipal, editingMessage]);
 
   const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
+  const [activityDock, setActivityDock] = useState<HTMLDivElement | null>(null);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -3183,6 +3184,8 @@ function KovaGPT() {
           signedIn={Boolean(isLoaded && isSignedIn)}
           userTier={tier}
           compact={compact}
+          sidebarOpen={sidebarOpen}
+          activityDock={activityDock}
           isStreaming={isStreaming}
           navigationBlocked={Boolean(input || attachments.length || isStreaming)}
           onShare={(trigger) => {
@@ -3374,6 +3377,7 @@ function KovaGPT() {
         data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
+        <div id="chat-activity-dock" ref={setActivityDock} />
         <MobileTopBar
           onOpenSidebar={() => {
             readingAnchorControllerRef.current?.capture();

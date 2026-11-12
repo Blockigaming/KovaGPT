@@ -584,3 +584,42 @@
 .kova-mobile-conversation-tools .kova-free-offer {
   margin-right: auto;
 }
+
+@media (min-width: 1024px) {
+  .kova-chat-main:has(#chat-activity-panel) {
+    --activity-width: clamp(264px, 26vw, 352px);
+    position: relative;
+    padding-inline-end: var(--activity-width);
+  }
+
+  #chat-activity-dock:has(#chat-activity-panel) {
+    position: absolute;
+    inset: 54px 0 0 auto;
+    width: var(--activity-width);
+  }
+
+  .kova-conversation-outputs.kova-inline-activity {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  .kova-inline-activity > header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .kova-inline-activity > header h2 {
+    flex: 1;
+    margin: 0;
+    color: inherit;
+  }
+}

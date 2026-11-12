@@ -133,12 +133,15 @@ function fixture(overrides = {}, desktop = true) {
           },
         ];
       },
+      useEffect() {},
       useRef(initial) {
         const i = cursor++;
         states[i] ??= { current: initial };
         return states[i];
       },
     },
+    "react-dom": { createPortal: (node) => node },
+    "./NovaLogo": { NovaLogo: "NovaLogo" },
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "lucide-react": primitives([
       "ArrowLeft",

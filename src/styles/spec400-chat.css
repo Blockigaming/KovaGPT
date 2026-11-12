@@ -1696,3 +1696,11 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   border-radius: var(--kova-radius-composer, 26px);
   background: var(--muted);
 }
+
+.kova-route-loading {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: var(--background);
+  color: var(--foreground);
+}
