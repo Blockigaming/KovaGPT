@@ -8,6 +8,7 @@ import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
 import { ResponseMarkdown } from "./ResponseMarkdown";
 import { TaskCreatedBubble } from "./TaskCreatedBubble";
+import { ChatTextAttachment } from "./ChatTextAttachment";
 import { HistoricalLibraryAttachment } from "./HistoricalLibraryAttachment";
 import { ChatImage, type ChatImageActions } from "./ChatImage";
 import { prepareChatImageAttachment } from "@/lib/chat-image-actions";
@@ -34,7 +35,6 @@ import {
   GitBranch,
   Globe,
   Mail,
-  FileText,
   ThumbsUp,
   ThumbsDown,
   History,
@@ -890,17 +890,10 @@ function ChatMessageInner({
                         ownerId={principalResolved && isSignedIn ? userKey : null}
                       />
                     ) : (
-                      <span
+                      <ChatTextAttachment
                         key={`${attachment.name}:${attachment.size ?? 0}`}
-                        className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground"
-                        title={attachment.name}
-                      >
-                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <span className="max-w-48 truncate">{attachment.name}</span>
-                        <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
-                          Attached
-                        </span>
-                      </span>
+                        attachment={attachment}
+                      />
                     ),
                   )}
               </div>

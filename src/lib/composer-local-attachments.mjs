@@ -31,7 +31,7 @@ const summaryStopWords = new Set(
 );
 
 /** Pick a short topic label locally from a heading or recurring words. */
-function summarizeLocalPaste(text) {
+export function summarizeLocalPaste(text) {
   const cleaned = text.replace(/https?:\/\/\S+/gi, " ");
   const words = (value) => value.match(/\p{L}[\p{L}\p{M}\p{N}'’]{0,47}/gu) ?? [];
   const heading = cleaned.trimStart().match(/^#{1,6}[^\S\r\n]+([^\r\n]+)/)?.[1];

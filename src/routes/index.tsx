@@ -3713,6 +3713,7 @@ function KovaGPT() {
               </Suspense>
             </section>
           )}
+          <div id="chat-attachment-preview-dock" className="kova-attachment-preview-dock" />
         </div>
       </main>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Copy, Download, ExternalLink, EyeOff, ImagePlus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
@@ -71,6 +72,7 @@ export function ChatImage({
       : null;
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
+  const [previewMarker, setPreviewMarker] = useState<string | null>(null);
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -243,10 +245,15 @@ export function ChatImage({
             decoding="async"
             referrerPolicy="no-referrer"
             tabIndex={0}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
+            data-attachment-preview-trigger=""
+            role="button"
             draggable={false}
             style={{ WebkitTouchCallout: "none", touchAction: "manipulation" }}
-            className={imageClassName}
+            className={`cursor-zoom-in ${imageClassName ?? ""}`}
+            onClick={() => {
+              if (!menuOpenRef.current) setPreviewMarker(marker);
+            }}
             onPointerDown={startPointerHold}
             onPointerMove={movePointerHold}
             onPointerUp={cancelTouchHold}
@@ -256,6 +263,11 @@ export function ChatImage({
             onTouchEnd={cancelTouchHold}
             onTouchCancel={cancelTouchHold}
             onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setPreviewMarker(marker);
+                return;
+              }
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
               const box = event.currentTarget.getBoundingClientRect();
@@ -272,6 +284,57 @@ export function ChatImage({
         </ContextMenuTrigger>
         {children}
       </span>
+      <Dialog
+        attachmentPreview
+        open={previewMarker === marker}
+        onOpenChange={(open) => {
+          if (!open) setPreviewMarker(null);
+        }}
+      >
+        <DialogContent
+          attachmentPreview
+          className="spec400-attachment-preview"
+          closeLabel="Close image preview"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            imageRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Image preview</DialogTitle>
+            <DialogDescription>{alt}</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="kova-preview-action"
+              disabled={busy}
+              onClick={() =>
+                void run(async (allowed) => {
+                  await copyChatImage(src, allowed);
+                  if (allowed()) toast.success("Image copied");
+                })
+              }
+            >
+              Copy image
+            </button>
+            <button
+              type="button"
+              className="kova-preview-action"
+              disabled={busy}
+              onClick={() => void run((allowed) => downloadChatImage(src, allowed))}
+            >
+              Download image
+            </button>
+          </div>
+          <img
+            src={src}
+            alt={alt}
+            referrerPolicy="no-referrer"
+            className="max-w-full self-center object-contain"
+          />
+        </DialogContent>
+      </Dialog>
       <ContextMenuContent className="w-60" aria-label="Image actions">
         {!copyOnly ? (
           <>

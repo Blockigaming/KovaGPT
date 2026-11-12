@@ -1132,3 +1132,82 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     border-radius: 20px;
   }
 }
+
+.kova-attachment-preview-dock {
+  display: none;
+}
+
+[data-slot="dialog-content"][data-attachment-preview] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+[data-slot="dialog-content"][data-attachment-preview="full"] {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  translate: none;
+  border: 0;
+  border-radius: 0;
+  padding-block: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-bottom));
+}
+
+[data-attachment-preview="full"] [data-kova-dialog-close] {
+  top: max(12px, env(safe-area-inset-top));
+}
+
+[data-attachment-preview] :is(.kova-preview-action, .spec400-toolbar-button) {
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+}
+
+@media (min-width: 1024px) {
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"])
+    > :is(.spec400-result-pane, .spec400-pane-divider, .spec400-result-tabs) {
+    display: none;
+  }
+
+  .kova-attachment-preview-dock:has(> [data-state="open"]) {
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  [data-slot="dialog-content"][data-attachment-preview="docked"] {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    flex: 1;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    translate: none;
+    animation: none;
+    border-radius: var(--kova-radius-panel);
+  }
+}
+
+[data-attachment-preview] .kova-preview-action:not(:disabled):hover {
+  background: var(--accent);
+}
+
+[data-attachment-preview] .kova-preview-action:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+[data-attachment-preview] .kova-preview-action:disabled {
+  opacity: 0.5;
+}

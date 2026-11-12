@@ -3,6 +3,7 @@ export const LOCAL_PASTE_MAX_CHARACTERS: number;
 export const LOCAL_PASTE_MAX_BYTES: number;
 export const ATTACHMENT_PREVIEW_CHARACTERS: number;
 export function utf8TextBytes(text: string): number;
+export function summarizeLocalPaste(text: string): string;
 export function prepareLocalPaste(text: string): { text: string; size: number; summary: string };
 export function attachmentPreviewWindow(
   text: string,

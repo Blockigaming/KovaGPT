@@ -1874,6 +1874,7 @@ export function ChatInput({
                 <button
                   type="button"
                   className="spec400-chip-inspect"
+                  data-attachment-preview-trigger=""
                   aria-label={`Inspect ${attachment.name}`}
                   aria-description={attachment.pasteSummary}
                   title={`${attachment.pasteSummary ?? attachment.name} · ${attachmentState(attachment)}`}
@@ -1926,6 +1927,7 @@ export function ChatInput({
                 <button
                   type="button"
                   className="spec400-chip-inspect"
+                  data-attachment-preview-trigger=""
                   aria-label="Inspect pending pasted text"
                   aria-description={pasteOffer.summary}
                   onClick={(event) => {
@@ -2513,6 +2515,7 @@ export function ChatInput({
         </DialogContent>
       </Dialog>
       <Dialog
+        attachmentPreview
         open={previewAttachment !== null || pastePreviewOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -2523,6 +2526,7 @@ export function ChatInput({
         }}
       >
         <DialogContent
+          attachmentPreview
           className="spec400-attachment-preview"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
