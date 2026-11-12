@@ -55,49 +55,51 @@ export function HistoricalLibraryAttachment({
         <FileText className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="max-w-48 truncate">{attachment.name}</span>
       </button>
-      <Dialog open={open} onOpenChange={setOpen} attachmentPreview>
-        <DialogContent
-          attachmentPreview
-          className="spec400-attachment-preview kova-preview-mobile-file"
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            trigger.current?.focus({ preventScroll: true });
-          }}
-        >
-          <DialogHeader className="kova-preview-mobile-description">
-            <DialogTitle>{attachment.name}</DialogTitle>
-            <DialogDescription>{label}</DialogDescription>
-          </DialogHeader>
-          <AttachmentPreviewMobileHeader
-            title={attachment.name}
-            actions={
-              <a href="/library" className="kova-preview-action inline-flex items-center">
-                Open Library
-              </a>
-            }
-          />
-          <div className="kova-preview-file-stage">
-            <AttachmentPreviewFileInfo name={attachment.name} size={attachment.size} />
-            <p className="kova-preview-desktop-actions">
-              <a href="/library" className="underline">
-                Open Library
-              </a>
-            </p>
-            {status !== "available" && (
-              <p className="text-center text-sm text-muted-foreground">{label}</p>
-            )}
-          </div>
-          {status === "available" && onAsk && (
-            <AttachmentPreviewAsk
-              onAsk={(prompt) => {
-                if (!onAsk(prompt)) return false;
-                setOpen(false);
-                return true;
-              }}
+      {open && (
+        <Dialog open={open} onOpenChange={setOpen} attachmentPreview>
+          <DialogContent
+            attachmentPreview
+            className="spec400-attachment-preview kova-preview-mobile-file"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              trigger.current?.focus({ preventScroll: true });
+            }}
+          >
+            <DialogHeader className="kova-preview-mobile-description">
+              <DialogTitle>{attachment.name}</DialogTitle>
+              <DialogDescription>{label}</DialogDescription>
+            </DialogHeader>
+            <AttachmentPreviewMobileHeader
+              title={attachment.name}
+              actions={
+                <a href="/library" className="kova-preview-action inline-flex items-center">
+                  Open Library
+                </a>
+              }
             />
-          )}
-        </DialogContent>
-      </Dialog>
+            <div className="kova-preview-file-stage">
+              <AttachmentPreviewFileInfo name={attachment.name} size={attachment.size} />
+              <p className="kova-preview-desktop-actions">
+                <a href="/library" className="underline">
+                  Open Library
+                </a>
+              </p>
+              {status !== "available" && (
+                <p className="text-center text-sm text-muted-foreground">{label}</p>
+              )}
+            </div>
+            {status === "available" && onAsk && (
+              <AttachmentPreviewAsk
+                onAsk={(prompt) => {
+                  if (!onAsk(prompt)) return false;
+                  setOpen(false);
+                  return true;
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground" role="status">
         {status === "loading" && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {label}

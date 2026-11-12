@@ -3451,10 +3451,11 @@ function KovaGPT() {
             {
               "--attachment-chat-width": `${attachmentPaneRatio}fr`,
               "--attachment-preview-width": `${1 - attachmentPaneRatio}fr`,
-              gridTemplateColumns:
-                result && wideResult
-                  ? `minmax(420px, ${paneRatio}fr) 12px minmax(420px, ${1 - paneRatio}fr)`
-                  : undefined,
+              ...(result && wideResult
+                ? {
+                    gridTemplateColumns: `minmax(420px, ${paneRatio}fr) 12px minmax(420px, ${1 - paneRatio}fr)`,
+                  }
+                : {}),
             } as CSSProperties
           }
         >

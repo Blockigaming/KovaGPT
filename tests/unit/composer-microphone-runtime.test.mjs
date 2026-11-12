@@ -110,6 +110,12 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     },
   };
   const modules = {
+    "./AttachmentPreviewMobile": Object.fromEntries(
+      ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
+        (name) => [name, () => null],
+      ),
+    ),
+    "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
     "@/lib/link-preview.mjs": linkPreview,
     react,

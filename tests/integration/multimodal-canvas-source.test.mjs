@@ -152,7 +152,10 @@ test("image lightbox delegates modal lifecycle and restores intentional focus", 
   const styles = read("src/styles.css");
   const dialog = read("src/components/ui/dialog.tsx");
   const shellOverlay = read("src/components/CommandPalette.tsx");
-  assert.match(dialog, /data-kova-dialog-surface=\{constrainToViewport \? "" : undefined\}/);
+  assert.match(
+    dialog,
+    /data-kova-dialog-surface=\{constrainToViewport && !attachmentPreview \? "" : undefined\}/,
+  );
   assert.match(images, /constrainToViewport=\{false\}/);
   assert.doesNotMatch(images, /data-kova-dialog-surface/);
   assert.doesNotMatch(shellOverlay, /data-kova-dialog-surface/);

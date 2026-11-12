@@ -1317,11 +1317,12 @@ function LibraryPage() {
     }
   };
   const reuseInChat = (item: LibItem, question?: string) => {
-    const context = item.content_text?.trim()
+    const fileContext = item.content_text?.trim()
       ? `Use this saved Library item as context:\n\n${item.content_text.slice(0, 20_000)}`
       : `Help me work with this saved Library item: ${item.title}`;
     try {
-      saveDraft(userKey, null, question ? `${question}\n\n${context}` : context);
+      const context = question ? `${question}\n\n${fileContext}` : fileContext;
+      saveDraft(userKey, null, context);
       clearPendingActive(userKey);
     } catch {
       toast.error("Could not prepare this item for chat.");

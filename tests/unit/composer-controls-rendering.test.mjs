@@ -28,6 +28,12 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "./AttachmentPreviewMobile": Object.fromEntries(
+    ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
+      (name) => [name, () => null],
+    ),
+  ),
+  "@/lib/chat-image-actions": {},
   "@/components/LinkPreviewChip": { LinkPreviewChip: empty },
   "@/lib/link-preview.mjs": linkPreview,
   "@/components/OpenDesktopAppButton": {
