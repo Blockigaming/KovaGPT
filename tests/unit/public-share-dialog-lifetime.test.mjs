@@ -52,14 +52,11 @@ function fixture() {
       },
     },
   );
-  const start = () =>
-    f.find("button", (n) => n.props.className === "kova-share-copy").props.onClick();
   return {
     ...f,
     props,
     requests,
     copies,
-    start,
     owner: (value) => {
       owner = value;
     },
@@ -75,8 +72,6 @@ for (const boundary of ["reopen", "account", "conversation"]) {
   test(`public Share ignores old responses after ${boundary} leaves and returns to the same identity`, async () => {
     const f = fixture();
     await f.flush();
-    f.start();
-    await f.flush();
     if (boundary === "reopen") f.props.open = false;
     if (boundary === "account") f.owner("owner-b");
     if (boundary === "conversation") f.props.conversation = { ...f.props.conversation, id: "b" };
@@ -85,9 +80,7 @@ for (const boundary of ["reopen", "account", "conversation"]) {
     f.owner("owner-a");
     f.props.conversation = { ...f.props.conversation, id: "a" };
     await f.flush();
-    f.start();
-    await f.flush();
-    assert.equal(f.requests.length, 2);
+    assert.equal(f.requests.length, boundary === "reopen" ? 2 : 3);
     assert.equal(f.requests[0].options.signal.aborted, true);
     f.requests[0].resolve(response("a"));
     await f.flush();
@@ -97,7 +90,7 @@ for (const boundary of ["reopen", "account", "conversation"]) {
       true,
       "stale completion cannot clear a newer request's pending state",
     );
-    f.requests[1].resolve(response("b"));
+    f.requests.at(-1).resolve(response("b"));
     await f.flush();
     assert.deepEqual(f.copies, [`https://kovagpt.com/share/${"b".repeat(64)}`]);
     assert.equal(f.messages.filter(([type]) => type === "success").length, 1);

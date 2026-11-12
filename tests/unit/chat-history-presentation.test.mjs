@@ -75,6 +75,8 @@ test("a pending migration keeps the same notice through background sync transiti
     const rendered = notice({ ...state(phase), migration: 2 });
     assert.ok(rendered, `${phase} must not remove the migration decision`);
     assert.equal(rendered.props["aria-label"], "Chat history synchronization");
+    assert.match(rendered.props.className, /min-h-11/);
+    assert.doesNotMatch(rendered.props.className, /\bborder\b|shadow/);
     const heading = rendered.children.find((node) => node?.props?.role === "status");
     assert.deepEqual(heading.children, ["Earlier chat history remains on this device"]);
   }
@@ -138,6 +140,19 @@ test("rate-limited recovery stays distinct from offline through retries and clea
   assert.equal(current.recoveryPhase, "rate_limited");
   assert.equal(present(current, state("saved")).recoveryPhase, undefined);
   assert.equal(present(current, state("syncing", "owner-b")).recoveryPhase, undefined);
+});
+
+test("temporary sync failures do not show manual retry controls during pending migration", () => {
+  for (const phase of ["offline", "rate_limited"]) {
+    const rendered = notice({ ...state(phase), migration: 2, recoveryPhase: phase });
+    assert.ok(rendered, "The earlier-device-chat migration decision remains available");
+    assert.doesNotMatch(JSON.stringify(rendered), /Retry chat sync/);
+  }
+  for (const phase of ["blocked", "device_error", "auth_required"]) {
+    const rendered = notice({ ...state(phase), migration: 2, recoveryPhase: phase });
+    assert.ok(rendered, "Actionable recovery stays visible");
+    assert.match(JSON.stringify(rendered), /Retry chat sync/);
+  }
 });
 
 test("transient retries stay quiet while critical recovery remains actionable", () => {

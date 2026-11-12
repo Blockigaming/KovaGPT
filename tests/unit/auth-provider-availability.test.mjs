@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync("src/lib/auth-providers.ts", "utf8");
 const dialog = readFileSync("src/components/auth/AuthDialog.tsx", "utf8");
+const googleOAuth = readFileSync("src/lib/google-oauth-browser.ts", "utf8");
 const authRoute = readFileSync("src/routes/auth.tsx", "utf8");
 
 test("provider availability starts unresolved so no provider is falsely advertised", () => {
@@ -29,7 +30,7 @@ test("the sign-in dialog only enables Google once the deployment confirms it", (
   assert.match(dialog, /disabled=\{loading \|\| !googleAvailable\}/);
   // The configured entrypoint returns to the canonical public origin to set its
   // browser cookie before beginning OAuth; aliases must not invent an auth host.
-  assert.match(dialog, /new URL\("\/api\/auth\/google\/start", browserKovaAuthOrigin\(\)\)/);
+  assert.match(googleOAuth, /new URL\("\/api\/auth\/google\/start", browserKovaAuthOrigin\(\)\)/);
 });
 
 test("the dialog has no unreachable password step and defers passwords to /auth", () => {

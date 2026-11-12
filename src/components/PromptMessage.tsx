@@ -1,3 +1,5 @@
+import { LinkPreviewChip } from "@/components/LinkPreviewChip";
+import { firstLinkPreviewUrl, isOnlyLink } from "@/lib/link-preview.mjs";
 import { Copy, Check } from "lucide-react";
 import {
   ContextMenu,
@@ -19,6 +21,9 @@ export function PromptMessage({
   onEdit?: () => void;
   onBranch?: () => void;
 }) {
+  const previewUrl = firstLinkPreviewUrl(content);
+  const linkOnly = previewUrl ? isOnlyLink(content, previewUrl) : false;
+
   return (
     <>
       <ContextMenu>
@@ -28,7 +33,8 @@ export function PromptMessage({
             tabIndex={0}
             aria-label="Sent prompt"
           >
-            {content}
+            {previewUrl && <LinkPreviewChip url={previewUrl} />}
+            {!linkOnly && content}
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>

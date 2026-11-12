@@ -100,11 +100,10 @@ test("Gmail send is confirmation-gated, exact in the approval card, and POST-onl
     executor.indexOf("export async function getAvailableGoogleTools"),
     executor.indexOf("export async function getGoogleToolContext"),
   );
-  assert.match(availability, /const capability = googleToolCapability\(tool\.function\.name\)/);
-  assert.match(availability, /await canUsePaidGoogleConnector\(userId\)/);
+  assert.match(availability, /await resolveEffectiveBillingTier\(admin\(\), userId\)/);
   assert.match(
     availability,
-    /\(!capability\.startsWith\("gmail\."\) \|\| gmailAllowed\) &&\s+hasGoogleCapability\(health\.scopes, capability\)/,
+    /\(paid \|\| !tool\.function\.name\.startsWith\("gmail_"\)\) &&\s+hasGoogleCapability\(health\.scopes, googleToolCapability\(tool\.function\.name\)\)/,
   );
 
   const summarizeStart = executor.indexOf("export function summarizeWriteTool");

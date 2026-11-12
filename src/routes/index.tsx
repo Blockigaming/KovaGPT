@@ -3517,7 +3517,7 @@ function KovaGPT() {
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
                     onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Ask KovaGPT anything..."
+                    placeholder="Work with KovaGPT"
                     responseSettings={settings}
                     onResponseSettingsChange={(change) =>
                       setSettings((previous) => ({ ...previous, ...change }))
@@ -3656,7 +3656,7 @@ function KovaGPT() {
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
                     onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Ask KovaGPT anything..."
+                    placeholder="Work with KovaGPT"
                     responseSettings={settings}
                     onResponseSettingsChange={(change) =>
                       setSettings((previous) => ({ ...previous, ...change }))

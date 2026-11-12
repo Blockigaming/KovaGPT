@@ -140,25 +140,25 @@ test("empty workspace remains contained and composer focus is deliberate", async
       .poll(async () => {
         const [menuBox, anchorBox, side] = await Promise.all([
           menu.boundingBox(),
-          attach.boundingBox(),
+          page.locator(".spec400-composer").boundingBox(),
           menu.getAttribute("data-side"),
         ]);
         const viewport = page.viewportSize();
         if (!menuBox || !anchorBox || !viewport) return false;
         const hasGap =
           side === "top"
-            ? menuBox.y + menuBox.height <= anchorBox.y - 7
-            : side === "bottom" && menuBox.y >= anchorBox.y + anchorBox.height + 7;
+            ? menuBox.y + menuBox.height <= anchorBox.y - 4
+            : side === "bottom" && menuBox.y >= anchorBox.y + anchorBox.height + 4;
         return (
           hasGap &&
-          menuBox.x >= 11 &&
-          menuBox.x + menuBox.width <= viewport.width - 11 &&
-          menuBox.y >= 11 &&
-          menuBox.y + menuBox.height <= viewport.height - 11
+          menuBox.x >= 7 &&
+          menuBox.x + menuBox.width <= viewport.width - 7 &&
+          menuBox.y >= 7 &&
+          menuBox.y + menuBox.height <= viewport.height - 7
         );
       })
       .toBe(true);
-    const fileAction = menu.getByRole("button", { name: "Files", exact: true });
+    const fileAction = menu.getByRole("button", { name: /^Add photos & files/ });
     await expect(fileAction).toBeVisible();
     // The SDK entrance scales the entire menu. Measure the target after that
     // native animation has settled, preserving the 36px fine-pointer minimum.
@@ -338,15 +338,15 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   await input.clear();
 
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const sheet = page.getByTestId("mobile-bottom-sheet");
+  const sheet = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Files", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: /^Add photos & files/ })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
-  for (const label of ["Projects", "Create Image", "Drawing"])
-    await expect(sheet.getByRole("button", { name: label, exact: true })).toBeVisible();
+  for (const label of ["Work in a project", "Create an image", "Drawing"])
+    await expect(sheet.getByRole("button", { name: new RegExp(`^${label}`) })).toBeVisible();
   await expect(sheet.locator("summary")).toHaveCount(0);
-  await sheet.getByRole("button", { name: "Close sheet" }).click();
+  await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();
 });

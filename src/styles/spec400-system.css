@@ -206,12 +206,15 @@ body .kova-assistant textarea.font-mono {
   }
 }
 
-/* The auth route shares the 400px form cap, overriding legacy card sizing. */
+/* Keep page gutters outside the password form so fields can use the full width. */
 body .kova-auth-page > main {
   box-sizing: border-box;
-  width: calc(100% - 32px);
+  width: calc(100% - 48px);
   max-width: 400px;
-  padding: 24px;
+  padding: clamp(16px, 3vh, 32px) 0 32px;
+  margin-top: 0;
+  border: 0;
+  background: transparent;
   border-radius: var(--kova-radius-panel);
 }
 

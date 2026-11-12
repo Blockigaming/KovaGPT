@@ -152,12 +152,8 @@ export async function startGoogleConnect(
   if (id) params.set("connectionId", connectionId(id));
   const suffix = `?${params}`;
   const { response, body } = await accountRequest(`/api/google/auth${suffix}`, {}, expectedUserId);
-  if (
-    response.status === 403 &&
-    connector === "gmail" &&
-    body?.error === "Gmail requires Kova Plus or Pro."
-  )
-    throw new Error(body.error);
+  if (response.status === 403 && connector === "gmail" && body?.error === "gmail_plan_required")
+    throw new Error("Gmail requires Kova Plus or Pro.");
   if (!response.ok || typeof body?.url !== "string")
     throw new Error(
       response.status === 503

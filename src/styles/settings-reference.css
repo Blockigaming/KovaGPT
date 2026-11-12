@@ -735,3 +735,20 @@
     min-width: 44px;
   }
 }
+
+.kova-settings-reference .kova-settings-search input {
+  border-radius: 999px;
+}
+
+.kova-settings-reference .kova-settings-search > svg {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kova-settings-reference .kova-settings-navigation-heading {
+  align-items: center;
+}
+
+.kova-settings-reference .kova-settings-nav-title h2 {
+  line-height: 1.2;
+}

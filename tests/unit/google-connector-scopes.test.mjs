@@ -96,6 +96,7 @@ test("actual auth endpoint validates connector before starting an OAuth attempt"
       "@tanstack/react-router": { createFileRoute: () => (config) => config },
       "@/lib/api-auth.server": {
         requireUser: async () => ({ userId: "owner", supabaseAdmin: {} }),
+        getCallerTier: async () => (paid ? "plus" : "free"),
       },
       "@/lib/google-oauth.server": {
         beginGoogleOAuth: async (...args) => {
@@ -103,7 +104,6 @@ test("actual auth endpoint validates connector before starting an OAuth attempt"
           return {};
         },
         buildGoogleAuthUrl: oauth.buildGoogleAuthUrl,
-        canUsePaidGoogleConnector: async () => paid,
       },
       "@/lib/google-rate-limit.server": { enforceGoogleRateLimit: async () => null },
       "@/lib/lockdown-policy.mjs": { enforceLockdownCapability: async () => null },

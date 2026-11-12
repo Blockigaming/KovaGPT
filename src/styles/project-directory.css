@@ -596,17 +596,10 @@
 
   .kova-app-shell[data-ui="modern"]
     .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
-    :is(.kova-project-create, .kova-project-templates) {
+    .kova-project-create {
     width: auto;
     min-width: 0;
     padding-inline: 12px;
-  }
-
-  .kova-app-shell[data-ui="modern"]
-    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
-    .kova-project-templates
-    > span {
-    display: inline;
   }
 
   .kova-project-directory .kova-project-directory-tools {
@@ -641,4 +634,57 @@
   width: 44px;
   min-width: 44px;
   min-height: 44px;
+}
+
+/* New project: stable form rhythm and usable phone sizing. */
+body .kova-project-create-dialog[data-kova-dialog-surface] {
+  width: min(520px, calc(100vw - 24px));
+  max-height: min(88dvh, 780px);
+  overflow-y: auto;
+  padding: clamp(20px, 3vw, 30px);
+  border: 0;
+  border-radius: 24px;
+}
+.kova-project-create-dialog [data-slot="dialog-header"] {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+.kova-project-create-form {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+}
+.kova-project-create-field {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+.kova-project-create-field input,
+.kova-project-create-field textarea {
+  width: 100%;
+  min-width: 0;
+  border-color: var(--border);
+  box-shadow: none;
+}
+.kova-project-create-form [data-project-appearance] {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 16px;
+}
+.kova-project-create-form [data-slot="dialog-footer"] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 520px) {
+  .kova-project-create-form [data-slot="dialog-footer"] button {
+    flex: 1 1 130px;
+  }
+}
+
+/* The grid owns the 8px label-to-input gap; remove the legacy label margin. */
+body [role="dialog"] form.kova-project-create-form .kova-project-create-field > div:first-child {
+  margin-bottom: 0;
 }

@@ -119,8 +119,9 @@ for (const theme of ["light", "dark"] as const) {
     await expect(directory).toHaveAttribute("data-project-view", "list");
     await expect(directory.locator(".kova-project-file:visible")).toHaveCount(3);
     await expandDesktopNavigation(page);
-    for (const name of ["New project", "Project templates"]) {
-      const button = page.getByRole("button", { name, exact: true });
+    await expect(directory.getByRole("button", { name: "Project templates" })).toHaveCount(0);
+    {
+      const button = directory.getByRole("button", { name: "New project", exact: true });
       await expect(button).toBeInViewport();
       const box = await button.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
