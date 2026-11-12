@@ -391,6 +391,7 @@ export function ComposerDrawingDialog({
       </Dialog>
       <AlertDialog open={open && discardOpen} onOpenChange={setDiscardOpen}>
         <AlertDialogContent
+          data-kova-notice-id={open && discardOpen ? "sketch_unsaved" : undefined}
           onCloseAutoFocus={(event) => {
             if (!openRef.current) event.preventDefault();
           }}

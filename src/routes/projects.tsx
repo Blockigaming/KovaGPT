@@ -1864,6 +1864,7 @@ function ProjectsPage() {
         </DialogContent>
       </Dialog>
       <ConfirmActionDialog
+        noticeId="confirm_project_delete"
         open={Boolean(deletingProject)}
         onOpenChange={(open) => !open && setDeletingProject(null)}
         title="Delete this project?"

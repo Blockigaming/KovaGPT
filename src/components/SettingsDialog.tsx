@@ -2769,6 +2769,11 @@ export function SettingsDialog({
         }}
       >
         <AlertDialogContent
+          data-kova-notice-id={
+            deletionDialogCurrent && !deletionDialogView.pending && !deletionDialogView.recoverable
+              ? "confirm_account_delete"
+              : undefined
+          }
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             const previous = deleteAccountReturnRef.current;

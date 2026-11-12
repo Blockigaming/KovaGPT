@@ -2,7 +2,7 @@
  * KovaGPT source notification coverage audit.
  *
  * The contract has three separate questions:
- *  1. Does this event have an actual code emitter / persisted server source?
+ *  1. Does this event have an actual code emitter, application-owned UI, or inbox mapping?
  *  2. Is there a backend-capable *conditional* route, such as a release campaign?
  *  3. Has an end-to-end scenario passed? (Never inferred from code presence.)
  *
@@ -11,6 +11,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { NOTIFICATION_IDS, NOTIFICATION_GROUPS } from "../src/lib/notification-catalog.mjs";
 import { verifiedEndToEndIds } from "../src/lib/notification-acceptance-evidence.mjs";
 
@@ -48,29 +49,119 @@ const origins = walk(join(root, "src")).filter(
 const index = new Map(
   NOTIFICATION_IDS.map((id) => [
     id,
-    { literal: new Set(), conditional: new Set(), persisted: new Set() },
+    { literal: new Set(), conditional: new Set(), native: new Set(), persisted: new Set() },
   ]),
 );
 const unknownDynamicEmitters = [];
-for (const path of origins) {
-  const code = readFileSync(path, "utf8");
-  const rel = relative(root, path);
-  // Capture the ID expression up to the first object field delimiter.
-  // Conditional expressions may contain multiple valid catalog IDs.
-  const emits = /publishKovaNotice\s*\(\s*\{[\s\S]{0,220}?\bid\s*:\s*([^,}\n]+(?:\n[^,}]+){0,5})/g;
-  for (const match of code.matchAll(emits)) {
-    const expression = match[1].trim();
-    const choices = [...expression.matchAll(/["']([a-z0-9_]+)["']/g)]
-      .map((m) => m[1])
-      .filter((id) => index.has(id));
-    if (!choices.length) {
-      unknownDynamicEmitters.push({ path: rel, expression: expression.slice(0, 100) });
-      continue;
-    }
-    const direct = /^["']([a-z0-9_]+)["']\s*$/.exec(expression);
-    for (const id of choices) index.get(id)[direct ? "literal" : "conditional"].add(rel);
+const chatPolicy = "src/lib/chat-notice-policy.mjs";
+
+function parseSource(path) {
+  return ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);
+}
+
+function visit(node, fn) {
+  fn(node);
+  ts.forEachChild(node, (child) => visit(child, fn));
+}
+
+function staticIds(node) {
+  if (!node) return [];
+  if (ts.isStringLiteralLike(node)) return [node.text];
+  if (ts.isConditionalExpression(node))
+    return [...staticIds(node.whenTrue), ...staticIds(node.whenFalse)];
+  if (ts.isParenthesizedExpression(node)) return staticIds(node.expression);
+  return [];
+}
+
+const chatFailureIds = new Set();
+visit(parseSource(join(root, chatPolicy)), (node) => {
+  if (ts.isReturnStatement(node)) {
+    for (const id of staticIds(node.expression)) chatFailureIds.add(id);
+  }
+});
+
+function localInitializer(identifier, statement) {
+  for (let scope = statement.parent; scope; scope = scope.parent) {
+    if (!ts.isBlock(scope)) continue;
+    const declarations = scope.statements
+      .filter((item) => item.end < statement.getStart() && ts.isVariableStatement(item))
+      .flatMap((item) => [...item.declarationList.declarations]);
+    const match = declarations.findLast(
+      (item) => ts.isIdentifier(item.name) && item.name.text === identifier,
+    );
+    if (match) return match.initializer;
+  }
+  return undefined;
+}
+
+function record(ids, kind, path) {
+  for (const id of ids) {
+    const row = index.get(id);
+    if (row) row[kind].add(path);
+    else unknownDynamicEmitters.push({ path, expression: id });
   }
 }
+
+for (const path of origins) {
+  const file = parseSource(path);
+  const rel = relative(root, path);
+  visit(file, (node) => {
+    if (ts.isJsxAttribute(node)) {
+      const name = node.name.getText(file);
+      const tag = node.parent.parent.tagName.getText(file);
+      if (
+        name !== "data-kova-notice-id" &&
+        !(name === "noticeId" && (tag === "ConfirmActionDialog" || tag === "ConfirmDialog"))
+      )
+        return;
+      const value = node.initializer;
+      record(
+        staticIds(value && ts.isJsxExpression(value) ? value.expression : value),
+        "native",
+        rel,
+      );
+      return;
+    }
+    if (!ts.isCallExpression(node) || node.expression.getText(file) !== "publishKovaNotice") return;
+    const payload = node.arguments[0];
+    const field =
+      payload &&
+      ts.isObjectLiteralExpression(payload) &&
+      payload.properties.find(
+        (item) => ts.isPropertyAssignment(item) && item.name.getText(file) === "id",
+      );
+    if (!field) {
+      unknownDynamicEmitters.push({ path: rel, expression: "Missing a static notice payload" });
+      return;
+    }
+    const value = field.initializer;
+    const expression = value.getText(file);
+    if (
+      (rel === "src/components/AnnouncementCampaignBridge.tsx" &&
+        expression === "campaign.eventId") ||
+      (rel === "src/components/PersistedNoticeBridge.tsx" && expression === "type")
+    )
+      return;
+    let ids = staticIds(value);
+    if (ts.isIdentifier(value)) {
+      const initializer = localInitializer(value.text, node);
+      if (
+        rel === "src/routes/index.tsx" &&
+        initializer &&
+        ts.isCallExpression(initializer) &&
+        initializer.expression.getText(file) === "chatFailureNoticeId"
+      )
+        ids = [...chatFailureIds];
+      else ids = staticIds(initializer);
+    }
+    if (!ids.length) {
+      unknownDynamicEmitters.push({ path: rel, expression: expression.slice(0, 100) });
+      return;
+    }
+    record(ids, ts.isStringLiteralLike(value) ? "literal" : "conditional", rel);
+  });
+}
+
 // The durable inbox has server-created notification types distinct from the
 // client event IDs. Count only explicit, reviewable mappings.
 const mapFile = join(root, "src/lib/persisted-notification-policy.mjs");
@@ -88,15 +179,20 @@ const rows = NOTIFICATION_IDS.map((id) => {
   const sources = index.get(id);
   const literalEmitters = [...sources.literal];
   const conditionalEmitters = [...sources.conditional];
+  const nativeSurfaces = [...sources.native];
   const persistedEmitters = [...sources.persisted];
   const group = Object.entries(NOTIFICATION_GROUPS).find(([, items]) => items.includes(id))?.[0];
   const sourceConnected =
-    literalEmitters.length > 0 || conditionalEmitters.length > 0 || persistedEmitters.length > 0;
+    literalEmitters.length > 0 ||
+    conditionalEmitters.length > 0 ||
+    nativeSurfaces.length > 0 ||
+    persistedEmitters.length > 0;
   return {
     id,
     group,
     literalEmitters,
     conditionalEmitters,
+    nativeSurfaces,
     persistedEmitters,
     sourceConnected,
     campaignCapable: group === "announcements" && campaignCapable,
@@ -108,6 +204,7 @@ const summary = {
   total: rows.length,
   literalEmitted: rows.filter((row) => row.literalEmitters.length).length,
   conditionalEmitted: rows.filter((row) => row.conditionalEmitters.length).length,
+  nativeSurfaces: rows.filter((row) => row.nativeSurfaces.length).length,
   persistedMapped: rows.filter((row) => row.persistedEmitters.length).length,
   sourceConnected: rows.filter((row) => row.sourceConnected).length,
   campaignCapable: rows.filter((row) => row.campaignCapable).length,

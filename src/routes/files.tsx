@@ -237,6 +237,7 @@ function FilesPage() {
               <section
                 className="rounded-2xl border p-10 text-center"
                 aria-labelledby="files-empty-title"
+                data-kova-notice-id={query || duplicates ? "no_matching_files" : undefined}
               >
                 <HardDrive className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
                 <h2 id="files-empty-title" className="mt-3 font-semibold">

@@ -395,6 +395,7 @@ function ImagesPage() {
   const [customHeight, setCustomHeight] = useState("864");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [delayedGeneration, setDelayedGeneration] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [resultPrompt, setResultPrompt] = useState<string>("");
@@ -455,6 +456,18 @@ function ImagesPage() {
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
+  const isGenerationDelayed = loading && delayedGeneration === generationRef.current;
+
+  useEffect(() => {
+    if (!loading) return;
+    const generation = generationRef.current;
+    const controller = generationControllerRef.current;
+    const timeout = window.setTimeout(() => {
+      if (generation === generationRef.current && controller && !controller.signal.aborted)
+        setDelayedGeneration(generation);
+    }, 20_000);
+    return () => window.clearTimeout(timeout);
+  }, [loading, userKey]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
   const generationStatusRef = useRef<HTMLDivElement>(null);
@@ -1184,6 +1197,7 @@ function ImagesPage() {
                     tabIndex={-1}
                     role="status"
                     aria-labelledby="image-generating-label"
+                    data-kova-notice-id={isGenerationDelayed ? "image_delayed" : "image_generating"}
                     className={cn(
                       "mx-auto flex max-w-md items-center justify-center gap-3 rounded-xl border border-border bg-muted text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4",
                       result ? "mb-4 min-h-16 p-4" : "aspect-square",
@@ -1194,7 +1208,7 @@ function ImagesPage() {
                       aria-hidden="true"
                     />
                     <span id="image-generating-label" className="text-sm">
-                      Generating image…
+                      {isGenerationDelayed ? "Still waiting for your image…" : "Generating image…"}
                     </span>
                   </div>
                 )}

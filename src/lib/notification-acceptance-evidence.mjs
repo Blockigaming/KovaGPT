@@ -8,39 +8,52 @@ export const NOTIFICATION_ACCEPTANCE_PROJECTS = Object.freeze([
   "phone-390x844",
 ]);
 
+// These specs drive actual browser controls or browser state. The fixture-only
+// renderer spec intentionally cannot qualify a source-triggered event.
+const ACCEPTANCE_FILES = new Set([
+  "notification-real-triggers.spec.ts",
+  "recovery-crud.spec.ts",
+  "composer-requested-layout.spec.ts",
+  "core-app-review.spec.ts",
+]);
+
 export function verifiedEndToEndIds(
   report,
   catalogIds,
   requiredProjects = NOTIFICATION_ACCEPTANCE_PROJECTS,
 ) {
   const validIds = new Set(catalogIds);
-  const passedById = new Map();
+  const required = new Set(requiredProjects);
+  const cases = new Map();
   const visit = (suites) => {
     for (const suite of Array.isArray(suites) ? suites : []) {
       for (const spec of Array.isArray(suite.specs) ? suite.specs : []) {
         const file = String(spec.file ?? suite.file ?? "").replaceAll("\\", "/");
-        if (file.split("/").at(-1) !== "notification-real-triggers.spec.ts") continue;
-        const ids = [...String(spec.title ?? "").matchAll(/\[notice:([a-z0-9_]+)\]/g)]
+        if (!ACCEPTANCE_FILES.has(file.split("/").at(-1))) continue;
+        const title = String(spec.title ?? "");
+        const ids = [...title.matchAll(/\[notice:([a-z0-9_]+)\]/g)]
           .map((match) => match[1])
           .filter((id) => validIds.has(id));
         if (!ids.length) continue;
+        const key = JSON.stringify([file, spec.line, spec.column, title]);
+        if (!cases.has(key)) cases.set(key, { ids, projects: new Map() });
+        const { projects } = cases.get(key);
         for (const run of Array.isArray(spec.tests) ? spec.tests : []) {
+          if (!required.has(run.projectName)) continue;
           const results = Array.isArray(run.results) ? run.results : [];
-          if (run.status !== "expected" || results.at(-1)?.status !== "passed") continue;
-          if (!requiredProjects.includes(run.projectName)) continue;
-          for (const id of ids) {
-            if (!passedById.has(id)) passedById.set(id, new Set());
-            passedById.get(id).add(run.projectName);
-          }
+          const passed = run.status === "expected" && results.at(-1)?.status === "passed";
+          projects.set(run.projectName, projects.get(run.projectName) !== false && passed);
         }
       }
       visit(suite.suites);
     }
   };
   visit(report?.suites);
-  return new Set(
-    [...passedById]
-      .filter(([, projects]) => requiredProjects.every((project) => projects.has(project)))
-      .map(([id]) => id),
-  );
+  const passedIds = new Set();
+  const incompleteIds = new Set();
+  for (const { ids, projects } of cases.values()) {
+    const complete = required.size > 0 && [...required].every((project) => projects.get(project));
+    for (const id of ids) (complete ? passedIds : incompleteIds).add(id);
+  }
+  return new Set([...passedIds].filter((id) => !incompleteIds.has(id)));
 }

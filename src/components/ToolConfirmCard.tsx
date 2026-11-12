@@ -192,6 +192,7 @@ export function ToolConfirmCard({
   return (
     <div
       aria-busy={!!busy}
+      data-kova-notice-id={confirm.status === "pending" ? "external_approval" : undefined}
       className="my-3 rounded-2xl border border-border bg-accent/30 p-4 text-sm"
     >
       <div className="flex items-center gap-2 font-medium">

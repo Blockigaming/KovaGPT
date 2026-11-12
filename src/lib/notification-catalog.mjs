@@ -262,6 +262,7 @@ const surfaces = {
   popover: ["try_feature", "check_this_out", "quick_tip", "did_you_know"],
   banner: ["app_update", "feature_changing", "feature_retired"],
   modal: [
+    "sketch_unsaved",
     "confirm_file_delete",
     "confirm_project_delete",
     "confirm_leave_project",
@@ -297,6 +298,8 @@ const surfaces = {
     "task_activation_failed",
     "no_audio",
     "member_removed",
+    "external_approval",
+    "no_matching_files",
     "request_canceled",
   ],
   status: [
@@ -323,6 +326,9 @@ const surfaces = {
     "image_copied",
     "image_save_failed",
     "library_load_failed",
+    "project_file_limit",
+    "storage_full",
+    "unsupported_image",
     "file_inaccessible",
     "save_failed",
     "history_failed",

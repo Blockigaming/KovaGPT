@@ -64,3 +64,23 @@ test("no report, malformed results, or unrecognized project is never evidence", 
     0,
   );
 });
+
+test("one scenario must pass on both devices, including when the report splits its results", () => {
+  const file = "/repo/tests/e2e/recovery-crud.spec.ts";
+  const title = "[notice:confirm_file_delete] real Library delete confirmation";
+  const desktop = spec(file, title, [run("desktop-1440x900")]);
+  const phone = spec(file, title, [run("phone-390x844")]);
+  const ids = ["confirm_file_delete"];
+  assert.deepEqual([...verifiedEndToEndIds(report([desktop, phone]), ids)], ids);
+  assert.equal(
+    verifiedEndToEndIds(report([desktop, { ...phone, title: title + " other path" }]), ids).size,
+    0,
+  );
+  assert.equal(
+    verifiedEndToEndIds(
+      report([desktop, phone, { ...phone, tests: [run("phone-390x844", "failed")] }]),
+      ids,
+    ).size,
+    0,
+  );
+});

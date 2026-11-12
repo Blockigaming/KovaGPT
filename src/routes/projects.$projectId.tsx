@@ -1096,6 +1096,7 @@ function ProjectDetailPage() {
         }}
       />
       <ConfirmDialog
+        noticeId="confirm_project_delete"
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`Delete “${project.name}”?`}
@@ -1128,6 +1129,7 @@ function ProjectDetailPage() {
           event.preventDefault();
           restoreDialogFocus(projectActionTriggerRef.current, projectActionUrlRef.current);
         }}
+        noticeId="confirm_leave_project"
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
         title={`Leave “${project.name}”?`}
@@ -2025,7 +2027,7 @@ function FilesTab({
     }
   }
 
-  async function responseError(response: Response): Promise<string> {
+  async function responseError(response: Response) {
     const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
     const code = typeof payload?.error === "string" ? payload.error : "";
     const messages: Record<string, string> = {
@@ -2053,7 +2055,7 @@ function FilesTab({
       project_file_finalize_unavailable:
         "The upload is stored safely but could not be published yet. Retry shortly.",
     };
-    return messages[code] ?? "The file could not be uploaded. Please retry.";
+    return { code, message: messages[code] ?? "The file could not be uploaded. Please retry." };
   }
 
   async function handleFiles(files: FileList | null) {
@@ -2084,7 +2086,18 @@ function FilesTab({
             },
           });
           if (!isCurrent()) return;
-          if (!response.ok) throw new Error(await responseError(response));
+          if (!response.ok) {
+            const { code, message } = await responseError(response);
+            if (!isCurrent()) return;
+            if (response.status === 409 && code === "project_file_limit_reached")
+              publishKovaNotice({ id: "project_file_limit", title: message });
+            else if (response.status === 413 && code === "project_storage_limit_reached")
+              publishKovaNotice({ id: "storage_full", title: message });
+            else if (response.status === 415 && code === "image_signature_required")
+              publishKovaNotice({ id: "unsupported_image", title: message });
+            else toast.error(message);
+            continue;
+          }
           toast.success(`${file.name} uploaded`);
         } catch (error) {
           if (!isCurrent()) return;
@@ -2320,6 +2333,7 @@ function FilesTab({
       )}
 
       <ConfirmDialog
+        noticeId="confirm_file_delete"
         open={!!confirmId}
         onOpenChange={(v) => !v && setConfirmId(null)}
         title={`Delete this ${kind}?`}
@@ -3699,6 +3713,7 @@ function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  noticeId,
   destructive,
   onConfirm,
   error,
@@ -3709,6 +3724,7 @@ function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel: string;
+  noticeId?: string;
   destructive?: boolean;
   onConfirm: () => Promise<void> | void;
   error?: string | null;
@@ -3721,7 +3737,10 @@ function ConfirmDialog({
   }, [open, error]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
+      <DialogContent
+        data-kova-notice-id={open ? noticeId : undefined}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

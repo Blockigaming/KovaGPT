@@ -28,3 +28,26 @@ test("critical real operations stay source-bound rather than catalog-only", () =
     assert.ok(row?.sourceConnected, id + " has no source emitter");
   }
 });
+
+test("source-owned notice surfaces and typed dynamic emitters retain their actual source", () => {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  for (const id of [
+    "confirm_project_delete",
+    "confirm_chat_delete",
+    "confirm_file_delete",
+    "confirm_account_delete",
+    "confirm_leave_project",
+    "disconnect_confirm",
+    "join_workspace_offer",
+    "sketch_unsaved",
+    "no_matching_files",
+    "external_approval",
+  ]) {
+    assert.ok(byId.get(id)?.nativeSurfaces.length, id);
+    assert.equal(byId.get(id).verifiedEndToEnd, false);
+  }
+  for (const id of ["voice_limit", "analysis_started", "message_too_long", "conversation_full"]) {
+    assert.ok(byId.get(id)?.conditionalEmitters.length, id);
+  }
+  assert.equal(summary.unclassifiedDynamicEmitters, 0);
+});

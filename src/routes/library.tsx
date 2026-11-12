@@ -2663,6 +2663,18 @@ function LibraryPage() {
           ) : null}
         </Dialog>
         <ConfirmActionDialog
+          noticeId={
+            visiblePendingDelete?.items.every((item) => item.id.startsWith("chat:"))
+              ? "confirm_chat_delete"
+              : visiblePendingDelete?.items.every(
+                    (item) =>
+                      item.item_type === "upload" ||
+                      item.item_type === "document" ||
+                      item.item_type === "image",
+                  )
+                ? "confirm_file_delete"
+                : undefined
+          }
           open={deleteDialogOpen && visiblePendingDelete !== null}
           onOpenChange={setDeleteDialogOpen}
           title={deleteSummary.title}

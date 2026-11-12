@@ -148,3 +148,22 @@ test("[contract:ineligible] absent backend offers and campaigns stay hidden", as
   await expect(page.locator('[data-free-introductory-offer="true"]')).toHaveCount(0);
   await expect(page.locator(".kova-notice-panel[data-group='announcements']")).toHaveCount(0);
 });
+
+test("[notice:no_matching_files] filters show no matching files only after a search", async ({
+  page,
+}, info) => {
+  await page.goto("/files");
+  await waitForKovaHydration(page);
+  const search = page.getByRole("textbox", { name: "Search files" });
+  const emptyResult = page.locator('[data-kova-notice-id="no_matching_files"]');
+  await expect(search).toBeVisible();
+  await expect(emptyResult).toHaveCount(0);
+  await search.fill("unmatched review filename");
+  await expect(emptyResult.getByRole("heading", { name: "No matching files" })).toBeVisible();
+  await info.attach("file-search-no-results", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+  await search.clear();
+  await expect(emptyResult).toHaveCount(0);
+});

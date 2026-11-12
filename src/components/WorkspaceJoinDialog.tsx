@@ -39,7 +39,10 @@ export function WorkspaceJoinDialog({
         }
       }}
     >
-      <DialogContent className="max-w-[460px] gap-0 rounded-[22px] border border-border bg-popover p-6 text-popover-foreground max-sm:!bottom-0 max-sm:!top-auto max-sm:!left-0 max-sm:!w-full max-sm:!max-w-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-[26px] max-sm:!px-5 max-sm:!pb-[calc(20px+env(safe-area-inset-bottom))]">
+      <DialogContent
+        data-kova-notice-id={open ? "join_workspace_offer" : undefined}
+        className="max-w-[460px] gap-0 rounded-[22px] border border-border bg-popover p-6 text-popover-foreground max-sm:!bottom-0 max-sm:!top-auto max-sm:!left-0 max-sm:!w-full max-sm:!max-w-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!rounded-b-none max-sm:!rounded-t-[26px] max-sm:!px-5 max-sm:!pb-[calc(20px+env(safe-area-inset-bottom))]"
+      >
         <div
           className="mb-5 grid h-11 w-11 place-items-center rounded-2xl bg-secondary"
           aria-hidden="true"

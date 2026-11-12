@@ -115,7 +115,7 @@ test("requested: connected plugin rows come only from current account status", a
   ).toHaveCount(0);
 });
 
-test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attachment", async ({
+test("[notice:sketch_unsaved] drawing supports pen, undo, redo, eraser, discard and PNG attachment", async ({
   page,
 }, info) => {
   await start(page);
@@ -171,7 +171,7 @@ test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attac
   );
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   const discard = page.getByRole("alertdialog", { name: "Discard changes?", exact: true });
-  await expect(discard).toBeVisible();
+  await expect(discard).toHaveAttribute("data-kova-notice-id", "sketch_unsaved");
   await discard.getByRole("button", { name: "Keep editing", exact: true }).click();
   expect(await png()).toBe(drawn);
   await page.screenshot({ path: info.outputPath("requested-drawing.png"), animations: "disabled" });

@@ -303,6 +303,7 @@ export function ConnectedAccountManager({
         </div>
       )}
       <ConfirmActionDialog
+        noticeId="disconnect_confirm"
         open={disconnect !== null}
         onOpenChange={(open) => !busy && !open && setDisconnect(null)}
         title="Disconnect account?"
