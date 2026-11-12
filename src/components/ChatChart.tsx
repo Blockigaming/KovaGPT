@@ -77,6 +77,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   return (
     <figure
       ref={figureRef}
+      data-kova-notice-id="chart_created"
       className="my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
       aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
     >

@@ -1123,7 +1123,7 @@ function LibraryPage() {
             }
           : previous,
       );
-      toast.success("Share revoked.");
+      publishKovaNotice({ id: "access_revoked", title: "Share revoked.", confirmed: true });
     } catch {
       if (isCurrent()) toast.error("Could not revoke this shared snapshot. Please try again.");
     } finally {

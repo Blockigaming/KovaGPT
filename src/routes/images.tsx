@@ -396,7 +396,11 @@ function ImagesPage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [delayedGeneration, setDelayedGeneration] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [generationError, setError] = useState<{
+    message: string;
+    referenceMissing?: boolean;
+  } | null>(null);
+  const error = generationError?.message;
   const [result, setResult] = useState<string | null>(null);
   const [resultPrompt, setResultPrompt] = useState<string>("");
   const [loginOpen, setLoginOpen] = useState(false);
@@ -837,9 +841,10 @@ function ImagesPage() {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
     if (aspectRatio === "custom" && !validCustomImageSize(`${customWidth}x${customHeight}`)) {
-      setError(
-        "Enter valid custom dimensions: multiples of 16, up to 3840px per edge, 655,360–8,294,400 pixels, and a ratio between 1:3 and 3:1.",
-      );
+      setError({
+        message:
+          "Enter valid custom dimensions: multiples of 16, up to 3840px per edge, 655,360–8,294,400 pixels, and a ratio between 1:3 and 3:1.",
+      });
       return;
     }
     if (!isSignedIn || !userKey) {
@@ -857,6 +862,7 @@ function ImagesPage() {
     setError(null);
     setLoading(true);
     let quotaNoticeShown = false;
+    let referenceMissing = false;
     publishKovaNotice({
       id: editSelection ? "image_edit_started" : "image_started",
       title: editSelection ? "Image edit requested" : "Image generation requested",
@@ -882,13 +888,21 @@ function ImagesPage() {
       if (generation !== generationRef.current || controller.signal.aborted) return;
       if (!res.ok) {
         const msg = typeof data.error === "string" ? data.error : "Failed to generate image";
+        referenceMissing =
+          Boolean(editSelection) && res.status === 409 && data.code === "image_reference_missing";
         if (res.status === 429 && /limit/i.test(msg)) {
           setLimitMessage(msg);
           setLimitOpen(true);
           quotaNoticeShown = true;
           publishKovaNotice({ id: "image_limit", title: "Image limit reached", message: msg });
         }
-        throw new Error(res.status === 503 ? IMAGE_GENERATION_UNAVAILABLE : msg);
+        throw new Error(
+          referenceMissing
+            ? "An image reference is unavailable. Choose an image from your Library and try again."
+            : res.status === 503
+              ? IMAGE_GENERATION_UNAVAILABLE
+              : msg,
+        );
       }
       const imageUrl = safeImageUrl(data.imageUrl);
       if (!imageUrl) {
@@ -910,8 +924,8 @@ function ImagesPage() {
       const message = e instanceof Error ? e.message : "Failed to generate image";
       const reveal = resultRevealRef.current;
       if (reveal?.generation === generation) reveal.error = message;
-      setError(message);
-      if (!quotaNoticeShown)
+      setError({ message, referenceMissing });
+      if (!quotaNoticeShown && !referenceMissing)
         publishKovaNotice({
           id: editSelection ? "image_edit_failed" : "image_failed",
           title: "Image generation failed",
@@ -1047,12 +1061,16 @@ function ImagesPage() {
             {error && (
               <div
                 id="image-generation-error"
+                data-kova-notice-id={
+                  generationError?.referenceMissing ? "reference_missing" : undefined
+                }
                 role="alert"
                 className="mt-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm leading-relaxed text-destructive"
               >
                 {error === IMAGE_GENERATION_UNAVAILABLE
                   ? IMAGE_GENERATION_UNAVAILABLE
-                  : error.startsWith("Enter valid custom dimensions:")
+                  : generationError?.referenceMissing ||
+                      error.startsWith("Enter valid custom dimensions:")
                     ? error
                     : "Image generation failed. Your prompt is kept here so you can try again."}
               </div>

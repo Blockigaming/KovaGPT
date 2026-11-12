@@ -6,6 +6,7 @@ import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { activeScheduledExecutionReadiness } from "@/lib/scheduled-execution-readiness.server";
 import {
+  TASK_CAPACITY_MESSAGE,
   parseTaskPayload,
   type TaskContextRef,
   type TaskTrigger,
@@ -56,6 +57,8 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error("That recipient is unavailable. Choose an existing verified account.");
   if (code === "40001")
     return new Error("This task changed. Refresh it before applying this action.");
+  if (code === "54000" && (message === "task_capacity" || message === "task_total_capacity"))
+    return new Error(TASK_CAPACITY_MESSAGE);
   if (code === "54000")
     return new Error(
       "The task or pending invitation limit was reached. Remove an unused item and retry.",

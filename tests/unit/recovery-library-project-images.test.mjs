@@ -42,8 +42,8 @@ function dialogContents(source) {
   return contents;
 }
 
-function imageFixture(status, editDraftDuringRequest = false) {
-  const state = { prompt: "", error: null, loading: false, history: [] };
+function imageFixture(status, { editDraftDuringRequest = false, referenceCode } = {}) {
+  const state = { prompt: "", error: null, loading: false, history: [], notices: [] };
   const source = images.slice(
     images.indexOf("  async function generate(p:"),
     images.indexOf("  const applyPreset"),
@@ -61,7 +61,7 @@ function imageFixture(status, editDraftDuringRequest = false) {
     captureResultReveal() {},
     clearResultReveal() {},
     aspectRatio: "1:1",
-    editSelection: null,
+    editSelection: referenceCode ? { source: { id: "owned-image" } } : null,
     IMAGE_GENERATION_UNAVAILABLE:
       "Image generation is temporarily unavailable. Your prompt is kept here so you can try again later.",
     setPrompt(value) {
@@ -75,6 +75,7 @@ function imageFixture(status, editDraftDuringRequest = false) {
     },
     publishKovaNotice: (notice) => {
       assert.ok(notice && typeof notice.id === "string");
+      state.notices.push(notice.id);
     },
     setLoginOpen() {},
     setLimitOpen() {},
@@ -92,7 +93,7 @@ function imageFixture(status, editDraftDuringRequest = false) {
         body:
           status === 200
             ? { imageUrl: "data:image/png;base64,fixture" }
-            : { error: "Provider not configured" },
+            : { error: "Provider not configured", code: referenceCode },
       };
     },
   };
@@ -106,17 +107,32 @@ test("unavailable image generation keeps the submitted prompt and reports availa
   const { state, generate } = imageFixture(503);
   await generate("A watercolor landscape");
   assert.equal(state.prompt, "A watercolor landscape");
-  assert.match(state.error, /temporarily unavailable.*prompt is kept/);
+  assert.match(state.error.message, /temporarily unavailable.*prompt is kept/);
+  assert.equal(state.error.referenceMissing, false);
   assert.equal(state.loading, false);
   assert.deepEqual(state.history, []);
   assert.match(images, /error === IMAGE_GENERATION_UNAVAILABLE\s*\? IMAGE_GENERATION_UNAVAILABLE/);
 });
 
 test("successful image generation does not clear a newer prompt draft", async () => {
-  const { state, generate } = imageFixture(200, true);
+  const { state, generate } = imageFixture(200, { editDraftDuringRequest: true });
   await generate("First prompt");
   assert.equal(state.prompt, "My next prompt");
   assert.equal(state.history.length, 1);
+});
+
+test("an unavailable image reference preserves the edit prompt and gives one specific recovery", async () => {
+  const { state, generate } = imageFixture(409, { referenceCode: "image_reference_missing" });
+  await generate("Add a blue frame");
+  assert.equal(state.prompt, "Add a blue frame");
+  assert.equal(state.error.referenceMissing, true);
+  assert.match(state.error.message, /Choose an image from your Library/);
+  assert.deepEqual(state.notices, ["image_edit_started"]);
+
+  const other = imageFixture(409, { referenceCode: "unknown" });
+  await other.generate("Add a blue frame");
+  assert.equal(other.state.error.referenceMissing, false);
+  assert.deepEqual(other.state.notices, ["image_edit_started", "image_edit_failed"]);
 });
 
 test("Library shared preview and item/version inspectors keep bounded, padded scroll surfaces", () => {

@@ -294,6 +294,13 @@ export function HelpSupportForm() {
       id="support-form"
       className="mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16"
       aria-labelledby="support-heading"
+      data-kova-notice-id={
+        topic === "Bug report"
+          ? "report_problem"
+          : topic === "Feature request"
+            ? "feature_feedback"
+            : undefined
+      }
     >
       <div className="mb-7 text-center">
         <h2 id="support-heading" className="text-2xl font-semibold sm:text-3xl">
@@ -371,7 +378,11 @@ export function HelpSupportForm() {
               ]}
             />
           </div>
-          <div>
+          <div
+            data-kova-notice-id={
+              topic === "Bug report" || topic === "Feature request" ? "feedback_details" : undefined
+            }
+          >
             <Label htmlFor="support-message">
               Message{" "}
               <span aria-hidden="true" className="text-destructive">

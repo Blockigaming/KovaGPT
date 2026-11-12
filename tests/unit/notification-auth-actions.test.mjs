@@ -7,7 +7,7 @@ test("authentication notices use actionable responsive sheets, not inert inline 
   for (const id of ["sign_in_required", "session_expired"]) {
     assert.equal(notificationDefinition(id)?.surface, "sheet");
   }
-  const host = readFileSync("src/components/KovaNotificationSurface.tsx", "utf8");
+  const host = readFileSync("src/components/KovaNotificationPanel.tsx", "utf8");
   assert.match(host, /useClerkSafe\(\)/);
   assert.match(host, /authenticationNeeded \? openSignIn/);
   assert.match(host, /await primaryAction\(\)/);

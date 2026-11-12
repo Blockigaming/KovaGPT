@@ -1229,6 +1229,7 @@ export function ComposerVoiceDialog({
                 <SelectValue placeholder="Choose a voice" />
               </SelectTrigger>
               <SelectContent
+                data-kova-notice-id="voice_select"
                 className="max-h-64"
                 onCloseAutoFocus={(event) => {
                   if (closing.current) event.preventDefault();

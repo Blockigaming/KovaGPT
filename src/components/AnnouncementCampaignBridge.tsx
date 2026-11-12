@@ -51,7 +51,7 @@ export function AnnouncementCampaignBridge({ ownerId }: { ownerId: string | null
                     // Persist dismissal first. Navigation must not cancel the
                     // only server request intended to prevent repeated prompts.
                     await acknowledge();
-                    window.location.assign(actionUrl);
+                    if (!cancelled) window.location.assign(actionUrl);
                   },
                 }
               : {}),

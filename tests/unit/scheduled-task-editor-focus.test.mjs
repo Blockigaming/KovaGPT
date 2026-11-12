@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as timeFormat from "../../src/lib/time-format.ts";
-import { parseTaskPayload } from "../../src/lib/scheduled-task-policy.mjs";
+import { parseTaskPayload, TASK_CAPACITY_MESSAGE } from "../../src/lib/scheduled-task-policy.mjs";
 import { loadUiModule, elements, text, settle, deferred } from "../helpers/ui-state-harness.mjs";
 
 // Simulated ref commits exercise focus lifecycle without making real service calls.
@@ -169,6 +169,7 @@ function fixture({
       },
       "@/components/ui/searchable-picker": { SearchablePicker: "searchable-picker" },
       "@/lib/scheduled-tasks.functions": services,
+      "@/lib/scheduled-task-policy.mjs": { TASK_CAPACITY_MESSAGE },
       "@/lib/scheduled-task-draft-validation": loadUiModule(
         "src/lib/scheduled-task-draft-validation.ts",
         { "@/lib/scheduled-task-policy.mjs": { parseTaskPayload } },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
@@ -9,13 +9,21 @@ import {
 } from "@/lib/workspace-join.functions";
 
 /** Only server-confirmed, verified-domain matches appear in Settings. */
-export function WorkspaceDiscoverySettings() {
+export function WorkspaceDiscoverySettings({ ownerId }: { ownerId: string }) {
   const [workspaces, setWorkspaces] = useState<AvailableWorkspace[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const operation = useRef({ active: true, pending: false });
+  useLayoutEffect(() => {
+    const scope = operation.current;
+    scope.active = true;
+    return () => {
+      scope.active = false;
+    };
+  }, []);
   useEffect(() => {
     let cancelled = false;
-    void findAvailableWorkspaces()
+    void findAvailableWorkspaces({ data: { expectedUserId: ownerId } })
       .then((matches) => {
         if (!cancelled) setWorkspaces(matches);
       })
@@ -25,7 +33,7 @@ export function WorkspaceDiscoverySettings() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ownerId]);
   if (!workspaces.length) return null;
   return (
     <section
@@ -61,7 +69,9 @@ export function WorkspaceDiscoverySettings() {
                   ? "Request pending"
                   : approved
                     ? "Approved — awaiting invitation"
-                    : "Not a member"}
+                    : workspace.request_status === "denied"
+                      ? "A previous request was denied"
+                      : "Not a member"}
               </p>
             </div>
             <Button
@@ -69,27 +79,33 @@ export function WorkspaceDiscoverySettings() {
               className="min-h-11 rounded-full px-4 text-sm"
               disabled={busy !== null || pending || approved}
               onClick={async () => {
+                const scope = operation.current;
+                if (!scope.active || scope.pending) return;
+                scope.pending = true;
                 setError("");
                 setBusy(workspace.team_id);
                 try {
                   const result = await submitWorkspaceJoinRequest({
-                    data: { teamId: workspace.team_id },
+                    data: { teamId: workspace.team_id, expectedUserId: ownerId },
                   });
-                  if (result.status !== "pending") throw new Error("Request not confirmed");
+                  if (!scope.active) return;
                   setWorkspaces((current) =>
                     current.map((item) =>
                       item.team_id === workspace.team_id
-                        ? { ...item, request_status: "pending" }
+                        ? { ...item, request_status: result.status }
                         : item,
                     ),
                   );
+                  if (result.status !== "pending") return;
                   publishKovaNotice({
                     id: "workspace_join_requested",
                     title: "Workspace request submitted",
                     message: "An administrator can review the request in team settings.",
                     confirmed: true,
+                    key: "workspace-join:" + result.id,
                   });
                 } catch {
+                  if (!scope.active) return;
                   setError(
                     "The request could not be confirmed. Review your connection and try again.",
                   );
@@ -98,7 +114,8 @@ export function WorkspaceDiscoverySettings() {
                     title: "Workspace request could not be confirmed",
                   });
                 } finally {
-                  setBusy(null);
+                  scope.pending = false;
+                  if (scope.active) setBusy(null);
                 }
               }}
             >

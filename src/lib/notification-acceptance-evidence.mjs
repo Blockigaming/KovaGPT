@@ -1,11 +1,12 @@
 /**
  * A source emitter is not a passed end-to-end test.
  * Only successful Playwright results from real-trigger browser scenarios on
- * both supported viewport projects may certify an event here.
+ * desktop, phone, and short landscape may certify an event here.
  */
 export const NOTIFICATION_ACCEPTANCE_PROJECTS = Object.freeze([
   "desktop-1440x900",
   "phone-390x844",
+  "phone-landscape-844x390",
 ]);
 
 // These specs drive actual browser controls or browser state. The fixture-only

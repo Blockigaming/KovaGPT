@@ -13,7 +13,7 @@ const run = (projectName, status = "passed") => ({
 const spec = (file, title, tests) => ({ file, title, tests });
 const report = (specs) => ({ suites: [{ title: "notification", specs }] });
 
-test("a notification is certified only after actual desktop and phone browser passes", () => {
+test("a notification requires desktop, phone and short-landscape browser passes", () => {
   const fixture = report([
     spec(
       "/repo/tests/e2e/notification-real-triggers.spec.ts",
@@ -65,20 +65,25 @@ test("no report, malformed results, or unrecognized project is never evidence", 
   );
 });
 
-test("one scenario must pass on both devices, including when the report splits its results", () => {
+test("the same scenario must pass on every required viewport, including across split reports", () => {
   const file = "/repo/tests/e2e/recovery-crud.spec.ts";
   const title = "[notice:confirm_file_delete] real Library delete confirmation";
   const desktop = spec(file, title, [run("desktop-1440x900")]);
   const phone = spec(file, title, [run("phone-390x844")]);
+  const landscape = spec(file, title, [run("phone-landscape-844x390")]);
   const ids = ["confirm_file_delete"];
-  assert.deepEqual([...verifiedEndToEndIds(report([desktop, phone]), ids)], ids);
+  assert.equal(verifiedEndToEndIds(report([desktop, phone]), ids).size, 0);
+  assert.deepEqual([...verifiedEndToEndIds(report([desktop, phone, landscape]), ids)], ids);
   assert.equal(
-    verifiedEndToEndIds(report([desktop, { ...phone, title: title + " other path" }]), ids).size,
+    verifiedEndToEndIds(
+      report([desktop, landscape, { ...phone, title: title + " other path" }]),
+      ids,
+    ).size,
     0,
   );
   assert.equal(
     verifiedEndToEndIds(
-      report([desktop, phone, { ...phone, tests: [run("phone-390x844", "failed")] }]),
+      report([desktop, phone, landscape, { ...phone, tests: [run("phone-390x844", "failed")] }]),
       ids,
     ).size,
     0,

@@ -7,6 +7,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
 import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
+import {
+  chatFailurePresentation,
+  publishRequestedChatTool,
+} from "../../src/lib/chat-sse-client.mjs";
 import { notificationDeliveryStub } from "../helpers/notification-test-double.mjs";
 
 const parse = (path) =>
@@ -74,6 +78,8 @@ globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
   chatFailureNoticeId,
+  chatFailurePresentation,
+  publishRequestedChatTool,
   notificationDeliveryStub,
   React,
   // This reused send fixture does not render controls; keep its transparent

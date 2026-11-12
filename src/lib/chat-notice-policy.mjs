@@ -19,6 +19,7 @@ export function chatFailureNoticeId(error, { signedIn = false, networkFailure = 
   if (code === "too_many_messages") return "conversation_full";
   if (code === "file_upload_limit") return "upload_limit";
   if (code === "image_generation_limit") return "image_limit";
+  if (code === "web_search_no_results") return "search_no_results";
   if (code === "web_search_unavailable") return "search_failed";
   if (code === "hosted_tools_unavailable") return "source_unavailable";
   if (code === "message_quota_unavailable") return "source_unavailable";

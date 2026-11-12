@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Users } from "lucide-react";
 import {
   Dialog,
@@ -12,21 +12,32 @@ import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import {
   submitWorkspaceJoinRequest,
   type AvailableWorkspace,
+  type JoinRequestStatus,
 } from "@/lib/workspace-join.functions";
 
 export function WorkspaceJoinDialog({
+  ownerId,
   workspaces,
   open,
   onClose,
   onRequested,
 }: {
+  ownerId: string;
   workspaces: AvailableWorkspace[];
   open: boolean;
   onClose: () => void;
-  onRequested: (teamId: string) => void;
+  onRequested: (teamId: string, status: JoinRequestStatus) => void;
 }) {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const operation = useRef({ active: true, pending: false });
+  useLayoutEffect(() => {
+    const scope = operation.current;
+    scope.active = true;
+    return () => {
+      scope.active = false;
+    };
+  }, []);
   if (!workspaces.length) return null;
 
   return (
@@ -87,21 +98,27 @@ export function WorkspaceJoinDialog({
                   disabled={pending || approved || submitting !== null}
                   aria-label={`Request to join ${workspace.team_name}`}
                   onClick={async () => {
+                    const scope = operation.current;
+                    if (!scope.active || scope.pending) return;
+                    scope.pending = true;
                     setError(null);
                     setSubmitting(workspace.team_id);
                     try {
                       const result = await submitWorkspaceJoinRequest({
-                        data: { teamId: workspace.team_id },
+                        data: { teamId: workspace.team_id, expectedUserId: ownerId },
                       });
-                      if (result.status !== "pending") throw new Error("Unconfirmed request");
-                      onRequested(workspace.team_id);
+                      if (!scope.active) return;
+                      onRequested(workspace.team_id, result.status);
+                      if (result.status !== "pending") return;
                       publishKovaNotice({
                         id: "workspace_join_requested",
                         title: "Request submitted",
                         message: "The workspace administrator can review your request.",
                         confirmed: true,
+                        key: "workspace-join:" + result.id,
                       });
                     } catch {
+                      if (!scope.active) return;
                       setError(
                         "Your request could not be confirmed. Check your connection and try again.",
                       );
@@ -110,7 +127,8 @@ export function WorkspaceJoinDialog({
                         title: "Workspace request could not be confirmed",
                       });
                     } finally {
-                      setSubmitting(null);
+                      scope.pending = false;
+                      if (scope.active) setSubmitting(null);
                     }
                   }}
                 >

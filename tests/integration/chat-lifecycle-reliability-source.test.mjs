@@ -64,6 +64,10 @@ test("explicit search requires a completed bounded search instead of an ordinary
     chatRoute,
     /preflight\.run\("web_search", search, \{\s*required: false,\s*timeoutMs: 8_000,\s*\}\)/u,
   );
+  assert.match(
+    chatRoute,
+    /if \(explicitWebSearch && result\?\.status === "empty" && result\.query\)[\s\S]{0,250}code: "web_search_no_results",\s*retryable: false,\s*\},\s*\{ status: 422/u,
+  );
   assert.match(chatRoute, /web_search_unavailable/u);
 });
 
@@ -94,7 +98,10 @@ test("main chat preserves the plan-limit dialog for authoritative 429 responses"
     homeChat.indexOf("if (quotaRejected && isCurrentRetryScope())"),
     homeChat.indexOf("const isNetwork ="),
   );
-  assert.match(quotaRecovery, /setLimitDialog\(\{ open: true, kind, message: raw \}\)/u);
+  assert.match(
+    quotaRecovery,
+    /setLimitDialog\(\{\s*open: true,\s*kind,\s*message: raw,\s*resetsAt: err\.resetAtMs,\s*usageKind: err\.usageKind,\s*\}\)/u,
+  );
 });
 
 test("manual stop preserves a truthful retryable assistant turn", () => {

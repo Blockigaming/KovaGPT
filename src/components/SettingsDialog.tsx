@@ -9,7 +9,6 @@ import "@/styles/settings-reference.css";
 import "@/styles/settings-page-layout.css";
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
-import { WorkspaceDiscoverySettings } from "@/components/WorkspaceDiscoverySettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -78,6 +77,8 @@ import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
+  lazy,
+  Suspense,
   useEffect,
   useCallback,
   useContext,
@@ -147,6 +148,12 @@ import {
 // Preserve the existing component-module API for code that imports this view.
 export { DEFAULT_SETTINGS, SETTINGS_SECTIONS, settingsSectionForTab } from "@/lib/settings-types";
 export type { Mood, Settings } from "@/lib/settings-types";
+
+const WorkspaceDiscoverySettings = lazy(() =>
+  import("@/components/WorkspaceDiscoverySettings").then((module) => ({
+    default: module.WorkspaceDiscoverySettings,
+  })),
+);
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
@@ -1930,7 +1937,11 @@ export function SettingsDialog({
                         Manage apps and permissions
                       </Link>
                     </Button>
-                    <WorkspaceDiscoverySettings />
+                    {userKey && (
+                      <Suspense fallback={null}>
+                        <WorkspaceDiscoverySettings key={userKey} ownerId={userKey} />
+                      </Suspense>
+                    )}
                   </section>
                 )}
               </TabsContent>

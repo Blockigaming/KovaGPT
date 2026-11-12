@@ -1227,6 +1227,15 @@ export const Route = createFileRoute("/api/chat")({
                       required: false,
                       timeoutMs: 8_000,
                     });
+                if (explicitWebSearch && result?.status === "empty" && result.query)
+                  return Response.json(
+                    {
+                      error: "No web sources were returned. Try changing your search.",
+                      code: "web_search_no_results",
+                      retryable: false,
+                    },
+                    { status: 422, headers: { "Cache-Control": "no-store" } },
+                  );
                 if (explicitWebSearch && result?.status !== "ok")
                   return Response.json(
                     {

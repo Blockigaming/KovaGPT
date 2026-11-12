@@ -1,5 +1,5 @@
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listTeamJoinRequests, reviewTeamJoinRequest } from "@/lib/workspace-join.functions";
 type RequestRow = {
   id: string;
@@ -8,13 +8,21 @@ type RequestRow = {
   status: string;
   requested_at: string;
 };
-export function WorkspaceJoinAdminPanel({ teamId }: { teamId: string }) {
+export function WorkspaceJoinAdminPanel({ teamId, ownerId }: { teamId: string; ownerId: string }) {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const operation = useRef({ active: true, pending: false });
+  useLayoutEffect(() => {
+    const scope = operation.current;
+    scope.active = true;
+    return () => {
+      scope.active = false;
+    };
+  }, []);
   useEffect(() => {
     let canceled = false;
-    void listTeamJoinRequests()
+    void listTeamJoinRequests({ data: { teamId, expectedUserId: ownerId } })
       .then((rows) => {
         if (!canceled) setRequests((rows as RequestRow[]).filter((r) => r.team_id === teamId));
       })
@@ -24,7 +32,7 @@ export function WorkspaceJoinAdminPanel({ teamId }: { teamId: string }) {
     return () => {
       canceled = true;
     };
-  }, [teamId]);
+  }, [ownerId, teamId]);
   if (!requests.length && !error) return null;
   return (
     <section
@@ -56,13 +64,17 @@ export function WorkspaceJoinAdminPanel({ teamId }: { teamId: string }) {
                   disabled={busy !== null}
                   className="min-h-11 rounded-full border border-border px-4 text-sm hover:bg-muted disabled:opacity-50"
                   onClick={async () => {
+                    const scope = operation.current;
+                    if (!scope.active || scope.pending) return;
+                    scope.pending = true;
                     setBusy(request.id);
                     setError("");
                     try {
                       const result = await reviewTeamJoinRequest({
-                        data: { requestId: request.id, approve },
+                        data: { teamId, expectedUserId: ownerId, requestId: request.id, approve },
                       });
-                      if (!result.ok) throw Error("Request not saved");
+                      if (!scope.active) return;
+                      if (result.ok !== true) throw new Error("Request not saved");
                       setRequests((items) => items.filter((item) => item.id !== request.id));
                       publishKovaNotice({
                         id: approve ? "workspace_join_approved" : "workspace_join_denied",
@@ -71,11 +83,13 @@ export function WorkspaceJoinAdminPanel({ teamId }: { teamId: string }) {
                           ? "You can now send an invitation from your team administration page."
                           : "The request has been denied.",
                         confirmed: true,
+                        key: "workspace-review:" + request.id,
                       });
                     } catch {
-                      setError("Review failed. Refresh and try again.");
+                      if (scope.active) setError("Review failed. Refresh and try again.");
                     } finally {
-                      setBusy(null);
+                      scope.pending = false;
+                      if (scope.active) setBusy(null);
                     }
                   }}
                 >

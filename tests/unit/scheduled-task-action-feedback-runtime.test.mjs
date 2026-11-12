@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { TASK_CAPACITY_MESSAGE } from "../../src/lib/scheduled-task-policy.mjs";
 import {
   createHookHarness,
   deferred,
@@ -492,6 +493,7 @@ function editorFixture() {
         taskRunFailureLabel: () => "",
       },
       "@/lib/scheduled-task-draft-validation": { validateScheduledTaskDraft: () => [] },
+      "@/lib/scheduled-task-policy.mjs": { TASK_CAPACITY_MESSAGE },
     },
     f.globals,
   );
@@ -566,6 +568,17 @@ test("an unmounted editor does not focus late create failure", async () => {
   f.framesNow();
   assert.equal(f.document.activeElement, other);
   assert.equal(f.scrolls.length, 0);
+});
+
+test("an authoritative task cap stays alongside the unsaved schedule", async () => {
+  const f = editorFixture();
+  await f.flush();
+  f.submit();
+  f.calls[0].reject(new Error(TASK_CAPACITY_MESSAGE));
+  await f.flush();
+  const error = f.byLabel("Scheduled task action failed");
+  assert.equal(error.props["data-kova-notice-id"], "task_limit");
+  assert.ok(text(error).includes(TASK_CAPACITY_MESSAGE));
 });
 
 test("completed results are bounded and dismissible without evicting pending or failed work", async () => {

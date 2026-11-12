@@ -968,15 +968,16 @@ function ProjectDetailPage() {
               invites={invites}
               isOwner={isOwner && !archived}
               onInvite={async (email, role) => {
+                const invitationRequestKey = requestKey;
                 const fn = (await import("@/lib/projects.functions")).inviteMember;
-                const res = await callServerFnDirect(fn, {
+                if (currentRequestKeyRef.current !== invitationRequestKey) return;
+                await callServerFnDirect(fn, {
                   data: { project_id: projectId, email, role },
                 });
-                toast.success(
-                  (res as { auto_accepted: boolean }).auto_accepted
-                    ? "Member added"
-                    : "Invitation sent",
-                );
+                if (currentRequestKeyRef.current !== invitationRequestKey) return;
+                toast.success("Project invitation created", {
+                  description: "The recipient can review it in Projects after signing in.",
+                });
                 await refresh();
               }}
               onRevoke={async (id) => {

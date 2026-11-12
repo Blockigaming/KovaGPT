@@ -1,16 +1,17 @@
 import { expect, test } from "@playwright/test";
+import { NOTIFICATION_ACCEPTANCE_PROJECTS } from "../../src/lib/notification-acceptance-evidence.mjs";
 import { fixture, functionNames } from "./actual-app-fixture";
 import { chooseSettingsSection, openCurrentSettings } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
-const supportedProjects = new Set(["desktop-1440x900", "phone-390x844"]);
+const supportedProjects = new Set(NOTIFICATION_ACCEPTANCE_PROJECTS);
 
 // These cases exercise app-owned operation paths, not window.dispatchEvent("kova:notice").
 // The authenticated backend is isolated by fixture(), so they are browser integration
 // evidence, not a claim about production mail, billing, or notification delivery.
 test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name));
-  await fixture(page, "dark", true, false);
+  await fixture(page, "dark", true, testInfo.title.includes("[notice:network_offline]"));
   await page.goto("/");
   await waitForKovaHydration(page);
 });
@@ -19,14 +20,33 @@ test("[notice:network_offline][notice:network_restored] offline and recovery not
   page,
   context,
 }, testInfo) => {
+  const dock = page.locator(".spec400-composer-dock");
+  const composer = dock.getByRole("textbox", { name: "Message KovaGPT" });
+  const draft = "Release notes draft\n\nKeep this text while offline.\n\nCheck composer clearance.";
+  await expect(composer).toBeEnabled();
+  await composer.fill(draft);
   await context.setOffline(true);
-  await expect(page.getByText("You're offline", { exact: true })).toBeVisible();
+  const offline = page.locator("[data-sonner-toast]").filter({ hasText: "You're offline" });
+  await expect(offline).toBeVisible();
+  await expect
+    .poll(async () => {
+      const [toast, input] = await Promise.all([offline.boundingBox(), dock.boundingBox()]);
+      return Boolean(toast && input && toast.y + toast.height <= input.y + 1);
+    })
+    .toBe(true);
   await context.setOffline(false);
-  await expect(page.getByText("Browser connection restored", { exact: true })).toBeVisible();
+  await expect(offline).toBeHidden();
+  const restored = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Browser connection restored" });
+  await expect(restored).toBeVisible();
   await testInfo.attach("network-recovery-" + testInfo.project.name, {
     body: await page.screenshot(),
     contentType: "image/png",
   });
+  await restored.getByRole("button", { name: "Close toast" }).click();
+  await expect(restored).toBeHidden();
+  await expect(composer).toHaveValue(draft);
 });
 
 test("[notice:theme_changed] saving an appearance choice emits its own notice in light mode", async ({

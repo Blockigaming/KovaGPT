@@ -5,7 +5,7 @@ import { NOTIFICATION_IDS, notificationDefinition } from "../../src/lib/notifica
 const source = (file) => readFileSync(file, "utf8");
 test("shared notice UI has responsive themed desktop and mobile geometry", () => {
   const css = source("src/components/kova-notification-surface.css");
-  const ui = source("src/components/KovaNotificationSurface.tsx");
+  const ui = source("src/components/KovaNotificationPanel.tsx");
   assert.match(css, /width: min\(460px, 100%\)/);
   assert.match(css, /@media \(max-width: 640px\)/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
@@ -27,6 +27,8 @@ test("toasts avoid composer controls in short viewports and limit stacking", () 
   assert.match(ui, /visibleToasts=\{shortViewport \? 1 : mobile \? 2 : 3\}/);
   assert.match(ui, /max-height: 560px/);
   assert.match(ui, /safe-area-inset-bottom/);
+  assert.match(ui, /ResizeObserver/);
+  assert.match(ui, /window\.innerHeight - rect\.top \+ 12/);
 });
 test("offer never displays solely on free plan", () => {
   const offer = source("src/components/FreeOfferButton.tsx");

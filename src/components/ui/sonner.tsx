@@ -28,12 +28,45 @@ const toastButtonClassName =
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const mobile = useIsMobile();
   const [shortViewport, setShortViewport] = useState(false);
+  const [composerClearance, setComposerClearance] = useState(0);
   useEffect(() => {
     const query = window.matchMedia("(max-height: 560px)");
-    const update = () => setShortViewport(query.matches);
+    let dock: Element | null = null;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const short = query.matches || (window.visualViewport?.height ?? Infinity) <= 560;
+      setShortViewport(short);
+      const current = document.querySelector(".spec400-composer-dock");
+      if (current !== dock) {
+        if (dock) resize.unobserve(dock);
+        dock = current;
+        if (dock) resize.observe(dock);
+      }
+      const rect = dock?.getBoundingClientRect();
+      const clearance =
+        !short && rect && rect.height > 0 ? Math.max(0, window.innerHeight - rect.top + 12) : 0;
+      setComposerClearance(Math.ceil(clearance));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    const resize = new ResizeObserver(schedule);
+    const mutations = new MutationObserver(() => {
+      if (!dock?.isConnected) schedule();
+    });
+    mutations.observe(document.body, { childList: true, subtree: true });
+    resize.observe(document.documentElement);
+    query.addEventListener("change", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
     update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      mutations.disconnect();
+      resize.disconnect();
+      query.removeEventListener("change", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
+    };
   }, []);
   return (
     <Sonner
@@ -43,9 +76,13 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
       duration={4_000}
       visibleToasts={shortViewport ? 1 : mobile ? 2 : 3}
       gap={8}
+      offset={{
+        top: "calc(32px + env(safe-area-inset-top))",
+        bottom: Math.max(32, composerClearance),
+      }}
       mobileOffset={{
         top: "calc(72px + env(safe-area-inset-top))",
-        bottom: "calc(88px + env(safe-area-inset-bottom))",
+        bottom: `max(calc(88px + env(safe-area-inset-bottom)), ${composerClearance}px)`,
         left: 16,
         right: 16,
       }}

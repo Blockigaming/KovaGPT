@@ -171,13 +171,26 @@ function AuthPage() {
     feedback.toastId = undefined;
     feedback.field = undefined;
   };
-  const showAuthError = (message: string, revision?: number, field?: "password") => {
+  const showAuthError = (
+    message: string,
+    revision?: number,
+    field?: "password",
+    reason?: "credentials" | "rate-limit",
+  ) => {
     const feedback = authFeedbackRef.current;
     if (!feedback.active || (revision !== undefined && revision !== feedback.revision)) return;
     // Synchronous validation replaces the previous attempt, just like an accepted retry.
     if (revision === undefined) feedback.revision += 1;
     feedback.field = field;
-    feedback.toastId = toast.error(message, {
+    const title =
+      reason === "credentials" ? (
+        <span data-kova-notice-id="invalid_credentials">{message}</span>
+      ) : reason === "rate-limit" ? (
+        <span data-kova-notice-id="sign_in_rate_limit">{message}</span>
+      ) : (
+        message
+      );
+    feedback.toastId = toast.error(title, {
       id: feedback.toastId,
       duration: Infinity,
       closeButton: true,
@@ -267,6 +280,14 @@ function AuthPage() {
               ? payload.error
               : "Authentication could not be completed. Please try again.",
             feedbackRevision,
+            undefined,
+            isSignUp
+              ? undefined
+              : response.status === 429
+                ? "rate-limit"
+                : response.status === 401
+                  ? "credentials"
+                  : undefined,
           );
           return;
         }
@@ -327,7 +348,21 @@ function AuthPage() {
         console.error("[KovaAuth] Password authentication was rejected", {
           error: error.name || "auth_error",
         });
-        showAuthError("That email and password could not be verified.", feedbackRevision);
+        if (error.status === 429) {
+          showAuthError(
+            "Too many attempts. Please try again later.",
+            feedbackRevision,
+            undefined,
+            "rate-limit",
+          );
+        } else {
+          showAuthError(
+            "That email and password could not be verified.",
+            feedbackRevision,
+            undefined,
+            error.code === "invalid_credentials" ? "credentials" : undefined,
+          );
+        }
         return;
       }
       toast.success("Welcome back.");
@@ -359,6 +394,8 @@ function AuthPage() {
             ? payload.error
             : "Two-factor verification could not be completed.",
           feedbackRevision,
+          undefined,
+          response.status === 429 ? "rate-limit" : undefined,
         );
         return;
       }

@@ -43,7 +43,12 @@ import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
+import {
+  chatResponseError,
+  consumeChatSse,
+  chatFailurePresentation,
+  publishRequestedChatTool,
+} from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -71,6 +76,13 @@ import { MobileTopBar } from "@/components/MobileTopBar";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
+const loadChatRecoveryPanels = () => import("@/components/ChatRecoveryPanels");
+const ChatRequestStatus = lazy(() =>
+  loadChatRecoveryPanels().then((module) => ({ default: module.ChatRequestStatus })),
+);
+const NextPromptPanel = lazy(() =>
+  loadChatRecoveryPanels().then((module) => ({ default: module.NextPromptPanel })),
+);
 const FreeOfferButton = lazy(() =>
   import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
 );
@@ -2139,7 +2151,7 @@ function KovaGPT() {
       let requestSucceeded = false;
       let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
-      const notifiedServerActivities = new Set<string>();
+      let reportedWebSources = false;
 
       try {
         const activeTool = retryTool;
@@ -2164,7 +2176,7 @@ function KovaGPT() {
           },
         );
 
-        const resp = await authFetch("/api/chat", {
+        const pendingResponse = authFetch("/api/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2211,6 +2223,8 @@ function KovaGPT() {
           }),
           signal: controller.signal,
         });
+        if (isCurrentRequest()) publishRequestedChatTool(activeTool, publishKovaNotice);
+        const resp = await pendingResponse;
         if (!isCurrentRequest()) {
           void resp.body?.cancel().catch(() => undefined);
           return;
@@ -2253,8 +2267,8 @@ function KovaGPT() {
             }
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
-              if (sources && !notifiedServerActivities.has("search_completed")) {
-                notifiedServerActivities.add("search_completed");
+              if (sources && !reportedWebSources) {
+                reportedWebSources = true;
                 publishKovaNotice({ id: "search_completed", title: "Web sources found" });
               }
               updateAssistantMessage((message) => ({
@@ -2267,21 +2281,6 @@ function KovaGPT() {
             }
 
             if (delta?.kind === "activity" && delta?.label) {
-              if (typeof delta.tool === "string") {
-                const eventId =
-                  delta.tool === "web_search"
-                    ? "search_started"
-                    : delta.tool === "data_analysis" || delta.tool === "file_analysis"
-                      ? "analysis_started"
-                      : null;
-                if (eventId && !notifiedServerActivities.has(eventId)) {
-                  notifiedServerActivities.add(eventId);
-                  publishKovaNotice({
-                    id: eventId,
-                    title: eventId === "search_started" ? "Searching sources" : "Analyzing data",
-                  });
-                }
-              }
               const { messageActivitiesFromDelta } =
                 await import("@/lib/message-activity-list.mjs");
               if (!isCurrentRequest()) return;
@@ -2409,22 +2408,12 @@ function KovaGPT() {
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
             e instanceof TypeError;
-          const category = err.category || (isNetwork ? "network_failure" : undefined);
-          const retryableCategory =
-            category === "model_timeout" ||
-            category === "streaming_interruption" ||
-            category === "network_failure" ||
-            category === "model_provider_failure";
-          // Respect the server's retryability signal. Configuration and
-          // authentication failures cannot heal through repeated requests and
-          // previously made the composer look stuck while it silently retried.
-          const sessionExpired = err.status === 401 || err.code === "authentication_required";
-          const canManualRetry =
-            !quotaRejected &&
-            !sessionExpired &&
-            err.status !== 403 &&
-            err.retryable !== false &&
-            (err.retryable === true || retryableCategory);
+          const { sessionExpired, canManualRetry, friendly } = chatFailurePresentation(err, {
+            raw,
+            signedIn: isSignedIn,
+            quotaRejected,
+            networkFailure: isNetwork,
+          });
           const failedResponseKey = JSON.stringify([requestPrincipal, nextConvId, assistantMsg.id]);
           if (canManualRetry) retryableFailedResponsesRef.current.add(failedResponseKey);
           else retryableFailedResponsesRef.current.delete(failedResponseKey);
@@ -2434,27 +2423,6 @@ function KovaGPT() {
           // Keep the partial response and require an explicit Retry action;
           // silently replaying with a new message ID can duplicate generation.
           const requestId = err.requestId;
-          const friendly = sessionExpired
-            ? isSignedIn
-              ? "Your session could not be verified. Sign in again to continue."
-              : "Sign in is required for this request."
-            : !canManualRetry
-              ? raw
-              : category === "rate_limit"
-                ? "You're going a bit fast — try again in a moment."
-                : category === "quota_exceeded"
-                  ? "You've hit your plan's limit. Try again later or upgrade."
-                  : category === "model_timeout"
-                    ? "The model took too long to respond. Tap retry."
-                    : category === "model_provider_failure"
-                      ? err.retryable === false
-                        ? raw
-                        : "KovaGPT is temporarily unavailable. Tap retry."
-                      : category === "streaming_interruption"
-                        ? "The connection dropped mid-response. Tap retry."
-                        : isNetwork
-                          ? "Connection lost while generating a response. Check your internet and tap retry."
-                          : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
 
           if (isCurrentRetryScope()) {
@@ -2799,50 +2767,21 @@ function KovaGPT() {
 
   const requestStatusPanel = (hasPendingMessage: boolean) =>
     visibleRequestNotice ? (
-      <section
-        className="mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm"
-        role="status"
-        data-testid="chat-request-status"
-      >
-        <>
-          <p>
-            {visibleRequestNotice.signedIn
-              ? "Your session could not be verified. Sign in again to continue."
-              : "Sign in is required for this request."}{" "}
-            Signing in does not resend a message. It may change the current account.
-          </p>
-          {(hasPendingMessage || Boolean(nextPromptRef.current)) && (
-            <p>
-              Save or copy your current message and attachments, then clear them before signing in.
-              Cancel or save any next message too. Drafts are not transferred between accounts.
-            </p>
-          )}
-          <SignInButton mode="modal">
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={hasPendingMessage || Boolean(nextPromptRef.current)}
-              onClick={(event) => {
-                if (
-                  !nextPromptMountedRef.current ||
-                  requestNoticeRef.current !== visibleRequestNotice ||
-                  hasPendingMessage ||
-                  Boolean(
-                    composerDraftRef.current.text.length ||
-                    composerDraftRef.current.attachments.length,
-                  ) ||
-                  Boolean(nextPromptRef.current) ||
-                  !sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current)
-                )
-                  event.preventDefault();
-              }}
-            >
-              Sign in
-            </Button>
-          </SignInButton>
-        </>
-      </section>
+      <Suspense fallback={null}>
+        <ChatRequestStatus
+          signedIn={visibleRequestNotice.signedIn}
+          draftProtected={hasPendingMessage || Boolean(nextPromptRef.current)}
+          canSignIn={() =>
+            nextPromptMountedRef.current &&
+            requestNoticeRef.current === visibleRequestNotice &&
+            !hasPendingMessage &&
+            !composerDraftRef.current.text.length &&
+            !composerDraftRef.current.attachments.length &&
+            !nextPromptRef.current &&
+            sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current)
+          }
+        />
+      </Suspense>
     ) : null;
   const visibleNextPrompt =
     principalReady && nextPrompt?.scope.principal === storagePrincipal ? nextPrompt : null;
@@ -2857,117 +2796,55 @@ function KovaGPT() {
       matchesNextPromptDraft(visibleNextPrompt, composerDraftRef.current)),
   );
   const nextPromptPanel = visibleNextPrompt ? (
-    <section
-      aria-label="Next message"
-      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
-      data-testid="next-prompt-panel"
-    >
-      <p role="status" className="font-medium">
-        {visibleNextPrompt.status === "held"
-          ? "Next message kept, not queued"
-          : "Next message queued"}
-      </p>
-      <p className="whitespace-pre-wrap break-words max-h-32 overflow-auto">
-        {visibleNextPrompt.text || "Attached material"}
-      </p>
-      {visibleNextPrompt.attachments.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {visibleNextPrompt.attachments.map((file) => file.name).join(", ")}
-        </p>
-      )}
-      {visibleNextPrompt.tool && (
-        <p className="text-xs text-muted-foreground">Tool: {visibleNextPrompt.tool}</p>
-      )}
-      <p className="text-xs text-muted-foreground">
-        {visibleNextPrompt.reason ??
-          "Only this version will be sent after the current response finishes. Later edits stay in your draft. Kept in this tab only."}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          data-next-prompt-cancel
-          onClick={(event) => {
-            if (
-              nextPromptRef.current === visibleNextPrompt &&
-              storagePrincipalRef.current === visibleNextPrompt.scope.principal
-            ) {
-              updateNextPrompt(null);
-              scheduleNextPromptFocus(event?.currentTarget, "composer", null);
-            }
-          }}
-        >
-          Cancel next message
-        </Button>
-        {nextPromptInCurrentChat ? (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            disabled={!canEditNextPrompt}
-            onClick={() => {
-              if (
-                !canEditNextPrompt ||
-                nextPromptRef.current !== visibleNextPrompt ||
-                !sameNextPromptContext(visibleNextPrompt.scope, nextPromptScopeRef.current)
-              )
-                return;
-              setInput(visibleNextPrompt.text);
-              setAttachments(visibleNextPrompt.attachments.map((file) => ({ ...file })));
-              setSelectedTool(visibleNextPrompt.tool);
-              updateNextPrompt(null);
-            }}
-          >
-            Edit next message
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={() => {
-              if (
-                storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
-                visibleNextPrompt.scope.conversationId &&
-                conversations.some((chat) => chat.id === visibleNextPrompt.scope.conversationId)
-              )
-                setActiveId(visibleNextPrompt.scope.conversationId);
-            }}
-          >
-            Open original chat
-          </Button>
-        )}
-      </div>
-      {nextPromptInCurrentChat && !canEditNextPrompt && (
-        <p className="text-xs text-muted-foreground">
-          Keep or clear your newer draft before editing this saved version.
-        </p>
-      )}
-    </section>
+    <Suspense fallback={null}>
+      <NextPromptPanel
+        prompt={visibleNextPrompt}
+        inCurrentChat={nextPromptInCurrentChat}
+        canEdit={canEditNextPrompt}
+        onCancel={(event) => {
+          if (
+            nextPromptRef.current === visibleNextPrompt &&
+            storagePrincipalRef.current === visibleNextPrompt.scope.principal
+          ) {
+            updateNextPrompt(null);
+            scheduleNextPromptFocus(event?.currentTarget, "composer", null);
+          }
+        }}
+        onEdit={() => {
+          if (
+            !canEditNextPrompt ||
+            nextPromptRef.current !== visibleNextPrompt ||
+            !sameNextPromptContext(visibleNextPrompt.scope, nextPromptScopeRef.current)
+          )
+            return;
+          setInput(visibleNextPrompt.text);
+          setAttachments(visibleNextPrompt.attachments.map((file) => ({ ...file })));
+          setSelectedTool(visibleNextPrompt.tool);
+          updateNextPrompt(null);
+        }}
+        onOpenOriginal={() => {
+          if (
+            storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
+            visibleNextPrompt.scope.conversationId &&
+            conversations.some((chat) => chat.id === visibleNextPrompt.scope.conversationId)
+          )
+            setActiveId(visibleNextPrompt.scope.conversationId);
+        }}
+      />
+    </Suspense>
   ) : undefined;
 
   const visibleQuotaRejectedDrafts = principalReady
     ? quotaRejectedDrafts.filter((draft) => sameNextPromptScope(draft.scope, nextPromptScope))
     : [];
   const quotaRejectedDraftPanel = visibleQuotaRejectedDrafts.map((draft) => (
-    <section
-      key={draft.id}
-      aria-label="Message kept after usage limit"
-      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
-      data-testid="quota-rejected-draft"
-    >
-      <Suspense fallback={null}>
-        <QuotaRejectedDraftPreview draft={draft} />
-      </Suspense>
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        disabled={Boolean(
+    <Suspense key={draft.id} fallback={null}>
+      <QuotaRejectedDraftPreview
+        draft={draft}
+        restoreDisabled={Boolean(
           input || attachments.length || selectedTool || isStreaming || editingMessage,
         )}
-        onClick={(event) => {
+        onRestore={(event) => {
           if (
             !nextPromptMountedRef.current ||
             !quotaRejectedDraftsRef.current.includes(draft) ||
@@ -2989,14 +2866,7 @@ function KovaGPT() {
           );
           scheduleNextPromptFocus(event.currentTarget, "composer", nextPromptRef.current);
         }}
-      >
-        Restore message
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        onClick={(event) => {
+        onDiscard={(event) => {
           if (
             !nextPromptMountedRef.current ||
             !quotaRejectedDraftsRef.current.includes(draft) ||
@@ -3009,10 +2879,8 @@ function KovaGPT() {
           );
           scheduleNextPromptFocus(event.currentTarget, "composer", nextPromptRef.current);
         }}
-      >
-        Discard kept version
-      </Button>
-    </section>
+      />
+    </Suspense>
   ));
 
   const composerPromptPanel = quotaRejectedDraftPanel.length ? (

@@ -1,4 +1,6 @@
 export const TASK_CONTEXT_MAX_CHARS = 24_000;
+export const TASK_CAPACITY_MESSAGE =
+  "The scheduled task limit was reached. Remove an unused task and try again.";
 export const TASK_PROVIDERS = Object.freeze(["gmail", "slack", "github"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const plain = (value) => value && typeof value === "object" && !Array.isArray(value);

@@ -239,7 +239,11 @@ export const Route = createFileRoute("/api/generate-image")({
             },
           });
         } catch (error) {
-          if (error instanceof ImageInputError) return json({ error: error.message }, error.status);
+          if (error instanceof ImageInputError)
+            return json(
+              { error: error.message, ...(error.code ? { code: error.code } : {}) },
+              error.status,
+            );
           if (error instanceof AiProviderError) return providerErrorResponse(error);
           if (error instanceof BodyReadError)
             return json(

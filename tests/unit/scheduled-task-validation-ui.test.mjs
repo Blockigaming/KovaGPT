@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as timeFormat from "../../src/lib/time-format.ts";
-import { parseTaskPayload } from "../../src/lib/scheduled-task-policy.mjs";
+import { parseTaskPayload, TASK_CAPACITY_MESSAGE } from "../../src/lib/scheduled-task-policy.mjs";
 import { elements, text, loadUiModule, settle, deferred } from "../helpers/ui-state-harness.mjs";
 
 const validation = loadUiModule("src/lib/scheduled-task-draft-validation.ts", {
@@ -136,6 +136,7 @@ function fixture({ task, draft, createResult, executionAvailable = true } = {}) 
       "@/components/ui/searchable-picker": { SearchablePicker: "searchable-picker" },
       "@tanstack/react-start": { useServerFn: (fn) => fn },
       "@/lib/scheduled-tasks.functions": services,
+      "@/lib/scheduled-task-policy.mjs": { TASK_CAPACITY_MESSAGE },
       "@/lib/scheduled-task-draft-validation": validation,
       "@/lib/scheduled-task-run-labels": loadUiModule("src/lib/scheduled-task-run-labels.ts", {}),
     },

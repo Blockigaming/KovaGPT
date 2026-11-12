@@ -12,14 +12,15 @@ test("contextual tips never become full blocking dialogs by default", () => {
 });
 
 test("nonblocking notices do not claim aria-modal and respect current dialogs", () => {
-  const src = readFileSync("src/components/KovaNotificationSurface.tsx", "utf8");
-  assert.match(src, /externalDialogOpen/);
-  assert.match(src, /externalDialogOpen && \(definition\.exclusive \|\| lowPriority\)/);
-  assert.match(src, /MutationObserver/);
-  assert.match(src, /aria-modal=\{nonBlocking \? undefined : true\}/);
-  assert.match(src, /event\.key !== "Tab" \|\| !panelRef\.current \|\| nonBlocking/);
-  assert.match(src, /anchorSelector/);
-  assert.match(src, /setAnchorPosition/);
+  const controller = readFileSync("src/components/KovaNotificationController.tsx", "utf8");
+  const panel = readFileSync("src/components/KovaNotificationPanel.tsx", "utf8");
+  assert.match(controller, /externalDialogOpen/);
+  assert.match(controller, /externalDialogOpen && \(definition\.exclusive \|\| lowPriority\)/);
+  assert.match(controller, /MutationObserver/);
+  assert.match(panel, /aria-modal=\{nonBlocking \? undefined : true\}/);
+  assert.match(panel, /event\.key !== "Tab" \|\| !panelRef\.current \|\| nonBlocking/);
+  assert.match(panel, /anchorSelector/);
+  assert.match(panel, /setAnchorPosition/);
 });
 
 test("desktop contextual UI and mobile release banners are independent of blocking sheets", () => {
@@ -32,7 +33,7 @@ test("desktop contextual UI and mobile release banners are independent of blocki
 });
 
 test("streaming changes do not repeatedly scan hidden or offscreen dialogs", () => {
-  const host = readFileSync("src/components/KovaNotificationSurface.tsx", "utf8");
+  const host = readFileSync("src/components/KovaNotificationController.tsx", "utf8");
   assert.match(host, /new MutationObserver/);
   assert.match(host, /requestAnimationFrame/);
   assert.match(host, /cancelAnimationFrame/);

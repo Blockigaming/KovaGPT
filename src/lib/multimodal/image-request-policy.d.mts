@@ -1,6 +1,7 @@
 export class ImageInputError extends Error {
   status: number;
-  constructor(message: string, status?: number);
+  code?: string;
+  constructor(message: string, status?: number, code?: string);
 }
 export type ImageSettings = {
   prompt: string;

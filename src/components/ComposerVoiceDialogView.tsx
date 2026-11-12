@@ -218,6 +218,9 @@ export function ComposerVoiceDialogView({
                   phase === "idle" && ready ? "kova-voice-status sr-only" : "kova-voice-status"
                 }
                 role="status"
+                data-kova-notice-id={
+                  mode === "voice" && availability === "checking" ? "voice_starting" : undefined
+                }
                 aria-live="polite"
               >
                 {(processing || availability === "checking") && (

@@ -7,6 +7,7 @@ import {
   HeadContent,
   ScriptOnce,
   Scripts,
+  CatchBoundary,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 
@@ -15,14 +16,12 @@ import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { KovaNotificationSurface, publishKovaNotice } from "@/components/KovaNotificationSurface";
-import { PersistedNoticeBridge } from "@/components/PersistedNoticeBridge";
-import { AnnouncementCampaignBridge } from "@/components/AnnouncementCampaignBridge";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
@@ -30,6 +29,16 @@ import { AppAccountGate } from "@/components/AppAccountGate";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
+const PersistedNoticeBridge = lazy(() =>
+  import("@/components/PersistedNoticeBridge").then((module) => ({
+    default: module.PersistedNoticeBridge,
+  })),
+);
+const AnnouncementCampaignBridge = lazy(() =>
+  import("@/components/AnnouncementCampaignBridge").then((module) => ({
+    default: module.AnnouncementCampaignBridge,
+  })),
+);
 
 // The blocking script runs after the render-blocking app stylesheet, before UI
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
@@ -370,9 +379,13 @@ function RootNotificationCenter() {
   return isLoaded ? (
     <>
       <KovaNotificationSurface key={user?.id ?? "guest"} accountId={user?.id ?? null} />
-      {isSignedIn && user?.id ? <PersistedNoticeBridge key={user.id} ownerId={user.id} /> : null}
       {isSignedIn && user?.id ? (
-        <AnnouncementCampaignBridge key={user.id} ownerId={user.id} />
+        <CatchBoundary getResetKey={() => user?.id} errorComponent={() => null}>
+          <Suspense key={user.id} fallback={null}>
+            <PersistedNoticeBridge ownerId={user.id} />
+            <AnnouncementCampaignBridge ownerId={user.id} />
+          </Suspense>
+        </CatchBoundary>
       ) : null}
     </>
   ) : null;

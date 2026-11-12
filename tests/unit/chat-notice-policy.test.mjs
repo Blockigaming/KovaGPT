@@ -2,8 +2,22 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chatFailureNoticeId } from "../../src/lib/chat-notice-policy.mjs";
-import { chatResponseError } from "../../src/lib/chat-sse-client.mjs";
+import { chatResponseError, publishRequestedChatTool } from "../../src/lib/chat-sse-client.mjs";
 import { NOTIFICATION_IDS } from "../../src/lib/notification-catalog.mjs";
+
+test("tool-request notices are scoped to explicitly selected search or analysis", () => {
+  const notices = [];
+  for (const tool of [undefined, "search_web", "web_search", "data_analysis", "file_analysis"])
+    publishRequestedChatTool(tool, (notice) => notices.push(notice));
+  assert.deepEqual(
+    notices.map(({ id, title }) => [id, title]),
+    [
+      ["search_started", "Web search requested"],
+      ["analysis_started", "Analysis requested"],
+      ["analysis_started", "Analysis requested"],
+    ],
+  );
+});
 
 test("server quota kind distinguishes Thinking from ordinary messages", () => {
   assert.equal(
@@ -37,6 +51,7 @@ test("backend-entitlement and availability failures have specific notices", () =
     [{ code: "kova_model_runtime_unverified", status: 503 }, "model_unavailable"],
     [{ code: "kova_model_vision_unavailable", status: 400 }, "unsupported_content"],
     [{ code: "web_search_unavailable", status: 503 }, "search_failed"],
+    [{ code: "web_search_no_results", status: 422 }, "search_no_results"],
     [{ code: "hosted_tools_unavailable", status: 503 }, "source_unavailable"],
     [{ code: "message_quota_unavailable", status: 503 }, "source_unavailable"],
     [{ code: "analysis_sign_in_required", status: 401 }, "sign_in_required"],

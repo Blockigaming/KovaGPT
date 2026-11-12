@@ -44,3 +44,13 @@ export function chatResponseError(
   response: Response,
   fallbackMessage?: string,
 ): Promise<ChatRequestError>;
+
+export function chatFailurePresentation(
+  error: Pick<Partial<ChatRequestError>, "category" | "status" | "code" | "retryable">,
+  details: { raw: string; signedIn: boolean; quotaRejected: boolean; networkFailure: boolean },
+): { sessionExpired: boolean; canManualRetry: boolean; friendly: string };
+
+export function publishRequestedChatTool(
+  tool: string | null | undefined,
+  publish: (notice: { id: string; title: string }) => void,
+): void;

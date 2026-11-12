@@ -41,7 +41,7 @@ test("domain activation has server-side owner check and DNS TXT proof before rec
   assert.match(server, /context\.revalidate/);
   assert.match(server, /upsert\(/);
   assert.match(server, /verification_method: "dns_txt"/);
-  const team = readFileSync("src/routes/team.tsx", "utf8");
+  const team = readFileSync("src/components/TeamWorkspacePage.tsx", "utf8");
   assert.match(team, /<TeamDomainVerificationPanel teamId=\{team\.id\}/);
 });
 

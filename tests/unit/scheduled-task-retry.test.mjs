@@ -131,6 +131,18 @@ test("stale revision is definitive and retry cannot be combined with edited sett
   );
 });
 
+test("task capacity is identified separately from a general database limit", async () => {
+  for (const message of ["task_capacity", "task_total_capacity", "task_receipt_capacity"]) {
+    const { update } = load({ rpcError: { code: "54000", message } });
+    await assert.rejects(update({ data: data(), context: { userId: owner } }), {
+      message:
+        message === "task_receipt_capacity"
+          ? "The task or pending invitation limit was reached. Remove an unused item and retry."
+          : policy.TASK_CAPACITY_MESSAGE,
+    });
+  }
+});
+
 for (const plan of ["free", "plus", "pro"]) {
   test(`${plan} task entitlement is independent of billing and execution readiness`, async () => {
     for (const available of [false, true]) {

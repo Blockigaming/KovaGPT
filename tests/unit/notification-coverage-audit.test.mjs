@@ -46,8 +46,11 @@ test("source-owned notice surfaces and typed dynamic emitters retain their actua
     assert.ok(byId.get(id)?.nativeSurfaces.length, id);
     assert.equal(byId.get(id).verifiedEndToEnd, false);
   }
-  for (const id of ["voice_limit", "analysis_started", "message_too_long", "conversation_full"]) {
+  for (const id of ["voice_limit", "message_too_long", "conversation_full"]) {
     assert.ok(byId.get(id)?.conditionalEmitters.length, id);
+  }
+  for (const id of ["search_started", "analysis_started"]) {
+    assert.deepEqual(byId.get(id)?.literalEmitters, ["src/lib/chat-sse-client.mjs"]);
   }
   assert.equal(summary.unclassifiedDynamicEmitters, 0);
 });

@@ -44,7 +44,12 @@ import {
   taskRunDeliveryLabel,
   taskRunFailureLabel,
 } from "@/lib/scheduled-task-run-labels";
-import type { TaskContextRef, TaskTrigger, TaskProvider } from "@/lib/scheduled-task-policy.mjs";
+import {
+  TASK_CAPACITY_MESSAGE,
+  type TaskContextRef,
+  type TaskTrigger,
+  type TaskProvider,
+} from "@/lib/scheduled-task-policy.mjs";
 import {
   validateScheduledTaskDraft,
   type ScheduledTaskValidationField,
@@ -568,6 +573,7 @@ function ScheduledTaskEditorBody({
               tabIndex={-1}
               role="alert"
               aria-label="Scheduled task action failed"
+              data-kova-notice-id={error === TASK_CAPACITY_MESSAGE ? "task_limit" : undefined}
               className="rounded-lg border border-destructive p-3 text-sm"
             >
               {!task && pending.current?.kind === "create" && (

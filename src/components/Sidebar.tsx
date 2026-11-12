@@ -42,8 +42,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useSta
 
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
-import { WorkspaceJoinDialog } from "@/components/WorkspaceJoinDialog";
-import { findAvailableWorkspaces, type AvailableWorkspace } from "@/lib/workspace-join.functions";
+import type { AvailableWorkspace } from "@/lib/workspace-join.functions";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
@@ -99,6 +98,11 @@ const FreeOfferButton = lazy(() =>
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
     default: module.ChatProjectDialog,
+  })),
+);
+const WorkspaceJoinDialog = lazy(() =>
+  import("@/components/WorkspaceJoinDialog").then((module) => ({
+    default: module.WorkspaceJoinDialog,
   })),
 );
 
@@ -298,18 +302,28 @@ export function Sidebar({
   const [resizing, setResizing] = useState(false);
   const signedIn = isLoaded && isSignedIn;
   const verifiedWorkspaceEmail = user?.primaryEmailAddress?.verification?.status === "verified";
-  const [availableWorkspaces, setAvailableWorkspaces] = useState<AvailableWorkspace[]>([]);
-  const [workspaceJoinOpen, setWorkspaceJoinOpen] = useState(false);
+  const workspaceOwner = signedIn && verifiedWorkspaceEmail ? (user?.id ?? null) : null;
+  const [workspaceMatches, setWorkspaceMatches] = useState<{
+    owner: string;
+    items: AvailableWorkspace[];
+  } | null>(null);
+  const [workspaceJoinOwner, setWorkspaceJoinOwner] = useState<string | null>(null);
+  const availableWorkspaces =
+    workspaceMatches?.owner === workspaceOwner ? workspaceMatches.items : [];
+  const workspaceJoinOpen = workspaceOwner !== null && workspaceJoinOwner === workspaceOwner;
   useEffect(() => {
     let cancelled = false;
-    setAvailableWorkspaces([]);
-    setWorkspaceJoinOpen(false);
-    if (!signedIn || !user?.id || !verifiedWorkspaceEmail) return;
-    const accountId = user.id;
-    void findAvailableWorkspaces()
+    setWorkspaceMatches(null);
+    setWorkspaceJoinOwner(null);
+    if (!workspaceOwner) return;
+    const accountId = workspaceOwner;
+    void import("@/lib/workspace-join.functions")
+      .then(({ findAvailableWorkspaces }) =>
+        cancelled ? [] : findAvailableWorkspaces({ data: { expectedUserId: accountId } }),
+      )
       .then((results) => {
         if (cancelled) return;
-        setAvailableWorkspaces(results);
+        setWorkspaceMatches({ owner: accountId, items: results });
         if (!results.length) return;
         // One introductory prompt per account and browser. The server is still
         // the sole authority for matching domain and available workspaces.
@@ -320,15 +334,15 @@ export function Sidebar({
         } catch {
           /* A blocked storage API should not prevent a useful prompt. */
         }
-        setWorkspaceJoinOpen(true);
+        setWorkspaceJoinOwner(accountId);
       })
       .catch(() => {
-        if (!cancelled) setAvailableWorkspaces([]);
+        if (!cancelled) setWorkspaceMatches(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [signedIn, user?.id, verifiedWorkspaceEmail]);
+  }, [workspaceOwner]);
   const railOwner = signedIn ? user?.id : undefined;
   const layout =
     railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
@@ -1155,7 +1169,7 @@ export function Sidebar({
         <DropdownMenuItem
           onSelect={() => {
             cancelPendingSelection();
-            setWorkspaceJoinOpen(true);
+            setWorkspaceJoinOwner(workspaceOwner);
           }}
         >
           <Users aria-hidden="true" />
@@ -1213,19 +1227,28 @@ export function Sidebar({
 
   return (
     <>
-      {signedIn && (
-        <WorkspaceJoinDialog
-          open={workspaceJoinOpen}
-          workspaces={availableWorkspaces}
-          onClose={() => setWorkspaceJoinOpen(false)}
-          onRequested={(teamId) => {
-            setAvailableWorkspaces((items) =>
-              items.map((item) =>
-                item.team_id === teamId ? { ...item, request_status: "pending" } : item,
-              ),
-            );
-          }}
-        />
+      {workspaceOwner && availableWorkspaces.length > 0 && (
+        <Suspense fallback={null}>
+          <WorkspaceJoinDialog
+            key={workspaceOwner}
+            ownerId={workspaceOwner}
+            open={workspaceJoinOpen}
+            workspaces={availableWorkspaces}
+            onClose={() => setWorkspaceJoinOwner(null)}
+            onRequested={(teamId, status) => {
+              setWorkspaceMatches((current) =>
+                current?.owner === workspaceOwner
+                  ? {
+                      ...current,
+                      items: current.items.map((item) =>
+                        item.team_id === teamId ? { ...item, request_status: status } : item,
+                      ),
+                    }
+                  : current,
+              );
+            }}
+          />
+        </Suspense>
       )}
       {signedIn && (
         <LogoutConfirmDialog
@@ -1879,7 +1902,7 @@ export function Sidebar({
               <button
                 type="button"
                 className="mb-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm hover:bg-accent"
-                onClick={() => setWorkspaceJoinOpen(true)}
+                onClick={() => setWorkspaceJoinOwner(workspaceOwner)}
               >
                 <Users className="h-5 w-5" aria-hidden="true" />
                 <span>Find workspaces</span>
