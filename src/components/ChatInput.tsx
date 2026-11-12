@@ -890,7 +890,7 @@ export function ChatInput({
               },
             ];
             setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
-            publishKovaNotice({ id: "file_too_large", title: "Image too large", message: f.name });
+            publishKovaNotice({ id: "image_too_large", title: "Image too large", message: f.name });
             continue;
           }
           const uploading: PendingAttachment = {
@@ -1045,7 +1045,7 @@ export function ChatInput({
             );
             setUploadAnnouncement(`${f.name}: file could not be read`);
             publishKovaNotice({
-              id: "upload_failed",
+              id: isDocument ? "file_processing_failed" : "upload_failed",
               title: "Document could not be attached",
               message: f.name,
             });
@@ -1099,11 +1099,17 @@ export function ChatInput({
 
   const removeAttachment = (index: number) => {
     const attachment = attachments[index];
-    const id = attachment?.clientId;
+    if (!attachment) return;
+    const id = attachment.clientId;
     if (attachment?.localPaste) setRemovedPaste(attachment);
     if (id) documentReadIdsRef.current.get(id)?.abort();
     setUploadAnnouncement(`${attachments[index]?.name ?? "Attachment"} removed`);
     updateAttachments(attachments.filter((_, position) => position !== index));
+    publishKovaNotice({
+      id: "file_removed",
+      title: "Attachment removed",
+      message: attachment.name,
+    });
     window.requestAnimationFrame(() => {
       if (attachment?.localPaste) undoPasteButtonRef.current?.focus();
       else ref.current?.focus();
@@ -1152,6 +1158,7 @@ export function ChatInput({
     setUploadAnnouncement(
       "Pasted text attached locally. Nothing has been uploaded. Inspect the chip to put it back into the message.",
     );
+    publishKovaNotice({ id: "paste_converted", title: "Pasted text attached to draft" });
     return true;
   };
 

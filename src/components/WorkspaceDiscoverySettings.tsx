@@ -93,6 +93,10 @@ export function WorkspaceDiscoverySettings() {
                   setError(
                     "The request could not be confirmed. Review your connection and try again.",
                   );
+                  publishKovaNotice({
+                    id: "workspace_join_failed",
+                    title: "Workspace request could not be confirmed",
+                  });
                 } finally {
                   setBusy(null);
                 }

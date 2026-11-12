@@ -315,6 +315,7 @@ const surfaces = {
     "file_saved",
     "file_removed",
     "image_copied",
+    "image_save_failed",
     "feedback_sent",
     "connection_success",
     "project_created",

@@ -1626,8 +1626,10 @@ function KovaGPT() {
       setTempChatStartOpen(false);
       setTempChatConfirmed(true);
       window.setTimeout(() => setTempChatConfirmed(false), 1400);
-      toast.success("Temporary chat on", {
-        description:
+      publishKovaNotice({
+        id: "temporary_chat",
+        title: "Temporary chat on",
+        message:
           context === "personalized"
             ? "No history or new memory. Your enabled context and connected apps may be used."
             : "No history or memory. Profile, instructions, personality and connected apps stay off.",

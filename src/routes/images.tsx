@@ -764,7 +764,10 @@ function ImagesPage() {
         publishKovaNotice({ id: "file_saved", title: "Image saved to Library", confirmed: true });
     } catch (error) {
       if (generation === saveGenerationRef.current)
-        toast.error(error instanceof Error ? error.message : "Could not save image");
+        publishKovaNotice({
+          id: "image_save_failed",
+          title: error instanceof Error ? error.message : "Could not save image",
+        });
     } finally {
       if (generation === saveGenerationRef.current) {
         savePendingRef.current = false;

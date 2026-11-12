@@ -90,7 +90,7 @@ test("unmount invalidates generation-scoped image actions", () => {
 });
 
 function saveFixture() {
-  let resolveSave;
+  let resolveSave, rejectSave;
   const state = { busy: false, saves: 0, notices: [] };
   const saveEpoch = { current: 1 },
     pending = { current: false };
@@ -113,24 +113,27 @@ function saveFixture() {
     imageUrlForLibrary: async (url) => url,
     saveImage: () => {
       state.saves++;
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         resolveSave = resolve;
+        rejectSave = reject;
       });
     },
     publishKovaNotice: (notice) => {
-      assert.equal(notice.id, "file_saved");
-      assert.equal(notice.confirmed, true);
+      if (notice.id === "file_saved") assert.equal(notice.confirmed, true);
       state.notices.push(notice.id);
-    },
-    toast: {
-      success: (value) => state.notices.push(value),
-      error: (value) => state.notices.push(value),
     },
   };
   const save = new Function(...Object.keys(dependencies), code + "; return saveGeneratedImage;")(
     ...Object.values(dependencies),
   );
-  return { state, saveEpoch, pending, save, finish: () => resolveSave() };
+  return {
+    state,
+    saveEpoch,
+    pending,
+    save,
+    finish: () => resolveSave(),
+    fail: () => rejectSave(new Error("Library unavailable")),
+  };
 }
 test("image Library save ignores duplicate clicks and releases the pending control", async () => {
   const f = saveFixture();
@@ -144,7 +147,7 @@ test("image Library save ignores duplicate clicks and releases the pending contr
   await first;
   assert.equal(f.state.busy, false);
   assert.equal(f.pending.current, false);
-  assert.equal(f.state.notices.length, 1);
+  assert.deepEqual(f.state.notices, ["file_saved"]);
 });
 test("image Library save cannot report success or clear a new account action", async () => {
   const f = saveFixture();
@@ -156,6 +159,19 @@ test("image Library save cannot report success or clear a new account action", a
   await first;
   assert.deepEqual(f.state.notices, []);
   assert.equal(f.state.busy, true);
+});
+
+test("image save failure emits once for the current account and never for a stale account", async () => {
+  for (const stale of [false, true]) {
+    const f = saveFixture();
+    const result = f.save({ prompt: "draft", imageUrl: "data:image/png;base64,test" });
+    await new Promise((resolve) => setImmediate(resolve));
+    if (stale) f.saveEpoch.current++;
+    f.fail();
+    await result;
+    assert.deepEqual(f.state.notices, stale ? [] : ["image_save_failed"]);
+    if (!stale) assert.equal(f.pending.current, false);
+  }
 });
 
 test("image-edit fields keep full-width rounded phone geometry and 44px controls", () => {

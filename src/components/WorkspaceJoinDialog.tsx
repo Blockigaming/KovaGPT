@@ -102,6 +102,10 @@ export function WorkspaceJoinDialog({
                       setError(
                         "Your request could not be confirmed. Check your connection and try again.",
                       );
+                      publishKovaNotice({
+                        id: "workspace_join_failed",
+                        title: "Workspace request could not be confirmed",
+                      });
                     } finally {
                       setSubmitting(null);
                     }
