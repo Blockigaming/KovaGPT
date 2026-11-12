@@ -1847,6 +1847,19 @@ function LibraryPage() {
           <LibraryUploadDialog
             key={userKey}
             ownerId={userKey}
+            firstUpload={
+              isSignedIn &&
+              principalReady &&
+              !libraryCleared &&
+              !loading &&
+              !loadError &&
+              !query &&
+              !searchQuery &&
+              filter === "all" &&
+              folderScope === "all" &&
+              !nextPage &&
+              !items.some((item) => item.source === "upload" || item.item_type === "document")
+            }
             onClose={() => setUploadOpen(false)}
             onSaved={() => {
               refreshLibrary();

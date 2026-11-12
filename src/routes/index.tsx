@@ -2392,11 +2392,12 @@ function KovaGPT() {
                   rejectedDraft,
                 ]);
             }
-            const kind: "image" | "chat" | "upload" = /image/i.test(raw)
-              ? "image"
-              : /upload|file/i.test(raw)
-                ? "upload"
-                : "chat";
+            const kind =
+              err.code === "image_generation_limit"
+                ? "image"
+                : err.code === "file_upload_limit"
+                  ? "upload"
+                  : "chat";
             setLimitDialog({
               open: true,
               kind,

@@ -8,6 +8,54 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, ArrowUpRight } from "lucide-react";
+import { useTier } from "@/hooks/useTier";
+import { DAILY_PLAN_ALLOWANCES } from "@/lib/plan-usage-policy.mjs";
+
+function QuotaPlanAction({
+  kind,
+  usageKind,
+  onClose,
+}: {
+  kind: "image" | "chat" | "upload";
+  usageKind?: "thinking" | "regular";
+  onClose: () => void;
+}) {
+  const { tier, status } = useTier();
+  const nextTier = tier === "free" ? "plus" : tier === "plus" ? "pro" : null;
+  const allowance =
+    kind === "image"
+      ? "images"
+      : kind === "upload"
+        ? "uploads"
+        : usageKind === "thinking"
+          ? "thinkingMessages"
+          : "regularMessages";
+  if (
+    status !== "ready" ||
+    !nextTier ||
+    DAILY_PLAN_ALLOWANCES[nextTier][allowance] <= DAILY_PLAN_ALLOWANCES[tier][allowance]
+  )
+    return null;
+  return (
+    <Button asChild className="min-h-11 rounded-full px-6 max-sm:min-h-12">
+      <Link
+        to="/pricing"
+        onClick={onClose}
+        data-kova-notice-id={
+          kind === "image"
+            ? "more_images"
+            : kind === "upload"
+              ? "more_uploads"
+              : usageKind === "thinking"
+                ? "more_reasoning"
+                : undefined
+        }
+      >
+        View plans <ArrowUpRight aria-hidden="true" className="ml-1 h-4 w-4" />
+      </Link>
+    </Button>
+  );
+}
 
 export function LimitReachedDialog({
   open,
@@ -70,11 +118,13 @@ export function LimitReachedDialog({
           >
             Close
           </Button>
-          <Button asChild className="min-h-11 rounded-full px-6 max-sm:min-h-12">
-            <Link to="/pricing" onClick={() => onOpenChange(false)}>
-              View plans <ArrowUpRight aria-hidden="true" className="ml-1 h-4 w-4" />
-            </Link>
-          </Button>
+          {open && (
+            <QuotaPlanAction
+              kind={kind}
+              usageKind={usageKind}
+              onClose={() => onOpenChange(false)}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>

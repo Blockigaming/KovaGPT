@@ -17,7 +17,7 @@ import {
   type ImageHistoryItem,
 } from "@/lib/image-history";
 import { safeImageUrl } from "@/lib/safe-image-url";
-import { createImageHistoryLoadGuard } from "@/lib/image-history-load";
+import { createImageHistoryLoadGuard, type ImageHistorySnapshot } from "@/lib/image-history-load";
 import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
@@ -51,7 +51,6 @@ import {
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
-import { getUsage } from "@/lib/limits";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
@@ -342,7 +341,7 @@ function takeLegacyHistory(userKey: string): ImageHistoryItem[] {
   }
 }
 
-async function loadHistory(userKey: string): Promise<ImageHistoryItem[]> {
+async function loadHistory(userKey: string): Promise<ImageHistorySnapshot> {
   const legacy = takeLegacyHistory(userKey);
   const migrationResults = await Promise.allSettled(
     legacy.map((item) => persistImageHistoryItem(userKey, item, HISTORY_LIMIT)),
@@ -353,11 +352,14 @@ async function loadHistory(userKey: string): Promise<ImageHistoryItem[]> {
     const transientLegacy = legacy.filter(
       (item, index) => migrationResults[index]?.status === "rejected" && !persistedIds.has(item.id),
     );
-    return [...persisted, ...transientLegacy]
-      .sort((left, right) => right.createdAt - left.createdAt)
-      .slice(0, HISTORY_LIMIT);
+    return {
+      storageVerified: true,
+      items: [...persisted, ...transientLegacy]
+        .sort((left, right) => right.createdAt - left.createdAt)
+        .slice(0, HISTORY_LIMIT),
+    };
   } catch {
-    return legacy;
+    return { storageVerified: false, items: legacy };
   }
 }
 
@@ -406,7 +408,9 @@ function ImagesPage() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
+  const [limitResetAt, setLimitResetAt] = useState<number | undefined>(undefined);
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
+  const [firstImageOwner, setFirstImageOwner] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
   const openSettings = useCallback(
@@ -659,6 +663,7 @@ function ImagesPage() {
     setResult(null);
     setResultPrompt("");
     setHistory([]);
+    setFirstImageOwner(null);
     setLightbox(null);
   }, [clearResultReveal]);
 
@@ -695,14 +700,24 @@ function ImagesPage() {
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
+    setLimitResetAt(undefined);
     setHistory([]);
+    setFirstImageOwner(null);
     if (isLoaded && isSignedIn && userKey) {
+      const historyGeneration = generationRef.current;
       void historyLoadGuard.load(
         () => loadHistory(userKey),
-        (items) => {
+        ({ items, storageVerified }) => {
           const objectUrls = items.filter((item) => item.objectUrl).map((item) => item.imageUrl);
           for (const objectUrl of objectUrls) historyObjectUrls.add(objectUrl);
-          setHistory(items);
+          setHistory((current) => {
+            const currentIds = new Set(current.map((item) => item.id));
+            return [...current, ...items.filter((item) => !currentIds.has(item.id))]
+              .sort((left, right) => right.createdAt - left.createdAt)
+              .slice(0, HISTORY_LIMIT);
+          });
+          if (storageVerified && items.length === 0 && generationRef.current === historyGeneration)
+            setFirstImageOwner(userKey);
         },
       );
     }
@@ -720,6 +735,7 @@ function ImagesPage() {
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
+    setFirstImageOwner(null);
     const item: ImageHistoryItem = {
       id: crypto.randomUUID(),
       prompt: p,
@@ -890,8 +906,10 @@ function ImagesPage() {
         const msg = typeof data.error === "string" ? data.error : "Failed to generate image";
         referenceMissing =
           Boolean(editSelection) && res.status === 409 && data.code === "image_reference_missing";
-        if (res.status === 429 && /limit/i.test(msg)) {
+        if (res.status === 429 && data.code === "image_generation_limit") {
           setLimitMessage(msg);
+          const resetAt = typeof data.resetsAt === "string" ? Date.parse(data.resetsAt) : NaN;
+          setLimitResetAt(Number.isFinite(resetAt) ? resetAt : undefined);
           setLimitOpen(true);
           quotaNoticeShown = true;
           publishKovaNotice({ id: "image_limit", title: "Image limit reached", message: msg });
@@ -1322,13 +1340,30 @@ function ImagesPage() {
                   </SignInButton>
                 </div>
               ) : history.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-10 text-center">
+                <div
+                  className="rounded-xl border border-dashed border-border p-10 text-center"
+                  data-kova-notice-id={
+                    firstImageOwner && firstImageOwner === userKey ? "first_image" : undefined
+                  }
+                >
                   <div className="mx-auto w-10 h-10 rounded-lg bg-foreground/5 flex items-center justify-center mb-3">
                     <ImageIcon className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Your generated images will appear here. Pick a style or describe an image above.
+                    {firstImageOwner && firstImageOwner === userKey
+                      ? "Create an image to start this browser’s image history."
+                      : "Your generated images will appear here. Pick a style or describe an image above."}
                   </p>
+                  {firstImageOwner && firstImageOwner === userKey && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => inputRef.current?.focus()}
+                    >
+                      Describe an image
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="kova-image-history-grid" data-ui-reference="chatgpt.images.history">
@@ -1423,7 +1458,7 @@ function ImagesPage() {
         onOpenChange={setLimitOpen}
         kind="image"
         message={limitMessage}
-        resetsAt={getUsage().resetsAt}
+        resetsAt={limitResetAt}
       />
 
       <Dialog

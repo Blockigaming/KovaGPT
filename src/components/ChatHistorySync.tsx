@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
   createChatHistoryController,
@@ -340,20 +340,8 @@ export function ChatHistorySyncStatus() {
     () => EMPTY,
   );
   const [busy, setBusy] = useState(false);
-  const [connection, setConnection] = useState<{
-    ownerId: string;
-    phase: "connected" | "failed";
-  } | null>(null);
-  const checkGeneration = useRef(0);
-  const checkOwner = useRef(user?.id);
-  checkOwner.current = user?.id;
   useEffect(() => {
-    setConnection(null);
     setBusy(false);
-    const pendingCheck = checkGeneration;
-    return () => {
-      pendingCheck.current++;
-    };
   }, [user?.id]);
   const working = busy || ["connecting", "saving_device", "syncing"].includes(state.phase);
   if (!user || state.ownerId !== user.id) return null;
@@ -372,21 +360,24 @@ export function ChatHistorySyncStatus() {
     offline: "Chats are saved on this device. Reconnecting to your account…",
     device_error:
       "Chat history could not be saved on this device. Keep this page open and export important drafts.",
-    other_tab:
-      "Chat editing is open in another tab. Close that tab to resume editing here automatically.",
     unavailable: "Account chat sync is unavailable in this browser.",
     cleared: "Device history was cleared. Reload to resume account sync.",
   };
+  // Preserve persistent recovery for blocked/auth/device-save failures even
+  // when the automatic controller enters a temporary pending state. Routine
+  // offline/rate-limited retries remain silent.
+  const criticalRecovery = ["device_error", "blocked", "auth_required"].includes(
+    state.recoveryPhase ?? "",
+  );
   const critical =
+    criticalRecovery ||
     state.conflicts.length > 0 ||
     ["device_error", "blocked", "auth_required", "cleared", "conflict"].includes(state.phase);
   // Keep a pending migration decision in place while background sync runs.
   // Collapsing it during a pointer press moves the transcript's native controls.
-  // Sync without a migration or critical error still has no visible notice.
-  const visible =
-    state.migration > 0 ||
-    state.conflicts.length > 0 ||
-    ["device_error", "blocked", "auth_required", "cleared"].includes(state.phase);
+  // Routine sync and passive multi-tab lock handoffs are silent. Real conflicts,
+  // unsaved device data and blocked persistence still require recoverable UI.
+  const visible = state.migration > 0 || critical;
   if (!visible) return null;
   const labelPhase =
     state.migration > 0 && !critical ? "local" : (state.recoveryPhase ?? state.phase);
@@ -401,37 +392,6 @@ export function ChatHistorySyncStatus() {
     }
   }
   const controller = controls.get(user.id);
-  async function checkConnection() {
-    const ownerId = state.ownerId;
-    if (!ownerId || busy) return;
-    const generation = ++checkGeneration.current;
-    setBusy(true);
-    const currentCheck = () =>
-      checkOwner.current === ownerId && checkGeneration.current === generation;
-    try {
-      const result = await requestWorkSync(
-        ownerId,
-        "/api/chat/history?cursor=0",
-        AbortSignal.timeout(15000),
-      );
-      if (
-        !result ||
-        typeof result !== "object" ||
-        !("ownerId" in result) ||
-        result.ownerId !== ownerId ||
-        !("epoch" in result) ||
-        typeof result.epoch !== "string" ||
-        !("records" in result) ||
-        !Array.isArray(result.records)
-      )
-        throw new Error("chat_history_invalid_response");
-      if (currentCheck()) setConnection({ ownerId, phase: "connected" });
-    } catch {
-      if (currentCheck()) setConnection({ ownerId, phase: "failed" });
-    } finally {
-      if (currentCheck()) setBusy(false);
-    }
-  }
   return (
     <div
       className="mx-auto my-2 max-h-[min(30dvh,16rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm [overflow-wrap:anywhere] [&_button]:h-auto [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:py-2"
@@ -441,25 +401,6 @@ export function ChatHistorySyncStatus() {
       <p role="status" aria-live="polite" className="font-medium text-foreground/80">
         {labels[labelPhase] ?? "Chat sync is pending"}
       </p>
-      {state.phase === "other_tab" && (
-        <div className="mt-2 space-y-2">
-          {connection?.ownerId === user.id && (
-            <p role="status">
-              {connection.phase === "connected"
-                ? "Your account sync connection is working."
-                : "The sync connection could not be verified. Try again shortly."}
-            </p>
-          )}
-          <Button
-            variant="outline"
-            className="rounded-full"
-            disabled={working}
-            onClick={() => void checkConnection()}
-          >
-            {busy ? "Checking connection…" : "Check sync connection"}
-          </Button>
-        </div>
-      )}
       {state.migration > 0 && (
         <div className="mt-2 space-y-2">
           <p>

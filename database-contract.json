@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 221,
+  "migrationCount": 222,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -347,6 +347,7 @@
     "accept_project_invite",
     "accept_project_invite",
     "accept_project_invite",
+    "accept_project_invite",
     "account_email_before_delete",
     "account_email_claim_dispatch",
     "account_email_defaults",
@@ -415,6 +416,7 @@
     "can_edit_project",
     "can_edit_project",
     "can_read_retained_work_source",
+    "can_receive_project_notice",
     "cancel_account_export_account_deletion",
     "cancel_account_export_account_deletion",
     "canvas_access",
@@ -496,6 +498,7 @@
     "decide_agent_approval",
     "decide_agent_approval",
     "decide_mcp_oauth_consent",
+    "decline_project_invite",
     "decline_project_invite",
     "decline_project_invite",
     "decline_project_invite",
@@ -996,6 +999,7 @@
     "site_principal_current",
     "site_principal_current",
     "start_developer_checkout",
+    "sync_project_invitation_notice",
     "team_verified_email",
     "touch_updated_at",
     "track_account_export_artifact_lifetime",
@@ -1665,6 +1669,7 @@
     "reject_export_while_account_deletion_pending",
     "reject_unsettled_customer_auth_deletion",
     "scheduled_tasks_touch_updated_at",
+    "sync_project_invitation_notice",
     "track_account_export_artifact_lifetime",
     "trg_fa_touch",
     "trg_family_member_cap",
@@ -2293,6 +2298,7 @@
     "execute on function public.%I() to service_role', routine)",
     "execute on function public.accept_project_invite(uuid) to authenticated, service_role",
     "execute on function public.accept_project_invite(uuid) to authenticated, service_role",
+    "execute on function public.accept_project_invite(uuid), public.decline_project_invite(uuid)\n  to authenticated, service_role",
     "execute on function public.account_email_get_preferences(uuid),public.account_email_update_preferences(uuid,jsonb),\n  public.account_email_claim_dispatch(uuid[],timestamptz),public.account_email_prepare_dispatch(uuid,uuid),\n  public.account_email_finish_dispatch(uuid,uuid,text),public.account_email_purge_expired(integer),\n  public.account_email_record_lifecycle(uuid,text,text,timestamptz,jsonb),\n  public.account_email_prepare_account_deletion(uuid,uuid) to service_role",
     "execute on function public.acquire_ai_generation(\n  text,\n  text,\n  uuid,\n  text,\n  uuid,\n  text,\n  text,\n  boolean,\n  text,\n  bigint,\n  bigint,\n  numeric,\n  boolean,\n  bigint,\n  bigint,\n  integer,\n  integer,\n  integer,\n  integer,\n  integer,\n  timestamptz,\n  timestamptz\n) to service_role",
     "execute on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) to service_role",
@@ -2923,6 +2929,7 @@
     "all on function kova_private.bind_recovery_account_authority() from public, anon, authenticated, service_role",
     "all on function kova_private.can_edit_project(uuid, uuid) from public, anon",
     "all on function kova_private.can_read_retained_work_source(text) from public,anon,authenticated",
+    "all on function kova_private.can_receive_project_notice(uuid) from public, anon, authenticated",
     "all on function kova_private.clear_chat_memory_on_account_deletion() from public,anon,authenticated",
     "all on function kova_private.close_auth_email_dispatch(bigint,text,text,text)\n from public, anon, authenticated, service_role",
     "all on function kova_private.control_agent_job(uuid, text) from public, anon",
@@ -2975,6 +2982,7 @@
     "all on function kova_private.rotate_security_session(kova_private.auth_sessions,text,text,timestamptz,text,jsonb,timestamptz)\n  from public, anon, authenticated, service_role",
     "all on function kova_private.scheduled_task_connection_current(uuid,text,text,text,text,text[]) from public,anon,authenticated",
     "all on function kova_private.site_authorized_session(uuid,uuid,text) from public,anon,authenticated",
+    "all on function kova_private.sync_project_invitation_notice() from public, anon, authenticated",
     "all on function kova_private.team_verified_email(uuid) from public,anon,authenticated",
     "all on function kova_private.track_account_export_artifact_lifetime()\n  from public, anon, authenticated",
     "all on function kova_private.validate_scheduled_task_context(uuid,jsonb,jsonb) from public,anon,authenticated",
@@ -2984,6 +2992,7 @@
     "all on function public.%I() from public, anon, authenticated', routine)",
     "all on function public.accept_project_invite(uuid) from public, anon, authenticated",
     "all on function public.accept_project_invite(uuid) from public, anon, authenticated",
+    "all on function public.accept_project_invite(uuid), public.decline_project_invite(uuid)\n  from public, anon, authenticated",
     "all on function public.account_email_claim_dispatch(uuid[],timestamptz) from public,anon,authenticated",
     "all on function public.account_email_finish_dispatch(uuid,uuid,text) from public,anon,authenticated",
     "all on function public.account_email_get_preferences(uuid) from public,anon,authenticated",
@@ -3954,5 +3963,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "954604643767d176d7651a2cc22b3a7b3dc3e37baf213db172d660bf4a9a70c2"
+  "sha256": "3ac54219138ef5536e6c54ce7ab53142252795c864def7e8fb8c3e7d54e7e47a"
 }

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 221,
-  "latest": "20261112022300_kova_workspace_join_review_current_authority.sql",
+  "count": 222,
+  "latest": "20261112031000_kova_project_invitation_notifications.sql",
   "migrations": [
     {
       "order": 1,
@@ -4673,6 +4673,25 @@
       "sha256": "07b512bd57a00ee68fa3593f8006b5bd8ff7414901e6c20efe3f613e1e2b6ebd",
       "tables": [],
       "functions": ["review_verified_team_join"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 222,
+      "filename": "20261112031000_kova_project_invitation_notifications.sql",
+      "timestamp": "20261112031000",
+      "sha256": "048356ad0c4d815abca1e170e3d2c039fa3e1a81e7db0d64f0cc067ba4e87993",
+      "tables": [],
+      "functions": [
+        "can_receive_project_notice",
+        "sync_project_invitation_notice",
+        "accept_project_invite",
+        "decline_project_invite"
+      ],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,

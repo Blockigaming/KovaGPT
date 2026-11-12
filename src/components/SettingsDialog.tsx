@@ -90,7 +90,9 @@ import {
   type ComponentProps,
 } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { getMyPlanUsage, type PlanUsageDto } from "@/utils/usage.functions";
+import { planUsageHasNewCapacity } from "@/lib/plan-usage-policy.mjs";
 import {
   createPortalSession,
   getSubscriptionSummary,
@@ -318,6 +320,9 @@ export function SettingsDialog({
   const [settingsQuery, setSettingsQuery] = useState("");
   const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<PlanUsageDto | null>(null);
+  const usageEvidence = useRef<{ ownerId: string; snapshot: PlanUsageDto } | null>(null);
+  if (usageEvidence.current && usageEvidence.current.ownerId !== userKey)
+    usageEvidence.current = null;
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageLoaded, setUsageLoaded] = useState(false);
   const [usageRetry, setUsageRetry] = useState(0);
@@ -518,7 +523,21 @@ export function SettingsDialog({
     setUsageLoading(true);
     getMyPlanUsage({ data: { ownerId: userKey } })
       .then((u) => {
-        if (!cancelled) setUsage(Array.isArray(u?.windows) && u.windows.length > 0 ? u : null);
+        if (cancelled || currentAuthUserKeyRef.current !== userKey) return;
+        if (!Array.isArray(u?.windows) || !u.windows.length) {
+          setUsage(null);
+          return;
+        }
+        const previous = usageEvidence.current;
+        if (previous?.ownerId === userKey && planUsageHasNewCapacity(previous.snapshot, u))
+          publishKovaNotice({
+            id: "usage_restored",
+            title: "Message allowance available",
+            message: "Your usage refreshed. You can return to chat to retry.",
+            confirmed: true,
+          });
+        usageEvidence.current = { ownerId: userKey, snapshot: u };
+        setUsage(u);
       })
       .catch(() => {
         if (!cancelled) setUsage(null);
@@ -1127,77 +1146,26 @@ export function SettingsDialog({
     },
   ];
   const destinations = destinationGroups.flatMap((group) => group.tabs);
-  const destination = (value: string) => destinations.find((item) => item.v === value)!;
-  const pageGroups: TabGroup[] = [
-    { title: "Your account", tabs: [destination("personalization"), destination("billing")] },
-    {
-      title: "Preferences",
-      tabs: [
-        destination("general"),
-        destination("appearance"),
-        destination("memory"),
-        destination("notifications"),
-      ],
-    },
-    { title: "Privacy & workspace", tabs: [destination("data"), destination("linked")] },
-    { title: "Support", tabs: [destination("help"), destination("logout")] },
-  ];
-  const groups = pageGroups;
-  const secondaryParents: Record<string, string> = {
-    email: "personalization",
-    logout: "personalization",
-    report: "help",
-    about: "help",
-    voice: "general",
-    shortcuts: "general",
-    memory: "data",
-    security: "data",
-    storage: "data",
-    location: "data",
-    parental: "data",
-    family: "linked",
-    usage: "billing",
-    "cloud-browser": "linked",
-  };
-  const parentTab = pageGroups.some((group) => group.tabs.some((item) => item.v === tab))
-    ? undefined
-    : secondaryParents[tab];
-  const secondaryTabs = destinations.filter(
-    (item) =>
-      secondaryParents[item.v] === tab &&
-      !pageGroups.some((group) => group.tabs.some((primary) => primary.v === item.v)),
-  );
-  const allTabs = groups.flatMap((group) => group.tabs);
-  const activeTab =
-    allTabs.find((item) => item.v === tab) ??
-    destinations.find((item) => item.v === tab) ??
-    allTabs[0];
+  // Every functional Settings destination belongs in the sidebar, including
+  // the entries previously relegated to "Also in..." cards in the content area.
+  const groups = destinationGroups;
+  const allTabs = destinations;
+  const activeTab = allTabs.find((item) => item.v === tab) ?? allTabs[0];
   const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
   const matchesSettingsQuery = (item: TabDef) =>
-    [item.label, ...(item.keywords ?? [])].some((term) =>
+    [item.label, SETTINGS_DESCRIPTIONS[item.v] ?? "", ...(item.keywords ?? [])].some((term) =>
       term.toLocaleLowerCase().includes(normalizedQuery),
     );
-  const matchingSecondaryTabs = normalizedQuery
-    ? destinations.filter(
-        (item) =>
-          secondaryParents[item.v] &&
-          !allTabs.some((primary) => primary.v === item.v) &&
-          matchesSettingsQuery(item),
-      )
-    : [];
-  const hasSettingsMatches =
-    !normalizedQuery ||
-    groups.some((group) => group.tabs.some(matchesSettingsQuery)) ||
-    matchingSecondaryTabs.length > 0;
   const filteredGroups = normalizedQuery
-    ? [
-        ...groups.map((group) => ({
+    ? groups
+        .map((group) => ({
           ...group,
-          tabs: group.tabs.filter((item) => item.v === tab || matchesSettingsQuery(item)),
-        })),
-        { title: "Related settings", tabs: matchingSecondaryTabs },
-      ].filter((group) => group.tabs.length > 0)
+          tabs: group.tabs.filter(matchesSettingsQuery),
+        }))
+        .filter((group) => group.tabs.length > 0)
     : groups;
+  const hasSettingsMatches =
+    !normalizedQuery || groups.some((group) => group.tabs.some(matchesSettingsQuery));
   const selectTab = (value: string) => {
     if (value === "logout") {
       setLogoutConfirmOpen(true);
@@ -1487,7 +1455,7 @@ export function SettingsDialog({
             </aside>
 
             <SettingsNavigationResize
-              width={settings.settingsNavigationWidth ?? (page ? 352 : 280)}
+              width={settings.settingsNavigationWidth ?? 272}
               onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
             />
 
@@ -1529,32 +1497,6 @@ export function SettingsDialog({
                 ) : null}
               </header>
               <p className="kova-settings-mobile-intro">{SETTINGS_DESCRIPTIONS[tab]}</p>
-              {parentTab ? (
-                <div className="kova-settings-parent-link">
-                  <Button variant="ghost" onClick={() => selectTab(parentTab)}>
-                    <ArrowLeft aria-hidden="true" />
-                    Back to {allTabs.find((item) => item.v === parentTab)?.label ?? "Settings"}
-                  </Button>
-                </div>
-              ) : secondaryTabs.length ? (
-                <nav className="kova-settings-related" aria-label={`${activeTab.label} sections`}>
-                  <p>Also in {activeTab.label.toLocaleLowerCase()}</p>
-                  <div>
-                    {secondaryTabs.map((item) => (
-                      <Button
-                        key={item.v}
-                        variant="ghost"
-                        data-desktop-only={item.v === "shortcuts" || undefined}
-                        onClick={() => selectTab(item.v)}
-                      >
-                        <item.icon aria-hidden="true" />
-                        <span>{item.label}</span>
-                        <span aria-hidden="true">›</span>
-                      </Button>
-                    ))}
-                  </div>
-                </nav>
-              ) : null}
               {/* DIRECT ACCOUNT SETTINGS */}
               <TabsContent
                 value="voice"

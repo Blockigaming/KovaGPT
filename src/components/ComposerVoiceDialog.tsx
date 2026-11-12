@@ -38,6 +38,7 @@ const MAX_REPLY_CHARACTERS = 4_000;
 const REQUEST_TIMEOUT_MS = 60_000;
 
 const VOICE_PREFERENCE_KEY = "kova-voice-selection-v1";
+const VOICE_FIRST_SESSION_KEY = "kova-voice-first-session-v1";
 type VoiceChoice = { id: string; label: string; available: boolean };
 type VoiceCapabilities = {
   configured: boolean;
@@ -195,6 +196,8 @@ export function ComposerVoiceDialog({
   const voiceHelpId = useId();
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
+  const [firstVoice, setFirstVoice] = useState(false);
+  const [microphoneMuted, setMicrophoneMuted] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState("");
   const [transcript, setTranscript] = useState("");
@@ -203,6 +206,7 @@ export function ComposerVoiceDialog({
   const [elapsed, setElapsed] = useState(0);
   const [audioUrl, setAudioUrl] = useState("");
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
+  const capabilityRetryScope = useRef<string | null>(null);
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [preferenceNotice, setPreferenceNotice] = useState("");
   const [lastVoiceReply, setLastVoiceReply] = useState("");
@@ -247,6 +251,7 @@ export function ComposerVoiceDialog({
   const phaseRef = useRef<Phase>("idle");
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
+  const muted = useRef(false);
   const chunks = useRef<Blob[]>([]);
   const audioBytes = useRef(0);
   const retainedRecording = useRef<Blob | null>(null);
@@ -289,6 +294,8 @@ export function ComposerVoiceDialog({
         });
       if (next === "transcribing")
         publishKovaNotice({ id: "dictation_started", title: "Transcribing recording" });
+      if (next === "requesting" && mode === "voice")
+        publishKovaNotice({ id: "voice_starting", title: "Starting Voice" });
     },
     [mode],
   );
@@ -322,6 +329,7 @@ export function ComposerVoiceDialog({
     // resources. A late getUserMedia result must immediately stop its own tracks.
     generation.current += 1;
     voiceSessionActive.current = false;
+    muted.current = false;
     const activePlayback = voicePlayback.current;
     voicePlayback.current = null;
     activePlayback?.stop();
@@ -372,6 +380,7 @@ export function ComposerVoiceDialog({
   useLayoutEffect(() => {
     mounted.current = true;
     closing.current = !open;
+    if (!open) capabilityRetryScope.current = null;
     releaseResources();
     setCapabilities(null);
     voiceCatalog.current = [];
@@ -382,6 +391,8 @@ export function ComposerVoiceDialog({
     setLastVoiceReply("");
     if (open) billingAfterClose.current = null;
     setChecking(false);
+    setFirstVoice(false);
+    setMicrophoneMuted(false);
     setError("");
     setTranscript("");
     setHasTranscript(false);
@@ -420,6 +431,15 @@ export function ComposerVoiceDialog({
           const selection = preferredVoice(scope.userId, voices, defaultId);
           selectedVoice.current = selection;
           setSelectedVoiceId(selection);
+          if (mode === "voice" && result.configured === true && result.conversation === true) {
+            const storage = safeBrowserStorage("localStorage");
+            const key = principalScopedStorageKey(VOICE_FIRST_SESSION_KEY, scope.userId);
+            try {
+              setFirstVoice(Boolean(storage && key && storage.getItem(key) === null));
+            } catch {
+              // Voice is available even when browser storage is restricted.
+            }
+          }
           setCapabilities({
             voices,
             defaultVoiceId: defaultId,
@@ -808,6 +828,20 @@ export function ComposerVoiceDialog({
     stream.current = null;
   };
 
+  function toggleMicrophoneMute() {
+    if (mode !== "voice" || phaseRef.current !== "recording" || !current.current.open) return;
+    const audioTracks = stream.current
+      ?.getAudioTracks()
+      .filter((track) => track.readyState === "live");
+    if (!audioTracks?.length) return;
+    const nextMuted = !muted.current;
+    for (const track of audioTracks) track.enabled = !nextMuted;
+    muted.current = nextMuted;
+    const monitor = silenceMonitor.current;
+    if (monitor && !nextMuted) monitor.gate = createVoiceSilenceGate();
+    setMicrophoneMuted(nextMuted);
+  }
+
   const startRecording = async (continuing = false) => {
     if (!userId || !capabilities?.configured || !capabilities.stt || phaseRef.current !== "idle")
       return;
@@ -835,6 +869,8 @@ export function ComposerVoiceDialog({
     if (mode === "voice") voiceSessionActive.current = true;
     releasePlayback();
     retainedRecording.current = null;
+    muted.current = false;
+    setMicrophoneMuted(false);
     setCanRetryRecording(false);
     setAudioUrl("");
     setError("");
@@ -885,6 +921,15 @@ export function ComposerVoiceDialog({
         void transcribe(scope, next.mimeType || mimeType || "audio/webm");
       };
       next.start(250);
+      if (mode === "voice" && firstVoice) {
+        const key = principalScopedStorageKey(VOICE_FIRST_SESSION_KEY, scope.userId);
+        try {
+          if (key) safeBrowserStorage("localStorage")?.setItem(key, "1");
+        } catch {
+          // The recording does not depend on this first-use preference.
+        }
+        setFirstVoice(false);
+      }
       updatePhase("recording");
       const started = Date.now();
       recordingClock.current = setInterval(() => {
@@ -905,11 +950,12 @@ export function ComposerVoiceDialog({
           const samples = new Float32Array(analyser.fftSize);
           const gate = createVoiceSilenceGate();
           const interval = setInterval(() => {
-            if (!isCurrent(scope) || phaseRef.current !== "recording") return;
+            if (!isCurrent(scope) || phaseRef.current !== "recording" || muted.current) return;
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
-            if (gate.sample(Math.sqrt(total / samples.length), Date.now())) stopRecording();
+            if (silenceMonitor.current?.gate.sample(Math.sqrt(total / samples.length), Date.now()))
+              stopRecording();
           }, 100);
           silenceMonitor.current = { context, source, interval, gate };
           setHandsFreeListening(true);
@@ -926,6 +972,11 @@ export function ComposerVoiceDialog({
         }
       }
       recordingDeadline.current = setTimeout(() => {
+        if (mode === "voice" && muted.current) {
+          cancelOperation();
+          setError("The microphone remained muted. Start a new voice turn when you’re ready.");
+          return;
+        }
         if (
           mode === "voice" &&
           silenceMonitor.current &&
@@ -1189,6 +1240,9 @@ export function ComposerVoiceDialog({
       phase={phase}
       mode={mode}
       status={status}
+      firstVoice={firstVoice}
+      microphoneMuted={mode === "voice" && phase === "recording" && microphoneMuted}
+      reconnecting={capabilityRetryScope.current === JSON.stringify([userId, contextKey])}
       handsFreeListening={mode === "voice" && handsFreeListening}
       availability={
         !userId
@@ -1293,6 +1347,19 @@ export function ComposerVoiceDialog({
               </span>
             </Button>
           )
+        ) : undefined
+      }
+      muteControl={
+        ready && mode === "voice" && phase === "recording" ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 rounded-full"
+            aria-label={microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+            onClick={toggleMicrophoneMute}
+          >
+            {microphoneMuted ? "Unmute" : "Mute"}
+          </Button>
         ) : undefined
       }
       retryControl={
@@ -1411,7 +1478,10 @@ export function ComposerVoiceDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setCapabilityAttempt((value) => value + 1)}
+            onClick={() => {
+              capabilityRetryScope.current = JSON.stringify([userId, contextKey]);
+              setCapabilityAttempt((value) => value + 1);
+            }}
           >
             Check again
           </Button>

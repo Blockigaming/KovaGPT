@@ -69,7 +69,10 @@ test.beforeAll(async () => {
                       ? "export const listVerifiedTeamDomains=async()=>[];export const getTeamDomainVerification=async()=>{throw Error('Unexpected domain request')};export const verifyTeamDomain=getTeamDomainVerification;"
                       : args.path === "workspace-requests"
                         ? "export const listTeamJoinRequests=async()=>[];export const reviewTeamJoinRequest=async()=>{throw Error('Unexpected workspace review')};"
-                        : `export const getTeamWorkspace=async()=>window.teamFixture.workspace;
+                        : `export const getTeamWorkspace=async({data})=>{
+  if(data.expectedUserId!=='${owner}')throw Error('Expected account was not bound to the workspace read');
+  return window.teamFixture.workspace;
+};
  export const reviewTeamInvitation=async({data})=>{const f=window.teamFixture;f.calls.push({name:'review',data});return{id:'33333333-3333-4333-8333-333333333333',state:'draft',quote:{added:f.added,interval:'month',recurring:f.added?2500:0,beforeTax:f.added?1250:0,total:f.added?1328:0}}};
  export const sendTeamInvitation=async({data})=>{const f=window.teamFixture;f.calls.push({name:'send',data});if(f.failSend)throw new Error('Payment needs confirmation. No invitation was sent.');return{ready:true,emailSent:true,paymentUrl:null}};
  export const manageTeamInvitation=async({data})=>{window.teamFixture.calls.push({name:'manage',data});return{ok:true}};

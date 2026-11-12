@@ -4,6 +4,7 @@ const SERVER_KIND_TO_NOTICE = {
   task_result: "task_completed",
   task_failure: "task_failed",
   project_invitation: "invitation_received",
+  project_member_joined: "member_joined",
   project_role_change: "permission_changed",
   shared_chat: "invitation_received",
   connector_reauth: "connection_expired",

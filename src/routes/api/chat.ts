@@ -17,6 +17,7 @@ import { INTERACTIVE_UI_INSTRUCTIONS } from "@/lib/interactive-ui.mjs";
 import {
   assertFeatureEnabled,
   assertNotBanned,
+  dailyFeatureLimit,
   enforceQuota,
   getCallerTier,
   optionalUser,
@@ -1061,11 +1062,7 @@ export const Route = createFileRoute("/api/chat")({
                   signal,
                 ),
               );
-              if (!uploadAllowed)
-                return Response.json(
-                  { error: "Daily file upload limit reached. Resets at midnight UTC." },
-                  { status: 429 },
-                );
+              if (!uploadAllowed) return dailyFeatureLimit("uploads");
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");

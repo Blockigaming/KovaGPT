@@ -3,7 +3,8 @@ export const LIBRARY_ORIGINAL_MAX_BYTES: number;
 export const ORIGINAL_DOCUMENT_MIMES: Readonly<Record<string, string>>;
 export class LibraryOriginalError extends Error {
   status: number;
-  constructor(message?: string, status?: number);
+  code?: string;
+  constructor(message?: string, status?: number, code?: string);
 }
 export type OriginalDocument = {
   id: string;

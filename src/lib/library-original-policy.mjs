@@ -8,9 +8,10 @@ export const ORIGINAL_DOCUMENT_MIMES = Object.freeze({
 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 export class LibraryOriginalError extends Error {
-  constructor(message = "The original file could not be saved. Please retry.", status = 409) {
+  constructor(message = "The original file could not be saved. Please retry.", status = 409, code) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 export function validateOriginalDocument({ id, name, contentType, bytes, text }) {

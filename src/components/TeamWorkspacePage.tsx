@@ -83,7 +83,7 @@ function TeamWorkspace({ owner }: { owner: string }) {
     mutate = useServerFn(mutateTeamMember),
     manage = useServerFn(manageTeamInvitation);
   async function refresh() {
-    const result = await read();
+    const result = await read({ data: { expectedUserId: owner } });
     if (active.current) setWorkspace(result);
   }
   useEffect(() => {

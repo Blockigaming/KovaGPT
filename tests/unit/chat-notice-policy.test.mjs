@@ -86,6 +86,16 @@ test("notices never claim a user has signed out when the session is merely unver
   );
 });
 
+test("only recognized server quota types carry a reset time to the allowance UI", async () => {
+  const resetsAt = "2026-11-13T00:00:00.000Z";
+  for (const code of ["image_generation_limit", "file_upload_limit", "provider_busy"]) {
+    const error = await chatResponseError(
+      Response.json({ error: "Request denied", code, resetsAt }, { status: 429 }),
+    );
+    assert.equal(error.resetAtMs, code === "provider_busy" ? undefined : Date.parse(resetsAt));
+  }
+});
+
 test("client preserves backend quota metadata rather than guessing from error wording", () => {
   const parser = readFileSync("src/lib/chat-sse-client.mjs", "utf8");
   const route = readFileSync("src/routes/index.tsx", "utf8");

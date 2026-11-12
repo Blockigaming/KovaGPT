@@ -33,6 +33,9 @@ export interface ComposerVoiceDialogViewProps {
   status: string;
   availability: ComposerVoiceAvailability;
   hasTranscript: boolean;
+  firstVoice?: boolean;
+  microphoneMuted?: boolean;
+  reconnecting?: boolean;
   handsFreeListening?: boolean;
   microphoneAvailable?: boolean;
   replyAvailable?: boolean;
@@ -40,6 +43,7 @@ export interface ComposerVoiceDialogViewProps {
   voicePicker?: ReactNode;
   conversationModelControl?: ReactNode;
   recordingControl?: ReactNode;
+  muteControl?: ReactNode;
   retryControl?: ReactNode;
   cancelControl?: ReactNode;
   transcriptReview?: ReactNode;
@@ -59,6 +63,9 @@ export function ComposerVoiceDialogView({
   status,
   availability,
   hasTranscript,
+  firstVoice = false,
+  microphoneMuted = false,
+  reconnecting = false,
   handsFreeListening = false,
   microphoneAvailable = true,
   replyAvailable = true,
@@ -66,6 +73,7 @@ export function ComposerVoiceDialogView({
   voicePicker,
   conversationModelControl,
   recordingControl,
+  muteControl,
   retryControl,
   cancelControl,
   transcriptReview,
@@ -77,6 +85,13 @@ export function ComposerVoiceDialogView({
   const ready = availability === "ready";
   const processing = ready && phase !== "idle" && phase !== "recording";
   const hasError = Boolean(error);
+  const firstVoicePermission = mode === "voice" && firstVoice && phase === "requesting";
+  const connectionStatus =
+    mode === "voice"
+      ? reconnecting
+        ? "Reconnecting to Voice…"
+        : "Connecting to Voice…"
+      : "Checking voice availability…";
   const contentFirst =
     hasTranscript ||
     Boolean(audioPlayer) ||
@@ -101,7 +116,9 @@ export function ComposerVoiceDialogView({
               : availability === "error"
                 ? "Voice couldn’t connect"
                 : phase === "recording"
-                  ? "Recording"
+                  ? microphoneMuted
+                    ? "Microphone muted"
+                    : "Recording"
                   : phase === "requesting"
                     ? "Allow microphone access"
                     : phase === "stopping" || phase === "transcribing"
@@ -126,7 +143,7 @@ export function ComposerVoiceDialogView({
   const description =
     error ||
     (availability === "checking"
-      ? "Checking voice availability…"
+      ? connectionStatus
       : availability === "unconfigured"
         ? mode === "voice"
           ? microphoneAvailable
@@ -151,12 +168,16 @@ export function ComposerVoiceDialogView({
                       : "Recording and reply playback are unavailable right now."
                   : phase === "recording"
                     ? mode === "voice"
-                      ? handsFreeListening
-                        ? "Listening live. Pause after speaking to send your turn automatically. Finish turn also works manually; Stop ends the conversation."
-                        : "Listening now. Press Finish turn when you finish speaking; Stop ends the conversation."
+                      ? microphoneMuted
+                        ? "Unmute to continue recording your voice turn."
+                        : handsFreeListening
+                          ? "Listening live. Pause after speaking to send your turn automatically. Finish turn also works manually; Stop ends the conversation."
+                          : "Listening now. Press Finish turn when you finish speaking; Stop ends the conversation."
                       : "Stop when you’re ready to turn your recording into text."
                     : phase === "requesting"
-                      ? "Your browser will ask before the microphone can start."
+                      ? firstVoicePermission
+                        ? "Allow microphone access to start your first voice turn. You can mute or stop from this panel."
+                        : "Your browser will ask before the microphone can start."
                       : phase === "stopping" || phase === "transcribing"
                         ? mode === "voice"
                           ? "Your recording is being transcribed before sending through your chat."
@@ -195,7 +216,7 @@ export function ComposerVoiceDialogView({
 
         <div className="kova-voice-body">
           <div className="kova-voice-canvas">
-            {ready && !contentFirst && (
+            {ready && !contentFirst && !microphoneMuted && (
               <svg
                 className="kova-voice-mark"
                 viewBox="0 0 200 200"
@@ -209,6 +230,7 @@ export function ComposerVoiceDialogView({
                 hasError ? "kova-voice-description kova-voice-error" : "kova-voice-description"
               }
               role={hasError ? "alert" : undefined}
+              data-kova-notice-id={firstVoicePermission ? "first_voice" : undefined}
             >
               {description}
             </DialogDescription>
@@ -219,17 +241,23 @@ export function ComposerVoiceDialogView({
                 }
                 role="status"
                 data-kova-notice-id={
-                  mode === "voice" && availability === "checking" ? "voice_starting" : undefined
+                  microphoneMuted
+                    ? "voice_muted"
+                    : mode === "voice" && availability === "checking"
+                      ? reconnecting
+                        ? "voice_reconnecting"
+                        : "voice_connecting"
+                      : undefined
                 }
                 aria-live="polite"
               >
                 {(processing || availability === "checking") && (
                   <Loader2 className="animate-spin" aria-hidden="true" />
                 )}
-                {phase === "recording" && (
+                {phase === "recording" && !microphoneMuted && (
                   <span className="kova-voice-recording-dot" aria-hidden="true" />
                 )}
-                {ready ? status : "Checking voice availability…"}
+                {microphoneMuted ? "Microphone muted" : ready ? status : connectionStatus}
               </p>
             )}
           </div>
@@ -259,6 +287,7 @@ export function ComposerVoiceDialogView({
             <div className="kova-voice-use-transcript">{useTranscriptControl}</div>
           )}
           <div className="kova-voice-dock">
+            {ready && muteControl}
             {ready && recordingControl && (
               <div className="kova-voice-record-control">{recordingControl}</div>
             )}

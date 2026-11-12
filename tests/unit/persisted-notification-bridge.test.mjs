@@ -70,6 +70,7 @@ test("root has one global host and an authenticated persisted-notice bridge", ()
 test("server-emitted project, connection, research and security events retain their semantics", () => {
   const types = {
     project_invitation: "invitation_received",
+    project_member_joined: "member_joined",
     project_role_change: "permission_changed",
     connector_reauth: "connection_expired",
     deep_research_complete: "research_completed",

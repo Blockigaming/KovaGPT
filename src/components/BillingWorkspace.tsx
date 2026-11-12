@@ -255,6 +255,7 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
                   hash={tier}
                   onClick={onNavigate}
                   className="kova-billing-plan-action"
+                  data-kova-notice-id={action.label === "Upgrade" ? "upgrade_available" : undefined}
                   aria-label={`${action.label} to ${plan.name}`}
                   aria-describedby="billing-plan-change-help"
                 >
@@ -266,6 +267,11 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
                   variant="outline"
                   className="kova-billing-plan-action"
                   disabled={action.disabled || portalLoading}
+                  data-kova-notice-id={
+                    action.label === "Upgrade" && !action.disabled && !portalLoading
+                      ? "upgrade_available"
+                      : undefined
+                  }
                   onClick={action.destination === "portal" ? onManage : undefined}
                   aria-describedby="billing-plan-change-help"
                   aria-label={

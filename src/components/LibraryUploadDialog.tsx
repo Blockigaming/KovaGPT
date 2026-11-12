@@ -11,10 +11,12 @@ import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
 /** Uses the existing original-document upload, extraction and server quota contracts. */
 export function LibraryUploadDialog({
   ownerId,
+  firstUpload = false,
   onClose,
   onSaved,
 }: {
   ownerId: string;
+  firstUpload?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -106,11 +108,14 @@ export function LibraryUploadDialog({
     } catch (cause) {
       if (!current.controller.signal.aborted) {
         setStatus("failed");
+        const code = cause instanceof Error && "code" in cause ? cause.code : undefined;
         publishKovaNotice({
           id:
-            cause instanceof Error && /limit|quota|allowance/i.test(cause.message)
+            code === "library_upload_limit"
               ? "upload_limit"
-              : "upload_failed",
+              : code === "library_storage_limit" || code === "library_file_count_limit"
+                ? "storage_full"
+                : "upload_failed",
           title: "Upload not completed",
           message: "Your file selection is preserved.",
         });
@@ -141,9 +146,12 @@ export function LibraryUploadDialog({
         }}
       >
         <DialogTitle>Upload to Library</DialogTitle>
-        <DialogDescription>
-          Upload a document and extract its readable text. Your account’s existing upload and
-          storage limits still apply.
+        <DialogDescription
+          data-kova-notice-id={firstUpload && !file && status === "idle" ? "first_file" : undefined}
+        >
+          {firstUpload && !file && status === "idle"
+            ? "Choose a document to add your first file to Library."
+            : "Upload a document and extract its readable text."}
         </DialogDescription>
         <p className="spec400-supporting">
           {Object.keys(ORIGINAL_DOCUMENT_MIMES)

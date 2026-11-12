@@ -149,7 +149,11 @@ async function handle(request: Request) {
         },
         request.method === "POST" ? error.status : 502,
       );
-    if (error instanceof LibraryOriginalError) return json({ error: error.message }, error.status);
+    if (error instanceof LibraryOriginalError)
+      return json(
+        { error: error.message, ...(error.code ? { code: error.code } : {}) },
+        error.status,
+      );
     if (deadline.signal.aborted)
       return json({ error: "The original-file request timed out. Please retry." }, 504);
     return json({ error: "The original file could not be processed. Please retry." }, 503);

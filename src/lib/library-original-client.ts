@@ -26,13 +26,16 @@ export async function originalLibraryHeaders(owner: string, signal: AbortSignal)
     throw new Error("Your account changed. Please try again.");
   return { Authorization: `Bearer ${session.access_token}`, "X-Kova-Owner": owner };
 }
-async function errorMessage(response: Response, signal: AbortSignal) {
+async function originalFileError(response: Response, signal: AbortSignal) {
   const bytes = await readResponseBytesBounded(response, 16384, { signal, timeoutMs: 5000 });
+  const fallback = "The original file request failed.";
   try {
     const value = JSON.parse(new TextDecoder().decode(bytes));
-    return typeof value.error === "string" ? value.error : "The original file request failed.";
+    return Object.assign(new Error(typeof value.error === "string" ? value.error : fallback), {
+      code: typeof value.code === "string" ? value.code : undefined,
+    });
   } catch {
-    return "The original file request failed.";
+    return new Error(fallback);
   }
 }
 export async function saveOriginalLibraryFile(
@@ -64,7 +67,7 @@ export async function saveOriginalLibraryFile(
       cache: "no-store",
     },
   );
-  if (!response.ok) throw new Error(await errorMessage(response, current));
+  if (!response.ok) throw await originalFileError(response, current);
   const bytes = await readResponseBytesBounded(response, 16384, {
     signal: current,
     timeoutMs: 5000,
@@ -91,7 +94,7 @@ export async function readOriginalLibraryFile(
       cache: "no-store",
     },
   );
-  if (!response.ok) throw new Error(await errorMessage(response, current));
+  if (!response.ok) throw await originalFileError(response, current);
   const contentType = response.headers.get("content-type")?.split(";", 1)[0] ?? "";
   if (!Object.values(ORIGINAL_DOCUMENT_MIMES).includes(contentType))
     throw new Error("The original file response was invalid.");

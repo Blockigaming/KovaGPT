@@ -972,7 +972,7 @@ function ProjectDetailPage() {
                 const invitationRequestKey = requestKey;
                 const fn = (await import("@/lib/projects.functions")).inviteMember;
                 if (currentRequestKeyRef.current !== invitationRequestKey) return false;
-                const invitation = await callServerFnDirect(fn, {
+                const invitation = await fn({
                   data: { project_id: projectId, email, role },
                 });
                 if (currentRequestKeyRef.current !== invitationRequestKey) return false;

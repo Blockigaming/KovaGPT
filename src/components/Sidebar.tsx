@@ -125,6 +125,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  deleteReady = true,
   onRename,
   onShare,
   onDuplicate,
@@ -144,6 +145,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  deleteReady?: boolean;
   onRename?: (id: string, title: string) => void | boolean | Promise<void | boolean>;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
@@ -1107,7 +1109,12 @@ export function Sidebar({
             />
           ) : null}
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive" onClick={() => onDelete(conversation.id)}>
+          <DropdownMenuItem
+            className="text-destructive"
+            disabled={!deleteReady}
+            title={!deleteReady ? "Chat history is not ready to save changes yet." : undefined}
+            onClick={() => onDelete(conversation.id)}
+          >
             <Trash2 />
             Delete
           </DropdownMenuItem>

@@ -250,6 +250,7 @@ export type NotificationType =
   | "shared_chat"
   | "project_invitation"
   | "project_role_change"
+  | "project_member_joined"
   | "billing_issue"
   | "usage_threshold"
   | "file_processing"

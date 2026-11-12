@@ -173,6 +173,7 @@ function fixture({ signedIn = true } = {}) {
       actions.push(["limit", value]);
     },
     setLimitMessage: (value) => actions.push(["limit-message", value]),
+    setLimitResetAt: (value) => actions.push(["limit-reset", value]),
     addToHistory: (...args) => actions.push(["history", ...args]),
     safeImageUrl: (value) => (value?.startsWith("data:image/") ? value : null),
     imageApiRequest: (...args) =>
@@ -202,13 +203,25 @@ function fixture({ signedIn = true } = {}) {
     unmount,
     commit: () => compile(`return (${code.commit})();`, { ...dependencies, ...state }),
     pendingCommit: () => compile(`return (${code.pending})();`, { ...dependencies, ...state }),
-    finish(index = requests.length - 1, status = 200, imageUrl = "data:image/png;base64,local") {
+    finish(
+      index = requests.length - 1,
+      status = 200,
+      imageUrl = "data:image/png;base64,local",
+      body,
+    ) {
       requests[index].resolve({
         response: { ok: status === 200, status },
         body:
-          status === 200
+          body ??
+          (status === 200
             ? { imageUrl }
-            : { error: status === 429 ? "Daily limit reached" : "Unavailable" },
+            : status === 429
+              ? {
+                  code: "image_generation_limit",
+                  error: "Daily image allowance used.",
+                  resetsAt: "2026-11-13T00:00:00.000Z",
+                }
+              : { error: "Unavailable" }),
       });
     },
   };
@@ -378,7 +391,13 @@ test("failed and invalid results restore the preserved prompt; quota dialogs ret
     assert.equal(f.calls.length, calls, "Failure restoration is one-shot");
     assert.equal(f.dependencies.resultRevealRef.current, null);
     assert.equal(f.document.count() + f.window.count(), 0);
-    if (status === 429) assert.ok(f.actions.some(([name]) => name === "limit"));
+    if (status === 429) {
+      assert.ok(f.actions.some(([name]) => name === "limit"));
+      assert.deepEqual(
+        f.actions.find(([name]) => name === "limit-reset"),
+        ["limit-reset", Date.parse("2026-11-13T00:00:00.000Z")],
+      );
+    }
   }
 });
 
@@ -397,6 +416,16 @@ test("stale or aborted requests cannot mark a newer intent as completed", async 
     assert.deepEqual(f.calls, []);
     f.unmount();
   }
+});
+
+test("provider throttling does not open an image allowance or upgrade dialog", async () => {
+  const f = fixture();
+  const pending = f.generate("Keep this image prompt");
+  f.finish(0, 429, undefined, { error: "The provider rate limit was reached." });
+  await pending;
+  assert.equal(f.state.limitOpen, false);
+  assert.equal(f.state.prompt, "Keep this image prompt");
+  assert.equal(f.state.error, "The provider rate limit was reached.");
 });
 
 test("duplicate and signed-out submissions do not create extra request or focus intents", async () => {

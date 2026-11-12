@@ -284,7 +284,9 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
       ? payload.kind
       : undefined;
   error.resetAtMs =
-    payload.code === "message_window_limit" &&
+    ["message_window_limit", "image_generation_limit", "file_upload_limit"].includes(
+      payload.code,
+    ) &&
     typeof payload.resetsAt === "string" &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(payload.resetsAt) &&
     Number.isFinite(Date.parse(payload.resetsAt))

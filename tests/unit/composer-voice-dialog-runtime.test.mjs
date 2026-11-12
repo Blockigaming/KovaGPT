@@ -451,19 +451,23 @@ function fixture(initial = {}, options = {}) {
   function trackStream() {
     const tracks = [
       {
+        enabled: true,
+        readyState: "live",
         stopped: 0,
         stop() {
           this.stopped++;
         },
       },
       {
+        enabled: true,
+        readyState: "live",
         stopped: 0,
         stop() {
           this.stopped++;
         },
       },
     ];
-    return { tracks, getTracks: () => tracks };
+    return { tracks, getTracks: () => tracks, getAudioTracks: () => tracks };
   }
   render();
   return {
@@ -1429,6 +1433,41 @@ test("hands-free Voice never sends a billable empty recording after idle timeout
   assert.equal(f.requests.length, 1, "No provider POST without detected speech");
   assert.equal(f.audioContexts[0].closed, 1);
   assert.match(f.text(), /No speech detected/);
+  f.unmount();
+});
+
+test("Voice mute disables capture tracks and suppresses automatic turns until unmuted", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true }, { audioAnalysis: true });
+  await f.ready();
+  const stream = await f.acquire();
+  await f.speechLevelAt(0.03, 100);
+  await f.speechLevelAt(0.03, 350);
+  await f.click("Mute");
+  assert.ok(stream.tracks.every((track) => !track.enabled));
+  assert.ok(f.nodes().some((node) => node.props["data-kova-notice-id"] === "voice_muted"));
+  await f.speechLevelAt(0.001, 4_000);
+  assert.equal(f.requests.length, 1);
+  await f.click("Unmute");
+  assert.ok(stream.tracks.every((track) => track.enabled));
+  await f.speechLevelAt(0.001, 4_100);
+  assert.equal(f.requests.length, 1, "Muted time must not auto-submit the previous turn");
+  await f.speechLevelAt(0.03, 4_200);
+  await f.speechLevelAt(0.03, 4_500);
+  await f.speechLevelAt(0.001, 5_700);
+  assert.equal(f.requests[1]?.init?.method, "POST");
+  f.unmount();
+});
+
+test("Voice shows connecting during its capability request and reconnecting only for an explicit retry", async () => {
+  const f = fixture({ mode: "voice" });
+  await f.flush();
+  assert.ok(f.nodes().some((node) => node.props["data-kova-notice-id"] === "voice_connecting"));
+  f.requests[0].resolve(Response.json({ error: "unavailable" }, { status: 503 }));
+  await f.flush();
+  await f.click("Check again");
+  assert.ok(f.nodes().some((node) => node.props["data-kova-notice-id"] === "voice_reconnecting"));
+  assert.equal(f.requests.length, 2);
+  assert.equal(f.microphoneRequests.length, 0);
   f.unmount();
 });
 

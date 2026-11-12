@@ -54,6 +54,27 @@ export function tooMany(message = "Daily limit reached") {
   );
 }
 
+export function dailyFeatureLimit(kind: "images" | "uploads" | "chats") {
+  const label = kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
+  const code =
+    kind === "images"
+      ? "image_generation_limit"
+      : kind === "uploads"
+        ? "file_upload_limit"
+        : "daily_usage";
+  const reset = new Date();
+  reset.setUTCHours(24, 0, 0, 0);
+  return Response.json(
+    {
+      error: `Daily ${label} allowance used. Check Usage for your limits.`,
+      category: "quota_exceeded",
+      code,
+      resetsAt: reset.toISOString(),
+    },
+    { status: 429, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 export async function requireUser(request: Request): Promise<HttpAuthedCaller | Response> {
   const result = await optionalUser(request);
   if (!result) return unauthorized();
@@ -315,10 +336,7 @@ export async function enforceQuota(
   }
   if (data === false) {
     if (kind === "voice") return tooMany(`Daily voice request limit reached (${limit}/day).`);
-    const label = kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
-    return tooMany(
-      `Daily ${label} allowance used. Check Usage for your limits. Resets at midnight UTC.`,
-    );
+    return dailyFeatureLimit(kind);
   }
   if (data !== true) return jsonError("Quota could not be verified", 503);
   return null;

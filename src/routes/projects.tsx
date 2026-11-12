@@ -961,6 +961,7 @@ function ProjectsPage() {
           <section
             className="kova-project-directory-invites"
             aria-labelledby="project-invitations-title"
+            data-kova-notice-id="invitation_received"
           >
             <h2 id="project-invitations-title" className="text-sm font-medium">
               Pending invitations
