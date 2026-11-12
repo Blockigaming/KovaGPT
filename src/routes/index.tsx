@@ -1695,8 +1695,11 @@ function KovaGPT() {
     setConversations(nextConversations);
     setTempChat(false);
     setTempChatContext("clean");
-    toast.success("Chat saved to history", {
-      description: "Regular chat continues. Earlier temporary turns stay out of memory.",
+    publishKovaNotice({
+      id: "saved",
+      title: "Chat saved to history",
+      confirmed: true,
+      message: "Regular chat continues. Earlier temporary turns stay out of memory.",
     });
   }, [active, conversations, isStreaming, setConversations, userKey]);
 

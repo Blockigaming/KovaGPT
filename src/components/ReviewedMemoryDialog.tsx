@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import type { Conversation } from "@/lib/chat-store";
 import { loadReviewedMemorySource, saveReviewedMemory } from "@/lib/reviewed-memory-client.mjs";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
-import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 
 export function ReviewedMemoryDialog({
   ownerId,
@@ -138,7 +138,11 @@ export function ReviewedMemoryDialog({
         isCurrent,
       });
       if (!isCurrent()) return;
-      toast.success("Reviewed memory saved for future chats");
+      publishKovaNotice({
+        id: "memory_updated",
+        title: "Reviewed memory saved for future chats",
+        confirmed: true,
+      });
       closing.current = true;
       onClose();
     } catch (failure) {

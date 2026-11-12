@@ -477,7 +477,7 @@ export function ComposerVoiceDialog({
   }, [releaseResources, updatePhase]);
 
   const failOperation = useCallback(
-    (message: string) => {
+    (message: string, noAudio = false) => {
       const savedRecording = retainedRecording.current;
       releaseResources();
       retainedRecording.current = savedRecording;
@@ -485,15 +485,17 @@ export function ComposerVoiceDialog({
       updatePhase("idle");
       setAudioUrl("");
       setError(message);
-      const eventId = /usage|limit|allowance/i.test(message)
-        ? "voice_limit"
-        : /microphone.*(denied|blocked)|permission/i.test(message)
-          ? "microphone_blocked"
-          : /unavailable|not configured/i.test(message)
-            ? "voice_unavailable"
-            : mode === "dictate"
-              ? "dictation_failed"
-              : "voice_disconnected";
+      const eventId = noAudio
+        ? "no_audio"
+        : /usage|limit|allowance/i.test(message)
+          ? "voice_limit"
+          : /microphone.*(denied|blocked)|permission/i.test(message)
+            ? "microphone_blocked"
+            : /unavailable|not configured/i.test(message)
+              ? "voice_unavailable"
+              : mode === "dictate"
+                ? "dictation_failed"
+                : "voice_disconnected";
       publishKovaNotice({ id: eventId, title: "Voice needs attention", message });
     },
     [releaseResources, updatePhase, mode],
@@ -768,7 +770,7 @@ export function ComposerVoiceDialog({
     chunks.current = [];
     audioBytes.current = 0;
     if (blob.size === 0) {
-      failOperation("No audio was recorded. Check your microphone and try again.");
+      failOperation("No audio was recorded. Check your microphone and try again.", true);
       return;
     }
     if (blob.size > MAX_AUDIO_BYTES) {
@@ -838,6 +840,7 @@ export function ComposerVoiceDialog({
     setError("");
     setElapsed(0);
     updatePhase("requesting");
+    publishKovaNotice({ id: "microphone_permission", title: "Requesting microphone access" });
     let acquired: MediaStream | null = null;
     try {
       // Capture starts only after explicit Start, or after actual playback ends

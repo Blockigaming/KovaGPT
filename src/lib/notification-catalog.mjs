@@ -293,6 +293,7 @@ const surfaces = {
     "source_unavailable",
     "save_failed",
     "history_failed",
+    "no_audio",
   ],
   status: [
     "image_started",
@@ -334,6 +335,7 @@ surfaces.status.push(
   "search_completed",
   "analysis_started",
   "notifications_permission",
+  "microphone_permission",
 );
 surfaces.inline.push(
   "session_expired",
