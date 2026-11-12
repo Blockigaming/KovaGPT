@@ -19,7 +19,9 @@ const mocks: Record<string, string> = {
   "@/components/WorkspacePageHeader": `export const WorkspacePageHeader=({title,titleId,description})=><header className="kova-page-header"><h1 id={titleId}>{title}</h1><p>{description}</p></header>;`,
   "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;`,
   "@/components/WorkflowSkillsPanel": `export const WorkflowSkillsPanel=()=>null;`,
-  "@/integrations/supabase/client": `export const supabase={auth:{resend:async()=>({error:null})}};`,
+  "@/integrations/supabase/client": `export const getSupabaseClientConfigStatus=()=>({configured:false});export const supabase={auth:{resend:async()=>({error:null})}};`,
+  "@/utils/plan.functions": `export const getMyPlanTier=async({data})=>({ownerId:data.ownerId,tier:window.testTier??'free'});`,
+
   "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};if(url==="/api/finances/manage"&&init?.method!=="POST")return {ok:true,json:async()=>({configured:false,planEligible:false,connections:[]})};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
   "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data})=>{window.operations.push(["provider-read",data]);return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
   "@/lib/google-client": `export const getGoogleStatus=async()=>window.googleStatus;export const startGoogleConnect=async(...args)=>{window.operations.push(["google-connect",...args])};export const disconnectGoogleAccount=async(...args)=>{window.operations.push(["google-disconnect",...args]);window.googleStatus={connected:false,state:"disconnected",accounts:[],selectedConnectionId:null,selectionRevision:2}};export const selectGoogleAccount=async(...args)=>window.operations.push(["google-select",...args]);`,
@@ -99,6 +101,7 @@ async function boot(
   google = emptyGoogle,
   url = "https://kova-plugins.test/apps",
   other: AccountStatus = { configuredProviders: [], accounts: [] },
+  tier: "free" | "plus" = "free",
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-plugins.test/")
@@ -110,9 +113,10 @@ async function boot(
   );
   await page.goto(url);
   await page.evaluate(
-    ({ google, other }) =>
+    ({ google, other, tier }) =>
       Object.assign(window, {
         testOwner: "test-owner",
+        testTier: tier,
         operations: [],
         toasts: [],
         googleStatus: google,
@@ -125,7 +129,7 @@ async function boot(
           health: "healthy",
         },
       }),
-    { google, other },
+    { google, other, tier },
   );
   // esbuild does not compile Tailwind utilities. Mirror DialogContent's individual
   // -translate-x-1/2 and -translate-y-1/2 positioning in this isolated harness.
@@ -194,8 +198,17 @@ test("new master entries support aliases and cannot start unimplemented connecti
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
-test("opening and dismissing details never starts OAuth; Connect is explicit", async ({ page }) => {
+test("Free accounts cannot initiate Gmail OAuth", async ({ page }) => {
   await boot(page);
+  await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+  ).toBeDisabled();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+});
+
+test("opening and dismissing details never starts OAuth; Connect is explicit", async ({ page }) => {
+  await boot(page, undefined, undefined, undefined, "plus");
   const trigger = page.getByRole("button", { name: "Connect Gmail", exact: true });
   await trigger.click();
   await expect(page.getByRole("dialog")).toContainText("Capabilities and permissions");
@@ -204,6 +217,9 @@ test("opening and dismissing details never starts OAuth; Connect is explicit", a
   await page.getByRole("button", { name: "Close connection details" }).click();
   await expect(trigger).toBeFocused();
   await trigger.click();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+  ).toBeEnabled();
   await page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as FixtureWindow).operations.length)).toBe(1);
   expect((await page.evaluate(() => (window as FixtureWindow).operations))[0][0]).toBe(

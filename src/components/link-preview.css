@@ -1,0 +1,124 @@
+.kova-link-preview {
+  width: min(100%, 370px);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface-secondary, var(--muted));
+  overflow: hidden;
+}
+.kova-link-preview-composer {
+  margin-inline: 8px;
+  width: min(calc(100% - 16px), 370px);
+}
+.kova-link-preview-message {
+  margin-bottom: 7px;
+  background: var(--background);
+}
+.kova-link-preview-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 8px 11px;
+  min-width: 0;
+  text-decoration: none;
+  border-radius: inherit;
+  transition: background-color 140ms ease;
+}
+.kova-link-preview-open:hover {
+  background: var(--accent);
+}
+.kova-link-preview-open:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.kova-link-preview-icon {
+  display: block;
+  flex: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+.kova-link-preview-labels {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+.kova-link-preview-title {
+  display: block;
+  color: #146fc8;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 19px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dark .kova-link-preview-title {
+  color: #58a7ff;
+}
+.kova-link-preview-site {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-link-preview-external {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--muted-foreground);
+}
+@media (max-width: 600px) {
+  .kova-link-preview {
+    width: 100%;
+  }
+  .kova-link-preview-composer {
+    width: calc(100% - 16px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-link-preview-open {
+    transition: none;
+  }
+}
+
+/* The entire URL is a single, removable object in the composer, including on touch. */
+.kova-link-preview-composer {
+  display: flex;
+  align-items: center;
+}
+.kova-link-preview-composer .kova-link-preview-open {
+  flex: 1 1 auto;
+}
+.kova-link-preview-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.kova-link-preview-remove svg {
+  width: 16px;
+  height: 16px;
+}
+.kova-link-preview-remove:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-link-preview-remove:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}

@@ -94,6 +94,7 @@ test("actual auth endpoint validates connector before starting an OAuth attempt"
       "@tanstack/react-router": { createFileRoute: () => (config) => config },
       "@/lib/api-auth.server": {
         requireUser: async () => ({ userId: "owner", supabaseAdmin: {} }),
+        getCallerTier: async () => "plus",
       },
       "@/lib/google-oauth.server": {
         beginGoogleOAuth: async (...args) => {

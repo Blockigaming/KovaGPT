@@ -142,7 +142,7 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     "developers",
     "Build with KovaGPT",
     "Developers",
-    "Developer documentation for the KovaGPT API and supported integration surfaces.",
+    "Coming later this year: developer API documentation and supported integration surfaces.",
     "Use server-issued credentials, follow published limits, and design for streamed output and recoverable errors.",
     [
       {
@@ -790,7 +790,7 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     "Developer terms and policies",
     "Legal",
     "Terms governing KovaGPT developer surfaces pending legal review.",
-    "API access remains subject to authentication, published limits, applicable terms, and server-side billing enforcement.",
+    "Developer API access is coming later this year. Availability will depend on published terms, authentication, limits, and server-side billing enforcement.",
     [
       {
         title: "No pricing override",

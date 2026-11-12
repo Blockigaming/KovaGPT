@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -115,6 +116,8 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
+    "@/lib/link-preview.mjs": linkPreview,
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },

@@ -66,7 +66,6 @@ function headerActions(route, state) {
     },
     Button: "button",
     RefreshCw: "refresh-icon",
-    LayoutTemplate: "template-icon",
     Plus: "plus-icon",
     ...state,
   });
@@ -101,11 +100,9 @@ test("compact Library refresh keeps its name, loading guard, and the Library ref
   assert.equal(headerActions("library", { ...state, principalReady: false }).length, 0);
 });
 
-test("Projects keeps full-label creation, dialog return focus, and named templates action", () => {
+test("Projects keeps full-label creation and return focus without Templates", () => {
   const opened = [];
   const returnFocus = { current: null };
-  const templatesReturnFocus = { current: null };
-  const templatesOpenedUrl = { current: null };
   const actions = headerActions("projects", {
     isSignedIn: true,
     isLoading: false,
@@ -119,26 +116,19 @@ test("Projects keeps full-label creation, dialog return focus, and named templat
     createFailureFocusRef: { current: null },
     setCreateError: () => {},
     createReturnFocusRef: returnFocus,
-    templatesReturnFocusRef: templatesReturnFocus,
-    templatesOpenedUrlRef: templatesOpenedUrl,
     window: { location: { href: "https://review.invalid/projects" } },
     setCreateOpen: (open) => opened.push(["create", open]),
-    setTemplatesOpen: (open) => opened.push(["templates", open]),
   });
   const create = actions.find((node) => node.type === "button" && /New project/.test(text(node)));
   assert.ok(create);
   const trigger = {};
   create.props.onClick({ currentTarget: trigger });
   assert.equal(returnFocus.current, trigger);
-  const templates = actions.find((node) => node.props?.["aria-label"] === "Project templates");
-  assert.ok(templates);
-  templates.props.onClick({ currentTarget: trigger });
-  assert.equal(templatesReturnFocus.current, trigger);
-  assert.equal(templatesOpenedUrl.current, "https://review.invalid/projects");
-  assert.deepEqual(opened, [
-    ["create", true],
-    ["templates", true],
-  ]);
+  assert.equal(
+    actions.filter((node) => node.props?.["aria-label"] === "Project templates").length,
+    0,
+  );
+  assert.deepEqual(opened, [["create", true]]);
 });
 
 test("density changes stay mobile-scoped and preserve touch targets and the active timer", () => {
@@ -147,7 +137,10 @@ test("density changes stay mobile-scoped and preserve touch targets and the acti
   assert.match(phone, /--page-padding: 16px 20px 40px;/);
   assert.match(phone, /grid-template-columns: minmax\(0, 1fr\) 140px;/);
   assert.match(phone, /\.kova-project-create\s*\{[^}]*width: 140px;/);
-  assert.match(phone, /\.kova-project-templates\s*\{[^}]*min-height: 44px;/);
+  assert.doesNotMatch(
+    readFileSync("src/routes/projects.tsx", "utf8"),
+    /ProjectTemplatesDialog|kova-project-templates/,
+  );
   assert.match(phone, /button\[aria-controls="kova-timers-panel"\]\s*\{[^}]*min-height: 44px;/);
   assert.match(phone, /:has\(\.tabular-nums\)\s*> span:last-child/);
   assert.match(phone, /\.kova-project-file-link\s*\{[^}]*min-height: 0;/);

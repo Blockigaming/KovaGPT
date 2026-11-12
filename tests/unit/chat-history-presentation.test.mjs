@@ -75,6 +75,8 @@ test("a pending migration keeps the same notice through background sync transiti
     const rendered = notice({ ...state(phase), migration: 2 });
     assert.ok(rendered, `${phase} must not remove the migration decision`);
     assert.equal(rendered.props["aria-label"], "Chat history synchronization");
+    assert.match(rendered.props.className, /min-h-11/);
+    assert.doesNotMatch(rendered.props.className, /\bborder\b|shadow/);
     const heading = rendered.children.find((node) => node?.props?.role === "status");
     assert.deepEqual(heading.children, ["Earlier chat history remains on this device"]);
   }

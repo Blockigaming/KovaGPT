@@ -84,6 +84,13 @@ import {
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ComposerPluginList } from "@/components/ComposerPluginList";
+import { LinkPreviewChip } from "@/components/LinkPreviewChip";
+import {
+  COMPOSER_LINK_MARKER,
+  firstLinkPreviewToken,
+  fromComposerLinkDisplay,
+  toComposerLinkDisplay,
+} from "@/lib/link-preview.mjs";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
     default: module.ComposerSignInDialog,
@@ -325,6 +332,13 @@ export function ChatInput({
     size: number;
     error?: string;
   } | null>(null);
+  const [atomicLinkRaw, setAtomicLinkRaw] = useState<string | null>(null);
+  // Only the rendered composer collapses the URL. State, history and model
+  // requests retain the exact original characters.
+  const activeAtomicLink = atomicLinkRaw && value.includes(atomicLinkRaw) ? atomicLinkRaw : null;
+  const visibleComposerValue = activeAtomicLink
+    ? toComposerLinkDisplay(value, activeAtomicLink)
+    : value;
   const composerStateRef = useRef({ value, attachments });
   composerStateRef.current = { value, attachments };
   const updateAttachments = (next: PendingAttachment[]) => {
@@ -334,6 +348,7 @@ export function ChatInput({
   const uploadBatchRef = useRef(false);
   useEffect(() => {
     setPasteOffer(null);
+    setAtomicLinkRaw(null);
   }, [attachmentAutoSave.scope, attachmentContext]);
   const documentReadsRef = useRef(new Set<AbortController>());
   const documentReadIdsRef = useRef(new Map<string, AbortController>());
@@ -834,6 +849,22 @@ export function ChatInput({
     }
   };
 
+  const updateComposerText = (visible: string) => {
+    if (activeAtomicLink) {
+      const kept = visible.includes(COMPOSER_LINK_MARKER);
+      onChange(kept ? fromComposerLinkDisplay(visible, activeAtomicLink) : visible);
+      if (!kept) setAtomicLinkRaw(null);
+      return;
+    }
+    onChange(visible);
+    // Typing an URL must not collapse it mid-word. Complete typed links when
+    // whitespace is entered; pasted links collapse immediately.
+    if (/\s$/u.test(visible)) {
+      const token = firstLinkPreviewToken(visible);
+      if (token) setAtomicLinkRaw(token.raw);
+    }
+  };
+
   const selectSlashCommand = (command: SlashCommand, trigger: HTMLElement | null) => {
     if (command === "model") {
       setSlashModels(true);
@@ -864,6 +895,57 @@ export function ChatInput({
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // A link typed manually has the same one-keystroke removal behavior even
+    // before its title chip has collapsed the editor text.
+    if (
+      !activeAtomicLink &&
+      !disabled &&
+      (e.key === "Backspace" || e.key === "Delete") &&
+      !(e.nativeEvent as KeyboardEvent).isComposing
+    ) {
+      const token = firstLinkPreviewToken(value);
+      if (token) {
+        const start = e.currentTarget.selectionStart;
+        const end = e.currentTarget.selectionEnd;
+        const hitsToken =
+          start < end
+            ? start < token.end && end > token.start
+            : e.key === "Backspace"
+              ? start > token.start && start <= token.end
+              : start >= token.start && start < token.end;
+        if (hitsToken) {
+          e.preventDefault();
+          const from = start < end ? Math.min(start, token.start) : token.start;
+          const through = start < end ? Math.max(end, token.end) : token.end;
+          onChange(value.slice(0, from) + value.slice(through));
+          window.requestAnimationFrame(() => ref.current?.setSelectionRange(from, from));
+          return;
+        }
+      }
+    }
+    if (activeAtomicLink && (e.key === "Backspace" || e.key === "Delete")) {
+      const start = e.currentTarget.selectionStart;
+      const end = e.currentTarget.selectionEnd;
+      const markerAt = visibleComposerValue.indexOf(COMPOSER_LINK_MARKER);
+      const hitsToken =
+        markerAt >= 0 &&
+        (start < end
+          ? start <= markerAt && markerAt < end
+          : (e.key === "Backspace" && start === markerAt + 1) ||
+            (e.key === "Delete" && start === markerAt));
+      if (hitsToken) {
+        e.preventDefault();
+        const next =
+          start < end
+            ? visibleComposerValue.slice(0, start) + visibleComposerValue.slice(end)
+            : visibleComposerValue.slice(0, markerAt) + visibleComposerValue.slice(markerAt + 1);
+        setAtomicLinkRaw(null);
+        onChange(next);
+        const caret = start < end ? start : markerAt;
+        window.requestAnimationFrame(() => ref.current?.setSelectionRange(caret, caret));
+        return;
+      }
+    }
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
     if (slashOpen && !slashModels && !native.isComposing && !composingRef.current) {
       if (e.key === "Escape") {
@@ -1225,8 +1307,32 @@ export function ChatInput({
     const generation = ++pasteGenerationRef.current;
     const files = Array.from(event.clipboardData.files || []);
     if (files.length === 0) {
-      // Native short-text paste remains untouched. Plain text is canonical; rich HTML never changes it.
+      // A pasted page/video URL is one removable composer token, not dozens
+      // of individual characters. The canonical prompt still stores the URL.
       const plain = event.clipboardData.getData("text/plain");
+      const target = event.target as HTMLElement;
+      const pastedToken = firstLinkPreviewToken(plain);
+      if (
+        !disabled &&
+        target === ref.current &&
+        pastedToken &&
+        !activeAtomicLink &&
+        plain.length <= LOCAL_PASTE_THRESHOLD
+      ) {
+        event.preventDefault();
+        const field = ref.current;
+        const start = field.selectionStart;
+        const end = field.selectionEnd;
+        const canonical = value.slice(0, start) + plain + value.slice(end);
+        setAtomicLinkRaw(pastedToken.raw);
+        onChange(canonical);
+        const position = start + plain.length - pastedToken.raw.length + 1;
+        window.requestAnimationFrame(() => {
+          if (ref.current) ref.current.setSelectionRange(position, position);
+        });
+        return;
+      }
+      // Native short-text paste remains untouched for other content.
       if (disabled || !showAddMenu || plain.length <= LOCAL_PASTE_THRESHOLD) return;
       event.preventDefault();
       if (pasteOffer) {
@@ -1235,8 +1341,9 @@ export function ChatInput({
         );
         return;
       }
-      const target = event.target as HTMLTextAreaElement | undefined;
-      const selectionTarget = target?.tagName === "TEXTAREA" ? target : ref.current;
+      const selectionPasteTarget = event.target as HTMLTextAreaElement | undefined;
+      const selectionTarget =
+        selectionPasteTarget?.tagName === "TEXTAREA" ? selectionPasteTarget : ref.current;
       try {
         const prepared = prepareLocalPaste(plain);
         const paste = {
@@ -1712,6 +1819,14 @@ export function ChatInput({
   const textWindow =
     previewText === undefined ? null : attachmentPreviewWindow(previewText, previewOffset);
   const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
+  const linkPreviewToken = firstLinkPreviewToken(value);
+  const linkPreviewUrl = linkPreviewToken?.url ?? null;
+  const removeLinkPreview = () => {
+    if (!linkPreviewToken || disabled) return;
+    setAtomicLinkRaw(null);
+    onChange(value.slice(0, linkPreviewToken.start) + value.slice(linkPreviewToken.end));
+    window.requestAnimationFrame(() => ref.current?.focus());
+  };
 
   return (
     <div
@@ -1833,15 +1948,18 @@ export function ChatInput({
             )}
           </ul>
         )}
+        {linkPreviewUrl && (
+          <LinkPreviewChip url={linkPreviewUrl} placement="composer" onRemove={removeLinkPreview} />
+        )}
         <div className="spec400-input-region">
           <textarea
             ref={ref}
-            value={value}
+            value={visibleComposerValue}
             onChange={(event) => {
               setSlashDismissed(false);
               setSlashModels(false);
               setSlashIndex(0);
-              onChange(event.target.value);
+              updateComposerText(event.target.value);
             }}
             onKeyDown={handleKey}
             disabled={disabled}

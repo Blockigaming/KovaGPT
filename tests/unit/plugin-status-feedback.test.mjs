@@ -125,6 +125,8 @@ function focusFixture() {
     googleRefreshRequest: 0,
     googleRefreshUrl: "https://local.invalid/apps",
     visibleSelectedApp: { id: "gmail" },
+    tierStatus: "ready",
+    tier: "plus",
     visibleGoogleLoading: false,
     isGoogleId: (id) => ["google", "gmail", "google-drive", "google-calendar"].includes(id),
     setGoogleLoading(value) {

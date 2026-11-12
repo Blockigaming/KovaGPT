@@ -1,3 +1,4 @@
+import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import assert from "node:assert/strict";
@@ -31,6 +32,8 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "@/components/LinkPreviewChip": { LinkPreviewChip: empty },
+  "@/lib/link-preview.mjs": linkPreview,
   "@/components/OpenDesktopAppButton": {
     OpenDesktopAppButton: () =>
       React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),

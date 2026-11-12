@@ -26,6 +26,7 @@ import {
 import { hasGoogleCapability, googleToolCapability } from "@/lib/google-account-policy.mjs";
 import { safeConnectorError } from "@/lib/connectors.server";
 import { LockdownPolicyError, assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 
 // OpenAI-compatible function tool schema.
 export type ToolDef = {
@@ -289,10 +290,20 @@ export async function getAvailableGoogleTools(
   binding?: GoogleAccountBinding,
 ): Promise<ToolDef[]> {
   await assertLockdownAllows(admin(), userId, "connector_read");
+  // Fail closed for Gmail when billing is unreachable, but avoid disabling
+  // the separately entitled free Calendar/Drive tools.
+  let paid = false;
+  try {
+    paid = (await resolveEffectiveBillingTier(admin(), userId)) !== "free";
+  } catch {
+    paid = false;
+  }
   const health = await getGoogleConnectionHealth(userId, binding?.connectionId);
   if (!health.connected) return [];
-  return ALL_TOOLS.filter((tool) =>
-    hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
+  return ALL_TOOLS.filter(
+    (tool) =>
+      (paid || !tool.function.name.startsWith("gmail_")) &&
+      hasGoogleCapability(health.scopes, googleToolCapability(tool.function.name)),
   );
 }
 
@@ -393,6 +404,12 @@ export async function runGoogleTool(
       };
     }
     throw error;
+  }
+  if (
+    name.startsWith("gmail_") &&
+    (await resolveEffectiveBillingTier(admin(), userId)) === "free"
+  ) {
+    return { error: "gmail_plan_required", message: "Gmail requires Kova Plus or Pro." };
   }
   if (WRITE_TOOL_NAMES.has(name)) {
     return {
@@ -755,6 +772,8 @@ export async function stagePendingAction(
   binding?: GoogleAccountBinding,
 ): Promise<PendingAction> {
   await assertLockdownAllows(admin(), userId, "connector_write");
+  if (tool.startsWith("gmail_") && (await resolveEffectiveBillingTier(admin(), userId)) === "free")
+    throw new Error("Gmail requires Kova Plus or Pro.");
   const validated = validateSupportedWrite(tool, args);
   const connection = await getGoogleConnection(userId, binding?.connectionId);
   const stagedGoogleSub =
@@ -874,6 +893,14 @@ export async function executePendingAction(
     };
   }
   if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
+  if (pendingRow.tool.startsWith("gmail_")) {
+    try {
+      if ((await resolveEffectiveBillingTier(db, userId)) === "free")
+        return { ok: false, error: "Gmail requires Kova Plus or Pro." };
+    } catch {
+      return { ok: false, error: "Your plan could not be verified. Try again later." };
+    }
+  }
   try {
     await assertLockdownAllows(db, userId, "connector_write");
   } catch (error) {

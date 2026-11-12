@@ -187,13 +187,21 @@ export function CommandPalette({
     : null;
   const deferredQuery = useDeferredValue(query);
   const normalized = deferredQuery.trim().toLowerCase();
-  const conversationMatches = normalized
-    ? searchConversations([...conversations, ...archivedConversations], deferredQuery).slice(0, 8)
-    : conversations.slice(0, 6).map((conversation) => ({
-        conversation,
-        snippet: `${conversation.messages.length} messages`,
-        score: 0,
-      }));
+  const [searchView, setSearchView] = useState<
+    "all" | "chats" | "images" | "documents" | "projects"
+  >("all");
+  const showActions = searchView === "all";
+  const showWorkspace = !["chats"].includes(searchView);
+  const showChats = searchView === "all" || searchView === "chats";
+  const conversationMatches = !showChats
+    ? []
+    : normalized
+      ? searchConversations([...conversations, ...archivedConversations], deferredQuery).slice(0, 8)
+      : conversations.slice(0, 6).map((conversation) => ({
+          conversation,
+          snippet: `${conversation.messages.length} messages`,
+          score: 0,
+        }));
   const [activeOptionKey, setActiveOptionKey] = useState("action:new-chat");
   const storageGenerationRef = useRef(0);
   const [commandState, setCommandState] = useState<{
@@ -319,8 +327,7 @@ export function CommandPalette({
   };
   const visibleActions = useMemo(
     () =>
-      quickActions
-        .slice(1)
+      (showActions ? quickActions.slice(1) : [])
         .map((action) =>
           action.action === "focus-input" && closesSidebarToFocus
             ? { ...action, label: "Close sidebar and focus message box" }
@@ -339,20 +346,32 @@ export function CommandPalette({
             (pinnedCommands.includes(action.href ?? action.action ?? "") ? 20 : 0),
         }))
         .sort((a, b) => b.score - a.score),
-    [normalized, recentCommands, pinnedCommands, closesSidebarToFocus],
+    [normalized, recentCommands, pinnedCommands, closesSidebarToFocus, showActions],
   );
   const visibleWorkspaceItems = useMemo(
     () =>
-      workspaceItems
+      (showWorkspace ? workspaceItems : [])
+        .filter((item) =>
+          searchView === "images"
+            ? item.type === "image"
+            : searchView === "documents"
+              ? item.type === "library"
+              : searchView === "projects"
+                ? item.type === "project"
+                : true,
+        )
         .filter((item) =>
           normalized ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized) : true,
         )
         .slice(0, 20),
-    [normalized, workspaceItems],
+    [normalized, workspaceItems, searchView, showWorkspace],
   );
   const actionItems = useMemo(
-    () => ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)],
-    [visibleActions],
+    () =>
+      showActions
+        ? ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)]
+        : [],
+    [visibleActions, showActions],
   );
   const workspaceStartIndex = actionItems.length;
   const chatStartIndex = workspaceStartIndex + visibleWorkspaceItems.length;
@@ -375,6 +394,9 @@ export function CommandPalette({
   useEffect(() => {
     setActiveOptionKey("action:new-chat");
   }, [query, open]);
+  useEffect(() => {
+    if (open) setSearchView("all");
+  }, [open]);
 
   useEffect(() => {
     if (!open || totalItems === 0) return;
@@ -573,6 +595,21 @@ export function CommandPalette({
             aria-label="Search workspace, commands, and chats"
             className=" min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
+          {query.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onQueryChange("");
+                searchInputRef.current?.focus({ preventScroll: true });
+              }}
+              className="min-h-9 shrink-0 rounded-lg px-3 text-xs text-muted-foreground"
+              aria-label="Clear search"
+            >
+              Clear
+            </Button>
+          )}
           <Button
             data-ui-reference="chatgpt.search-dialog.control"
             variant="ghost"
@@ -587,224 +624,262 @@ export function CommandPalette({
         </div>
 
         <div
+          role="tablist"
+          aria-label="Search result type"
+          className="mx-3 mt-2 flex min-h-11 shrink-0 items-center gap-1 overflow-x-auto rounded-full bg-muted/55 p-1 sm:mx-5"
+        >
+          {(["all", "chats", "images", "documents", "projects"] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              role="tab"
+              aria-selected={searchView === view}
+              onClick={() => setSearchView(view)}
+              className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-medium capitalize transition-colors hover:bg-accent focus-visible:outline-offset-2 ${searchView === view ? "bg-[var(--surface-selected)] text-foreground" : "text-muted-foreground"}`}
+            >
+              {view === "all" ? "All" : view[0].toUpperCase() + view.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div
           id="command-palette-results"
           role="listbox"
           aria-label="Command palette results"
           className="min-h-0 flex-1 max-h-[60dvh] overflow-y-auto overscroll-contain p-2"
         >
-          <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
-          <Button
-            data-ui-reference="chatgpt.search-dialog.control"
-            variant="ghost"
-            type="button"
-            onClick={() => {
-              onNewChat();
-              closePalette();
-            }}
-            id="command-option-0"
-            role="option"
-            aria-selected={activeIndex === 0}
-            className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
-          >
-            <SquarePen className="h-4 w-4 text-muted-foreground" />
-            <span>Start a new chat</span>
-            <span className="ml-auto rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
-              ⌘ ⇧ O
-            </span>
-          </Button>
-          <Button
-            data-ui-reference="chatgpt.search-dialog.control"
-            variant="ghost"
-            type="button"
-            onClick={() => {
-              suppressFocusRestore();
-              onOpenSettings();
-              closePalette();
-            }}
-            id="command-option-1"
-            role="option"
-            aria-selected={activeIndex === 1}
-            className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
-          >
-            <Settings className="h-4 w-4 text-muted-foreground" />
-            <span>Open settings</span>
-          </Button>
-          {visibleActions.map((action, actionIndex) => {
-            const Icon = action.icon;
-            const index = actionIndex + 2;
-            const className = `flex h-auto min-h-11 w-full items-center gap-3 whitespace-normal rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
-            const content = (
-              <>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="min-w-0 flex-1 break-words">{action.label}</span>
-                {pinnedCommands.includes(action.href ?? action.action ?? "") ? (
-                  <Star className="ml-auto h-3.5 w-3.5 fill-current" aria-label="Pinned command" />
-                ) : null}
-                {action.disabledReason ? (
-                  <span className="min-w-0 max-w-[45%] break-words text-right text-[11px]">
-                    {action.disabledReason}
-                  </span>
-                ) : null}
-              </>
-            );
-            if (action.href) {
-              return (
-                <Link
-                  key={action.href}
-                  id={`command-option-${index}`}
-                  role="option"
-                  aria-selected={activeIndex === index}
-                  to={action.href as never}
-                  onClick={() => {
-                    suppressFocusRestore();
-                    const next = [
-                      action.href!,
-                      ...recentCommands.filter((item) => item !== action.href),
-                    ].slice(0, 12);
-                    saveRecentCommands(next);
-                    platformEvents.publish("platform", "command.executed", {
-                      command: action.href,
-                    });
-                    closePalette();
-                  }}
-                  className={className}
-                >
-                  {content}
-                </Link>
-              );
-            }
-            return (
+          {showActions && (
+            <>
+              <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                Actions
+              </div>
               <Button
                 data-ui-reference="chatgpt.search-dialog.control"
                 variant="ghost"
-                key={action.action}
-                id={`command-option-${index}`}
-                role="option"
-                aria-selected={activeIndex === index}
-                type="button"
-                disabled={!!action.disabledReason}
-                onClick={() => {
-                  const targetIndex = actionItems.indexOf(action.action);
-                  if (targetIndex >= 0) setActiveIndex(targetIndex);
-                  if (action.action === "focus-input") {
-                    focusMessageBox();
-                  } else if (action.action === "theme") {
-                    applyThemeMode(
-                      document.documentElement.classList.contains("dark") ? "light" : "dark",
-                    );
-                    platformEvents.publish("platform", "command.executed", {
-                      command: action.action,
-                    });
-                    closePalette();
-                  } else if (action.action === "search") {
-                    searchWorkspace();
-                  }
-                }}
-                className={className}
-              >
-                {content}
-              </Button>
-            );
-          })}
-
-          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Workspace</div>
-          {workspaceStatus === "loading" ? (
-            <p role="status" className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
-              Searching workspace…
-            </p>
-          ) : null}
-          {workspaceStatus === "error" ? (
-            <div
-              role="alert"
-              className="flex min-h-11 items-center justify-between gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2 text-sm text-destructive"
-            >
-              <span>Workspace results are unavailable.</span>
-              {retryWorkspaceSearch ? (
-                <Button
-                  data-ui-reference="chatgpt.search-dialog.control"
-                  variant="outline"
-                  type="button"
-                  className="  border  text-foreground hover:bg-accent"
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.stopPropagation();
-                  }}
-                  onClick={retryWorkspaceSearch}
-                >
-                  Retry
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-          {workspaceStatus === "ready" && visibleWorkspaceItems.length === 0 ? (
-            <p className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
-              No workspace results
-            </p>
-          ) : null}
-          {visibleWorkspaceItems.map((item, workspaceIndex) => {
-            const index = workspaceStartIndex + workspaceIndex;
-            return (
-              <Link
-                key={`${item.type}:${item.id}`}
-                id={`command-option-${index}`}
-                to={item.href as never}
-                role="option"
-                aria-selected={activeIndex === index}
-                onPointerMove={() => setActiveIndex(index)}
-                onClick={() => {
-                  suppressFocusRestore();
-                  platformEvents.publish("platform", "command.executed", {
-                    command: `workspace:${item.type}`,
-                  });
-                  closePalette();
-                }}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
-              >
-                <Boxes className="h-4 w-4 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                <span className="text-xs text-muted-foreground">{item.type}</span>
-              </Link>
-            );
-          })}
-
-          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
-          {normalized ? null : (
-            <p className="px-3 pb-2 text-[11px] text-muted-foreground">
-              Search message text or use is:pinned, has:attachment, in:title:, after:, and before:.
-            </p>
-          )}
-          {conversationMatches.length === 0 ? (
-            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No chats found
-            </div>
-          ) : (
-            conversationMatches.map(({ conversation: chat, snippet }, chatIndex) => (
-              <Button
-                data-ui-reference="chatgpt.search-dialog.control"
-                variant="ghost"
-                key={chat.id}
                 type="button"
                 onClick={() => {
-                  if (archivedConversations.some((item) => item.id === chat.id))
-                    onSelectArchived(chat);
-                  else onSelectChat(chat.id);
+                  onNewChat();
                   closePalette();
                 }}
-                id={`command-option-${chatStartIndex + chatIndex}`}
+                id="command-option-0"
                 role="option"
-                aria-selected={activeIndex === chatStartIndex + chatIndex}
-                className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
+                aria-selected={activeIndex === 0}
+                className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
               >
-                <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-                <span className="min-w-0 flex-1 truncate">{chat.title}</span>
-                <span className="hidden max-w-52 truncate text-xs text-muted-foreground sm:block">
-                  {snippet}
+                <SquarePen className="h-4 w-4 text-muted-foreground" />
+                <span>Start a new chat</span>
+                <span className="ml-auto rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                  ⌘ ⇧ O
                 </span>
               </Button>
-            ))
+              <Button
+                data-ui-reference="chatgpt.search-dialog.control"
+                variant="ghost"
+                type="button"
+                onClick={() => {
+                  suppressFocusRestore();
+                  onOpenSettings();
+                  closePalette();
+                }}
+                id="command-option-1"
+                role="option"
+                aria-selected={activeIndex === 1}
+                className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                <span>Open settings</span>
+              </Button>
+              {visibleActions.map((action, actionIndex) => {
+                const Icon = action.icon;
+                const index = actionIndex + 2;
+                const className = `flex h-auto min-h-11 w-full items-center gap-3 whitespace-normal rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
+                const content = (
+                  <>
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 break-words">{action.label}</span>
+                    {pinnedCommands.includes(action.href ?? action.action ?? "") ? (
+                      <Star
+                        className="ml-auto h-3.5 w-3.5 fill-current"
+                        aria-label="Pinned command"
+                      />
+                    ) : null}
+                    {action.disabledReason ? (
+                      <span className="min-w-0 max-w-[45%] break-words text-right text-[11px]">
+                        {action.disabledReason}
+                      </span>
+                    ) : null}
+                  </>
+                );
+                if (action.href) {
+                  return (
+                    <Link
+                      key={action.href}
+                      id={`command-option-${index}`}
+                      role="option"
+                      aria-selected={activeIndex === index}
+                      to={action.href as never}
+                      onClick={() => {
+                        suppressFocusRestore();
+                        const next = [
+                          action.href!,
+                          ...recentCommands.filter((item) => item !== action.href),
+                        ].slice(0, 12);
+                        saveRecentCommands(next);
+                        platformEvents.publish("platform", "command.executed", {
+                          command: action.href,
+                        });
+                        closePalette();
+                      }}
+                      className={className}
+                    >
+                      {content}
+                    </Link>
+                  );
+                }
+                return (
+                  <Button
+                    data-ui-reference="chatgpt.search-dialog.control"
+                    variant="ghost"
+                    key={action.action}
+                    id={`command-option-${index}`}
+                    role="option"
+                    aria-selected={activeIndex === index}
+                    type="button"
+                    disabled={!!action.disabledReason}
+                    onClick={() => {
+                      const targetIndex = actionItems.indexOf(action.action);
+                      if (targetIndex >= 0) setActiveIndex(targetIndex);
+                      if (action.action === "focus-input") {
+                        focusMessageBox();
+                      } else if (action.action === "theme") {
+                        applyThemeMode(
+                          document.documentElement.classList.contains("dark") ? "light" : "dark",
+                        );
+                        platformEvents.publish("platform", "command.executed", {
+                          command: action.action,
+                        });
+                        closePalette();
+                      } else if (action.action === "search") {
+                        searchWorkspace();
+                      }
+                    }}
+                    className={className}
+                  >
+                    {content}
+                  </Button>
+                );
+              })}
+            </>
           )}
-          <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
-            Press Alt+Enter to pin or unpin the selected command.
-          </p>
+          {showWorkspace && (
+            <>
+              <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">
+                Workspace
+              </div>
+              {workspaceStatus === "loading" ? (
+                <p role="status" className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
+                  Searching workspace…
+                </p>
+              ) : null}
+              {workspaceStatus === "error" ? (
+                <div
+                  role="alert"
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2 text-sm text-destructive"
+                >
+                  <span>Workspace results are unavailable.</span>
+                  {retryWorkspaceSearch ? (
+                    <Button
+                      data-ui-reference="chatgpt.search-dialog.control"
+                      variant="outline"
+                      type="button"
+                      className="  border  text-foreground hover:bg-accent"
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.stopPropagation();
+                      }}
+                      onClick={retryWorkspaceSearch}
+                    >
+                      Retry
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+              {workspaceStatus === "ready" && visibleWorkspaceItems.length === 0 ? (
+                <p className="min-h-11 px-3 py-2.5 text-sm text-muted-foreground">
+                  No workspace results
+                </p>
+              ) : null}
+              {visibleWorkspaceItems.map((item, workspaceIndex) => {
+                const index = workspaceStartIndex + workspaceIndex;
+                return (
+                  <Link
+                    key={`${item.type}:${item.id}`}
+                    id={`command-option-${index}`}
+                    to={item.href as never}
+                    role="option"
+                    aria-selected={activeIndex === index}
+                    onPointerMove={() => setActiveIndex(index)}
+                    onClick={() => {
+                      suppressFocusRestore();
+                      platformEvents.publish("platform", "command.executed", {
+                        command: `workspace:${item.type}`,
+                      });
+                      closePalette();
+                    }}
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
+                  >
+                    <Boxes className="h-4 w-4 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                    <span className="text-xs text-muted-foreground">{item.type}</span>
+                  </Link>
+                );
+              })}
+            </>
+          )}
+          {showChats && (
+            <>
+              <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
+              {normalized ? null : (
+                <p className="px-3 pb-2 text-[11px] text-muted-foreground">
+                  Search message text or use is:pinned, has:attachment, in:title:, after:, and
+                  before:.
+                </p>
+              )}
+              {conversationMatches.length === 0 ? (
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No chats found
+                </div>
+              ) : (
+                conversationMatches.map(({ conversation: chat, snippet }, chatIndex) => (
+                  <Button
+                    data-ui-reference="chatgpt.search-dialog.control"
+                    variant="ghost"
+                    key={chat.id}
+                    type="button"
+                    onClick={() => {
+                      if (archivedConversations.some((item) => item.id === chat.id))
+                        onSelectArchived(chat);
+                      else onSelectChat(chat.id);
+                      closePalette();
+                    }}
+                    id={`command-option-${chatStartIndex + chatIndex}`}
+                    role="option"
+                    aria-selected={activeIndex === chatStartIndex + chatIndex}
+                    className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+                    <span className="min-w-0 flex-1 truncate">{chat.title}</span>
+                    <span className="hidden max-w-52 truncate text-xs text-muted-foreground sm:block">
+                      {snippet}
+                    </span>
+                  </Button>
+                ))
+              )}
+            </>
+          )}
+          {showActions && (
+            <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
+              Press Alt+Enter to pin or unpin the selected command.
+            </p>
+          )}
         </div>
       </div>
     </div>

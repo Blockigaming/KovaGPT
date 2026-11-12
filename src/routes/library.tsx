@@ -2038,7 +2038,7 @@ function LibraryPage() {
                   type="button"
                   aria-pressed={filter === item.id}
                   onClick={() => setFilter(item.id)}
-                  className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition ${filter === item.id ? "border-foreground bg-foreground text-background" : "border-border bg-transparent text-muted-foreground hover:text-foreground"}`}
+                  className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-medium transition-colors ${filter === item.id ? "bg-[var(--surface-selected)] text-foreground" : "bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                 >
                   {item.label}
                 </button>

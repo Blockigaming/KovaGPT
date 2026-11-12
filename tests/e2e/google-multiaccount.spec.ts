@@ -67,7 +67,7 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
   page,
   context,
 }) => {
-  await installAuthenticatedFixture(page);
+  await installAuthenticatedFixture(page, { tier: "plus" });
   await page.route("**/api/**", async (route) => route.fulfill({ json: {} }));
   let current = status(),
     release: (() => void) | undefined;
