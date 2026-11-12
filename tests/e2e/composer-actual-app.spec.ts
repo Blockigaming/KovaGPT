@@ -641,12 +641,14 @@ test("requested polish: Health and Finances own separate connection panels witho
     await expect(tabs.getByRole("tab", { name, exact: true })).toBeVisible();
   }
   await tabs.getByRole("tab", { name: "Finances", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Bank accounts", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeVisible();
+  await expect(page.getByText("$12,483.92", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bank accounts", exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Health accounts", exact: true })).toBeHidden();
   await page.screenshot({ path: info.outputPath("polish-finances.png"), animations: "disabled" });
   await tabs.getByRole("tab", { name: "Health", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Health accounts", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Bank accounts", exact: true })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("polish-health.png"), animations: "disabled" });
 });
