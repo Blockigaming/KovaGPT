@@ -797,34 +797,51 @@
   color: var(--foreground);
 }
 
-.kova-live-voice::before {
+.kova-live-voice::before,
+.kova-live-voice::after {
   position: absolute;
   z-index: -1;
-  inset: -120% -12%;
+  inset: -45% -12%;
   content: "";
   background:
     radial-gradient(ellipse at 39% 49%, #d68f5b 0%, transparent 26%),
     radial-gradient(ellipse at 58% 55%, #e6e4df 0%, transparent 30%),
     radial-gradient(ellipse at 59% 38%, #77869c 0%, transparent 32%);
   filter: blur(34px);
-  opacity: 0.19;
-  animation: kova-live-voice-drift 24s ease-in-out infinite alternate;
-  transition: opacity 300ms ease;
+  opacity: 0;
+  animation: kova-live-voice-rise 18s ease-in-out infinite;
 }
 
-.kova-live-voice[data-phase="recording"]::before {
-  opacity: 0.26;
-}
-.kova-live-voice[data-phase="speaking"]::before {
-  opacity: 0.37;
+.kova-live-voice {
+  --voice-glow-opacity: 0.22;
 }
 
-@keyframes kova-live-voice-drift {
-  from {
-    transform: rotate(-7deg) scale(0.95);
+.kova-live-voice::after {
+  animation-delay: -9s;
+}
+
+.kova-live-voice[data-phase="recording"] {
+  --voice-glow-opacity: 0.3;
+}
+
+.kova-live-voice[data-phase="speaking"] {
+  --voice-glow-opacity: 0.4;
+}
+
+@keyframes kova-live-voice-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(34%) rotate(-7deg) scale(0.95);
   }
-  to {
-    transform: rotate(8deg) scale(1.08);
+  35% {
+    opacity: var(--voice-glow-opacity);
+  }
+  72% {
+    opacity: calc(var(--voice-glow-opacity) * 0.65);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-44%) rotate(8deg) scale(1.08);
   }
 }
 
@@ -855,6 +872,9 @@
 @media (prefers-reduced-motion: reduce) {
   .kova-live-voice::before {
     animation: none;
-    transition: none;
+    opacity: var(--voice-glow-opacity);
+  }
+  .kova-live-voice::after {
+    animation: none;
   }
 }
