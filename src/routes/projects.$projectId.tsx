@@ -79,6 +79,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { supabase } from "@/integrations/supabase/client";
@@ -400,7 +401,14 @@ function ProjectDetailPage() {
       // Only the confirmed target changes; a failed refresh cannot wipe other rows or drafts.
       if (kind === "invite")
         setInvites((previous) => previous.filter((invite) => invite.id !== id));
-      else setMembers((previous) => previous.filter((member) => member.user_id !== id));
+      else {
+        setMembers((previous) => previous.filter((member) => member.user_id !== id));
+        publishKovaNotice({
+          id: "member_removed",
+          title: "Project member removed",
+          confirmed: true,
+        });
+      }
       setMemberRemovalError(null);
       setMemberRemovalStatus(
         kind === "invite"

@@ -2736,6 +2736,7 @@ function KovaGPT() {
     if (!composerDraftRef.current.text && !composerDraftRef.current.attachments.length)
       setSelectedTool(null);
     if (!target) return;
+    publishKovaNotice({ id: "request_canceled", title: "Generation stopped" });
     setConversations((previous) =>
       previous.map((conversation) => {
         if (conversation.id !== target.conversationId) return conversation;

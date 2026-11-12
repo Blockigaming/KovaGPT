@@ -65,6 +65,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
@@ -698,7 +699,7 @@ function LibraryPage() {
         console.error("[library] load failed");
         setLoadError(e instanceof Error ? e.message : "Could not load your library.");
         setSelected([]);
-        toast.error("Could not load your library.");
+        publishKovaNotice({ id: "library_load_failed", title: "Could not load your library." });
       } finally {
         pageRequests.current.delete(controller);
         if (isCurrent()) setLoading(false);
@@ -1261,7 +1262,11 @@ function LibraryPage() {
       const loaded = value ? await value(owner!, item, controller.signal) : item;
       if (current()) action(loaded);
     } catch {
-      if (current()) toast.error("This item could not be opened. Refresh Library and try again.");
+      if (!current()) return;
+      const message = "This item could not be opened. Refresh Library and try again.";
+      if (item.file_name || item.file_url)
+        publishKovaNotice({ id: "file_inaccessible", title: message });
+      else toast.error(message);
     } finally {
       pageRequests.current.delete(controller);
     }
@@ -2388,7 +2393,11 @@ function LibraryPage() {
                 ),
               );
               setRenameTarget(null);
-              toast.success("Saved-item title updated");
+              publishKovaNotice({
+                id: "changes_updated",
+                title: "Saved-item title updated",
+                confirmed: true,
+              });
             }}
             onCloseAutoFocus={(event) => {
               event.preventDefault();

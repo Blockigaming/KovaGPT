@@ -294,6 +294,8 @@ const surfaces = {
     "save_failed",
     "history_failed",
     "no_audio",
+    "member_removed",
+    "request_canceled",
   ],
   status: [
     "image_started",
@@ -317,6 +319,8 @@ const surfaces = {
     "file_removed",
     "image_copied",
     "image_save_failed",
+    "library_load_failed",
+    "file_inaccessible",
     "feedback_sent",
     "connection_success",
     "project_created",

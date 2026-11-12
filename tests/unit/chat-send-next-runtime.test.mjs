@@ -138,12 +138,16 @@ function fixture() {
     streams = [],
     errors = [],
     timers = [],
-    delays = [];
+    delays = [],
+    notices = [];
   let sequence = 0;
   const context = {
     ...helpers,
     chatFailureNoticeId,
-    publishKovaNotice: notificationDeliveryStub.publishKovaNotice,
+    publishKovaNotice(notice) {
+      notificationDeliveryStub.publishKovaNotice(notice);
+      notices.push(notice.id);
+    },
     React,
     Button,
     Suspense: React.Suspense,
@@ -319,6 +323,7 @@ function fixture() {
   }
   return {
     context,
+    notices,
     requests,
     streams,
     errors,
@@ -491,6 +496,8 @@ for (const outcome of ["failure", "stop", "confirmation"]) {
     f.context.queue("web_search");
     if (outcome === "stop") {
       f.context.stop();
+      f.context.stop();
+      assert.equal(f.notices.filter((id) => id === "request_canceled").length, 1);
       f.requests[0].reject(new DOMException("Stopped", "AbortError"));
       await settle();
     } else
