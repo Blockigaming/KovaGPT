@@ -1,4 +1,5 @@
 import { useEffect, useState, type MouseEvent } from "react";
+import { ChevronRight, Plug, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -25,6 +26,7 @@ export function ComposerPluginList({
   onNavigate,
   conversations,
   onRequireSignIn,
+  inline = false,
   navigationBlocked = false,
 }: {
   userId: string | null;
@@ -32,7 +34,8 @@ export function ComposerPluginList({
   onNavigate: () => void;
   /** Only the current, principal-ready account’s saved conversations. */
   conversations: readonly ComposerSavedConversation[];
-  onRequireSignIn: (pluginId: string) => void;
+  onRequireSignIn?: () => void;
+  inline?: boolean;
   navigationBlocked?: boolean;
 }) {
   const accounts = useConnectedAccounts(userId, authLoaded && Boolean(userId));
@@ -95,61 +98,42 @@ export function ComposerPluginList({
     plugins.filter((plugin) => connection(plugin.id).connected).map((plugin) => plugin.id),
   );
 
-  const hasRequests = connected.some((plugin) => plugin.count > 0);
-  const row = (plugin: ConnectorItem, count?: number) => {
-    const status = connection(plugin.id);
-    const comingSoon = ["Not available yet", "Requires setup"].includes(status.label);
-    const contents = (
-      <>
-        <img
-          src={PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id]}
-          className="kova-composer-plugin-logo"
-          alt=""
-          aria-hidden="true"
-        />
-        <span>
-          <span>{plugin.label}</span>
-          <small data-coming-soon={comingSoon || undefined}>
-            {comingSoon ? "Coming soon" : status.label}
-          </small>
-        </span>
-        {count === undefined && <span>{status.action}</span>}
-      </>
-    );
-    const title = `Review ${plugin.label} connection and permissions`;
-    // Guests have no route link or preload: clicking only asks the parent to sign in.
-    if (!authLoaded || !userId)
-      return (
-        <button
-          key={plugin.id}
-          type="button"
-          className="kova-composer-plugin"
-          disabled={!authLoaded}
-          onClick={() => {
-            if (authLoaded && !userId) onRequireSignIn(plugin.id);
-          }}
-          title={title}
-        >
-          {contents}
-        </button>
-      );
-    return (
-      <Link
-        key={plugin.id}
-        to="/apps"
-        preload={false}
-        className="kova-composer-plugin"
-        onClick={handleNavigate}
-        aria-disabled={navigationBlocked || undefined}
-        title={navigationBlocked ? blockedNavigationTitle : title}
-      >
-        {contents}
-      </Link>
-    );
-  };
+  const row = (plugin: ConnectorItem) => (
+    <Link
+      key={plugin.id}
+      to="/apps"
+      preload={false}
+      className="kova-composer-plugin"
+      onClick={handleNavigate}
+      aria-disabled={navigationBlocked || undefined}
+      title={
+        navigationBlocked
+          ? blockedNavigationTitle
+          : `Review ${plugin.label} connection and permissions`
+      }
+    >
+      <img
+        src={PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id]}
+        className="kova-composer-plugin-logo"
+        alt=""
+      />
+      <span>{plugin.label}</span>
+      {inline ? (
+        <small>{CONNECTION_FLOWS[plugin.id]?.description ?? plugin.description}</small>
+      ) : null}
+    </Link>
+  );
+  if (inline)
+    return connected.length ? (
+      <div className="kova-composer-plugins" aria-label="Your connected plugins">
+        {connected.map(({ id }) => row(plugins.find((plugin) => plugin.id === id)!))}
+      </div>
+    ) : null;
+
   return (
     <section className="kova-composer-plugins" aria-label="Your connected plugins">
-      <label className="block p-2">
+      <label className="kova-composer-menu-search">
+        <Search aria-hidden="true" />
         <span className="sr-only">Search plugins</span>
         <input
           type="search"
@@ -157,7 +141,7 @@ export function ComposerPluginList({
           placeholder="Search plugins…"
           value={pluginQuery}
           onChange={(event) => setPluginQuery(event.target.value)}
-          className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+          className="w-full bg-transparent text-sm"
         />
       </label>
       <div className="kova-composer-plugin-list">
@@ -170,36 +154,31 @@ export function ComposerPluginList({
                 : "No connected plugins."}
           </p>
         ) : null}
-        {connected.length > 0 && (
-          <>
-            <h3
-              title={
-                hasRequests
-                  ? "Order reflects saved requests; execution success is unverified."
-                  : undefined
-              }
-            >
-              Your plugins
-            </h3>
-            {connected.map(({ id, count }) =>
-              row(
-                plugins.find((plugin) => plugin.id === id)!,
-                count,
-              ),
-            )}
-          </>
-        )}
+        {connected.map(({ id }) => row(plugins.find((plugin) => plugin.id === id)!))}
       </div>
-      <Link
-        to="/apps"
-        preload={false}
-        className="kova-composer-action"
-        onClick={handleNavigate}
-        aria-disabled={navigationBlocked || undefined}
-        title={navigationBlocked ? blockedNavigationTitle : undefined}
-      >
-        Connect plugins
-      </Link>
+      {userId ? (
+        <Link
+          to="/apps"
+          preload={false}
+          className="kova-composer-action"
+          onClick={handleNavigate}
+          aria-disabled={navigationBlocked || undefined}
+          title={navigationBlocked ? blockedNavigationTitle : undefined}
+        >
+          <Plug aria-hidden="true" />
+          <span>Connect plugins</span>
+          <ChevronRight aria-hidden="true" className="ml-auto" />
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className="kova-composer-action"
+          onClick={onRequireSignIn}
+          disabled={!authLoaded}
+        >
+          <Plug aria-hidden="true" /> Connect plugins
+        </button>
+      )}
     </section>
   );
 }

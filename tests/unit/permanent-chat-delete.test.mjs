@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { loadUiModule } from "../helpers/ui-state-harness.mjs";
-function fixture({ confirm = true, save = true } = {}) {
+function fixture({ confirm = true, save = true, writable = true } = {}) {
+  const historyEvents = new EventTarget();
+  let historyWritable = writable;
   const chat = { id: "chat", title: "Chat" },
     other = { id: "other", title: "Other" };
   const values = new Map([
@@ -20,7 +22,10 @@ function fixture({ confirm = true, save = true } = {}) {
         deleteChatWithUndo: async (_owner, _id, _current, commit) => (confirm ? commit() : false),
         readChatDeleteIntents: () => [],
       },
-      "./chat-history-bridge": { canWriteChatHistory: () => true },
+      "./chat-history-bridge": {
+        CHAT_HISTORY_CHANGED_EVENT: "kova:chat-history-changed",
+        canWriteChatHistory: () => historyWritable,
+      },
       "./chat-store": {
         loadConversations: () => [chat, other],
         saveConversations: async (owner, items) => {
@@ -34,13 +39,24 @@ function fixture({ confirm = true, save = true } = {}) {
       },
     },
     {
+      window: historyEvents,
+      setTimeout,
+      clearTimeout,
       localStorage: {
         getItem: (key) => values.get(key) ?? null,
         setItem: (key, value) => values.set(key, value),
       },
     },
   );
-  return { run: (current) => module.permanentlyDeleteChat("A", chat, current), events, values };
+  return {
+    run: (current) => module.permanentlyDeleteChat("A", chat, current),
+    ready: () => {
+      historyWritable = true;
+      historyEvents.dispatchEvent(new Event("kova:chat-history-changed"));
+    },
+    events,
+    values,
+  };
 }
 test("permanent removal clears active, archived, draft and legacy Trash copies of only the chosen chat", async () => {
   const f = fixture();
@@ -70,4 +86,26 @@ test("failed history persistence keeps all legacy recovery copies and reports fa
   );
   assert.equal(JSON.parse(f.values.get("active:A")).length, 2);
   assert.equal(JSON.parse(f.values.get("kova-chat-trash-v1:A")).entries.length, 2);
+});
+
+test("deletion started during history initialization waits for writable state without losing the click", async () => {
+  const f = fixture({ writable: false });
+  const operation = f.run(() => true);
+  await Promise.resolve();
+  assert.equal(f.events.length, 0, "No deletion is committed before history initializes");
+  f.ready();
+  assert.equal(await operation, true);
+  assert.equal(f.events[0][1].length, 1);
+  assert.equal(f.events[0][1][0].id, "other");
+});
+
+test("a deletion waiting for history must not commit after the account changes", async () => {
+  const f = fixture({ writable: false });
+  let current = true;
+  const operation = f.run(() => current);
+  await Promise.resolve();
+  current = false;
+  f.ready();
+  assert.equal(await operation, false);
+  assert.equal(f.events.length, 0);
 });

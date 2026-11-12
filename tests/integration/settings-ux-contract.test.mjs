@@ -193,10 +193,7 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
   assert.match(settingsSource, /placeholder="Search settings"/);
   assert.match(settingsSource, /No settings found/);
   assert.match(settingsSource, /const filteredGroups = normalizedQuery/);
-  assert.match(
-    settingsSource,
-    /settingsSearchMatches\(item, normalizedQuery, SETTINGS_DESCRIPTIONS\[item\.v\] \?\? ""\)/,
-  );
+  assert.match(settingsSource, /const queryTerms = settingsQuery/);
   assert.match(settingsSource, /tabs: group\.tabs\.filter\(matchesSettingsQuery\)/);
   assert.match(settingsSource, /aria-label="Settings navigation"/);
   assert.match(settingsSource, /aria-label="Back to settings"/);

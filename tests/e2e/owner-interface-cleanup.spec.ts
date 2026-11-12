@@ -171,8 +171,11 @@ test("sidebar deletion from Library permanently removes a chat without Trash", a
   const deleteAction = page.getByRole("menuitem", { name: "Delete", exact: true });
   // A chat cannot be removed until the ownership lock and local snapshot are ready.
   await expect(deleteAction).toBeEnabled({ timeout: 15000 });
-  await deleteAction.click();
-  await expect(page.getByText("Chat deleted", { exact: true })).toBeVisible();
+  // Observe before clicking because the toast disappears after five seconds.
+  await Promise.all([
+    expect(page.getByText("Chat deleted", { exact: true })).toBeVisible({ timeout: 10000 }),
+    deleteAction.click(),
+  ]);
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0, {
     timeout: 10000,
   });

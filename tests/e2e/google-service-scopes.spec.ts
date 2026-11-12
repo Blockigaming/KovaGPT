@@ -7,7 +7,6 @@ for (const [connector, label, permission] of [
   ["google-drive", "Google Drive", "read Drive files"],
 ]) {
   test(`${label} Connect sends only its own service selection`, async ({ page }) => {
-    await installAuthenticatedFixture(page);
     await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
     await page.route("**/api/google/status", (route) =>
       route.fulfill({
@@ -25,6 +24,7 @@ for (const [connector, label, permission] of [
     await page.route("**/_serverFn/**", (route) =>
       route.fulfill({ json: { result: [], context: {} } }),
     );
+    await installAuthenticatedFixture(page, { tier: "plus" });
     const selections: string[] = [];
     await page.route("**/api/google/auth?**", (route) => {
       const url = new URL(route.request().url());

@@ -53,6 +53,15 @@ function readRememberedPostAuthRedirect(): string | null {
   }
 }
 
+export function peekPostAuthRedirect(): string {
+  if (typeof window === "undefined") return "/";
+  return safeRelativeRedirect(
+    readRememberedPostAuthRedirect(),
+    window.location.origin,
+    OAUTH_CALLBACK_PATH,
+  );
+}
+
 export function rememberPostAuthRedirect() {
   if (typeof window === "undefined") return;
   try {

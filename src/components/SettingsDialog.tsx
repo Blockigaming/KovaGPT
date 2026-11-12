@@ -1,4 +1,3 @@
-import { settingsSearchMatches } from "@/lib/settings-search.mjs";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
@@ -157,6 +156,49 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
 
 type TabDef = { v: string; label: string; icon: typeof Cog; keywords?: string[] };
 type TabGroup = { title: string; hint?: string; tabs: TabDef[] };
+
+const SETTINGS_SEARCH_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "can",
+  "change",
+  "find",
+  "for",
+  "how",
+  "i",
+  "is",
+  "my",
+  "the",
+  "to",
+  "where",
+]);
+
+const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
+  general:
+    "language locale send enter input chat preferences model thinking response tools web search",
+  appearance:
+    "dark light system theme color font text size layout contrast density animations reduced motion",
+  notifications: "alerts push reminders email desktop sound scheduled tasks",
+  personalization: "profile name avatar photo picture display name",
+  security: "password passkey two factor 2fa mfa recovery devices sessions sign in sign out",
+  email: "email address verification change email account",
+  parental: "parental controls parent teen child restrictions family safety",
+  voice: "dictation speech microphone transcription audio speaker",
+  storage: "disk cache files attachments library device storage offline",
+  data: "history delete clear chats archive download export privacy public shared links training",
+  memory: "remember forget saved memories instructions preferences personalization context",
+  shortcuts: "keyboard hotkeys commands enter send key bindings",
+  usage: "quota limits remaining tokens messages images uploads model allowance",
+  linked: "plugins apps connectors integrations gmail drive calendar github outlook notion slack",
+  "cloud-browser": "browser website allow block approvals automation permissions",
+  family: "family invite invitations members shared plan household",
+  location: "location city timezone region",
+  billing: "upgrade downgrade cancel refund receipt credit card pricing plans free plus pro team",
+  report: "bug broken error issue feedback",
+  help: "support documentation faq contact question",
+  about: "version credits legal terms privacy",
+  logout: "sign out log off",
+};
 
 const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   general: "Messages, response style, and chat defaults.",
@@ -1125,9 +1167,20 @@ export function SettingsDialog({
   const groups = destinationGroups;
   const allTabs = destinations;
   const activeTab = allTabs.find((item) => item.v === tab) ?? allTabs[0];
-  const normalizedQuery = settingsQuery.trim().toLocaleLowerCase();
-  const matchesSettingsQuery = (item: TabDef) =>
-    settingsSearchMatches(item, normalizedQuery, SETTINGS_DESCRIPTIONS[item.v] ?? "");
+  const queryTerms = settingsQuery.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+  const normalizedQuery = queryTerms.join(" ");
+  const matchesSettingsQuery = (item: TabDef) => {
+    const text = [
+      item.label,
+      SETTINGS_DESCRIPTIONS[item.v] ?? "",
+      ...(item.keywords ?? []),
+      SETTINGS_SEARCH_TOPICS[item.v] ?? "",
+    ]
+      .join(" ")
+      .toLocaleLowerCase();
+    const meaningful = queryTerms.filter((term) => !SETTINGS_SEARCH_STOP_WORDS.has(term));
+    return (meaningful.length ? meaningful : queryTerms).every((term) => text.includes(term));
+  };
   const filteredGroups = normalizedQuery
     ? groups
         .map((group) => ({
@@ -1364,7 +1417,6 @@ export function SettingsDialog({
                   <h2 ref={navigationHeadingRef} tabIndex={-1}>
                     Settings
                   </h2>
-                  <p>Your space, your preferences.</p>
                 </div>
                 {page ? <div className="kova-settings-navigation-close">{pageClose}</div> : null}
               </div>

@@ -150,7 +150,11 @@ test("public links use unguessable tokens, store only digests and share a fixed 
   assert.equal(snapshot.snapshot.messages[0].content, "Hello");
   assert.equal(JSON.stringify(snapshot).includes("secret"), false);
   assert.throws(() => publicShareSnapshot({ ...chat, temporary: true }));
-  assert.throws(() => publicShareSnapshot({ messages: [] }));
+  assert.deepEqual(publicShareSnapshot({ messages: [] }).snapshot.messages, []);
+  const content = "A".repeat(51_000);
+  const large = Array.from({ length: 501 }, () => ({ role: "user", content }));
+  assert.equal(publicShareSnapshot({ messages: large }).snapshot.messages.length, 501);
+  assert.equal(publicShareSnapshot({ messages: large }).snapshot.messages[500].content, content);
 });
 test("guided diagnostics vary by actual setup without generating duplicate article records", () => {
   const faq = { category: "Chat & modes", answer: "Check your draft." };

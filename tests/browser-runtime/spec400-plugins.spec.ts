@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
-import { readFileSync, statSync } from "node:fs";
+import { statSync, readFileSync } from "node:fs";
 import type { GoogleStatus } from "../../src/lib/google-client";
 import type { AccountStatus } from "../../src/hooks/use-connected-accounts";
 import { MASTER_CONNECTORS } from "../../src/lib/connector-master-list.mjs";
