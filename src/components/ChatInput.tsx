@@ -34,6 +34,7 @@ import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import type { Settings } from "@/components/SettingsDialog";
 import { ComposerPdfPages } from "@/components/ComposerPdfPages";
 import {
+  DocumentExtractionLimitError,
   PdfTextUnavailableError,
   pdfDocumentText,
   selectPdfPages,
@@ -1045,7 +1046,14 @@ export function ChatInput({
             );
             setUploadAnnouncement(`${f.name}: file could not be read`);
             publishKovaNotice({
-              id: isDocument ? "file_processing_failed" : "upload_failed",
+              id:
+                error instanceof DocumentExtractionLimitError
+                  ? error.limit === "workbook"
+                    ? "spreadsheet_too_large"
+                    : "document_too_long"
+                  : isDocument
+                    ? "file_processing_failed"
+                    : "upload_failed",
               title: "Document could not be attached",
               message: f.name,
             });

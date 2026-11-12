@@ -283,6 +283,8 @@ const surfaces = {
   inline: [
     "upload_failed",
     "upload_limit",
+    "document_too_long",
+    "spreadsheet_too_large",
     "image_failed",
     "search_failed",
     "analysis_failed",

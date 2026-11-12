@@ -72,6 +72,13 @@ export function validateDocumentExtractionResult(value, requirePdf = false) {
   return { text: value.text, note: value.note };
 }
 
+export class DocumentExtractionLimitError extends Error {
+  constructor(message, limit) {
+    super(message);
+    this.limit = limit;
+  }
+}
+
 export class PdfTextUnavailableError extends Error {
   constructor(message, pdf) {
     super(message);

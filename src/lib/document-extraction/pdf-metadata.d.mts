@@ -12,6 +12,10 @@ export function validateDocumentExtractionResult(
   value: unknown,
   requirePdf?: boolean,
 ): DocumentExtractionResult | undefined;
+export class DocumentExtractionLimitError extends Error {
+  constructor(message: string, limit: "text" | "workbook");
+  limit: "text" | "workbook";
+}
 export class PdfTextUnavailableError extends Error {
   pdf: PdfExtractionMetadata;
   constructor(message: string, pdf: PdfExtractionMetadata);

@@ -7,4 +7,7 @@ export function extractOfficeDocument(
   extension: string,
 ): { text: string; note: string };
 
-export class DocumentExtractionError extends Error {}
+export class DocumentExtractionError extends Error {
+  constructor(message: string, limit?: "text" | "workbook");
+  limit?: "text" | "workbook";
+}
