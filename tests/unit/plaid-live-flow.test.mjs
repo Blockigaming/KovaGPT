@@ -183,3 +183,18 @@ test("revocation between reads stops the next provider call and discards results
     /plaid_response_rejected/,
   );
 });
+
+test("balances remain available while Plaid prepares the first transaction feed", async () => {
+  const snapshot = await readFinanceSnapshot(
+    "test-token",
+    async (path) => {
+      if (path === "/transactions/get") throw new Error("plaid_transactions_pending");
+      return { accounts: [{ account_id: "a", balances: { current: 12 } }] };
+    },
+    async () => {},
+    now,
+  );
+  assert.equal(snapshot.transactionsPending, true);
+  assert.equal(snapshot.accounts[0].current, 12);
+  assert.deepEqual(snapshot.transactions, []);
+});

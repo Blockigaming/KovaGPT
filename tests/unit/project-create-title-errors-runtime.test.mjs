@@ -417,7 +417,8 @@ function titleFixture() {
   const b = base(),
     requests = [],
     loads = [],
-    changes = [];
+    changes = [],
+    historyWrites = [];
   const auth = { isLoaded: true, isSignedIn: true, user: { id: "owner-a" } };
   const props = {
     open: true,
@@ -448,7 +449,10 @@ function titleFixture() {
       "@/lib/chat-store": {
         loadConversations: () => [props.conversation],
         archiveConversation: async () => true,
-        saveConversations: async () => true,
+        saveConversations: async (...args) => {
+          historyWrites.push(args);
+          return true;
+        },
       },
       "@/lib/chat-history-bridge": {
         chatHistorySnapshot: () => 0,
@@ -487,6 +491,7 @@ function titleFixture() {
     props,
     requests,
     changes,
+    historyWrites,
     input,
     error,
     render,
@@ -532,6 +537,8 @@ test("chat moves wait for writable history and recheck readiness at submission",
   assert.equal(f.requests[0].args.data.title, "Retained title");
   f.requests[0].resolve({ id: "copied" });
   await send;
+  // An explicit save invalidates pending autosaves of the original chat list.
+  assert.deepEqual(f.historyWrites, [["owner-a", []]]);
   f.render();
   assert.match(text(f.render()), /Moved to\s+Writable/);
 });

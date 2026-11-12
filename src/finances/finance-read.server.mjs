@@ -30,12 +30,20 @@ export async function readFinanceSnapshot(
   )
     throw new Error("plaid_response_rejected");
   await ensureCurrent();
-  const transactions = await requestPlaid("/transactions/get", {
-    access_token: accessToken,
-    start_date: start,
-    end_date: end,
-    options: { count: 100, offset: 0 },
-  });
+  let transactionsPending = false;
+  let transactions;
+  try {
+    transactions = await requestPlaid("/transactions/get", {
+      access_token: accessToken,
+      start_date: start,
+      end_date: end,
+      options: { count: 100, offset: 0 },
+    });
+  } catch (error) {
+    if (error?.message !== "plaid_transactions_pending") throw error;
+    transactionsPending = true;
+    transactions = { transactions: [], total_transactions: 0 };
+  }
   if (
     !Array.isArray(transactions.transactions) ||
     transactions.transactions.length > 100 ||
@@ -77,7 +85,9 @@ export async function readFinanceSnapshot(
       amount: amount(transaction.amount),
       currency: text(transaction.iso_currency_code, 3),
       pending: transaction.pending === true,
+      category: text(transaction.personal_finance_category?.primary, 60),
     })),
+    transactionsPending,
     limited: Number(transactions.total_transactions) > transactions.transactions.length,
   };
 }

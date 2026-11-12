@@ -217,7 +217,7 @@ test("all chosen tools are configurable and Maps retains its release gate", () =
   const f = fixture({ railShortcuts: ["maps", "projects", "library", "scheduled-tasks", "apps"] });
   assert.deepEqual(
     controls(f.find("Additional shortcuts")).map(({ props }) => props["aria-label"]),
-    ["Projects", "Library", "Scheduled tasks", "Plugins"],
+    ["Projects", "Library", "Scheduled tasks", "Connections"],
   );
   const approved = fixture({ mapsReleaseApproved: true, railShortcuts: ["maps", "images"] });
   assert.deepEqual(
@@ -249,7 +249,7 @@ for (const [path, label] of [
   ["/projects/project-1", "Projects"],
   ["/scheduled-tasks/task-1", "Scheduled tasks"],
   ["/library", "Library"],
-  ["/apps/plugin-1", "Plugins"],
+  ["/apps/plugin-1", "Connections"],
 ]) {
   test(`selected destination remains marked on ${path}`, () => {
     const f = fixture({ path, railShortcuts: SIDEBAR_ITEMS.map((item) => item.id) });

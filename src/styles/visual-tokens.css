@@ -203,7 +203,7 @@
     0 2px 6px -2px rgba(0, 0, 0, 0.5);
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px -8px rgba(0, 0, 0, 0.6);
   color-scheme: dark;
-  --background: #212121;
+  --background: #000000;
   --foreground: #ffffff;
   --card: #303030;
   --card-foreground: var(--foreground);
@@ -220,7 +220,7 @@
   --border: #ffffff1f;
   --input: #ffffff26;
   --ring: #339cff;
-  --sidebar: #181818;
+  --sidebar: #202020;
   --sidebar-foreground: var(--foreground);
   --sidebar-hover: #ffffff0d;
   --sidebar-active: #303030;
