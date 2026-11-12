@@ -2,6 +2,7 @@
 // Never add different currencies or unposted transactions to USD totals.
 export function summarizeUsdActivity(records) {
   const byDay = new Map();
+  const byCategory = new Map();
   let spentCents = 0;
   let receivedCents = 0;
   let excludedPending = 0;
@@ -35,6 +36,10 @@ export function summarizeUsdActivity(records) {
     if (cents >= 0) {
       spentCents += cents;
       day.spentCents += cents;
+      if (cents > 0) {
+        const category = record.category || "UNCATEGORIZED";
+        byCategory.set(category, (byCategory.get(category) ?? 0) + cents);
+      }
     } else {
       receivedCents += -cents;
       day.receivedCents += -cents;
@@ -52,6 +57,9 @@ export function summarizeUsdActivity(records) {
         spent: daySpent / 100,
         received: dayReceived / 100,
       })),
+    categories: [...byCategory.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([category, cents]) => ({ category, amount: cents / 100 })),
     excludedPending,
     excludedCurrency,
     excludedInvalid,

@@ -1492,6 +1492,9 @@ function AppsPage() {
                   state={stateOf(visibleSelectedApp.id)}
                   configured={configuredOf(visibleSelectedApp.id)}
                 />
+                {(visibleSelectedApp.id === "gmail" || visibleSelectedApp.id === "google-docs") && (
+                  <p>{visibleSelectedApp.label} requires Kova Plus or Pro.</p>
+                )}
                 <section className="spec400-plugin-detail-section">
                   <h3>Capabilities and permissions</h3>
                   {selectedReview && (
@@ -1920,6 +1923,7 @@ function AppsPage() {
               <TabsContent forceMount value="finances" className="spec400-connection-group">
                 <BankConnectionsPanel
                   key={`banks:${userKey ?? "guest"}`}
+                  visible={connectionGroup === "finances"}
                   ownerId={isSignedIn ? userKey : null}
                 />
               </TabsContent>

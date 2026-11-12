@@ -228,7 +228,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         },
         {
           name: "theme-color",
-          content: "#212121",
+          content: "#000000",
           media: "(prefers-color-scheme: dark)",
         },
         { name: "color-scheme", content: "light dark" },

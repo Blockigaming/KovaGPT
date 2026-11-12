@@ -263,3 +263,20 @@ test("a stalled fetch and stalled response body stop at the deadline without ret
   );
   assert.equal(cancelled, true);
 });
+
+test("recognizes only the transaction initialization code without exposing provider details", async () => {
+  const fetchImpl = async () =>
+    new Response(
+      JSON.stringify({
+        error_code: "PRODUCT_NOT_READY",
+        error_message: "private provider diagnostics",
+      }),
+      { status: 400 },
+    );
+  await assert.rejects(requestPlaid("/transactions/get", {}, { env, fetchImpl }), {
+    message: "plaid_transactions_pending",
+  });
+  await assert.rejects(requestPlaid("/accounts/get", {}, { env, fetchImpl }), {
+    message: "plaid_400",
+  });
+});

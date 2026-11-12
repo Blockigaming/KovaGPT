@@ -142,7 +142,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await capture(page, info, "tasks");
 
   await openSidebar(page);
-  await page.getByRole("link", { name: "Plugins", exact: true }).click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page).toHaveURL(/\/apps$/);
   await confirmSidebarState();
   await expect(

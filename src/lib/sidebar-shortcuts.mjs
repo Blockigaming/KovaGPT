@@ -6,7 +6,7 @@ export const SIDEBAR_SHORTCUTS = Object.freeze(
     { id: "library", label: "Library", to: "/library" },
     { id: "projects", label: "Projects", to: "/projects" },
     { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
-    { id: "apps", label: "Plugins", to: "/apps" },
+    { id: "apps", label: "Connections", to: "/apps" },
     { id: "maps", label: "Maps", to: "/maps" },
   ].map((shortcut) => Object.freeze(shortcut)),
 );

@@ -160,9 +160,22 @@ test("workspace and campaign migrations retain workspace isolation, request reco
   const db = new PGlite();
   try {
     await prepareTeamDatabase(db);
+    await db.exec(`
+      create function auth.uid() returns uuid language sql stable as $$
+        select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+      $$;
+      grant usage on schema auth to authenticated;
+    `);
+    await applyMigration(db, "20260722130000_product_completeness_reliability.sql");
+    await db.exec(`
+      grant select, insert, update, delete on public.app_notifications to authenticated;
+      grant select, insert on public.notification_preferences to service_role;
+      grant select on public.app_notifications to service_role;
+    `);
     await applyMigration(db, "20261110224500_kova_verified_team_workspace_join_requests.sql");
     await applyMigration(db, "20261110233000_kova_notification_campaigns.sql");
     await applyMigration(db, "20261112022300_kova_workspace_join_review_current_authority.sql");
+    await applyMigration(db, "20261112195600_kova_workspace_join_decision_notifications.sql");
     const [owner, requester, unrelated, anotherRequester, unverified] = ids;
     await db.query("update auth.users set email='outside@other.invalid' where id=$1", [unrelated]);
     await db.query("update team_workspaces set status='active' where id=$1", [team]);
@@ -181,6 +194,12 @@ test("workspace and campaign migrations retain workspace isolation, request reco
         .rows[0].ok;
     const claim = async (id) =>
       (await db.query("select claim_team_join_notification($1) request", [id])).rows[0].request;
+    const decisionNotices = async () =>
+      (
+        await db.query(
+          "select id, owner_id, type, action_url, safe_preview from app_notifications where expires_at is null order by created_at",
+        )
+      ).rows;
 
     assert.deepEqual(await discover(owner), []);
     assert.deepEqual(await discover(unrelated), []);
@@ -201,15 +220,50 @@ test("workspace and campaign migrations retain workspace isolation, request reco
     );
     assert.equal((await claim(id)).notification_attempts, 2);
     await assert.rejects(review(unrelated, id, true), /Only the verified workspace owner/);
+    assert.deepEqual(await decisionNotices(), []);
+    await db.exec("begin");
     assert.equal(await review(owner, id, true), true);
+    assert.equal((await decisionNotices()).length, 1);
+    await db.exec("rollback");
+    assert.deepEqual(await decisionNotices(), []);
+    assert.equal((await discover(requester))[0].request_status, "pending");
+    assert.equal(await review(owner, id, true), true);
+    await assert.rejects(review(owner, id, true), /Request is no longer pending/);
     assert.equal(await request(requester), id);
     assert.equal((await discover(requester))[0].request_status, "approved");
     assert.equal(await claim(id), null);
     assert.deepEqual((await db.query("select * from team_members")).rows, []);
+    const [approved] = await decisionNotices();
+    assert.deepEqual(approved, {
+      id: approved.id,
+      owner_id: requester,
+      type: "workspace_join_approved",
+      action_url: "/settings/connections",
+      safe_preview: "You can join after the workspace owner sends an invitation.",
+    });
 
     const deniedId = await request(anotherRequester);
     assert.equal(await review(owner, deniedId, false), true);
+    assert.deepEqual(
+      (await decisionNotices()).map(({ owner_id, type }) => [owner_id, type]),
+      [
+        [requester, "workspace_join_approved"],
+        [anotherRequester, "workspace_join_denied"],
+      ],
+    );
     await assert.rejects(request(anotherRequester), /Try again after the review period/);
+    await db.query(
+      "update team_join_requests set reviewed_at=now()-interval '8 days' where id=$1",
+      [deniedId],
+    );
+    assert.equal(await request(anotherRequester), deniedId);
+    assert.deepEqual(await decisionNotices(), [approved]);
+    await db.query(
+      "insert into notification_preferences(user_id,in_app_enabled) values($1,false)",
+      [anotherRequester],
+    );
+    assert.equal(await review(owner, deniedId, true), true);
+    assert.deepEqual(await decisionNotices(), [approved]);
 
     const campaign = (
       await db.query(
@@ -245,8 +299,29 @@ test("workspace and campaign migrations retain workspace isolation, request reco
     assert.deepEqual(await discover(unrelated), []);
     await assert.rejects(review(owner, staleId, true), /Request eligibility has changed/);
     assert.equal(await review(owner, staleId, false), true);
+    assert.deepEqual(await decisionNotices(), [approved]);
 
     await db.exec("set role authenticated");
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [unrelated]);
+    assert.deepEqual(await decisionNotices(), []);
+    assert.equal(
+      (await db.query("update app_notifications set read_at=now() where id=$1", [approved.id]))
+        .affectedRows,
+      0,
+    );
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [requester]);
+    assert.deepEqual(await decisionNotices(), [approved]);
+    assert.equal(
+      (await db.query("update app_notifications set read_at=now() where id=$1", [approved.id]))
+        .affectedRows,
+      1,
+    );
+    await assert.rejects(
+      db.query("update app_notifications set type='workspace_join_denied' where id=$1", [
+        approved.id,
+      ]),
+      { code: "42501" },
+    );
     for (const table of [
       "team_verified_domains",
       "team_join_requests",

@@ -24,6 +24,8 @@ const toasterStyle = {
 // The same small ChatGPT pill geometry as Button, overriding native toast actions.
 const toastButtonClassName =
   "group-[.toast]:!h-8 group-[.toast]:!rounded-full group-[.toast]:!px-[15.96px] group-[.toast]:!text-sm group-[.toast]:!font-medium group-[.toast]:!leading-5 group-[.toast]:!transition-[background-color,color,border-color,box-shadow,opacity] group-[.toast]:!duration-150 group-[.toast]:!ease-[ease] group-[.toast]:focus-visible:!outline-none group-[.toast]:focus-visible:!ring-2 group-[.toast]:focus-visible:!ring-ring group-[.toast]:focus-visible:!ring-offset-2 group-[.toast]:focus-visible:!ring-offset-background [@media(pointer:coarse)]:!min-h-11";
+const touchToastCloseButton =
+  "[@media(pointer:coarse)]:!left-1 [@media(pointer:coarse)]:!right-auto [@media(pointer:coarse)]:!top-1 [@media(pointer:coarse)]:!size-11 [@media(pointer:coarse)]:!transform-none [@media(pointer:coarse)]:!border-0 [@media(pointer:coarse)]:!bg-transparent";
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const mobile = useIsMobile();
@@ -92,7 +94,8 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background",
+            "group toast group-[.toaster]:!rounded-[0.75rem] group-[.toaster]:!border-0 group-[.toaster]:!p-4 group-[.toaster]:!gap-3 group-[.toaster]:!bg-popover group-[.toaster]:!text-sm group-[.toaster]:!leading-5 group-[.toaster]:!text-popover-foreground group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:group-[.toaster]:!shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)] group-[.toaster]:focus-visible:!ring-2 group-[.toaster]:focus-visible:!ring-ring group-[.toaster]:focus-visible:!ring-offset-2 group-[.toaster]:focus-visible:!ring-offset-background [@media(pointer:coarse)]:group-[.toaster]:!pl-14",
+          closeButton: touchToastCloseButton,
           icon: "group-[.toast]:!m-0 group-[.toast]:!size-[20px] group-[.toast]:[&_svg]:!m-0 group-[.toast]:[&_svg]:!size-[20px]",
           content: "group-[.toast]:!min-w-0 group-[.toast]:!flex-1 group-[.toast]:!gap-0",
           title: "group-[.toast]:!font-semibold group-[.toast]:!leading-5 [text-wrap:pretty]",

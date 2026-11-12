@@ -348,6 +348,7 @@ const surfaces = {
     "project_updated",
     "workspace_join_requested",
     "workspace_join_approved",
+    "workspace_join_denied",
     "subscription_updated",
     "settings_updated",
     "invalid_credentials",
@@ -390,6 +391,7 @@ const REQUIRE_ACTUAL_STATE = new Set([
   "offer_claimed",
   "workspace_join_requested",
   "workspace_join_approved",
+  "workspace_join_denied",
   "task_completed",
   "subscription_updated",
   "upload_completed",
@@ -426,7 +428,7 @@ export function notificationDefinition(id) {
     requiresEvidence: REQUIRE_ACTUAL_STATE.has(id),
     dismissible: true,
     exclusive: CONFIRMATION.has(id) || surface === "modal" || surface === "sheet",
-    liveRegion: ERROR_WORDS.test(id) ? "assertive" : "polite",
+    liveRegion: id !== "workspace_join_denied" && ERROR_WORDS.test(id) ? "assertive" : "polite",
   });
 }
 export function selectNotificationQueue(

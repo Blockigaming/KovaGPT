@@ -145,7 +145,22 @@ export async function requestPlaid(
     throw new Error(combined.aborted ? "plaid_request_cancelled" : "plaid_transport_failed");
   }
   if (!response.ok) {
-    Promise.resolve(response.body?.cancel()).catch(() => undefined);
+    if (path === "/transactions/get" && response.status === 400) {
+      // Plaid can return balances while its first transaction import is still running.
+      let code;
+      try {
+        const bytes = await readResponseBytesBounded(response, 8192, {
+          signal: combined,
+          timeoutMs,
+        });
+        code = JSON.parse(new TextDecoder().decode(bytes))?.error_code;
+      } catch {
+        // Retain the normal status-only error for malformed provider responses.
+      }
+      if (code === "PRODUCT_NOT_READY") throw new Error("plaid_transactions_pending");
+    } else {
+      Promise.resolve(response.body?.cancel()).catch(() => undefined);
+    }
     throw new Error(`plaid_${response.status}`);
   }
   let value;

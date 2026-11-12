@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { listNotifications, markNotificationsRead } from "@/lib/notification-center.functions";
 import { publishKovaNotice } from "@/components/KovaNotificationSurface";
@@ -26,6 +27,7 @@ function safeSessionStorage(): Storage | null {
  * server insertion govern which rows are delivered.
  */
 export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
+  const navigate = useNavigate();
   const list = useServerFn(listNotifications);
   const markRead = useServerFn(markNotificationsRead);
   const ownerRef = useRef(ownerId);
@@ -63,7 +65,7 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
               ? {
                   primaryLabel: "View",
                   onPrimary: () => {
-                    if (isCurrent()) window.location.assign(actionUrl);
+                    if (isCurrent()) void navigate({ href: actionUrl });
                   },
                 }
               : {}),
@@ -93,6 +95,6 @@ export function PersistedNoticeBridge({ ownerId }: { ownerId: string | null }) {
       window.removeEventListener("focus", focus);
       document.removeEventListener("visibilitychange", focus);
     };
-  }, [list, markRead, ownerId]);
+  }, [list, markRead, navigate, ownerId]);
   return null;
 }

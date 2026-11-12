@@ -75,6 +75,8 @@ test("server-emitted project, connection, research and security events retain th
     project_invitation: "invitation_received",
     project_member_joined: "member_joined",
     project_role_change: "permission_changed",
+    workspace_join_approved: "workspace_join_approved",
+    workspace_join_denied: "workspace_join_denied",
     connector_reauth: "connection_expired",
     deep_research_complete: "research_completed",
     security_alert: "security_check",

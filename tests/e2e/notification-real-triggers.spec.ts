@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name));
   const saved = /\[notice:(network_offline|conversation_full)\]/u.test(testInfo.title);
   await fixture(page, "dark", true, saved, "free", {
-    preserveStorageOnReload: testInfo.title.includes("[contract:did_you_know]"),
+    preserveStorageOnReload: /\[notice:(did_you_know|feedback_requested)\]/u.test(testInfo.title),
   });
   await page.goto("/");
   await waitForKovaHydration(page);
@@ -50,7 +50,16 @@ test("[notice:network_offline][notice:network_restored] offline and recovery not
     body: await page.screenshot(),
     contentType: "image/png",
   });
-  await restored.getByRole("button", { name: "Close toast" }).click();
+  const closeToast = restored.getByRole("button", { name: "Close toast" });
+  if (await page.evaluate(() => window.matchMedia("(pointer: coarse)").matches)) {
+    await expect
+      .poll(async () => {
+        const bounds = await closeToast.boundingBox();
+        return Boolean(bounds && bounds.width >= 44 && bounds.height >= 44);
+      })
+      .toBe(true);
+  }
+  await closeToast.click();
   await expect(restored).toBeHidden();
   await expect(composer).toHaveValue(draft);
 });
@@ -493,7 +502,7 @@ test("[notice:no_matching_files] filters show no matching files only after a sea
   await expect(emptyResult).toHaveCount(0);
 });
 
-test("[contract:reference_saved][contract:quick_tip] a named image reference is acknowledged only after Library saves it", async ({
+test("[contract:reference_saved][notice:quick_tip] a named image reference is acknowledged only after Library saves it", async ({
   page,
 }, testInfo) => {
   const imageUrl =
@@ -574,7 +583,7 @@ test("[contract:reference_saved][contract:quick_tip] a named image reference is 
   await expect(tip).toHaveCount(0);
 });
 
-test("[contract:did_you_know] Library filter discovery stays dismissed after reload", async ({
+test("[notice:did_you_know] Library filter discovery stays dismissed after reload", async ({
   page,
 }) => {
   await page.route("**/api/library/items**", (route) =>
@@ -596,6 +605,47 @@ test("[contract:did_you_know] Library filter discovery stays dismissed after rel
   await filters.click();
   await expect(page.getByText("Filter loaded items", { exact: true })).toBeVisible();
   await expect(tip).toHaveCount(0);
+});
+
+test("[notice:feedback_requested] an unanswered Help search offers optional feedback", async ({
+  page,
+}) => {
+  await page.goto("/help");
+  await waitForKovaHydration(page);
+  const search = page.getByRole("textbox", { name: "Search help", exact: true });
+  const invitation = page.locator('[data-kova-notice-id="feedback_requested"]');
+  await expect(invitation).toHaveCount(0);
+  const query = "no matching help article 147892";
+  await search.fill(query);
+  await expect(page.getByRole("heading", { name: /No answers found/ })).toBeVisible();
+  await expect(invitation.getByRole("heading", { name: "Share your feedback" })).toBeVisible();
+  await invitation.getByRole("button", { name: "Later", exact: true }).click();
+  await expect(search).toBeFocused();
+  await expect(invitation).toHaveCount(0);
+
+  await page.reload();
+  await waitForKovaHydration(page);
+  await search.fill(query);
+  await expect(page.getByRole("heading", { name: /No answers found/ })).toBeVisible();
+  await expect(invitation).toHaveCount(0);
+});
+
+test("[notice:feedback_requested] the Help feedback action opens the existing message field", async ({
+  page,
+}) => {
+  let submissions = 0;
+  await page.route("**/api/public/help-submit", (route) => {
+    submissions++;
+    return route.abort("blockedbyclient");
+  });
+  await page.goto("/help");
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Search help", exact: true }).fill("unmatched 186512");
+  const invitation = page.locator('[data-kova-notice-id="feedback_requested"]');
+  await invitation.getByRole("button", { name: "Write feedback", exact: true }).click();
+  await expect(page.locator("#support-message")).toBeFocused();
+  await expect(invitation).toHaveCount(0);
+  expect(submissions).toBe(0);
 });
 
 test("[contract:privacy_updated] saving browser privacy rules uses the current account and confirms the write", async ({
