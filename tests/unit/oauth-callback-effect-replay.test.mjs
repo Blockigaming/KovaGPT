@@ -83,6 +83,8 @@ function dialogFixture({ mode = "dual", github = true, rejected = false, inline 
           DialogTitle: "h2",
         },
         "@tanstack/react-router": { useNavigate: () => () => {} },
+        "@/components/auth/GoogleIcon": { GoogleIcon: "google-icon" },
+        "@/lib/google-oauth-browser": {},
         "@/components/NovaLogo": { NovaLogo: "logo" },
         "@/integrations/supabase/config": {
           SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.test" },

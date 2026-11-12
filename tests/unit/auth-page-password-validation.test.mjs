@@ -53,6 +53,8 @@ function fixture() {
     "@/components/ui/button": { Button: "button" },
     "@/components/ui/input": { Input: "input" },
     "@/components/ui/label": { Label: "label" },
+    "@/components/auth/GoogleIcon": { GoogleIcon: "google-icon" },
+    "@/lib/google-oauth-browser": { isOwnedGoogleConfigured: () => false },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "@/integrations/supabase/config": {
       SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.invalid" },

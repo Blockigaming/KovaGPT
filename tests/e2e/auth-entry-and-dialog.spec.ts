@@ -120,6 +120,39 @@ test("valid sign-up deep links use account metadata and named fields", async ({ 
   expect(authWrites).toEqual([]);
 });
 
+for (const mode of ["sign-in", "sign-up"] as const) {
+  test(`the ${mode} password step keeps Google and gives form fields room`, async ({ page }) => {
+    await page.route("**/auth/v1/settings", (route) =>
+      route.fulfill({ json: { external: { google: true, github: true, email: true } } }),
+    );
+    await page.goto(`/auth?email=review%40example.invalid&mode=${mode}`);
+    await waitForKovaHydration(page);
+
+    const google = page.getByRole("button", { name: "Continue with Google", exact: true });
+    const github = page.getByRole("button", { name: "Continue with GitHub", exact: true });
+    const main = page.locator("#main-content");
+    const email = page.getByLabel("Email address", { exact: true });
+    const password = page.getByLabel("Password", { exact: true });
+
+    await expect(google).toBeEnabled();
+    const googleBox = await expectMinimumTarget(google);
+    const githubBox = await expectMinimumTarget(github);
+    const emailBox = await expectMinimumTarget(email);
+    const passwordBox = await expectMinimumTarget(password);
+    const mainBox = (await main.boundingBox())!;
+    expect(googleBox.y + googleBox.height).toBeLessThan(githubBox.y);
+    expect(emailBox.width).toBeCloseTo(mainBox.width, 0);
+    expect(passwordBox.width).toBeCloseTo(mainBox.width, 0);
+    expect(emailBox.x).toBeGreaterThanOrEqual(16);
+    for (const field of [email, password]) {
+      const fieldId = await field.getAttribute("id");
+      const labelBox = (await main.locator(`label[for="${fieldId}"]`).boundingBox())!;
+      const fieldBox = (await field.boundingBox())!;
+      expect(fieldBox.y - labelBox.y - labelBox.height).toBeGreaterThanOrEqual(6);
+    }
+  });
+}
+
 test("auth dialog has one semantic title, one contained close target, and Escape restores focus", async ({
   page,
 }, testInfo) => {
