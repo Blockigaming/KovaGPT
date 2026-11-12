@@ -86,8 +86,8 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
     composerStyles,
     '.spec400-composer[data-focus-origin="keyboard"]:focus-within',
   );
-  assert.equal(focus.outline, "2px solid var(--ring)");
-  assert.equal(focus["outline-offset"], "2px");
+  assert.equal(focus.outline, "none");
+  assert.equal(focus["outline-offset"], "0");
   assert.match(styles, /\[role="menuitem"\]:focus-visible/);
   assert.match(styles, /@media \(max-width: 359px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
@@ -265,7 +265,7 @@ test("canonical reference styles own shell and composer contracts without retire
   assert.equal(
     declarations(composerStyles, '.spec400-composer[data-focus-origin="keyboard"]:focus-within')
       .outline,
-    "2px solid var(--ring)",
+    "none",
   );
   const send = declarations(composerStyles, ".spec400-send-button");
   for (const key of ["width", "height", "min-width", "min-height"]) assert.equal(send[key], "36px");
