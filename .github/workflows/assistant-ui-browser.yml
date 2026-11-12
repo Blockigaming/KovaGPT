@@ -69,8 +69,7 @@ concurrency:
   group: assistant-ui-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Trust only this job's checked-out working tree. Containers can have a
-# different UID from the mounted GitHub workspace; all tests remain active.
+# Trust only the checked-out PR working tree inside the job container.
 env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: safe.directory
@@ -175,9 +174,11 @@ jobs:
     name: Assistant auth visual
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    # The reviewed auth snapshots use the Ubuntu runner's system font stack.
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
     timeout-minutes: 20
     env:
+      HOME: /root
       AI_GENERATION_ENABLED: "false"
       KOVA_GENERATION_DISABLED: "true"
     steps:
