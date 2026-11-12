@@ -16,7 +16,7 @@ import {
   FileText,
   Camera,
   BookOpen,
-  Box,
+  Boxes,
   ChevronRight,
   MessageSquare,
   Search,
@@ -153,7 +153,7 @@ const SLASH_COMMANDS = [
     description: "Send feedback about this chat",
     icon: MessageSquare,
   },
-  { id: "model", label: "Model", description: "Change your model", icon: Box, submenu: true },
+  { id: "model", label: "Model", description: "Change your model", icon: Boxes, submenu: true },
   { id: "study", label: "Study", description: "Learn a new concept", icon: BookOpen },
   {
     id: "project",
@@ -701,8 +701,8 @@ export function ChatInput({
   }, [isStreaming, value, attachments.length]);
 
   useEffect(() => {
-    if (disabled || !showAddMenu) setPlusOpen(false);
-  }, [disabled, showAddMenu]);
+    if (disabled || isStreaming || !showAddMenu) setPlusOpen(false);
+  }, [disabled, isStreaming, showAddMenu]);
   useEffect(() => {
     if (disabled || isStreaming || !showAddMenu || isMobileLayout) setUtilityMenu(null);
   }, [disabled, isStreaming, showAddMenu, isMobileLayout]);
@@ -1362,7 +1362,7 @@ export function ChatInput({
 
   const renderRecentLibraryFiles = () => (
     <div className="kova-composer-library" aria-label="Saved Library files">
-      {recentLibraryFiles.length > 0 ? (
+      {recentLibraryFiles.length > 0 || !recentLibraryLoading ? (
         <label className="kova-composer-menu-search">
           <Search aria-hidden="true" />
           <span className="sr-only">Search Library files</span>
@@ -2119,7 +2119,7 @@ export function ChatInput({
                       ref.current?.focus();
                     }}
                   >
-                    <Box aria-hidden="true" />
+                    <Boxes aria-hidden="true" />
                     {item.id === "instant"
                       ? "KovaGPT Chat"
                       : item.id === "thinking"
@@ -2141,7 +2141,7 @@ export function ChatInput({
                       ref.current?.focus();
                     }}
                   >
-                    <Box aria-hidden="true" />
+                    <Boxes aria-hidden="true" />
                     {item.label}
                   </button>
                 ))

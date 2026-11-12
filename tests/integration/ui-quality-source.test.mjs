@@ -111,7 +111,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(openingTag(home, "h1", /id="chat-greeting"/), /id="chat-greeting"/);
   assert.match(home, /id="chat-greeting"[^>]*>\s*\{greeting\}\s*<\/h1>/);
   assert.match(composer, /COMPOSER_TOOLS/);
-  assert.match(composer, /renderComposerActions\(false\)/);
+  assert.match(composer, /renderComposerActions\(isMobileLayout\)/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS\.map/);
 
   // A blocked attachment may explain the blocker, but it must not submit the message.

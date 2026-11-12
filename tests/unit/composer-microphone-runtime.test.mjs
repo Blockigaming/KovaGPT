@@ -111,6 +111,8 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
   const modules = {
     react,
     "lucide-react": {},
+    "@/lib/consumer-model-selection.mjs": { CONSUMER_MODELS: [] },
+    "@/components/HelpSupportForm": { HelpSupportForm: "HelpSupportForm" },
     "@/components/ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
     "@tanstack/react-router": {
       useNavigate: () => () => {
