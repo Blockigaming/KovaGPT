@@ -1,3 +1,4 @@
+import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
@@ -293,13 +294,6 @@ function KovaGPT() {
     [isLoaded, storagePrincipal, userKey],
   );
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [unreadReplyIds, setUnreadReplyIds] = useState<ReadonlySet<string>>(() => new Set());
-  const replyToastIdsRef = useRef(new Map<string, string>());
-  const dismissReplyToasts = useCallback(() => {
-    for (const id of replyToastIdsRef.current.values()) toast.dismiss(id);
-    replyToastIdsRef.current.clear();
-  }, []);
-  useEffect(() => dismissReplyToasts, [dismissReplyToasts]);
   const [composerVoiceMode, setComposerVoiceMode] = useState<"dictate" | "voice" | null>(null);
   const composerVoiceSessionRef = useRef<{
     mode: "dictate" | "voice";
@@ -308,8 +302,8 @@ function KovaGPT() {
     generation: number;
     openedUrl: string;
   } | null>(null);
-  const conversationsRef = useRef(conversations);
-  conversationsRef.current = conversations;
+  const voiceConversationsRef = useRef(conversations);
+  voiceConversationsRef.current = conversations;
   const stopComposerVoiceRequestRef = useRef<() => void>(() => undefined);
   const composerDraftRef = useRef({
     text: "",
@@ -922,8 +916,6 @@ function KovaGPT() {
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
-    setUnreadReplyIds(new Set());
-    dismissReplyToasts();
     if (!isLoaded) {
       storageGenerationRef.current += 1;
       updateNextPrompt(null);
@@ -988,7 +980,6 @@ function KovaGPT() {
       /* ignore */
     }
   }, [
-    dismissReplyToasts,
     isLoaded,
     userKey,
     isSignedIn,
@@ -1086,8 +1077,6 @@ function KovaGPT() {
     if (!isLoaded) return;
     const handlePrincipalReset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
-      setUnreadReplyIds(new Set());
-      dismissReplyToasts();
       storageGenerationRef.current += 1;
       updateNextPrompt(null);
       abortRef.current?.abort();
@@ -1123,15 +1112,7 @@ function KovaGPT() {
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
     return () =>
       window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
-  }, [
-    isLoaded,
-    userKey,
-    updateNextPrompt,
-    setInput,
-    setAttachments,
-    setSelectedTool,
-    dismissReplyToasts,
-  ]);
+  }, [isLoaded, userKey, updateNextPrompt, setInput, setAttachments, setSelectedTool]);
 
   useEffect(() => {
     if (!principalReady) return;
@@ -1411,18 +1392,6 @@ function KovaGPT() {
 
   useEffect(() => {
     activeIdRef.current = activeId;
-    if (!activeId) return;
-    const toastId = replyToastIdsRef.current.get(activeId);
-    if (toastId) {
-      toast.dismiss(toastId);
-      replyToastIdsRef.current.delete(activeId);
-    }
-    setUnreadReplyIds((previous) => {
-      if (!previous.has(activeId)) return previous;
-      const next = new Set(previous);
-      next.delete(activeId);
-      return next;
-    });
   }, [activeId]);
 
   useEffect(
@@ -2327,36 +2296,15 @@ function KovaGPT() {
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (requestSucceeded)
           updateAssistantMessage((message) => ({ ...message, createdAt: Date.now() }));
-        if (assembledReply && activeIdRef.current === nextConvId) {
-          setStreamAnnouncement("KovaGPT response complete");
-        } else if (requestSucceeded && nextPromptMountedRef.current && isCurrentRequest()) {
-          const finishedChat = conversationsRef.current.find(
-            (conversation) => conversation.id === nextConvId && !conversation.temporary,
-          );
-          if (finishedChat) {
-            setUnreadReplyIds((previous) => new Set(previous).add(nextConvId));
-            const toastId = `chat-reply:${nextConvId}`;
-            replyToastIdsRef.current.set(nextConvId, toastId);
-            toast("New reply", {
-              id: toastId,
-              position: "top-right",
-              description: finishedChat.title,
-              duration: 6000,
-              action: {
-                label: "Open chat",
-                onClick: () => {
-                  if (
-                    nextPromptMountedRef.current &&
-                    storageGenerationRef.current === requestGeneration &&
-                    storagePrincipalRef.current === requestPrincipal &&
-                    conversationsRef.current.some((conversation) => conversation.id === nextConvId)
-                  ) {
-                    setActiveId(nextConvId);
-                  }
-                },
-              },
-            });
-          }
+        if (activeIdRef.current === nextConvId) {
+          if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
+        } else if (
+          requestSucceeded &&
+          userKey &&
+          nextPromptMountedRef.current &&
+          isCurrentRequest()
+        ) {
+          announceBackgroundChatReply(userKey, nextConvId);
         }
 
         // Always re-summarize so the chat name in the sidebar reflects the conversation
@@ -2789,7 +2737,7 @@ function KovaGPT() {
       turn,
       signal,
       isCurrent,
-      getConversations: () => conversationsRef.current,
+      getConversations: () => voiceConversationsRef.current,
       saveConversations: (items) => saveConversations(turn.ownerId, items),
       loadHistoryState: () => loadChatHistoryDevice(turn.ownerId),
       subscribeHistory: (notify) => {
@@ -3352,7 +3300,7 @@ function KovaGPT() {
       </p>
       <Sidebar
         conversations={historyConversations}
-        unreadReplyIds={principalReady ? unreadReplyIds : undefined}
+        trackBackgroundReplies={principalReady}
         activeId={activeId}
         onSelect={setActiveId}
         onNew={startNewChat}
