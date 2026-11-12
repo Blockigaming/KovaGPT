@@ -1211,3 +1211,243 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 [data-attachment-preview] .kova-preview-action:disabled {
   opacity: 0.5;
 }
+
+.kova-preview-mobile-header,
+.kova-preview-file-info,
+.kova-preview-image-actions,
+.kova-preview-ask {
+  display: none;
+}
+
+[data-attachment-preview="full"]:is(.kova-preview-mobile-image, .kova-preview-mobile-file) {
+  gap: 0;
+  overflow: hidden;
+  padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+  transform: none;
+}
+
+[data-attachment-preview="full"]
+  :is(.kova-preview-mobile-header ~ [data-kova-dialog-close], .kova-preview-desktop-actions) {
+  display: none;
+}
+
+[data-attachment-preview="full"] .kova-preview-mobile-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+[data-attachment-preview="full"] .kova-preview-mobile-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+
+.kova-preview-mobile-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kova-preview-mobile-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kova-preview-circle,
+.kova-preview-share {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.kova-preview-circle > svg {
+  width: 22px;
+  height: 22px;
+}
+
+.kova-preview-share {
+  padding-inline: 16px;
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 600;
+}
+
+.kova-preview-more {
+  position: relative;
+}
+
+.kova-preview-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.kova-preview-more-actions {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-floating);
+}
+
+[data-attachment-preview="full"] :is(.kova-preview-file-stage, .kova-preview-image-stage) {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage img {
+  max-height: 100%;
+  object-fit: contain;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage[data-actual-size] {
+  display: block;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage[data-actual-size] img {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  margin-inline: auto;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  gap: 8px;
+  padding: 12px 12px 4px;
+}
+
+.kova-preview-image-actions > button {
+  display: grid;
+  min-width: 64px;
+  justify-items: center;
+  gap: 5px;
+  color: var(--foreground);
+  font-size: 0.75rem;
+}
+
+[data-attachment-preview="full"] .kova-preview-file-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+[data-attachment-preview="full"] .kova-preview-file-info {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 8px;
+  margin: auto 0;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.kova-preview-file-icon {
+  display: grid;
+  width: 86px;
+  height: 112px;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+  background: var(--muted);
+  font-size: 0.75rem;
+}
+
+.kova-preview-file-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.kova-preview-file-info p {
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.kova-preview-file-info small {
+  color: var(--muted-foreground);
+}
+
+[data-attachment-preview="full"] .kova-preview-ask {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin: 8px max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
+  padding: 4px 5px 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-composer, 26px);
+  background: var(--muted);
+}
+
+.kova-preview-ask input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 16px;
+}
+
+.kova-preview-ask input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.kova-preview-ask button {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.kova-preview-ask button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kova-preview-mobile-header :focus-visible,
+.kova-preview-image-actions :focus-visible,
+.kova-preview-ask :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

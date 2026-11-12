@@ -3,12 +3,19 @@ import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { Attachment } from "@/lib/chat-store";
 import { attachmentPreviewWindow, summarizeLocalPaste } from "@/lib/composer-local-attachments.mjs";
+import {
+  AttachmentPreviewAsk,
+  AttachmentPreviewFileInfo,
+  AttachmentPreviewMobileHeader,
+} from "./AttachmentPreviewMobile";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 export function ChatTextAttachment({
   attachment,
+  onAsk,
 }: {
   attachment: Extract<Attachment, { kind: "text_file" }>;
+  onAsk?: (prompt: string) => boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -30,6 +37,27 @@ export function ChatTextAttachment({
     window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
   };
 
+  const actions = (
+    <>
+      <button
+        type="button"
+        className="kova-preview-action"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(attachment.content);
+            toast.success("Text copied");
+          } catch {
+            toast.error("Could not copy the text.");
+          }
+        }}
+      >
+        Copy text
+      </button>
+      <button type="button" className="kova-preview-action" onClick={downloadText}>
+        Download text
+      </button>
+    </>
+  );
   return (
     <>
       <button
@@ -49,14 +77,14 @@ export function ChatTextAttachment({
       <Dialog attachmentPreview open={open} onOpenChange={setOpen}>
         <DialogContent
           attachmentPreview
-          className="spec400-attachment-preview"
+          className="spec400-attachment-preview kova-preview-mobile-file"
           closeLabel="Close preview"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             trigger.current?.focus({ preventScroll: true });
           }}
         >
-          <DialogHeader>
+          <DialogHeader className="kova-preview-mobile-description">
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
               {attachment.fileType && !attachment.fileType.startsWith("text/")
@@ -64,52 +92,49 @@ export function ChatTextAttachment({
                 : "Text preview"}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="kova-preview-action"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(attachment.content);
-                  toast.success("Text copied");
-                } catch {
-                  toast.error("Could not copy the text.");
-                }
-              }}
-            >
-              Copy text
-            </button>
-            <button type="button" className="kova-preview-action" onClick={downloadText}>
-              Download text
-            </button>
+          <AttachmentPreviewMobileHeader title={title} actions={actions} />
+          <div className="kova-preview-desktop-actions flex flex-wrap gap-2">{actions}</div>
+          <div className="kova-preview-file-stage">
+            {attachment.name !== "pasted-text.txt" && (
+              <AttachmentPreviewFileInfo name={attachment.name} size={attachment.size} />
+            )}
+            {preview.total > 0 && (
+              <p className="spec400-preview-range">
+                Characters {preview.start + 1}–{preview.end} of {preview.total.toLocaleString()}
+              </p>
+            )}
+            <pre className="spec400-bounded-preview" tabIndex={0}>
+              {preview.text}
+            </pre>
+            {preview.total > 4_000 && (
+              <div className="spec400-preview-pages" role="group" aria-label="Text preview pages">
+                <button
+                  type="button"
+                  className="kova-preview-action"
+                  disabled={preview.start === 0}
+                  onClick={() => setOffset(Math.max(0, preview.start - 4_000))}
+                >
+                  Previous text
+                </button>
+                <button
+                  type="button"
+                  className="kova-preview-action"
+                  disabled={preview.end >= preview.total}
+                  onClick={() => setOffset(preview.end)}
+                >
+                  Next text
+                </button>
+              </div>
+            )}
           </div>
-          {preview.total > 0 && (
-            <p className="spec400-preview-range">
-              Characters {preview.start + 1}–{preview.end} of {preview.total.toLocaleString()}
-            </p>
-          )}
-          <pre className="spec400-bounded-preview" tabIndex={0}>
-            {preview.text}
-          </pre>
-          {preview.total > 4_000 && (
-            <div className="spec400-preview-pages" role="group" aria-label="Text preview pages">
-              <button
-                type="button"
-                className="kova-preview-action"
-                disabled={preview.start === 0}
-                onClick={() => setOffset(Math.max(0, preview.start - 4_000))}
-              >
-                Previous text
-              </button>
-              <button
-                type="button"
-                className="kova-preview-action"
-                disabled={preview.end >= preview.total}
-                onClick={() => setOffset(preview.end)}
-              >
-                Next text
-              </button>
-            </div>
+          {onAsk && (
+            <AttachmentPreviewAsk
+              onAsk={(prompt) => {
+                if (!onAsk(prompt)) return false;
+                setOpen(false);
+                return true;
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

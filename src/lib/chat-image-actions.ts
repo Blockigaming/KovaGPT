@@ -225,3 +225,17 @@ export function openChatImage(src: string) {
   clickImageLink(url);
   setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
 }
+
+export async function shareChatImage(src: string, allowed: () => boolean) {
+  const file = await chatImageFile(src, allowed);
+  if (!allowed()) return;
+  if (!navigator.canShare?.({ files: [file] })) {
+    await copyChatImage(src, allowed);
+    return "copied";
+  }
+  try {
+    await navigator.share({ files: [file] });
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
+  }
+}

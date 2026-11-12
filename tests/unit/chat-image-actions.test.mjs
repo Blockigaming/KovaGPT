@@ -231,6 +231,9 @@ function menuFixture(mobile = false) {
         ["Copy", "Download", "ExternalLink", "EyeOff", "ImagePlus"].map((name) => [name, name]),
       ),
       sonner: { toast: { error: (value) => errors.push(value), success() {} } },
+      "./AttachmentPreviewMobile": {
+        AttachmentPreviewMobileHeader: "AttachmentPreviewMobileHeader",
+      },
       "./ui/dialog": Object.fromEntries(
         ["Dialog", "DialogContent", "DialogDescription", "DialogHeader", "DialogTitle"].map(
           (name) => [name, name],

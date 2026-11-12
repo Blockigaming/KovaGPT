@@ -1,3 +1,9 @@
+import {
+  AttachmentPreviewAsk,
+  AttachmentPreviewFileInfo,
+  AttachmentPreviewMobileHeader,
+} from "./AttachmentPreviewMobile";
+import { copyChatImage, downloadChatImage, shareChatImage } from "@/lib/chat-image-actions";
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
 import { CONSUMER_MODELS, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
 import {
@@ -193,6 +199,7 @@ export function ChatInput({
   value,
   onChange,
   onSubmit,
+  onAskAttachment,
   onStop,
   onSendNext,
   sendNextDisabled = false,
@@ -239,6 +246,7 @@ export function ChatInput({
   value: string;
   onChange: (v: string) => void;
   onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
+  onAskAttachment?: (prompt: string, attachment: PendingAttachment) => boolean;
   onStop: () => void;
   /** Explicitly snapshot one next message; ordinary typing and Enter never enqueue. */
   onSendNext?: (tool?: ComposerToolId | null, trigger?: HTMLButtonElement | null) => boolean;
@@ -1821,6 +1829,29 @@ export function ChatInput({
   const previewText = pastePreviewOpen ? pasteOffer?.text : previewAttachment?.textContent;
   const textWindow =
     previewText === undefined ? null : attachmentPreviewWindow(previewText, previewOffset);
+  const previewImage = previewAttachment?.kind === "image" ? previewAttachment.dataUrl : null;
+  const previewName = pastePreviewOpen
+    ? pasteOffer?.summary
+    : (previewAttachment?.pasteSummary ?? previewAttachment?.name);
+  const attachmentPreviewRef = useRef(previewAttachment);
+  attachmentPreviewRef.current = previewAttachment;
+  const runPreviewImageAction = async (
+    action: (src: string, allowed: () => boolean) => Promise<unknown>,
+  ) => {
+    if (!previewImage) return;
+    const allowed = () => attachmentPreviewRef.current === previewAttachment;
+    try {
+      await action(previewImage, allowed);
+    } catch (error) {
+      if (allowed()) toast.error(error instanceof Error ? error.message : "Image action failed.");
+    }
+  };
+  const closeAttachmentPreview = () => {
+    attachmentPreviewRef.current = null;
+    setPreviewAttachment(null);
+    setPastePreviewOpen(false);
+    setPreviewOffset(0);
+  };
   const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
   const linkPreviewToken = firstLinkPreviewToken(value);
   const linkPreviewUrl = linkPreviewToken?.url ?? null;
@@ -2518,16 +2549,12 @@ export function ChatInput({
         attachmentPreview
         open={previewAttachment !== null || pastePreviewOpen}
         onOpenChange={(open) => {
-          if (!open) {
-            setPreviewAttachment(null);
-            setPastePreviewOpen(false);
-            setPreviewOffset(0);
-          }
+          if (!open) closeAttachmentPreview();
         }}
       >
         <DialogContent
           attachmentPreview
-          className="spec400-attachment-preview"
+          className={`spec400-attachment-preview ${previewImage ? "kova-preview-mobile-image" : "kova-preview-mobile-file"}`}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             if (previewReturnToInputRef.current || !previewTriggerRef.current?.isConnected)
@@ -2536,12 +2563,8 @@ export function ChatInput({
             previewReturnToInputRef.current = false;
           }}
         >
-          <DialogHeader>
-            <DialogTitle>
-              {pastePreviewOpen
-                ? pasteOffer?.summary
-                : (previewAttachment?.pasteSummary ?? previewAttachment?.name)}
-            </DialogTitle>
+          <DialogHeader className="kova-preview-mobile-description">
+            <DialogTitle>{previewName}</DialogTitle>
             <DialogDescription>
               {pastePreviewOpen
                 ? "Kept locally. Not attached or uploaded. Reloading discards this pasted text."
@@ -2552,106 +2575,171 @@ export function ChatInput({
                     : "Attachment"}
             </DialogDescription>
           </DialogHeader>
-          {previewAttachment?.pdf && (
-            <ComposerPdfPages
-              key={previewAttachment.clientId ?? previewAttachment.name}
-              pdf={previewAttachment.pdf}
-              selectedPages={previewAttachment.selectedPdfPages}
-              disabled={disabled || !isLoaded || !user || previewAttachment.status !== "complete"}
-              onSelect={updatePdfSelection}
-            />
-          )}
-          {previewPdfWithoutMetadata && (
-            <p>
-              Page count, page selection and page-read results are unavailable for this attachment.
-              Saved text-only records do not retain PDF page metadata. Attach the original PDF again
-              to inspect its pages.
-            </p>
-          )}
-          {previewAttachment?.kind === "image" && previewAttachment.dataUrl ? (
-            <img
-              src={previewAttachment.dataUrl}
-              alt={previewAttachment.name}
-              loading="lazy"
-              decoding="async"
-            />
-          ) : textWindow ? (
-            <>
-              <p className="spec400-preview-range">
-                Characters {textWindow.start + 1}–{textWindow.end} of{" "}
-                {textWindow.total.toLocaleString()}.{" "}
-                {pastePreviewOpen
-                  ? "The full text is kept locally."
-                  : previewAttachment?.selectedPdfPages
-                    ? "Only the selected pages’ extracted text is attached; the full extraction is kept locally for Restore."
-                    : "The full text remains attached."}
-              </p>
-              <pre className="spec400-bounded-preview" tabIndex={0}>
-                {textWindow.text}
-              </pre>
-              {textWindow.total > 4_000 && (
-                <div className="spec400-preview-pages" role="group" aria-label="Text preview pages">
-                  <button
-                    type="button"
-                    className="spec400-toolbar-button"
-                    disabled={textWindow.start === 0}
-                    onClick={() => setPreviewOffset(Math.max(0, textWindow.start - 4_000))}
-                  >
-                    Previous text
-                  </button>
-                  <button
-                    type="button"
-                    className="spec400-toolbar-button"
-                    disabled={textWindow.end >= textWindow.total}
-                    onClick={() => setPreviewOffset(textWindow.end)}
-                  >
-                    Next text
-                  </button>
-                </div>
+          <AttachmentPreviewMobileHeader
+            title={previewImage ? undefined : previewName}
+            onDownload={
+              previewImage ? () => void runPreviewImageAction(downloadChatImage) : undefined
+            }
+            onShare={previewImage ? () => void runPreviewImageAction(shareChatImage) : undefined}
+            actions={
+              previewImage ? (
+                <button
+                  type="button"
+                  className="kova-preview-action"
+                  onClick={() => void runPreviewImageAction(copyChatImage)}
+                >
+                  Copy image
+                </button>
+              ) : previewText !== undefined ? (
+                <button
+                  type="button"
+                  className="kova-preview-action"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(previewText);
+                      toast.success("Text copied");
+                    } catch {
+                      toast.error("Could not copy the text.");
+                    }
+                  }}
+                >
+                  Copy text
+                </button>
+              ) : (
+                <p className="p-2 text-sm">
+                  {previewAttachment ? attachmentState(previewAttachment) : "Attachment"}
+                </p>
+              )
+            }
+          />
+          <div className={previewImage ? "kova-preview-image-stage" : "kova-preview-file-stage"}>
+            {previewAttachment &&
+              !previewImage &&
+              !previewAttachment.localPaste &&
+              !pastePreviewOpen && (
+                <AttachmentPreviewFileInfo
+                  name={previewAttachment.name}
+                  size={previewAttachment.size}
+                />
               )}
-            </>
-          ) : (
-            <p>
-              {previewAttachment?.error ??
-                "This saved reference is checked for readability when you send. The full file is available in Library."}
-            </p>
-          )}
-          {previewAttachment?.extractionNote && <p>{previewAttachment.extractionNote}</p>}
-          {(pastePreviewOpen || previewAttachment?.localPaste) && (
-            <div className="spec400-dialog-footer">
-              <button
-                type="button"
-                className="spec400-toolbar-button"
-                onClick={() => pasteIntoMessage(previewAttachment ?? undefined)}
-              >
-                Back to text
-              </button>
-              {pastePreviewOpen && pasteOffer && (
+            {previewAttachment?.pdf && (
+              <ComposerPdfPages
+                key={previewAttachment.clientId ?? previewAttachment.name}
+                pdf={previewAttachment.pdf}
+                selectedPages={previewAttachment.selectedPdfPages}
+                disabled={disabled || !isLoaded || !user || previewAttachment.status !== "complete"}
+                onSelect={updatePdfSelection}
+              />
+            )}
+            {previewPdfWithoutMetadata && (
+              <p>
+                Page count, page selection and page-read results are unavailable for this
+                attachment. Saved text-only records do not retain PDF page metadata. Attach the
+                original PDF again to inspect its pages.
+              </p>
+            )}
+            {previewAttachment?.kind === "image" && previewAttachment.dataUrl ? (
+              <img
+                src={previewAttachment.dataUrl}
+                alt={previewAttachment.name}
+                loading="lazy"
+                decoding="async"
+              />
+            ) : textWindow ? (
+              <>
+                <p className="spec400-preview-range">
+                  Characters {textWindow.start + 1}–{textWindow.end} of{" "}
+                  {textWindow.total.toLocaleString()}.{" "}
+                  {pastePreviewOpen
+                    ? "The full text is kept locally."
+                    : previewAttachment?.selectedPdfPages
+                      ? "Only the selected pages’ extracted text is attached; the full extraction is kept locally for Restore."
+                      : "The full text remains attached."}
+                </p>
+                <pre className="spec400-bounded-preview" tabIndex={0}>
+                  {textWindow.text}
+                </pre>
+                {textWindow.total > 4_000 && (
+                  <div
+                    className="spec400-preview-pages"
+                    role="group"
+                    aria-label="Text preview pages"
+                  >
+                    <button
+                      type="button"
+                      className="spec400-toolbar-button"
+                      disabled={textWindow.start === 0}
+                      onClick={() => setPreviewOffset(Math.max(0, textWindow.start - 4_000))}
+                    >
+                      Previous text
+                    </button>
+                    <button
+                      type="button"
+                      className="spec400-toolbar-button"
+                      disabled={textWindow.end >= textWindow.total}
+                      onClick={() => setPreviewOffset(textWindow.end)}
+                    >
+                      Next text
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p>
+                {previewAttachment?.error ??
+                  "This saved reference is checked for readability when you send. The full file is available in Library."}
+              </p>
+            )}
+            {previewAttachment?.extractionNote && <p>{previewAttachment.extractionNote}</p>}
+            {(pastePreviewOpen || previewAttachment?.localPaste) && (
+              <div className="spec400-dialog-footer">
                 <button
                   type="button"
                   className="spec400-toolbar-button"
-                  disabled={disabled || !isLoaded || attachments.length >= 2}
-                  onClick={() => attachLocalPaste(pasteOffer)}
+                  onClick={() => pasteIntoMessage(previewAttachment ?? undefined)}
                 >
-                  Attach text
+                  Back to text
                 </button>
-              )}
-            </div>
-          )}
-          {previewAttachment?.status === "failed" && (
-            <button
-              type="button"
-              className="spec400-toolbar-button"
-              onClick={() => {
-                const index = attachments.indexOf(previewAttachment);
-                if (index >= 0) removeAttachment(index);
-                setPreviewAttachment(null);
-                fileRef.current?.click();
-              }}
-            >
-              Choose file again
-            </button>
-          )}
+                {pastePreviewOpen && pasteOffer && (
+                  <button
+                    type="button"
+                    className="spec400-toolbar-button"
+                    disabled={disabled || !isLoaded || attachments.length >= 2}
+                    onClick={() => attachLocalPaste(pasteOffer)}
+                  >
+                    Attach text
+                  </button>
+                )}
+              </div>
+            )}
+            {previewAttachment?.status === "failed" && (
+              <button
+                type="button"
+                className="spec400-toolbar-button"
+                onClick={() => {
+                  const index = attachments.indexOf(previewAttachment);
+                  if (index >= 0) removeAttachment(index);
+                  setPreviewAttachment(null);
+                  fileRef.current?.click();
+                }}
+              >
+                Choose file again
+              </button>
+            )}
+          </div>
+          {previewAttachment?.status === "complete" &&
+            !pastePreviewOpen &&
+            !previewAttachment.localPaste &&
+            !previewImage &&
+            onAskAttachment && (
+              <AttachmentPreviewAsk
+                onAsk={(prompt) => {
+                  if (!onAskAttachment(prompt, previewAttachment)) return false;
+                  closeAttachmentPreview();
+                  return true;
+                }}
+              />
+            )}
         </DialogContent>
       </Dialog>
       <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>

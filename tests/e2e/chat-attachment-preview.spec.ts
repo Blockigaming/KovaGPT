@@ -61,6 +61,10 @@ test("chat attachments open in the workspace preview without downloading", async
   await openText.click();
   const textPreview = await checkGeometry("review.txt");
   await expect(textPreview.getByText("Chemical bonding study notes.")).toBeVisible();
+  if (!wide) {
+    await expect(textPreview.getByRole("textbox", { name: "Ask KovaGPT" })).toBeVisible();
+    await textPreview.getByLabel("More options").click();
+  }
   await expect(textPreview.getByRole("button", { name: "Copy text" })).toBeVisible();
   await expect(textPreview.getByRole("button", { name: "Download text" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -71,6 +75,8 @@ test("chat attachments open in the workspace preview without downloading", async
   const imagePreview = await checkGeometry("Image preview");
   await expect(imagePreview.getByRole("img")).toBeVisible();
   await expect(imagePreview.getByRole("button", { name: "Download image" })).toBeVisible();
-  await imagePreview.getByRole("button", { name: "Close image preview" }).click();
+  await imagePreview
+    .getByRole("button", { name: wide ? "Close image preview" : "Close preview" })
+    .click();
   await expect(imagePreview).toBeHidden();
 });

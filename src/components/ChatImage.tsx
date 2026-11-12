@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Copy, Download, ExternalLink, EyeOff, ImagePlus } from "lucide-react";
+import {
+  Copy,
+  Download,
+  ExternalLink,
+  EyeOff,
+  ImagePlus,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import { AttachmentPreviewMobileHeader } from "./AttachmentPreviewMobile";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -15,6 +24,7 @@ import {
   copyChatImage,
   downloadChatImage,
   openChatImage,
+  shareChatImage,
   type ChatImageAttachmentHandler,
 } from "@/lib/chat-image-actions";
 import {
@@ -73,6 +83,7 @@ export function ChatImage({
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
   const [previewMarker, setPreviewMarker] = useState<string | null>(null);
+  const [actualSize, setActualSize] = useState(false);
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -215,6 +226,26 @@ export function ChatImage({
       if (allowed()) setBusy(false);
     }
   };
+  const copyImage = () =>
+    void run(async (allowed) => {
+      await copyChatImage(src, allowed);
+      if (allowed()) toast.success("Image copied");
+    });
+  const downloadImage = () => void run((allowed) => downloadChatImage(src, allowed));
+  const addToChat = () =>
+    void run(async (allowed) => {
+      if (!actions || !allowed()) return;
+      const add = actions.prepareAdd();
+      const file = await chatImageFile(src, allowed);
+      if (!allowed()) return;
+      await add(file, allowed);
+      if (allowed()) setPreviewMarker(null);
+    });
+  const shareImage = () =>
+    void run(async (allowed) => {
+      if ((await shareChatImage(src, allowed)) === "copied" && allowed())
+        toast.success("Image copied for sharing");
+    });
   if (visibility.marker === marker && visibility.hidden)
     return (
       <span className="my-2 inline-flex max-w-full items-center gap-3 rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -288,33 +319,46 @@ export function ChatImage({
         attachmentPreview
         open={previewMarker === marker}
         onOpenChange={(open) => {
-          if (!open) setPreviewMarker(null);
+          if (!open) {
+            setPreviewMarker(null);
+            setActualSize(false);
+          }
         }}
       >
         <DialogContent
           attachmentPreview
-          className="spec400-attachment-preview"
+          className="spec400-attachment-preview kova-preview-mobile-image"
           closeLabel="Close image preview"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             imageRef.current?.focus({ preventScroll: true });
           }}
         >
-          <DialogHeader>
+          <DialogHeader className="kova-preview-mobile-description">
             <DialogTitle>Image preview</DialogTitle>
             <DialogDescription>{alt}</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-wrap gap-2">
+          <AttachmentPreviewMobileHeader
+            busy={busy}
+            onDownload={downloadImage}
+            onShare={shareImage}
+            actions={
+              <button
+                type="button"
+                className="kova-preview-action"
+                disabled={busy}
+                onClick={copyImage}
+              >
+                Copy image
+              </button>
+            }
+          />
+          <div className="kova-preview-desktop-actions flex flex-wrap gap-2">
             <button
               type="button"
               className="kova-preview-action"
               disabled={busy}
-              onClick={() =>
-                void run(async (allowed) => {
-                  await copyChatImage(src, allowed);
-                  if (allowed()) toast.success("Image copied");
-                })
-              }
+              onClick={copyImage}
             >
               Copy image
             </button>
@@ -322,17 +366,50 @@ export function ChatImage({
               type="button"
               className="kova-preview-action"
               disabled={busy}
-              onClick={() => void run((allowed) => downloadChatImage(src, allowed))}
+              onClick={downloadImage}
             >
               Download image
             </button>
           </div>
-          <img
-            src={src}
-            alt={alt}
-            referrerPolicy="no-referrer"
-            className="max-w-full self-center object-contain"
-          />
+          <div className="kova-preview-image-stage" data-actual-size={actualSize || undefined}>
+            <img
+              src={src}
+              alt={alt}
+              referrerPolicy="no-referrer"
+              className="max-w-full self-center object-contain"
+            />
+          </div>
+          <div className="kova-preview-image-actions">
+            {actions && (
+              <button type="button" onClick={addToChat} disabled={busy}>
+                <span className="kova-preview-circle">
+                  <ImagePlus aria-hidden="true" />
+                </span>
+                Add to chat
+              </button>
+            )}
+            <button type="button" onClick={() => setActualSize((value) => !value)}>
+              <span className="kova-preview-circle">
+                {actualSize ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              </span>
+              {actualSize ? "Fit to screen" : "Actual size"}
+            </button>
+            {actions && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewMarker(null);
+                  setActualSize(false);
+                  hide(true);
+                }}
+              >
+                <span className="kova-preview-circle">
+                  <EyeOff aria-hidden="true" />
+                </span>
+                Hide
+              </button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
       <ContextMenuContent className="w-60" aria-label="Image actions">

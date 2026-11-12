@@ -1835,6 +1835,7 @@ function KovaGPT() {
       voiceRequest?: { signal: AbortSignal },
       quickAnswer = false,
       requestWebSearch?: boolean,
+      preserveComposer = false,
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1867,6 +1868,7 @@ function KovaGPT() {
         return;
       }
       const clearComposer =
+        !preserveComposer &&
         !voiceRequest &&
         !_retryAttempt &&
         !requestId &&
@@ -2969,6 +2971,27 @@ function KovaGPT() {
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
+  const canAskAboutAttachment =
+    !isStreaming && isSignedIn && principalReady && historyReady && !editingMessage;
+  const askAboutAttachment = (prompt: string, files: PendingAttachment[]) => {
+    if (inFlightRef.current || !canAskAboutAttachment) return false;
+    void send(
+      prompt,
+      files,
+      undefined,
+      0,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      true,
+    );
+    return inFlightRef.current;
+  };
+
   const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
     if (!active) return null;
     const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
@@ -3061,6 +3084,12 @@ function KovaGPT() {
             }),
           );
         }}
+        onAskAttachment={
+          canAskAboutAttachment
+            ? (prompt, attachment) =>
+                askAboutAttachment(prompt, pendingMessageAttachments([attachment]))
+            : undefined
+        }
         onDraftPrompt={isLastAssistant && !isStreaming ? prepareResponseDraft : undefined}
         onFollowUp={
           isLastAssistant && !isStreaming && isSignedIn && principalReady && historyReady
@@ -3474,6 +3503,11 @@ function KovaGPT() {
                     value={principalReady ? input : ""}
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}
+                    onAskAttachment={
+                      canAskAboutAttachment
+                        ? (prompt, attachment) => askAboutAttachment(prompt, [attachment])
+                        : undefined
+                    }
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
@@ -3613,6 +3647,11 @@ function KovaGPT() {
                     value={principalReady ? input : ""}
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}
+                    onAskAttachment={
+                      canAskAboutAttachment
+                        ? (prompt, attachment) => askAboutAttachment(prompt, [attachment])
+                        : undefined
+                    }
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
