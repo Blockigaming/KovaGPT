@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, X, Loader2, Mail, Calendar, FileEdit, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { authFetch } from "@/lib/auth-fetch";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
@@ -72,7 +73,7 @@ export function ToolConfirmCard({
             status: "confirmed",
             resultText: statusJson.result_text || "Email sent.",
           });
-          toast.success("Email sent");
+          publishKovaNotice({ id: "email_sent", title: "Email sent", confirmed: true });
           return;
         }
         if (statusJson.status === "pending") {
@@ -159,7 +160,9 @@ export function ToolConfirmCard({
         status: decision === "confirm" ? "confirmed" : "cancelled",
         resultText: json.result_text,
       });
-      toast.success(decision === "confirm" ? "Done" : "Cancelled");
+      if (decision === "confirm" && confirm.tool === "gmail_send")
+        publishKovaNotice({ id: "email_sent", title: "Email sent", confirmed: true });
+      else toast.success(decision === "confirm" ? "Done" : "Cancelled");
     } catch (e) {
       if (!isCurrent()) return;
       if (decision === "confirm" && confirm.tool === "gmail_send") {

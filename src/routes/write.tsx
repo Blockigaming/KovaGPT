@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Bookmark, Check, Copy, Download, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { publishKovaNotice } from "@/components/KovaNotificationSurface";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { SearchablePicker } from "@/components/ui/searchable-picker";
@@ -385,7 +386,10 @@ function WritePage() {
       setDirty(true);
       toast.success("Version restored");
     } catch {
-      toast.error("Saved document versions could not be read");
+      publishKovaNotice({
+        id: "history_failed",
+        title: "Saved document versions could not be read",
+      });
     }
   };
 

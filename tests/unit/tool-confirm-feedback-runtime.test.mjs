@@ -28,6 +28,7 @@ function fixture(fetchImpl) {
   const requests = [],
     updates = [],
     toasts = [],
+    notices = [],
     frames = [],
     cards = [],
     listeners = new Set(),
@@ -100,6 +101,9 @@ function fixture(fetchImpl) {
               (...args) => toasts.push({ kind, args }),
             ]),
           ),
+        },
+        "@/components/KovaNotificationSurface": {
+          publishKovaNotice: (notice) => notices.push(notice.id),
         },
         "@/lib/auth-fetch": { authFetch },
         "@/lib/dialog-return-focus": restore,
@@ -185,6 +189,7 @@ function fixture(fetchImpl) {
     requests,
     updates,
     toasts,
+    notices,
     listeners,
     document,
     window,
@@ -286,6 +291,7 @@ test("explicit Retry completes only B once and prevents stale or repeated comple
   assert.equal(f.requests.length, 2, "settled callback cannot replay before React commits");
   await f.flush();
   assert.equal(b.confirm.status, "confirmed");
+  assert.deepEqual(f.notices, []);
   assert.equal(label(b.feedback()), REVIEW_CHAT_ACTION_SUCCESS);
   assert.equal(b.buttons().length, 0);
   assert.equal(f.document.activeElement, b.feedback().node);
@@ -423,6 +429,21 @@ test("reconciled pending Gmail send keeps its recovery explanation inside the ca
   assert.deepEqual(b.buttons().map(label), ["Send", "Cancel"]);
   assert.equal(f.requests.length, 2);
 });
+
+for (const reconcile of [false, true]) {
+  test(`Gmail success notifies exactly once (${reconcile ? "reconciled" : "direct"})`, async () => {
+    const f = fixture(async (_url, init) => {
+      if (reconcile && init?.method === "POST") throw new Error("Connection lost");
+      return response({ ok: true, status: "confirmed", result_text: "Email sent." });
+    });
+    const card = f.mount({ ...reviewChatActionConfirmations()[1], tool: "gmail_send" });
+    card.click("Send");
+    await f.flush();
+    assert.equal(card.confirm.status, "confirmed");
+    assert.deepEqual(f.notices, ["email_sent"]);
+    assert.equal(f.requests.length, reconcile ? 2 : 1);
+  });
+}
 
 test("the chat update path targets the exact action and does not modify the separate composer", () => {
   const source = readFileSync("src/routes/index.tsx", "utf8");
