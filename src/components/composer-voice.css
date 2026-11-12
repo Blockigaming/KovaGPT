@@ -804,10 +804,10 @@
   inset: -45% -12%;
   content: "";
   background:
-    radial-gradient(ellipse at 39% 49%, #d68f5b 0%, transparent 26%),
-    radial-gradient(ellipse at 58% 55%, #e6e4df 0%, transparent 30%),
-    radial-gradient(ellipse at 59% 38%, #77869c 0%, transparent 32%),
-    radial-gradient(ellipse at 72% 53%, #789f98 0%, transparent 25%);
+    radial-gradient(ellipse at 39% 49%, var(--voice-glow-a, #d68f5b) 0%, transparent 26%),
+    radial-gradient(ellipse at 58% 55%, var(--voice-glow-b, #e6e4df) 0%, transparent 30%),
+    radial-gradient(ellipse at 59% 38%, var(--voice-glow-c, #77869c) 0%, transparent 32%),
+    radial-gradient(ellipse at 72% 53%, var(--voice-glow-a, #789f98) 0%, transparent 25%);
   filter: blur(34px);
   opacity: 0;
   animation: kova-live-voice-rise 18s ease-in-out infinite;
@@ -819,10 +819,10 @@
 
 .kova-live-voice::after {
   background:
-    radial-gradient(ellipse at 36% 55%, #8ca8bc 0%, transparent 30%),
-    radial-gradient(ellipse at 51% 47%, #a395b3 0%, transparent 26%),
-    radial-gradient(ellipse at 65% 54%, #aba98d 0%, transparent 28%),
-    radial-gradient(ellipse at 73% 44%, #bd8e98 0%, transparent 24%);
+    radial-gradient(ellipse at 36% 55%, var(--voice-glow-a, #8ca8bc) 0%, transparent 30%),
+    radial-gradient(ellipse at 51% 47%, var(--voice-glow-b, #a395b3) 0%, transparent 26%),
+    radial-gradient(ellipse at 65% 54%, var(--voice-glow-c, #aba98d) 0%, transparent 28%),
+    radial-gradient(ellipse at 73% 44%, var(--voice-glow-a, #bd8e98) 0%, transparent 24%);
   animation-delay: -9s;
 }
 

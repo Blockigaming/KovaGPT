@@ -1,5 +1,5 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 import { AudioLines, X, ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
   VOICE_PREFERENCE_KEY,
   preferredVoice,
+  preferredVoiceGlow,
   readVoiceChoices,
   type VoiceChoice,
 } from "@/lib/voice/preference";
@@ -1162,12 +1163,21 @@ export function ComposerVoiceDialog({
   if (open && mode === "voice" && checking && autoStartVoice) return null;
 
   if (open && mode === "voice" && capabilities?.realtime && conversationReady && !disabled) {
+    const { colors } = preferredVoiceGlow(userId);
+    const glowStyle = colors.length
+      ? ({
+          "--voice-glow-a": colors[0],
+          "--voice-glow-b": colors[1],
+          "--voice-glow-c": colors[2],
+        } as CSSProperties)
+      : undefined;
     const listening = phase === "recording";
     const speaking = phase === "speaking";
     return (
       <section
         className="kova-live-voice"
         aria-label="Live Voice"
+        style={glowStyle}
         data-phase={phase}
         onKeyDown={(event) => {
           if (event.key === "Escape") closeDialog(false);

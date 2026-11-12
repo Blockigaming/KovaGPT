@@ -4,6 +4,9 @@ import { authFetch } from "@/lib/auth-fetch";
 import { principalScopedStorageKey, safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
 import {
   VOICE_PREFERENCE_KEY,
+  VOICE_GLOW_KEY,
+  VOICE_GLOW_PALETTES,
+  preferredVoiceGlow,
   preferredVoice,
   readVoiceChoices,
   type VoiceChoice,
@@ -13,6 +16,7 @@ import { Button } from "@/components/ui/button";
 export function VoiceConnectionStatus() {
   const { user, isLoaded, isSignedIn } = useUser();
   const owner = isLoaded && isSignedIn ? user?.id : null;
+  const [glow, setGlow] = useState(() => preferredVoiceGlow(owner).id);
   const current = useRef(owner);
   current.current = owner;
   const [result, setResult] = useState<{
@@ -27,6 +31,7 @@ export function VoiceConnectionStatus() {
   const pending = useRef(false);
   const request = useRef({ generation: 0 });
   useEffect(() => {
+    setGlow(preferredVoiceGlow(owner).id);
     setResult(null);
     setError("");
     pending.current = false;
@@ -90,6 +95,35 @@ export function VoiceConnectionStatus() {
           start recording.
         </p>
       </div>
+      {owner && (
+        <label className="block space-y-2 text-sm">
+          <span className="block">Live Voice glow</span>
+          <select
+            className="min-h-11 w-full rounded-lg border border-border bg-background px-3"
+            value={glow}
+            onChange={(event) => {
+              const palette = VOICE_GLOW_PALETTES.find(({ id }) => id === event.target.value);
+              if (!palette) return;
+              const key = principalScopedStorageKey(VOICE_GLOW_KEY, owner);
+              const storage = safeBrowserStorage("localStorage");
+              try {
+                if (!key || !storage) throw new Error();
+                storage.setItem(key, palette.id);
+                setGlow(palette.id);
+                setError("");
+              } catch {
+                setError("Your browser couldn't save the glow palette.");
+              }
+            }}
+          >
+            {VOICE_GLOW_PALETTES.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <Button
         type="button"
         variant="outline"

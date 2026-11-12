@@ -49,3 +49,23 @@ export function preferredVoice(
   }
   return fallback;
 }
+
+export const VOICE_GLOW_PALETTES = [
+  { id: "original", label: "Multicolor", colors: [] },
+  { id: "sunset", label: "Sunset", colors: ["#d68f5b", "#cf8796", "#efd7bb"] },
+  { id: "ocean", label: "Ocean", colors: ["#789f98", "#8ca8bc", "#a6c7d3"] },
+  { id: "lavender", label: "Lavender", colors: ["#a395b3", "#a395b3", "#a395b3"] },
+  { id: "white", label: "Soft white", colors: ["#e6e4df", "#e6e4df", "#e6e4df"] },
+] as const;
+
+export const VOICE_GLOW_KEY = "kova-voice-glow-v1";
+
+export function preferredVoiceGlow(owner: string | null | undefined) {
+  const key = principalScopedStorageKey(VOICE_GLOW_KEY, owner);
+  try {
+    const saved = key && safeBrowserStorage("localStorage")?.getItem(key);
+    return VOICE_GLOW_PALETTES.find(({ id }) => id === saved) ?? VOICE_GLOW_PALETTES[0];
+  } catch {
+    return VOICE_GLOW_PALETTES[0];
+  }
+}
