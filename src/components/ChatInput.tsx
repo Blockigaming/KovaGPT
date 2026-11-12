@@ -1,5 +1,9 @@
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
-import { CONSUMER_MODELS, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
+import {
+  CONSUMER_MODELS,
+  consumerModel,
+  type ConsumerModelId,
+} from "@/lib/consumer-model-selection.mjs";
 import {
   ArrowUp,
   Brain,
@@ -2110,7 +2114,13 @@ export function ChatInput({
               />
             ) : null}
             {canChangeAgent && mode && onModeChange ? (
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+              <ModelSelector
+                mode={mode}
+                onChange={onModeChange}
+                userTier={userTier}
+                modelLabel={consumerModel(hostedModel)?.label}
+                compact
+              />
             ) : (
               <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
             )}

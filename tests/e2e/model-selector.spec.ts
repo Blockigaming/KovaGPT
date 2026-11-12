@@ -117,37 +117,26 @@ test.describe("short desktop model picker", () => {
         Boolean(element.closest('[role="dialog"][aria-label="Response options"]')),
       ),
     ).toBe(false);
+    const slider = picker.getByRole("slider", { name: "Response effort" });
     const lastOption = picker.getByTestId("model-option-ultra");
-    const optionScroll = picker.getByTestId("model-options-scroll");
-    // The header stays in place while the options viewport reveals the last
-    // model, even when the popover is bounded by a short browser window.
-    await optionScroll.evaluate((element) => {
-      element.scrollTop = element.scrollHeight;
+    await expect(lastOption).toBeInViewport({ ratio: 1 });
+    const rail = (await slider.boundingBox())!;
+    await slider.click({ position: { x: rail.width - 3, y: rail.height / 2 } });
+    await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
+    const fill = picker.locator('[data-slot="effort-fill"]');
+    const fillStyle = await fill.evaluate((element) => {
+      const style = getComputedStyle(element, "::before");
+      return { width: parseFloat(style.width), color: style.backgroundColor };
     });
-    await expect
-      .poll(() =>
-        lastOption.evaluate((button) => {
-          const box = button.getBoundingClientRect();
-          const hit = button.ownerDocument.elementFromPoint(
-            box.x + box.width / 2,
-            box.y + box.height / 2,
-          );
-          const scroll = button.closest('[data-testid="model-options-scroll"]');
-          return {
-            reachable: button.contains(hit),
-            scrollTop: scroll?.scrollTop,
-            scrollHeight: scroll?.scrollHeight,
-            clientHeight: scroll?.clientHeight,
-            optionTop: box.top,
-            optionBottom: box.bottom,
-            hitTarget: hit?.getAttribute("data-testid") ?? hit?.tagName ?? null,
-          };
-        }),
-      )
-      .toEqual(expect.objectContaining({ reachable: true }));
+    expect(fillStyle.width).toBeGreaterThan(rail.width / 2);
+    expect(fillStyle.color).toBe("rgb(255, 255, 255)");
 
-    // The Options panel can flip sides after the nested menu opens. Check the
-    // settled picker, including the viewport edge, after its scroll correction.
+    await picker.getByRole("button", { name: "Reset response effort to Lite" }).click();
+    await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
+    await slider.press("ArrowRight");
+    await expect(slider).toHaveAttribute("aria-valuetext", "Medium");
+    await slider.press("Home");
+
     await expect
       .poll(async () => {
         const bounds = await picker.boundingBox();
