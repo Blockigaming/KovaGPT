@@ -110,6 +110,7 @@ export type PendingAttachment = {
   textContent?: string;
   /** Local clipboard input; it is not uploaded or saved before explicit Send. */
   localPaste?: boolean;
+  pasteSummary?: string;
   pasteOrigin?: { original: string; start: number; end: number };
   name: string;
   size?: number;
@@ -326,6 +327,7 @@ export function ChatInput({
   const [pasteOffer, setPasteOffer] = useState<{
     id: string;
     text: string;
+    summary: string;
     original: string;
     start: number;
     end: number;
@@ -1287,6 +1289,7 @@ export function ChatInput({
         dataUrl: "",
         textContent: paste.text,
         localPaste: true,
+        pasteSummary: paste.summary,
         pasteOrigin: { original: paste.original, start: paste.start, end: paste.end },
         name: "pasted-text.txt",
         fileType: "text/plain",
@@ -1872,7 +1875,8 @@ export function ChatInput({
                   type="button"
                   className="spec400-chip-inspect"
                   aria-label={`Inspect ${attachment.name}`}
-                  title={`${attachment.name} · ${attachmentState(attachment)}`}
+                  aria-description={attachment.pasteSummary}
+                  title={`${attachment.pasteSummary ?? attachment.name} · ${attachmentState(attachment)}`}
                   onClick={(event) => {
                     previewTriggerRef.current = event.currentTarget;
                     previewReturnToInputRef.current = false;
@@ -1889,7 +1893,9 @@ export function ChatInput({
                   ) : (
                     <FileText aria-hidden="true" />
                   )}
-                  <span className="spec400-chip-name">{attachment.name}</span>
+                  <span className="spec400-chip-name">
+                    {attachment.pasteSummary ?? attachment.name}
+                  </span>
                   <span className="sr-only">{attachmentState(attachment)}</span>
                   {attachment.localPaste && <small>Local</small>}
                   {attachment.pdf && (
@@ -1921,6 +1927,7 @@ export function ChatInput({
                   type="button"
                   className="spec400-chip-inspect"
                   aria-label="Inspect pending pasted text"
+                  aria-description={pasteOffer.summary}
                   onClick={(event) => {
                     previewTriggerRef.current = event.currentTarget;
                     previewReturnToInputRef.current = false;
@@ -1929,7 +1936,7 @@ export function ChatInput({
                   }}
                 >
                   <FileText aria-hidden="true" />
-                  <span className="spec400-chip-name">pasted-text.txt</span>
+                  <span className="spec400-chip-name">{pasteOffer.summary}</span>
                   <small>Not attached</small>
                 </button>
                 <button
@@ -2527,7 +2534,9 @@ export function ChatInput({
         >
           <DialogHeader>
             <DialogTitle>
-              {pastePreviewOpen ? "pasted-text.txt" : previewAttachment?.name}
+              {pastePreviewOpen
+                ? pasteOffer?.summary
+                : (previewAttachment?.pasteSummary ?? previewAttachment?.name)}
             </DialogTitle>
             <DialogDescription>
               {pastePreviewOpen
