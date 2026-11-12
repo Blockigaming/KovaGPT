@@ -54,6 +54,7 @@ import { ChatProjectSubmenu } from "@/components/ChatProjectSubmenu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useChatReplyActivity } from "@/hooks/useChatReplyActivity";
 import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
@@ -109,6 +110,7 @@ function RailTooltip({ label, children }: { label: string; children: React.React
 
 export function Sidebar({
   conversations,
+  trackBackgroundReplies = false,
   activeId,
   onSelect,
   onNew,
@@ -129,6 +131,7 @@ export function Sidebar({
   compactOnly = false,
 }: {
   conversations: Conversation[];
+  trackBackgroundReplies?: boolean;
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
@@ -149,6 +152,12 @@ export function Sidebar({
   compactOnly?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
+  const unreadReplyIds = useChatReplyActivity(
+    trackBackgroundReplies && isLoaded && isSignedIn ? user?.id : undefined,
+    conversations,
+    activeId,
+    onSelect,
+  );
   const deleteOwner = isLoaded ? (isSignedIn ? user?.id : null) : undefined;
   const deleteOwnerRef = useRef(deleteOwner);
   deleteOwnerRef.current = deleteOwner;
@@ -987,8 +996,20 @@ export function Sidebar({
               }}
               aria-label={`Open chat ${conversation.title}`}
               aria-current={activeId === conversation.id ? "page" : undefined}
+              aria-description={
+                unreadReplyIds?.has(conversation.id) && activeId !== conversation.id
+                  ? "Unread reply"
+                  : undefined
+              }
             >
               <span className="truncate">{conversation.title}</span>
+              {unreadReplyIds?.has(conversation.id) && activeId !== conversation.id && (
+                <span
+                  className="kova-chat-unread-dot"
+                  data-testid="chat-unread-dot"
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </TooltipTrigger>
           <TooltipContent

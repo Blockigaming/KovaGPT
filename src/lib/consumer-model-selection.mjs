@@ -1,8 +1,10 @@
+import { KOVA_MODEL_LABELS } from "./kova-foundation-models.mjs";
+
 /** Closed product choices. Provider IDs and endpoints never come from the client. */
 export const CONSUMER_MODELS = Object.freeze([
   Object.freeze({
     id: "kova-argon-4.6",
-    label: "Argon 4.6",
+    label: KOVA_MODEL_LABELS["kova-argon-4.6"],
     description: "Fast replies",
     role: "DEFAULT_CHAT",
     tiers: Object.freeze(["free", "plus", "pro"]),
@@ -10,7 +12,7 @@ export const CONSUMER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "kova-neon-4.6",
-    label: "Neon 4.6",
+    label: KOVA_MODEL_LABELS["kova-neon-4.6"],
     description: "Balanced intelligence",
     role: "ADVANCED_REASONING",
     tiers: Object.freeze(["plus", "pro"]),
@@ -18,7 +20,7 @@ export const CONSUMER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "kova-xenon-5",
-    label: "Xenon 5",
+    label: KOVA_MODEL_LABELS["kova-xenon-5"],
     description: "Advanced reasoning",
     role: "PREMIUM_REASONING",
     tiers: Object.freeze(["plus", "pro"]),
@@ -26,7 +28,7 @@ export const CONSUMER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "kova-argon-4.5",
-    label: "Argon 4.5",
+    label: KOVA_MODEL_LABELS["kova-argon-4.5"],
     description: "Previous generation",
     role: "DEFAULT_CHAT",
     routingBinding: "kova-argon-4.6",
@@ -35,7 +37,7 @@ export const CONSUMER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "kova-neon-4.5",
-    label: "Neon 4.5",
+    label: KOVA_MODEL_LABELS["kova-neon-4.5"],
     description: "Previous generation",
     role: "ADVANCED_REASONING",
     routingBinding: "kova-neon-4.6",
@@ -44,7 +46,7 @@ export const CONSUMER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "kova-xenon-4.6",
-    label: "Xenon 4.6",
+    label: KOVA_MODEL_LABELS["kova-xenon-4.6"],
     description: "Previous generation",
     role: "PREMIUM_REASONING",
     routingBinding: "kova-xenon-5",
@@ -53,7 +55,7 @@ export const CONSUMER_MODELS = Object.freeze([
   }),
   Object.freeze({
     id: "kova-xenon-6.1",
-    label: "Xenon 6.1",
+    label: KOVA_MODEL_LABELS["kova-xenon-6.1"],
     description: "Most capable reasoning",
     role: "PREMIUM_REASONING",
     routingBinding: "kova-xenon-5",
