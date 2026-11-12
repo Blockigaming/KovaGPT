@@ -278,7 +278,7 @@ export function BankConnectionsPanel({
           if (action === "read") setSnapshot(body);
           else {
             initialRead.current = false;
-          setMessage("Bank disconnected and Plaid access removed.");
+            setMessage("Bank disconnected and Plaid access removed.");
             await reload();
           }
         }
