@@ -357,7 +357,8 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
   await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
-  if (page.viewportSize()!.width < 1024) await dismissMobileSidebar(page);
+  if (await page.getByRole("dialog", { name: "Primary navigation", exact: true }).isVisible())
+    await dismissMobileSidebar(page);
   await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();

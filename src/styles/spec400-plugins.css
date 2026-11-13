@@ -35,7 +35,9 @@
   background: transparent;
   box-shadow: none;
   font-size: 14px;
-  transition: color 140ms ease, background 140ms ease;
+  transition:
+    color 140ms ease,
+    background 140ms ease;
 }
 .spec400-plugin-tabs [role="tab"]:hover:not([data-state="active"]) {
   color: var(--foreground);

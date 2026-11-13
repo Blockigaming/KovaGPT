@@ -327,7 +327,8 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
   await page.getByRole("button", { name: "Send message" }).click();
 
   const status = page.locator(".kova-thinking-indicator");
-  await expect(status).toContainText("Preparing reply…");
+  await page.clock.runFor(1_000);
+  await expect(status).toContainText(/Working for \d+s/);
   await expect(page.getByRole("list", { name: "Activity", exact: true })).toBeVisible();
   await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
   await expect(page.getByText("Read example.org", { exact: true })).toBeVisible();
@@ -335,11 +336,9 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
     page.getByRole("list", { name: "Activity", exact: true }).getByRole("listitem"),
   ).toHaveCount(2);
   await page.clock.runFor(8_000);
-  await expect(status).toContainText("Still waiting for the response…");
+  await expect(status).toHaveAttribute("data-wait-stage", "continued");
   await page.clock.runFor(22_000);
-  await expect(
-    page.getByRole("status").filter({ hasText: "Taking a little longer" }),
-  ).toContainText("Taking a little longer…");
+  await expect(status).toHaveAttribute("data-wait-stage", "extended");
 
   if (testInfo.project.name === "desktop-1440x900") {
     await page.getByRole("button", { name: "New chat", exact: true }).click();
@@ -347,9 +346,7 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
       .getByRole("button", { name: /^Open chat / })
       .first()
       .click();
-    await expect(
-      page.getByRole("status").filter({ hasText: "Taking a little longer" }),
-    ).toContainText("Taking a little longer…");
+    await expect(status).toHaveAttribute("data-wait-stage", "extended");
   }
   await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();

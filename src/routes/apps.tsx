@@ -1388,12 +1388,16 @@ function AppsPage() {
       );
     return false;
   };
-  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector).slice().sort((a, b) => {
-    const aWorking = WORKING_IDS.has(a.id) || a.status === "live" || a.status === "setup_required" ? 0 : 1;
-    const bWorking = WORKING_IDS.has(b.id) || b.status === "live" || b.status === "setup_required" ? 0 : 1;
-    if (aWorking !== bWorking) return aWorking - bWorking;
-    return a.label.localeCompare(b.label);
-  });
+  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector)
+    .slice()
+    .sort((a, b) => {
+      const aWorking =
+        WORKING_IDS.has(a.id) || a.status === "live" || a.status === "setup_required" ? 0 : 1;
+      const bWorking =
+        WORKING_IDS.has(b.id) || b.status === "live" || b.status === "setup_required" ? 0 : 1;
+      if (aWorking !== bWorking) return aWorking - bWorking;
+      return a.label.localeCompare(b.label);
+    });
   const connectedCount = catalog.filter((item) => hasConnection(item.id)).length;
   const connectionCountState = !isLoaded
     ? "unknown"
