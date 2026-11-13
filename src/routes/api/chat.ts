@@ -165,7 +165,8 @@ const TONE_INSTRUCTION = "";
 const ADAPTIVE_INSTRUCTION = "";
 const UNRESTRICTED_INSTRUCTION = "";
 const ACCURACY_INSTRUCTION = "";
-const CHART_INSTRUCTION = `
+const CHART_INSTRUCTION = "";
+const FINAL_CHART_INSTRUCTION = `
 
 When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
 const CREATOR_INSTRUCTION = "";
@@ -1543,7 +1544,7 @@ export const Route = createFileRoute("/api/chat")({
                     ADAPTIVE_INSTRUCTION +
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
-                    CHART_INSTRUCTION +
+                    FINAL_CHART_INSTRUCTION +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
                     INTERACTIVE_UI_INSTRUCTIONS +
@@ -1688,6 +1689,7 @@ export const Route = createFileRoute("/api/chat")({
                       ADAPTIVE_INSTRUCTION +
                       UNRESTRICTED_INSTRUCTION +
                       ACCURACY_INSTRUCTION +
+                      CHART_INSTRUCTION +
                       CREATOR_INSTRUCTION +
                       (customKova?.block ?? "") +
                       workflowSkill.toolPlanningBlock +
