@@ -30,6 +30,7 @@ export function HealthConnectionsPanel({
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<HealthSummary | null>(null);
   const [showDemo, setShowDemo] = useState(false);
+  const [appleSteps, setAppleSteps] = useState("");
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
   useEffect(() => {
@@ -282,13 +283,43 @@ export function HealthConnectionsPanel({
           {!result.summaries.length && <p>No summaries are available for the last seven days.</p>}
         </div>
       )}
-      <p className="text-sm text-muted-foreground">
-        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">
-          Coming soon
-        </span>{" "}
-        Apple Health and Android Health Connect require a mobile app. Other wearables and
-        medical-record services are not connected here.
-      </p>
+      <section
+        className="space-y-3 rounded-xl border border-border p-4"
+        aria-labelledby="apple-health-title"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="apple-health-title" className="font-medium">
+            Apple Health
+          </h3>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
+            iPhone app in development
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Copy today's step total from the Kova Health iPhone app and paste it here. The total stays
+          on this page until you leave or refresh.
+        </p>
+        <label className="block space-y-1 text-sm">
+          <span>Today's steps</span>
+          <input
+            className="block w-full max-w-48 rounded-lg border border-border bg-background px-3 py-2"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={9}
+            value={appleSteps}
+            onChange={(event) => setAppleSteps(event.target.value.replace(/[^0-9]/gu, ""))}
+          />
+        </label>
+        {appleSteps && (
+          <div className="flex items-center gap-3">
+            <output>{Number(appleSteps).toLocaleString()} steps</output>
+            <Button variant="outline" onClick={() => setAppleSteps("")}>
+              Clear
+            </Button>
+          </div>
+        )}
+      </section>
+      <p className="text-sm text-muted-foreground">Android Health Connect requires a mobile app.</p>
       <ConfirmActionDialog
         open={disconnect !== null}
         onOpenChange={(open) => !busy && !open && setDisconnect(null)}

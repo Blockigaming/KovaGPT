@@ -1,0 +1,23 @@
+name: Apple Health iOS
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/apple-health-ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - working-directory: ios
+        run: |
+          xcodegen generate
+          xcodebuild -project KovaHealth.xcodeproj -scheme KovaHealth -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
