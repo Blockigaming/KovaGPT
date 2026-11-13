@@ -77,7 +77,12 @@ type StateWindow = Window & {
 };
 async function boot(
   page: import("@playwright/test").Page,
-  options: { health?: boolean; configured?: boolean; connection?: boolean; delayLink?: boolean } = {},
+  options: {
+    health?: boolean;
+    configured?: boolean;
+    connection?: boolean;
+    delayLink?: boolean;
+  } = {},
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-sensitive-fixture.test/")
