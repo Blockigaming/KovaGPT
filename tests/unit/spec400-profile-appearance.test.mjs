@@ -326,7 +326,7 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
-    /\.kova-settings-content-header\s*\{[\s\S]*?min-height: 68px;\s*padding: max\(10px, var\(--safe-top\)\) max\(16px, var\(--safe-right\)\) 10px\s+max\(16px, var\(--safe-left\)\);/,
+    /\.kova-settings-content-header\s*\{[\s\S]*?min-height: 68px;\s*padding: max\(10px, var\(--safe-top, 0px\)\) 16px 10px;/,
   );
   assert.match(preview, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(preview, /width: 100%/);
