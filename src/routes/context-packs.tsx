@@ -423,8 +423,6 @@ function ContextPacksPage() {
   return (
     <AppShell>
       <main
-        id="main-content"
-        tabIndex={-1}
         data-ui-reference="claude.project.knowledge"
         className={"kova-tool-page " + "mx-auto min-w-0 w-full max-w-5xl px-4 py-7 sm:px-6"}
       >

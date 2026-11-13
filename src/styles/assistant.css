@@ -466,7 +466,6 @@
   min-width: var(--chat-message-action) !important;
   min-height: var(--chat-message-action) !important;
   flex-basis: var(--chat-message-action) !important;
-  border-radius: var(--kova-radius-button);
 }
 @media (min-width: 1024px) and (pointer: fine) {
   .kova-assistant .kova-desktop-topbar .kova-topbar-button {

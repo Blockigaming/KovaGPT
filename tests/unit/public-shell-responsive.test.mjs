@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHookHarness, elements, loadUiModule, text } from "../helpers/ui-state-harness.mjs";
 
-function fixture(initialPath = "/features", phone = false) {
+function fixture(initialPath = "/features") {
   const hooks = createHookHarness();
   let pathname = initialPath;
   const listeners = new Map();
@@ -21,15 +21,8 @@ function fixture(initialPath = "/features", phone = false) {
       Link: "Link",
       useRouterState: ({ select }) => select({ location: { pathname } }),
     },
-    "lucide-react": { ChevronDown: "ChevronDown", Menu: "Menu", X: "X" },
+    "lucide-react": { Menu: "Menu", X: "X" },
     "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
-    "@/hooks/use-mobile": { usePhoneLayout: () => phone },
-    "@/components/ui/button": {
-      Button: ({ asChild, children, ...props }) =>
-        asChild
-          ? { ...children, props: { ...children.props, ...props } }
-          : { type: "button", props: { ...props, children } },
-    },
     "@/lib/drawer-navigation-focus": { requestDrawerNavigationFocus: () => true },
   };
   const { PublicFooter } = loadUiModule("src/components/PublicFooter.tsx", dependencies);
@@ -115,10 +108,6 @@ test("public header wraps without losing navigation destinations or bounded cont
   assert.equal(toggle.props.variant, "ghost");
   assert.equal(toggle.props.size, "icon");
   includesClasses(toggle, ["ml-auto", "lg:hidden"]);
-  const phoneAction = elements(navigation, (node) =>
-    node.props.className?.includes("kova-public-phone-cta"),
-  )[0];
-  assert.equal(phoneAction.props.to, "/");
 });
 
 test("mobile public navigation is scrollable and Escape closes it and restores toggle focus", () => {
@@ -202,16 +191,4 @@ test("footer columns adapt to available text width while preserving legal and he
   const current = links.filter((node) => node.props["aria-current"] === "page");
   assert.equal(current.length, 1);
   assert.equal(current[0].props.to, "/help");
-  const phoneNav = elements(
-    fixture("/help", true).footer(),
-    (node) => node.props["aria-label"] === "Footer navigation",
-  )[0];
-  assert.equal(
-    elements(phoneNav, (node) => node.type === "details").length,
-    publicCatalog.PUBLIC_WEBSITE_FOOTER.length,
-  );
-  assert.deepEqual(
-    elements(phoneNav, (node) => node.type === "Link").map((node) => node.props.to),
-    links.map((node) => node.props.to),
-  );
 });

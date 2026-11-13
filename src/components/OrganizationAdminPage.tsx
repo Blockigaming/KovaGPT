@@ -31,8 +31,6 @@ export default function OrganizationAdminPage() {
   return (
     <AppShell>
       <main
-        id="main-content"
-        tabIndex={-1}
         data-ui-reference="chatgpt.workspace.members"
         className={"kova-tool-page " + "mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6"}
       >

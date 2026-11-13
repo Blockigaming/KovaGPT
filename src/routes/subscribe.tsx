@@ -14,11 +14,7 @@ function CheckoutPage() {
   const { plan } = Route.useSearch();
   const { user, isLoaded, isSignedIn } = useUser();
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="kova-phone-account-flow min-h-dvh bg-background text-foreground"
-    >
+    <main id="main-content" tabIndex={-1} className="min-h-dvh bg-background text-foreground">
       <section className="mx-auto flex min-h-dvh max-w-lg flex-col items-center justify-center gap-4 text-center px-6 py-10">
         <h1 className="kova-checkout-wave text-xl font-semibold">Opening checkout…</h1>
         {!plan ? (

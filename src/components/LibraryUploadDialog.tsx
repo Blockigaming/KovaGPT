@@ -100,7 +100,6 @@ export function LibraryUploadDialog({
       }}
     >
       <DialogContent
-        phoneSheet
         className="spec400-management-dialog"
         onInteractOutside={(event) => {
           if (busy) event.preventDefault();

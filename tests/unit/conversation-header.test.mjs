@@ -247,7 +247,10 @@ test("desktop and compact headers contain Share and Activity only", () => {
     const actions = nodes(root).find((node) => node.props["aria-label"] === "Conversation actions");
     assert.deepEqual(
       nodes(actions)
-        .filter((node) => node.type === "button")
+        .filter(
+          (node) =>
+            node.type === "button" && /^kova-conversation-(share|icon)$/.test(node.props.className),
+        )
         .map((node) => node.props["aria-label"]),
       ["Share chat", "Activity"],
     );

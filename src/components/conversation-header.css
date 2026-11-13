@@ -105,14 +105,21 @@
   background: color-mix(in oklab, var(--destructive) 9%, transparent);
 }
 .kova-conversation-outputs {
-  width: 352px;
-  padding: 18px;
+  width: min(360px, calc(100vw - 24px));
+  padding: 16px;
+  border: 0;
+  border-radius: 20px;
+  max-height: min(650px, calc(100dvh - 90px));
+  overflow-y: auto;
 }
 .kova-conversation-outputs h2 {
   color: var(--muted-foreground);
-  font-size: 14px;
-  margin: 2px 4px 8px;
+  font-size: 13px;
+  margin: 18px 0 10px;
   font-weight: 500;
+}
+.kova-conversation-outputs h2:first-child {
+  margin-top: 0;
 }
 .kova-output-list {
   display: grid;
@@ -199,363 +206,14 @@
 }
 .kova-conversation-actions-compact .kova-conversation-share {
   padding: 0;
+  display: inline-flex;
+  border: 0;
 }
 .kova-conversation-actions-compact .kova-conversation-share span {
   display: none;
 }
-.kova-conversation-sources {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.kova-source-group > summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: 8px 6px;
-  border-radius: var(--kova-radius-compact);
-  cursor: pointer;
-  list-style: none;
-  font-size: 14px;
-}
-.kova-source-group > summary::-webkit-details-marker {
-  display: none;
-}
-.kova-source-group > summary:hover,
-.kova-source-memory:hover {
-  background: var(--accent);
-}
-.kova-source-group > summary > span {
-  flex: 1;
-}
-.kova-source-group > summary svg,
-.kova-source-browser > svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-.kova-source-group > summary > svg:last-child {
-  width: 14px;
-}
-.kova-source-group[open] > summary > svg:last-child {
-  transform: rotate(90deg);
-}
-.kova-source-group small,
-.kova-source-browser small {
-  color: var(--muted-foreground);
-  font-size: 12px;
-}
-.kova-source-group ol {
-  list-style: none;
-  margin: 2px 0 8px 30px;
-  padding: 0;
-}
-.kova-source-group a {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-height: 44px;
-  padding: 8px;
-  border-radius: var(--kova-radius-compact);
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.kova-source-group a:hover {
-  background: var(--accent);
-}
-.kova-source-memory {
-  display: block;
-  min-height: 44px;
-  width: calc(100% - 30px);
-  margin-left: 30px;
-  padding: 8px;
-  text-align: left;
-  font-size: 13px;
-  border-radius: 8px;
-}
-.kova-source-browser {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 6px;
-  min-height: 52px;
-}
-.kova-source-browser > span:first-of-type {
-  flex: 1;
-  min-width: 0;
-}
-.kova-source-browser strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 400;
-}
-.kova-source-browser small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.kova-source-state {
-  color: var(--muted-foreground);
-  font-size: 11px;
-}
-.kova-source-state-active {
-  color: var(--foreground);
-}
-.kova-source-group summary:focus-visible,
-.kova-source-group a:focus-visible,
-.kova-source-memory:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-.kova-conversation-sources:first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-.kova-browser-section {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.kova-browser-section:first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-.kova-browser-card {
-  display: block;
-  width: 100%;
-  padding: 0;
-  overflow: hidden;
-  text-align: left;
-  border: 0;
-  border-radius: var(--kova-radius-output);
-  background: transparent;
-  color: var(--foreground);
-}
-.kova-browser-card:hover:not(:disabled) .kova-browser-card-action {
-  color: var(--foreground);
-}
-.kova-browser-card:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 3px;
-}
-.kova-browser-card-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  min-height: 156px;
-  padding: 20px;
-  border-radius: var(--kova-radius-output);
-  background: var(--muted);
-}
-.kova-browser-card-content > svg {
-  width: 24px;
-  height: 24px;
-  opacity: 0.65;
-}
-.kova-browser-card-content strong {
-  font-size: 14px;
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-.kova-browser-card-content small {
-  color: var(--muted-foreground);
-  font-size: 12px;
-}
-.kova-browser-card-footer {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 2px 0;
-  font-size: 12px;
-  color: var(--muted-foreground);
-}
-.kova-browser-card-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.kova-browser-card-footer svg {
-  width: 14px;
-  height: 14px;
-}
-.kova-sample-browser-thumbnail {
-  display: block;
-  position: relative;
-  overflow: hidden;
-  background: #fafafa;
-  color: #262626;
-  border-radius: 18px;
-  min-height: 180px;
-  text-align: left;
-}
-.kova-sample-browser-toolbar {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  height: 28px;
-  padding: 0 12px;
-  color: #999;
-  font-size: 9px;
-  background: #ededed;
-}
-.kova-sample-browser-toolbar span {
-  margin-left: 12px;
-  font-size: 10px;
-}
-.kova-sample-browser-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px 24px 36px;
-  font-size: 11px;
-}
-.kova-sample-browser-page strong {
-  font-size: 15px;
-  font-weight: 500;
-}
-.kova-sample-browser-line {
-  display: block;
-  height: 6px;
-  border-radius: 6px;
-  background: #e5e5e5;
-  width: 85%;
-}
-.kova-sample-browser-line:last-child {
-  width: 60%;
-}
-.kova-sample-browser-badge {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  border-radius: 9px;
-  background: #444;
-  color: #fff;
-  padding: 5px 9px;
-  font-size: 10px;
-}
-
-.kova-browser-section-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.kova-browser-section-heading h2 {
-  margin-bottom: 0;
-}
-.kova-browser-section-heading .kova-source-state {
-  font-size: 12px;
-}
-
-.kova-conversation-actions-compact .kova-conversation-share {
-  display: inline-flex;
-  border: 0;
-}
 .kova-conversation-actions-compact .spec400-header-context {
   display: none;
-}
-
-/* ChatGPT overflow menu: one opaque neutral surface on desktop and phone. */
-.kova-conversation-menu-phone {
-  width: min(256px, calc(100vw - 24px));
-  padding: 6px;
-  border-radius: var(--kova-radius-menu);
-  background: var(--popover);
-  border-color: var(--border);
-  box-shadow: var(--shadow-floating);
-}
-.kova-conversation-menu-title {
-  padding: 0 14px 8px;
-  color: var(--muted-foreground);
-  font-size: 13px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.kova-conversation-menu-phone [role="menuitem"] {
-  min-height: 44px;
-  padding: 6px 8px;
-  gap: 6px;
-  font-size: 14px;
-  border-radius: var(--kova-radius-compact);
-}
-.kova-conversation-menu-phone [role="menuitem"] > svg {
-  width: 20px;
-  height: 20px;
-}
-.kova-conversation-menu-phone .kova-mobile-secondary {
-  display: none;
-}
-.kova-find-results {
-  max-height: 45dvh;
-  overflow-y: auto;
-  display: grid;
-  gap: 8px;
-}
-.kova-find-result {
-  padding: 12px;
-  border-radius: 16px;
-  text-align: left;
-  min-height: 44px;
-  background: var(--accent);
-}
-.kova-find-result span {
-  color: var(--muted-foreground);
-  font-size: 12px;
-}
-.kova-find-result p {
-  font-size: 14px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  margin-top: 4px;
-}
-
-@media (max-width: 1023px), (any-pointer: coarse) {
-  .kova-conversation-menu [role="menuitem"],
-  .kova-conversation-submenu [role="menuitem"] {
-    min-height: 44px;
-  }
-}
-
-.kova-conversation-outputs {
-  width: min(360px, calc(100vw - 24px));
-  padding: 18px;
-  border-radius: 20px;
-  max-height: min(650px, calc(100dvh - 90px));
-  overflow-y: auto;
-}
-.kova-conversation-outputs h2 {
-  margin: 18px 0 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted-foreground);
-}
-.kova-conversation-outputs h2:first-child {
-  margin-top: 0;
-}
-.kova-activity-context {
-  display: flex;
-  min-height: 44px;
-  margin-top: 16px;
-  font-size: 13px;
-  color: var(--muted-foreground);
-  text-align: left;
-}
-.kova-conversation-outputs .kova-browser-card {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-/* Activity is a single borderless surface; browser and steps lead the inventory. */
-.kova-conversation-outputs {
-  border: 0;
-  padding: 16px;
 }
 .kova-activity-steps {
   margin-block: 4px 16px;
@@ -567,7 +225,38 @@
   border: 0;
   box-shadow: none;
 }
-
+.kova-activity-section-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.kova-activity-section-toggle h2 {
+  margin: 0;
+}
+.kova-activity-chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  transition: transform 150ms ease;
+}
+.kova-activity-chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+.kova-activity-section-toggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
 .kova-conversation-outputs-touch {
   width: 100%;
   max-width: none;

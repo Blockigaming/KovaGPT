@@ -13,7 +13,6 @@ function Dialog({
   modal,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root> & {
-  phoneSheet?: boolean;
   attachmentPreview?: boolean | "fullscreen" | "library";
 }) {
   const dock = useAttachmentPreviewDock(
@@ -51,7 +50,6 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<
 > {
   constrainToViewport?: boolean;
   closeLabel?: string;
-  phoneSheet?: boolean;
   attachmentPreview?: boolean | "fullscreen" | "library";
 }
 
@@ -65,7 +63,6 @@ const DialogContent = React.forwardRef<
       children,
       constrainToViewport = true,
       closeLabel = "Close",
-      phoneSheet = false,
       attachmentPreview,
       ...props
     },
@@ -83,7 +80,6 @@ const DialogContent = React.forwardRef<
           data-slot="dialog-content"
           data-ui-reference="chatgpt.dialog.centered"
           data-kova-dialog-surface={constrainToViewport && !attachmentPreview ? "" : undefined}
-          data-kova-phone-sheet={phoneSheet || undefined}
           data-attachment-preview={
             attachmentPreview
               ? panel

@@ -4,7 +4,7 @@ import { MessageActivityList } from "./MessageActivityList";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { NovaLogo } from "./NovaLogo";
-import { X, File, FileText, Image, Share, Download, SlidersHorizontal } from "lucide-react";
+import { X, File, FileText, Image, Share, Download, LayoutList, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -22,11 +22,11 @@ import { MemorySourcesDialog } from "./MemorySourcesDialog";
 import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ConversationSourcesPanel, ConversationActivitySummary } from "./ConversationSourcesPanel";
+import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <SlidersHorizontal aria-hidden="true" />;
+  return <LayoutList aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
@@ -91,6 +91,8 @@ export function ConversationHeaderActions({
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
   const [outputsOpen, setOutputsOpen] = useState(false);
+  const [outputsCollapsed, setOutputsCollapsed] = useState(false);
+  const [stepsCollapsed, setStepsCollapsed] = useState(false);
   const inlineActivity = isDesktop && !compact && !sidebarOpen;
   const [inlineOpen, setInlineOpen] = useState(true);
   useEffect(() => {
@@ -147,13 +149,37 @@ export function ConversationHeaderActions({
       />
       {steps.some((step) => step.tool !== "scheduled_task") && (
         <section className="kova-activity-steps" aria-label="Steps">
-          <h2>Steps</h2>
-          <MessageActivityList activities={steps} />
+          <button
+            type="button"
+            className="kova-activity-section-toggle"
+            aria-expanded={!stepsCollapsed}
+            onClick={() => setStepsCollapsed((v) => !v)}
+          >
+            <h2>Steps</h2>
+            <ChevronDown
+              className={`kova-activity-chevron${stepsCollapsed ? " is-collapsed" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          {!stepsCollapsed ? <MessageActivityList activities={steps} /> : null}
         </section>
       )}
-      <h2>Outputs</h2>
-      {generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
-      {generatedOutputs.length > 0 && (
+      <button
+        type="button"
+        className="kova-activity-section-toggle"
+        aria-expanded={!outputsCollapsed}
+        onClick={() => setOutputsCollapsed((v) => !v)}
+      >
+        <h2>Outputs</h2>
+        <ChevronDown
+          className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+      {!outputsCollapsed && generatedOutputs.length === 0 ? (
+        <p className="kova-header-note">No outputs yet.</p>
+      ) : null}
+      {!outputsCollapsed && generatedOutputs.length > 0 && (
         <>
           <div className="kova-output-list">
             {generatedOutputs.map((output) => (
