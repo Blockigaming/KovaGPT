@@ -100,6 +100,7 @@ const WORKING_IDS = new Set<string>([
   "google-drive",
   "google-calendar",
   "github",
+  "plaid",
   ...Object.keys(CONNECTION_FLOWS),
 ]);
 
@@ -190,10 +191,17 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
 }
 
 function AppLogo({ id }: { id: string }) {
-  const asset = getPluginReview(id)?.brandAsset.src;
+  const review = getPluginReview(id);
+  const asset = review?.brandAsset.src;
+  const domain = review?.connector.domain?.trim();
+  const favicon =
+    !asset && domain
+      ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      : undefined;
+  const src = asset || favicon;
   return (
     <span className="spec400-plugin-logo" aria-hidden="true">
-      {asset ? <img src={asset} alt="" /> : <PanelsTopLeft />}
+      {src ? <img src={src} alt="" /> : <PanelsTopLeft />}
     </span>
   );
 }
@@ -1380,7 +1388,12 @@ function AppsPage() {
       );
     return false;
   };
-  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector);
+  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector).slice().sort((a, b) => {
+    const aWorking = WORKING_IDS.has(a.id) || a.status === "live" || a.status === "setup_required" ? 0 : 1;
+    const bWorking = WORKING_IDS.has(b.id) || b.status === "live" || b.status === "setup_required" ? 0 : 1;
+    if (aWorking !== bWorking) return aWorking - bWorking;
+    return a.label.localeCompare(b.label);
+  });
   const connectedCount = catalog.filter((item) => hasConnection(item.id)).length;
   const connectionCountState = !isLoaded
     ? "unknown"

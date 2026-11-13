@@ -1,68 +1,49 @@
-/* Prompt actions stay below the bubble; every observed tool step remains visible. */
-.kova-prompt-actions {
-  display: flex;
-  align-items: center;
-  min-height: 36px;
-  margin-top: 4px;
+.kova-user-message-group .kova-prompt-actions {
   opacity: 0;
-  transition: opacity 160ms ease;
+  pointer-events: none;
+  transition: opacity 120ms ease;
 }
 .kova-user-message-group:hover .kova-prompt-actions,
-.kova-user-message-group:focus-within .kova-prompt-actions {
+.kova-user-message-group:focus-within .kova-prompt-actions,
+.kova-user-message-group[data-menu-open="true"] .kova-prompt-actions {
   opacity: 1;
-}
-.kova-prompt-copy {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: var(--kova-radius-compact);
-  background: transparent;
-}
-.kova-prompt-copy svg {
-  grid-area: 1 / 1;
-  width: 16px;
-  height: 16px;
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-.kova-copy-check {
-  opacity: 0;
-  transform: scale(0.65) rotate(-20deg);
-}
-.kova-prompt-copy[data-copied="true"] .kova-copy-glyph {
-  opacity: 0;
-  transform: scale(0.65) rotate(20deg);
-}
-.kova-prompt-copy[data-copied="true"] .kova-copy-check {
-  opacity: 1;
-  transform: scale(1) rotate(0);
+  pointer-events: auto;
 }
 .kova-activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  list-style: none;
-  margin: 0 0 16px;
+  display: grid;
+  gap: 6px;
+  margin: 0;
   padding: 0;
+  list-style: none;
 }
 .kova-activity-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
+  min-height: 28px;
+  font-size: 13px;
   color: var(--muted-foreground);
-  font-size: 14px;
-  line-height: 1.5;
   animation: kova-activity-appear 180ms ease-out;
 }
-.kova-activity-icon {
+.kova-activity-logo {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+}
+.kova-activity-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kova-activity-icon {
+  width: 14px;
+  height: 14px;
 }
 .kova-activity-row[data-status="failed"] {
   color: var(--destructive);
@@ -70,31 +51,19 @@
 @keyframes kova-activity-appear {
   from {
     opacity: 0;
-    transform: translateY(3px);
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 @media (hover: none), (any-pointer: coarse), (max-width: 1023px) {
-  .kova-prompt-actions {
+  .kova-user-message-group .kova-prompt-actions {
     opacity: 1;
-    min-height: 44px;
-  }
-  .kova-prompt-copy {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .kova-prompt-actions,
-  .kova-prompt-copy svg {
-    transition: none;
+    pointer-events: auto;
   }
   .kova-activity-row {
-    animation: none;
+    min-height: 32px;
   }
 }

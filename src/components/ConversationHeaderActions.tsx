@@ -2,7 +2,7 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { File, FileText, Image, Share, Download, SlidersHorizontal } from "lucide-react";
+import { File, FileText, Image, Share, Download, LayoutList, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -24,7 +24,7 @@ import { ConversationSourcesPanel, ConversationActivitySummary } from "./Convers
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <SlidersHorizontal aria-hidden="true" />;
+  return <LayoutList aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
@@ -85,6 +85,8 @@ export function ConversationHeaderActions({
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
   const [outputsOpen, setOutputsOpen] = useState(false);
+  const [outputsCollapsed, setOutputsCollapsed] = useState(false);
+  const [stepsCollapsed, setStepsCollapsed] = useState(false);
   const [dialog, setDialog] = useState<"share-restricted" | null>(null);
   const [selectedOutput, setSelectedOutput] = useState<ConversationOutput | null>(null);
   const outputsRef = useRef<HTMLButtonElement>(null);
@@ -135,13 +137,35 @@ export function ConversationHeaderActions({
       />
       {steps.some((step) => step.tool !== "scheduled_task") && (
         <section className="kova-activity-steps" aria-label="Steps">
-          <h2>Steps</h2>
-          <MessageActivityList activities={steps} />
+          <button
+            type="button"
+            className="kova-activity-section-toggle"
+            aria-expanded={!stepsCollapsed}
+            onClick={() => setStepsCollapsed((v) => !v)}
+          >
+            <h2>Steps</h2>
+            <ChevronDown
+              className={`kova-activity-chevron${stepsCollapsed ? " is-collapsed" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          {!stepsCollapsed ? <MessageActivityList activities={steps} /> : null}
         </section>
       )}
-      <h2>Outputs</h2>
-      {generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
-      {generatedOutputs.length > 0 && (
+      <button
+        type="button"
+        className="kova-activity-section-toggle"
+        aria-expanded={!outputsCollapsed}
+        onClick={() => setOutputsCollapsed((v) => !v)}
+      >
+        <h2>Outputs</h2>
+        <ChevronDown
+          className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+      {!outputsCollapsed && generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
+      {!outputsCollapsed && generatedOutputs.length > 0 && (
         <>
           <div className="kova-output-list">
             {generatedOutputs.map((output) => (
@@ -192,193 +216,93 @@ export function ConversationHeaderActions({
           setOutputsOpen(false);
           setSelectedMemory(sources);
         }}
-        onOpenAttachment={(outputId) => {
-          const output = outputs.find((item) => item.id === outputId);
-          if (!output) return;
-          rememberFocus(outputsRef.current);
-          setSelectedOutput(output);
-          setOutputsOpen(false);
-        }}
+        onOpenAttachment={() => {}}
       />
-      {onOpenContext ? (
-        <button
-          type="button"
-          className="kova-activity-context"
-          onClick={(event) => {
-            dialogOpeningRef.current = true;
-            setOutputsOpen(false);
-            onOpenContext(outputsRef.current ?? event.currentTarget);
-          }}
-        >
-          Chat instructions and context
-        </button>
-      ) : null}
-      {isStreaming ? (
-        <p className="kova-header-note">
-          A response is still being generated. Its output may change.
-        </p>
-      ) : null}
     </>
   );
+
   return (
     <>
-      <div
-        className={`kova-conversation-actions${compact ? " kova-conversation-actions-compact" : ""}`}
-        aria-label="Conversation actions"
-      >
-        <button
-          ref={shareRef}
-          type="button"
-          className="kova-conversation-share"
-          aria-label="Share chat"
-          title="Share chat"
-          onClick={() => {
-            if (restrictedTemporary || !signedIn) {
-              rememberFocus(shareRef.current);
-              dialogOpeningRef.current = false;
-              setDialog("share-restricted");
-            } else onShare(shareRef.current);
-          }}
-        >
-          <Share aria-hidden="true" />
-          <span>Share</span>
-        </button>
-        {!isDesktop ? (
-          <>
+      <div className={`kova-conversation-actions${compact ? " kova-conversation-actions-compact" : ""}`}>
+        <Popover open={outputsOpen} onOpenChange={setOutputsOpen}>
+          <PopoverTrigger asChild>
             <button
-              ref={outputsRef}
               type="button"
+              ref={outputsRef}
               className="kova-conversation-icon"
               aria-label="Activity"
               title="Activity"
-              aria-haspopup="dialog"
-              aria-expanded={outputsOpen}
-              onClick={() => {
-                dialogOpeningRef.current = false;
-                setOutputsOpen(true);
-              }}
             >
               <OutputsIcon />
             </button>
-            <MobileBottomSheet
-              open={outputsOpen}
-              onOpenChange={setOutputsOpen}
-              title="Activity"
-              restoreFocus={!dialogOpeningRef.current}
-            >
-              <div className="kova-conversation-outputs kova-conversation-outputs-touch">
-                {activityContent}
-              </div>
-            </MobileBottomSheet>
-          </>
-        ) : (
-          <Popover
-            open={outputsOpen}
-            onOpenChange={(open) => {
-              if (open) dialogOpeningRef.current = false;
-              setOutputsOpen(open);
-            }}
-          >
-            <PopoverTrigger asChild>
-              <button
-                ref={outputsRef}
-                type="button"
-                className="kova-conversation-icon"
-                aria-label="Activity"
-                title="Activity"
-              >
-                <OutputsIcon />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              sideOffset={10}
-              className="kova-conversation-outputs"
-              aria-label="Activity"
-              onCloseAutoFocus={(event) => {
-                if (!dialogOpeningRef.current) return;
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="kova-conversation-outputs"
+            onCloseAutoFocus={(event) => {
+              if (dialogOpeningRef.current) {
                 event.preventDefault();
                 dialogOpeningRef.current = false;
-              }}
-            >
-              {activityContent}
-            </PopoverContent>
-          </Popover>
+              }
+            }}
+          >
+            {activityContent}
+          </PopoverContent>
+        </Popover>
+        {!compact && (
+          <button
+            type="button"
+            ref={shareRef}
+            className="kova-conversation-share"
+            onClick={() => {
+              if (restrictedTemporary) {
+                setDialog("share-restricted");
+                return;
+              }
+              onShare(shareRef.current);
+            }}
+          >
+            <Share aria-hidden="true" />
+            <span>Share</span>
+          </button>
         )}
       </div>
-      <Dialog
-        open={dialog === "share-restricted"}
-        onOpenChange={(open) => {
-          if (!open) setDialog(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md" onCloseAutoFocus={restoreFocus}>
-          <DialogTitle>Sharing unavailable</DialogTitle>
-          <DialogDescription>
-            {restrictedTemporary
-              ? "Temporary chats cannot be shared. Start a regular chat to share a conversation."
-              : "Sign in to share this conversation."}
-          </DialogDescription>
-          <Button variant="outline" onClick={() => setDialog(null)}>
-            Close
-          </Button>
+      <Dialog open={dialog === "share-restricted"} onOpenChange={(open) => !open && setDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sharing is unavailable</DialogTitle>
+            <DialogDescription>
+              Temporary chats cannot be shared. Start a saved chat to share it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="kova-header-dialog-buttons">
+            <Button variant="outline" onClick={() => setDialog(null)}>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog
-        open={selectedOutput !== null}
+        open={Boolean(selectedOutput)}
         onOpenChange={(open) => {
           if (!open) setSelectedOutput(null);
         }}
       >
-        <DialogContent className="sm:max-w-2xl" onCloseAutoFocus={restoreFocus}>
-          <DialogTitle className="break-words pr-8">{selectedOutput?.name}</DialogTitle>
-          <DialogDescription>
-            {selectedOutput?.kind === "library"
-              ? "This chat keeps a Library reference. Open Library to access the original file."
-              : selectedOutput?.kind === "text" && selectedOutput.extracted
-                ? "Extracted text from the attachment. The original file is not stored in this chat."
-                : selectedOutput?.kind === "artifact"
-                  ? "Generated content from this conversation."
-                  : "Attachment in this conversation."}
-          </DialogDescription>
-          {selectedOutput?.kind === "image" ? (
-            selectedOutput.source ? (
-              <img
-                className="kova-header-image-preview"
-                src={selectedOutput.source}
-                alt={selectedOutput.name}
-              />
-            ) : (
-              <p className="kova-header-note">
-                This image is unavailable or has an unsupported format.
-              </p>
-            )
-          ) : selectedOutput && selectedOutput.kind !== "library" ? (
-            <pre className="kova-header-text-preview">
-              {selectedOutput.content || "No extracted text is available."}
-            </pre>
+        <DialogContent onCloseAutoFocus={restoreFocus} className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedOutput?.name ?? "Output"}</DialogTitle>
+            <DialogDescription>{selectedOutput?.label}</DialogDescription>
+          </DialogHeader>
+          {selectedOutput?.kind === "image" && selectedOutput.source ? (
+            <img
+              src={selectedOutput.source}
+              alt=""
+              className="kova-header-image-preview"
+            />
+          ) : selectedOutput && selectedOutput.kind !== "image" ? (
+            <pre className="kova-header-text-preview">{selectedOutput.content}</pre>
           ) : null}
-          {selectedOutput?.kind === "library" ? (
-            <>
-              {navigationBlocked ? (
-                <p className="kova-header-note">
-                  Send or clear your current message and attachments before opening Library.
-                </p>
-              ) : null}
-              <Button asChild variant="outline">
-                <Link
-                  to="/library"
-                  preload={false}
-                  aria-disabled={navigationBlocked}
-                  onClick={(event) => {
-                    if (navigationBlocked) event.preventDefault();
-                  }}
-                >
-                  Open Library
-                </Link>
-              </Button>
-            </>
-          ) : selectedOutput ? (
+          {selectedOutput ? (
             <Button
               variant="outline"
               className="min-h-11"
