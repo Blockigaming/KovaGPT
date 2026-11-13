@@ -711,7 +711,7 @@ function composer(f) {
       return {
         withResponsePresentation,
         createChatHistoryPayload: async (messages) => ({ messages }),
-        chatRequestProfile: () => ({}),
+        chatRequestUser: () => ({ user: {} }),
         fetchForPrincipal: async (owner, url, init) => {
           assert.equal(owner, ownerId);
           assert.equal(url, "/api/chat");
