@@ -265,7 +265,11 @@ function fixture({
         hostedBodies.push(body);
         assert.equal(
           body.model,
-          hostedFreeMode ? "gpt-5.6-luna" : HOSTED_MODEL_MAP[connectedModel],
+          hostedFreeMode === "instant"
+            ? "gpt-5-mini"
+            : hostedFreeMode === "thinking"
+              ? "gpt-5"
+              : HOSTED_MODEL_MAP[connectedModel],
         );
         const hasToolOutput = body.input.some((item) => item.type === "function_call_output");
         const usage = {
@@ -484,10 +488,10 @@ for (const model of Object.keys(HOSTED_MODEL_MAP)) {
   }
 }
 
-test("production-style Free routing sends Luna with the exact reasoning effort", async () => {
-  for (const [hostedFreeMode, effort] of [
-    ["instant", "low"],
-    ["thinking", "medium"],
+test("production-style Free routing sends the selected GPT-5 model and Kova identity", async () => {
+  for (const [hostedFreeMode, effort, label] of [
+    ["instant", "low", "Argon 4.6 mini"],
+    ["thinking", "medium", "Argon 4.5"],
   ]) {
     const f = fixture({ hostedFreeMode });
     const response = await f.post();
@@ -495,7 +499,12 @@ test("production-style Free routing sends Luna with the exact reasoning effort",
     assert.match(await response.text(), /Reviewed answer/);
     assert.equal(f.hostedBodies.length, 1);
     assert.deepEqual(f.hostedBodies[0].reasoning, { effort });
-    assert.match(f.hostedBodies[0].instructions, /Kova Argon 4\.6/);
+    assert.ok(f.hostedBodies[0].instructions.includes(`You are ${label},`));
+    assert.ok(
+      f.hostedBodies[0].instructions.includes(
+        `Your exact product name for this response is ${label},`,
+      ),
+    );
   }
 });
 

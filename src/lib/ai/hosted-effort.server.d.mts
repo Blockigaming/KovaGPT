@@ -1,3 +1,5 @@
+import type { FreeChatMode } from "./kova-hosted-inference.server.mjs";
+
 export type HostedInternalUsage = {
   input: number;
   output: number;
@@ -7,7 +9,7 @@ export type HostedInternalUsage = {
 export function requestHostedEffort(input: {
   request: Record<string, unknown>;
   mode: string;
-  freeChat?: boolean;
+  freeChat?: FreeChatMode;
   token?: string;
   signal?: AbortSignal;
   onUsage?: (usage: HostedInternalUsage) => void;
