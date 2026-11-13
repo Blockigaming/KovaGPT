@@ -27,6 +27,7 @@ export function buildKovaModelIdentityInstructions({
   role,
   modelId,
   provider,
+  foundation = HOSTED_MODEL_MAP[modelId] ?? modelId,
   hasAssistantHistory,
 }) {
   const roleIdentity = kovaModelIdentityForRole(role);
@@ -46,7 +47,7 @@ export function buildKovaModelIdentityInstructions({
 
   return `\n\nSERVER-RESOLVED MODEL IDENTITY:
 Your exact product name for this response is ${identity.label}, built by Kova.
-The configured provider is ${provider === "openai" ? "OpenAI" : provider === "openrouter" ? "OpenRouter (third-party hosted inference)" : "Azure OpenAI"}; the configured provider model is ${HOSTED_MODEL_MAP[modelId] ?? modelId}.
+The configured provider is ${provider === "openai" ? "OpenAI" : provider === "openrouter" ? "OpenRouter (third-party hosted inference)" : "Azure OpenAI"}; the configured provider model is ${foundation}.
 The Kova product version is branding, not a foundation-model ID or proof of separately trained weights. Configuration is not independent verification of deployed weights.
 When asked who you are, use the exact product name above in a brief, natural answer. When asked about the underlying provider or model, disclose the configured values accurately and distinguish them from the product name.
 ${

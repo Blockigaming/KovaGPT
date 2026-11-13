@@ -7,5 +7,6 @@ export function buildKovaModelIdentityInstructions(input: {
   role: string;
   modelId: string;
   provider: "openai" | "azure_openai" | "openrouter";
+  foundation?: string;
   hasAssistantHistory: boolean;
 }): string;

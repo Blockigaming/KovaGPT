@@ -10,6 +10,7 @@ import { readResponseBytesBounded } from "../endpoint-reliability.mjs";
  */
 export { HOSTED_MODEL_MAP } from "../kova-foundation-models.mjs";
 
+export const FREE_CHAT_FOUNDATION = HOSTED_MODEL_MAP["kova-argon-4.5"];
 export const HOSTED_CHAT_URL = "https://api.openai.com/v1/responses";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
 export const MODEL_OUTPUT_LIMITS = Object.freeze({
@@ -43,7 +44,7 @@ export function isKovaHostedModelId(value) {
   return typeof value === "string" && Object.hasOwn(HOSTED_MODEL_MAP, value);
 }
 
-export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {}) {
+export function prepareKovaHostedRequest(value, { effort: selectedEffort, freeChat = false } = {}) {
   if (
     selectedEffort !== undefined &&
     !["none", "low", "medium", "high", "xhigh", "max"].includes(selectedEffort)
@@ -105,9 +106,10 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
     throw new Error("conflicting_hosted_token_limit");
   // Reasoning is server-resolved; never trust a caller's reasoning object.
   const effort = resolveKovaReasoningEffort(value.model, selectedEffort);
+  const foundation = freeChat ? FREE_CHAT_FOUNDATION : HOSTED_MODEL_MAP[value.model];
   const instructions = [
     kovaIdentityInstruction(value.model),
-    `Verified configuration: underlying foundation ${HOSTED_MODEL_MAP[value.model]}, developed by OpenAI. Kova is the product provider, not the foundation trainer.`,
+    `Verified configuration: underlying foundation ${foundation}, developed by OpenAI. Kova is the product provider, not the foundation trainer.`,
   ];
   const input = [];
   for (const message of value.messages) {
@@ -158,7 +160,7 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
     }
   }
   const payload = {
-    model: HOSTED_MODEL_MAP[value.model],
+    model: foundation,
     instructions: instructions.join("\n\n"),
     input,
     stream: value.stream === true,
@@ -198,7 +200,7 @@ export function prepareKovaHostedRequest(value, { effort: selectedEffort } = {})
   const body = JSON.stringify(payload);
   if (Buffer.byteLength(body, "utf8") > MAX_REQUEST_BYTES)
     throw new Error("hosted_request_too_large");
-  return { endpoint: HOSTED_CHAT_URL, body, alias: value.model };
+  return { endpoint: HOSTED_CHAT_URL, body, alias: value.model, foundation };
 }
 
 export async function requestKovaHostedChat({
@@ -207,10 +209,11 @@ export async function requestKovaHostedChat({
   signal,
   fetchImpl = fetch,
   effort,
+  freeChat,
 } = {}) {
   if (typeof token !== "string" || token.trim().length < 16)
     throw new Error("hosted_api_key_unavailable");
-  const prepared = prepareKovaHostedRequest(request, { effort });
+  const prepared = prepareKovaHostedRequest(request, { effort, freeChat });
   const boundedSignal = AbortSignal.any([AbortSignal.timeout(90_000), ...(signal ? [signal] : [])]);
   boundedSignal.throwIfAborted();
   const response = await fetchImpl(prepared.endpoint, {
@@ -239,7 +242,7 @@ export async function requestKovaHostedChat({
     }
     throw new Error("kova_hosted_response_invalid");
   }
-  const expectedModel = HOSTED_MODEL_MAP[request.model];
+  const expectedModel = prepared.foundation;
   if (request.stream === true) return responsesStreamToChatStream(response, { expectedModel });
   const bytes = await readResponseBytesBounded(response, 8 * 1024 * 1024, {
     signal: boundedSignal,

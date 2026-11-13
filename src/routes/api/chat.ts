@@ -67,7 +67,10 @@ import {
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { hostedEffortBudget } from "@/lib/consumer-effort-policy.mjs";
-import { isKovaHostedModelId } from "@/lib/ai/kova-hosted-inference.server.mjs";
+import {
+  FREE_CHAT_FOUNDATION,
+  isKovaHostedModelId,
+} from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import {
   FreeConnectorBudget,
@@ -1156,7 +1159,15 @@ export const Route = createFileRoute("/api/chat")({
               },
               { requestId },
             );
-            const model = routeDecision.modelId;
+            const acceptanceFlag = runtimeEnv("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+            const freeChat =
+              callerTier === "free" &&
+              runtimeEnv("KOVA_HOSTED_INFERENCE_ENABLED") === "true" &&
+              !capture &&
+              (!acceptanceFlag || acceptanceFlag === "false") &&
+              !explicitHostedTool &&
+              (m.id === "instant" || m.id === "thinking");
+            const model = freeChat ? "kova-argon-4.6" : routeDecision.modelId;
             // Check the resolved hosted alias too: a role misconfiguration must
             // not grant a foundation outside the consumer's plan.
             if (
@@ -1191,6 +1202,7 @@ export const Route = createFileRoute("/api/chat")({
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
               modelId: model,
+              foundation: freeChat ? FREE_CHAT_FOUNDATION : undefined,
               provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
               hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
             });
@@ -1707,15 +1719,22 @@ export const Route = createFileRoute("/api/chat")({
                   ]
                 : finalMessages;
 
-            const catalogModel = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
+            const productModel = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
               (entry) => entry.id === model,
             );
-            if (!catalogModel) {
+            const foundationModel = freeChat
+              ? KOVA_HOSTED_TEXT_MODELS.find((entry) => entry.id === "kova-argon-4.5")
+              : productModel;
+            if (!productModel || !foundationModel) {
               return Response.json(
                 { error: "AI model configuration is unavailable." },
                 { status: 503 },
               );
             }
+            const catalogModel = {
+              ...productModel,
+              pricePerMillion: foundationModel.pricePerMillion,
+            };
             let inputEstimate = estimateProviderInput({
               messages: body.messages,
               tools: availableTools,
@@ -1806,7 +1825,7 @@ export const Route = createFileRoute("/api/chat")({
                 toolPlanningMessages = finalMessages;
                 body.messages = finalMessages;
                 inputEstimate = estimateProviderInput(
-                  prepareChatResponsesRequest({ ...body, stream: true }),
+                  prepareChatResponsesRequest({ ...body, stream: true }, freeChat),
                 );
                 maximumProviderCalls = 1;
                 estimatedCost = estimateMaximumCostUsd(
@@ -1821,7 +1840,7 @@ export const Route = createFileRoute("/api/chat")({
               // not. A short turn must not require enough headroom for the full
               // mode ceiling. The atomic admission gate still rechecks usage.
               inputEstimate = estimateProviderInput(
-                prepareChatResponsesRequest({ ...body, stream: true }),
+                prepareChatResponsesRequest({ ...body, stream: true }, freeChat),
               );
               outputCeiling = Math.min(
                 outputCeiling,
@@ -1963,6 +1982,7 @@ export const Route = createFileRoute("/api/chat")({
             const hostedInternalUsage = { input: 0, output: 0, cachedInput: 0, reasoning: 0 };
             const hostedExecution = {
               mode: m.id,
+              freeChat,
               beforeSend: () => assertSelectedContextsCurrent(request.signal),
               onUsage: (usage: typeof hostedInternalUsage) => {
                 for (const key of ["input", "output", "cachedInput", "reasoning"] as const)
@@ -2050,7 +2070,7 @@ export const Route = createFileRoute("/api/chat")({
                       operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
                       chatId: chatId ?? "",
                     },
-                    { mode: m.id },
+                    { mode: m.id, freeChat },
                   );
                 } catch {
                   clearTimeout(hopTimer);
