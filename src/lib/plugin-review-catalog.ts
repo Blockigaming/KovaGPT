@@ -9,7 +9,6 @@ import onedriveLogo from "../assets/plugins/onedrive.svg";
 import githubLogo from "../assets/plugins/github.svg";
 import notionLogo from "../assets/plugins/notion.svg";
 import linearLogo from "../assets/plugins/linear.svg";
-import plaidLogo from "../assets/plugins/plaid.svg";
 
 export type PluginReviewPermission = {
   access: "read" | "write";
@@ -55,7 +54,6 @@ export const PLUGIN_BRAND_ASSET_URLS: Record<string, string> = {
   github: githubLogo,
   notion: notionLogo,
   linear: linearLogo,
-  plaid: plaidLogo,
 };
 
 function supported(label: string, access: "read" | "write" = "read"): PluginReviewPermission {
