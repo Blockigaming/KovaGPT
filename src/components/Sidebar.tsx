@@ -16,6 +16,8 @@ import {
 import {
   Archive,
   Brain,
+  HeartPulse,
+  CreditCard,
   Bell,
   PanelLeft,
   ArrowLeft,
@@ -85,6 +87,8 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   projects: ProjectsGlyph,
   "scheduled-tasks": TasksGlyph,
   apps: PluginsGlyph,
+  health: HeartPulse,
+  finances: CreditCard,
   maps: Map,
   memory: Brain,
   settings: SettingsGlyph,
@@ -413,7 +417,17 @@ export function Sidebar({
     return true;
   };
 
-  const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
+  const connectionView = useRouterState({
+    select: (state) => new URLSearchParams(state.location.searchStr).get("connection_view"),
+  });
+  const isOn = (path: string) => {
+    const [base, query] = path.split("?");
+    if (base === "/apps")
+      return (
+        pathname === base && connectionView === new URLSearchParams(query).get("connection_view")
+      );
+    return pathname === base || pathname.startsWith(`${base}/`);
+  };
 
   useEffect(() => {
     const refresh = () => {
@@ -901,7 +915,12 @@ export function Sidebar({
   const navLink = (to: string, label: string, Icon: SidebarGlyph, badge?: string) => (
     <Link
       key={to}
-      to={to as never}
+      to={to.split("?")[0] as never}
+      search={
+        to.includes("?")
+          ? (Object.fromEntries(new URLSearchParams(to.split("?")[1])) as never)
+          : undefined
+      }
       className={navRow(isOn(to))}
       aria-current={isOn(to) ? "page" : undefined}
       aria-label={collapsed ? label : undefined}
@@ -927,7 +946,12 @@ export function Sidebar({
   const railLink = (to: string, label: string, Icon: SidebarGlyph) => (
     <RailTooltip key={to} label={label}>
       <Link
-        to={to as never}
+        to={to.split("?")[0] as never}
+        search={
+          to.includes("?")
+            ? (Object.fromEntries(new URLSearchParams(to.split("?")[1])) as never)
+            : undefined
+        }
         className="kova-rail-button relative"
         aria-label={label}
         aria-current={isOn(to) ? "page" : undefined}

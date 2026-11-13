@@ -14,7 +14,7 @@ function FinancesPage() {
   const { user, isSignedIn, isLoaded } = useUser();
   const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   return (
-    <AppShell>
+    <AppShell hideUtilities>
       <main
         id="main-content"
         tabIndex={-1}
