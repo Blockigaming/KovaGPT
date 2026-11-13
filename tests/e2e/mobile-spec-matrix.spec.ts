@@ -89,6 +89,14 @@ for (const [width, height] of viewports) {
       const attachmentOptions = page.getByRole("dialog", { name: "Attach files and tools" });
       if (width < 1024) await expect(attachmentOptions).toBeVisible();
       await page.keyboard.press("Escape");
+      await expect(attachmentOptions).toBeHidden();
+
+      if (width < 768 && height > width) {
+        await page.setViewportSize({ width: height, height: width });
+        await expect(composer).toHaveValue("First line\nA second line for this draft.");
+        await page.setViewportSize({ width, height });
+        await expect(composer).toHaveValue("First line\nA second line for this draft.");
+      }
 
       await send.click();
       await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();

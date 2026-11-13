@@ -212,7 +212,7 @@ for (const theme of ["dark", "light"] as const) {
       await expect(sidebar).toHaveAttribute("data-state", state);
     });
 
-    test(`${theme}: management search preserves the chosen sidebar state: ${initiallyOpen ? "open" : "closed"}`, async ({
+    test(`${theme}: management search preserves the drawer until a destination is selected: ${initiallyOpen ? "open" : "closed"}`, async ({
       page,
     }) => {
       await coreFixture(page, theme);
@@ -257,7 +257,7 @@ for (const theme of ["dark", "light"] as const) {
         await expect(page.locator("[data-chat-transcript]")).toBeVisible();
         await expect(page.locator(".kova-sidebar[data-kova-core-sidebar]")).toHaveAttribute(
           "data-state",
-          state,
+          "closed",
         );
       } else {
         await page.keyboard.press("Escape");
