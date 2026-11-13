@@ -124,6 +124,7 @@ export function BankConnectionsPanel({
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
   const handler = useRef<PlaidHandler | null>(null);
+  const cancelLinkLoad = useRef<(() => void) | null>(null);
   const request = useCallback(
     (url: string, body?: object) =>
       fetchWithTimeoutAuthenticated(
@@ -161,7 +162,9 @@ export function BankConnectionsPanel({
     void reload();
     return () => {
       active.current = false;
+      cancelLinkLoad.current?.();
       handler.current?.destroy();
+      handler.current = null;
     };
   }, [reload]);
   const openLink = useCallback(
@@ -170,56 +173,76 @@ export function BankConnectionsPanel({
       if (!sdk || !active.current) return;
       let settled = false;
       handler.current?.destroy();
-      handler.current = sdk.create({
-        token: linkToken,
-        ...(receivedRedirectUri ? { receivedRedirectUri } : {}),
-        onSuccess: (publicToken) => {
-          if (settled || !active.current) return;
-          settled = true;
-          clearPlaidLinkSession(window.sessionStorage, ownerId ?? "");
-          void (async () => {
-            try {
-              const result = await request("/api/finances/exchange", {
-                publicToken,
-                country: "US",
-              });
-              const connection = await result.json();
-              if (!result.ok || typeof connection.id !== "string") throw new Error();
-              if (active.current) {
-                newlyLinked.current = connection.id;
-                initialRead.current = false;
-                toast.success("Bank connected.");
-                await reload();
-              }
-            } catch {
-              if (active.current)
-                toast.error(
-                  "The link result could not be confirmed. Refresh connection status before starting another link.",
-                  { position: "bottom-right" },
-                );
-            } finally {
-              if (active.current) {
-                setBusy(false);
-                handler.current?.destroy();
-                handler.current = null;
-              }
-            }
-          })();
-        },
-        onExit: (error) => {
-          if (settled || !active.current) return;
-          settled = true;
-          clearPlaidLinkSession(window.sessionStorage, ownerId ?? "");
-          setBusy(false);
-          if (error)
-            toast.error("Plaid could not finish linking this bank. Try again later.", {
-              position: "bottom-right",
-            });
-          handler.current?.destroy();
-          handler.current = null;
-        },
+      let finishLoading: (loaded: boolean) => void = () => {};
+      const loaded = new Promise<boolean>((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("plaid_link_load_timeout")), 20_000);
+        finishLoading = (value) => {
+          window.clearTimeout(timer);
+          resolve(value);
+        };
+        cancelLinkLoad.current = () => finishLoading(false);
       });
-      handler.current.open();
+      try {
+        handler.current = sdk.create({
+          token: linkToken,
+          ...(receivedRedirectUri ? { receivedRedirectUri } : {}),
+          onLoad: () => finishLoading(true),
+          onSuccess: (publicToken) => {
+            if (settled || !active.current) return;
+            settled = true;
+            clearPlaidLinkSession(window.sessionStorage, ownerId ?? "");
+            void (async () => {
+              try {
+                const result = await request("/api/finances/exchange", {
+                  publicToken,
+                  country: "US",
+                });
+                const connection = await result.json();
+                if (!result.ok || typeof connection.id !== "string") throw new Error();
+                if (active.current) {
+                  newlyLinked.current = connection.id;
+                  initialRead.current = false;
+                  toast.success("Bank connected.");
+                  await reload();
+                }
+              } catch {
+                if (active.current)
+                  toast.error(
+                    "The link result could not be confirmed. Refresh connection status before starting another link.",
+                    { position: "bottom-right" },
+                  );
+              } finally {
+                if (active.current) {
+                  setBusy(false);
+                  handler.current?.destroy();
+                  handler.current = null;
+                }
+              }
+            })();
+          },
+          onExit: (error) => {
+            if (settled || !active.current) return;
+            settled = true;
+            finishLoading(false);
+            clearPlaidLinkSession(window.sessionStorage, ownerId ?? "");
+            setBusy(false);
+            if (error)
+              toast.error("Plaid could not finish linking this bank. Try again later.", {
+                position: "bottom-right",
+              });
+            handler.current?.destroy();
+            handler.current = null;
+          },
+        });
+        if ((await loaded) && active.current && !settled) handler.current?.open();
+      } catch (error) {
+        handler.current?.destroy();
+        handler.current = null;
+        throw error;
+      } finally {
+        finishLoading(false);
+        cancelLinkLoad.current = null;
+      }
     },
     [ownerId, reload, request, setBusy],
   );
@@ -241,14 +264,19 @@ export function BankConnectionsPanel({
       return;
     }
     setBusy(true);
-    void openLink(token, window.location.href).catch(() => {
-      if (active.current) {
-        setBusy(false);
-        toast.error("Bank sign-in could not resume. Start a new bank connection.", {
-          position: "bottom-right",
-        });
-      }
-    });
+    setLinking(true);
+    void openLink(token, window.location.href)
+      .catch(() => {
+        if (active.current) {
+          setBusy(false);
+          toast.error("Bank sign-in could not resume. Start a new bank connection.", {
+            position: "bottom-right",
+          });
+        }
+      })
+      .finally(() => {
+        if (active.current) setLinking(false);
+      });
   }, [ownerId, status, openLink, setBusy]);
   const connect = async () => {
     if (running.current || !ownerId || !status?.configured) return;
