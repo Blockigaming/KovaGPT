@@ -144,7 +144,6 @@ function ChatMessageInner({
   onOpenCanvas,
   onAskAttachment,
   onOpenAttachmentPane,
-  onSelectSuggestion,
   showAdvertisement = false,
 }: {
   message: Message;
@@ -183,7 +182,6 @@ function ChatMessageInner({
     prompt: string,
     attachment: Exclude<NonNullable<Message["attachments"]>[number], { kind: "image" }>,
   ) => boolean;
-  onSelectSuggestion?: (prompt: string) => void;
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
@@ -1082,11 +1080,12 @@ function ChatMessageInner({
       {!isUser &&
         !streaming &&
         !message.generationStatus &&
-        onSelectSuggestion &&
+        onFollowUp &&
         normalizeResponseFollowups(message.followups).length > 0 && (
           <nav className="kova-response-followups" aria-label="Suggested follow-ups">
+            <p>Suggested follow-ups</p>
             {normalizeResponseFollowups(message.followups).map((suggestion) => (
-              <button type="button" key={suggestion} onClick={() => onSelectSuggestion(suggestion)}>
+              <button type="button" key={suggestion} onClick={() => onFollowUp(suggestion)}>
                 <Sparkles aria-hidden="true" />
                 <span>{suggestion}</span>
               </button>

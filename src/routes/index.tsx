@@ -20,7 +20,7 @@ import {
   type NextPromptScope,
 } from "@/lib/chat-send-next";
 import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversation.mjs";
-import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
+import { appendFollowupToDraft, extractResponseFollowups } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
 import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
@@ -1809,7 +1809,7 @@ function KovaGPT() {
       voiceRequest?: { signal: AbortSignal },
       quickAnswer = false,
       requestWebSearch?: boolean,
-      preserveComposer = false,
+      { preserveDraft = false } = {},
     ) => {
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
@@ -1842,7 +1842,7 @@ function KovaGPT() {
         return;
       }
       const clearComposer =
-        !preserveComposer &&
+        !preserveDraft &&
         !voiceRequest &&
         !_retryAttempt &&
         !requestId &&
@@ -2127,6 +2127,7 @@ function KovaGPT() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(!voiceRequest ? { "X-Kova-Response-Followups": "1" } : {}),
             "Idempotency-Key": userMsg.id,
             "X-Kova-Assistant-Message-Id": assistantMsg.id,
           },
@@ -2269,8 +2270,16 @@ function KovaGPT() {
             retryable: true,
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
-        if (requestSucceeded)
-          updateAssistantMessage((message) => ({ ...message, createdAt: Date.now() }));
+        if (requestSucceeded) {
+          const { content, followups } = extractResponseFollowups(assembledReply);
+          assembledReply = content;
+          updateAssistantMessage((message) => ({
+            ...message,
+            content,
+            ...(followups.length ? { followups } : {}),
+            createdAt: Date.now(),
+          }));
+        }
         if (activeIdRef.current === nextConvId) {
           if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
         } else if (
@@ -2889,7 +2898,7 @@ function KovaGPT() {
       undefined,
       false,
       undefined,
-      true,
+      { preserveDraft: true },
     );
     return inFlightRef.current;
   };
@@ -2938,11 +2947,6 @@ function KovaGPT() {
             },
             trigger,
           )
-        }
-        onSelectSuggestion={
-          isLastAssistant && !isStreaming
-            ? (suggestion) => prepareResponseDraft(suggestion)?.()
-            : undefined
         }
         temporary={Boolean(active.temporary)}
         onReplaceContent={
@@ -2997,9 +3001,28 @@ function KovaGPT() {
         onFollowUp={
           isLastAssistant && !isStreaming && isSignedIn && principalReady && historyReady
             ? (prompt) => {
-                if (inFlightRef.current) return false;
-                // send acquires the request synchronously before its first await.
-                void send(prompt, []);
+                if (
+                  inFlightRef.current ||
+                  editingMessage ||
+                  activeIdRef.current !== active.id ||
+                  !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current) ||
+                  responseDraftGeneration !== storageGenerationRef.current
+                )
+                  return false;
+                void send(
+                  prompt,
+                  [],
+                  undefined,
+                  0,
+                  undefined,
+                  undefined,
+                  undefined,
+                  undefined,
+                  undefined,
+                  false,
+                  undefined,
+                  { preserveDraft: true },
+                );
                 return inFlightRef.current;
               }
             : undefined
