@@ -51,6 +51,10 @@ import {
 } from "@/lib/document-extraction/pdf-metadata.mjs";
 import { ComposerUploadAllowance } from "@/components/ComposerUploadAllowance";
 import { ComposerContextPanel } from "@/components/ComposerContextPanel";
+import {
+  ComposerFormattingToolbar,
+  type ComposerSelection,
+} from "@/components/ComposerFormattingToolbar";
 import { ComposerModelStatus } from "@/components/ComposerModelStatus";
 import { ComposerVoiceDialog } from "@/components/ComposerVoiceDialog";
 import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
@@ -232,6 +236,7 @@ export function ChatInput({
   showResources = true,
   savedConversations = [],
   surface = "conversation",
+  desktopConversationLayout = false,
   attachmentContext,
   latestAssistantText = "",
   latestAssistantReply,
@@ -290,6 +295,7 @@ export function ChatInput({
   showResources?: boolean;
   savedConversations?: readonly Conversation[];
   /** Controls whether the desktop add menu opens below the centered composer or above a docked one. */
+  desktopConversationLayout?: boolean;
   surface?: "empty" | "conversation";
   /** Invalidate pending reads when changing chat or entering/leaving prompt edit. */
   attachmentContext?: string;
@@ -371,6 +377,26 @@ export function ChatInput({
   const isCoarsePointer = interaction === "touch";
 
   const ref = useRef<HTMLTextAreaElement>(null);
+  const [formatSelection, setFormatSelection] = useState<ComposerSelection | null>(null);
+  useEffect(() => setFormatSelection(null), [attachmentContext, attachmentAutoSave.scope]);
+  useEffect(() => {
+    if (!formatSelection) return;
+    const closeOutside = (event: Event) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target !== ref.current &&
+        !target.closest(".kova-composer-formatting")
+      )
+        setFormatSelection(null);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("focusin", closeOutside);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("focusin", closeOutside);
+    };
+  }, [formatSelection]);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -614,7 +640,13 @@ export function ChatInput({
           parseFloat(metrics.paddingBottom),
       );
       const composer = el.closest<HTMLElement>(".spec400-composer");
-      if (composer && surface === "conversation" && !isMobileLayout && !isCoarsePointer) {
+      if (
+        composer &&
+        surface === "conversation" &&
+        !desktopConversationLayout &&
+        !isMobileLayout &&
+        !isCoarsePointer
+      ) {
         // Measure against the compact text slot even while the draft is expanded.
         // Measuring only the current wider row would repeatedly expand/collapse
         // drafts that fit one wide line but not the compact input slot.
@@ -683,7 +715,15 @@ export function ChatInput({
       observer.disconnect();
       if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
     };
-  }, [value, isLoaded, user?.id, isMobileLayout, isCoarsePointer, surface]);
+  }, [
+    value,
+    isLoaded,
+    user?.id,
+    isMobileLayout,
+    isCoarsePointer,
+    surface,
+    desktopConversationLayout,
+  ]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
   useEffect(() => {
@@ -1836,6 +1876,7 @@ export function ChatInput({
     <div
       className="spec400-chat-input"
       data-composer-surface={surface}
+      data-desktop-conversation={desktopConversationLayout || undefined}
       data-signed-in={isLoaded && user ? "true" : undefined}
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
@@ -1955,17 +1996,47 @@ export function ChatInput({
         {linkPreviewUrl && (
           <LinkPreviewChip url={linkPreviewUrl} placement="composer" onRemove={removeLinkPreview} />
         )}
+        {!isMobileLayout &&
+          !isCoarsePointer &&
+          !disabled &&
+          formatSelection?.draft === visibleComposerValue && (
+            <ComposerFormattingToolbar
+              inputRef={ref}
+              selection={formatSelection}
+              onChange={updateComposerText}
+              onClose={() => setFormatSelection(null)}
+            />
+          )}
         <div className="spec400-input-region">
           <textarea
             ref={ref}
             value={visibleComposerValue}
+            onSelect={(event) => {
+              const {
+                selectionStart: start,
+                selectionEnd: end,
+                value: draft,
+              } = event.currentTarget;
+              const selected = draft.slice(start, end);
+              setFormatSelection(
+                selected.trim() && !selected.includes(COMPOSER_LINK_MARKER)
+                  ? { start, end, draft }
+                  : null,
+              );
+            }}
             onChange={(event) => {
               setSlashDismissed(false);
               setSlashModels(false);
               setSlashIndex(0);
               updateComposerText(event.target.value);
             }}
-            onKeyDown={handleKey}
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && formatSelection) {
+                setFormatSelection(null);
+                return;
+              }
+              handleKey(event);
+            }}
             disabled={disabled}
             onCompositionStart={() => {
               composingRef.current = true;
@@ -2119,6 +2190,9 @@ export function ChatInput({
                 onChange={onModeChange}
                 userTier={userTier}
                 modelLabel={CONSUMER_MODELS.find((model) => model.id === hostedModel)?.label}
+                showFreeModelLabel={
+                  desktopConversationLayout && !isMobileLayout && !isCoarsePointer
+                }
                 compact
               />
             ) : (

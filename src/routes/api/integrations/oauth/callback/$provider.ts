@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { HEALTH_PROVIDERS } from "@/health/providers.mjs";
 import { completeOAuth } from "@/integrations/oauth-lifecycle.server";
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "@/integrations/oauth-providers.server";
 import {
@@ -22,6 +23,8 @@ export const Route = createFileRoute("/api/integrations/oauth/callback/$provider
           target.searchParams.set("integration_error", "unsupported_provider");
           return redirect(target);
         }
+        if (Object.hasOwn(HEALTH_PROVIDERS, provider))
+          target.searchParams.set("connection_view", "health");
         const code = url.searchParams.get("code"),
           state = url.searchParams.get("state"),
           providerError = url.searchParams.get("error");

@@ -1,3 +1,4 @@
+import ReactMarkdown from "react-markdown";
 import { LinkPreviewChip } from "@/components/LinkPreviewChip";
 import { firstLinkPreviewUrl, isOnlyLink } from "@/lib/link-preview.mjs";
 import { Copy, Check } from "lucide-react";
@@ -21,7 +22,8 @@ export function PromptMessage({
   onEdit?: () => void;
   onBranch?: () => void;
 }) {
-  const previewUrl = firstLinkPreviewUrl(content);
+  const formatted = /^(?:#{1,3} |[-*+] |\d+\. )|\*[^*\n]+\*|\]\(<https?:\/\//mu.test(content);
+  const previewUrl = formatted ? null : firstLinkPreviewUrl(content);
   const linkOnly = previewUrl ? isOnlyLink(content, previewUrl) : false;
 
   return (
@@ -34,7 +36,16 @@ export function PromptMessage({
             aria-label="Sent prompt"
           >
             {previewUrl && <LinkPreviewChip url={previewUrl} />}
-            {!linkOnly && content}
+            {!linkOnly &&
+              (formatted ? (
+                <div className="kova-formatted-prompt">
+                  <ReactMarkdown skipHtml disallowedElements={["img"]}>
+                    {content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                content
+              ))}
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>

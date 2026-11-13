@@ -129,6 +129,7 @@ export function Sidebar({
   hideGuestLogin = false,
   mapsReleaseApproved = false,
   compactOnly = false,
+  desktopConversationLayout = false,
 }: {
   conversations: Conversation[];
   trackBackgroundReplies?: boolean;
@@ -150,6 +151,7 @@ export function Sidebar({
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
+  desktopConversationLayout?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const unreadReplyIds = useChatReplyActivity(
@@ -1703,6 +1705,7 @@ export function Sidebar({
       <aside
         ref={drawerRef}
         id="kova-primary-navigation"
+        data-desktop-conversation={desktopConversationLayout || undefined}
         data-kova-core-sidebar=""
         data-kova-refined-sidebar=""
         style={sidebarStyle}
@@ -1723,7 +1726,9 @@ export function Sidebar({
               KovaGPT
             </span>
             <div className="kova-sidebar-header-actions">
-              {layout.searchPosition === "header" ? searchButton() : null}
+              {layout.searchPosition === "header" || (desktopConversationLayout && !mobileViewport)
+                ? searchButton()
+                : null}
               <button
                 type="button"
                 className="kova-header-button kova-sidebar-toggle flex lg:hidden"
@@ -1844,14 +1849,14 @@ export function Sidebar({
                     tabIndex={-1}
                     className={pinned.length > 0 ? "kova-recents-heading" : undefined}
                   >
-                    Recent chats
+                    {desktopConversationLayout && !mobileViewport ? "Recents" : "Recent chats"}
                   </h2>
                   {recents.slice(0, 8).map(chatRow)}
                 </div>
               ) : null}
               {filtered.length > 0 ? (
                 <button
-                  className="kova-nav-row"
+                  className="kova-nav-row kova-sidebar-view-all"
                   type="button"
                   onClick={(event) => {
                     if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();

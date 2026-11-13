@@ -36,20 +36,21 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const singleRow =
+  const desktopConversation =
     conversation &&
     (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
-  await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
+  await expect(composer).toHaveCSS("display", "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
-  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+  if (desktopConversation) await height.toBeGreaterThanOrEqual(104);
+  else if (conversation) await height.toBeLessThanOrEqual(92);
   else await height.toBeGreaterThanOrEqual(128);
   await expect
     .poll(() =>
-      composer.evaluate((node, oneRow) => {
+      composer.evaluate((node) => {
         const input = node.querySelector("textarea")!.getBoundingClientRect();
         const attach = node.querySelector('[aria-label="Attach"]')!.getBoundingClientRect();
-        return oneRow ? attach.right <= input.left + 1 : input.bottom <= attach.top + 1;
-      }, singleRow),
+        return input.bottom <= attach.top + 1;
+      }),
     )
     .toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

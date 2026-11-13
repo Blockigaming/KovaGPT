@@ -1,3 +1,4 @@
+import * as consumerModels from "../../src/lib/consumer-model-selection.mjs";
 import * as planUsage from "../../src/lib/plan-usage-policy.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -25,6 +26,7 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
     ["@/components/NovaLogo", "src/components/NovaLogo.tsx"],
   ]);
   function load(id) {
+    if (id === "@/lib/consumer-model-selection.mjs") return consumerModels;
     if (id === "./plan-usage-policy.mjs" || id === "@/lib/plan-usage-policy.mjs") return planUsage;
     if (id === "@/lib/mode-entitlements.mjs") return entitlements;
     if (id === "@/lib/kova-model-identity.mjs") return modelIdentity;

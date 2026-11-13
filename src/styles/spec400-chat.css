@@ -32,7 +32,7 @@
   padding-bottom: max(6px, env(safe-area-inset-bottom));
 }
 @media (min-width: 1024px) and (pointer: fine) {
-  .spec400-chat-input[data-composer-surface="conversation"]
+  .spec400-chat-input[data-composer-surface="conversation"]:not([data-desktop-conversation])
     .spec400-composer:not(
       :has(
         .spec400-composer-input[data-multiline="true"],
@@ -47,7 +47,7 @@
     padding: 6px var(--composer-compact-padding);
     gap: var(--composer-compact-gap);
   }
-  .spec400-chat-input[data-composer-surface="conversation"]
+  .spec400-chat-input[data-composer-surface="conversation"]:not([data-desktop-conversation])
     .spec400-composer:not(
       :has(
         .spec400-composer-input[data-multiline="true"],
@@ -59,7 +59,7 @@
     .spec400-composer-toolbar {
     display: contents;
   }
-  .spec400-chat-input[data-composer-surface="conversation"]
+  .spec400-chat-input[data-composer-surface="conversation"]:not([data-desktop-conversation])
     .spec400-composer:not(
       :has(
         .spec400-composer-input[data-multiline="true"],
@@ -1131,4 +1131,94 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     padding: 16px;
     border-radius: 20px;
   }
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+  .spec400-chat-input[data-desktop-conversation] .spec400-composer {
+    min-height: 104px;
+    padding: 10px 8px 8px;
+    gap: 8px;
+  }
+  .spec400-chat-input[data-desktop-conversation] .spec400-input-region {
+    align-items: flex-start;
+    padding-inline: 10px;
+  }
+}
+
+.kova-composer-formatting {
+  position: absolute;
+  z-index: 10;
+  inset-block-start: 0;
+  inset-inline-start: 50%;
+  translate: -50% -80%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 20%);
+}
+.kova-composer-formatting button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding-inline: 7px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.kova-composer-formatting button:is(:hover, :focus-visible, [aria-expanded="true"]) {
+  background: var(--accent);
+}
+.kova-composer-formatting svg {
+  width: 16px;
+  height: 16px;
+}
+.kova-composer-formatting-panel {
+  position: absolute;
+  inset-block-end: 100%;
+  inset-inline-start: 60%;
+  display: grid;
+  gap: 2px;
+  min-width: 185px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--popover);
+  box-shadow: inherit;
+}
+.kova-composer-formatting-panel input {
+  width: 180px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+}
+
+.kova-formatted-prompt :is(ol, ul) {
+  padding-inline-start: 1.5em;
+}
+.kova-formatted-prompt ol {
+  list-style: decimal;
+}
+.kova-formatted-prompt ul {
+  list-style: disc;
+}
+.kova-formatted-prompt :is(h1, h2, h3) {
+  font-weight: 650;
+}
+.kova-formatted-prompt h1 {
+  font-size: 1.4em;
+}
+.kova-formatted-prompt h2 {
+  font-size: 1.25em;
+}
+.kova-formatted-prompt h3 {
+  font-size: 1.1em;
+}
+.kova-formatted-prompt a {
+  text-decoration: underline;
 }

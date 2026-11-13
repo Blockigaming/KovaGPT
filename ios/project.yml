@@ -1,0 +1,25 @@
+name: KovaHealth
+options:
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  KovaHealth:
+    type: application
+    platform: iOS
+    sources:
+      - KovaHealth
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kovagpt.health
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSHealthShareUsageDescription: Kova Health reads today's step total so you can choose to share it with KovaGPT.
+    entitlements:
+      path: KovaHealth.entitlements
+      properties:
+        com.apple.developer.healthkit: true

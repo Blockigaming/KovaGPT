@@ -230,3 +230,20 @@ test("slash commands are selectable by keyboard and show the account model menu"
   await expect(input).toHaveValue("");
   await expect(page.getByRole("button", { name: /remove study/i })).toBeVisible();
 });
+
+test("desktop draft selection opens formatting controls and applies the chosen style", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width < 1024, "Formatting toolbar is desktop-only.");
+  await start(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await input.fill("Format this draft");
+  await input.evaluate((element: HTMLTextAreaElement) => element.select());
+  const toolbar = page.getByRole("group", { name: "Format selected draft text" });
+  await expect(toolbar).toBeVisible();
+  await toolbar.getByRole("button", { name: "Text", exact: true }).click();
+  await toolbar.getByRole("button", { name: "Heading 2" }).click();
+  await expect(input).toHaveValue("## Format this draft");
+  await expect(toolbar).toBeHidden();
+  await expect(input).toBeFocused();
+});

@@ -38,6 +38,7 @@ const closedSurfaces = {
     OpenDesktopAppButton: () =>
       React.createElement("button", { "aria-label": "Open desktop app" }, "Open desktop app"),
   },
+  "@/components/ComposerFormattingToolbar": { ComposerFormattingToolbar: () => null },
   "@/components/ComposerVoiceDialog": { ComposerVoiceDialog: empty },
   "@/components/ui/ExpandViewIcon": { ExpandViewIcon: empty },
   "@/components/ComposerUploadAllowance": { ComposerUploadAllowance: empty },
