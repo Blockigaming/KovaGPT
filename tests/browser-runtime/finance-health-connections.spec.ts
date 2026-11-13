@@ -270,3 +270,19 @@ test("an old Plaid success callback cannot exchange its token after account swit
     ),
   ).toBe(false);
 });
+
+test("WHOOP Apple Health preview displays a copied summary without a provider request", async ({
+  page,
+}) => {
+  await boot(page);
+  const field = page.getByRole("textbox", { name: "WHOOP summary from Kova Health" });
+  await field.fill(
+    "WHOOP via Apple Health | Sleep (last 24 hours): 450 | Resting heart rate (bpm): 57",
+  );
+  await expect(page.getByText("450 minutes", { exact: true })).toBeVisible();
+  await expect(page.getByText("57 bpm", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
+  await page.getByRole("button", { name: "Clear WHOOP summary" }).click();
+  await expect(field).toHaveValue("");
+  await expect(page.getByText("450 minutes", { exact: true })).toHaveCount(0);
+});
