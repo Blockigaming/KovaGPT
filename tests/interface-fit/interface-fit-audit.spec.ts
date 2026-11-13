@@ -358,7 +358,7 @@ if (scope === "public") {
       .scrollIntoViewIfNeeded();
     await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
     await expect(size).toHaveAttribute("aria-valuenow", "100");
-    if (!phone) await expect(navigation).toHaveAttribute("aria-valuenow", "280");
+    if (!compact) await expect(navigation).toHaveAttribute("aria-valuenow", "280");
     await page.screenshot({ path: info.outputPath("appearance-reset.png") });
   });
 }
