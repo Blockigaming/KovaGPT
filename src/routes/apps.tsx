@@ -191,12 +191,10 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
 }
 
 function AppLogo({ id }: { id: string }) {
-  const review = getPluginReview(id);
-  const asset = review?.brandAsset.src;
-  const src = asset;
+  const asset = getPluginReview(id)?.brandAsset.src;
   return (
     <span className="spec400-plugin-logo" aria-hidden="true">
-      {src ? <img src={src} alt="" /> : <PanelsTopLeft />}
+      {asset ? <img src={asset} alt="" /> : <PanelsTopLeft />}
     </span>
   );
 }
