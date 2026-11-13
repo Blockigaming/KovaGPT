@@ -2025,3 +2025,39 @@ body {
   outline-offset: -2px !important;
   box-shadow: none !important;
 }
+
+/* Portaled compact overlays also follow the visible viewport while typing. */
+@media (width < 1024px) {
+  :root[data-kova-keyboard]
+    :is(
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"]
+    )[data-kova-dialog-surface]:not(.kova-settings-dialog, .spec400-expanded-input) {
+    top: calc(var(--kova-visible-top, 0px) + var(--kova-visible-height, 100dvh) / 2);
+    max-height: calc(var(--kova-visible-height, 100dvh) - 2rem);
+  }
+
+  :root[data-kova-keyboard] [data-kova-bottom-sheet] {
+    bottom: max(
+      0px,
+      calc(100dvh - var(--kova-visible-height, 100dvh) - var(--kova-visible-top, 0px))
+    );
+    max-height: min(calc(var(--kova-visible-height, 100dvh) * 0.88), 44rem);
+  }
+
+  .kova-assistant .prose-chat {
+    overflow-wrap: anywhere;
+  }
+
+  .kova-assistant .prose-chat :is(pre, .kova-table-scroll) {
+    overscroll-behavior-inline: contain;
+  }
+
+  .kova-assistant .prose-chat :is(ul, ol) {
+    padding-inline-start: 1.25em;
+  }
+
+  .kova-assistant .prose-chat blockquote {
+    padding-inline-start: 0.75em;
+  }
+}

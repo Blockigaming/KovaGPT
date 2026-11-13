@@ -1,5 +1,6 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { BarChart3, Copy, Download, Table2 } from "lucide-react";
+import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
   Select,
@@ -29,6 +30,7 @@ import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
+  const { isMobile } = useLayout();
   const xKey = spec.xKey ?? "name";
   const keys = useMemo(
     () =>
@@ -67,7 +69,16 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   const axes = (
     <>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-      <XAxis dataKey={xKey} stroke="var(--muted-foreground)" fontSize={12} />
+      <XAxis
+        dataKey={xKey}
+        stroke="var(--muted-foreground)"
+        fontSize={isMobile ? 11 : 12}
+        minTickGap={isMobile ? 16 : 5}
+        tickFormatter={(value) => {
+          const label = String(value);
+          return isMobile && label.length > 12 ? `${label.slice(0, 11)}…` : label;
+        }}
+      />
       <YAxis stroke="var(--muted-foreground)" fontSize={12} />
       <Tooltip />
       <Legend />
@@ -81,7 +92,9 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <figcaption className="mr-auto text-sm font-semibold">{spec.title ?? "Chart"}</figcaption>
+        <figcaption className="mr-auto basis-full break-words text-sm font-semibold sm:basis-auto">
+          {spec.title ?? "Chart"}
+        </figcaption>
         <label className="sr-only" htmlFor={chartTypeId}>
           Chart type
         </label>

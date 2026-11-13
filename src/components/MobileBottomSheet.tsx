@@ -72,6 +72,7 @@ export function MobileBottomSheet({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           data-testid="mobile-bottom-sheet"
+          data-kova-bottom-sheet=""
           onOpenAutoFocus={() => {
             previouslyFocused.current =
               document.activeElement instanceof HTMLElement ? document.activeElement : null;

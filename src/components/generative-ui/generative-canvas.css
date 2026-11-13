@@ -321,7 +321,8 @@
   .kova-generative-footer {
     padding: 12px 14px;
   }
-  .kova-generative-dates {
+  .kova-generative-dates,
+  .kova-generative-board {
     grid-template-columns: minmax(0, 1fr);
   }
 }

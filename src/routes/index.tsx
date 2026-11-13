@@ -58,7 +58,6 @@ import {
 import { PanelLeft, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
-import { useChatViewport } from "@/hooks/use-chat-viewport";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
@@ -384,7 +383,6 @@ function KovaGPT() {
   }, [activeId, storagePrincipal, editingMessage]);
 
   const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
-  const shellRef = useChatViewport();
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -3271,7 +3269,6 @@ function KovaGPT() {
   return (
     <div
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
-      ref={shellRef}
       data-ui="modern"
     >
       <p className="sr-only" aria-live="polite">

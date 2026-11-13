@@ -1,0 +1,55 @@
+import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { waitForKovaHydration } from "./hydration";
+
+const viewports = [
+  [320, 568],
+  [375, 667],
+  [390, 844],
+  [430, 932],
+  [667, 375],
+  [768, 1024],
+  [1024, 768],
+  [1280, 800],
+  [1440, 900],
+  [1920, 1080],
+] as const;
+
+test.beforeEach(async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop-1440x900", "this spec sets its own viewport");
+  await installAuthenticatedFixture(page);
+});
+
+for (const [width, height] of viewports) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await waitForKovaHydration(page);
+
+      const html = page.locator("html");
+      await html.evaluate((element, mode) => {
+        element.classList.toggle("dark", mode === "dark");
+        element.style.fontSize = "20px";
+      }, theme);
+
+      const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+      await expect(composer).toBeVisible();
+      await composer.fill("First line\nA second line for this draft.");
+      const send = page.getByRole("button", { name: "Send message" });
+      await send.scrollIntoViewIfNeeded();
+      await expect(send).toBeInViewport({ ratio: 1 });
+
+      if (width < 1024) {
+        await page.getByRole("button", { name: "Open menu" }).click();
+        const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+        await expect(drawer).toBeVisible();
+        await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
+        await expect(drawer).toBeHidden();
+        await expect(composer).toHaveValue("First line\nA second line for this draft.");
+      }
+
+      expect(await html.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    });
+  }
+}

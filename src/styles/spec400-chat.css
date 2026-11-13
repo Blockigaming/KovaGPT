@@ -1135,12 +1135,13 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 
 /* Chat uses the visual viewport when the software keyboard overlays the page. */
 .kova-assistant[data-ui="modern"] {
-  height: var(--chat-visible-height, 100dvh);
+  height: 100dvh;
 }
 
 .kova-assistant[data-keyboard-open="true"] {
   position: relative;
-  top: var(--chat-visible-top, 0px);
+  top: var(--kova-visible-top, 0px);
+  height: var(--kova-visible-height, 100dvh);
   --safe-bottom: 0px;
 }
 
