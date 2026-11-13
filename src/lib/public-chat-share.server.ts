@@ -126,7 +126,7 @@ export async function handlePublicChatShare(request: Request, token: string) {
     const globalRate = await consumeApplicationRateLimit({
       identity: "public:chat-share-read",
       action: "public_chat_share_global",
-      limit: 500,
+      limit: 100,
       windowSeconds: 60,
     });
     if (!globalRate.allowed)
@@ -138,7 +138,7 @@ export async function handlePublicChatShare(request: Request, token: string) {
     const rate = await consumeApplicationRateLimit({
       identity: `share:${hash}`,
       action: "public_chat_share",
-      limit: 120,
+      limit: 60,
       windowSeconds: 60,
     });
     if (!rate.allowed)
