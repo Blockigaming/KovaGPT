@@ -17,6 +17,7 @@ const home =
   (await readFile("src/components/HomeChatStarters.tsx", "utf8"));
 const root = await readFile("src/routes/__root.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
+const streamingStatus = await readFile("src/components/StreamingStatus.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
 const starters = await readFile("src/components/HomeChatStarters.tsx", "utf8");
 const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx", "utf8");
@@ -420,7 +421,7 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
 });
 
 test("streaming status reports only real activity instead of invented progression", () => {
-  const status = readFileSync("src/components/StreamingStatus.tsx", "utf8");
+  const status = streamingStatus;
   assert.match(status, /CONTINUED_WAIT_MS = 8_000/);
   assert.match(status, /EXTENDED_WAIT_MS = 30_000/);
   assert.match(status, /Date\.now\(\) - startedAt/);
