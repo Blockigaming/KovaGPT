@@ -135,6 +135,7 @@ import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiAiServicesRouteImport } from './routes/api/ai/services'
+import { Route as ApiAuthChangeEmailRouteImport } from './routes/api/auth/change-email'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
@@ -875,6 +876,11 @@ const ApiAiServicesRoute = ApiAiServicesRouteImport.update({
   path: '/api/ai/services',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthChangeEmailRoute = ApiAuthChangeEmailRouteImport.update({
+  id: '/api/auth/change-email',
+  path: '/api/auth/change-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
   path: '/api/auth/login',
@@ -1530,6 +1536,7 @@ export interface FileRoutesByFullPath {
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/ai/services': typeof ApiAiServicesRoute
+  '/api/auth/change-email': typeof ApiAuthChangeEmailRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1758,6 +1765,7 @@ export interface FileRoutesByTo {
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/ai/services': typeof ApiAiServicesRoute
+  '/api/auth/change-email': typeof ApiAuthChangeEmailRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1987,6 +1995,7 @@ export interface FileRoutesById {
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/ai/services': typeof ApiAiServicesRoute
+  '/api/auth/change-email': typeof ApiAuthChangeEmailRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -2217,6 +2226,7 @@ export interface FileRouteTypes {
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/ai/services'
+    | '/api/auth/change-email'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2445,6 +2455,7 @@ export interface FileRouteTypes {
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/ai/services'
+    | '/api/auth/change-email'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2673,6 +2684,7 @@ export interface FileRouteTypes {
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/ai/services'
+    | '/api/auth/change-email'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2898,6 +2910,7 @@ export interface RootRouteChildren {
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
   ApiAiServicesRoute: typeof ApiAiServicesRoute
+  ApiAuthChangeEmailRoute: typeof ApiAuthChangeEmailRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
@@ -3876,6 +3889,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/change-email': {
+      id: '/api/auth/change-email'
+      path: '/api/auth/change-email'
+      fullPath: '/api/auth/change-email'
+      preLoaderRoute: typeof ApiAuthChangeEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/login': {
       id: '/api/auth/login'
       path: '/api/auth/login'
@@ -4824,6 +4844,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
   ApiAiServicesRoute: ApiAiServicesRoute,
+  ApiAuthChangeEmailRoute: ApiAuthChangeEmailRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthPasswordRoute: ApiAuthPasswordRoute,
