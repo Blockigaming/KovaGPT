@@ -162,6 +162,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "ComposerUploadAllowance",
     "ComposerPdfPages",
     "ComposerContextPanel",
+    "ComposerFormattingToolbar",
     "ComposerModelStatus",
     "MobileBottomSheet",
     "ResponsiveModelSelector",

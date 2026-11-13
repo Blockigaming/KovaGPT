@@ -215,7 +215,7 @@ test("health summaries load only after the user selects an account read", async 
   await boot(page, { health: true });
   const health = page.getByRole("region", { name: "Health accounts" });
   await expect(health.locator("h2 + span")).toHaveCount(0);
-  await expect(health.getByRole("button", { name: "Connect Oura" })).toBeEnabled();
+  await expect(health.getByRole("button", { name: "Connect Oura", exact: true })).toBeEnabled();
   await expect(health.getByRole("button", { name: "Connect WHOOP" })).toBeDisabled();
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
   await page.getByRole("button", { name: "Read Oura summaries" }).click();

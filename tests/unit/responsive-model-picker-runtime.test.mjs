@@ -1,3 +1,4 @@
+import * as consumerModels from "../../src/lib/consumer-model-selection.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isModeAllowedForTier } from "../../src/lib/mode-entitlements.mjs";
@@ -40,6 +41,7 @@ function fixture(initial = {}) {
       }),
     {
       modules: {
+        "@/lib/consumer-model-selection.mjs": consumerModels,
         "@/lib/modes": {
           MODES: modes,
           isModeAllowedForTier,

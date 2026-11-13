@@ -21,6 +21,7 @@ const { MessageActivityList } = loadUiModule("src/components/MessageActivityList
   "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
 });
 const { PromptMessage } = loadUiModule("src/components/PromptMessage.tsx", {
+  "react-markdown": { default: "react-markdown" },
   "@/components/LinkPreviewChip": { LinkPreviewChip: () => null },
   "@/lib/link-preview.mjs": linkPreview,
   "lucide-react": icons,
