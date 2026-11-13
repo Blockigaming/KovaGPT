@@ -1,3 +1,4 @@
+import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
   latestSavedModelReply,
@@ -2313,7 +2314,16 @@ function KovaGPT() {
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (requestSucceeded)
           updateAssistantMessage((message) => ({ ...message, createdAt: Date.now() }));
-        if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
+        if (activeIdRef.current === nextConvId) {
+          if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
+        } else if (
+          requestSucceeded &&
+          userKey &&
+          nextPromptMountedRef.current &&
+          isCurrentRequest()
+        ) {
+          announceBackgroundChatReply(userKey, nextConvId);
+        }
 
         // Always re-summarize so the chat name in the sidebar reflects the conversation
         if (assembledReply) {
@@ -3308,6 +3318,7 @@ function KovaGPT() {
       </p>
       <Sidebar
         conversations={historyConversations}
+        trackBackgroundReplies={principalReady}
         activeId={activeId}
         onSelect={setActiveId}
         onNew={startNewChat}

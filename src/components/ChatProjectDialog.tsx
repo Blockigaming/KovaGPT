@@ -18,11 +18,7 @@ import {
   loadConversations,
   saveConversations,
 } from "@/lib/chat-store";
-import {
-  canSendChatHistory,
-  CHAT_HISTORY_CHANGED_EVENT,
-  chatHistorySnapshot,
-} from "@/lib/chat-history-bridge";
+import { canSendChatHistory, CHAT_HISTORY_CHANGED_EVENT } from "@/lib/chat-history-bridge";
 import { completeProjectChatMove } from "@/lib/project-chat-move.mjs";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { importChatToProject } from "@/lib/project-workspace.functions";
@@ -235,8 +231,7 @@ export function ChatProjectDialog({
           readActive: () => loadConversations(principalId),
           archive: async () =>
             !conversation.messages.some((message) => message.attachments?.length),
-          remove: (items) =>
-            saveConversations(principalId, items, { snapshot: chatHistorySnapshot(principalId) }),
+          remove: (items) => saveConversations(principalId, items),
         });
       } catch {
         /* The confirmed project copy remains available; keep the original on uncertainty. */

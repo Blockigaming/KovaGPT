@@ -12,9 +12,9 @@ const products = [
   "kova-xenon-6.1",
 ];
 for (const [tier, selected, label, permitted] of [
-  ["free", "kova-argon-4.6", "Argon 4.6", 1],
-  ["plus", "kova-neon-4.6", "Neon 4.6", 7],
-  ["pro", "kova-xenon-5", "Xenon 5", 7],
+  ["free", "kova-argon-4.6", "Kova Argon 4.6", 1],
+  ["plus", "kova-neon-4.6", "Kova Neon 4.6", 7],
+  ["pro", "kova-xenon-5", "Kova Xenon 5", 7],
 ] as const) {
   test(`${tier} selects its exact product without sending, then submits and restores that choice`, async ({
     page,
