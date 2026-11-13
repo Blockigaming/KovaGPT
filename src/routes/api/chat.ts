@@ -1700,7 +1700,6 @@ export const Route = createFileRoute("/api/chat")({
                         FREE_CONNECTOR_PLANNING_INSTRUCTION +
                         buildUserContextBlock(personalContext ?? {}) +
                         personalityBlock +
-                        voiceStyle +
                         memoryBlock +
                         (conversationSummary?.block ?? "") +
                         projectBlock +
