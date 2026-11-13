@@ -47,6 +47,16 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   await page.keyboard.press("Control+Backslash");
   expect(await sidebarPreferences()).toEqual(before);
   await expect(settings).toHaveAttribute("data-settings-open", "true");
+  await page.route("**/api/voice", (route) =>
+    route.fulfill({
+      json: {
+        stt: true,
+        conversation: false,
+        voices: [{ id: "fixture-voice", label: "Fixture voice", available: true }],
+        defaultVoiceId: "fixture-voice",
+      },
+    }),
+  );
   for (const section of [
     "Profile",
     "Appearance",
@@ -58,7 +68,7 @@ test("requested: every Settings section has room and Settings owns sidebar inter
     "Connections",
     "Cloud Browser",
     "Data controls",
-    "Voice",
+    "Live Voice",
     "Usage",
     "Subscriptions",
   ]) {
@@ -84,11 +94,8 @@ test("requested: every Settings section has room and Settings owns sidebar inter
     expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth + 1), section).toBe(
       true,
     );
-    if (section === "Voice") {
-      await page.route("**/api/voice", (route) =>
-        route.fulfill({ json: { stt: true, conversation: false } }),
-      );
-      await settings.getByRole("button", { name: "Check voice connection", exact: true }).click();
+    if (section === "Live Voice") {
+      await expect(settings.getByLabel("Reply voice")).toHaveValue("fixture-voice");
       await expect(settings.getByRole("status").filter({ hasText: "Dictation" })).toContainText(
         "Configured",
       );
