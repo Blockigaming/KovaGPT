@@ -87,6 +87,7 @@ test("dedicated settings excludes workspace navigation and supports desktop drag
   } else {
     await expect(page.getByRole("separator", { name: "Resize settings navigation" })).toBeHidden();
     const back = page.getByRole("button", { name: "Back to settings", exact: true });
+    await expect(back.or(navigation)).toBeVisible();
     if (await back.isVisible()) await back.click();
     await expect(navigation).toBeVisible();
     await page.getByRole("tab", { name: "Appearance", exact: true }).click();
