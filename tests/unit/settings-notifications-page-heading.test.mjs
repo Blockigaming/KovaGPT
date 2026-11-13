@@ -6,11 +6,10 @@ const source = readFileSync(
   "utf8",
 );
 const section = source.split("{/* NOTIFICATIONS */}")[1].split("{/* PARENTAL */}")[0];
-test("page Notifications uses the shared title while the dialog retains its inner heading", () => {
-  assert.match(
-    section,
-    /\{!page \? <h3 className="text-sm font-semibold">Notifications<\/h3> : null\}/,
-  );
+test("Notifications uses the shared heading in the page and dialog", () => {
+  assert.match(source, /<h2 id=\{currentSectionHeadingId\}[^>]*>\s*\{activeTab.label\}/);
+  assert.match(section, /aria-labelledby=\{currentSectionHeadingId\}/);
+  assert.doesNotMatch(section, /<h[23]\b/);
   assert.match(section, /<PwaSettings ownerId=\{isLoaded \? userKey : null\}/);
   assert.match(section, /<AccountEmailPreferences ownerId=\{isLoaded \? userKey : null\}/);
   assert.equal((section.match(/<AccountEmailPreferences\b/g) ?? []).length, 1);
