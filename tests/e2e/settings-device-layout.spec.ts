@@ -38,6 +38,15 @@ for (const theme of ["dark", "light"] as const) {
       const contentBox = (await content.boundingBox())!;
       expect(navBox.x + navBox.width).toBeLessThanOrEqual(contentBox.x + 8);
     }
+    const parentalIcon = navigation
+      .getByRole("tab", { name: "Parental controls", exact: true })
+      .locator('[data-sdk-geometry="ParentControl"] > path');
+    expect(
+      await parentalIcon.evaluate((icon) => {
+        const style = getComputedStyle(icon);
+        return style.fill === style.color;
+      }),
+    ).toBe(true);
     await navigation.getByRole("tab", { name: "Data controls", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Data controls", exact: true })).toBeVisible();
     if (phone) {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 219,
+  "migrationCount": 221,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -140,6 +140,7 @@
     "kova_policy_event_receipts",
     "kova_policy_intro_redemptions",
     "kova_policy_subscription_state",
+    "kova_private",
     "kova_private",
     "kova_private",
     "kova_private",
@@ -630,6 +631,7 @@
     "kova_auth_begin_totp_enrollment_reauthenticated",
     "kova_auth_bind_mfa_login_factor",
     "kova_auth_bind_mfa_login_factor",
+    "kova_auth_change_email",
     "kova_auth_change_password",
     "kova_auth_change_password",
     "kova_auth_claim_email_dispatch",
@@ -882,6 +884,7 @@
     "read_library_version_history",
     "read_mcp_oauth_consent",
     "read_organization_workspace",
+    "read_public_chat_share",
     "read_public_chat_share",
     "read_scheduled_task_saved_context",
     "ready_agent_specialist_tasks",
@@ -2391,6 +2394,7 @@
     "execute on function public.kova_auth_begin_totp_enrollment_reauthenticated(text,text,text,uuid,bigint,timestamptz)\n to service_role",
     "execute on function public.kova_auth_bind_mfa_login_factor(text,uuid,timestamptz)\n  to service_role",
     "execute on function public.kova_auth_bind_mfa_login_factor(text,uuid,timestamptz)\n  to service_role",
+    "execute on function public.kova_auth_change_email(text,uuid,text,text,text,jsonb,jsonb) to service_role",
     "execute on function public.kova_auth_change_password(text,uuid,bigint,text,text,timestamptz,timestamptz)\n  to service_role",
     "execute on function public.kova_auth_claim_email_dispatch(uuid,text[],text[],timestamptz) to service_role",
     "execute on function public.kova_auth_claim_passkey_challenge(text,text,text,text,text,timestamptz) to service_role",
@@ -2494,6 +2498,7 @@
     "execute on function public.read_account_deletion_state(uuid) to service_role",
     "execute on function public.read_kova_site_asset(uuid,text,text,text) to service_role",
     "execute on function public.read_organization_workspace(uuid,uuid,text,bigint,bigint,integer) to service_role",
+    "execute on function public.read_public_chat_share(text) to service_role",
     "execute on function public.read_public_chat_share(text) to service_role",
     "execute on function public.read_scheduled_task_saved_context(uuid,text) to service_role",
     "execute on function public.ready_agent_specialist_tasks(uuid) to service_role",
@@ -3073,6 +3078,7 @@
     "all on function public.kova_auth_begin_totp_enrollment_reauthenticated(text,text,text,uuid,bigint,timestamptz)\n from public, anon, authenticated",
     "all on function public.kova_auth_bind_mfa_login_factor(text,uuid,timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_bind_mfa_login_factor(text,uuid,timestamptz)\n  from public, anon, authenticated",
+    "all on function public.kova_auth_change_email(text,uuid,text,text,text,jsonb,jsonb) from public, anon, authenticated",
     "all on function public.kova_auth_change_password(text,uuid,bigint,text,text,timestamptz,timestamptz)\n  from public, anon, authenticated",
     "all on function public.kova_auth_claim_email_dispatch(uuid,text[],text[],timestamptz) from public,anon,authenticated",
     "all on function public.kova_auth_claim_passkey_challenge(text,text,text,text,text,timestamptz) from public, anon, authenticated",
@@ -3183,6 +3189,7 @@
     "all on function public.read_account_deletion_state(uuid) from public,anon,authenticated",
     "all on function public.read_kova_site_asset(uuid,text,text,text) from public,anon,authenticated",
     "all on function public.read_organization_workspace(uuid,uuid,text,bigint,bigint,integer) from public,anon,authenticated",
+    "all on function public.read_public_chat_share(text) from public, anon, authenticated",
     "all on function public.read_public_chat_share(text) from public,anon,authenticated",
     "all on function public.read_scheduled_task_saved_context(uuid,text) from public,anon,authenticated",
     "all on function public.ready_agent_specialist_tasks(uuid) from public,anon,authenticated",
@@ -3244,6 +3251,7 @@
     "all on kova_private.account_email_events from public, anon, authenticated, service_role",
     "all on kova_private.account_email_preferences from public, anon, authenticated, service_role",
     "all on kova_private.auth_compatibility_candidates from public, anon, authenticated, service_role",
+    "all on kova_private.auth_email_changes from public, anon, authenticated",
     "all on kova_private.auth_email_dispatches from public, anon, authenticated, service_role",
     "all on kova_private.auth_legacy_mfa_migrations\n  from public, anon, authenticated, service_role",
     "all on kova_private.auth_legacy_retirements from public, anon, authenticated, service_role",
@@ -3895,5 +3903,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "b48162d56b54008086512d96d59473016d74b444138de9285cd2f55658c34205"
+  "sha256": "b37595c3976957e233f51209ac1eb238d008c77c6bde2350f213898fbf3ec66e"
 }

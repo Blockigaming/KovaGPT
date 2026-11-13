@@ -24,9 +24,13 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   await expect(input).toHaveAttribute("placeholder", "Work with KovaGPT");
   const composer = page.locator(".spec400-composer");
   const box = (await composer.boundingBox())!;
-  const text = (await input.boundingBox())!;
-  expect(text.x - box.x).toBeLessThanOrEqual(18);
-  expect(text.y - box.y).toBeLessThanOrEqual(20);
+  const inset = await composer.evaluate((surface) => {
+    const text = surface.querySelector("textarea")!.getBoundingClientRect();
+    const frame = surface.getBoundingClientRect();
+    return { x: text.x - frame.x, y: text.y - frame.y };
+  });
+  expect(inset.x).toBeLessThanOrEqual(18);
+  expect(inset.y).toBeLessThanOrEqual(20);
   if (page.viewportSize()!.width >= 1024) {
     const header = (await page.locator(".kova-desktop-topbar").boundingBox())!;
     expect(header.y).toBeLessThanOrEqual(1);
