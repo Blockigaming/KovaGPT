@@ -88,13 +88,19 @@ async function verifyRoute(
   const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 15_000 });
   expect(response?.status(), `${route} ${colorScheme} status`).toBe(200);
   await waitForKovaHydration(page);
+  // Guest entry and navigation can change after the session check completes.
+  await expect(page.getByRole("dialog", { name: "Checking account", exact: true })).toBeHidden();
+  await expect(page.locator("main.kova-session-shell-main")).toHaveCount(0);
 
   const main = page.locator("main#main-content");
   await expect(main, `${route} ${colorScheme} main`).toHaveCount(1);
   const pageHeading = main.locator("h1");
   await expect(pageHeading, `${route} ${colorScheme} unique page heading`).toHaveCount(1);
   await expect(pageHeading, `${route} ${colorScheme} heading`).toBeVisible();
-  const publicNavigation = page.getByRole("navigation", { name: "Public navigation" });
+  const publicNavigation = page.getByRole("navigation", {
+    name: "Public navigation",
+    exact: true,
+  });
   if ((await publicNavigation.count()) === 1) {
     await expect(publicNavigation, `${route} ${colorScheme} navigation`).toBeVisible();
     await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
