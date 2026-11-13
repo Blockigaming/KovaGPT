@@ -1,3 +1,4 @@
+import "./product-showcase.css";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
@@ -40,15 +41,19 @@ export function ProductOverview() {
         className="public-overview"
         data-ui-reference="grok-product-overview"
       >
-        <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
-          <PublicAction to="/">Open KovaGPT</PublicAction>
-          <PublicAction to="/download" secondary>
-            Use KovaGPT on the web
-          </PublicAction>
-        </PublicHero>
+        <div className="kova-showcase-progress" aria-hidden="true" />
+        <div className="kova-showcase-hero">
+          <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
+            <PublicAction to="/">Open KovaGPT</PublicAction>
+            <a href="#workflow-example" className="kova-button public-action is-secondary">
+              Explore the demo <span aria-hidden="true">↓</span>
+            </a>
+          </PublicHero>
+        </div>
 
         <section
-          className="public-workflow-example"
+          id="workflow-example"
+          className="public-workflow-example kova-showcase-jump kova-showcase-enter"
           data-ui-reference="chatgpt-conversation-example"
           aria-labelledby="workflow-example-title"
         >
@@ -123,7 +128,10 @@ export function ProductOverview() {
           </div>
         </section>
 
-        <section className="public-use-cases" aria-labelledby="use-cases-title">
+        <section
+          className="public-use-cases kova-showcase-chapters"
+          aria-labelledby="use-cases-title"
+        >
           <div className="public-section-heading">
             <h2 id="use-cases-title">
               For your work, your ideas,
@@ -132,7 +140,7 @@ export function ProductOverview() {
             </h2>
           </div>
           <div className="public-use-case-grid">
-            <article className="public-use-case">
+            <article className="public-use-case kova-showcase-enter">
               <h3>Find the right words.</h3>
               <p>
                 Shape a first draft, try a different tone, or make a complicated idea easier to
@@ -153,7 +161,7 @@ export function ProductOverview() {
                 <span className="public-illustration-note">Make it sound like you.</span>
               </div>
             </article>
-            <article className="public-use-case">
+            <article className="public-use-case kova-showcase-enter">
               <h3>Follow your curiosity.</h3>
               <p>
                 Ask a follow-up, work through an example, and find a way of understanding that
@@ -169,7 +177,7 @@ export function ProductOverview() {
                 <span className="public-learning-question">Now give me a question to try.</span>
               </div>
             </article>
-            <article className="public-use-case">
+            <article className="public-use-case kova-showcase-enter">
               <h3>See the next step.</h3>
               <p>
                 Break a big task into smaller pieces and turn an open-ended idea into a useful plan.
@@ -192,7 +200,10 @@ export function ProductOverview() {
           </div>
         </section>
 
-        <section className="public-plan-band" aria-labelledby="overview-plans-title">
+        <section
+          className="public-plan-band kova-showcase-enter"
+          aria-labelledby="overview-plans-title"
+        >
           <div>
             <h2 id="overview-plans-title">A plan for the way you work.</h2>
             <p>Compare Free, Plus, and Pro, with the modes and allowances included in each.</p>
@@ -200,7 +211,10 @@ export function ProductOverview() {
           <PublicAction to="/pricing">Explore plans</PublicAction>
         </section>
 
-        <section className="public-control-section" aria-labelledby="overview-control-title">
+        <section
+          className="public-control-section kova-showcase-enter"
+          aria-labelledby="overview-control-title"
+        >
           <div className="public-section-heading">
             <h2 id="overview-control-title">Your work. Your choices.</h2>
             <p>Understand your settings and take a thoughtful approach to every answer.</p>
@@ -228,7 +242,10 @@ export function ProductOverview() {
             </article>
           </div>
         </section>
-        <section className="public-closing" aria-labelledby="overview-closing-title">
+        <section
+          className="public-closing kova-showcase-enter"
+          aria-labelledby="overview-closing-title"
+        >
           <h2 id="overview-closing-title">Start with KovaGPT.</h2>
           <PublicAction to="/">Open KovaGPT</PublicAction>
         </section>

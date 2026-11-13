@@ -1,0 +1,104 @@
+[data-public-shell] .kova-showcase-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse at 82% 12%,
+      color-mix(in srgb, #7863ea 20%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse at 12% 100%,
+      color-mix(in srgb, #4389d6 14%, transparent),
+      transparent 58%
+    );
+}
+[data-public-shell] .kova-showcase-hero h1 {
+  max-width: 15ch;
+  font-size: clamp(2.75rem, 7.5vw, 6rem);
+  line-height: 0.99;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+[data-public-shell] .public-overview .kova-showcase-hero {
+  padding-block: clamp(4rem, 12vw, 9rem);
+  border-radius: 1.5rem;
+}
+[data-public-shell] .public-overview .kova-showcase-hero h1 {
+  margin-inline: auto;
+}
+
+.kova-showcase-jump {
+  scroll-margin-top: 6rem;
+}
+.kova-showcase-progress {
+  display: none;
+}
+.kova-showcase-screen {
+  min-width: 0;
+  background: color-mix(in srgb, var(--background) 94%, #7863ea);
+}
+.kova-showcase-code {
+  overflow: auto;
+  overscroll-behavior-inline: contain;
+  white-space: pre;
+}
+
+@media (min-width: 64rem) {
+  [data-public-shell] .public-overview .kova-showcase-chapters {
+    display: grid;
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
+    align-items: start;
+    gap: clamp(2rem, 7vw, 7rem);
+  }
+  .kova-showcase-chapters > .public-section-heading {
+    position: sticky;
+    top: 8rem;
+  }
+  [data-public-shell] .kova-showcase-chapters > .public-use-case-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .kova-showcase-enter {
+      animation: kova-showcase-arrive linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 26%;
+    }
+    .kova-showcase-enter:focus-within {
+      animation: none;
+    }
+    .kova-showcase-progress {
+      display: block;
+      position: fixed;
+      z-index: 41;
+      inset: 0 0 auto;
+      height: 3px;
+      pointer-events: none;
+      background: #8275ed;
+      transform-origin: left;
+      animation: kova-showcase-progress linear both;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+@keyframes kova-showcase-arrive {
+  from {
+    opacity: 0.6;
+    translate: 0 24px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes kova-showcase-progress {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 1 1;
+  }
+}

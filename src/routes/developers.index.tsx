@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { PublicPageView } from "@/components/public/PublicSite";
 
 export const Route = createFileRoute("/developers/")({
@@ -16,32 +17,62 @@ export const Route = createFileRoute("/developers/")({
   }),
 });
 
+const modelExamples = {
+  cURL: 'curl -H "Authorization: Bearer $KOVA_API_KEY" https://kovagpt.com/api/v1/models',
+  JavaScript: `const response = await fetch(
+  "https://kovagpt.com/api/v1/models",
+  { headers: { Authorization: "Bearer " + process.env.KOVA_API_KEY } },
+);
+if (!response.ok) throw new Error(await response.text());
+console.log(await response.json());`,
+} as const;
+
 function DevelopersOverview() {
+  const [language, setLanguage] = useState<keyof typeof modelExamples>("cURL");
   return (
     <PublicPageView
+      showcase
       eyebrow="Developers"
       title="Bring KovaGPT into your app"
       summary="Generate text and images or create embeddings through the KovaGPT API. Manage keys and spending in one console."
       primaryAction={{ label: "Open developer console", to: "/developers/console" }}
       secondaryAction={{ label: "Read the quickstart", to: "/developers/quickstart" }}
     >
-      <article className="min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
+      <article className="kova-showcase-enter min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
         <h2 className="text-xl font-semibold">Start with the model catalog</h2>
         <p className="mt-3 leading-7 text-muted-foreground">
           List the models available to your key before requesting a generation quote.
         </p>
-        <pre
-          aria-label="List models with curl"
-          className="mt-6 overflow-x-auto rounded-xl border border-border bg-muted p-4 font-mono text-sm leading-7"
-        >
-          <code>
-            {
-              'curl https://kovagpt.com/api/v1/models \\\n  -H "Authorization: Bearer $KOVA_API_KEY"'
-            }
-          </code>
-        </pre>
+        <div className="kova-showcase-screen mt-6 rounded-xl border border-border">
+          <div
+            role="group"
+            aria-label="Code language"
+            className="flex flex-wrap gap-1 border-b border-border p-2"
+          >
+            {(Object.keys(modelExamples) as (keyof typeof modelExamples)[]).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={option === language}
+                aria-controls="model-catalog-code"
+                className="min-h-11 rounded-lg px-3 text-sm hover:bg-muted aria-pressed:bg-foreground aria-pressed:text-background"
+                onClick={() => setLanguage(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <pre
+            id="model-catalog-code"
+            aria-label={`${language} model catalog example`}
+            tabIndex={0}
+            className="kova-showcase-code p-4 font-mono text-sm leading-7"
+          >
+            <code>{modelExamples[language]}</code>
+          </pre>
+        </div>
       </article>
-      <article className="min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
+      <article className="kova-showcase-enter min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
         <h2 className="text-xl font-semibold">Set your budget before you run</h2>
         <p className="mt-3 leading-7 text-muted-foreground">
           Use a scoped key, request a quote, and review the estimated cost. The console shows

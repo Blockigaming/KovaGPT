@@ -412,10 +412,14 @@ function Page() {
       title={item.title}
       summary={item.summary}
       review={item.review}
+      showcase={item.slug === "features" || item.slug === "business"}
       {...actions}
     >
       {item.sections.map((section: { title: string; body: string }) => (
-        <article key={section.title} className="rounded-2xl border border-border bg-background p-6">
+        <article
+          key={section.title}
+          className={`rounded-2xl border border-border bg-background p-6 ${item.slug === "features" || item.slug === "business" ? "kova-showcase-enter" : ""}`}
+        >
           <h2 className="text-xl font-semibold">{section.title}</h2>
           <p className="mt-3 leading-7 text-muted-foreground">{section.body}</p>
         </article>

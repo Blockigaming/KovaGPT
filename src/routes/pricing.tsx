@@ -1,3 +1,4 @@
+import "@/components/public/product-showcase.css";
 import { PublicShell } from "@/components/public/PublicShell";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
@@ -127,10 +128,14 @@ function PricingPage() {
         data-ui-reference="chatgpt-pricing"
         className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
-        <section aria-labelledby="pricing-title" className="mx-auto max-w-3xl text-center">
+        <div className="kova-showcase-progress" aria-hidden="true" />
+        <section
+          aria-labelledby="pricing-title"
+          className="kova-showcase-hero mx-auto rounded-3xl px-5 py-14 text-center sm:py-20"
+        >
           <h1
             id="pricing-title"
-            className="mb-5 text-balance text-4xl font-semibold tracking-[-0.055em] sm:text-6xl"
+            className="mx-auto mb-5 text-balance text-4xl font-semibold tracking-[-0.055em] sm:text-6xl"
           >
             Plans for how you use KovaGPT
           </h1>
@@ -165,7 +170,7 @@ function PricingPage() {
           <>
             <section
               aria-label="KovaGPT plans"
-              className="mt-12 grid items-stretch gap-5 md:grid-cols-3"
+              className="kova-showcase-enter mt-12 grid items-stretch gap-5 md:grid-cols-3"
             >
               <PlanCard
                 name="Kova Free"
@@ -213,7 +218,10 @@ function PricingPage() {
           <OrganizationPlans onContact={() => setEnterpriseOpen(true)} />
         )}
 
-        <section aria-labelledby="pricing-faq-title" className="mt-20 border-t border-border pt-12">
+        <section
+          aria-labelledby="pricing-faq-title"
+          className="kova-showcase-enter mt-20 border-t border-border pt-12"
+        >
           <h2 id="pricing-faq-title" className="text-2xl font-semibold tracking-[-0.02em]">
             Pricing FAQ
           </h2>
