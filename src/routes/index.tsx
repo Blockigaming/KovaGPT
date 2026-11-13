@@ -3277,6 +3277,7 @@ function KovaGPT() {
       </p>
       <Sidebar
         conversations={historyConversations}
+        desktopConversationLayout={chatStarted}
         trackBackgroundReplies={principalReady}
         activeId={activeId}
         onSelect={setActiveId}
@@ -3596,6 +3597,7 @@ function KovaGPT() {
                     </div>
                   )}
                   <ChatInput
+                    desktopConversationLayout
                     value={principalReady ? input : ""}
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}

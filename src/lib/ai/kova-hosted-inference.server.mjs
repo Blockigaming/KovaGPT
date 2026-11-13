@@ -1,3 +1,4 @@
+import { FREE_CHAT_MODEL_LABELS } from "../consumer-model-selection.mjs";
 import { HOSTED_MODEL_MAP, resolveKovaReasoningEffort } from "../kova-foundation-models.mjs";
 import { kovaIdentityInstruction } from "./kova-identity-policy.mjs";
 import { responsesStreamToChatStream } from "./responses-compat.server.mjs";
@@ -11,8 +12,16 @@ import { readResponseBytesBounded } from "../endpoint-reliability.mjs";
 export { HOSTED_MODEL_MAP } from "../kova-foundation-models.mjs";
 
 export const FREE_CHAT_MODELS = Object.freeze({
-  instant: Object.freeze({ foundation: "gpt-5-mini", label: "Argon 4.6 mini", effort: "low" }),
-  thinking: Object.freeze({ foundation: "gpt-5", label: "Argon 4.5", effort: "medium" }),
+  instant: Object.freeze({
+    foundation: "gpt-5-mini",
+    label: FREE_CHAT_MODEL_LABELS.instant,
+    effort: "low",
+  }),
+  thinking: Object.freeze({
+    foundation: "gpt-5",
+    label: FREE_CHAT_MODEL_LABELS.thinking,
+    effort: "medium",
+  }),
 });
 export const HOSTED_CHAT_URL = "https://api.openai.com/v1/responses";
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;

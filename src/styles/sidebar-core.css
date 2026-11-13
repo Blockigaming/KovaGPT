@@ -849,3 +849,21 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   color: var(--foreground);
   opacity: 1;
 }
+
+@media (min-width: 1024px) {
+  .kova-sidebar[data-desktop-conversation] .kova-sidebar-primary > :not(.kova-new-chat) {
+    display: none;
+  }
+  .kova-sidebar[data-desktop-conversation] .kova-sidebar-primary {
+    border-bottom: 1px solid var(--border);
+  }
+  .kova-sidebar[data-desktop-conversation] .kova-sidebar-history {
+    padding-top: 30px;
+  }
+  .kova-sidebar[data-desktop-conversation] .kova-recents-heading {
+    margin-top: 28px;
+  }
+  .kova-sidebar[data-desktop-conversation] .kova-sidebar-view-all {
+    display: none;
+  }
+}

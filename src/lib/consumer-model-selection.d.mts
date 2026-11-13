@@ -1,3 +1,5 @@
+export const FREE_CHAT_MODEL_LABELS: Readonly<Record<"instant" | "thinking", string>>;
+
 export type ConsumerModelId =
   | "kova-argon-4.6"
   | "kova-neon-4.6"

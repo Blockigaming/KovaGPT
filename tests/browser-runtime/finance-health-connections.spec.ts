@@ -204,13 +204,19 @@ test("unconfigured finance and health stay disabled and never fetch private data
   await boot(page, { configured: false });
   await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Health accounts" }).locator("h2 + span"),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toBeDisabled();
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
 test("health summaries load only after the user selects an account read", async ({ page }) => {
   await boot(page, { health: true });
+  const health = page.getByRole("region", { name: "Health accounts" });
+  await expect(health.locator("h2 + span")).toHaveCount(0);
+  await expect(health.getByRole("button", { name: "Connect Oura" })).toBeEnabled();
+  await expect(health.getByRole("button", { name: "Connect WHOOP" })).toBeDisabled();
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
   await page.getByRole("button", { name: "Read Oura summaries" }).click();
   await expect(page.getByText("87 score", { exact: true })).toBeVisible();

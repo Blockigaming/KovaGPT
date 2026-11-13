@@ -842,7 +842,10 @@ function AppsPage() {
   useEffect(() => {
     const params = new URL(window.location.href).searchParams;
     if (params.has("oauth_state_id")) setConnectionGroup("finances");
-    else if (["oura", "whoop"].includes(params.get("integration_connected") ?? ""))
+    else if (
+      params.get("connection_view") === "health" ||
+      ["oura", "whoop"].includes(params.get("integration_connected") ?? "")
+    )
       setConnectionGroup("health");
   }, []);
   const setQuery = (query: string) => setListPreferences({ query });
@@ -1295,6 +1298,8 @@ function AppsPage() {
       toast.error(
         "The provider connection was not completed. Review the account status and try again.",
       );
+    else if (["oura", "whoop"].includes(url.searchParams.get("integration_connected") ?? ""))
+      toast.message("Authorization returned. Read summaries to verify health access.");
     else toast.message("Authorization returned. Review the account and search to verify access.");
     for (const key of ["integration_connected", "integration_error", "connection_view"])
       url.searchParams.delete(key);

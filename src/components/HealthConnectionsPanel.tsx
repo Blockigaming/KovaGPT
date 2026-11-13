@@ -118,6 +118,9 @@ export function HealthConnectionsPanel({
       }
     }
   };
+  const anyConfigured = data?.configuredProviders.some((entry) =>
+    Object.hasOwn(HEALTH_PROVIDERS, entry.id),
+  );
   return (
     <section
       className="mt-6 space-y-5 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6"
@@ -127,9 +130,11 @@ export function HealthConnectionsPanel({
         <h2 id="health-connections-title" className="text-xl font-semibold tracking-tight">
           Health accounts
         </h2>
-        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-          Coming soon
-        </span>
+        {data && !loading && !error && !anyConfigured && (
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            Coming soon
+          </span>
+        )}
       </div>
       <p className="text-sm text-muted-foreground">
         Choose a provider and review its permissions. Summaries are fetched only when you click Read
@@ -154,7 +159,14 @@ export function HealthConnectionsPanel({
       ) : (
         <>
           {loading && <p role="status">Checking health accounts…</p>}
-          {error && <p role="status">Health account status is unavailable.</p>}
+          {error && (
+            <div className="flex flex-wrap items-center gap-3">
+              <p role="status">Health account status is unavailable.</p>
+              <Button variant="outline" disabled={loading || busy} onClick={() => void reload()}>
+                Refresh status
+              </Button>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             {(
               Object.entries(HEALTH_PROVIDERS) as [

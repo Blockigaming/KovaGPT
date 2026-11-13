@@ -1,5 +1,10 @@
 import { KOVA_MODEL_LABELS } from "./kova-foundation-models.mjs";
 
+export const FREE_CHAT_MODEL_LABELS = Object.freeze({
+  instant: "Argon 4.6 mini",
+  thinking: "Argon 4.5",
+});
+
 /** Closed product choices. Provider IDs and endpoints never come from the client. */
 export const CONSUMER_MODELS = Object.freeze([
   Object.freeze({

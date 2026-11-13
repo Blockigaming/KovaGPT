@@ -1,3 +1,4 @@
+import { FREE_CHAT_MODEL_LABELS } from "@/lib/consumer-model-selection.mjs";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Brain, ChevronDown, RotateCcw, Zap } from "lucide-react";
 import {
@@ -26,6 +27,7 @@ export function ResponsiveModelSelector({
   userTier = "free",
   compact = false,
   modelLabel,
+  showFreeModelLabel = false,
   placement = "composer",
 }: {
   mode: ModeId;
@@ -33,6 +35,7 @@ export function ResponsiveModelSelector({
   userTier?: Tier;
   compact?: boolean;
   modelLabel?: string;
+  showFreeModelLabel?: boolean;
   placement?: "composer" | "topbar";
 }) {
   const { isDesktop, interaction } = useLayout();
@@ -191,14 +194,18 @@ export function ResponsiveModelSelector({
         aria-pressed={mode === "thinking"}
         title={
           mode === "thinking"
-            ? "Argon Medium is on. Click for Argon Lite."
-            : "Thinking uses Argon Medium. Normal chat uses Argon Lite."
+            ? `Thinking uses ${FREE_CHAT_MODEL_LABELS.thinking}. Click for ${FREE_CHAT_MODEL_LABELS.instant}.`
+            : `Normal chat uses ${FREE_CHAT_MODEL_LABELS.instant}. Click for ${FREE_CHAT_MODEL_LABELS.thinking}.`
         }
         className="kova-thinking-toggle"
         onClick={() => onChange(mode === "thinking" ? "instant" : "thinking")}
       >
-        <Brain aria-hidden="true" />
-        <span>Thinking</span>
+        {!showFreeModelLabel && <Brain aria-hidden="true" />}
+        <span>
+          {showFreeModelLabel
+            ? `Kova ${FREE_CHAT_MODEL_LABELS[mode === "thinking" ? "thinking" : "instant"]}`
+            : "Thinking"}
+        </span>
       </button>
     );
 
