@@ -188,8 +188,11 @@ export function createSpeechHandler({
       if (typeof text !== "string" || !text.trim()) throw fail("speech_message_unavailable", 404);
       if (text.length > SPEECH_LIMITS.textChars) throw fail("speech_text_too_long", 413);
       const policy = modelPolicy?.();
-      if (!policy?.valid) throw fail("speech_model_not_configured", 503);
+      // Older saved replies predate model receipts. Ownership, exact saved text,
+      // session revalidation, and paid-provider rate limits apply to every reply.
+      if (saved.voiceModelReceipt && !policy?.valid) throw fail("speech_model_not_configured", 503);
       if (
+        saved.voiceModelReceipt &&
         !verifyVoiceModelReceipt(policy, saved.voiceModelReceipt, {
           ownerId: auth.userId,
           chatId: input.chatId,
