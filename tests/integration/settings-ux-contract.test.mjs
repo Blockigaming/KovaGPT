@@ -271,7 +271,7 @@ test("settings navigation is centralized and routes every rendered category", ()
       ["security", "Security and login"],
       ["email", "Account"],
       ["parental", "Parental controls"],
-      ["voice", "Voice"],
+      ["voice", "Live Voice"],
       ["storage", "Storage"],
       ["privacy", "Data controls"],
       ["memory", "Personalization"],
