@@ -1,4 +1,4 @@
-/* Keep both message surfaces rounded and align their actions to the text. */
+/* Align message actions to the text. */
 .kova-message {
   scroll-margin-top: 80px;
 }
@@ -57,8 +57,21 @@
   min-width: 32px;
   min-height: 32px;
   flex-basis: 32px;
-  border-radius: var(--kova-radius-compact);
-  padding: 7px;
+  border-radius: 8px;
+  padding: 6px;
+}
+.kova-response-action-bar button.kova-message-icon-action > svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+@media (hover: hover) {
+  .kova-response-action-bar button.kova-message-icon-action:hover:not(:disabled) {
+    background: var(--accent);
+  }
+}
+.kova-response-action-bar button.kova-message-icon-action[data-state="open"] {
+  background: var(--accent);
 }
 .kova-selection-actions button {
   min-height: 44px;
@@ -227,4 +240,18 @@ body .kova-response-retry-menu[role="menu"] {
 }
 .kova-response-change-draft button:hover:not(:disabled) {
   background: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kova-conversation-scroll[data-chat-transcript] {
+    animation: kova-transcript-enter 180ms ease-out;
+  }
+  @keyframes kova-transcript-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }

@@ -97,6 +97,13 @@ test("implemented homepage, pricing tabs, FAQ, restored responsive asset, and re
         mobilePage.on("pageerror", (error) => errors.push(error.message));
         await mobilePage.goto("/");
         await expect(mobilePage.locator("html")).toHaveAttribute("data-kova-hydration", "ready");
+        await expect(
+          mobilePage.getByRole("heading", { name: "Question what’s next", exact: true }),
+        ).toBeVisible();
+        await expect(mobilePage.getByRole("link", { name: "Explore KovaGPT" })).toHaveAttribute(
+          "href",
+          "/overview",
+        );
         await mobilePage.evaluate(() => document.fonts.ready);
         await expect.poll(() => mobilePage.evaluate(() => window.scrollY)).toBe(0);
         await mobilePage.screenshot({ path: `${evidence}/mobile-hero.png` });

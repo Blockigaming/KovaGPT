@@ -203,7 +203,12 @@ test("same-principal cleanup blocks late writes and account-switch UI flashes", 
 
   assert.match(chat, /lifecycleGenerationRef\.current \+= 1/);
   assert.match(chat, /requestGeneration === lifecycleGenerationRef\.current/);
-  assert.match(chat, /if \(!isCurrent\(\)\) return;[\s\S]{0,180}savedIds\.push/);
+  for (const saved of [true, false]) {
+    assert.match(
+      chat,
+      new RegExp(`if \\(!isCurrent\\(\\)\\) return;\\s*updateBookmark\\(${saved}\\)`),
+    );
+  }
 
   assert.match(write, /if \(!documentReady \|\| !dirty \|\| !draftKey \|\| !titleKey\) return/);
   assert.match(write, /requestPrincipal !== principalRef\.current/);

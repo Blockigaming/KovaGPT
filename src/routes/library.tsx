@@ -663,7 +663,7 @@ function LibraryPage() {
             },
             controller.signal,
           ),
-          more ? Promise.resolve([]) : listWorkspaceRecents(),
+          more ? Promise.resolve([]) : listWorkspaceRecents().catch(() => []),
         ]);
         const saved = ["chats", "work"].includes(filter) ? [] : page.items;
         const savedIds = new Set(saved.map((item) => item.id));

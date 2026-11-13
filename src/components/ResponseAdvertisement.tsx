@@ -107,12 +107,7 @@ export function ResponseAdvertisement() {
       return;
     }
     attachConsent();
-    const ads = (adWindow.adsbygoogle ??= [] as unknown as NonNullable<AdWindow["adsbygoogle"]>);
-    ads.requestNonPersonalizedAds = 1;
-    void loadAdScript().catch(() => {
-      if (active) setFailed(true);
-    });
-    return () => {
+    const stop = () => {
       active = false;
       try {
         if (listenerId !== undefined && api) api("removeEventListener", 2, () => {}, listenerId);
@@ -120,6 +115,19 @@ export function ResponseAdvertisement() {
         /* Vendor cleanup failure must not interrupt the conversation. */
       }
     };
+    // A frozen or otherwise unusable vendor queue must keep the ad closed.
+    try {
+      const ads = (adWindow.adsbygoogle ??= [] as unknown as NonNullable<AdWindow["adsbygoogle"]>);
+      if (!Reflect.set(ads, "requestNonPersonalizedAds", 1))
+        throw new Error("Ad queue unavailable");
+    } catch {
+      setFailed(true);
+      return stop;
+    }
+    void loadAdScript().catch(() => {
+      if (active) setFailed(true);
+    });
+    return stop;
   }, [eligible, enabled]);
   const show = eligible && enabled && consented && !failed;
   useEffect(() => {

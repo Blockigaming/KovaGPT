@@ -19,6 +19,7 @@ test("translation hub matches the observed default workspace", async ({ page }) 
   await expect(
     page.getByRole("button", { name: "Swap source and target languages" }),
   ).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "Translation", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy translation" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Make it sound more fluent" })).toBeDisabled();
 });

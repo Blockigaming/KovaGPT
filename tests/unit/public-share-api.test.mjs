@@ -5,12 +5,14 @@ import ts from "typescript";
 import * as policy from "../../src/lib/public-chat-share-policy.mjs";
 import * as bodyPolicy from "../../src/lib/endpoint-reliability.mjs";
 import { isCrossSiteMutation } from "../../src/lib/auth-security.mjs";
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 
 const owner = "11111111-1111-4111-8111-111111111111";
-function fixture() {
+function fixture({ realRateLimit = false } = {}) {
   const queries = [],
     results = [],
-    rpc = [];
+    rpc = [],
+    rateRequests = [];
   const state = {
     auth: true,
     rate: { allowed: true },
@@ -53,7 +55,21 @@ function fixture() {
           : new Response(null, { status: 401 }),
     },
     "./auth-security.mjs": { isCrossSiteMutation },
-    "./distributed-rate-limit.server": { consumeApplicationRateLimit: async () => state.rate },
+    "./distributed-rate-limit.server": {
+      consumeApplicationRateLimit: realRateLimit
+        ? (input) =>
+            consumeDistributedRateLimit({
+              ...input,
+              backendUrl: "https://rate-limit.test",
+              serviceRoleKey: "fixture-key",
+              hashSecret: "h".repeat(32),
+              fetchImpl: async (_url, { body }) => {
+                rateRequests.push(JSON.parse(body));
+                return Response.json([{ allowed: true, retry_after: 1 }]);
+              },
+            })
+        : async () => state.rate,
+    },
     "./endpoint-reliability.mjs": bodyPolicy,
     "./public-chat-share-policy.mjs": policy,
     "@/integrations/supabase/client.server": { supabaseAdmin: db },
@@ -84,7 +100,7 @@ function fixture() {
       },
       ...(method !== "GET" ? { body: JSON.stringify(value) } : {}),
     });
-  return { ...exports, queries, results, state, rpc, request };
+  return { ...exports, queries, results, state, rpc, rateRequests, request };
 }
 
 test("share management rejects cross-site, unauthenticated, changed-owner, throttled and deleting accounts before writes", async () => {
@@ -151,14 +167,26 @@ test("revocation filters by both exact link id and verified owner", async () => 
   );
 });
 test("public reads use a hashed capability, bounded rate checks and private response headers", async () => {
-  const f = fixture();
+  const f = fixture({ realRateLimit: true });
   assert.equal((await f.handlePublicChatShare(f.request("GET"), "not-a-token")).status, 404);
   assert.equal(f.rpc.length, 0);
+  assert.equal(f.rateRequests.length, 0);
   const token = "a".repeat(64),
     res = await f.handlePublicChatShare(f.request("GET"), token);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("Referrer-Policy"), "no-referrer");
   assert.match(res.headers.get("X-Robots-Tag"), /noindex/);
+  assert.deepEqual(
+    f.rateRequests.map(({ p_action, p_limit, p_window_seconds }) => [
+      p_action,
+      p_limit,
+      p_window_seconds,
+    ]),
+    [
+      ["public_chat_share_global", 100, 60],
+      ["public_chat_share", 60, 60],
+    ],
+  );
   assert.deepEqual(f.rpc, [
     ["read_public_chat_share", { p_token_hash: await policy.shareTokenHash(token) }],
   ]);

@@ -7,7 +7,15 @@ import zipfile
 
 EXPECTED = {f"e2e-blob-{shard}" for shard in range(1, 9)} | {
     f"e2e-blob-public-{project}-{shard}"
-    for project in ("phone-390x844", "tablet-1024x768", "desktop-1440x900")
+    for project in (
+        "phone-320x700",
+        "phone-390x844",
+        "phone-landscape-844x390",
+        "tablet-768x1024",
+        "tablet-1024x768",
+        "desktop-1280x800",
+        "desktop-1440x900",
+    )
     for shard in range(1, 4)
 }
 
@@ -19,7 +27,7 @@ def validate(source: Path, destination: Path) -> int:
         raise ValueError("Report destination must be new")
     entries = list(source.iterdir())
     if {p.name for p in entries} != EXPECTED:
-        raise ValueError("Expected all seventeen public and core report artifacts")
+        raise ValueError(f"Expected all {len(EXPECTED)} public and core report artifacts")
     reports = []
     for folder in entries:
         if folder.is_symlink() or not folder.is_dir():

@@ -67,7 +67,11 @@ import {
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { hostedEffortBudget } from "@/lib/consumer-effort-policy.mjs";
-import { FREE_CHAT_MODELS, isKovaHostedModelId } from "@/lib/ai/kova-hosted-inference.server.mjs";
+import {
+  FREE_CHAT_MODELS,
+  HOSTED_MODEL_MAP,
+  isKovaHostedModelId,
+} from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import {
   FreeConnectorBudget,
@@ -166,6 +170,9 @@ const ADAPTIVE_INSTRUCTION = "";
 const UNRESTRICTED_INSTRUCTION = "";
 const ACCURACY_INSTRUCTION = "";
 const CHART_INSTRUCTION = "";
+const FINAL_CHART_INSTRUCTION = `
+
+When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
 const CREATOR_INSTRUCTION = "";
 const MAX_IMAGE_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 const MAX_TOOL_HOP_RESPONSE_BYTES = 2 * 1024 * 1024;
@@ -1541,7 +1548,7 @@ export const Route = createFileRoute("/api/chat")({
                     ADAPTIVE_INSTRUCTION +
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
-                    CHART_INSTRUCTION +
+                    FINAL_CHART_INSTRUCTION +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
                     INTERACTIVE_UI_INSTRUCTIONS +
@@ -2728,24 +2735,18 @@ export const Route = createFileRoute("/api/chat")({
             const voiceRelayCancellation = new AbortController();
             const voicePolicy = voiceModelPolicy(runtimeEnv);
             const voiceMessageId = request.headers.get("x-kova-assistant-message-id");
+            const hostedVoiceModel = isKovaHostedModelId(model);
+            const voiceProvider = hostedVoiceModel ? "openai" : getAiProviderConfig().provider;
+            const voiceModelId = freeChatModel?.foundation ?? (HOSTED_MODEL_MAP[model] || model);
+            // The receipt must identify the foundation actually used by the transport.
+            const voiceModel = { provider: voiceProvider, modelId: voiceModelId };
             const voiceIdentity =
               auth &&
               !temporary &&
               chatId &&
               voiceMessageId &&
-              eligibleVoiceModel(voicePolicy, {
-                provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
-                modelId: model,
-              })
-                ? {
-                    ownerId: auth.userId,
-                    chatId,
-                    messageId: voiceMessageId,
-                    provider: isKovaHostedModelId(model)
-                      ? "openai"
-                      : getAiProviderConfig().provider,
-                    modelId: model,
-                  }
+              eligibleVoiceModel(voicePolicy, voiceModel)
+                ? { ownerId: auth.userId, chatId, messageId: voiceMessageId, ...voiceModel }
                 : null;
             let usageBuffer = "";
             let usageFinalized = false;

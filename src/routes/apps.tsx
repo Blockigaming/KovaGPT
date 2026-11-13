@@ -5,7 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
@@ -100,6 +100,7 @@ const WORKING_IDS = new Set<string>([
   "google-drive",
   "google-calendar",
   "github",
+  "plaid",
   ...Object.keys(CONNECTION_FLOWS),
 ]);
 
@@ -190,10 +191,17 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
 }
 
 function AppLogo({ id }: { id: string }) {
-  const asset = getPluginReview(id)?.brandAsset.src;
+  const review = getPluginReview(id);
+  const asset = review?.brandAsset.src;
+  const domain = review?.connector.domain?.trim();
+  const favicon =
+    !asset && domain
+      ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      : undefined;
+  const src = asset || favicon;
   return (
     <span className="spec400-plugin-logo" aria-hidden="true">
-      {asset ? <img src={asset} alt="" /> : <PanelsTopLeft />}
+      {src ? <img src={src} alt="" /> : <PanelsTopLeft />}
     </span>
   );
 }
@@ -838,13 +846,20 @@ function AppsPage() {
       isLoaded ? userKey : undefined,
       parsePluginFilters,
     );
+  const navigate = useNavigate({ from: "/apps" });
+  const searchString = useLocation({ select: (location) => location.searchStr });
   const [connectionGroup, setConnectionGroup] = useState<"health" | "finances" | null>(null);
   useEffect(() => {
-    const params = new URL(window.location.href).searchParams;
-    if (params.has("oauth_state_id")) setConnectionGroup("finances");
-    else if (["oura", "whoop"].includes(params.get("integration_connected") ?? ""))
+    const params = new URLSearchParams(searchString);
+    const view = params.get("connection_view");
+    if (params.has("oauth_state_id") || view === "finances") setConnectionGroup("finances");
+    else if (
+      view === "health" ||
+      ["oura", "whoop"].includes(params.get("integration_connected") ?? "")
+    )
       setConnectionGroup("health");
-  }, []);
+    else setConnectionGroup(null);
+  }, [searchString]);
   const setQuery = (query: string) => setListPreferences({ query });
   const setCategory = (category: string) => setListPreferences({ category });
   const setConnectionFilter = (value: string) =>
@@ -1286,6 +1301,7 @@ function AppsPage() {
       return;
     const id = url.searchParams.get("connection_view");
     if (id && Object.hasOwn(CONNECTION_FLOWS, id)) {
+      url.searchParams.delete("connection_view");
       const item = MASTER_PLUGIN_REVIEW_CATALOG.find(
         (entry) => entry.connector.id === id,
       )?.connector;
@@ -1296,8 +1312,7 @@ function AppsPage() {
         "The provider connection was not completed. Review the account status and try again.",
       );
     else toast.message("Authorization returned. Review the account and search to verify access.");
-    for (const key of ["integration_connected", "integration_error", "connection_view"])
-      url.searchParams.delete(key);
+    for (const key of ["integration_connected", "integration_error"]) url.searchParams.delete(key);
     window.history.replaceState(window.history.state, "", url);
     void refreshOtherConnections();
   }, [activityReady, isSignedIn, refreshOtherConnections]);
@@ -1373,7 +1388,12 @@ function AppsPage() {
       );
     return false;
   };
-  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector);
+  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector).slice().sort((a, b) => {
+    const aWorking = WORKING_IDS.has(a.id) || a.status === "live" || a.status === "setup_required" ? 0 : 1;
+    const bWorking = WORKING_IDS.has(b.id) || b.status === "live" || b.status === "setup_required" ? 0 : 1;
+    if (aWorking !== bWorking) return aWorking - bWorking;
+    return a.label.localeCompare(b.label);
+  });
   const connectedCount = catalog.filter((item) => hasConnection(item.id)).length;
   const connectionCountState = !isLoaded
     ? "unknown"
@@ -1823,11 +1843,13 @@ function AppsPage() {
             <Tabs
               value={connectionGroup ?? connectionFilter}
               onValueChange={(value) => {
-                if (value === "health" || value === "finances") setConnectionGroup(value);
-                else {
-                  setConnectionGroup(null);
-                  setConnectionFilter(value);
-                }
+                const view = value === "health" || value === "finances" ? value : null;
+                setConnectionGroup(view);
+                if (!view) setConnectionFilter(value);
+                const params = new URLSearchParams(searchString);
+                if (view) params.set("connection_view", view);
+                else params.delete("connection_view");
+                void navigate({ search: Object.fromEntries(params) as never, replace: true });
               }}
               className="spec400-plugin-directory"
             >

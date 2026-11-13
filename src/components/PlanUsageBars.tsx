@@ -53,6 +53,12 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
         Today's images {boundedPercent(images, base.images * multiplier)}% used · uploads{" "}
         {boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.
       </p>
+      {windows.some((window) => window.costPercentUsed === null) && (
+        <p className="text-xs leading-5 text-muted-foreground">
+          Chat percentages currently reflect message counts. Cost-based usage is temporarily
+          unavailable.
+        </p>
+      )}
       <p className="text-xs leading-5 text-muted-foreground">
         Usage percentages are estimates. Additional safety and plan protections may apply.
       </p>

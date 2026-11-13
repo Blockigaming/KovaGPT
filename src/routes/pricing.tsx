@@ -1,9 +1,8 @@
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState, type MouseEvent as ReactMouseEvent } from "react";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
-import { NovaLogo } from "@/components/NovaLogo";
 import { PlanComparison } from "@/components/public/PlanComparison";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
@@ -120,22 +119,11 @@ function PricingPage() {
   };
 
   return (
-    <div data-billing-page className="min-h-dvh bg-background text-foreground">
-      <header className="flex items-center justify-between px-6 py-5">
-        <Link to="/" className="inline-flex h-11 items-center gap-2 text-lg font-semibold">
-          <NovaLogo decorative />
-          KovaGPT
-        </Link>
-        <Link
-          to="/"
-          className="inline-flex h-11 items-center rounded-full border border-border px-4 text-sm"
-        >
-          Back to chat
-        </Link>
-      </header>
+    <PublicShell>
       <main
         id="main-content"
         tabIndex={-1}
+        data-billing-page
         data-ui-reference="chatgpt-pricing"
         className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
@@ -263,9 +251,8 @@ function PricingPage() {
         </section>
       </main>
 
-      <PublicFooter />
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
-    </div>
+    </PublicShell>
   );
 }
 

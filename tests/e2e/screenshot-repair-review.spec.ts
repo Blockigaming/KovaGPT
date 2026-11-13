@@ -111,7 +111,8 @@ for (const theme of ["dark", "light"] as const) {
     const panel = page.locator("section.kova-settings-page");
     await expect(screen).toBeVisible();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
-    if (page.viewportSize()!.width >= 768) {
+    const phone = page.viewportSize()!.width < 768;
+    if (!phone) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toBeVisible();
     } else {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toHaveCount(0);
@@ -128,7 +129,7 @@ for (const theme of ["dark", "light"] as const) {
         }),
       )
       .toBe(true);
-    if (page.viewportSize()!.width >= 768) {
+    if (!phone) {
       const nav = page.getByRole("complementary", { name: "Settings navigation" });
       await expect(nav).toBeVisible();
       const geometry = await nav.evaluate((node) => {

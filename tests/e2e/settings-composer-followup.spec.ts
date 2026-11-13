@@ -21,7 +21,8 @@ for (const theme of ["dark", "light"] as const) {
     const top = (await surface.boundingBox())!.y;
     const header = surface.locator(".kova-settings-content-header");
     expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-    if (page.viewportSize()!.width >= 768) {
+    const phone = page.viewportSize()!.width < 768;
+    if (!phone) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();

@@ -148,7 +148,7 @@ export async function handlePrivateLibraryImage(request: Request): Promise<Respo
       consumeApplicationRateLimit({
         identity: `user:${auth.userId}`,
         action: "library_private_image",
-        limit: 120,
+        limit: 100,
         windowSeconds: 60,
       }),
     );

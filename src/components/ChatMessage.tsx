@@ -3,6 +3,7 @@ import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
+import { StreamingStatus } from "./StreamingStatus";
 import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
@@ -18,7 +19,6 @@ import { splitInteractiveContent } from "@/lib/interactive-ui.mjs";
 import { InteractiveBlock } from "./interactive-ui/InteractiveBlock";
 import {
   Copy,
-  ArrowUp,
   Sparkles,
   Check,
   ImageIcon,
@@ -70,7 +70,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
-import { saveToLibrary } from "@/lib/library.functions";
+import { deleteLibraryItem, findResponseBookmark, saveToLibrary } from "@/lib/library.functions";
 import { getResponseFeedbackBatch, submitResponseFeedback } from "@/lib/feedback.functions";
 import { loadResponseFeedbackBatched } from "@/lib/feedback-batch";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -118,108 +118,6 @@ const MessageVersionHistoryDialog = lazy(() =>
 // deterministic.
 function cleanAssistantText(text: string): string {
   return text.replace(/\r\n?/g, "\n");
-}
-
-const CONTINUED_WAIT_MS = 8_000;
-const EXTENDED_WAIT_MS = 30_000;
-
-type WaitStage = "initial" | "continued" | "extended";
-
-function waitStageAt(startedAt: number): WaitStage {
-  const elapsed = Math.max(0, Date.now() - startedAt);
-  if (elapsed >= EXTENDED_WAIT_MS) return "extended";
-  if (elapsed >= CONTINUED_WAIT_MS) return "continued";
-  return "initial";
-}
-
-function StreamingStatus({
-  activities,
-  startedAt,
-  onSkipThinking,
-}: {
-  activities?: import("@/lib/chat-store").Activity[];
-  startedAt: number;
-  onSkipThinking?: () => void;
-}) {
-  const [waitStage, setWaitStage] = useState<WaitStage>(() => waitStageAt(startedAt));
-  const [elapsedSeconds, setElapsedSeconds] = useState(() =>
-    Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
-  );
-  useEffect(() => {
-    const timer = window.setInterval(
-      () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000))),
-      1000,
-    );
-    return () => window.clearInterval(timer);
-  }, [startedAt]);
-  useEffect(() => {
-    const elapsed = Math.max(0, Date.now() - startedAt);
-    setWaitStage(waitStageAt(startedAt));
-    const continuedTimer =
-      elapsed < CONTINUED_WAIT_MS
-        ? window.setTimeout(() => setWaitStage("continued"), CONTINUED_WAIT_MS - elapsed)
-        : null;
-    const extendedTimer =
-      elapsed < EXTENDED_WAIT_MS
-        ? window.setTimeout(() => setWaitStage("extended"), EXTENDED_WAIT_MS - elapsed)
-        : null;
-    return () => {
-      if (continuedTimer !== null) window.clearTimeout(continuedTimer);
-      if (extendedTimer !== null) window.clearTimeout(extendedTimer);
-    };
-  }, [startedAt]);
-
-  const active =
-    activities
-      ?.slice()
-      .reverse()
-      .find((activity) => activity.status === "running") ?? null;
-  const tool = (active?.tool ?? "").toLowerCase();
-  let label =
-    waitStage === "extended"
-      ? "Taking a little longer"
-      : waitStage === "continued"
-        ? "Still waiting for the response"
-        : "Preparing reply";
-  if (tool) {
-    if (tool.includes("image")) label = "Creating Image";
-    else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
-    else if (tool.includes("calendar")) label = "Checking Calendar";
-    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read"))
-      label = "Reading documents";
-    else if (tool.includes("memory") || tool.includes("recall")) label = "Searching memory";
-    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse"))
-      label = "Searching the web";
-    else if (tool.includes("write")) label = "Writing draft";
-    else label = active?.label ?? "Working";
-  }
-  if (elapsedSeconds < 1) return null;
-  return (
-    <div
-      className="kova-thinking-indicator flex min-h-8 flex-wrap items-center gap-2 py-1"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      data-wait-stage={waitStage}
-    >
-      <span className="min-w-0 flex-1 text-sm text-muted-foreground">Thinking · {label}…</span>
-      {onSkipThinking && (
-        <button
-          type="button"
-          className="rounded-lg px-3 py-1 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          title="Stop this attempt and request a faster answer in Default mode"
-          onClick={onSkipThinking}
-        >
-          Skip
-        </button>
-      )}
-      {elapsedSeconds >= 8 && (
-        <span role="timer" aria-live="off" className="text-xs text-muted-foreground">
-          {elapsedSeconds}s elapsed
-        </span>
-      )}
-    </div>
-  );
 }
 
 function ChatMessageInner({
@@ -352,6 +250,7 @@ function ChatMessageInner({
   const [retryMenuOpen, setRetryMenuOpen] = useState(false);
   const retryFocusRef = useRef<(() => void) | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const bookmarkPending = useRef(false);
   const [saved, setSaved] = useState(false);
   const [sharing, setSharing] = useState(false);
   const sharingPending = useRef(false);
@@ -359,6 +258,8 @@ function ChatMessageInner({
   const [copyFallbackText, setCopyFallbackText] = useState<string | null>(null);
   useEffect(() => {
     let ids: string[] = [];
+    bookmarkPending.current = false;
+    setSaving(false);
     try {
       ids = JSON.parse(
         safeBrowserStorage("localStorage")?.getItem(
@@ -535,6 +436,8 @@ function ChatMessageInner({
   );
 
   const saveFn = useServerFn(saveToLibrary);
+  const findBookmark = useServerFn(findResponseBookmark);
+  const deleteBookmark = useServerFn(deleteLibraryItem);
   const saveImageFn = useServerFn(saveImageToLibrary);
   const imageSaveIds = useRef(new Map<string, string>());
   const saveResponseImage = useCallback(
@@ -595,7 +498,6 @@ function ChatMessageInner({
     () => (isUser ? "" : cleanAssistantText(message.content)),
     [isUser, message.content],
   );
-  const chartParts = useMemo(() => extractCharts(cleanedResponse), [cleanedResponse]);
   const canvasParts = useMemo(
     () => (isUser || streaming ? [] : splitGenerativeContent(cleanedResponse)),
     [cleanedResponse, isUser, streaming],
@@ -635,6 +537,25 @@ function ChatMessageInner({
             />
           ) : part.text.trim() ? (
             markdown(part.text, `t${i}`)
+          ) : null,
+        )}
+      </div>
+    );
+  };
+  const renderResponseSection = (content: string, section: number) => {
+    const parts = streaming ? [] : extractCharts(content);
+    if (!parts.some((part) => part.kind === "chart")) {
+      return renderResponseText(content, section === 0 ? undefined : section);
+    }
+    return (
+      <div key={section} className="space-y-2">
+        {parts.map((part, index) =>
+          part.kind === "chart" ? (
+            <Suspense key={index} fallback={null}>
+              <ChatChart spec={part.spec} />
+            </Suspense>
+          ) : part.value.trim() ? (
+            renderResponseText(part.value, section === 0 ? index : `${section}:${index}`)
           ) : null,
         )}
       </div>
@@ -761,7 +682,7 @@ function ChatMessageInner({
   };
 
   const saveItem = async () => {
-    if (saving) return;
+    if (bookmarkPending.current) return;
     // Guests can save to a local-only library while signed-in users persist through Supabase.
     const dedupKey = principalResolved
       ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
@@ -777,17 +698,69 @@ function ChatMessageInner({
       requestPrincipal === principalRef.current;
     let savedIds: string[];
     try {
-      savedIds = JSON.parse(safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]");
+      const stored: unknown = JSON.parse(
+        safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]",
+      );
+      savedIds = Array.isArray(stored)
+        ? stored.filter((id): id is string => typeof id === "string")
+        : [];
     } catch {
       savedIds = [];
     }
-    if (message.id && savedIds.includes(message.id)) {
-      setSaved(true);
-      toast.info("Already in your Library.");
-      return;
-    }
+    const updateBookmark = (value: boolean) => {
+      try {
+        const storage = safeBrowserStorage("localStorage");
+        const stored: unknown = JSON.parse(storage?.getItem(dedupKey) || "[]");
+        const ids = Array.isArray(stored) ? stored.filter((id) => id !== message.id) : [];
+        if (value) ids.push(message.id);
+        storage?.setItem(dedupKey, JSON.stringify(ids.slice(-500)));
+      } catch {
+        /* Storage is optional for server-backed Library items. */
+      }
+      setSaved(value);
+    };
+    bookmarkPending.current = true;
     setSaving(true);
     try {
+      const wasSaved = savedIds.includes(message.id);
+      const guestLibrary = isSignedIn ? null : await import("@/lib/guest-library");
+      const guestItems = guestLibrary?.loadGuestLibrary() ?? [];
+      const guestItem = guestItems.find((item) => item.response_message_id === message.id);
+      const legacyGuestItems =
+        wasSaved && !guestItem
+          ? guestItems.filter(
+              (item) =>
+                !item.response_message_id &&
+                item.source === "chat" &&
+                (item.item_type === "code" || item.item_type === "chat_artifact") &&
+                item.content_text === message.content,
+            )
+          : [];
+      if (legacyGuestItems.length > 1)
+        throw new Error(
+          "Multiple older saves match this reply. Remove the intended one from Library.",
+        );
+      const bookmarkId =
+        isSignedIn && userKey
+          ? await findBookmark({
+              data: {
+                ownerId: userKey,
+                messageId: message.id,
+                ...(wasSaved &&
+                  message.content.length <= 300_000 && { legacyContent: message.content }),
+              },
+            })
+          : (guestItem ?? legacyGuestItems[0])?.id;
+      if (!isCurrent()) return;
+      if (bookmarkId) {
+        if (guestLibrary) guestLibrary.deleteGuestItem(bookmarkId);
+        else if (userKey)
+          await deleteBookmark({ data: { id: bookmarkId, expectedOwnerId: userKey } });
+        if (!isCurrent()) return;
+        updateBookmark(false);
+        toast.success("Removed from Library");
+        return;
+      }
       const content = message.content.trim();
       if (content.length > (isSignedIn ? 300_000 : 100_000))
         throw new Error(
@@ -808,34 +781,27 @@ function ChatMessageInner({
         source: "chat" as const,
         content_text: message.content,
       };
-      if (isSignedIn) await saveFn({ data: payload });
-      else {
-        const { saveGuestItem, loadGuestLibrary } = await import("@/lib/guest-library");
-        if (!isCurrent()) return;
-        const item = saveGuestItem(payload);
-        if (!loadGuestLibrary().some((savedItem) => savedItem.id === item.id))
+      if (guestLibrary) {
+        const item = guestLibrary.saveGuestItem({ ...payload, responseMessageId: message.id });
+        if (!guestLibrary.loadGuestLibrary().some((savedItem) => savedItem.id === item.id))
           throw new Error(
             "Library could not save on this device. Your response is preserved; copy or export it instead.",
           );
+      } else if (userKey) {
+        await saveFn({
+          data: { ...payload, expectedOwnerId: userKey, responseMessageId: message.id },
+        });
       }
       if (!isCurrent()) return;
-      if (message.id) {
-        try {
-          savedIds.push(message.id);
-          safeBrowserStorage("localStorage")?.setItem(
-            dedupKey,
-            JSON.stringify(savedIds.slice(-500)),
-          );
-        } catch {
-          /* ignore */
-        }
-      }
-      setSaved(true);
+      updateBookmark(true);
       toast.success("Saved to Library");
     } catch (error) {
       if (isCurrent()) toast.error(error instanceof Error ? error.message : "Could not save");
     } finally {
-      if (isCurrent()) setSaving(false);
+      if (isCurrent()) {
+        bookmarkPending.current = false;
+        setSaving(false);
+      }
     }
   };
 
@@ -941,7 +907,6 @@ function ChatMessageInner({
                 />
               ) : (
                 (() => {
-                  const hasChart = chartParts.some((part) => part.kind === "chart");
                   const markdown = hasWidget ? (
                     <div className="space-y-3">
                       {canvasParts.map((part, index) =>
@@ -978,24 +943,12 @@ function ChatMessageInner({
                             }
                           />
                         ) : part.text.trim() ? (
-                          renderResponseText(part.text, index)
-                        ) : null,
-                      )}
-                    </div>
-                  ) : hasChart ? (
-                    <div className="space-y-2">
-                      {chartParts.map((part, index) =>
-                        part.kind === "chart" ? (
-                          <Suspense key={index} fallback={null}>
-                            <ChatChart spec={part.spec} />
-                          </Suspense>
-                        ) : part.value.trim() ? (
-                          renderResponseText(part.value, index)
+                          renderResponseSection(part.text, index)
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    renderResponseText(cleanedResponse, undefined)
+                    renderResponseSection(cleanedResponse, 0)
                   );
                   if (responseChip)
                     return (
@@ -1085,9 +1038,9 @@ function ChatMessageInner({
                 onClick={() => void saveItem()}
                 disabled={saving}
                 className="kova-message-icon-action"
-                aria-label={saved ? "Saved to Library" : "Save to Library"}
+                aria-label={saved ? "Remove from Library" : "Save to Library"}
                 aria-pressed={saved}
-                title={saved ? "Saved to Library" : "Save to Library"}
+                title={saved ? "Remove from Library" : "Save to Library"}
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1543,7 +1496,7 @@ function ChatMessageInner({
                   ]
                 : []),
               {
-                label: saved ? "Saved" : "Save to Library",
+                label: saved ? "Remove from Library" : "Save to Library",
                 icon: Bookmark,
                 onClick: () => {
                   saveItem();

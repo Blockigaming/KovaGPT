@@ -70,7 +70,7 @@ export default defineConfig({
     { name: "tablet-768x1024", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
     {
       name: "phone-landscape-844x390",
-      use: { viewport: { width: 844, height: 390 }, hasTouch: true },
+      use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true },
     },
     { name: "tablet-1024x768", use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     { name: "desktop-1280x800", use: { viewport: { width: 1280, height: 800 } } },

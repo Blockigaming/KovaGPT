@@ -71,7 +71,8 @@ test("dedicated settings excludes workspace navigation and supports desktop drag
   await waitForKovaHydration(page);
   await expect(page.locator(".kova-sidebar, .kova-sidebar-rail")).toHaveCount(0);
   const navigation = page.getByRole("complementary", { name: "Settings navigation" });
-  if (page.viewportSize()!.width >= 768) {
+  const phone = page.viewportSize()!.width < 768;
+  if (!phone) {
     const edge = page.getByRole("separator", { name: "Resize settings navigation" });
     await edge.focus();
     await edge.press("ArrowRight");

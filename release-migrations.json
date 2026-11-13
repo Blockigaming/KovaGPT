@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 219,
-  "latest": "20261112023605_kova_public_chat_share_full_snapshots.sql",
+  "count": 221,
+  "latest": "20261113020000_kova_verified_email_change.sql",
   "migrations": [
     {
       "order": 1,
@@ -4639,6 +4639,34 @@
       "functions": ["guard_public_chat_share"],
       "destructive": true,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 220,
+      "filename": "20261113012000_kova_public_chat_share_reader_privileges.sql",
+      "timestamp": "20261113012000",
+      "sha256": "973c186cb36623f3d2493b569eb9dc31e81c6907163d51384e28289609db2643",
+      "tables": [],
+      "functions": ["read_public_chat_share"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 221,
+      "filename": "20261113020000_kova_verified_email_change.sql",
+      "timestamp": "20261113020000",
+      "sha256": "a6c2f120157f38de3bc7629fa2e306051a1054f1b54663739f61ce75ced3bb6e",
+      "tables": ["kova_private"],
+      "functions": ["kova_auth_change_email"],
+      "destructive": true,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

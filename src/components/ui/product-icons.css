@@ -1,3 +1,7 @@
+[data-sdk-geometry="ParentControl"] > path {
+  fill: currentColor;
+}
+
 /* MIT OpenAI Apps SDK UI LoadingIndicator, pinned to 0f00143.
  * Source CSS structure/values retained; class/keyframe names scoped locally.
  * The SVG shell retains existing icon props and SVG refs. Its XHTML content

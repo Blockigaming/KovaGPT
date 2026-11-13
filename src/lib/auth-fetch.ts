@@ -1,12 +1,19 @@
 // Browser-side fetch wrapper that attaches the current Supabase access token
 // when browser auth is configured. Anonymous/public API calls must still work
 // in preview environments where Supabase client env is intentionally absent.
+import { getCapturedKovaPrincipal, isKovaSessionActive } from "@/lib/kova-auth-browser";
 import { supabase, getSupabaseClientConfigStatus } from "@/integrations/supabase/client";
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
 
-  if (getSupabaseClientConfigStatus().configured) {
+  if (isKovaSessionActive()) {
+    const owner = getCapturedKovaPrincipal()?.accountId;
+    const expectedOwner = headers.get("X-Kova-Owner");
+    if (expectedOwner && owner !== expectedOwner)
+      throw new Error("Your account changed. Please try again.");
+    if (owner) headers.set("X-Kova-Owner", owner);
+  } else if (getSupabaseClientConfigStatus().configured) {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const owner = data.session?.user?.id;
