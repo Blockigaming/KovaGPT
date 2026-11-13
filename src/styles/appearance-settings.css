@@ -195,15 +195,15 @@
   }
 }
 
-@media (max-width: 767px) {
-  .kova-appearance-settings .kova-preference-row:has([data-slot="select-trigger"]) {
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
+  .kova-appearance-settings .kova-preference-row:has([role="combobox"]) {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     justify-content: stretch;
     align-items: stretch;
     gap: 12px;
   }
-  .kova-appearance-settings .kova-preference-row [data-slot="select-trigger"] {
+  .kova-appearance-settings .kova-preference-row [role="combobox"] {
     width: 100%;
     min-height: 48px;
   }
