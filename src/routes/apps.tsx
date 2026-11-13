@@ -193,12 +193,7 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
 function AppLogo({ id }: { id: string }) {
   const review = getPluginReview(id);
   const asset = review?.brandAsset.src;
-  const domain = review?.connector.domain?.trim();
-  const favicon =
-    !asset && domain
-      ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
-      : undefined;
-  const src = asset || favicon;
+  const src = asset;
   return (
     <span className="spec400-plugin-logo" aria-hidden="true">
       {src ? <img src={src} alt="" /> : <PanelsTopLeft />}

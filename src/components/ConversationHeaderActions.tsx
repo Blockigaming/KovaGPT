@@ -2,7 +2,7 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { File, FileText, Image, Share, Download, List, ChevronDown } from "lucide-react";
+import { File, FileText, Image, Share, Download, SlidersHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -24,7 +24,7 @@ import { ConversationSourcesPanel, ConversationActivitySummary } from "./Convers
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <List aria-hidden="true" />;
+  return <SlidersHorizontal aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
@@ -85,8 +85,6 @@ export function ConversationHeaderActions({
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
   const [outputsOpen, setOutputsOpen] = useState(false);
-  const [outputsCollapsed, setOutputsCollapsed] = useState(false);
-  const [stepsCollapsed, setStepsCollapsed] = useState(false);
   const [dialog, setDialog] = useState<"share-restricted" | null>(null);
   const [selectedOutput, setSelectedOutput] = useState<ConversationOutput | null>(null);
   const outputsRef = useRef<HTMLButtonElement>(null);
@@ -137,37 +135,13 @@ export function ConversationHeaderActions({
       />
       {steps.some((step) => step.tool !== "scheduled_task") && (
         <section className="kova-activity-steps" aria-label="Steps">
-          <button
-            type="button"
-            className="kova-activity-section-toggle"
-            aria-expanded={!stepsCollapsed}
-            onClick={() => setStepsCollapsed((v) => !v)}
-          >
-            <h2>Steps</h2>
-            <ChevronDown
-              className={`kova-activity-chevron${stepsCollapsed ? " is-collapsed" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-          {!stepsCollapsed ? <MessageActivityList activities={steps} /> : null}
+          <h2>Steps</h2>
+          <MessageActivityList activities={steps} />
         </section>
       )}
-      <button
-        type="button"
-        className="kova-activity-section-toggle"
-        aria-expanded={!outputsCollapsed}
-        onClick={() => setOutputsCollapsed((v) => !v)}
-      >
-        <h2>Outputs</h2>
-        <ChevronDown
-          className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
-          aria-hidden="true"
-        />
-      </button>
-      {!outputsCollapsed && generatedOutputs.length === 0 ? (
-        <p className="kova-header-note">No outputs yet.</p>
-      ) : null}
-      {!outputsCollapsed && generatedOutputs.length > 0 && (
+      <h2>Outputs</h2>
+      {generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
+      {generatedOutputs.length > 0 && (
         <>
           <div className="kova-output-list">
             {generatedOutputs.map((output) => (
@@ -218,11 +192,34 @@ export function ConversationHeaderActions({
           setOutputsOpen(false);
           setSelectedMemory(sources);
         }}
-        onOpenAttachment={() => {}}
+        onOpenAttachment={(outputId) => {
+          const output = outputs.find((item) => item.id === outputId);
+          if (!output) return;
+          rememberFocus(outputsRef.current);
+          setSelectedOutput(output);
+          setOutputsOpen(false);
+        }}
       />
+      {onOpenContext ? (
+        <button
+          type="button"
+          className="kova-activity-context"
+          onClick={(event) => {
+            dialogOpeningRef.current = true;
+            setOutputsOpen(false);
+            onOpenContext(outputsRef.current ?? event.currentTarget);
+          }}
+        >
+          Chat instructions and context
+        </button>
+      ) : null}
+      {isStreaming ? (
+        <p className="kova-header-note">
+          A response is still being generated. Its output may change.
+        </p>
+      ) : null}
     </>
   );
-
   return (
     <>
       <div
