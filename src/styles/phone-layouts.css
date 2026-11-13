@@ -271,27 +271,16 @@
   .kova-project-conversation .spec400-chat-input {
     padding-bottom: max(8px, var(--safe-bottom));
   }
-  .kova-app-shell[data-workspace-page="apps"] .kova-connection-navigation {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 6px;
-  }
   .kova-app-shell[data-workspace-page="apps"] .spec400-plugin-tabs {
     display: grid;
     width: 100%;
     height: auto;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px;
     padding: 3px;
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface-secondary);
-  }
-  .kova-app-shell[data-workspace-page="apps"] .kova-connection-finances {
-    border: 1px solid var(--border);
-    background: var(--kova-phone-tint);
-    color: var(--foreground);
   }
   .kova-app-shell[data-workspace-page="apps"] .spec400-plugin-tabs > button {
     min-width: 0;
