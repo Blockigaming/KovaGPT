@@ -1,6 +1,6 @@
 import "./product-showcase.css";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { PublicAction, PublicHero } from "@/components/public/PublicSections";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,25 @@ const examples = [
 export function ProductOverview() {
   const [selected, setSelected] = useState(0);
   const example = examples[selected];
+  const story = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!story.current || !("IntersectionObserver" in window)) return;
+    const desktop = window.matchMedia(
+      "(min-width: 64rem) and (min-height: 48rem) and (prefers-reduced-motion: no-preference)",
+    );
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!desktop.matches) return;
+        const current = entries.find((entry) => entry.isIntersecting);
+        if (current) setSelected(Number((current.target as HTMLElement).dataset.example));
+      },
+      { rootMargin: "-35% 0px -50% 0px" },
+    );
+    story.current
+      .querySelectorAll("[data-example]")
+      .forEach((chapter) => observer.observe(chapter));
+    return () => observer.disconnect();
+  }, []);
   return (
     <PublicShell>
       <main
@@ -43,7 +62,11 @@ export function ProductOverview() {
       >
         <div className="kova-showcase-progress" aria-hidden="true" />
         <div className="kova-showcase-hero">
-          <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
+          <PublicHero
+            eyebrow=""
+            title="Meet KovaGPT."
+            description="Write a first draft, understand a new idea, or turn a project into a plan."
+          >
             <PublicAction to="/">Open KovaGPT</PublicAction>
             <a href="#workflow-example" className="kova-button public-action is-secondary">
               Explore the demo <span aria-hidden="true">↓</span>
@@ -51,154 +74,109 @@ export function ProductOverview() {
           </PublicHero>
         </div>
 
-        <section
-          id="workflow-example"
-          className="public-workflow-example kova-showcase-jump kova-showcase-enter"
-          data-ui-reference="chatgpt-conversation-example"
-          aria-labelledby="workflow-example-title"
-        >
-          <aside className="public-example-sidebar" aria-hidden="true">
-            <span className="public-example-sidebar-brand">
-              <NovaLogo decorative className="h-6 w-6" /> KovaGPT
-            </span>
-            <span>
-              <Plus size={15} /> New chat
-            </span>
-            <span>
-              <Search size={15} /> Search chats
-            </span>
-            <span>
-              <FileText size={15} /> Library
-            </span>
-            <small>Conversations</small>
-            <span className="is-current">
-              <MessageSquare size={15} /> A fresh perspective
-            </span>
-            <span>Making a plan</span>
-            <span>Working through an idea</span>
-          </aside>
-          <div className="public-example-main">
-            <div className="public-example-toolbar">
-              <h2 id="workflow-example-title">One conversation. Many possibilities.</h2>
-              <div className="public-example-options" role="group" aria-label="Choose an example">
-                {examples.map((item, index) => (
-                  <Button
-                    key={item.label}
-                    type="button"
-                    variant={selected === index ? "secondary" : "ghost"}
-                    size="sm"
-                    aria-pressed={selected === index}
-                    aria-controls="workflow-example-content"
-                    onClick={() => setSelected(index)}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div
-              id="workflow-example-content"
-              className="public-example-conversation"
-              aria-live="polite"
-            >
-              <p className="public-example-prompt">{example.prompt}</p>
-              <div className="public-example-answer">
-                <p className="public-eyebrow">KovaGPT · Example response</p>
-                <h3>{example.title}</h3>
-                <p>{example.body}</p>
-                <ol>
-                  {example.steps.map((step) => (
-                    <li key={step}>{step}</li>
+        <div className="kova-overview-story" ref={story}>
+          <section
+            id="workflow-example"
+            className="public-workflow-example kova-showcase-jump"
+            data-ui-reference="chatgpt-conversation-example"
+            aria-labelledby="workflow-example-title"
+          >
+            <aside className="public-example-sidebar" aria-hidden="true">
+              <span className="public-example-sidebar-brand">
+                <NovaLogo decorative className="h-6 w-6" /> KovaGPT
+              </span>
+              <span>
+                <Plus size={15} /> New chat
+              </span>
+              <span>
+                <Search size={15} /> Search chats
+              </span>
+              <span>
+                <FileText size={15} /> Library
+              </span>
+              <small>Conversations</small>
+              <span className="is-current">
+                <MessageSquare size={15} /> A fresh perspective
+              </span>
+              <span>Making a plan</span>
+              <span>Working through an idea</span>
+            </aside>
+            <div className="public-example-main">
+              <div className="public-example-toolbar">
+                <h2 id="workflow-example-title" tabIndex={-1}>
+                  Example conversation
+                </h2>
+                <div className="public-example-options" role="group" aria-label="Choose an example">
+                  {examples.map((item, index) => (
+                    <Button
+                      key={item.label}
+                      type="button"
+                      variant={selected === index ? "secondary" : "ghost"}
+                      size="sm"
+                      aria-pressed={selected === index}
+                      aria-controls="workflow-example-content"
+                      onClick={() => setSelected(index)}
+                    >
+                      {item.label}
+                    </Button>
                   ))}
-                </ol>
+                </div>
               </div>
+              <div
+                id="workflow-example-content"
+                className="public-example-conversation"
+                aria-live="polite"
+              >
+                <p className="public-example-prompt">{example.prompt}</p>
+                <div className="public-example-answer">
+                  <p className="public-eyebrow">KovaGPT · Example response</p>
+                  <h3>{example.title}</h3>
+                  <p>{example.body}</p>
+                  <ol>
+                    {example.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+              <div className="public-example-composer" aria-hidden="true">
+                <span>
+                  <Plus size={20} />
+                </span>
+                <span>Ask a follow-up…</span>
+                <span>
+                  <ArrowUp size={20} />
+                </span>
+              </div>
+              <p className="public-example-caption">
+                Illustrative conversation. Open KovaGPT to start your own.
+              </p>
             </div>
-            <div className="public-example-composer" aria-hidden="true">
-              <span>
-                <Plus size={20} />
-              </span>
-              <span>Ask a follow-up…</span>
-              <span>
-                <ArrowUp size={20} />
-              </span>
-            </div>
-            <p className="public-example-caption">
-              Illustrative conversation. Open KovaGPT to start your own.
-            </p>
-          </div>
-        </section>
+          </section>
 
-        <section
-          className="public-use-cases kova-showcase-chapters"
-          aria-labelledby="use-cases-title"
-        >
-          <div className="public-section-heading">
-            <h2 id="use-cases-title">
-              For your work, your ideas,
-              <br />
-              and everything in between.
-            </h2>
-          </div>
-          <div className="public-use-case-grid">
-            <article className="public-use-case kova-showcase-enter">
-              <h3>Find the right words.</h3>
-              <p>
-                Shape a first draft, try a different tone, or make a complicated idea easier to
-                follow.
-              </p>
-              <div
-                className="public-document-illustration"
-                aria-label="Illustrative writing outline"
-              >
-                <span className="public-illustration-label">Example · First draft</span>
-                <strong>
-                  A small idea.
-                  <br />A clear beginning.
-                </strong>
-                <span className="public-illustration-rule" />
-                <span className="public-illustration-rule" />
-                <span className="public-illustration-rule is-short" />
-                <span className="public-illustration-note">Make it sound like you.</span>
-              </div>
-            </article>
-            <article className="public-use-case kova-showcase-enter">
-              <h3>Follow your curiosity.</h3>
-              <p>
-                Ask a follow-up, work through an example, and find a way of understanding that
-                clicks.
-              </p>
-              <div
-                className="public-learning-illustration"
-                aria-label="Illustrative learning conversation"
-              >
-                <span className="public-illustration-label">Example · Learn together</span>
-                <span className="public-learning-question">Can you explain it another way?</span>
-                <span className="public-learning-answer">Let’s start with something familiar.</span>
-                <span className="public-learning-question">Now give me a question to try.</span>
-              </div>
-            </article>
-            <article className="public-use-case kova-showcase-enter">
-              <h3>See the next step.</h3>
-              <p>
-                Break a big task into smaller pieces and turn an open-ended idea into a useful plan.
-              </p>
-              <div className="public-plan-illustration" aria-label="Illustrative project plan">
-                <span className="public-illustration-label">Example · Project outline</span>
-                <ol>
-                  <li>
-                    <span>01</span>Define the outcome
-                  </li>
-                  <li>
-                    <span>02</span>Gather your ideas
-                  </li>
-                  <li>
-                    <span>03</span>Choose where to start
-                  </li>
-                </ol>
-              </div>
-            </article>
-          </div>
-        </section>
+          <section className="kova-overview-chapters" aria-label="Ways to use KovaGPT">
+            {examples.map((item, index) => (
+              <article className="kova-overview-chapter" key={item.label} data-example={index}>
+                <h2>{item.label}</h2>
+                <p>{item.title}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelected(index);
+                    document
+                      .getElementById("workflow-example-title")
+                      ?.focus({ preventScroll: true });
+                    document
+                      .getElementById("workflow-example")
+                      ?.scrollIntoView({ block: "nearest" });
+                  }}
+                >
+                  View example <span aria-hidden="true">↗</span>
+                </button>
+              </article>
+            ))}
+          </section>
+        </div>
 
         <section
           className="public-plan-band kova-showcase-enter"
