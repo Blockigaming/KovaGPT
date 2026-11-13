@@ -17,6 +17,7 @@ const home =
   (await readFile("src/components/HomeChatStarters.tsx", "utf8"));
 const root = await readFile("src/routes/__root.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
+const streamingStatus = await readFile("src/components/StreamingStatus.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
 const starters = await readFile("src/components/HomeChatStarters.tsx", "utf8");
 const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx", "utf8");
@@ -420,26 +421,27 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
 });
 
 test("streaming status reports only real activity instead of invented progression", () => {
-  assert.match(message, /CONTINUED_WAIT_MS = 8_000/);
-  assert.match(message, /EXTENDED_WAIT_MS = 30_000/);
-  assert.match(message, /Date\.now\(\) - startedAt/);
-  assert.match(message, /activity\.status === "running"/);
+  const status = streamingStatus;
+  assert.match(status, /CONTINUED_WAIT_MS = 8_000/);
+  assert.match(status, /EXTENDED_WAIT_MS = 30_000/);
+  assert.match(status, /Date\.now\(\) - startedAt/);
+  assert.match(status, /activity\.status === "running"/);
   assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
   assert.match(message, /if \(!streaming\) localStreamingStartedAtRef\.current = null/);
   assert.match(message, /streamingStartedAt \?\? localStreamingStartedAtRef\.current/);
   assert.match(home, /startedAt: Date\.now\(\)/);
   assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
   assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
-  assert.match(message, /"Still waiting for the response"/);
-  assert.match(message, /"Taking a little longer"/);
-  assert.match(message, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
-  assert.match(message, /return \(\) => window\.clearInterval\(timer\)/);
-  assert.match(message, /Thinking · \{label\}…/);
-  assert.match(message, /elapsedSeconds >= 8 && \(\s*<span role="timer" aria-live="off"/);
-  assert.doesNotMatch(message, /IDLE_STATUSES|Planning response|Finishing response/);
-  assert.match(message, /kova-thinking-indicator/);
-  assert.match(message, /role="status"/);
-  assert.match(message, /aria-atomic="true"/);
+  assert.match(status, /"Still working"/);
+  assert.match(status, /"Taking a little longer"/);
+  assert.match(status, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
+  assert.match(status, /return \(\) => window\.clearInterval\(timer\)/);
+  assert.match(status, /Working for \{elapsedSeconds\}s/);
+  assert.doesNotMatch(status, />\s*Skip\s*</);
+  assert.doesNotMatch(status, /IDLE_STATUSES|Planning response|Finishing response/);
+  assert.match(status, /kova-thinking-indicator/);
+  assert.match(status, /role="status"/);
+  assert.match(status, /aria-atomic="true"/);
   assert.match(message, /<MessageActivityList activities=\{message\.activities\}/);
 });
 
