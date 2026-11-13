@@ -3,8 +3,8 @@ name: Apple Health iOS
 on:
   pull_request:
     paths:
-      - 'ios/**'
-      - '.github/workflows/apple-health-ios.yml'
+      - "ios/**"
+      - ".github/workflows/apple-health-ios.yml"
   workflow_dispatch:
 
 permissions:
