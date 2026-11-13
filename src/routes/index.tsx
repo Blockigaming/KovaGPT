@@ -204,7 +204,6 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
-import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
   consumePrincipalHandoff,
@@ -2128,12 +2127,8 @@ function KovaGPT() {
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
-        const {
-          createChatHistoryPayload,
-          fetchForPrincipal,
-          chatRequestProfile,
-          withResponsePresentation,
-        } = await import("@/lib/chat-summary-snapshot.mjs");
+        const { createChatHistoryPayload, fetchForPrincipal, chatRequestUser } =
+          await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2148,9 +2143,6 @@ function KovaGPT() {
           },
         );
 
-        const liveVoiceReply = voiceRequest
-          ? (await import("@/lib/voice/preference")).readLiveVoiceReply(userKey)
-          : null;
         const resp = await authFetch("/api/chat", {
           method: "POST",
           headers: {
@@ -2173,43 +2165,16 @@ function KovaGPT() {
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            ...(liveVoiceReply ? { voice: true } : {}),
-            user:
-              tempChat && tempChatContext === "clean"
-                ? requestWebSearch === undefined
-                  ? undefined
-                  : { webSearch: requestWebSearch }
-                : withResponsePresentation(
-                    chatRequestProfile({
-                      ...settings,
-                      ...(liveVoiceReply
-                        ? {
-                            responseLength: liveVoiceReply.length,
-                            customInstructions: [
-                              liveVoiceReply.details.trim()
-                                ? settings.customInstructions?.slice(0, 6800)
-                                : settings.customInstructions,
-                              liveVoiceReply.details.trim() &&
-                                `Live Voice preferences: ${liveVoiceReply.details.trim()}`,
-                            ]
-                              .filter(Boolean)
-                              .join("\n\n"),
-                          }
-                        : {}),
-                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
-                    }),
-                    settings,
-                  ),
+            ...(await chatRequestUser(
+              settings,
+              tempChat && tempChatContext === "clean",
+              requestWebSearch,
+              isLoaded ? userKey : undefined,
+              tier,
+              Boolean(voiceRequest),
+            )),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
-            personality:
-              tempChat && tempChatContext === "clean"
-                ? undefined
-                : personalityToInstruction(
-                    loadPersonality(isLoaded ? userKey : undefined),
-                    isLoaded ? userKey : undefined,
-                    tier,
-                  ) || undefined,
           }),
           signal: controller.signal,
         });

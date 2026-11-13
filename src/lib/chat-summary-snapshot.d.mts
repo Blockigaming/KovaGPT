@@ -78,3 +78,12 @@ export function chatRequestProfile(
 ): Record<string, unknown>;
 
 export { withResponsePresentation } from "./spec400-response-preferences.mjs";
+
+export function chatRequestUser(
+  settings: import("../components/SettingsDialog").Settings,
+  cleanTemporaryChat: boolean,
+  webSearch: boolean | undefined,
+  owner: string | null | undefined,
+  tier: import("@/hooks/useTier").Tier,
+  voice: boolean,
+): Promise<{ voice?: true; user?: Record<string, unknown>; personality?: string }>;

@@ -1,3 +1,4 @@
+import { withResponsePresentation } from "./spec400-response-preferences.mjs";
 import { deriveTitle } from "./chat-store.ts";
 import { boundedSummaryText } from "./chat-summary-text.mjs";
 import { enqueueMemoryWrite } from "./memory-write-coordinator.mjs";
@@ -373,3 +374,21 @@ export function chatRequestProfile(settings) {
 }
 
 export { withResponsePresentation } from "./spec400-response-preferences.mjs";
+
+export async function chatRequestUser(settings, cleanTemporaryChat, webSearch, owner, tier, voice) {
+  if (cleanTemporaryChat) return { user: webSearch === undefined ? undefined : { webSearch } };
+  const { loadPersonality, personalityToInstruction } =
+    await import("../components/PersonalitySliders.tsx");
+  if (voice) {
+    const { applyLiveVoiceReply } = await import("./voice/preference.ts");
+    settings = applyLiveVoiceReply(settings, owner);
+  }
+  return {
+    voice: voice || undefined,
+    user: withResponsePresentation(
+      chatRequestProfile(webSearch === undefined ? settings : { ...settings, webSearch }),
+      settings,
+    ),
+    personality: personalityToInstruction(loadPersonality(owner), owner, tier) || undefined,
+  };
+}

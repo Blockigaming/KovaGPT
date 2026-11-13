@@ -63,7 +63,7 @@ const storedAttachmentsDefinition = attachmentSource.statements
   .getText(attachmentSource)
   .replace(/^export /u, "");
 const compiled = js(`globalThis.storedMessageAttachments = ${storedAttachmentsDefinition};
-  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule").replace('await import("@/lib/voice/preference")', '{ readLiveVoiceReply: () => ({ length: "medium", details: "Use simple examples." }) }')};
+  globalThis.send = ${arrow("send").replace('await import("@/lib/chat-summary-snapshot.mjs")', "await summaryModule")};
 globalThis.stop = ${arrow("stop")};
 globalThis.setInput = ${arrow("setInput")};
 globalThis.setAttachments = ${arrow("setAttachments")};
@@ -88,9 +88,9 @@ const sendFixture = () => {
   const f = sendFixtureFactory();
   f.context.summaryModule = f.context.summaryModule.then((module) => ({
     ...module,
-    chatRequestProfile: ({ responseLength, customInstructions }) => ({
-      responseLength,
-      customInstructions,
+    chatRequestUser: (_settings, _temporary, _webSearch, _owner, _tier, voice) => ({
+      voice,
+      user: { responseLength: "medium", customInstructions: "Use simple examples." },
     }),
   }));
   f.context.stopComposerVoiceRequestRef = { current: f.context.stop };

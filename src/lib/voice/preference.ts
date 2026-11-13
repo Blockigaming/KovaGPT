@@ -89,3 +89,22 @@ export function readLiveVoiceReply(owner: string | null | undefined): LiveVoiceR
     return { length: "short", details: "" };
   }
 }
+
+export function applyLiveVoiceReply<
+  T extends {
+    responseLength: LiveVoiceReply["length"];
+    customInstructions?: string;
+  },
+>(settings: T, owner: string | null | undefined): T {
+  const { length, details } = readLiveVoiceReply(owner);
+  const instructions = details.trim();
+  return {
+    ...settings,
+    responseLength: length,
+    customInstructions: instructions
+      ? [settings.customInstructions?.slice(0, 6800), `Live Voice preferences: ${instructions}`]
+          .filter(Boolean)
+          .join("\n\n")
+      : settings.customInstructions,
+  };
+}
