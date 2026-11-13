@@ -328,14 +328,19 @@ if (scope === "public") {
       name: "Settings sidebar width",
       exact: true,
     });
-    const phone = page.viewportSize()!.width < 768;
-    const controls = phone
+    const compact = await page.evaluate(
+      () =>
+        matchMedia(
+          "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
+        ).matches,
+    );
+    const controls = compact
       ? ([[size, "85", "125"]] as const)
       : ([
           [size, "85", "125"],
           [navigation, "200", "440"],
         ] as const);
-    if (phone) await expect(navigation).toBeHidden();
+    if (compact) await expect(navigation).toBeHidden();
     for (const [slider, min, max] of controls) {
       await slider.scrollIntoViewIfNeeded();
       await slider.press("Home");
