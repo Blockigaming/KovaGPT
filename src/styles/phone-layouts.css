@@ -16,7 +16,8 @@
   .kova-topbar[data-kova-compact-header] .kova-topbar-inner {
     min-height: 52px;
     column-gap: 6px;
-    padding-inline: max(12px, var(--safe-left)) max(12px, var(--safe-right));
+    padding-inline: max(12px, 0.5rem, var(--safe-left, 0px))
+      max(12px, 0.5rem, var(--safe-right, 0px));
     padding-bottom: 2px;
   }
   .kova-topbar[data-kova-compact-header] .kova-sidebar-toggle {

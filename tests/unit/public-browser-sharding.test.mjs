@@ -13,7 +13,15 @@ const publicFiles = [
   "writing-tools.spec.ts",
   "translation-family.spec.ts",
 ];
-const verificationProjects = ["phone-390x844", "tablet-1024x768", "desktop-1440x900"];
+const verificationProjects = [
+  "phone-320x700",
+  "phone-390x844",
+  "phone-landscape-844x390",
+  "tablet-768x1024",
+  "tablet-1024x768",
+  "desktop-1280x800",
+  "desktop-1440x900",
+];
 
 function evaluate(source, env = {}, modules = {}) {
   const exports = {};
@@ -98,13 +106,15 @@ test("the actual public matrix retains every route and theme in bounded groups",
     if (!scope) assert.deepEqual(paths, PUBLIC_REVIEW_PATHS);
   }
   assert.match(source, /for \(const colorScheme of \["light", "dark"\] as const\)/);
+  assert.match(source, /localStorage\.setItem\("kova-theme-mode", "system"\)/);
+  assert.match(source, /expect\(layout\.isDark,.*\)\.toBe\(colorScheme === "dark"\)/);
   assert.match(source, /for \(const route of routes\)/);
   assert.match(source, /test\.step\(`\$\{colorScheme\} \$\{route\}`/);
   assert.match(source, /waitUntil: "domcontentloaded", timeout: 15_000/);
   assert.match(source, /expect\(runtimeErrors,.*\)\.toEqual\(\[\]\)/);
 });
 
-test("public shards retain the three viewports and feed fail-closed existing required checks", () => {
+test("public shards cover phone and tablet orientations and desktop, and feed required checks", () => {
   const workflow = read(".github/workflows/ci.yml");
   const section = (name, next) =>
     workflow.slice(workflow.indexOf(`\n  ${name}:`), workflow.indexOf(`\n  ${next}:`));
@@ -112,7 +122,25 @@ test("public shards retain the three viewports and feed fail-closed existing req
   assert.match(publicJob, /needs: verify/);
   assert.match(publicJob, /KOVA_BROWSER_SUITE: "public"/);
   assert.match(publicJob, /PLAYWRIGHT_PREBUILT: "1"/);
-  assert.match(publicJob, /project: \[phone-390x844, tablet-1024x768, desktop-1440x900\]/);
+  const projects = publicJob.match(/project:\n((?: {10}- [\w-]+\n)+)/)?.[1];
+  assert.deepEqual(
+    Array.from(projects?.matchAll(/- ([\w-]+)/g) ?? [], (match) => match[1]),
+    verificationProjects,
+  );
+  const browserProjects = config("public").projects.filter(({ name }) =>
+    verificationProjects.includes(name),
+  );
+  assert.deepEqual(
+    new Set(Array.from(browserProjects, ({ name }) => name)),
+    new Set(verificationProjects),
+  );
+  for (const { name, use } of browserProjects) {
+    const [, width, height] = name.match(/-(\d+)x(\d+)$/u);
+    assert.equal(use.viewport.width, Number(width));
+    assert.equal(use.viewport.height, Number(height));
+    assert.equal(Boolean(use.hasTouch), !name.startsWith("desktop"));
+    assert.equal(Boolean(use.isMobile), name.startsWith("phone"));
+  }
   assert.match(publicJob, /shard: \[1, 2, 3\]/);
   assert.match(
     publicJob,
@@ -125,6 +153,24 @@ test("public shards retain the three viewports and feed fail-closed existing req
   assert.match(publicJob, /if: always\(\)/);
   assert.match(publicJob, /if-no-files-found: error/);
   assert.doesNotMatch(publicJob, /continue-on-error|KOVA_PUBLIC_MATRIX_SCOPE/);
+  const expectedReports = spawnSync(
+    "python3",
+    [
+      "-c",
+      'import runpy; print("\\n".join(sorted(runpy.run_path("scripts/release/validate-playwright-reports.py")["EXPECTED"])))',
+    ],
+    { encoding: "utf8" },
+  );
+  assert.equal(expectedReports.status, 0, expectedReports.stderr);
+  assert.deepEqual(
+    expectedReports.stdout.trim().split("\n"),
+    [
+      ...Array.from({ length: 8 }, (_, i) => `e2e-blob-${i + 1}`),
+      ...verificationProjects.flatMap((name) =>
+        [1, 2, 3].map((shard) => `e2e-blob-public-${name}-${shard}`),
+      ),
+    ].sort(),
+  );
   assert.match(section("e2e-report", "isolated-database"), /pattern: e2e-blob-\*/);
   for (const [name, next] of [
     ["browser", "release-e2e"],

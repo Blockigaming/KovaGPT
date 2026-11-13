@@ -67,7 +67,7 @@ export function PlanComparison() {
           </tbody>
         </table>
       </div>
-      <div className="kova-phone-plan-comparison hidden">
+      <div className="kova-phone-plan-comparison hidden" role="region" aria-label="Plan comparison">
         {rows.map(({ label, values }) => (
           <details key={label}>
             <summary>{label}</summary>

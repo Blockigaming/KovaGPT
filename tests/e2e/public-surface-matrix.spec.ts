@@ -3,7 +3,15 @@ import { expect, test, type Page } from "@playwright/test";
 import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
-const verificationProjects = new Set(["phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
+const verificationProjects = new Set([
+  "phone-320x700",
+  "phone-390x844",
+  "phone-landscape-844x390",
+  "tablet-768x1024",
+  "tablet-1024x768",
+  "desktop-1280x800",
+  "desktop-1440x900",
+]);
 const expandedPublicRoutes = new Set([
   "/academy",
   "/business-data",
@@ -114,8 +122,11 @@ async function verifyRoute(
     const mainRect = main?.getBoundingClientRect();
     const headingStyle = heading ? getComputedStyle(heading) : null;
     return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
       clientWidth: root.clientWidth,
       scrollWidth: root.scrollWidth,
+      isDark: root.classList.contains("dark"),
       mainHeight: mainRect?.height ?? 0,
       headingColor: headingStyle?.color ?? "",
       headingVisibility: headingStyle?.visibility ?? "",
@@ -123,6 +134,13 @@ async function verifyRoute(
     };
   });
 
+  expect(layout.viewportWidth, `${route} ${colorScheme} viewport width`).toBe(
+    page.viewportSize()?.width,
+  );
+  expect(layout.viewportHeight, `${route} ${colorScheme} viewport height`).toBe(
+    page.viewportSize()?.height,
+  );
+  expect(layout.isDark, `${route} ${colorScheme} applied theme`).toBe(colorScheme === "dark");
   expect(layout.scrollWidth, `${route} ${colorScheme} horizontal overflow`).toBeLessThanOrEqual(
     layout.clientWidth + 1,
   );
@@ -145,6 +163,9 @@ test.describe.parallel("complete public surface matrix", () => {
       test.skip(!verificationProjects.has(testInfo.project.name));
       test.setTimeout(Math.max(4 * 60_000, routes.length * 2 * 20_000));
 
+      // The app defaults to dark and persists its preference across navigations.
+      // Use its system setting so both emulated themes are actually rendered.
+      await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "system"));
       const runtimeErrors = watchForRuntimeErrors(page);
       for (const colorScheme of ["light", "dark"] as const) {
         await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });

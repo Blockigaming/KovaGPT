@@ -86,13 +86,21 @@ for (const width of widths)
               await expect(summary.locator("..")).not.toHaveAttribute("open", "");
               await expect(summary).toBeFocused();
             }
-            const footerLink = page
-              .getByRole("navigation", { name: "Footer navigation" })
-              .getByRole("link")
-              .first();
+            const footer = page.getByRole("navigation", { name: "Footer navigation" });
+            if (width < 768) {
+              const group = footer.locator("details").first();
+              const summary = group.locator("summary");
+              await expect(group).not.toHaveAttribute("open", "");
+              await summary.focus();
+              await expect(summary).toBeFocused();
+              expect(Math.round((await summary.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
+              await page.keyboard.press("Space");
+              await expect(group).toHaveAttribute("open", "");
+            }
+            const footerLink = footer.getByRole("link").first();
             await footerLink.focus();
             await expect(footerLink).toBeFocused();
-            expect((await footerLink.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+            expect(Math.round((await footerLink.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
             // Reviewable representative visuals, not a claim that every content page is finished.
             if ((width === 390 || width === 1440) && textScale === 1) {
               await page.evaluate(() => window.scrollTo(0, 0));

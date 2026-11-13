@@ -15,7 +15,7 @@ export const PHONE_MAX = 768;
 // desktop, and utility classes prefixed with `lg:` mark the desktop shell.
 export const TABLET_MAX = 1024;
 
-const PHONE_LAYOUT_QUERY =
+export const PHONE_LAYOUT_QUERY =
   "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)";
 
 function subscribeToPhoneLayout(onChange: () => void) {
