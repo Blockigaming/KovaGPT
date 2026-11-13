@@ -30,3 +30,5 @@ export function chatUsageWindows(
 }[];
 
 export function isUnlimitedBasicChat(tier: string, modelId: string, mode: string): boolean;
+
+export function legacyFiveHourWindow(now: Date): { start: string; resetsAt: string };

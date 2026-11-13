@@ -34,6 +34,14 @@ const DAY_MS = 24 * 60 * 60_000;
 const HOUR_MS = 60 * 60_000;
 const FIVE_HOURS_MS = 5 * HOUR_MS;
 
+export function legacyFiveHourWindow(now) {
+  const start = Math.floor(now.getTime() / FIVE_HOURS_MS) * FIVE_HOURS_MS;
+  return {
+    start: new Date(start).toISOString(),
+    resetsAt: new Date(start + FIVE_HOURS_MS).toISOString(),
+  };
+}
+
 export function chatUsageWindows(tier, now = new Date(), usageMultiplier = 1) {
   if (![1, 5].includes(usageMultiplier) || (usageMultiplier !== 1 && tier !== "pro"))
     throw new Error("Invalid usage multiplier");
