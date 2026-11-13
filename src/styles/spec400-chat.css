@@ -1148,7 +1148,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 @media (width < 1024px) {
   .kova-assistant[data-ui="modern"] {
     --chat-gutter: 16px;
-    --kova-radius-composer: 22px;
+    --chat-composer-corner: 22px;
   }
 
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {

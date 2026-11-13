@@ -26,12 +26,12 @@ test("major workspaces share one accessible page header contract", async () => {
 
 test("toast presentation uses one mobile-safe launch candidate configuration", async () => {
   const source = await read("src/components/ui/sonner.tsx");
-  assert.match(source, /const mobile = useIsMobile\(\)/);
-  assert.match(source, /position=\{mobile \? "top-center" : "bottom-right"\}/);
+  assert.match(source, /const \{ isDesktop \} = useLayout\(\)/);
+  assert.match(source, /position=\{isDesktop \? "bottom-right" : "top-center"\}/);
   assert.match(source, /closeButton/);
   assert.match(
     source,
-    /mobileOffset=\{\{ top: "calc\(72px \+ env\(safe-area-inset-top\)\)", left: 16, right: 16 \}\}/,
+    /mobileOffset=\{\{\s*top: "calc\(64px \+ env\(safe-area-inset-top\) \+ var\(--kova-visible-top, 0px\)\)",\s*left: "max\(16px, env\(safe-area-inset-left\)\)"/,
   );
   assert.match(source, /visibleToasts=\{4\}/);
 });

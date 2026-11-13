@@ -55,10 +55,10 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.equal(closed.visibility, "hidden");
   assert.equal(closed["pointer-events"], "none");
   assert.match(sidebar, /data-state=\{open \? "open" : "closed"\}/);
-  assert.match(tokens, /--kova-sidebar-drawer-width: min\(320px, calc\(100vw - 32px\)\);/);
+  assert.match(tokens, /--kova-sidebar-drawer-width: min\(86vw, 320px\);/);
   assert.equal(
     sidebarRule(".kova-sidebar[data-kova-core-sidebar]", "(max-width: 1023px)").width,
-    "var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)))",
+    "var(--kova-sidebar-drawer-width, min(86vw, 320px))",
   );
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);

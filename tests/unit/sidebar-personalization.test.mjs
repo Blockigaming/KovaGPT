@@ -173,10 +173,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
       rule.parent.params === "(max-width: 1023px)" &&
       rule.selector === ".kova-sidebar[data-kova-core-sidebar]",
   );
-  assert.equal(
-    property(mobile, "width"),
-    "var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)))",
-  );
+  assert.equal(property(mobile, "width"), "var(--kova-sidebar-drawer-width, min(86vw, 320px))");
   assert.equal(property(mobile, "min-width"), "0");
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
   // Only the right corners are rounded so the drawer fills the left edge.
@@ -190,7 +187,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   assert.equal(property(desktopFrame, "border-radius"), "0 20px 20px 0");
   assert.equal(tokens.get("--kova-sidebar-width"), "260px");
   assert.equal(tokens.get("--kova-sidebar-rail-width"), "60px");
-  assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(320px, calc(100vw - 32px))");
+  assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(86vw, 320px)");
   assert.ok(
     !rules.some(
       (rule) =>

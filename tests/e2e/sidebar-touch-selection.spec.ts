@@ -257,7 +257,7 @@ for (const theme of ["dark", "light"] as const) {
         await expect(page.locator("[data-chat-transcript]")).toBeVisible();
         await expect(page.locator(".kova-sidebar[data-kova-core-sidebar]")).toHaveAttribute(
           "data-state",
-          "closed",
+          viewport.width < 1024 ? "closed" : "open",
         );
       } else {
         await page.keyboard.press("Escape");
