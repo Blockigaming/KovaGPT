@@ -114,8 +114,7 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
 }) => {
   const viewport = page.viewportSize()!;
   test.skip(viewport.width >= 1024, "compact shell");
-  await installAuthenticatedFixture(page);
-  await page.addInitScript(() => localStorage.setItem("kova-mobile-sidebar-open", "1"));
+  await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
@@ -133,6 +132,7 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   expect(mainBox.x).toBe(0);
   expect(mainBox.width).toBe(viewport.width);
 
+  await page.evaluate(() => localStorage.setItem("kova-mobile-sidebar-open", "1"));
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(opener).toBeVisible();
