@@ -55,7 +55,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { ArrowDown, PanelLeft, Sparkles, X } from "lucide-react";
+import { PanelLeft, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
@@ -728,7 +728,6 @@ function KovaGPT() {
   const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
-  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [resultTab, setResultTab] = useState<"conversation" | "result">("conversation");
   const workspaceRef = useRef<HTMLDivElement>(null);
   const responseDraftUrl = typeof window === "undefined" ? undefined : window.location.href;
@@ -3184,27 +3183,6 @@ function KovaGPT() {
     ) : null;
 
   const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
-  const jumpToLatestButton = showJumpToLatest ? (
-    <Button
-      variant="ghost"
-      size="icon"
-      type="button"
-      onClick={() => {
-        const element = scrollRef.current;
-        if (!element) return;
-        nearBottomRef.current = true;
-        readingAnchorControllerRef.current?.followEnd();
-        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
-        element.focus({ preventScroll: true });
-        setShowJumpToLatest(false);
-      }}
-      className="kova-topbar-button h-11 w-11 shrink-0 rounded-full p-2"
-      aria-label="Jump to latest message"
-      title="Jump to latest message"
-    >
-      <ArrowDown className="h-5 w-5" aria-hidden="true" />
-    </Button>
-  ) : null;
   const freeOfferButton =
     isLoaded && isSignedIn && tier === "free" ? (
       <Suspense fallback={null}>
@@ -3255,7 +3233,6 @@ function KovaGPT() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 shrink-0">
-          {jumpToLatestButton}
           {freeOfferButton}
           {conversationActions()}
           {isLoaded && isSignedIn && !chatStarted && (
@@ -3366,7 +3343,6 @@ function KovaGPT() {
           chatStarted={chatStarted}
           conversationActions={
             <>
-              {jumpToLatestButton}
               {freeOfferButton}
               {conversationActions(true)}
             </>
@@ -3582,7 +3558,6 @@ function KovaGPT() {
                     readingAnchorControllerRef={readingAnchorControllerRef}
                     transcriptScope={transcriptScope}
                     transcriptScopeRef={transcriptScopeRef}
-                    setShowJumpToLatest={setShowJumpToLatest}
                     renderMessage={renderTranscriptMessage}
                   />
                 </Suspense>
