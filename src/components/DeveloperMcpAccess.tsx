@@ -77,8 +77,6 @@ export function DeveloperMcpAccessPage({ requestId }: { requestId?: string }) {
     [authOpen, setAuthOpen] = useState(false);
   return (
     <main
-      id="main-content"
-      tabIndex={-1}
       data-ui-reference="chatgpt-settings-form"
       className="mx-auto w-full max-w-3xl space-y-6 p-5"
     >

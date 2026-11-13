@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
@@ -10,7 +9,7 @@ for (const theme of ["dark", "light"] as const) {
     await coreFixture(page, theme, "pro");
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+    const phone = page.viewportSize()!.width < 768;
     const navigation = page.getByRole("complementary", { name: "Settings navigation" });
     const content = page.locator(".kova-settings-content");
     if (phone) {
@@ -34,15 +33,6 @@ for (const theme of ["dark", "light"] as const) {
       const contentBox = (await content.boundingBox())!;
       expect(navBox.x + navBox.width).toBeLessThanOrEqual(contentBox.x + 8);
     }
-    const parentalIcon = navigation
-      .getByRole("tab", { name: "Parental controls", exact: true })
-      .locator('[data-sdk-geometry="ParentControl"] > path');
-    expect(
-      await parentalIcon.evaluate((icon) => {
-        const style = getComputedStyle(icon);
-        return style.fill === style.color;
-      }),
-    ).toBe(true);
     await navigation.getByRole("tab", { name: "Data controls", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Data controls", exact: true })).toBeVisible();
     if (phone) {
@@ -62,7 +52,6 @@ for (const theme of ["dark", "light"] as const) {
     page,
   }) => {
     await coreFixture(page, theme, "pro");
-    const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
     for (const section of [
       "responses",
       "appearance",
@@ -77,31 +66,29 @@ for (const theme of ["dark", "light"] as const) {
       await expect(content).toBeVisible();
       const issues = await content
         .locator('input:not([type="checkbox"]):not([type="radio"]), textarea, [role="combobox"]')
-        .evaluateAll(
-          (nodes, phone) =>
-            nodes.flatMap((node) => {
-              const box = node.getBoundingClientRect();
-              if (!box.width || !box.height) return [];
-              const card = node.closest(".kova-settings-card, .kova-settings-section, section");
-              const parent = card?.getBoundingClientRect();
-              return [
-                ...(box.x < 0 || box.right > innerWidth + 1
-                  ? [`outside viewport: ${node.getAttribute("aria-label") || node.tagName}`]
-                  : []),
-                ...(parent && (box.left < parent.left - 1 || box.right > parent.right + 1)
-                  ? ["outside card"]
-                  : []),
-                ...(phone &&
-                node.matches("input, textarea") &&
-                parseFloat(getComputedStyle(node).fontSize) < 16
-                  ? ["phone input below 16px"]
-                  : []),
-              ];
-            }),
-          phone,
+        .evaluateAll((nodes) =>
+          nodes.flatMap((node) => {
+            const box = node.getBoundingClientRect();
+            if (!box.width || !box.height) return [];
+            const card = node.closest(".kova-settings-card, .kova-settings-section, section");
+            const parent = card?.getBoundingClientRect();
+            return [
+              ...(box.x < 0 || box.right > innerWidth + 1
+                ? [`outside viewport: ${node.getAttribute("aria-label") || node.tagName}`]
+                : []),
+              ...(parent && (box.left < parent.left - 1 || box.right > parent.right + 1)
+                ? ["outside card"]
+                : []),
+              ...(innerWidth < 768 &&
+              node.matches("input, textarea") &&
+              parseFloat(getComputedStyle(node).fontSize) < 16
+                ? ["phone input below 16px"]
+                : []),
+            ];
+          }),
         );
       expect(issues, section).toEqual([]);
-      if (section === "appearance" && phone) {
+      if (section === "appearance" && page.viewportSize()!.width < 768) {
         const widths = await content
           .locator('.kova-preference-row [role="combobox"]')
           .evaluateAll((nodes) =>

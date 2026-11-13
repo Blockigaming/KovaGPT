@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { PanelLeft, List, MessageCircleOff, Sliders, SquarePen } from "lucide-react";
+import { PanelLeft, MessageCircleOff, Sliders, SquarePen } from "lucide-react";
 import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import type { ModeId, Tier } from "@/lib/modes";
 
@@ -16,7 +16,6 @@ export function MobileTopBar({
   onOpenSidebar,
   onNewChat,
   title,
-  workspace = false,
   temporaryChat = false,
   chatStarted = false,
   conversationActions,
@@ -28,7 +27,6 @@ export function MobileTopBar({
   onOpenSidebar: () => void;
   onNewChat: () => void;
   title?: string;
-  workspace?: boolean;
   mode?: ModeId;
   onModeChange?: (mode: ModeId) => void;
   userTier?: Tier;
@@ -59,7 +57,6 @@ export function MobileTopBar({
   return (
     <header
       data-ui-reference="chatgpt-mobile-topbar"
-      data-kova-compact-header={workspace ? "workspace" : chatStarted ? "conversation" : "chat"}
       className="kova-topbar sticky top-0 z-30 lg:hidden"
     >
       <div className="kova-topbar-inner grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-1 px-2 pb-1">
@@ -72,13 +69,12 @@ export function MobileTopBar({
           aria-haspopup="dialog"
           className="kova-action kova-sidebar-toggle w-11 h-11 text-foreground"
         >
-          <PanelLeft className="kova-tablet-menu-icon w-5 h-5" aria-hidden="true" />
-          <List className="kova-phone-menu-icon hidden h-5 w-5" aria-hidden="true" />
+          <PanelLeft className="w-5 h-5" aria-hidden="true" />
         </Button>
         <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
           <span
-            role={workspace ? undefined : "heading"}
-            aria-level={workspace ? undefined : 1}
+            role="heading"
+            aria-level={1}
             data-kova-navigation-heading=""
             className="spec400-mobile-page-title min-w-0 truncate text-sm font-medium"
           >

@@ -134,8 +134,6 @@ function KnowledgeGraph() {
   return (
     <AppShell>
       <main
-        id="main-content"
-        tabIndex={-1}
         data-ui-reference="gemini.canvas.knowledge"
         className={"kova-tool-page " + "mx-auto w-full max-w-7xl px-4 py-7 sm:px-6"}
       >

@@ -176,9 +176,8 @@ test("core chat surfaces use shared workspace primitives", () => {
     1,
     "expanded navigation owns the brand; rail owns navigation controls",
   );
-  assert.match(starters, /className="kova-phone-greeting-mark hidden" aria-hidden="true"/);
-  assert.match(openingTag(starters, "NovaLogo", /decorative/), /\bmark\b/);
-  assert.equal((home.match(/<NovaLogo\b/g) ?? []).length, 1);
+  assert.doesNotMatch(starters, /<NovaLogo/);
+  assert.doesNotMatch(home, /<NovaLogo/);
   assert.match(publicSite, /<PublicShell>/);
   assert.doesNotMatch(publicSite, /<NovaLogo/);
   assert.match(openingTag(publicShell, "NovaLogo", /decorative/), /className="h-6 w-6"/);
@@ -371,11 +370,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(home, /surface="empty"/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
-  assert.match(starters, /<div key="composer" className="kova-empty-composer">\s*\{children\}/);
-  assert.match(
-    starters,
-    /\{!phone && composer\}[\s\S]*<ContinueWorking[\s\S]*\{phone && composer\}/,
-  );
+  assert.match(starters, /<div className="kova-empty-composer">\s*\{children\}/);
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

@@ -62,16 +62,22 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const page = pathname.split("/")[1] || "chat";
   const pageTitle =
     (
       {
+        library: "Library",
+        projects: "Projects",
+        work: "Work",
+        "scheduled-tasks": "Scheduled tasks",
         apps: "Connections",
+        finances: "Finances",
+        settings: "Settings",
+        images: "Images",
+        profile: "Profile",
         billing: "Subscriptions",
-        kovas: "Kovas",
-        write: "Write",
+        help: "Help",
       } as Record<string, string>
-    )[page] ?? page.replaceAll("-", " ").replace(/^./u, (letter) => letter.toUpperCase());
+    )[pathname.split("/")[1]] ?? "KovaGPT";
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);
@@ -284,7 +290,6 @@ export function AppShell({
     <div
       className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
-      data-workspace-page={page}
     >
       <Sidebar
         conversations={conversations}
@@ -323,7 +328,6 @@ export function AppShell({
         {!hideMobileTopBar && (
           <MobileTopBar
             title={pageTitle}
-            workspace
             onOpenSidebar={() => setSidebarOpen(true)}
             onNewChat={handleNew}
           />

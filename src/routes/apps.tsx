@@ -1467,7 +1467,6 @@ function AppsPage() {
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent
-            phoneSheet
             className="spec400-plugin-detail"
             data-ui-reference="chatgpt.apps.details-dialog"
             closeLabel="Close connection details"

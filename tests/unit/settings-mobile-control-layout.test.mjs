@@ -15,8 +15,7 @@ function rule(selector, media = null) {
   assert.ok(Object.keys(values).length, `Missing ${selector}`);
   return values;
 }
-const mobile =
-  "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)";
+const mobile = "(max-width: 767px)";
 const dialog = '[role="dialog"].kova-settings-dialog.is-authenticated';
 const close = '[role="dialog"].kova-settings-dialog > [data-kova-dialog-close]';
 
