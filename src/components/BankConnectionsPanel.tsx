@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CreditCard,
   Globe2,
-  LoaderCircle,
   PackageOpen,
 } from "./ui/product-icons.tsx";
 import { toast } from "sonner";
@@ -41,9 +40,15 @@ const exampleSpending = [
 const exampleTotal = exampleSpending.reduce((total, category) => total + category.cents, 0);
 const exampleCurrency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
-function FinanceSpendingPreview({ action }: { action?: React.ReactNode }) {
+function FinanceSpendingPreview({
+  action,
+  unavailable,
+}: {
+  action?: React.ReactNode;
+  unavailable: boolean;
+}) {
   return (
-    <div className="mx-auto w-full max-w-[680px] space-y-14 py-8 sm:py-14">
+    <div className="kova-finance-preview mx-auto w-full max-w-[680px] space-y-14 py-8 sm:py-14">
       <header className="flex flex-col items-center gap-4 text-center">
         <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
           <span aria-hidden="true" className="text-2xl font-semibold text-emerald-500">
@@ -57,7 +62,8 @@ function FinanceSpendingPreview({ action }: { action?: React.ReactNode }) {
           See how Kova can help you make sense of spending, subscriptions, balances, and
           investments.
         </p>
-        {action ?? (
+        {action}
+        {unavailable && (
           <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground">
             Coming soon
           </span>
@@ -132,7 +138,7 @@ export function BankConnectionsPanel({
         {
           method: body ? "POST" : "GET",
           cache: "no-store",
-          headers: { "Content-Type": "application/json", "X-Kova-Expected-Owner": ownerId ?? "" },
+          headers: { "Content-Type": "application/json", "X-Kova-Owner": ownerId ?? "" },
           ...(body ? { body: JSON.stringify(body) } : {}),
         },
         30_000,
@@ -168,7 +174,8 @@ export function BankConnectionsPanel({
   const openLink = useCallback(
     async (linkToken: string, receivedRedirectUri?: string) => {
       const sdk = await getPlaidSdk();
-      if (!sdk || !active.current) return;
+      if (!active.current) return;
+      if (!sdk) throw new Error("plaid_sdk_unavailable");
       let settled = false;
       handler.current?.destroy();
       handler.current = sdk.create({
@@ -189,7 +196,7 @@ export function BankConnectionsPanel({
               if (active.current) {
                 newlyLinked.current = connection.id;
                 initialRead.current = false;
-                toast.success("Bank connected.");
+                toast.success("Accounts linked");
                 await reload();
               }
             } catch {
@@ -242,7 +249,12 @@ export function BankConnectionsPanel({
       return;
     }
     setBusy(true);
-    void openLink(token, window.location.href).catch(() => {
+    const callbackUrl = new URL(window.location.href);
+    if (callbackUrl.searchParams.get("kova_plaid_return") === "apps") {
+      callbackUrl.pathname = "/apps";
+      callbackUrl.searchParams.delete("kova_plaid_return");
+    }
+    void openLink(token, callbackUrl.href).catch(() => {
       if (active.current) {
         setBusy(false);
         toast.error("Bank sign-in could not resume. Start a new bank connection.", {
@@ -347,20 +359,31 @@ export function BankConnectionsPanel({
       onClick={() => void connect()}
       disabled={busy || !status?.configured}
       aria-busy={linking}
-      className="relative bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
+      aria-label={linking ? "Connecting a bank" : undefined}
+      className="min-w-[132px] bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
     >
-      <span className={linking ? "opacity-0" : undefined}>Connect a bank</span>
-      {linking && (
-        <span className="absolute inset-0 grid place-items-center">
-          <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
-        </span>
+      {linking ? (
+        <span
+          aria-hidden="true"
+          className="size-4 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
+        />
+      ) : (
+        "Connect a bank"
       )}
     </Button>
   );
   if (!hasConnections) {
     return (
       <>
-        <FinanceSpendingPreview action={ownerId && status?.configured ? linkButton : undefined} />
+        <FinanceSpendingPreview
+          action={ownerId && status?.configured ? linkButton : undefined}
+          unavailable={status?.configured === false}
+        />
+        {ownerId && !status && !statusFailed && (
+          <p className="text-center text-sm text-muted-foreground" role="status">
+            Checking bank connections…
+          </p>
+        )}
         {ownerId && statusFailed && (
           <div className="text-center">
             <Button variant="outline" onClick={() => void reload()}>
@@ -376,7 +399,9 @@ export function BankConnectionsPanel({
     <section className="mt-8 space-y-5" aria-labelledby="bank-connections-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="bank-connections-title" className="text-xl font-semibold tracking-tight">
-          Bank accounts
+          {status?.connections.some((connection) => connection.status === "connected")
+            ? "Accounts linked"
+            : "Bank accounts"}
         </h2>
         <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
           Read-only connections
@@ -450,7 +475,7 @@ export function BankConnectionsPanel({
               </li>
             ))}
           </ul>
-          <div className="overflow-x-auto">
+          <div className="kova-transaction-table overflow-x-auto">
             <table className="w-full text-left text-sm">
               <caption className="text-left font-medium mb-2">
                 Recent transactions{snapshot.limited ? " (limited to 100)" : ""}
@@ -478,6 +503,30 @@ export function BankConnectionsPanel({
               </tbody>
             </table>
           </div>
+          {snapshot.transactions.length > 0 && (
+            <section className="kova-transaction-list hidden" aria-label="Recent transactions">
+              <h3 className="font-medium">Recent transactions</h3>
+              {snapshot.limited && (
+                <p className="text-sm text-muted-foreground">Latest 100 transactions</p>
+              )}
+              <ul>
+                {snapshot.transactions.map((transaction, index) => (
+                  <li key={transaction.id ?? index}>
+                    <div>
+                      <strong>
+                        {transaction.name}
+                        {transaction.pending ? " (pending)" : ""}
+                      </strong>
+                      {transaction.date && (
+                        <time dateTime={transaction.date}>{transaction.date}</time>
+                      )}
+                    </div>
+                    <span>{money(transaction.amount, transaction.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {!snapshot.transactions.length && (
             <p>
               {snapshot.transactionsPending

@@ -198,11 +198,12 @@ test("account and memory mutations are bounded, no-store, and cross-site guarded
 });
 
 test("auth UI does not enumerate duplicate signups or expose raw provider errors", async () => {
-  const [dialog, forgot, mfa, settings] = await Promise.all([
+  const [dialog, forgot, mfa, settings, emailChange] = await Promise.all([
     read("src/components/auth/AuthDialog.tsx"),
     read("src/components/auth/ForgotPasswordDialog.tsx"),
     read("src/components/MfaPanel.tsx"),
     read("src/components/SettingsDialog.tsx"),
+    read("src/components/EmailChangeForm.tsx"),
   ]);
   assert.doesNotMatch(dialog, /Already registered/);
   assert.doesNotMatch(dialog, /error\.message/);
@@ -211,7 +212,10 @@ test("auth UI does not enumerate duplicate signups or expose raw provider errors
   assert.doesNotMatch(forgot, /toast\.error\(msg\)/);
   assert.doesNotMatch(mfa, /toast\.error\(\(e as Error\)\.message/);
   assert.doesNotMatch(settings, /onClick=\{\(\) => clerk\?\.openUserProfile\(\)\}/);
-  assert.match(settings, /Email-address\s+changes are not\s+currently available in the app/);
+  assert.match(settings, /<EmailChangeForm key=\{userKey\} ownerId=\{userKey\}/);
+  assert.match(emailChange, /principal\?\.accountId !== ownerId/);
+  assert.match(emailChange, /"\/api\/auth\/change-email"/);
+  assert.match(emailChange, /oldCode: oldCode\.trim\(\),\s*newCode: newCode\.trim\(\)/);
 });
 
 test("account deletion disclosures preserve the recovery window and retention exceptions", async () => {

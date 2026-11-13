@@ -3,7 +3,15 @@ import { expect, test, type Page } from "@playwright/test";
 import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
-const verificationProjects = new Set(["phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
+const verificationProjects = new Set([
+  "phone-320x700",
+  "phone-390x844",
+  "phone-landscape-844x390",
+  "tablet-768x1024",
+  "tablet-1024x768",
+  "desktop-1280x800",
+  "desktop-1440x900",
+]);
 const expandedPublicRoutes = new Set([
   "/academy",
   "/business-data",
@@ -80,19 +88,22 @@ async function verifyRoute(
   const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 15_000 });
   expect(response?.status(), `${route} ${colorScheme} status`).toBe(200);
   await waitForKovaHydration(page);
+  // Guest entry and navigation can change after the session check completes.
+  await expect(page.getByRole("dialog", { name: "Checking account", exact: true })).toBeHidden();
+  await expect(page.locator("main.kova-session-shell-main")).toHaveCount(0);
 
   const main = page.locator("main#main-content");
   await expect(main, `${route} ${colorScheme} main`).toHaveCount(1);
   const pageHeading = main.locator("h1");
   await expect(pageHeading, `${route} ${colorScheme} unique page heading`).toHaveCount(1);
   await expect(pageHeading, `${route} ${colorScheme} heading`).toBeVisible();
-  const publicNavigation = page.getByRole("navigation", { name: "Public navigation" });
+  const publicNavigation = page.getByRole("navigation", {
+    name: "Public navigation",
+    exact: true,
+  });
   if ((await publicNavigation.count()) === 1) {
     await expect(publicNavigation, `${route} ${colorScheme} navigation`).toBeVisible();
     await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
-  } else if (route === "/pricing") {
-    await expect(page.locator("[data-billing-page]")).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "Back to chat", exact: true })).toBeVisible();
   } else {
     await expect(
       page.getByRole("button", { name: /^Log in(?: to KovaGPT)?$/u }).first(),
@@ -117,8 +128,11 @@ async function verifyRoute(
     const mainRect = main?.getBoundingClientRect();
     const headingStyle = heading ? getComputedStyle(heading) : null;
     return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
       clientWidth: root.clientWidth,
       scrollWidth: root.scrollWidth,
+      isDark: root.classList.contains("dark"),
       mainHeight: mainRect?.height ?? 0,
       headingColor: headingStyle?.color ?? "",
       headingVisibility: headingStyle?.visibility ?? "",
@@ -126,6 +140,13 @@ async function verifyRoute(
     };
   });
 
+  expect(layout.viewportWidth, `${route} ${colorScheme} viewport width`).toBe(
+    page.viewportSize()?.width,
+  );
+  expect(layout.viewportHeight, `${route} ${colorScheme} viewport height`).toBe(
+    page.viewportSize()?.height,
+  );
+  expect(layout.isDark, `${route} ${colorScheme} applied theme`).toBe(colorScheme === "dark");
   expect(layout.scrollWidth, `${route} ${colorScheme} horizontal overflow`).toBeLessThanOrEqual(
     layout.clientWidth + 1,
   );
@@ -148,6 +169,9 @@ test.describe.parallel("complete public surface matrix", () => {
       test.skip(!verificationProjects.has(testInfo.project.name));
       test.setTimeout(Math.max(4 * 60_000, routes.length * 2 * 20_000));
 
+      // The app defaults to dark and persists its preference across navigations.
+      // Use its system setting so both emulated themes are actually rendered.
+      await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "system"));
       const runtimeErrors = watchForRuntimeErrors(page);
       for (const colorScheme of ["light", "dark"] as const) {
         await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });

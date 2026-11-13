@@ -50,7 +50,7 @@ test("shell removes decorative effects and keeps navigation neutral and reachabl
   assert.match(sidebar, /inert=\{collapsed \|\| workspaceSearchOpen \? true : undefined\}/);
   assert.match(
     sidebarStyles,
-    /\.kova-sidebar \.kova-chat-row:is\(:hover, :focus-within, \.is-active\) \.kova-chat-options\s*\{\s*opacity: 1/,
+    /\.kova-sidebar \.kova-chat-row:hover \.kova-chat-options,\s*\.kova-sidebar \.kova-chat-options:is\(:focus-visible, \[data-state="open"\]\)\s*\{\s*opacity: 1/,
   );
   assert.doesNotMatch(sidebar, /new CustomEvent\("kova-open-lens"\)/);
   assert.doesNotMatch(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);

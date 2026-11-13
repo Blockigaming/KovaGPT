@@ -331,6 +331,11 @@ test("the actual workspace uses specified heading, surface, control and icon geo
   assert.match(tokens, /:root\s*\{[^}]*--kova-radius-card: 16px;/s);
   assert.doesNotMatch(structural, /:root:root|--(?:radius|kova-radius-[a-z-]+)\s*:/);
   for (const control of elements(f.render(), (node) => node.type === "button")) {
+    if (control.props["aria-controls"]?.startsWith("translation-")) {
+      assert.equal(typeof control.props["aria-pressed"], "boolean");
+      assert.equal(control.props.type, "button");
+      continue;
+    }
     assert.ok(["outline", "default"].includes(control.props.variant));
     if (control.props["data-kova-button-shape"] === "preserve") {
       assert.equal(control.props["data-ui-reference"], "gemini.canvas.refinement-card");

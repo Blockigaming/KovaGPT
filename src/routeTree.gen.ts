@@ -30,6 +30,7 @@ import { Route as ContextPacksRouteImport } from './routes/context-packs'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FilesRouteImport } from './routes/files'
+import { Route as FinancesRouteImport } from './routes/finances'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HelpRouteImport } from './routes/help'
@@ -134,6 +135,7 @@ import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiAiServicesRouteImport } from './routes/api/ai/services'
+import { Route as ApiAuthChangeEmailRouteImport } from './routes/api/auth/change-email'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
@@ -338,6 +340,11 @@ const DownloadRoute = DownloadRouteImport.update({
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinancesRoute = FinancesRouteImport.update({
+  id: '/finances',
+  path: '/finances',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GettingStartedRoute = GettingStartedRouteImport.update({
@@ -867,6 +874,11 @@ const ApiAgentsTeamsRoute = ApiAgentsTeamsRouteImport.update({
 const ApiAiServicesRoute = ApiAiServicesRouteImport.update({
   id: '/api/ai/services',
   path: '/api/ai/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthChangeEmailRoute = ApiAuthChangeEmailRouteImport.update({
+  id: '/api/auth/change-email',
+  path: '/api/auth/change-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
@@ -1419,6 +1431,7 @@ export interface FileRoutesByFullPath {
   '/discovery': typeof DiscoveryRoute
   '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
+  '/finances': typeof FinancesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
@@ -1523,6 +1536,7 @@ export interface FileRoutesByFullPath {
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/ai/services': typeof ApiAiServicesRoute
+  '/api/auth/change-email': typeof ApiAuthChangeEmailRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1646,6 +1660,7 @@ export interface FileRoutesByTo {
   '/discovery': typeof DiscoveryRoute
   '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
+  '/finances': typeof FinancesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
@@ -1750,6 +1765,7 @@ export interface FileRoutesByTo {
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/ai/services': typeof ApiAiServicesRoute
+  '/api/auth/change-email': typeof ApiAuthChangeEmailRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1874,6 +1890,7 @@ export interface FileRoutesById {
   '/discovery': typeof DiscoveryRoute
   '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
+  '/finances': typeof FinancesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
@@ -1978,6 +1995,7 @@ export interface FileRoutesById {
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/ai/services': typeof ApiAiServicesRoute
+  '/api/auth/change-email': typeof ApiAuthChangeEmailRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -2103,6 +2121,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/download'
     | '/files'
+    | '/finances'
     | '/getting-started'
     | '/goals'
     | '/help'
@@ -2207,6 +2226,7 @@ export interface FileRouteTypes {
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/ai/services'
+    | '/api/auth/change-email'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2330,6 +2350,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/download'
     | '/files'
+    | '/finances'
     | '/getting-started'
     | '/goals'
     | '/help'
@@ -2434,6 +2455,7 @@ export interface FileRouteTypes {
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/ai/services'
+    | '/api/auth/change-email'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2557,6 +2579,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/download'
     | '/files'
+    | '/finances'
     | '/getting-started'
     | '/goals'
     | '/help'
@@ -2661,6 +2684,7 @@ export interface FileRouteTypes {
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/ai/services'
+    | '/api/auth/change-email'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2785,6 +2809,7 @@ export interface RootRouteChildren {
   DiscoveryRoute: typeof DiscoveryRoute
   DownloadRoute: typeof DownloadRoute
   FilesRoute: typeof FilesRoute
+  FinancesRoute: typeof FinancesRoute
   GettingStartedRoute: typeof GettingStartedRoute
   GoalsRoute: typeof GoalsRoute
   HelpRoute: typeof HelpRoute
@@ -2885,6 +2910,7 @@ export interface RootRouteChildren {
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
   ApiAiServicesRoute: typeof ApiAiServicesRoute
+  ApiAuthChangeEmailRoute: typeof ApiAuthChangeEmailRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
@@ -3126,6 +3152,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof FilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finances': {
+      id: '/finances'
+      path: '/finances'
+      fullPath: '/finances'
+      preLoaderRoute: typeof FinancesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/getting-started': {
@@ -3854,6 +3887,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ai/services'
       fullPath: '/api/ai/services'
       preLoaderRoute: typeof ApiAiServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/change-email': {
+      id: '/api/auth/change-email'
+      path: '/api/auth/change-email'
+      fullPath: '/api/auth/change-email'
+      preLoaderRoute: typeof ApiAuthChangeEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/login': {
@@ -4701,6 +4741,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoveryRoute: DiscoveryRoute,
   DownloadRoute: DownloadRoute,
   FilesRoute: FilesRoute,
+  FinancesRoute: FinancesRoute,
   GettingStartedRoute: GettingStartedRoute,
   GoalsRoute: GoalsRoute,
   HelpRoute: HelpRoute,
@@ -4803,6 +4844,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
   ApiAiServicesRoute: ApiAiServicesRoute,
+  ApiAuthChangeEmailRoute: ApiAuthChangeEmailRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthPasswordRoute: ApiAuthPasswordRoute,

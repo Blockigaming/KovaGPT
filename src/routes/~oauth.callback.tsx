@@ -78,9 +78,11 @@ function OAuthCallbackPage() {
 
   return (
     <main
+      id="main-content"
+      tabIndex={-1}
       aria-busy={!error}
       data-ui-reference="chatgpt.auth.transition"
-      className="flex min-h-[100dvh] items-center justify-center bg-background px-4 text-foreground"
+      className="kova-phone-account-flow flex min-h-[100dvh] items-center justify-center bg-background px-4 text-foreground"
     >
       {error ? (
         <section

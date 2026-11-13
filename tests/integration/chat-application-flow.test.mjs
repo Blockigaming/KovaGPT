@@ -88,6 +88,7 @@ function fixture({
   tokenLimit = 10_000,
   connectedModel = null,
   connectedMode = "instant",
+  hostedFreeMode = null,
 } = {}) {
   const ownerId = acceptance?.plan.ownerId ?? "owner-a";
   const chatId = acceptance?.plan.chatId ?? "123e4567-e89b-42d3-a456-426614174000";
@@ -111,7 +112,7 @@ function fixture({
     KOVA_AI_TIMEOUT_MS: "1000",
     KOVA_GENERATION_DISABLED: String(disabled),
     KOVA_GENERATION_ACCEPTANCE_ENABLED: acceptance ? "true" : undefined,
-    KOVA_HOSTED_INFERENCE_ENABLED: connectedModel ? "true" : undefined,
+    KOVA_HOSTED_INFERENCE_ENABLED: connectedModel || hostedFreeMode ? "true" : undefined,
     OPENROUTER_API_KEY: connectedModel ? "synthetic-hosted-test-key-only" : undefined,
     ...(connectedModel
       ? {
@@ -257,12 +258,19 @@ function fixture({
     ),
     fetch: async (url, init) => {
       calls.push("provider");
-      if (connectedModel) {
+      if (connectedModel || hostedFreeMode) {
         assert.equal(url, "https://api.openai.com/v1/responses");
         assert.equal(init.redirect, "error");
         const body = JSON.parse(init.body);
         hostedBodies.push(body);
-        assert.equal(body.model, HOSTED_MODEL_MAP[connectedModel]);
+        assert.equal(
+          body.model,
+          hostedFreeMode === "instant"
+            ? "gpt-5-mini"
+            : hostedFreeMode === "thinking"
+              ? "gpt-5"
+              : HOSTED_MODEL_MAP[connectedModel],
+        );
         const hasToolOutput = body.input.some((item) => item.type === "function_call_output");
         const usage = {
           input_tokens: 130,
@@ -380,7 +388,7 @@ function fixture({
     signal: requestAbort.signal,
     headers: { "Content-Type": "application/json", "Idempotency-Key": "fixture-message-123" },
     body: JSON.stringify({
-      mode: connectedModel ? connectedMode : "instant",
+      mode: hostedFreeMode ?? (connectedModel ? connectedMode : "instant"),
       ...(connectedModel ? { hostedModel: connectedModel } : {}),
       chatId,
       messages: [{ role: "user", content: prompt }],
@@ -479,6 +487,26 @@ for (const model of Object.keys(HOSTED_MODEL_MAP)) {
     });
   }
 }
+
+test("production-style Free routing sends the selected GPT-5 model and Kova identity", async () => {
+  for (const [hostedFreeMode, effort, label] of [
+    ["instant", "low", "Argon 4.6 mini"],
+    ["thinking", "medium", "Argon 4.5"],
+  ]) {
+    const f = fixture({ hostedFreeMode });
+    const response = await f.post();
+    assert.equal(response.status, 200, response.status !== 200 ? await response.text() : "");
+    assert.match(await response.text(), /Reviewed answer/);
+    assert.equal(f.hostedBodies.length, 1);
+    assert.deepEqual(f.hostedBodies[0].reasoning, { effort });
+    assert.ok(f.hostedBodies[0].instructions.includes(`You are ${label},`));
+    assert.ok(
+      f.hostedBodies[0].instructions.includes(
+        `Your exact product name for this response is ${label},`,
+      ),
+    );
+  }
+});
 
 test("application route → actual repaired adapter → incremental client completion", async () => {
   const f = fixture();

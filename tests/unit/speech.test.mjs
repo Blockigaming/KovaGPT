@@ -127,11 +127,20 @@ test("owned stored assistant text streams once with server-only key and fail-clo
   assert.doesNotMatch(JSON.stringify([...response.headers]), /mock-key/);
 });
 
-test("saved speech rejects unproven, edited or revoked-model replies before quota and provider", async () => {
+test("older saved replies without a model receipt use ElevenLabs", async () => {
+  const f = fixture({ modelPolicy: () => ({ valid: false }) });
+  delete f.row.payload.messages[0].voiceModelReceipt;
+  const response = await f.handler(request());
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+  assert.ok(f.calls.limits.length > 0);
+  assert.equal(f.calls.provider.length, 1);
+  assert.match(f.calls.provider[0][0], /^https:\/\/api\.elevenlabs\.io\/v1\/text-to-speech\//u);
+  assert.equal(JSON.parse(f.calls.provider[0][1].body).text, text);
+});
+
+test("saved speech rejects tampered, stale or revoked-model replies before quota and provider", async () => {
   for (const mutate of [
-    (f) => {
-      f.row.payload.messages[0].voiceModelReceipt = undefined;
-    },
     (f) => {
       f.row.payload.messages[0].voiceModelReceipt = `${modelReceipt}a`;
     },

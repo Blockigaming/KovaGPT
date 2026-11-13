@@ -11,6 +11,7 @@ import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as originalPolicy from "../../src/lib/library-original-policy.mjs";
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 import { resolveLibraryImageUrl } from "../../src/lib/library-image-url.ts";
 import { assertImagePrincipal } from "../../src/lib/multimodal/image-source.server.mjs";
 
@@ -159,7 +160,16 @@ function fixture(options = {}) {
         events.push("rate");
         assert.equal(input.identity, `user:${owner}`);
         assert.equal(input.action, "library_private_image");
-        return options.rate ?? { allowed: true };
+        return (
+          options.rate ??
+          consumeDistributedRateLimit({
+            ...input,
+            backendUrl: "https://rate-limit.test",
+            serviceRoleKey: "fixture-key",
+            hashSecret: "h".repeat(32),
+            fetchImpl: async () => Response.json([{ allowed: true, retry_after: 1 }]),
+          })
+        );
       },
     },
     "@/lib/runtime-env.server": { runtimeEnv: () => options.base ?? "https://fixture.supabase.co" },

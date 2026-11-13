@@ -139,12 +139,15 @@ export function PublicHeader() {
           <Link to="/">Open KovaGPT</Link>
         </Button>
 
+        <Link to="/" className="kova-public-phone-cta hidden min-h-11 items-center">
+          Open KovaGPT
+        </Link>
         <Button
           ref={menuButtonRef}
           type="button"
           variant="ghost"
           size="icon"
-          className="ml-auto lg:hidden"
+          className="kova-public-menu-toggle ml-auto lg:hidden"
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-controls="public-mobile-navigation"
           aria-expanded={open}
@@ -165,7 +168,7 @@ export function PublicHeader() {
           className="min-h-0 overflow-y-auto overscroll-contain border-t border-border bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 lg:hidden"
           aria-label="Mobile public navigation"
         >
-          <div className="mx-auto grid max-w-7xl gap-1">
+          <div className="kova-public-mobile-menu-grid mx-auto grid max-w-7xl gap-1">
             {navigation.map((item) => (
               <PublicNavigationLink
                 key={item.to}
@@ -209,7 +212,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
     };
     const animated = Array.from(
       root.querySelectorAll<HTMLElement>(
-        "main > section, main > article, main article > section, .public-use-case, .public-plan-card, .public-section-heading, .public-workflow-example",
+        "main > section, main > article, main article > section, main section article, .public-article-body section, .public-directory-links > a, .spec400-review-card, .public-use-case, .public-plan-card, .public-section-heading, .public-workflow-example, .kova-public-interactive",
       ),
     ).slice(0, 100);
     const observer =
@@ -225,7 +228,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
             { threshold: 0.07, rootMargin: "0px 0px -20px 0px" },
           )
         : null;
-    for (const item of animated) {
+    for (const [index, item] of animated.entries()) {
+      item.style.setProperty("--kova-reveal-delay", `${(index % 4) * 45}ms`);
       if (observer) observer.observe(item);
       else item.setAttribute("data-kova-revealed", "true");
     }

@@ -1,3 +1,4 @@
+import { EmailChangeForm } from "@/components/EmailChangeForm";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
 import { MemoryOverview } from "@/components/MemoryOverview";
@@ -1382,6 +1383,7 @@ export function SettingsDialog({
           />
         ) : (
           <Tabs
+            data-settings-phone-view={mobileHome ? "index" : "section"}
             value={tab}
             onValueChange={selectTab}
             orientation="vertical"
@@ -1479,7 +1481,7 @@ export function SettingsDialog({
             </aside>
 
             <SettingsNavigationResize
-              width={settings.settingsNavigationWidth ?? 272}
+              width={settings.settingsNavigationWidth ?? 210}
               onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
             />
 
@@ -1923,10 +1925,7 @@ export function SettingsDialog({
                     {user?.primaryEmailAddress?.emailAddress ?? "No email on file"}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Verification and security emails are sent here. Email-address changes are not
-                  currently available in the app; contact support@kovagpt.com if you need help.
-                </p>
+                {userKey && <EmailChangeForm key={userKey} ownerId={userKey} />}
               </TabsContent>
 
               {/* USAGE */}

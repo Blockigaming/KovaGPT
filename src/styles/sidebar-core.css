@@ -5,6 +5,8 @@
   --sidebar-row-height: 36px;
   --sidebar-icon-slot: 20px;
   --sidebar-button-size: 32px;
+  --sidebar-motion: 260ms;
+  --sidebar-ease: cubic-bezier(0.22, 1, 0.36, 1);
   color: var(--sidebar-foreground, var(--foreground));
   background: var(--sidebar);
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
@@ -26,9 +28,9 @@
   border: 0;
   border-radius: 0 20px 20px 0;
   transition:
-    width var(--kova-motion-standard) var(--kova-ease),
-    min-width var(--kova-motion-standard) var(--kova-ease),
-    transform var(--kova-motion-standard) var(--kova-ease),
+    width var(--sidebar-motion) var(--sidebar-ease),
+    min-width var(--sidebar-motion) var(--sidebar-ease),
+    transform var(--sidebar-motion) var(--sidebar-ease),
     visibility 0ms;
 }
 .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
@@ -38,10 +40,10 @@
   visibility: hidden;
   pointer-events: none;
   transition:
-    width var(--kova-motion-standard) var(--kova-ease),
-    min-width var(--kova-motion-standard) var(--kova-ease),
-    transform var(--kova-motion-standard) var(--kova-ease),
-    visibility 0ms var(--kova-motion-standard);
+    width var(--sidebar-motion) var(--sidebar-ease),
+    min-width var(--sidebar-motion) var(--sidebar-ease),
+    transform var(--sidebar-motion) var(--sidebar-ease),
+    visibility 0ms var(--sidebar-motion, var(--kova-motion-standard));
 }
 .kova-sidebar-inner {
   display: flex;
@@ -164,8 +166,7 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
-.kova-sidebar :is(.kova-nav-row, .kova-header-button, .kova-account-main):hover,
-.kova-sidebar .kova-chat-row:hover {
+.kova-sidebar :is(.kova-nav-row, .kova-header-button, .kova-account-main):hover {
   background: var(--sidebar-hover);
 }
 .kova-sidebar .kova-nav-row:is([aria-current="page"], .is-active),
@@ -227,7 +228,13 @@
   align-items: center;
   border-radius: 8px;
 }
+:root:not([data-kova-input-modality="pointer"]) .kova-sidebar .kova-chat-row:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
 .kova-sidebar .kova-chat-row-main {
+  /* The containing row draws the keyboard outline. */
+  --kova-keyboard-outline: none;
   display: flex;
   min-width: 0;
   height: var(--sidebar-row-height);
@@ -280,10 +287,9 @@
   height: 17px;
 }
 .kova-sidebar .kova-chat-quick-pin.is-pinned {
-  opacity: 1;
   color: var(--foreground);
 }
-.kova-sidebar .kova-chat-row:is(:hover, :focus-within) .kova-chat-quick-pin,
+.kova-sidebar .kova-chat-row:hover .kova-chat-quick-pin,
 .kova-sidebar .kova-chat-quick-pin:focus-visible {
   opacity: 1;
 }
@@ -308,7 +314,8 @@
   background: transparent;
   opacity: 0;
 }
-.kova-sidebar .kova-chat-row:is(:hover, :focus-within, .is-active) .kova-chat-options {
+.kova-sidebar .kova-chat-row:hover .kova-chat-options,
+.kova-sidebar .kova-chat-options:is(:focus-visible, [data-state="open"]) {
   opacity: 1;
 }
 .kova-sidebar-search-wrap {
@@ -419,11 +426,11 @@
   overflow: hidden;
   padding: 0 8px 12px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 0 20px 20px 0;
   transition:
-    width var(--kova-motion-standard) var(--kova-ease),
-    min-width var(--kova-motion-standard) var(--kova-ease),
-    padding var(--kova-motion-standard) var(--kova-ease),
+    width var(--sidebar-motion) var(--sidebar-ease),
+    min-width var(--sidebar-motion) var(--sidebar-ease),
+    padding var(--sidebar-motion) var(--sidebar-ease),
     visibility 0ms;
 }
 .kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
@@ -433,14 +440,15 @@
   visibility: hidden;
   pointer-events: none;
   transition:
-    width var(--kova-motion-standard) var(--kova-ease),
-    min-width var(--kova-motion-standard) var(--kova-ease),
-    padding var(--kova-motion-standard) var(--kova-ease),
-    visibility 0ms var(--kova-motion-standard);
+    width var(--sidebar-motion) var(--sidebar-ease),
+    min-width var(--sidebar-motion) var(--sidebar-ease),
+    padding var(--sidebar-motion) var(--sidebar-ease),
+    visibility 0ms var(--sidebar-motion, var(--kova-motion-standard));
 }
 .kova-rail-shortcuts {
   display: flex;
-  width: 100%;
+  width: 44px;
+  flex-shrink: 0;
   min-height: 0;
   flex: 1;
   flex-direction: column;
@@ -502,7 +510,7 @@ button.kova-sidebar-scrim {
   pointer-events: none;
   transition:
     opacity var(--kova-motion-standard) var(--kova-ease),
-    visibility 0ms var(--kova-motion-standard);
+    visibility 0ms var(--sidebar-motion, var(--kova-motion-standard));
 }
 /* ChatGPT mobile chrome keeps the page label and actions on one opaque bar. */
 .kova-topbar:not(.kova-desktop-topbar) {

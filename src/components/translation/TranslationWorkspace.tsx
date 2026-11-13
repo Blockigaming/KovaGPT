@@ -66,6 +66,7 @@ const refinements = [
 ];
 
 export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
+  const [phonePane, setPhonePane] = useState<"source" | "translation">("source");
   const [sourceLanguage, setSourceLanguage] = useState<string>(pair?.source ?? "Detect language");
   const [targetLanguage, setTargetLanguage] = useState<string>(pair?.target ?? "Spanish");
   const [source, setSource] = useState("");
@@ -259,8 +260,35 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
               />
             </div>
 
-            <div className="mt-4 grid overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-composer)] md:grid-cols-2">
-              <div className="relative min-h-64 border-b border-border md:border-b-0 md:border-r">
+            <div
+              className="kova-phone-translation-switch hidden"
+              role="group"
+              aria-label="Translation panels"
+            >
+              {(["source", "translation"] as const).map((pane) => (
+                <button
+                  key={pane}
+                  type="button"
+                  aria-controls={`translation-${pane}-pane`}
+                  aria-pressed={phonePane === pane}
+                  onClick={() => setPhonePane(pane)}
+                >
+                  {pane === "source"
+                    ? "Source text"
+                    : translation
+                      ? "View translation"
+                      : "Translation"}
+                </button>
+              ))}
+            </div>
+            <div
+              data-phone-translation-pane={phonePane}
+              className="kova-translation-panes mt-4 grid overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-composer)] md:grid-cols-2"
+            >
+              <div
+                id="translation-source-pane"
+                className="relative min-h-64 border-b border-border md:border-b-0 md:border-r"
+              >
                 <label htmlFor="translation-source" className="sr-only">
                   Source content to translate
                 </label>
@@ -315,7 +343,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 </div>
               </div>
 
-              <div className="relative min-h-64 bg-muted/25">
+              <div id="translation-translation-pane" className="relative min-h-64 bg-muted/25">
                 <label htmlFor="translation-output" className="sr-only">
                   Translation
                 </label>

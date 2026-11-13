@@ -13,7 +13,10 @@ if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
 // Isolated local fixtures: no provider, auth, database, or deployment calls.
 const root = process.cwd();
 const mocks: Record<string, string> = {
-  "@tanstack/react-router": `export const createFileRoute=()=>value=>value;`,
+  "@tanstack/react-router": `
+    export const createFileRoute = () => (route) => route;
+    export const Link = ({ to, ...props }) => <a href={to} {...props} />;
+  `,
   "@tanstack/react-start": `export const useServerFn=fn=>fn;export const createClientOnlyFn=fn=>fn;`,
   "@/components/AppShell": `export const AppShell=({children})=>children;`,
   "@/components/WorkspacePageHeader": `export const WorkspacePageHeader=({title,titleId,description})=><header className="kova-page-header"><h1 id={titleId}>{title}</h1><p>{description}</p></header>;`,
@@ -144,6 +147,10 @@ async function boot(
 test("approved master directory supports primary and category filters", async ({ page }) => {
   await boot(page);
   await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Finances", exact: true })).toHaveAttribute(
+    "href",
+    "/finances",
+  );
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);
   for (const item of MASTER_CONNECTORS) {

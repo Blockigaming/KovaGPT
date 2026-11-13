@@ -257,8 +257,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
-    # The desktop shard traverses the complete public detail catalog in both
-    # themes. Keep its full coverage when browser dependency downloads are slow.
+    # Each viewport traverses the complete public catalog in both themes.
     timeout-minutes: 45
     env:
       HOME: /root
@@ -268,7 +267,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [phone-390x844, tablet-1024x768, desktop-1440x900]
+        project:
+          - phone-320x700
+          - phone-390x844
+          - phone-landscape-844x390
+          - tablet-768x1024
+          - tablet-1024x768
+          - desktop-1280x800
+          - desktop-1440x900
         shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

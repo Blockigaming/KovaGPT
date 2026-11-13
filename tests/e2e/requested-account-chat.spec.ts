@@ -91,9 +91,8 @@ test("requested: every Settings section has room and Settings owns sidebar inter
       geometry.width + 1,
     );
     const panel = settings.getByRole("tabpanel").first();
-    expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth + 1), section).toBe(
-      true,
-    );
+    const panelOverflow = await panel.evaluate((node) => node.scrollWidth - node.clientWidth);
+    expect(panelOverflow, `${section} horizontal overflow`).toBeLessThanOrEqual(1);
     if (section === "Live Voice") {
       await expect(settings.getByLabel("Reply voice")).toHaveValue("fixture-voice");
       await expect(settings.getByRole("status").filter({ hasText: "Dictation" })).toContainText(

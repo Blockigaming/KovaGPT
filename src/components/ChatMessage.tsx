@@ -18,7 +18,6 @@ import { splitInteractiveContent } from "@/lib/interactive-ui.mjs";
 import { InteractiveBlock } from "./interactive-ui/InteractiveBlock";
 import {
   Copy,
-  ArrowUp,
   Sparkles,
   Check,
   ImageIcon,
@@ -70,7 +69,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveImageToLibrary } from "@/lib/library-images.functions";
-import { saveToLibrary } from "@/lib/library.functions";
+import { deleteLibraryItem, findResponseBookmark, saveToLibrary } from "@/lib/library.functions";
 import { getResponseFeedbackBatch, submitResponseFeedback } from "@/lib/feedback.functions";
 import { loadResponseFeedbackBatched } from "@/lib/feedback-batch";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -202,16 +201,7 @@ function StreamingStatus({
       aria-atomic="true"
       data-wait-stage={waitStage}
     >
-      <details open className="min-w-0 flex-1">
-        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-          Thinking · {label}…
-        </summary>
-        <p className="py-2 text-xs text-muted-foreground">
-          Waiting for the model’s response. Tool activity below reflects completed or running
-          operations.
-        </p>
-        <MessageActivityList activities={activities} />
-      </details>
+      <span className="min-w-0 flex-1 text-sm text-muted-foreground">Thinking · {label}…</span>
       {onSkipThinking && (
         <button
           type="button"
@@ -361,6 +351,7 @@ function ChatMessageInner({
   const [retryMenuOpen, setRetryMenuOpen] = useState(false);
   const retryFocusRef = useRef<(() => void) | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const bookmarkPending = useRef(false);
   const [saved, setSaved] = useState(false);
   const [sharing, setSharing] = useState(false);
   const sharingPending = useRef(false);
@@ -368,6 +359,8 @@ function ChatMessageInner({
   const [copyFallbackText, setCopyFallbackText] = useState<string | null>(null);
   useEffect(() => {
     let ids: string[] = [];
+    bookmarkPending.current = false;
+    setSaving(false);
     try {
       ids = JSON.parse(
         safeBrowserStorage("localStorage")?.getItem(
@@ -544,6 +537,8 @@ function ChatMessageInner({
   );
 
   const saveFn = useServerFn(saveToLibrary);
+  const findBookmark = useServerFn(findResponseBookmark);
+  const deleteBookmark = useServerFn(deleteLibraryItem);
   const saveImageFn = useServerFn(saveImageToLibrary);
   const imageSaveIds = useRef(new Map<string, string>());
   const saveResponseImage = useCallback(
@@ -770,7 +765,7 @@ function ChatMessageInner({
   };
 
   const saveItem = async () => {
-    if (saving) return;
+    if (bookmarkPending.current) return;
     // Guests can save to a local-only library while signed-in users persist through Supabase.
     const dedupKey = principalResolved
       ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
@@ -786,17 +781,69 @@ function ChatMessageInner({
       requestPrincipal === principalRef.current;
     let savedIds: string[];
     try {
-      savedIds = JSON.parse(safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]");
+      const stored: unknown = JSON.parse(
+        safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]",
+      );
+      savedIds = Array.isArray(stored)
+        ? stored.filter((id): id is string => typeof id === "string")
+        : [];
     } catch {
       savedIds = [];
     }
-    if (message.id && savedIds.includes(message.id)) {
-      setSaved(true);
-      toast.info("Already in your Library.");
-      return;
-    }
+    const updateBookmark = (value: boolean) => {
+      try {
+        const storage = safeBrowserStorage("localStorage");
+        const stored: unknown = JSON.parse(storage?.getItem(dedupKey) || "[]");
+        const ids = Array.isArray(stored) ? stored.filter((id) => id !== message.id) : [];
+        if (value) ids.push(message.id);
+        storage?.setItem(dedupKey, JSON.stringify(ids.slice(-500)));
+      } catch {
+        /* Storage is optional for server-backed Library items. */
+      }
+      setSaved(value);
+    };
+    bookmarkPending.current = true;
     setSaving(true);
     try {
+      const wasSaved = savedIds.includes(message.id);
+      const guestLibrary = isSignedIn ? null : await import("@/lib/guest-library");
+      const guestItems = guestLibrary?.loadGuestLibrary() ?? [];
+      const guestItem = guestItems.find((item) => item.response_message_id === message.id);
+      const legacyGuestItems =
+        wasSaved && !guestItem
+          ? guestItems.filter(
+              (item) =>
+                !item.response_message_id &&
+                item.source === "chat" &&
+                (item.item_type === "code" || item.item_type === "chat_artifact") &&
+                item.content_text === message.content,
+            )
+          : [];
+      if (legacyGuestItems.length > 1)
+        throw new Error(
+          "Multiple older saves match this reply. Remove the intended one from Library.",
+        );
+      const bookmarkId =
+        isSignedIn && userKey
+          ? await findBookmark({
+              data: {
+                ownerId: userKey,
+                messageId: message.id,
+                ...(wasSaved &&
+                  message.content.length <= 300_000 && { legacyContent: message.content }),
+              },
+            })
+          : (guestItem ?? legacyGuestItems[0])?.id;
+      if (!isCurrent()) return;
+      if (bookmarkId) {
+        if (guestLibrary) guestLibrary.deleteGuestItem(bookmarkId);
+        else if (userKey)
+          await deleteBookmark({ data: { id: bookmarkId, expectedOwnerId: userKey } });
+        if (!isCurrent()) return;
+        updateBookmark(false);
+        toast.success("Removed from Library");
+        return;
+      }
       const content = message.content.trim();
       if (content.length > (isSignedIn ? 300_000 : 100_000))
         throw new Error(
@@ -817,34 +864,27 @@ function ChatMessageInner({
         source: "chat" as const,
         content_text: message.content,
       };
-      if (isSignedIn) await saveFn({ data: payload });
-      else {
-        const { saveGuestItem, loadGuestLibrary } = await import("@/lib/guest-library");
-        if (!isCurrent()) return;
-        const item = saveGuestItem(payload);
-        if (!loadGuestLibrary().some((savedItem) => savedItem.id === item.id))
+      if (guestLibrary) {
+        const item = guestLibrary.saveGuestItem({ ...payload, responseMessageId: message.id });
+        if (!guestLibrary.loadGuestLibrary().some((savedItem) => savedItem.id === item.id))
           throw new Error(
             "Library could not save on this device. Your response is preserved; copy or export it instead.",
           );
+      } else if (userKey) {
+        await saveFn({
+          data: { ...payload, expectedOwnerId: userKey, responseMessageId: message.id },
+        });
       }
       if (!isCurrent()) return;
-      if (message.id) {
-        try {
-          savedIds.push(message.id);
-          safeBrowserStorage("localStorage")?.setItem(
-            dedupKey,
-            JSON.stringify(savedIds.slice(-500)),
-          );
-        } catch {
-          /* ignore */
-        }
-      }
-      setSaved(true);
+      updateBookmark(true);
       toast.success("Saved to Library");
     } catch (error) {
       if (isCurrent()) toast.error(error instanceof Error ? error.message : "Could not save");
     } finally {
-      if (isCurrent()) setSaving(false);
+      if (isCurrent()) {
+        bookmarkPending.current = false;
+        setSaving(false);
+      }
     }
   };
 
@@ -924,7 +964,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            {!waitingForFirstToken && <MessageActivityList activities={message.activities} />}
+            <MessageActivityList activities={message.activities} />
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}
@@ -1094,9 +1134,9 @@ function ChatMessageInner({
                 onClick={() => void saveItem()}
                 disabled={saving}
                 className="kova-message-icon-action"
-                aria-label={saved ? "Saved to Library" : "Save to Library"}
+                aria-label={saved ? "Remove from Library" : "Save to Library"}
                 aria-pressed={saved}
-                title={saved ? "Saved to Library" : "Save to Library"}
+                title={saved ? "Remove from Library" : "Save to Library"}
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1552,7 +1592,7 @@ function ChatMessageInner({
                   ]
                 : []),
               {
-                label: saved ? "Saved" : "Save to Library",
+                label: saved ? "Remove from Library" : "Save to Library",
                 icon: Bookmark,
                 onClick: () => {
                   saveItem();

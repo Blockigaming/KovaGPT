@@ -11,6 +11,8 @@ function StudyPage() {
   return (
     <AppShell>
       <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="chatgpt.study.workspace"
         className={"kova-tool-page " + "mx-auto w-full max-w-3xl overflow-y-auto p-4 md:p-8"}
       >

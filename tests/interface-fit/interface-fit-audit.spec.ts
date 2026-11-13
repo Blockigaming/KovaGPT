@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { coreFixture } from "../e2e/core-app-fixture";
 import { fixture } from "../e2e/actual-app-fixture";
@@ -149,7 +150,7 @@ if (scope === "public") {
     );
     await toolbar.getByRole("button", { name: "Read aloud", exact: true }).click();
     await expect(toolbar.getByRole("status")).toHaveText(
-      "Read aloud is available for saved replies from approved OpenAI models.",
+      "Read aloud is unavailable for this reply. Try a newly generated reply.",
     );
     await expectContained(page, "response speech error");
     expect(
@@ -328,7 +329,7 @@ if (scope === "public") {
       name: "Settings sidebar width",
       exact: true,
     });
-    const phone = page.viewportSize()!.width < 768;
+    const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
     const controls = phone
       ? ([[size, "85", "125"]] as const)
       : ([

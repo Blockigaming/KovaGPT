@@ -705,6 +705,68 @@
     font-size: 24px;
   }
 }
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
+  .public-website-header {
+    padding-block: max(8px, var(--safe-top)) 8px;
+    border-bottom: 1px solid #292929;
+  }
+  .public-website-header nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .public-website-brand {
+    min-height: 44px;
+  }
+  .public-phone-discover {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid #303030;
+    border-radius: 12px;
+    background: #202020;
+    color: inherit;
+    font-size: 13px;
+  }
+  .public-website .public-website-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    margin-top: 28px;
+    padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right));
+  }
+  .public-website-hero-left {
+    text-align: start;
+  }
+  .public-website-hero h1 {
+    max-width: 14ch;
+    font-size: clamp(34px, 9vw, 46px);
+  }
+  .public-website-subtitle {
+    margin-block: 10px 20px;
+  }
+  .public-website-hero .public-sign-in {
+    max-width: none;
+    padding: 14px;
+    border-radius: 18px;
+    background: var(--public-card);
+  }
+  .public-website .public-classroom {
+    width: 100%;
+    margin: 0;
+  }
+  .public-website .public-classroom img {
+    width: 100%;
+    aspect-ratio: 2.1;
+    object-fit: cover;
+    object-position: center 40%;
+  }
+  .public-website .public-plans,
+  .public-website .public-website-faq {
+    padding-block-start: 48px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .public-website *,
   .public-website *::before,

@@ -76,7 +76,10 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.ok(!SIDEBAR_ITEMS.some((item) => item.id === "work"));
   assert.doesNotMatch(sidebar, /navLink\("\/work"/);
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
-  assert.match(sidebar, /cancelPendingSelection\(\);\s+onNew\(\);/);
+  assert.match(
+    sidebar,
+    /cancelPendingSelection\(\);\s+closeAfterMobileNavigation\("\/"\);\s+onNew\(\);/,
+  );
   assert.match(sidebar, /if \(!open \|\| !isMobileViewport\(\)\) return/);
   assert.match(sidebar, /navigationOwnsFocusRef\.current = requestDrawerNavigationFocus/);
   assert.match(sidebar, /closeAfterMobileNavigation\(to\)/);
@@ -157,11 +160,11 @@ test("destructive chat actions use an accessible confirmation dialog", () => {
   assert.match(confirmDialog, /destructive/);
 });
 
-test("chat viewport only autoscrolls near bottom and exposes jump-to-latest", () => {
+test("chat viewport only autoscrolls near bottom without a jump arrow", () => {
   assert.match(index, /nearBottomRef/);
-  assert.match(index, /showJumpToLatest/);
+  assert.doesNotMatch(index, /showJumpToLatest/);
   assert.match(transcript, /distance < 120/);
-  assert.match(index, /Jump to latest/);
+  assert.doesNotMatch(index, /Jump to latest/);
   assert.match(index, /<ActiveChatTranscript/u);
   assert.match(transcript, /onScroll=\{updateNearBottom\}/);
 });

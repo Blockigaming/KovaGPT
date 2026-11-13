@@ -89,7 +89,9 @@ function UnsubscribePage() {
 
   return (
     <main
-      className="min-h-[80vh] flex items-center justify-center px-6 py-16"
+      id="main-content"
+      tabIndex={-1}
+      className="kova-phone-account-flow min-h-[80vh] flex items-center justify-center px-6 py-16"
       data-ui-reference="chatgpt.auth.status"
     >
       <Card className="w-full max-w-md p-8 text-center">
