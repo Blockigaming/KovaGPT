@@ -105,14 +105,24 @@
   background: color-mix(in oklab, var(--destructive) 9%, transparent);
 }
 .kova-conversation-outputs {
-  width: 352px;
-  padding: 18px;
+  width: fit-content;
+  min-width: 280px;
+  max-width: min(360px, calc(100vw - 24px));
+  height: auto;
+  max-height: min(650px, calc(100dvh - 90px));
+  padding: 16px;
+  border-radius: 20px;
+  border: 0;
+  overflow-y: auto;
 }
 .kova-conversation-outputs h2 {
   color: var(--muted-foreground);
-  font-size: 14px;
-  margin: 2px 4px 8px;
+  font-size: 13px;
+  margin: 18px 0 10px;
   font-weight: 500;
+}
+.kova-conversation-outputs h2:first-child {
+  margin-top: 0;
 }
 .kova-output-list {
   display: grid;
@@ -523,22 +533,6 @@
   }
 }
 
-.kova-conversation-outputs {
-  width: min(360px, calc(100vw - 24px));
-  padding: 18px;
-  border-radius: 20px;
-  max-height: min(650px, calc(100dvh - 90px));
-  overflow-y: auto;
-}
-.kova-conversation-outputs h2 {
-  margin: 18px 0 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted-foreground);
-}
-.kova-conversation-outputs h2:first-child {
-  margin-top: 0;
-}
 .kova-activity-context {
   display: flex;
   min-height: 44px;
@@ -552,11 +546,47 @@
   overflow: hidden;
 }
 
-/* Activity is a single borderless surface; browser and steps lead the inventory. */
-.kova-conversation-outputs {
-  border: 0;
-  padding: 16px;
+/* Collapsible Steps / Outputs / Inputs */
+.kova-activity-section {
+  margin-block: 4px 8px;
 }
+.kova-activity-section-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 2px;
+  border-radius: var(--kova-radius-compact);
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  user-select: none;
+}
+.kova-activity-section-summary::-webkit-details-marker {
+  display: none;
+}
+.kova-activity-section-summary:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-activity-chevron {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0;
+  transition: transform 120ms ease;
+}
+.kova-activity-section[open] > .kova-activity-section-summary .kova-activity-chevron {
+  transform: rotate(90deg);
+}
+.kova-activity-section-body {
+  padding: 2px 0 4px;
+}
+.kova-activity-section-body .kova-header-note {
+  margin-top: 4px;
+}
+
 .kova-activity-steps {
   margin-block: 4px 16px;
 }
@@ -572,6 +602,7 @@
   width: 100%;
   max-width: none;
   max-height: none;
+  height: auto;
   overflow: visible;
   border: 0;
   box-shadow: none;
