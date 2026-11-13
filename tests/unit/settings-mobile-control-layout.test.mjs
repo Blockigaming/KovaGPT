@@ -9,7 +9,15 @@ function rule(selector, media = null) {
   const values = {};
   parsed.walkRules((node) => {
     const parentMedia = node.parent.type === "atrule" ? node.parent.params : null;
-    if (node.selectors.includes(selector) && parentMedia === media)
+    if (
+      node.selectors.includes(selector) &&
+      (media === null
+        ? parentMedia === null
+        : parentMedia
+            ?.split(",")
+            .map((query) => query.trim())
+            .includes(media))
+    )
       for (const child of node.nodes) if (child.type === "decl") values[child.prop] = child.value;
   });
   assert.ok(Object.keys(values).length, `Missing ${selector}`);

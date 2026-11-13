@@ -25,6 +25,13 @@ for (const [width, height] of viewports) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.route("**/mobile-spec-image.png", (route) =>
+        route.fulfill({
+          contentType: "image/png",
+          path: "public/kova-logo.png",
+        }),
+      );
+      const imageUrl = new URL("/mobile-spec-image.png", test.info().project.use.baseURL).href;
       const content = [
         "## Responsive report",
         "AnUnbrokenToken".repeat(30),
@@ -32,6 +39,8 @@ for (const [width, height] of viewports) {
         "| Category | Measurement |",
         "| --- | --- |",
         "| One | " + "x".repeat(90) + " |",
+        "",
+        `![Responsive preview](${imageUrl})`,
         "",
         "```text",
         "long_code_".repeat(40),
@@ -86,6 +95,16 @@ for (const [width, height] of viewports) {
       const chart = page.getByRole("figure", { name: "Interactive chart: Measurements" });
       await chart.getByRole("button", { name: "Table", exact: true }).click();
       await expect(chart.getByRole("table")).toBeVisible();
+
+      const openImage = page.getByRole("button", { name: "View full size" });
+      await openImage.click();
+      const imageView = page.getByRole("dialog", { name: "Responsive preview" });
+      await expect(imageView.getByRole("img", { name: "Responsive preview" })).toBeVisible();
+      if (width < 768) {
+        await expect.poll(async () => (await imageView.boundingBox())?.width).toBe(width);
+      }
+      await imageView.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(openImage).toBeFocused();
 
       expect(await html.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
     });
