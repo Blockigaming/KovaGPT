@@ -6,6 +6,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useId, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { saveAccountProfile, type AccountProfile } from "@/lib/account-profile.functions";
+import { ACCOUNT_PROFILE_CHANGED, useAccountProfile } from "@/lib/use-account-profile";
+import { toast } from "sonner";
 import { User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,58 +51,7 @@ export function ProfileSettings({
   }, []);
   return (
     <div className="kova-profile-settings space-y-6" data-ui-reference="chatgpt.settings.profile">
-      <section className="space-y-4" aria-label="Account details">
-        <div className="flex flex-wrap items-center gap-4">
-          <Avatar className="h-16 w-16" aria-label="Account photo">
-            {user?.imageUrl ? <AvatarImage src={user.imageUrl} alt="Your account photo" /> : null}
-            <AvatarFallback>
-              <User2 aria-hidden="true" className="h-7 w-7" />
-              <span className="sr-only">No account photo</span>
-            </AvatarFallback>
-          </Avatar>
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="kova-profile-disabled-outline"
-                disabled
-                aria-describedby="profile-photo-limit"
-              >
-                Change photo
-              </Button>
-              <Button type="button" variant="ghost" disabled aria-describedby="profile-photo-limit">
-                Remove photo
-              </Button>
-            </div>
-            <p id="profile-photo-limit" className="text-xs text-muted-foreground">
-              Photo editing is unavailable for this account.
-            </p>
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2 text-sm">
-            Account display name
-            <Input
-              value={user?.fullName || user?.firstName || "Not provided"}
-              readOnly
-              aria-describedby="profile-account-limit"
-            />
-          </label>
-          <label className="grid gap-2 text-sm">
-            Account email
-            <Input
-              value={user?.primaryEmailAddress?.emailAddress || "Unavailable"}
-              readOnly
-              aria-describedby="profile-account-limit"
-            />
-          </label>
-        </div>
-        <p id="profile-account-limit" className="text-xs text-muted-foreground">
-          These account fields are read-only. Account name editing and verified email changes are
-          unavailable here.
-        </p>
-      </section>
+      <AccountProfileEditor key={user?.id ?? "guest"} user={principalResolved ? user : null} />
       <PreferredNameForm
         key={`${principalResolved ? (user?.id ?? "guest") : "loading"}:${settings.displayName}`}
         ownerId={user?.id ?? null}
@@ -157,6 +110,132 @@ export function ProfileSettings({
         </p>
       </section>
     </div>
+  );
+}
+
+async function resizeProfilePhoto(file: File) {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024)
+    throw new Error("Choose a JPEG, PNG, or WebP image under 8 MB.");
+  const bitmap = await createImageBitmap(file, { resizeWidth: 256, resizeHeight: 256 });
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 256;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The photo could not be processed.");
+    context.drawImage(bitmap, 0, 0);
+    return canvas.toDataURL("image/webp", 0.82);
+  } finally {
+    bitmap.close();
+  }
+}
+
+function AccountProfileEditor({ user }: { user: ReturnType<typeof useUser>["user"] }) {
+  const ownerId = user?.id ?? null;
+  const { profile, loaded, failed, retry } = useAccountProfile(ownerId);
+  const save = useServerFn(saveAccountProfile);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const input = useRef<HTMLInputElement>(null);
+  const name = draft ?? profile?.name ?? user?.fullName ?? "";
+  const photo = profile?.photo === undefined ? user?.imageUrl : profile.photo;
+  const disabled = !ownerId || !loaded || failed || busy;
+  async function update(build: () => Promise<Partial<AccountProfile>>) {
+    if (!ownerId || disabled || pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    try {
+      const saved = await save({ data: { ownerId, profile: await build() } });
+      window.dispatchEvent(
+        new CustomEvent(ACCOUNT_PROFILE_CHANGED, { detail: { ownerId, profile: saved } }),
+      );
+      setDraft(null);
+      toast.success("Profile updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Your profile could not be saved.");
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="space-y-4" aria-label="Account details">
+      <div className="kova-settings-reference-row">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12" aria-label="Profile photo">
+            {photo && <AvatarImage src={photo} alt="" />}
+            <AvatarFallback>
+              <User2 aria-hidden="true" />
+            </AvatarFallback>
+          </Avatar>
+          <span>Profile photo</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            ref={input}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (file)
+                void update(async () => ({
+                  photo: await resizeProfilePhoto(file),
+                }));
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            onClick={() => input.current?.click()}
+          >
+            Change photo
+          </Button>
+          {photo && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={disabled}
+              onClick={() => void update(async () => ({ photo: null }))}
+            >
+              Remove
+            </Button>
+          )}
+        </div>
+      </div>
+      <form
+        className="kova-settings-reference-row"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (name.trim()) void update(async () => ({ name: name.trim() }));
+        }}
+      >
+        <label className="grid gap-2 text-sm">
+          Display name
+          <Input
+            value={name}
+            maxLength={120}
+            required
+            disabled={disabled}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        </label>
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={disabled || draft === null || !name.trim()}
+        >
+          Save changes
+        </Button>
+      </form>
+      {failed && (
+        <Button type="button" variant="outline" onClick={retry}>
+          Retry loading profile
+        </Button>
+      )}
+    </section>
   );
 }
 

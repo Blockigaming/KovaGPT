@@ -1479,7 +1479,7 @@ export function SettingsDialog({
             </aside>
 
             <SettingsNavigationResize
-              width={settings.settingsNavigationWidth ?? 272}
+              width={settings.settingsNavigationWidth ?? 210}
               onChange={(width) => onChange({ ...settings, settingsNavigationWidth: width })}
             />
 

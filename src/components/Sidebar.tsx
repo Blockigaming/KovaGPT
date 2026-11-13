@@ -39,6 +39,7 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { useAccountProfile } from "@/lib/use-account-profile";
 import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -1111,12 +1112,18 @@ export function Sidebar({
     </div>
   );
 
-  const accountName = user?.fullName || user?.firstName || user?.username || null;
+  const { profile: accountProfile } = useAccountProfile(isLoaded ? (user?.id ?? null) : null);
+  const accountName =
+    accountProfile?.name || user?.fullName || user?.firstName || user?.username || null;
   const accountEmail = user?.email || null;
   const displayName = !isLoaded
     ? "Loading account…"
     : accountName || accountEmail || "Account details unavailable";
-  const avatarUrl = isLoaded ? user?.imageUrl || null : null;
+  const avatarUrl = isLoaded
+    ? accountProfile?.photo === undefined
+      ? user?.imageUrl
+      : accountProfile.photo
+    : null;
   const accountInitial = isLoaded && accountName ? accountName.charAt(0).toUpperCase() : null;
   const planLabel =
     tierStatus === "loading"
