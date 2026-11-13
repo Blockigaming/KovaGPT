@@ -21,6 +21,13 @@ const mocks: Record<string, string> = {
       if(window.delayRead)return new Promise(resolve=>window.resolveRead=()=>resolve(Response.json(window.financeSnapshot)));
       return Response.json(window.financeSnapshot);
     }
+    if(url==='/api/integrations/oauth/start'){
+      const endpoints={oura:'https://cloud.ouraring.com/oauth/authorize',whoop:'https://api.prod.whoop.com/oauth/oauth2/auth'};
+      const expectedScopes={oura:['daily'],whoop:['read:sleep','read:recovery','read:cycles']};
+      if(JSON.stringify(body.optionalScopes)!==JSON.stringify(expectedScopes[body.provider])||body.returnPath!=='/apps'||init.headers['X-Kova-Expected-Owner']!==window.owner)
+        return Response.json({error:'unexpected_oauth_request'},{status:400});
+      return Response.json({url:endpoints[body.provider]+'?state=fixture-state'});
+    }
     if(url==='/api/health-data/read')return Response.json({provider:'oura',fetchedAt:new Date().toISOString(),summaries:[{metric:'sleep',date:'2026-10-30',score:87,scoreUnit:'score',steps:null,restingHeartRate:null}],missing:[],limited:false});
     if(url.endsWith('/disconnect')){window.healthStatus.accounts=[];return Response.json({providerRevoked:true})}
     return Response.json({error:'unavailable'},{status:503});
@@ -76,7 +83,12 @@ type StateWindow = Window & {
 };
 async function boot(
   page: import("@playwright/test").Page,
-  options: { health?: boolean; configured?: boolean; connection?: boolean } = {},
+  options: {
+    health?: boolean;
+    configured?: boolean;
+    connection?: boolean;
+    healthProvider?: "oura" | "whoop";
+  } = {},
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-sensitive-fixture.test/")
@@ -87,7 +99,7 @@ async function boot(
       : route.abort(),
   );
   await page.goto("https://kova-sensitive-fixture.test/apps");
-  await page.evaluate(({ health, configured, connection }) => {
+  await page.evaluate(({ health, configured, connection, healthProvider }) => {
     Object.assign(window, {
       owner: "00000000-0000-4000-8000-000000000001",
       operations: [],
@@ -122,7 +134,11 @@ async function boot(
         limited: false,
       },
       healthStatus: {
-        configuredProviders: health ? [{ id: "oura" }] : [],
+        configuredProviders: healthProvider
+          ? [{ id: healthProvider }]
+          : health
+            ? [{ id: "oura" }]
+            : [],
         accounts: health
           ? [
               {
@@ -265,3 +281,29 @@ test("an old Plaid success callback cannot exchange its token after account swit
     ),
   ).toBe(false);
 });
+
+for (const { id, name, endpoint } of [
+  {
+    id: "oura",
+    name: "Oura",
+    endpoint: "https://cloud.ouraring.com/oauth/authorize",
+  },
+  {
+    id: "whoop",
+    name: "WHOOP",
+    endpoint: "https://api.prod.whoop.com/oauth/oauth2/auth",
+  },
+] as const) {
+  test(`Connect ${name} requests the expected scopes and opens provider consent`, async ({
+    page,
+  }) => {
+    await boot(page, { healthProvider: id });
+    await page.route(endpoint + "?*", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<h1>Provider consent fixture</h1>" }),
+    );
+    expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
+    await page.getByRole("button", { name: `Connect ${name}`, exact: true }).click();
+    await expect(page).toHaveURL(endpoint + "?state=fixture-state");
+    await expect(page.getByRole("heading", { name: "Provider consent fixture" })).toBeVisible();
+  });
+}
