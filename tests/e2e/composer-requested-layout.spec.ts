@@ -80,6 +80,43 @@ test("requested: empty project, plugin and file pickers contain no sample record
   await expect(plugins).not.toContainText("Recommended plugins");
 });
 
+test("opening Choose project uses the prefetched list", async ({ page }) => {
+  await fixture(page, "dark", true);
+  let requests = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    const name = functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!);
+    if (!name?.startsWith("listProjects_")) return route.fallback();
+    requests++;
+    await route.fulfill({
+      json: {
+        result: [
+          {
+            id: "33333333-3333-4333-8333-333333333333",
+            name: "Prefetched project",
+            role: "owner",
+            archived_at: null,
+            deletion_requested_at: null,
+          },
+        ],
+        context: {},
+      },
+    });
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await expect.poll(() => requests).toBe(1);
+  const trigger = page.getByRole("button", { name: "Choose project", exact: true });
+  await trigger.click();
+  const picker = page.getByRole("dialog", { name: "Choose project", exact: true });
+  await expect(
+    picker.getByRole("button", { name: "Open project Prefetched project" }),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect.poll(() => requests).toBe(2);
+});
+
 test("requested: connected plugin rows come only from current account status", async ({ page }) => {
   await fixture(page, "dark", true);
   await page.route("**/api/google/status", (route) =>

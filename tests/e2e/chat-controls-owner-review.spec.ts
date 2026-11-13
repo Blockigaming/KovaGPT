@@ -3,7 +3,7 @@ import { coreFixture } from "./core-app-fixture";
 import { owner, chatA, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
-test("response is unboxed with five ordered actions, public response sharing, and a persistent bookmark", async ({
+test("response is unboxed with five ordered actions, public sharing, and a bookmark that saves and removes", async ({
   page,
 }) => {
   await coreFixture(page, "dark");
@@ -18,6 +18,10 @@ test("response is unboxed with five ordered actions, public response sharing, an
     }),
   );
   const shares: unknown[] = [];
+  const bookmarkId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  let savedBookmark: string | null = null;
+  let saved = 0;
+  let removed = 0;
   await page.route("**/api/chat-share", async (route) => {
     shares.push(route.request().postDataJSON());
     await route.fulfill({ json: { id: "share-fixture", path: "/share/" + "a".repeat(64) } });
@@ -25,8 +29,18 @@ test("response is unboxed with five ordered actions, public response sharing, an
   await page.route("**/_serverFn/**", async (route) => {
     const name =
       functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!) || "";
-    if (name.startsWith("saveToLibrary_"))
-      return route.fulfill({ json: { result: { id: "library-fixture" }, context: {} } });
+    if (name.startsWith("findResponseBookmark_"))
+      return route.fulfill({ json: { result: savedBookmark, context: {} } });
+    if (name.startsWith("saveToLibrary_")) {
+      saved++;
+      savedBookmark = bookmarkId;
+      return route.fulfill({ json: { result: { id: bookmarkId }, context: {} } });
+    }
+    if (name.startsWith("deleteLibraryItem_")) {
+      removed++;
+      savedBookmark = null;
+      return route.fulfill({ json: { result: { ok: true }, context: {} } });
+    }
     return route.fallback();
   });
   await page.goto("/");
@@ -58,14 +72,13 @@ test("response is unboxed with five ordered actions, public response sharing, an
   await toolbar.getByRole("button", { name: "Share response", exact: true }).click();
   expect(shares).toHaveLength(1);
   await toolbar.getByRole("button", { name: "Save to Library", exact: true }).click();
+  const remove = toolbar.getByRole("button", { name: "Remove from Library", exact: true });
+  await expect(remove).toHaveAttribute("aria-pressed", "true");
+  await remove.click();
   await expect(
-    toolbar.getByRole("button", { name: "Saved to Library", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await toolbar.getByRole("button", { name: "Saved to Library", exact: true }).click();
-  await page.waitForTimeout(2200); // Saving again must not clear the filled bookmark after two seconds.
-  await expect(
-    toolbar.getByRole("button", { name: "Saved to Library", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    toolbar.getByRole("button", { name: "Save to Library", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect({ saved, removed, savedBookmark }).toEqual({ saved: 1, removed: 1, savedBookmark: null });
   await toolbar.getByRole("button", { name: "More actions", exact: true }).click();
   await expect(page.getByRole("menuitem")).toHaveCount(2);
   await expect(page.getByRole("menuitem", { name: "Try again", exact: true })).toBeVisible();

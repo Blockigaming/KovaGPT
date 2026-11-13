@@ -149,7 +149,7 @@ if (scope === "public") {
     );
     await toolbar.getByRole("button", { name: "Read aloud", exact: true }).click();
     await expect(toolbar.getByRole("status")).toHaveText(
-      "Read aloud is available for saved replies from approved OpenAI models.",
+      "Read aloud is unavailable for this reply. Try a newly generated reply.",
     );
     await expectContained(page, "response speech error");
     expect(

@@ -60,13 +60,13 @@ export function ComposerProjectPicker({
   const cycle = opening.current.cycle;
   const canAccess = Boolean(open && principalId && !opening.current.invalidated);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
-  const [attempt, setAttempt] = useState(0);
+  const [refresh, setRefresh] = useState(0);
   const [projectQuery, setProjectQuery] = useState("");
   const [navigationError, setNavigationError] = useState("");
   const [navigating, setNavigating] = useState<string | null>(null);
   const mounted = useRef(true);
   const navigationPending = useRef(false);
-  const generation = useRef(0);
+  const storageGeneration = useRef(0);
   const current = useRef({ open, principalId, cycle, canAccess, navigationBlocked });
   current.current = { open, principalId, cycle, canAccess, navigationBlocked };
   const visible = canAccess && snapshot?.principalId === principalId ? snapshot : null;
@@ -88,13 +88,15 @@ export function ComposerProjectPicker({
   }, []);
 
   useEffect(() => {
-    const request = ++generation.current;
+    const request = storageGeneration.current;
     let active = true;
     if (!principalId) setSnapshot(null);
     if (principalId) {
       setSnapshot((previous) => (previous?.principalId === principalId ? previous : null));
       const isCurrent = () =>
-        active && request === generation.current && current.current.principalId === principalId;
+        active &&
+        request === storageGeneration.current &&
+        current.current.principalId === principalId;
       void getProjects().then(
         (projects) => {
           if (!isCurrent()) return;
@@ -107,14 +109,25 @@ export function ComposerProjectPicker({
           });
         },
         () => {
-          if (isCurrent()) setSnapshot({ principalId, projects: [], status: "error" });
+          if (!isCurrent()) return;
+          setSnapshot((previous) =>
+            previous?.principalId === principalId && previous.status === "ready"
+              ? previous
+              : { principalId, projects: [], status: "error" },
+          );
         },
       );
     }
     return () => {
       active = false;
     };
-  }, [principalId, getProjects, attempt, open]);
+  }, [principalId, getProjects, refresh]);
+
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (wasOpen.current && !open) setRefresh((value) => value + 1);
+    wasOpen.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (!principalId) return;
@@ -122,9 +135,9 @@ export function ComposerProjectPicker({
       if (!isPrincipalBrowserStorageClearedEvent(event, principalId)) return;
       opening.current.invalidated = open;
       current.current.canAccess = false;
-      generation.current++;
+      storageGeneration.current++;
       setSnapshot(null);
-      setAttempt((value) => value + 1);
+      setRefresh((value) => value + 1);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -156,10 +169,10 @@ export function ComposerProjectPicker({
     navigationPending.current = true;
     setNavigating(projectId);
     setNavigationError("");
-    const request = generation.current;
+    const request = storageGeneration.current;
     const isCurrent = () =>
       mounted.current &&
-      request === generation.current &&
+      request === storageGeneration.current &&
       current.current.canAccess &&
       current.current.principalId === principalId &&
       current.current.cycle === cycle;
@@ -261,7 +274,7 @@ export function ComposerProjectPicker({
             <p role="alert" className="text-sm">
               Your projects could not be loaded.
             </p>
-            <Button variant="outline" onClick={() => setAttempt((value) => value + 1)}>
+            <Button variant="outline" onClick={() => setRefresh((value) => value + 1)}>
               Try again
             </Button>
           </div>

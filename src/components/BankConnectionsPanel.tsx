@@ -515,7 +515,9 @@ export function BankConnectionsPanel({
                         {transaction.name}
                         {transaction.pending ? " (pending)" : ""}
                       </strong>
-                      <time dateTime={transaction.date}>{transaction.date}</time>
+                      {transaction.date && (
+                        <time dateTime={transaction.date}>{transaction.date}</time>
+                      )}
                     </div>
                     <span>{money(transaction.amount, transaction.currency)}</span>
                   </li>
