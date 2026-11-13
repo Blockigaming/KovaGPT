@@ -127,7 +127,10 @@ export function HealthConnectionsPanel({
     }
   };
   return (
-    <section className="mt-8 space-y-5" aria-labelledby="health-connections-title">
+    <section
+      className="mt-6 space-y-5 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6"
+      aria-labelledby="health-connections-title"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="health-connections-title" className="text-xl font-semibold tracking-tight">
           Health accounts
@@ -163,19 +166,12 @@ export function HealthConnectionsPanel({
                 data?.configuredProviders.some((entry) => entry.id === id) === true;
               const accounts = data?.accounts.filter((account) => account.provider_id === id) ?? [];
               return (
-                <div
-                  key={id}
-                  className="space-y-3 rounded-2xl border border-border bg-card/40 p-4 transition-colors hover:border-foreground/20"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold tracking-tight">{provider.label}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Sleep, recovery and activity summaries. Basic profile access identifies the
-                        account.
-                      </p>
-                    </div>
-                  </div>
+                <div key={id} className="rounded-xl border border-border p-4 space-y-3">
+                  <h3 className="font-medium">{provider.label}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sleep, recovery and activity summaries. Basic profile access identifies the
+                    account.
+                  </p>
                   {!loading && !error && !configured && (
                     <p className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700 dark:text-amber-300">
                       Coming soon
@@ -183,7 +179,6 @@ export function HealthConnectionsPanel({
                   )}
                   <Button
                     variant="outline"
-                    className="rounded-full"
                     disabled={!configured || busy || loading || error}
                     onClick={() => void connect(id)}
                   >
