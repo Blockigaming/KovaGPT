@@ -8,5 +8,6 @@ export function buildKovaModelIdentityInstructions(input: {
   modelId: string;
   provider: "openai" | "azure_openai" | "openrouter";
   foundation?: string;
+  productLabel?: string;
   hasAssistantHistory: boolean;
 }): string;
