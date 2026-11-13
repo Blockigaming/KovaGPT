@@ -113,6 +113,8 @@ function OmegaPage() {
     return (
       <AppShell>
         <main
+          id="main-content"
+          tabIndex={-1}
           data-ui-reference="chatgpt.workspace.settings"
           className={"kova-tool-page " + "p-6"}
           aria-label="Loading Omega"
@@ -125,6 +127,8 @@ function OmegaPage() {
     return (
       <AppShell>
         <main
+          id="main-content"
+          tabIndex={-1}
           data-ui-reference="chatgpt.workspace.settings"
           className={"kova-tool-page " + "mx-auto max-w-xl p-8 text-center"}
         >
@@ -146,6 +150,8 @@ function OmegaPage() {
   return (
     <AppShell>
       <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="chatgpt.workspace.settings"
         className={"kova-tool-page " + "mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"}
       >

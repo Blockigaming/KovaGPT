@@ -1,14 +1,17 @@
 import "./public/public-website.css";
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PUBLIC_WEBSITE_FOOTER, PUBLIC_WEBSITE_PAGES } from "@/lib/public-website-catalog.mjs";
 import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
 import { requiresAppAccount } from "@/lib/app-access-policy.mjs";
+import { usePhoneLayout } from "@/hooks/use-mobile";
 
 export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [query, setQuery] = useState("");
+  const phone = usePhoneLayout();
   const directory = useMemo(() => {
     const entries = new Map(
       PUBLIC_SITEMAP_ENTRIES.filter(({ path }) => path === "/" || !requiresAppAccount(path)).map(
@@ -49,27 +52,40 @@ export function PublicFooter() {
             </Link>
           </div>
           <nav aria-label="Footer navigation" className="kova-footer-nav">
-            {PUBLIC_WEBSITE_FOOTER.map((group) => (
-              <div key={group.label}>
-                <h2>{group.label}</h2>
-                <ul>
-                  {group.links.map((item) => {
-                    const currentPage = pathname === item.to;
-                    return (
-                      <li key={item.to}>
-                        <Link
-                          to={item.to as never}
-                          aria-current={currentPage ? "page" : undefined}
-                          className="min-h-11"
-                        >
-                          {item.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+            {PUBLIC_WEBSITE_FOOTER.map((group) => {
+              const links = group.links.map((item) => {
+                const currentPage = pathname === item.to;
+                return (
+                  <li key={item.to}>
+                    <Link
+                      to={item.to as never}
+                      aria-current={currentPage ? "page" : undefined}
+                      className="min-h-11"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              });
+              return (
+                <div key={group.label} className="kova-footer-group">
+                  {phone ? (
+                    <details className="kova-footer-mobile-group">
+                      <summary>
+                        {group.label}
+                        <ChevronDown size={18} aria-hidden="true" />
+                      </summary>
+                      <ul>{links}</ul>
+                    </details>
+                  ) : (
+                    <div>
+                      <h2>{group.label}</h2>
+                      <ul>{links}</ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </div>
         <details className="kova-footer-directory">

@@ -817,3 +817,7 @@ export async function consumeHandoff(input: {
   });
   return principalFromRow(firstRow(value, "kova_auth_consume_handoff"));
 }
+
+export function changeKovaEmail(args: JsonObject): Promise<string> {
+  return rpc("kova_auth_change_email", args);
+}

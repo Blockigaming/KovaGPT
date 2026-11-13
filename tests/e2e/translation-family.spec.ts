@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 test.beforeEach(async ({ page }) => {
@@ -19,6 +20,18 @@ test("translation hub matches the observed default workspace", async ({ page }) 
   await expect(
     page.getByRole("button", { name: "Swap source and target languages" }),
   ).toBeDisabled();
+  const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+  if (phone) {
+    const panels = page.getByRole("group", { name: "Translation panels" });
+    const source = panels.getByRole("button", { name: "Source text", exact: true });
+    const translation = panels.getByRole("button", { name: "Translation", exact: true });
+    await expect(source).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("textbox", { name: "Translation", exact: true })).toBeHidden();
+    await translation.click();
+    await expect(translation).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("textbox", { name: "Translation", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Source content to translate")).toBeHidden();
+  }
   await expect(page.getByRole("button", { name: "Copy translation" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Make it sound more fluent" })).toBeDisabled();
 });
@@ -56,6 +69,8 @@ test("translator enables submission without fabricating an unsigned result", asy
   await page.goto("/translate/tagalog-to-english");
   await page.getByLabel("Source content to translate").fill("Kumusta ka?");
   await expect(page.getByRole("button", { name: "Translate", exact: true })).toBeEnabled();
+  const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+  if (phone) await page.getByRole("button", { name: "Translation", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Translation", exact: true })).toHaveValue("");
   await expect(page.getByRole("button", { name: "Make it professional" })).toBeDisabled();
 });

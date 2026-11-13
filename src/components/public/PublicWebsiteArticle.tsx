@@ -1,5 +1,6 @@
+import "./public-website.css";
 import { Link } from "@tanstack/react-router";
-import { PublicWebsiteLayout } from "./PublicWebsite";
+import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
 
 export function websitePageHead(item: WebsitePage) {
@@ -33,8 +34,8 @@ export function websitePageHead(item: WebsitePage) {
 export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
   const category = item.path.split("/")[1];
   return (
-    <PublicWebsiteLayout>
-      <main id="main-content" tabIndex={-1} className="public-website-article">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="public-website public-website-article">
         <nav className="public-website-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">KovaGPT</Link>
           <span aria-hidden="true"> / </span>
@@ -70,12 +71,29 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
             ))}
           </div>
           <aside aria-label="On this page">
-            <h2>On this page</h2>
-            {item.sections.map((section, index) => (
-              <a key={section.title} href={`#section-${index + 1}`}>
-                {section.title}
-              </a>
-            ))}
+            <h2 className="kova-article-desktop-index">On this page</h2>
+            <div className="kova-article-desktop-index">
+              {item.sections.map((section, index) => (
+                <a key={section.title} href={`#section-${index + 1}`}>
+                  {section.title}
+                </a>
+              ))}
+            </div>
+            <details className="kova-article-phone-index hidden">
+              <summary>On this page</summary>
+              {item.sections.map((section, index) => (
+                <a
+                  key={section.title}
+                  href={`#section-${index + 1}`}
+                  onClick={(event) => {
+                    const details = event.currentTarget.closest("details");
+                    if (details) details.open = false;
+                  }}
+                >
+                  {section.title}
+                </a>
+              ))}
+            </details>
           </aside>
         </div>
         {item.related.length > 0 && (
@@ -94,6 +112,6 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
           </section>
         )}
       </main>
-    </PublicWebsiteLayout>
+    </PublicShell>
   );
 }

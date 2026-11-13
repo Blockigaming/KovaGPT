@@ -1,6 +1,17 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { ArrowUpRight, ImageIcon, FolderKanban, LibraryBig } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { NovaLogo } from "@/components/NovaLogo";
+import { usePhoneLayout } from "@/hooks/use-mobile";
 import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
+
+const destinations = [
+  { to: "/images", label: "Images", icon: ImageIcon },
+  { to: "/projects", label: "Projects", icon: FolderKanban },
+  { to: "/library", label: "Library", icon: LibraryBig },
+] as const;
+
 export function ContinueWorking({
   conversations,
   onSelect,
@@ -19,6 +30,10 @@ export function ContinueWorking({
             <li key={conversation.id}>
               <button type="button" onClick={() => onSelect(conversation.id)}>
                 <strong>{conversation.title}</strong>
+                <ArrowUpRight
+                  className="kova-phone-resume-icon hidden h-4 w-4"
+                  aria-hidden="true"
+                />
                 <time dateTime={new Date(conversation.updatedAt).toISOString()}>
                   Updated{" "}
                   {new Date(conversation.updatedAt).toLocaleDateString(undefined, {
@@ -50,10 +65,16 @@ export function HomeWelcome({
   children: ReactNode;
 }) {
   const greeting = useHomeGreeting(owner, firstName, chatId);
+  const phone = usePhoneLayout();
   const homeScrollRef = useRef<HTMLElement>(null);
+  const composer = (
+    <div key="composer" className="kova-empty-composer">
+      {children}
+    </div>
+  );
 
   useEffect(() => {
-    if (!owner) return;
+    if (!owner || phone || typeof ResizeObserver === "undefined") return;
     const section = homeScrollRef.current;
     if (!section) return;
     let following = true;
@@ -79,7 +100,7 @@ export function HomeWelcome({
         section.removeEventListener(event, stopFollowing);
       }
     };
-  }, [owner, chatId, conversations.length]);
+  }, [owner, chatId, conversations.length, phone]);
 
   return (
     <section
@@ -93,6 +114,9 @@ export function HomeWelcome({
           data-ui-reference="claude.greeting"
           className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
         >
+          <span className="kova-phone-greeting-mark hidden" aria-hidden="true">
+            <NovaLogo mark decorative className="h-9 w-9" />
+          </span>
           <h1
             id="chat-greeting"
             className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
@@ -100,10 +124,21 @@ export function HomeWelcome({
             {greeting}
           </h1>
         </div>
-        <div className="kova-empty-composer">{children}</div>
+        {!phone && composer}
+        {owner ? (
+          <nav className="kova-phone-home-destinations hidden" aria-label="Chat shortcuts">
+            {destinations.map(({ to, label, icon: Icon }) => (
+              <Link to={to} key={to}>
+                <Icon aria-hidden="true" />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         {conversations.length ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
         ) : null}
+        {phone && composer}
       </div>
     </section>
   );

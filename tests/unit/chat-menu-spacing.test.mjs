@@ -42,12 +42,17 @@ test("sidebar chat pin is one accessible hover control and the menu floats outsi
   assert.match(sidebar, /aria-pressed={Boolean\(conversation\.pinned\)}/);
   assert.match(sidebar, /fill={conversation\.pinned \? "currentColor" : "none"}/);
   assert.match(sidebar, /onClick={\(event\) => {[\s\S]*?quickTogglePin\(conversation\);/);
-  assert.match(styles, /\.kova-sidebar \.kova-chat-quick-pin\.is-pinned \{[\s\S]*?opacity: 1/);
   assert.match(
     styles,
-    /\.kova-sidebar \.kova-chat-row:is\(:hover, :focus-within\) \.kova-chat-quick-pin/,
+    /\.kova-sidebar \.kova-chat-quick-pin\.is-pinned \{\s*color: var\(--foreground\)/,
+  );
+  assert.doesNotMatch(styles, /\.kova-sidebar \.kova-chat-quick-pin\.is-pinned \{[^}]*opacity: 1/);
+  assert.match(
+    styles,
+    /\.kova-sidebar \.kova-chat-row:hover \.kova-chat-quick-pin,\s*\.kova-sidebar \.kova-chat-quick-pin:focus-visible/,
   );
   assert.match(sidebar, /side={mobileViewport \? "bottom" : "right"}/);
+  assert.match(sidebar, /align={mobileViewport \? "end" : "center"}/);
   assert.match(sidebar, /data-sidebar-menu-placement="floating"/);
   assert.match(shared, /<DropdownMenuPrimitive\.Portal>/);
   assert.doesNotMatch(

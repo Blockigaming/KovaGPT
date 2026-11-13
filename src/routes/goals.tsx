@@ -146,6 +146,8 @@ function GoalsPage() {
   return (
     <AppShell>
       <main
+        id="main-content"
+        tabIndex={-1}
         className="kova-page kova-secondary-page kova-goals-page"
         data-ui-reference="chatgpt.tasks.goal-list"
       >
@@ -161,7 +163,7 @@ function GoalsPage() {
           </div>
         ) : (
           <>
-            <section className="mt-6 rounded-2xl border bg-card/35 p-4">
+            <section className="kova-goal-create mt-6 rounded-2xl border bg-card/35 p-4">
               <label className="text-sm font-medium" htmlFor="new-goal-title">
                 New goal
               </label>

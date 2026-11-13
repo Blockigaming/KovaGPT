@@ -24,9 +24,13 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   await expect(input).toHaveAttribute("placeholder", "Work with KovaGPT");
   const composer = page.locator(".spec400-composer");
   const box = (await composer.boundingBox())!;
-  const text = (await input.boundingBox())!;
-  expect(text.x - box.x).toBeLessThanOrEqual(18);
-  expect(text.y - box.y).toBeLessThanOrEqual(20);
+  const inset = await composer.evaluate((surface) => {
+    const text = surface.querySelector("textarea")!.getBoundingClientRect();
+    const frame = surface.getBoundingClientRect();
+    return { x: text.x - frame.x, y: text.y - frame.y };
+  });
+  expect(inset.x).toBeLessThanOrEqual(18);
+  expect(inset.y).toBeLessThanOrEqual(20);
   if (page.viewportSize()!.width >= 1024) {
     const header = (await page.locator(".kova-desktop-topbar").boundingBox())!;
     expect(header.y).toBeLessThanOrEqual(1);
@@ -78,6 +82,43 @@ test("requested: empty project, plugin and file pickers contain no sample record
   await expect(plugins).toContainText("No connected plugins.");
   await expect(plugins.locator(".kova-composer-plugin")).toHaveCount(0);
   await expect(plugins).not.toContainText("Recommended plugins");
+});
+
+test("opening Choose project uses the prefetched list", async ({ page }) => {
+  await fixture(page, "dark", true);
+  let requests = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    const name = functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!);
+    if (!name?.startsWith("listProjects_")) return route.fallback();
+    requests++;
+    await route.fulfill({
+      json: {
+        result: [
+          {
+            id: "33333333-3333-4333-8333-333333333333",
+            name: "Prefetched project",
+            role: "owner",
+            archived_at: null,
+            deletion_requested_at: null,
+          },
+        ],
+        context: {},
+      },
+    });
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await expect.poll(() => requests).toBe(1);
+  const trigger = page.getByRole("button", { name: "Choose project", exact: true });
+  await trigger.click();
+  const picker = page.getByRole("dialog", { name: "Choose project", exact: true });
+  await expect(
+    picker.getByRole("button", { name: "Open project Prefetched project" }),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect.poll(() => requests).toBe(2);
 });
 
 test("requested: connected plugin rows come only from current account status", async ({ page }) => {

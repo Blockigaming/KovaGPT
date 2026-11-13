@@ -148,6 +148,8 @@
 .kova-settings-reference .kova-settings-nav-icon svg {
   width: 19px;
   height: 19px;
+  color: var(--foreground);
+  stroke: currentColor;
 }
 .kova-settings-reference .kova-settings-nav-copy {
   min-width: 0;
@@ -182,9 +184,9 @@
   flex: none;
   align-items: center;
   gap: 16px;
-  min-height: 96px;
+  min-height: 80px;
   margin: 0;
-  padding: 24px 32px 20px;
+  padding: 20px 28px 16px;
 }
 .kova-settings-reference .kova-settings-section-copy {
   flex: 1;
@@ -230,7 +232,7 @@
   min-width: 0;
   width: 100%;
   margin: 0;
-  padding: 0 32px 40px;
+  padding: 0 28px 32px;
   overflow: visible;
   line-height: 1.5;
 }
@@ -276,9 +278,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 16px 24px;
+  gap: 12px 20px;
   min-width: 0;
-  min-height: 68px;
+  min-height: 60px;
   margin: 0;
   padding: 16px 0;
   border: 0;
@@ -428,7 +430,7 @@
     width: 100%;
   }
 }
-@media (max-width: 767px) {
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
   .kova-settings-reference {
     --settings-space: 20px;
   }
@@ -751,4 +753,64 @@
 
 .kova-settings-reference .kova-settings-nav-title h2 {
   line-height: 1.2;
+}
+
+/* Desktop settings use a compact navigation rail and flat, divided rows. */
+@media (min-width: 1024px),
+  (min-width: 768px) and (height > 500px),
+  (min-width: 768px) and (not (pointer: coarse)) {
+  .kova-settings-reference {
+    --settings-space: 16px;
+  }
+  [role="dialog"].kova-settings-dialog.is-authenticated {
+    width: min(820px, calc(100vw - 48px));
+    height: min(640px, calc(100dvh - 48px));
+    border-radius: 20px;
+  }
+  .kova-settings-reference .kova-settings-sidebar {
+    width: var(--kova-settings-navigation-width, 210px);
+    padding: 16px 12px;
+  }
+  .kova-settings-reference .kova-settings-navigation-heading {
+    min-height: 36px;
+    margin-bottom: 12px;
+    padding-inline: 8px;
+  }
+  .kova-settings-reference .kova-settings-search {
+    margin-bottom: 12px;
+  }
+  .kova-settings-reference .kova-settings-nav section + section {
+    margin-top: 12px;
+  }
+  .kova-settings-reference .kova-settings-nav .kova-settings-nav-item {
+    min-height: 36px;
+    padding: 7px 10px;
+    border-radius: 8px;
+  }
+  .kova-settings-reference .kova-settings-content-header {
+    min-height: 64px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .kova-settings-reference .kova-settings-content-header h2 {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
+  .kova-settings-reference .kova-profile-settings > section {
+    padding: 12px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section + section,
+  .kova-settings-reference .kova-profile-settings > section + section {
+    border-top: 1px solid var(--border);
+  }
+  .kova-settings-reference
+    .kova-profile-settings
+    .kova-settings-reference-row
+    + .kova-settings-reference-row {
+    border-top: 1px solid var(--border);
+  }
 }

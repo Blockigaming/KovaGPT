@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { closeCurrentSettings, openResponseOptions } from "./current-ui";
@@ -21,7 +22,8 @@ for (const theme of ["dark", "light"] as const) {
     const top = (await surface.boundingBox())!.y;
     const header = surface.locator(".kova-settings-content-header");
     expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-    if (page.viewportSize()!.width >= 768) {
+    const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+    if (!phone) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();

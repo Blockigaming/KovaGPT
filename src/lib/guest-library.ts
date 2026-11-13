@@ -11,6 +11,7 @@ const MAX_DATA_URL_BYTES = 1_500_000;
 
 export type GuestSaveInput = {
   title: string;
+  responseMessageId?: string;
   item_type: LibraryItem["item_type"];
   source: LibraryItem["source"];
   content_text?: string | null;
@@ -48,6 +49,7 @@ export function saveGuestItem(input: GuestSaveInput): LibraryItem {
   const item: LibraryItem = {
     id: `guest-${crypto.randomUUID()}`,
     title: input.title.slice(0, 200),
+    ...(input.responseMessageId && { response_message_id: input.responseMessageId }),
     item_type: input.item_type,
     source: input.source,
     content_text: input.content_text?.slice(0, 100_000) ?? null,

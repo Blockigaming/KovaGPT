@@ -538,3 +538,10 @@
 .spec400-connection-group[data-state="inactive"] {
   display: none;
 }
+
+.kova-connection-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

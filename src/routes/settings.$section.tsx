@@ -15,7 +15,11 @@ function SettingsPage() {
   const tab = valid ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS] : "general";
   return (
     <div className="kova-settings-screen">
-      <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-page kova-secondary-page kova-settings-route"
+      >
         {!valid ? (
           <p role="status">
             This settings section is unavailable. General settings are shown below.

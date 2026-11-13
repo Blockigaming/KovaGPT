@@ -42,6 +42,7 @@ import {
   beginTotpEnrollment,
   bindMfaLoginFactor,
   changePassword,
+  changeKovaEmail,
   createCompatibilityPrincipal,
   createOAuthState,
   createPasswordAccount,
@@ -1847,5 +1848,86 @@ export async function handleKovaGoogleExchange(request: Request): Promise<Respon
     return new Response(null, { status: 303, headers });
   } catch {
     return googleFailureRedirect("google_handoff_invalid");
+  }
+}
+
+export async function handleKovaEmailChange(request: Request): Promise<Response> {
+  const unavailable = kovaModeAvailable();
+  if (unavailable) return unavailable;
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  const session = requireSessionDigest(request);
+  if (session instanceof Response) return session;
+  const body = await readJsonObject(request);
+  if (body instanceof Response) return body;
+  const confirm = body.action === "confirm";
+  if (!confirm && body.action !== "start") return jsonError("Invalid request.", 400);
+  try {
+    const principal = await resolveSession(session);
+    if (!principal || !matchesCapturedPrincipal(request, principal) || !principal.emailVerified)
+      return jsonError("Sign in with a verified account to change your email.", 401);
+    const limited = await rateLimit(
+      request,
+      confirm ? "kova_email_change_confirm" : "kova_email_change_start",
+      confirm ? 12 : 3,
+      3600,
+      `user:${principal.accountId}`,
+    );
+    if (limited) return limited;
+    let email: string;
+    try {
+      email = normalizeKovaEmail(typeof body.email === "string" ? body.email : "");
+    } catch {
+      return jsonError("Enter a valid email address.", 400);
+    }
+    const oldCode = confirm ? body.oldCode : generateKovaToken();
+    const newCode = confirm ? body.newCode : generateKovaToken();
+    if (
+      typeof oldCode !== "string" ||
+      typeof newCode !== "string" ||
+      !/^[A-Za-z0-9_-]{43}$/u.test(oldCode) ||
+      !/^[A-Za-z0-9_-]{43}$/u.test(newCode)
+    )
+      return jsonError("Enter both confirmation codes.", 400);
+    const oldProof = digestKovaToken(oldCode);
+    const newProof = digestKovaToken(newCode);
+    const mail = (to: string, code: string, digest: string) => {
+      const issuedAt = new Date().toISOString();
+      const base = emailPayload({
+        to,
+        label: "kova-auth-verification",
+        link: new URL("/settings", publicOrigin()).toString(),
+        tokenDigest: digest,
+        issuedAt,
+        expiresAt: futureIso(1200),
+      });
+      const text = `Your KovaGPT email-change code is ${code}. Paste it into the matching field in Settings. The code expires in 20 minutes. If you did not request this change, do not share the code.`;
+      return {
+        ...base,
+        subject: "Confirm your KovaGPT email change",
+        text,
+        html: `<p>${text}</p>`,
+      };
+    };
+    const result = await changeKovaEmail({
+      p_session: session,
+      p_owner: principal.accountId,
+      p_email: email,
+      p_old_proof: oldProof,
+      p_new_proof: newProof,
+      ...(!confirm && {
+        p_old_mail: mail(principal.email, oldCode, oldProof),
+        p_new_mail: mail(email, newCode, newProof),
+      }),
+    });
+    if (result === "sent") return json({ sent: true });
+    if (result === "changed")
+      return json({ changed: true }, { headers: { "Set-Cookie": clearKovaSessionCookie() } });
+    if (result === "provider")
+      return jsonError("Manage your sign-in email with your sign-in provider.", 400);
+    if (result === "session") return jsonError("Your session changed. Sign in and try again.", 401);
+    if (result === "unavailable") return jsonError("Choose a different email address.", 400);
+    return jsonError("The confirmation codes are invalid or expired. Request new codes.", 400);
+  } catch {
+    return jsonError("Email changes are temporarily unavailable. Try again.", 503);
   }
 }

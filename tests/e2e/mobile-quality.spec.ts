@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { openCurrentSettings } from "./current-ui";
+import { functionNames } from "./server-function-fixture";
 
 const mobileProjects = new Set([
   "phone-320x700",
@@ -58,7 +59,19 @@ test("composer and attachment menu stay reachable on narrow screens", async ({ p
   await expect(sheet).toBeHidden();
 });
 
-for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
+for (const route of [
+  "/projects",
+  "/library",
+  "/apps",
+  "/scheduled-tasks",
+  "/reset-password",
+  "/images",
+  "/finances",
+  "/work",
+  "/files",
+  "/translate",
+  "/write",
+]) {
   test(`mobile workspace ${route} never overflows`, async ({ page }) => {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
@@ -66,6 +79,55 @@ for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/res
     await expectNoPageOverflow(page);
   });
 }
+
+test("phone shortcuts and the Library filter sheet work when workspace recents are down", async ({
+  page,
+}) => {
+  test.skip((page.viewportSize()?.width ?? 1024) >= 768);
+  await page.route("**/_serverFn/**", (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    if (functionNames.get(id)?.startsWith("listWorkspaceRecents_"))
+      return route.fulfill({ status: 503, json: { error: "Workspace recents are unavailable." } });
+    return route.fallback();
+  });
+  await page.route("**/api/library/items", (route) => {
+    if (route.request().method() !== "POST" || route.request().postDataJSON()?.operation !== "list")
+      return route.fallback();
+    return route.fulfill({ json: { items: [], cursor: null, hasMore: false } });
+  });
+  await page.route("**/api/library/folders", (route) => route.fulfill({ json: { folders: [] } }));
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const shortcuts = page.getByRole("navigation", { name: "Chat shortcuts" });
+  await expect(shortcuts).toBeVisible();
+  await shortcuts.getByRole("link", { name: "Library" }).click();
+  await expect(page).toHaveURL(/\/library$/u);
+  await expect(page.getByRole("heading", { name: "Library", exact: true })).toBeVisible();
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
+  await filters.click();
+  const sheet = page.getByRole("dialog", { name: "Filter Library items" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("combobox", { name: "Source" })).toBeVisible();
+  await expect.poll(async () => (await sheet.boundingBox())?.y ?? 0).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(filters).toBeFocused();
+});
+
+test("translation separates the source and result on phones", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 1024) >= 768);
+  await page.goto("/translate", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const source = page.getByRole("textbox", { name: "Source content to translate" });
+  const output = page.getByRole("textbox", { name: "Translation", exact: true });
+  await source.fill("Hello from Kova.");
+  const panels = page.getByRole("group", { name: "Translation panels" });
+  await panels.getByRole("button", { name: "Translation", exact: true }).click();
+  await expect(output).toBeVisible();
+  await expect(source).toBeHidden();
+  await panels.getByRole("button", { name: "Source text" }).click();
+  await expect(source).toHaveValue("Hello from Kova.");
+});
 
 test("mobile settings never overflow", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });

@@ -13,6 +13,7 @@ import {
 export type LibraryItem = {
   id: string;
   title: string;
+  response_message_id?: string;
   item_type: "upload" | "image" | "chat_artifact" | "document" | "code" | "website_draft" | "other";
   source: "chat" | "images" | "upload" | "manual" | "other";
   content_text: string | null;
@@ -123,6 +124,7 @@ export const renameLibrarySavedItem = createServerFn({ method: "POST" })
 const SaveSchema = z.object({
   expectedOwnerId: z.string().uuid().optional(),
   idempotencyKey: z.string().uuid().optional(),
+  responseMessageId: z.string().min(1).max(200).optional(),
   title: z.string().trim().min(1).max(200),
   item_type: ItemTypeEnum,
   source: SourceEnum.default("manual"),
@@ -151,12 +153,26 @@ export const saveToLibrary = createServerFn({ method: "POST" })
       file_size: data.file_size ?? null,
     };
     const fingerprint = await librarySaveFingerprint(values);
+    // A stable item ID makes concurrent saves of the same reply idempotent.
+    let idempotencyKey = data.idempotencyKey;
+    if (data.responseMessageId && data.source === "chat") {
+      const bytes = new Uint8Array(
+        await crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(JSON.stringify([context.userId, data.responseMessageId])),
+        ),
+      ).slice(0, 16);
+      bytes[6] = (bytes[6] & 0x0f) | 0x80;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      idempotencyKey = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
     const findExisting = async () => {
-      if (!data.idempotencyKey) return null;
+      if (!idempotencyKey) return null;
       const result = await context.supabase
         .from("user_library_items")
         .select("id, metadata")
-        .eq("id", data.idempotencyKey)
+        .eq("id", idempotencyKey)
         .eq("user_id", context.userId)
         .maybeSingle();
       if (result.error) throw new Error("Library save could not be checked. Please retry.");
@@ -181,8 +197,11 @@ export const saveToLibrary = createServerFn({ method: "POST" })
       .from("user_library_items")
       .insert({
         ...values,
-        ...(data.idempotencyKey ? { id: data.idempotencyKey } : {}),
-        metadata: { library_save_fingerprint: fingerprint },
+        ...(idempotencyKey ? { id: idempotencyKey } : {}),
+        metadata: {
+          library_save_fingerprint: fingerprint,
+          ...(data.responseMessageId && { response_message_id: data.responseMessageId }),
+        },
       })
       .select("id")
       .single();
@@ -193,6 +212,59 @@ export const saveToLibrary = createServerFn({ method: "POST" })
       throw new Error("Failed to save");
     }
     return { id: row.id };
+  });
+
+export const findResponseBookmark = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) =>
+    z
+      .object({
+        ownerId: z.string().uuid(),
+        messageId: z.string().min(1).max(200),
+        legacyContent: z.string().max(300_000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<string | null> => {
+    if (data.ownerId !== context.userId) throw new Error("Your account changed.");
+    const items = () =>
+      context.supabase
+        .from("user_library_items")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("source", "chat")
+        .in("item_type", ["chat_artifact", "code"])
+        .is("file_url", null)
+        .limit(2);
+    const current = await items().contains("metadata", { response_message_id: data.messageId });
+    if (current.error) throw new Error("Your bookmark could not be checked.");
+    if (current.data[0]) return current.data[0].id;
+    if (data.legacyContent === undefined) return null;
+    // Match older saves locally so long responses never enter the query URL.
+    const { data: legacy, error } = await context.supabase
+      .from("user_library_items")
+      .select("id,content_text,metadata")
+      .eq("user_id", context.userId)
+      .eq("source", "chat")
+      .in("item_type", ["chat_artifact", "code"])
+      .is("file_url", null)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error("Your bookmark could not be checked.");
+    const matches = legacy.filter(
+      (item) =>
+        item.content_text === data.legacyContent &&
+        item.metadata &&
+        typeof item.metadata === "object" &&
+        !Array.isArray(item.metadata) &&
+        typeof item.metadata.library_save_fingerprint === "string" &&
+        !item.metadata.response_message_id,
+    );
+    if (matches.length > 1)
+      throw new Error(
+        "Multiple older saves match this reply. Remove the intended one from Library.",
+      );
+    return matches[0]?.id ?? null;
   });
 
 export const deleteLibraryItem = createServerFn({ method: "POST" })

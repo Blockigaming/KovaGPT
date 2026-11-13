@@ -689,3 +689,16 @@ html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file
     min-height: 44px;
   }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .kova-library-page .kova-file-card:hover {
+    transform: scale(1.015);
+    border-color: var(--border-subtle);
+    box-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-library-page .kova-file-card:hover {
+    transform: none;
+  }
+}
