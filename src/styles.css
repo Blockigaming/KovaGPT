@@ -2061,3 +2061,14 @@ body {
     padding-inline-start: 0.75em;
   }
 }
+
+@media (width < 768px) {
+  :root[data-kova-keyboard]
+    body
+    :is(.kova-settings-dialog, .spec400-expanded-input)[data-kova-dialog-surface] {
+    top: var(--kova-visible-top, 0px);
+    bottom: auto;
+    height: var(--kova-visible-height);
+    max-height: var(--kova-visible-height) !important;
+  }
+}

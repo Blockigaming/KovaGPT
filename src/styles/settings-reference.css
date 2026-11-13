@@ -247,9 +247,9 @@
 .kova-settings-reference .kova-profile-settings > section {
   min-width: 0;
   margin: 0;
-  padding: 20px 22px;
+  padding: 18px 20px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--settings-card);
 }
 .kova-settings-reference .kova-settings-content h3 {
@@ -355,9 +355,8 @@
 }
 .kova-settings-reference .kova-settings-usage-card,
 .kova-settings-reference .kova-settings-usage-summary {
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  display: grid;
+  gap: 12px;
 }
 .kova-settings-reference .kova-settings-current-plan {
   margin: 0;
@@ -393,14 +392,20 @@
   background: var(--surface-secondary);
 }
 .kova-settings-reference .kova-settings-inline-error {
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  padding-block: 8px 0;
   color: var(--muted-foreground);
   font-size: 14px;
 }
 .kova-settings-reference .kova-settings-inline-error button {
-  margin-top: 12px;
+  min-height: 44px;
+  margin-top: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--foreground);
+}
+.kova-settings-reference .kova-settings-inline-error button:hover {
+  background: var(--accent);
 }
 .kova-settings-reference .kova-settings-help-links {
   display: grid;
@@ -430,7 +435,7 @@
     width: 100%;
   }
 }
-@media (max-width: 767px) {
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
   .kova-settings-reference {
     --settings-space: 20px;
   }
@@ -624,8 +629,8 @@
   }
   .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
   .kova-settings-reference .kova-profile-settings > section {
-    padding: 20px 18px;
-    border-radius: 20px;
+    padding: 16px;
+    border-radius: 14px;
   }
   .kova-settings-reference .kova-settings-reference-row {
     grid-template-columns: minmax(0, 1fr);
@@ -756,7 +761,9 @@
 }
 
 /* Desktop settings use a compact navigation rail and flat, divided rows. */
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 501px),
+  (min-width: 768px) and (pointer: fine),
+  (min-width: 1024px) {
   .kova-settings-reference {
     --settings-space: 16px;
   }
@@ -793,17 +800,6 @@
   .kova-settings-reference .kova-settings-content-header h2 {
     font-size: 20px;
     line-height: 28px;
-  }
-  .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
-  .kova-settings-reference .kova-profile-settings > section {
-    padding: 12px 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-  }
-  .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section + section,
-  .kova-settings-reference .kova-profile-settings > section + section {
-    border-top: 1px solid var(--border);
   }
   .kova-settings-reference
     .kova-profile-settings

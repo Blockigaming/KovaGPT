@@ -95,6 +95,7 @@ export type ProjectChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
   sources?: ResponseSource[];
+  followups?: string[];
 };
 export type ProjectChatDetail = ProjectChatSummary & {
   snapshot: { messages: ProjectChatMessage[] };
@@ -135,11 +136,18 @@ const MessageSchema = z
     role: z.enum(["user", "assistant", "system"]),
     content: z.string().max(100_000),
     sources: z.array(ResponseSourceSchema).max(12).optional(),
+    followups: z.array(z.string().trim().min(1).max(240)).max(3).optional(),
   })
   .strict()
   .superRefine((message, context) => {
-    if (message.sources !== undefined && message.role !== "assistant") {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: "Only responses can have sources" });
+    if (
+      (message.sources !== undefined || message.followups !== undefined) &&
+      message.role !== "assistant"
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Only assistant messages can include sources or follow-ups",
+      });
     }
   });
 

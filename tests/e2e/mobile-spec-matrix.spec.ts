@@ -24,6 +24,7 @@ for (const [width, height] of viewports) {
   for (const theme of ["light", "dark"] as const) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
       await page.setViewportSize({ width, height });
+      await page.emulateMedia({ reducedMotion: "reduce" });
       const content = [
         "## Responsive report",
         "AnUnbrokenToken".repeat(30),
@@ -31,6 +32,10 @@ for (const [width, height] of viewports) {
         "| Category | Measurement |",
         "| --- | --- |",
         "| One | " + "x".repeat(90) + " |",
+        "",
+        "```text",
+        "long_code_".repeat(40),
+        "```",
         "",
         "```kova-chart",
         JSON.stringify({
@@ -70,6 +75,11 @@ for (const [width, height] of viewports) {
         await expect(drawer).toBeHidden();
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
       }
+
+      await page.getByRole("button", { name: "Attach", exact: true }).click();
+      const attachmentOptions = page.getByRole("dialog", { name: "Attach files and tools" });
+      if (width < 1024) await expect(attachmentOptions).toBeVisible();
+      await page.keyboard.press("Escape");
 
       await send.click();
       await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();

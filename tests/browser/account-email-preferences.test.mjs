@@ -47,7 +47,15 @@ test("account email controls persist each event, handle uncertain writes, and is
             path: "session",
             namespace: "fixture",
           }));
-          b.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
+          b.onResolve({ filter: /^@\/lib\/kova-auth-browser$/ }, () => ({
+            path: "owned-session",
+            namespace: "fixture",
+          }));
+          b.onLoad({ filter: /^owned-session$/, namespace: "fixture" }, () => ({
+            contents: `export const isKovaSessionActive=()=>Boolean(window.ownedSession);
+              export const getCapturedKovaPrincipal=()=>window.ownedSession;`,
+          }));
+          b.onLoad({ filter: /^session$/, namespace: "fixture" }, () => ({
             contents: `export const supabase={auth:{getSession:async()=>({data:{session:window.fixtureOwner?{user:{id:window.fixtureOwner},access_token:'synthetic-session'}:null},error:null})}};`,
           }));
         },
@@ -68,7 +76,13 @@ test("account email controls persist each event, handle uncertain writes, and is
       return;
     }
     const owner = req.headers["x-kova-owner"];
-    assert.equal(req.headers.authorization, "Bearer synthetic-session");
+    if (
+      req.headers.authorization !== "Bearer synthetic-session" &&
+      req.headers.cookie !== "fixture-owned-session=1"
+    ) {
+      res.writeHead(401).end();
+      return;
+    }
     let body;
     if (req.method === "PATCH") {
       const chunks = [];
@@ -76,7 +90,7 @@ test("account email controls persist each event, handle uncertain writes, and is
       body = JSON.parse(Buffer.concat(chunks).toString());
       Object.assign(owners.get(owner), body.preferences);
     }
-    requests.push({ owner, method: req.method, body });
+    requests.push({ owner, method: req.method, body, authorization: req.headers.authorization });
     const value = { version: 1, preferences: { ...owners.get(owner) } };
     if (req.method === "GET" && owner === holdOwner) {
       await new Promise((resolve) => {
@@ -115,6 +129,25 @@ test("account email controls persist each event, handle uncertain writes, and is
         await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
         false,
       );
+    });
+
+    await t.test("Kova-owned settings read and save with cookie auth", async () => {
+      await page.evaluate(() => {
+        document.cookie = "fixture-owned-session=1";
+        window.ownedSession = { accountId: "owner-a" };
+      });
+      await page.getByRole("button", { name: "Reload email preferences" }).click();
+      await toggle("New sign-in").waitFor();
+      assert.equal(requests.at(-1).authorization, undefined);
+      await toggle("New sign-in").click();
+      await page.getByRole("status").filter({ hasText: "Email preference saved." }).waitFor();
+      assert.equal(requests.at(-1).authorization, undefined);
+      assert.deepEqual(requests.at(-1).body, { preferences: { new_login: false } });
+      await toggle("New sign-in").click();
+      await page.getByRole("status").filter({ hasText: "Email preference saved." }).waitFor();
+      await page.evaluate(() => {
+        window.ownedSession = null;
+      });
     });
 
     await t.test("a keyboard change updates just that event and survives reload", async () => {

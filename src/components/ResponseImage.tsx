@@ -100,6 +100,8 @@ export function ResponseImage({
       {full && (
         <Dialog open onOpenChange={setFull}>
           <DialogContent
+            constrainToViewport={false}
+            data-kova-response-image-view=""
             className="sm:max-w-[92vw]"
             onCloseAutoFocus={(event) => {
               event.preventDefault();
