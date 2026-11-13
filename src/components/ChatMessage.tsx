@@ -202,16 +202,7 @@ function StreamingStatus({
       aria-atomic="true"
       data-wait-stage={waitStage}
     >
-      <details open className="min-w-0 flex-1">
-        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-          Thinking · {label}…
-        </summary>
-        <p className="py-2 text-xs text-muted-foreground">
-          Waiting for the model’s response. Tool activity below reflects completed or running
-          operations.
-        </p>
-        <MessageActivityList activities={activities} />
-      </details>
+      <span className="min-w-0 flex-1 text-sm text-muted-foreground">Thinking · {label}…</span>
       {onSkipThinking && (
         <button
           type="button"
@@ -924,7 +915,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            {!waitingForFirstToken && <MessageActivityList activities={message.activities} />}
+            <MessageActivityList activities={message.activities} />
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}

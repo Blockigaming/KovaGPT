@@ -145,7 +145,6 @@ function fixture({ unmountOnNavigate = false, createLocalBranch = false } = {}) 
     readingAnchorControllerRef: { current: null },
     transcriptScope: scope,
     transcriptScopeRef,
-    setShowJumpToLatest() {},
     renderMessage: (_message, _index, _component, onBranch) => ({
       type: "branch-trigger",
       props: { onClick: onBranch },
