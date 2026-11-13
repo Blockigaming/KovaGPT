@@ -213,7 +213,7 @@ test("unconfigured finance and health stay disabled and never fetch private data
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
 test("health summaries load only after the user selects an account read", async ({ page }) => {
