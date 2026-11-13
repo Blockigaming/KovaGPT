@@ -56,7 +56,7 @@ export function PublicWebsiteLayout({ children }: { children: ReactNode }) {
       <header className="public-website-header">
         <nav aria-label="Public navigation">
           <WebsiteBrand />
-          <Link to="/overview" className="public-phone-discover hidden">
+          <Link to="/$slug" params={{ slug: "overview" }} className="public-phone-discover hidden">
             Explore KovaGPT
           </Link>
         </nav>
