@@ -19,7 +19,6 @@ export default function DesktopChatToolbar({
   selectedWorkflowSkill,
   isStreaming,
   clearWorkflowSkill,
-  jumpToLatestButton,
   freeOfferButton,
   actions,
   tempChat,
@@ -35,7 +34,6 @@ export default function DesktopChatToolbar({
   selectedWorkflowSkill: { name: string } | null;
   isStreaming: boolean;
   clearWorkflowSkill: () => void;
-  jumpToLatestButton: ReactNode;
   freeOfferButton: ReactNode;
   actions: ReactNode;
   tempChat: boolean;
@@ -81,7 +79,6 @@ export default function DesktopChatToolbar({
       </div>
 
       <div className="ml-auto flex items-center gap-2 shrink-0">
-        {jumpToLatestButton}
         {freeOfferButton}
         {actions}
         {isLoaded && isSignedIn && !chatStarted && (

@@ -57,7 +57,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { ArrowDown, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
@@ -700,7 +700,6 @@ function KovaGPT() {
   const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
-  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [resultTab, setResultTab] = useState<"conversation" | "result">("conversation");
   const workspaceRef = useRef<HTMLDivElement>(null);
   const responseDraftUrl = typeof window === "undefined" ? undefined : window.location.href;
@@ -1120,7 +1119,7 @@ function KovaGPT() {
           (item) => typeof item?.title === "string" && typeof item?.content === "string",
         )
       ) {
-        throw new Error("invalid_context_pack_handoff");
+        throw new Error();
       }
       const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
       return () =>
@@ -1144,7 +1143,7 @@ function KovaGPT() {
           !Array.isArray(steps) ||
           !steps.every((step) => typeof step?.text === "string")
         )
-          throw new Error("invalid_work_handoff");
+          throw new Error();
         return () =>
           setInput(
             `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
@@ -1155,7 +1154,7 @@ function KovaGPT() {
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
       if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
-        throw new Error("invalid_app_handoff");
+        throw new Error();
       return () => {
         setInput(appContext.prompt);
         setSelectedTool("web_search");
@@ -1163,7 +1162,7 @@ function KovaGPT() {
     });
 
     consume<ConversationWorkflowSkill>("kova-workflow-skill-chat", (skill) => {
-      if (!isConversationWorkflowSkill(skill)) throw new Error("invalid_workflow_skill_handoff");
+      if (!isConversationWorkflowSkill(skill)) throw new Error();
       return () => {
         setActiveId(null);
         setPendingWorkflowSkill(skill);
@@ -1184,7 +1183,7 @@ function KovaGPT() {
               (item) => typeof item?.title === "string" && typeof item?.content === "string",
             )))
       ) {
-        throw new Error("invalid_prompt_handoff");
+        throw new Error();
       }
       const context = launch.pack
         ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
@@ -3109,27 +3108,6 @@ function KovaGPT() {
     ) : null;
 
   const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
-  const jumpToLatestButton = showJumpToLatest ? (
-    <Button
-      variant="ghost"
-      size="icon"
-      type="button"
-      onClick={() => {
-        const element = scrollRef.current;
-        if (!element) return;
-        nearBottomRef.current = true;
-        readingAnchorControllerRef.current?.followEnd();
-        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
-        element.focus({ preventScroll: true });
-        setShowJumpToLatest(false);
-      }}
-      className="kova-topbar-button h-11 w-11 shrink-0 rounded-full p-2"
-      aria-label="Jump to latest message"
-      title="Jump to latest message"
-    >
-      <ArrowDown className="h-5 w-5" aria-hidden="true" />
-    </Button>
-  ) : null;
   const freeOfferButton =
     isLoaded && isSignedIn && tier === "free" ? (
       <Suspense fallback={null}>
@@ -3149,7 +3127,6 @@ function KovaGPT() {
           selectedWorkflowSkill={selectedWorkflowSkill ?? null}
           isStreaming={isStreaming}
           clearWorkflowSkill={clearWorkflowSkill}
-          jumpToLatestButton={jumpToLatestButton}
           freeOfferButton={freeOfferButton}
           actions={conversationActions()}
           tempChat={tempChat}
@@ -3246,7 +3223,6 @@ function KovaGPT() {
           chatStarted={chatStarted}
           conversationActions={
             <>
-              {jumpToLatestButton}
               {freeOfferButton}
               {conversationActions(true)}
             </>
@@ -3467,7 +3443,6 @@ function KovaGPT() {
                     readingAnchorControllerRef={readingAnchorControllerRef}
                     transcriptScope={transcriptScope}
                     transcriptScopeRef={transcriptScopeRef}
-                    setShowJumpToLatest={setShowJumpToLatest}
                     renderMessage={renderTranscriptMessage}
                   />
                 </Suspense>

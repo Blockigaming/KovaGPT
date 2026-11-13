@@ -158,11 +158,11 @@ test("destructive chat actions use an accessible confirmation dialog", () => {
   assert.match(confirmDialog, /destructive/);
 });
 
-test("chat viewport only autoscrolls near bottom and exposes jump-to-latest", () => {
+test("chat viewport only autoscrolls near bottom without a jump arrow", () => {
   assert.match(index, /nearBottomRef/);
-  assert.match(index, /showJumpToLatest/);
+  assert.doesNotMatch(index, /showJumpToLatest/);
   assert.match(transcript, /distance < 120/);
-  assert.match(index, /Jump to latest/);
+  assert.doesNotMatch(index, /Jump to latest/);
   assert.match(index, /<ActiveChatTranscript/u);
   assert.match(transcript, /onScroll=\{updateNearBottom\}/);
 });

@@ -8,6 +8,7 @@ import {
   isKovaHostedModelId,
   prepareKovaHostedRequest,
   requestKovaHostedChat,
+  type FreeChatMode,
 } from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
 import {
@@ -729,6 +730,7 @@ export async function chatCompletions(
   acceptanceScope?: GenerationAcceptanceScope,
   execution?: {
     mode: string;
+    freeChat?: FreeChatMode;
     onUsage?: (usage: HostedInternalUsage) => void;
     beforeSend?: () => Promise<void>;
   },
@@ -761,7 +763,8 @@ export async function chatCompletions(
       const { requestHostedEffort } = await import("@/lib/ai/hosted-effort.server.mjs");
       return await requestHostedEffort({
         request: body,
-        mode: execution?.mode ?? "instant",
+        mode: execution.mode,
+        freeChat: execution.freeChat,
         onUsage: execution?.onUsage,
         beforeSend: execution?.beforeSend,
         token: env("OPENAI_API_KEY"),
@@ -791,9 +794,9 @@ export async function streamingChatCompletions(
 }
 
 /** Pure: estimate the same wire body that the selected model's transport sends. */
-export function prepareChatResponsesRequest(body: JsonObject): JsonObject {
+export function prepareChatResponsesRequest(body: JsonObject, freeChat?: FreeChatMode): JsonObject {
   if (isKovaHostedModelId(body.model))
-    return JSON.parse(prepareKovaHostedRequest(body).body) as JsonObject;
+    return JSON.parse(prepareKovaHostedRequest(body, { freeChat }).body) as JsonObject;
   return withProviderModel(toResponsesRequest(body), body.stream === true ? "streaming" : "chat");
 }
 

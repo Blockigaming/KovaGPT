@@ -195,33 +195,57 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
 test("cloud browser and steps precede outputs in the borderless activity surface", async ({
   page,
 }) => {
-  await coreFixture(page, "dark");
-  await page.addInitScript(
-    ({ owner }) => {
-      const key = `nova-gpt-conversations-v3:user:${owner}`;
-      const chats = JSON.parse(localStorage.getItem(key) || "[]");
-      chats[0].messages[1].activities = [
-        { tool: "browser_interact", label: "Opened the review page", status: "done" },
-        { tool: "file_search", label: "Read the supplied notes", status: "done" },
-      ];
-      localStorage.setItem(key, JSON.stringify(chats));
-    },
-    { owner },
-  );
+  await coreFixture(page, "dark", "free", {
+    preserveStorageOnReload: true,
+    savedMessages: [
+      { id: "prompt-a", role: "user", content: "Draft a release checklist." },
+      {
+        id: "answer-a",
+        role: "assistant",
+        content: "Here is the release checklist.",
+        activities: [
+          { tool: "browser_interact", label: "Opened the review page", status: "done" },
+          { tool: "file_search", label: "Read the supplied notes", status: "done" },
+        ],
+      },
+    ],
+  });
   await page.goto("/");
   await waitForKovaHydration(page);
+  const desktop = page.viewportSize()!.width >= 1024;
   await page
-    .getByRole("button", { name: "Activity", exact: true })
+    .getByRole("button", { name: /^(Open menu|Expand sidebar|Open sidebar)$/ })
     .filter({ visible: true })
+    .first()
     .click();
+  await page
+    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+    .press("Enter");
+  await expect(page.getByText("Here is the release checklist.", { exact: true })).toBeVisible();
+  if (desktop) {
+    await expect(page.locator("#chat-activity-panel")).toBeHidden();
+    await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
+  }
+  const activity = page.getByRole("button", { name: "Activity", exact: true }).filter({
+    visible: true,
+  });
   const panel = page.locator(".kova-conversation-outputs");
+  if (desktop) {
+    await expect(activity).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toBeVisible();
+    const closeActivity = panel.getByRole("button", { name: "Close activity", exact: true });
+    await closeActivity.click();
+    await expect(panel).toBeHidden();
+    await expect(activity).toBeFocused();
+  }
+  await activity.click();
   await expect(panel).toHaveCSS("border-top-width", "0px");
   const headings = await panel.getByRole("heading").allTextContents();
   expect(headings.indexOf("Cloud browser")).toBeGreaterThanOrEqual(0);
   expect(headings.indexOf("Steps")).toBeGreaterThan(headings.indexOf("Cloud browser"));
   expect(headings.indexOf("Outputs")).toBeGreaterThan(headings.indexOf("Steps"));
   await expect(panel.getByText("Read the supplied notes", { exact: true })).toBeVisible();
-  if (page.viewportSize()!.width < 1024) {
+  if (!desktop) {
     const sheet = page.getByRole("dialog", { name: "Activity", exact: true });
     await expect(sheet).toBeVisible();
     await expect
