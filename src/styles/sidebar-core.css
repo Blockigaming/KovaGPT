@@ -245,6 +245,17 @@
   line-height: 20px;
   text-align: left;
 }
+.kova-chat-unread-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  margin-inline-start: auto;
+  border-radius: 50%;
+  background: var(--kova-chat-activity-accent);
+}
+.kova-chat-row-main:has(.kova-chat-unread-dot) {
+  gap: 8px;
+}
 .kova-sidebar .kova-chat-quick-pin {
   display: grid;
   width: 28px;

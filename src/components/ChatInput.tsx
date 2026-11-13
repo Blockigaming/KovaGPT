@@ -5,7 +5,11 @@ import {
 } from "./AttachmentPreviewMobile";
 import { copyChatImage, downloadChatImage, shareChatImage } from "@/lib/chat-image-actions";
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
-import { CONSUMER_MODELS, type ConsumerModelId } from "@/lib/consumer-model-selection.mjs";
+import {
+  CONSUMER_MODELS,
+  consumerModel,
+  type ConsumerModelId,
+} from "@/lib/consumer-model-selection.mjs";
 import {
   ArrowUp,
   Brain,
@@ -2150,7 +2154,13 @@ export function ChatInput({
               />
             ) : null}
             {canChangeAgent && mode && onModeChange ? (
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+              <ModelSelector
+                mode={mode}
+                onChange={onModeChange}
+                userTier={userTier}
+                modelLabel={CONSUMER_MODELS.find((model) => model.id === hostedModel)?.label}
+                compact
+              />
             ) : (
               <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
             )}

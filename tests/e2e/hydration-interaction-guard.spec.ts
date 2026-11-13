@@ -80,7 +80,7 @@ for (const { mode, system, dark } of themeCases) {
     page,
   }, testInfo) => {
     test.skip(!["desktop-1440x900", "phone-390x844"].includes(testInfo.project.name));
-    const background = dark ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
+    const background = dark ? "rgb(33, 33, 33)" : "rgb(255, 255, 255)";
     // The canonical ChatGPT source palette is also selected before hydration.
     const foreground = dark ? "rgb(255, 255, 255)" : "rgb(13, 13, 13)";
     const hydrationErrors: string[] = [];

@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
-import { Brain, ChevronDown, Check } from "lucide-react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { Brain, ChevronDown, RotateCcw, Zap } from "lucide-react";
 import {
   MODES,
   isModeAllowedForTier,
@@ -25,12 +25,14 @@ export function ResponsiveModelSelector({
   onChange,
   userTier = "free",
   compact = false,
+  modelLabel,
   placement = "composer",
 }: {
   mode: ModeId;
   onChange: (m: ModeId) => void;
   userTier?: Tier;
   compact?: boolean;
+  modelLabel?: string;
   placement?: "composer" | "topbar";
 }) {
   const { isDesktop, interaction } = useLayout();
@@ -99,54 +101,38 @@ export function ResponsiveModelSelector({
         (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
         (compact ? "px-3 text-sm" : "px-4 text-[15px]"));
 
-  const renderOption = (availableMode: (typeof MODES)[number]) => {
-    const selected = availableMode.id === mode;
-    return (
-      <button
-        key={availableMode.id}
-        type="button"
-        data-slot="model-selector-option"
-        data-kova-button-shape="preserve"
-        aria-pressed={selected}
-        onClick={() => {
-          onChange(availableMode.id);
-          closeAndRestoreFocus();
-        }}
-        className="min-h-11 w-full rounded-[var(--kova-radius-compact)] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring [font-family:var(--font-ui,var(--font-sans))]"
-        data-testid={"model-option-" + availableMode.id}
-      >
-        <div
-          className={
-            useSheet
-              ? "flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-4 py-3 text-left " +
-                (selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent")
-              : "flex min-h-11 w-full items-center gap-2 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left transition-colors duration-100 " +
-                (selected ? "bg-accent" : "hover:bg-accent/60")
-          }
-        >
-          {availableMode.id === "thinking" && (
-            <Brain aria-hidden="true" className="h-4 w-4 shrink-0" />
-          )}
-          <span className="flex-1 text-[15px] font-medium">{modeDisplayLabel(availableMode)}</span>
-          {selected && (
-            <Check
-              className={useSheet ? "h-5 w-5" : "h-4 w-4 text-foreground"}
-              aria-label={useSheet ? "Selected" : undefined}
-            />
-          )}
-        </div>
-      </button>
-    );
-  };
-
   const options = (
-    <>
-      <div className="px-3 py-3">
-        <label htmlFor={menuId + "-effort"} className="block text-sm font-medium">
-          Response effort: {modeDisplayLabel(current)}
-        </label>
+    <div className="kova-effort-picker">
+      <div className="kova-effort-header">
+        <Zap aria-hidden="true" className="kova-effort-icon" />
+        <div className="min-w-0 text-center">
+          <div className="text-sm font-semibold leading-5">{modeDisplayLabel(current)}</div>
+          {modelLabel && <div className="truncate text-xs text-muted-foreground">{modelLabel}</div>}
+        </div>
+        <button
+          type="button"
+          className="kova-effort-reset"
+          aria-label="Reset response effort to Lite"
+          title="Reset to Lite"
+          onClick={() => onChange("instant")}
+        >
+          <RotateCcw aria-hidden="true" className="size-3.5" />
+        </button>
+      </div>
+      <div
+        className="kova-effort-control"
+        style={
+          {
+            "--effort-position": `${(effortIndex / (availableModes.length - 1)) * 100}%`,
+          } as CSSProperties
+        }
+      >
+        <div className="kova-effort-track" aria-hidden="true">
+          <div className="kova-effort-fill" data-slot="effort-fill" />
+        </div>
         <input
           id={menuId + "-effort"}
+          className="kova-effort-range"
           type="range"
           min={0}
           max={availableModes.length - 1}
@@ -154,25 +140,33 @@ export function ResponsiveModelSelector({
           value={effortIndex}
           aria-label="Response effort"
           aria-valuetext={modeDisplayLabel(current)}
-          className="mt-3 min-h-11 w-full accent-foreground"
           onChange={(event) => {
-            const next = availableModes[Number(event.target.value)];
-            if (next && isModeAllowedForTier(userTier, next.id)) onChange(next.id);
+            const next = availableModes[event.currentTarget.valueAsNumber];
+            if (next) onChange(next.id);
           }}
         />
-        <p className="text-xs text-muted-foreground">
-          Higher modes allow more compute and cost. Ultra uses subagents of the selected model.
-        </p>
-      </div>
-      {groups.map((group) => (
-        <div key={group.id} className="pb-2">
-          <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
-            Response effort
-          </div>
-          {group.modes.map(renderOption)}
+        <div className="kova-effort-stops">
+          {availableModes.map((availableMode, index) => (
+            <button
+              key={availableMode.id}
+              type="button"
+              data-slot="model-selector-option"
+              data-testid={`model-option-${availableMode.id}`}
+              data-filled={index <= effortIndex}
+              aria-pressed={index === effortIndex}
+              title={modeDisplayLabel(availableMode)}
+              className="kova-effort-stop"
+              onClick={() => {
+                onChange(availableMode.id);
+                closeAndRestoreFocus();
+              }}
+            >
+              <span className="sr-only">{modeDisplayLabel(availableMode)}</span>
+            </button>
+          ))}
         </div>
-      ))}
-    </>
+      </div>
+    </div>
   );
 
   // Guests see the brand in the header and Default inside the composer.
@@ -262,7 +256,7 @@ export function ResponsiveModelSelector({
             title="Response effort"
             ariaLabel="Choose response effort"
           >
-            <div className="flex flex-col gap-1">{options}</div>
+            {options}
           </MobileBottomSheet>
         ) : (
           <PopoverContent
@@ -275,15 +269,7 @@ export function ResponsiveModelSelector({
             align="start"
             sideOffset={8}
             collisionPadding={12}
-            className="kova-model-menu flex w-72 max-w-[calc(100vw-24px)] flex-col rounded-[var(--kova-radius-menu)] border border-border bg-popover p-2 shadow-[var(--shadow-floating)] [font-family:var(--font-ui,var(--font-sans))]"
-            style={{
-              overflow: "hidden",
-              // A composer trigger sits near mid-screen. Keep this menu short
-              // enough for either side so Radix does not flip it after scrolling.
-              maxHeight: topbar
-                ? undefined
-                : "min(36dvh, var(--radix-popover-content-available-height, 36dvh))",
-            }}
+            className="kova-model-menu kova-effort-popover"
             onOpenAutoFocus={(event) => {
               // The menu is portalled out of the Options scroll container.
               // Begin at the selected option without replacing the trigger.
@@ -294,15 +280,7 @@ export function ResponsiveModelSelector({
               selected.focus({ preventScroll: true });
             }}
           >
-            <div className="shrink-0 px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
-              Response effort
-            </div>
-            <div
-              data-testid="model-options-scroll"
-              className="min-h-0 overflow-y-auto overscroll-contain"
-            >
-              {options}
-            </div>
+            {options}
           </PopoverContent>
         )}
       </div>

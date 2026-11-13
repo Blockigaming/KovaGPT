@@ -5,8 +5,10 @@ import {
   CalendarDays,
   CreditCard,
   Globe2,
+  LoaderCircle,
   PackageOpen,
 } from "./ui/product-icons.tsx";
+import { toast } from "sonner";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
@@ -115,7 +117,8 @@ export function BankConnectionsPanel({
     setBusyState(value);
   }, []);
   const resumed = useRef(false);
-  const [message, setMessage] = useState("");
+  const [statusFailed, setStatusFailed] = useState(false);
+  const [linking, setLinking] = useState(false);
   const initialRead = useRef(false);
   const newlyLinked = useRef<string | null>(null);
   const [snapshot, setSnapshot] = useState<FinanceSnapshot | null>(null);
@@ -142,11 +145,15 @@ export function BankConnectionsPanel({
       const response = await request("/api/finances/manage");
       const body = await response.json();
       if (!response.ok || !Array.isArray(body.connections)) throw new Error();
-      if (active.current) setStatus(body);
+      if (active.current) {
+        setStatus(body);
+        setStatusFailed(false);
+      }
     } catch {
       if (active.current) {
         setStatus(null);
-        setMessage("Bank connection status is unavailable.");
+        setStatusFailed(true);
+        toast.error("Bank connection status is unavailable.", { position: "bottom-right" });
       }
     }
   }, [ownerId, request]);
@@ -182,13 +189,14 @@ export function BankConnectionsPanel({
               if (active.current) {
                 newlyLinked.current = connection.id;
                 initialRead.current = false;
-                setMessage("Bank connected.");
+                toast.success("Bank connected.");
                 await reload();
               }
             } catch {
               if (active.current)
-                setMessage(
+                toast.error(
                   "The link result could not be confirmed. Refresh connection status before starting another link.",
+                  { position: "bottom-right" },
                 );
             } finally {
               if (active.current) {
@@ -204,11 +212,10 @@ export function BankConnectionsPanel({
           settled = true;
           clearPlaidLinkSession(window.sessionStorage, ownerId ?? "");
           setBusy(false);
-          setMessage(
-            error
-              ? "Plaid could not finish linking this bank. Try again later."
-              : "Bank linking cancelled.",
-          );
+          if (error)
+            toast.error("Plaid could not finish linking this bank. Try again later.", {
+              position: "bottom-right",
+            });
           handler.current?.destroy();
           handler.current = null;
         },
@@ -228,8 +235,9 @@ export function BankConnectionsPanel({
     resumed.current = true;
     const token = readPlaidLinkSession(window.sessionStorage, ownerId);
     if (!token) {
-      setMessage(
+      toast.error(
         "This bank sign-in session expired or belongs to another account. Start a new bank connection.",
+        { position: "bottom-right" },
       );
       return;
     }
@@ -237,14 +245,16 @@ export function BankConnectionsPanel({
     void openLink(token, window.location.href).catch(() => {
       if (active.current) {
         setBusy(false);
-        setMessage("Bank sign-in could not resume. Start a new bank connection.");
+        toast.error("Bank sign-in could not resume. Start a new bank connection.", {
+          position: "bottom-right",
+        });
       }
     });
   }, [ownerId, status, openLink, setBusy]);
   const connect = async () => {
     if (running.current || !ownerId || !status?.configured) return;
     setBusy(true);
-    setMessage("");
+    setLinking(true);
     try {
       const response = await request("/api/finances/link-token", { country: "US" });
       const body = await response.json();
@@ -260,15 +270,16 @@ export function BankConnectionsPanel({
     } catch {
       if (active.current) {
         setBusy(false);
-        setMessage("Bank linking is unavailable. Refresh status and try again later.");
+        toast.error("Bank linking is unavailable. Please try again.", { position: "bottom-right" });
       }
+    } finally {
+      if (active.current) setLinking(false);
     }
   };
   const manage = useCallback(
     async (connectionId: string, action: "read" | "disconnect") => {
       if (running.current) return;
       setBusy(true);
-      setMessage("");
       if (action === "disconnect") setSnapshot(null);
       try {
         const response = await request("/api/finances/manage", { connectionId, action });
@@ -278,16 +289,17 @@ export function BankConnectionsPanel({
           if (action === "read") setSnapshot(body);
           else {
             initialRead.current = false;
-            setMessage("Bank disconnected and Plaid access removed.");
+            toast.success("Bank disconnected and Plaid access removed.");
             await reload();
           }
         }
       } catch {
         if (active.current)
-          setMessage(
+          toast.error(
             action === "read"
               ? "The bank could not be read. Reconnect or try again later."
               : "Disconnect could not be confirmed. Refresh status before retrying.",
+            { position: "bottom-right" },
           );
       } finally {
         if (active.current) {
@@ -330,40 +342,31 @@ export function BankConnectionsPanel({
     }
   };
   const hasConnections = Boolean(ownerId && status?.connections.length);
+  const linkButton = (
+    <Button
+      onClick={() => void connect()}
+      disabled={busy || !status?.configured}
+      aria-busy={linking}
+      className="relative bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
+    >
+      <span className={linking ? "opacity-0" : undefined}>Connect a bank</span>
+      {linking && (
+        <span className="absolute inset-0 grid place-items-center">
+          <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
+        </span>
+      )}
+    </Button>
+  );
   if (!hasConnections) {
     return (
       <>
-        <FinanceSpendingPreview
-          action={
-            ownerId && status?.configured ? (
-              <Button onClick={() => void connect()} disabled={busy}>
-                Link a bank
-              </Button>
-            ) : undefined
-          }
-        />
-        {message && (
-          <p role="status" className="text-center">
-            {message}
-          </p>
-        )}
-        {ownerId && !status && message && (
+        <FinanceSpendingPreview action={ownerId && status?.configured ? linkButton : undefined} />
+        {ownerId && statusFailed && (
           <div className="text-center">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setMessage("");
-                void reload();
-              }}
-            >
+            <Button variant="outline" onClick={() => void reload()}>
               Retry
             </Button>
           </div>
-        )}
-        {busy && (
-          <p role="status" className="text-center">
-            Working…
-          </p>
         )}
       </>
     );
@@ -397,9 +400,7 @@ export function BankConnectionsPanel({
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void connect()} disabled={busy || !status?.configured}>
-              Link a bank
-            </Button>
+            {linkButton}
             <Button variant="outline" onClick={() => void reload()} disabled={busy}>
               Refresh bank status
             </Button>
@@ -430,8 +431,6 @@ export function BankConnectionsPanel({
           ))}
         </>
       )}
-      {message && <p role="status">{message}</p>}
-      {busy && <p role="status">Working…</p>}
       {snapshot && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
