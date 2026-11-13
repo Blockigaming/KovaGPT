@@ -13,7 +13,7 @@ function FinancesPage() {
   const { user, isSignedIn, isLoaded } = useUser();
   const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   return (
-    <AppShell>
+    <AppShell hideUtilities>
       <main
         id="main-content"
         className="kova-page kova-secondary-page mx-auto w-full max-w-6xl px-5 py-8"

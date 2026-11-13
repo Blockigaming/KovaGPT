@@ -173,6 +173,11 @@
 .kova-sidebar .kova-chat-row.is-active {
   background: var(--sidebar-active);
 }
+@media (hover: hover) {
+  .kova-sidebar .kova-chat-row:hover {
+    background: var(--sidebar-active);
+  }
+}
 .kova-sidebar-workspace {
   margin-top: 12px;
 }
