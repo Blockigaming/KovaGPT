@@ -111,11 +111,11 @@ test("late consumers keep ordinary actions and compact transcript icons distinct
     ["src/styles/spec400-chat.css", ".spec400-toolbar-button"],
   ])
     hasRadius(path, selector, "button");
-  hasRadius(
+  const actionRadii = rules(
     "src/components/response-action-refinement.css",
     "button.kova-message-icon-action",
-    "compact",
-  );
+  ).flatMap((rule) => declarations(rule, "border-radius").map((decl) => decl.value));
+  assert.deepEqual(actionRadii, ["8px"]);
 });
 
 test("shared buttons retain the pinned reference hierarchy and larger coarse-pointer targets", () => {
