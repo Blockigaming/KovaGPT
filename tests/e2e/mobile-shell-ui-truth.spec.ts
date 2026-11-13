@@ -108,3 +108,61 @@ test.describe("mobile shell UI truth", () => {
       .toBe(false);
   });
 });
+
+test("compact chat starts closed and keeps its canvas in place behind the drawer", async ({
+  page,
+}) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 1024, "compact shell");
+  await installAuthenticatedFixture(page);
+  await page.addInitScript(() => localStorage.setItem("kova-mobile-sidebar-open", "1"));
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const main = page.locator(".kova-chat-main");
+  const opener = page.getByRole("button", { name: "Open menu" });
+  await expect(opener).toBeVisible();
+  await expect(main).toHaveAttribute("data-sidebar", "closed");
+  await opener.click();
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  await expect(drawer).toBeVisible();
+  await expect
+    .poll(async () => (await drawer.boundingBox())?.width)
+    .toBeCloseTo(Math.min(viewport.width * 0.86, 320), 0);
+  const mainBox = (await main.boundingBox())!;
+  expect(mainBox.x).toBe(0);
+  expect(mainBox.width).toBe(viewport.width);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await expect(opener).toBeVisible();
+  await expect(main).toHaveAttribute("data-sidebar", "closed");
+});
+
+test("a reduced visual viewport keeps the mobile composer reachable", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 1024, "compact shell");
+  await installAuthenticatedFixture(page);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const textbox = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await textbox.fill("Keep this draft");
+  const visibleHeight = viewport.height - (viewport.height < 500 ? 145 : 300);
+  await page.evaluate((height) => {
+    const visual = window.visualViewport!;
+    Object.defineProperty(visual, "height", { configurable: true, value: height });
+    visual.dispatchEvent(new Event("resize"));
+  }, visibleHeight);
+
+  const shell = page.locator(".kova-assistant[data-ui=modern]");
+  await expect(shell).toHaveAttribute("data-keyboard-open", "true");
+  await expect.poll(async () => (await shell.boundingBox())?.height).toBe(visibleHeight);
+  const send = page.getByRole("button", { name: "Send message" });
+  const sendBox = (await send.boundingBox())!;
+  expect(sendBox.y + sendBox.height).toBeLessThanOrEqual(visibleHeight + 1);
+
+  await textbox.blur();
+  await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  await expect(textbox).toHaveValue("Keep this draft");
+});

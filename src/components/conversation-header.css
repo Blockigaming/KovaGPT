@@ -579,10 +579,9 @@
 }
 .kova-mobile-conversation-tools {
   min-width: 0;
-  padding: 0 8px 4px;
 }
-.kova-mobile-conversation-tools .kova-free-offer {
-  margin-right: auto;
+.kova-mobile-conversation-tools .kova-conversation-actions {
+  gap: 2px;
 }
 
 .kova-activity-section-toggle {

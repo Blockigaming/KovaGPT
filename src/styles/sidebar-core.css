@@ -500,11 +500,11 @@
 button.kova-sidebar-scrim {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 35;
   border: 0;
   border-radius: 0;
   padding: 0;
-  background: #0008;
+  background: rgb(0 0 0 / 45%);
   transition:
     opacity var(--kova-motion-standard) var(--kova-ease),
     visibility 0ms;
@@ -548,13 +548,13 @@ button.kova-sidebar-scrim {
     inset: 0 auto 0 0;
     height: 100dvh;
     margin: 0;
-    width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
+    width: var(--kova-sidebar-drawer-width, min(86vw, 320px));
     min-width: 0;
     max-width: calc(100vw - 24px);
     border-radius: 0 24px 24px 0;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
-    width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
+    width: var(--kova-sidebar-drawer-width, min(86vw, 320px));
     transform: translateX(-100%);
   }
   .kova-sidebar-inner {
@@ -716,13 +716,9 @@ button.kova-auth-sign-up:hover {
   }
 }
 
-/* Phone navigation leaves a readable sliver of the current conversation. */
+/* Phone navigation overlays the conversation. */
 @media (max-width: 767px) {
-  .kova-sidebar[data-kova-core-sidebar],
-  .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
-    width: min(360px, calc(100vw - 80px));
-    max-width: calc(100vw - 64px);
-    border-radius: 0 24px 24px 0;
+  .kova-sidebar[data-kova-core-sidebar] {
     overflow: hidden;
     --sidebar-row-height: 48px;
     --sidebar-icon-slot: 22px;
@@ -755,11 +751,6 @@ button.kova-auth-sign-up:hover {
   }
   .kova-sidebar-footer {
     padding-bottom: max(16px, var(--safe-bottom));
-  }
-  .kova-assistant:has(.kova-sidebar[data-state="open"]) > .kova-chat-main,
-  .kova-app-content[data-sidebar="open"] {
-    transform: translateX(min(360px, calc(100vw - 80px)));
-    /* The sidebar, not the conversation pane, owns the rounded corners. */
   }
 }
 @media (max-width: 767px) {
@@ -861,4 +852,25 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
 .kova-profile-menu .kova-profile-menu-account {
   color: var(--foreground);
   opacity: 1;
+}
+
+.kova-sidebar-destinations {
+  display: contents;
+}
+
+@media (width < 768px) {
+  .kova-sidebar-destinations:not(:empty) {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 3px;
+    scroll-padding-inline: 3px;
+  }
+
+  .kova-sidebar-destinations > .kova-nav-row {
+    flex: 0 0 auto;
+    width: auto;
+    border: 1px solid var(--border);
+  }
 }

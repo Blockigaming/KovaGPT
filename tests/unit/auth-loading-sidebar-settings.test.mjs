@@ -39,7 +39,7 @@ test("settings block every sidebar setter without overwriting the saved preferen
     {
       window: {
         matchMedia: () => media,
-        localStorage: { getItem: () => "0", setItem: (...args) => writes.push(args) },
+        localStorage: { getItem: () => "1", setItem: (...args) => writes.push(args) },
       },
       document: { querySelector: () => (settingsOpen ? {} : null) },
     },
@@ -59,5 +59,5 @@ test("settings block every sidebar setter without overwriting the saved preferen
   set(true);
   [open] = render();
   assert.equal(open, true);
-  assert.deepEqual(writes.at(-1), ["kova-mobile-sidebar-open", "1"]);
+  assert.equal(writes.length, before, "the compact drawer does not persist its open state");
 });
