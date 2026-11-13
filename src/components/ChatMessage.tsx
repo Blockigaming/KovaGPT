@@ -595,7 +595,6 @@ function ChatMessageInner({
     () => (isUser ? "" : cleanAssistantText(message.content)),
     [isUser, message.content],
   );
-  const chartParts = useMemo(() => extractCharts(cleanedResponse), [cleanedResponse]);
   const canvasParts = useMemo(
     () => (isUser || streaming ? [] : splitGenerativeContent(cleanedResponse)),
     [cleanedResponse, isUser, streaming],
@@ -635,6 +634,25 @@ function ChatMessageInner({
             />
           ) : part.text.trim() ? (
             markdown(part.text, `t${i}`)
+          ) : null,
+        )}
+      </div>
+    );
+  };
+  const renderResponseSection = (content: string, section: number) => {
+    const parts = streaming ? [] : extractCharts(content);
+    if (!parts.some((part) => part.kind === "chart")) {
+      return renderResponseText(content, section === 0 ? undefined : section);
+    }
+    return (
+      <div key={section} className="space-y-2">
+        {parts.map((part, index) =>
+          part.kind === "chart" ? (
+            <Suspense key={index} fallback={null}>
+              <ChatChart spec={part.spec} />
+            </Suspense>
+          ) : part.value.trim() ? (
+            renderResponseText(part.value, section === 0 ? index : `${section}:${index}`)
           ) : null,
         )}
       </div>
@@ -941,7 +959,6 @@ function ChatMessageInner({
                 />
               ) : (
                 (() => {
-                  const hasChart = chartParts.some((part) => part.kind === "chart");
                   const markdown = hasWidget ? (
                     <div className="space-y-3">
                       {canvasParts.map((part, index) =>
@@ -978,24 +995,12 @@ function ChatMessageInner({
                             }
                           />
                         ) : part.text.trim() ? (
-                          renderResponseText(part.text, index)
-                        ) : null,
-                      )}
-                    </div>
-                  ) : hasChart ? (
-                    <div className="space-y-2">
-                      {chartParts.map((part, index) =>
-                        part.kind === "chart" ? (
-                          <Suspense key={index} fallback={null}>
-                            <ChatChart spec={part.spec} />
-                          </Suspense>
-                        ) : part.value.trim() ? (
-                          renderResponseText(part.value, index)
+                          renderResponseSection(part.text, index)
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    renderResponseText(cleanedResponse, undefined)
+                    renderResponseSection(cleanedResponse, 0)
                   );
                   if (responseChip)
                     return (

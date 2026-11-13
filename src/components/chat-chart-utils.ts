@@ -12,6 +12,7 @@ export type ChartSpec = {
 export const CHART_TYPES: ChartType[] = ["bar", "line", "pie", "donut", "scatter"];
 
 export function parseChartSpec(raw: string): ChartSpec | null {
+  if (raw.length > 64_000) return null;
   try {
     const value: unknown = JSON.parse(raw);
     if (!value || typeof value !== "object") return null;
@@ -20,7 +21,23 @@ export function parseChartSpec(raw: string): ChartSpec | null {
       !CHART_TYPES.includes(object.type as ChartType) ||
       !Array.isArray(object.data) ||
       object.data.length === 0 ||
-      object.data.some((row) => !row || typeof row !== "object" || Array.isArray(row))
+      object.data.length > 500 ||
+      (object.title !== undefined && typeof object.title !== "string") ||
+      (object.xKey !== undefined && typeof object.xKey !== "string") ||
+      (object.keys !== undefined &&
+        (!Array.isArray(object.keys) || object.keys.some((key) => typeof key !== "string"))) ||
+      (object.colors !== undefined &&
+        (!Array.isArray(object.colors) ||
+          object.colors.some(
+            (color) => typeof color !== "string" || !/^#[0-9a-f]{3,8}$/i.test(color),
+          ))) ||
+      object.data.some(
+        (row) =>
+          !row ||
+          typeof row !== "object" ||
+          Array.isArray(row) ||
+          Object.values(row).some((cell) => typeof cell !== "string" && !Number.isFinite(cell)),
+      )
     )
       return null;
     return object as ChartSpec;
