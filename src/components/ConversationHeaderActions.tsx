@@ -290,22 +290,60 @@ export function ConversationHeaderActions({
         </DialogContent>
       </Dialog>
       <Dialog
-        open={Boolean(selectedOutput)}
+        open={selectedOutput !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedOutput(null);
         }}
       >
-        <DialogContent onCloseAutoFocus={restoreFocus} className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{selectedOutput?.name ?? "Output"}</DialogTitle>
-            <DialogDescription>{selectedOutput?.label}</DialogDescription>
-          </DialogHeader>
-          {selectedOutput?.kind === "image" && selectedOutput.source ? (
-            <img src={selectedOutput.source} alt="" className="kova-header-image-preview" />
-          ) : selectedOutput && selectedOutput.kind !== "image" ? (
-            <pre className="kova-header-text-preview">{selectedOutput.content}</pre>
+        <DialogContent className="sm:max-w-2xl" onCloseAutoFocus={restoreFocus}>
+          <DialogTitle className="break-words pr-8">{selectedOutput?.name}</DialogTitle>
+          <DialogDescription>
+            {selectedOutput?.kind === "library"
+              ? "This chat keeps a Library reference. Open Library to access the original file."
+              : selectedOutput?.kind === "text" && selectedOutput.extracted
+                ? "Extracted text from the attachment. The original file is not stored in this chat."
+                : selectedOutput?.kind === "artifact"
+                  ? "Generated content from this conversation."
+                  : "Attachment in this conversation."}
+          </DialogDescription>
+          {selectedOutput?.kind === "image" ? (
+            selectedOutput.source ? (
+              <img
+                className="kova-header-image-preview"
+                src={selectedOutput.source}
+                alt={selectedOutput.name}
+              />
+            ) : (
+              <p className="kova-header-note">
+                This image is unavailable or has an unsupported format.
+              </p>
+            )
+          ) : selectedOutput && selectedOutput.kind !== "library" ? (
+            <pre className="kova-header-text-preview">
+              {selectedOutput.content || "No extracted text is available."}
+            </pre>
           ) : null}
-          {selectedOutput ? (
+          {selectedOutput?.kind === "library" ? (
+            <>
+              {navigationBlocked ? (
+                <p className="kova-header-note">
+                  Send or clear your current message and attachments before opening Library.
+                </p>
+              ) : null}
+              <Button asChild variant="outline">
+                <Link
+                  to="/library"
+                  preload={false}
+                  aria-disabled={navigationBlocked}
+                  onClick={(event) => {
+                    if (navigationBlocked) event.preventDefault();
+                  }}
+                >
+                  Open Library
+                </Link>
+              </Button>
+            </>
+          ) : selectedOutput ? (
             <Button
               variant="outline"
               className="min-h-11"
