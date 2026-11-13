@@ -9,11 +9,32 @@ test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ pag
   await page.goto("/");
   await waitForKovaHydration(page);
   const sidebar = page.getByRole("navigation", { name: "Primary navigation", exact: true });
+  const chat = page.getByRole("button", { name: "Open chat Composer review chat", exact: true });
+  const row = sidebar.locator(".kova-chat-row").filter({ has: chat });
+  const pin = row.getByRole("button", { name: "Pin Composer review chat", exact: true });
   const options = sidebar.getByRole("button", { name: "Options for Composer review chat" });
-  await options.hover();
+  await expect(chat).toHaveAttribute("aria-current", "page");
+  await expect(chat).not.toHaveAttribute("title", /.+/);
+  await expect(pin).toHaveCSS("opacity", "0");
+  await expect(options).toHaveCSS("opacity", "0");
+  await page.keyboard.press("Tab");
+  await chat.focus();
+  await expect(chat).toBeFocused();
+  await expect(chat).toHaveCSS("outline-style", "none");
+  await expect(row).toHaveCSS("outline-style", "solid");
+  await chat.hover();
+  await expect(pin).toHaveCSS("opacity", "1");
+  await expect(options).toHaveCSS("opacity", "1");
   await options.click();
   const chatMenu = page.locator(".kova-sidebar-chat-menu");
   await expect(chatMenu).toHaveCSS("border-top-width", "0px");
+  await expect
+    .poll(async () => {
+      const rowBox = (await row.boundingBox())!;
+      const menuBox = (await chatMenu.boundingBox())!;
+      return Math.abs(rowBox.y + rowBox.height / 2 - (menuBox.y + menuBox.height / 2));
+    })
+    .toBeLessThanOrEqual(2);
   await chatMenu.getByRole("menuitem", { name: "Rename", exact: true }).click();
   const rename = page.getByRole("dialog", { name: "Rename chat" });
   await expect(rename).toBeVisible();

@@ -467,7 +467,7 @@ body {
   :where(a, button, [role="button"], [tabindex]):not(input):not(textarea):not(
     select
   ):focus-visible {
-  outline: 2px solid var(--ring) !important;
+  outline: var(--kova-keyboard-outline, 2px solid var(--ring)) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }
@@ -2019,7 +2019,10 @@ body {
     [role="menuitem"],
     [role="combobox"]
   ):focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 65%, transparent) !important;
+  outline: var(
+    --kova-keyboard-outline,
+    2px solid color-mix(in srgb, var(--foreground) 65%, transparent)
+  ) !important;
   outline-offset: -2px !important;
   box-shadow: none !important;
 }
