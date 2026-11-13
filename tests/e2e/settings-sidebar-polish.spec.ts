@@ -22,7 +22,9 @@ test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ pag
 
   await sidebar.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
   const rail = page.getByRole("navigation", { name: "Collapsed navigation", exact: true });
-  await expect(rail).toHaveCSS("border-top-left-radius", "20px");
+  await expect(rail).toHaveCSS("border-top-left-radius", "0px");
+  await expect(rail).toHaveCSS("border-bottom-left-radius", "0px");
+  await expect(rail).toHaveCSS("border-top-right-radius", "20px");
   await expect(rail).toHaveCSS("border-bottom-right-radius", "20px");
   await rail.getByRole("button", { name: "Account menu", exact: true }).click();
   const accountMenu = page.locator(".kova-profile-menu");

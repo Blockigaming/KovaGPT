@@ -29,6 +29,8 @@ const settingsPageStylesSource = await readFile(
   new URL("../../src/styles/settings-page-layout.css", import.meta.url),
   "utf8",
 );
+const phoneLayouts =
+  "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)";
 const styleRule = (source, selector, media = null) => {
   const matches = [];
   postcss.parse(source).walkRules((rule) => {
@@ -203,7 +205,7 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
   const hidden = styleRule(
     settingsStylesSource,
     ".kova-settings-reference :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden",
-    "(max-width: 767px)",
+    phoneLayouts,
   ).declarations;
   assert.equal(hidden.display, "none");
 });
@@ -419,7 +421,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ]) {
-    const { rule, declarations } = styleRule(settingsStylesSource, selector, "(max-width: 767px)");
+    const { declarations } = styleRule(settingsStylesSource, selector, phoneLayouts);
     for (const [property, value] of Object.entries({
       inset: "0",
       width: "100%",
@@ -436,12 +438,12 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   const sidebar = styleRule(
     settingsStylesSource,
     ".kova-settings-reference .kova-settings-sidebar",
-    "(max-width: 767px)",
+    phoneLayouts,
   ).declarations;
   const header = styleRule(
     settingsStylesSource,
     ".kova-settings-reference .kova-settings-content-header",
-    "(max-width: 767px)",
+    phoneLayouts,
   ).declarations;
   assert.match(sidebar.padding, /--safe-top/);
   assert.match(sidebar.padding, /--safe-bottom/);
@@ -449,7 +451,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   const panel = styleRule(
     settingsStylesSource,
     '.kova-settings-reference .kova-settings-content > [role="tabpanel"]',
-    "(max-width: 767px)",
+    phoneLayouts,
   ).declarations;
   assert.equal(
     panel.padding,

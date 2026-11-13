@@ -2023,9 +2023,3 @@ body {
   outline-offset: -2px !important;
   box-shadow: none !important;
 }
-
-:root:not([data-kova-input-modality="pointer"])
-  .kova-sidebar
-  button.kova-chat-row-main:focus-visible {
-  outline: none !important;
-}

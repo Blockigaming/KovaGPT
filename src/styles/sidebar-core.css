@@ -232,6 +232,11 @@
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
+:root:not([data-kova-input-modality="pointer"])
+  .kova-sidebar
+  button.kova-chat-row-main:focus-visible {
+  outline: none !important;
+}
 .kova-sidebar .kova-chat-row-main {
   display: flex;
   min-width: 0;
