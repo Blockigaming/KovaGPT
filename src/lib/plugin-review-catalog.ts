@@ -101,7 +101,9 @@ export function getPluginReviewEntry(id: string) {
   return getPluginReview(id);
 }
 
-export const MASTER_PLUGIN_REVIEW_CATALOG = MASTER_CONNECTOR_IDS.map((id) => getPluginReview(id)!).filter(Boolean);
+export const MASTER_PLUGIN_REVIEW_CATALOG = MASTER_CONNECTOR_IDS.map((id) =>
+  getPluginReview(id)!,
+).filter(Boolean);
 
 export const PLUGIN_REVIEW_PERMISSION_NOTICE =
   "Permissions shown here describe the product surface, not a live OAuth grant.";

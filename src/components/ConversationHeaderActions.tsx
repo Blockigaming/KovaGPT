@@ -164,7 +164,9 @@ export function ConversationHeaderActions({
           aria-hidden="true"
         />
       </button>
-      {!outputsCollapsed && generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
+      {!outputsCollapsed && generatedOutputs.length === 0 ? (
+        <p className="kova-header-note">No outputs yet.</p>
+      ) : null}
       {!outputsCollapsed && generatedOutputs.length > 0 && (
         <>
           <div className="kova-output-list">
@@ -223,7 +225,9 @@ export function ConversationHeaderActions({
 
   return (
     <>
-      <div className={`kova-conversation-actions${compact ? " kova-conversation-actions-compact" : ""}`}>
+      <div
+        className={`kova-conversation-actions${compact ? " kova-conversation-actions-compact" : ""}`}
+      >
         <Popover open={outputsOpen} onOpenChange={setOutputsOpen}>
           <PopoverTrigger asChild>
             <button
@@ -267,7 +271,10 @@ export function ConversationHeaderActions({
           </button>
         )}
       </div>
-      <Dialog open={dialog === "share-restricted"} onOpenChange={(open) => !open && setDialog(null)}>
+      <Dialog
+        open={dialog === "share-restricted"}
+        onOpenChange={(open) => !open && setDialog(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Sharing is unavailable</DialogTitle>
@@ -294,11 +301,7 @@ export function ConversationHeaderActions({
             <DialogDescription>{selectedOutput?.label}</DialogDescription>
           </DialogHeader>
           {selectedOutput?.kind === "image" && selectedOutput.source ? (
-            <img
-              src={selectedOutput.source}
-              alt=""
-              className="kova-header-image-preview"
-            />
+            <img src={selectedOutput.source} alt="" className="kova-header-image-preview" />
           ) : selectedOutput && selectedOutput.kind !== "image" ? (
             <pre className="kova-header-text-preview">{selectedOutput.content}</pre>
           ) : null}

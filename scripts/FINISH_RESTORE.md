@@ -14,6 +14,7 @@ git push
 ```
 
 `apply-ui-fixes.py` downloads clean copies from `main` and applies:
+
 - Plaid in WORKING_IDS (not Coming soon)
 - Favicon logos for every plugin
 - Working-first sort
