@@ -8,8 +8,10 @@ const transcript = readFileSync(
   "utf8",
 );
 
-test("chat omits the jump arrow and still follows replies when the reader is near the bottom", () => {
+test("the transcript remains keyboard-scrollable and follows replies near the bottom", () => {
   assert.doesNotMatch(route, /jumpToLatestButton|Jump to latest message/);
+  assert.doesNotMatch(transcript, /showJumpToLatest|Jump to latest message/);
+  assert.match(transcript, /data-chat-transcript="true"\s+tabIndex=\{-1\}/);
   assert.match(transcript, /if \(nearBottomRef.current\)/);
   assert.match(transcript, /scrollTo\(\{ top: el.scrollHeight, behavior: "auto" \}\)/);
 });

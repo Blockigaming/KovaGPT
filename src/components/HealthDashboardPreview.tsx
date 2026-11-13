@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 const metrics = [
   { label: "Sleep", value: 82, color: "#8b5cf6" },
@@ -19,7 +19,7 @@ export function HealthDashboardPreview() {
           </p>
         </div>
         <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-          COMING SOON · DEMO DATA
+          Sample data
         </span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -60,8 +60,7 @@ export function HealthDashboardPreview() {
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Illustrative values only, not medical measurements or a diagnosis. No provider account is
-        connected to this example.
+        Connect a health account and read its summaries to see your own data.
       </p>
     </section>
   );

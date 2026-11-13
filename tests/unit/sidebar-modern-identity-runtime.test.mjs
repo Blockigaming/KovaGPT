@@ -140,9 +140,15 @@ function renderTopbar(props = {}, user = { isLoaded: true, isSignedIn: false }) 
     useUser: () => user,
     clerkEnabled: true,
     ...Object.fromEntries(
-      ["PanelLeft", "MessageCircleOff", "Sliders", "SquarePen", "SignInButton", "SignUpButton"].map(
-        (name) => [name, name],
-      ),
+      [
+        "PanelLeft",
+        "List",
+        "MessageCircleOff",
+        "Sliders",
+        "SquarePen",
+        "SignInButton",
+        "SignUpButton",
+      ].map((name) => [name, name]),
     ),
   });
 }

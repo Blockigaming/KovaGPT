@@ -453,7 +453,9 @@ function WritePage() {
 
   return (
     <AppShell>
-      <div
+      <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="claude.artifacts.document"
         className="kova-tool-page mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10"
         aria-busy={!documentReady}
@@ -481,7 +483,10 @@ function WritePage() {
           </div>
         </div>
 
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div
+          className="kova-writing-actions mb-3 flex flex-wrap items-center gap-2"
+          aria-label="Writing tools"
+        >
           {actionButton("improve", "Improve", Wand2)}
           {actionButton("grammar", "Fix grammar")}
           {actionButton("shorten", "Shorten")}
@@ -697,7 +702,7 @@ function WritePage() {
           destructive
           onConfirm={clearAll}
         />
-      </div>
+      </main>
     </AppShell>
   );
 }

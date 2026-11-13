@@ -2875,10 +2875,10 @@ export function ChatInput({
           />
         </Suspense>
       ) : null}
-      {projectPickerOpen ? (
+      {(isLoaded && user) || projectPickerOpen ? (
         <Suspense fallback={null}>
           <ComposerProjectPicker
-            open
+            open={projectPickerOpen}
             onOpenChange={setProjectPickerOpen}
             navigationBlocked={Boolean(
               value.length || attachments.length || isStreaming || disabled,

@@ -38,6 +38,8 @@ function Page() {
   return (
     <AppShell>
       <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="chatgpt.safety.trusted-contacts"
         className={"kova-tool-page " + "mx-auto w-full max-w-3xl px-4 py-8"}
       >

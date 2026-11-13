@@ -67,7 +67,11 @@ import {
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { hostedEffortBudget } from "@/lib/consumer-effort-policy.mjs";
-import { FREE_CHAT_MODELS, isKovaHostedModelId } from "@/lib/ai/kova-hosted-inference.server.mjs";
+import {
+  FREE_CHAT_MODELS,
+  HOSTED_MODEL_MAP,
+  isKovaHostedModelId,
+} from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import {
   FreeConnectorBudget,
@@ -2728,24 +2732,18 @@ export const Route = createFileRoute("/api/chat")({
             const voiceRelayCancellation = new AbortController();
             const voicePolicy = voiceModelPolicy(runtimeEnv);
             const voiceMessageId = request.headers.get("x-kova-assistant-message-id");
+            const hostedVoiceModel = isKovaHostedModelId(model);
+            const voiceProvider = hostedVoiceModel ? "openai" : getAiProviderConfig().provider;
+            const voiceModelId = freeChatModel?.foundation ?? (HOSTED_MODEL_MAP[model] || model);
+            // The receipt must identify the foundation actually used by the transport.
+            const voiceModel = { provider: voiceProvider, modelId: voiceModelId };
             const voiceIdentity =
               auth &&
               !temporary &&
               chatId &&
               voiceMessageId &&
-              eligibleVoiceModel(voicePolicy, {
-                provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
-                modelId: model,
-              })
-                ? {
-                    ownerId: auth.userId,
-                    chatId,
-                    messageId: voiceMessageId,
-                    provider: isKovaHostedModelId(model)
-                      ? "openai"
-                      : getAiProviderConfig().provider,
-                    modelId: model,
-                  }
+              eligibleVoiceModel(voicePolicy, voiceModel)
+                ? { ownerId: auth.userId, chatId, messageId: voiceMessageId, ...voiceModel }
                 : null;
             let usageBuffer = "";
             let usageFinalized = false;

@@ -77,7 +77,10 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.ok(!SIDEBAR_ITEMS.some((item) => item.id === "work"));
   assert.doesNotMatch(sidebar, /navLink\("\/work"/);
   assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
-  assert.match(sidebar, /cancelPendingSelection\(\);\s+onNew\(\);/);
+  assert.match(
+    sidebar,
+    /cancelPendingSelection\(\);\s+closeAfterMobileNavigation\("\/"\);\s+onNew\(\);/,
+  );
   assert.match(sidebar, /if \(!open \|\| !isMobileViewport\(\)\) return/);
   assert.match(sidebar, /navigationOwnsFocusRef\.current = requestDrawerNavigationFocus/);
   assert.match(sidebar, /closeAfterMobileNavigation\(to\)/);

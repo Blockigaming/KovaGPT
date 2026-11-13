@@ -15,6 +15,24 @@ export const PHONE_MAX = 768;
 // desktop, and utility classes prefixed with `lg:` mark the desktop shell.
 export const TABLET_MAX = 1024;
 
+export const PHONE_LAYOUT_QUERY =
+  "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)";
+
+function subscribeToPhoneLayout(onChange: () => void) {
+  const media = window.matchMedia(PHONE_LAYOUT_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+// Match the phone stylesheet, including a phone held in landscape.
+export function usePhoneLayout() {
+  return React.useSyncExternalStore(
+    subscribeToPhoneLayout,
+    () => window.matchMedia(PHONE_LAYOUT_QUERY).matches,
+    () => false,
+  );
+}
+
 export type LayoutMode = "mobile" | "tablet" | "desktop";
 export type InteractionMode = "touch" | "pointer";
 

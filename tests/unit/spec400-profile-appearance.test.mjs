@@ -198,8 +198,14 @@ function profileFixture(component = "ProfileSettings") {
     "src/components/ProfileSettings.tsx",
     (exports) => () => exports[component](props),
     {
-      sourceSuffix: "\nexport { PreferredNameForm };",
+      sourceSuffix: "\nexport { PreferredNameForm, AccountProfileEditor };",
       modules: {
+        "@tanstack/react-start": { useServerFn: (fn) => fn },
+        "@/lib/account-profile.functions": { saveAccountProfile: () => {} },
+        "@/lib/use-account-profile": {
+          ACCOUNT_PROFILE_CHANGED: "kova-account-profile-changed",
+          useAccountProfile: () => ({ profile: null, loaded: true, failed: false }),
+        },
         "@/components/ui/select": {
           Select: "Select",
           SelectContent: "SelectContent",
@@ -238,18 +244,16 @@ function profileFixture(component = "ProfileSettings") {
   };
 }
 
-test("Profile presents readonly identity and honest locale limits without response controls or duplicate heading", async () => {
+test("Profile supports photo and display name edits without adding response controls or a duplicate heading", async () => {
   const f = profileFixture();
   await f.flush();
+  const account = profileFixture("AccountProfileEditor");
+  await account.flush();
   assert.equal(
-    f.find("input", (n) => n.props.value === "Verified account name").props.readOnly,
-    true,
+    account.find("input", (n) => n.props.value === "Verified account name").props.disabled,
+    false,
   );
-  assert.equal(
-    f.find("input", (n) => n.props.value === "verified@example.test").props.readOnly,
-    true,
-  );
-  assert.equal(f.find("button", (n) => text(n) === "Change photo").props.disabled, true);
+  assert.equal(account.find("button", (n) => text(n) === "Change photo").props.disabled, false);
   assert.match(f.text(), /Interface language/);
   assert.match(f.text(), /Timezone detected on this device/);
   assert.match(f.text(), /Time format/);
@@ -322,7 +326,7 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
-    /\.kova-settings-content-header\s*\{[\s\S]*?min-height: 68px;[\s\S]*?padding: max\(10px, var\(--safe-top, 0px\)\) 16px 10px;/,
+    /\.kova-settings-content-header\s*\{[\s\S]*?min-height: 68px;\s*padding: max\(10px, var\(--safe-top\)\) max\(16px, var\(--safe-right\)\) 10px\s+max\(16px, var\(--safe-left\)\);/,
   );
   assert.match(preview, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(preview, /width: 100%/);

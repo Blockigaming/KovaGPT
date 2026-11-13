@@ -24,6 +24,7 @@ import {
   type MouseEvent,
 } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
+import { usePhoneLayout } from "@/hooks/use-mobile";
 import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { SharedChatInbox, SharedChatSummary } from "@/lib/shared-chats.functions";
 import {
@@ -369,6 +376,7 @@ function LibraryImageDownloadAction({ item }: { item: LibItem }) {
 }
 
 function LibraryPage() {
+  const phone = usePhoneLayout();
   const { isSignedIn, isLoaded, user } = useUser();
   const timeFormat = useTimeFormatPreference(user?.id ?? null, isLoaded);
   const detailSearch = Route.useSearch();
@@ -677,7 +685,9 @@ function LibraryPage() {
             },
             controller.signal,
           ),
-          more ? Promise.resolve([]) : listWorkspaceRecents(),
+          // Workspace suggestions are supplemental. A failure there must not
+          // make saved Library items or their filters unavailable.
+          more ? Promise.resolve([]) : listWorkspaceRecents().catch(() => []),
         ]);
         const saved = ["chats", "work"].includes(filter) ? [] : page.items;
         const savedIds = new Set(saved.map((item) => item.id));
@@ -1788,6 +1798,58 @@ function LibraryPage() {
     );
   };
 
+  const filterTrigger = (
+    <Button variant="outline" className="spec400-library-filter-trigger">
+      <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
+      Filters
+      {(sourceFilter !== "all" || dateFilter !== "all") && (
+        <span aria-label="Active metadata filters">
+          {Number(sourceFilter !== "all") + Number(dateFilter !== "all")}
+        </span>
+      )}
+    </Button>
+  );
+  const filterControls = (
+    <>
+      <div className="spec400-library-metadata-filters">
+        <div className="spec400-library-metadata-field">
+          <label htmlFor="library-source-filter">Source</label>
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger id="library-source-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sources</SelectItem>
+              <SelectItem value="upload">Uploads</SelectItem>
+              <SelectItem value="chat">Chat</SelectItem>
+              <SelectItem value="images">Images</SelectItem>
+              <SelectItem value="manual">Manual</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="spec400-library-metadata-field">
+          <label htmlFor="library-date-filter">Date saved</label>
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger id="library-date-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any time</SelectItem>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <p className="spec400-supporting">
+        Source and date filters apply to loaded items. Load more to include older results.
+      </p>
+    </>
+  );
+
   const libraryRenderGeneration = lifecycleGenerationRef.current;
 
   return (
@@ -1882,63 +1944,30 @@ function LibraryPage() {
                   className="h-11 rounded-[var(--kova-radius-input)] pl-9"
                 />
               </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="spec400-library-filter-trigger">
-                    <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
-                    Filters
-                    {(sourceFilter !== "all" || dateFilter !== "all") && (
-                      <span aria-label="Active metadata filters">
-                        {Number(sourceFilter !== "all") + Number(dateFilter !== "all")}
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  className="spec400-library-filter-panel"
-                  aria-label="Filter Library items"
-                >
-                  <p className="font-medium">Filter loaded items</p>
-                  <div className="spec400-library-metadata-filters">
-                    <div className="spec400-library-metadata-field">
-                      <label htmlFor="library-source-filter">Source</label>
-                      <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                        <SelectTrigger id="library-source-filter">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All sources</SelectItem>
-                          <SelectItem value="upload">Uploads</SelectItem>
-                          <SelectItem value="chat">Chat</SelectItem>
-                          <SelectItem value="images">Images</SelectItem>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="spec400-library-metadata-field">
-                      <label htmlFor="library-date-filter">Date saved</label>
-                      <Select value={dateFilter} onValueChange={setDateFilter}>
-                        <SelectTrigger id="library-date-filter">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Any time</SelectItem>
-                          <SelectItem value="7">Last 7 days</SelectItem>
-                          <SelectItem value="30">Last 30 days</SelectItem>
-                          <SelectItem value="90">Last 90 days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <p className="spec400-supporting">
-                    Source and date filters apply to loaded items. Load more to include older
-                    results.
-                  </p>
-                </PopoverContent>
-              </Popover>
+              {phone ? (
+                <Dialog>
+                  <DialogTrigger asChild>{filterTrigger}</DialogTrigger>
+                  <DialogContent phoneSheet className="spec400-library-filter-panel">
+                    <DialogTitle>Filter Library items</DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Choose the source and date of saved items.
+                    </DialogDescription>
+                    {filterControls}
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>{filterTrigger}</PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    className="spec400-library-filter-panel"
+                    aria-label="Filter Library items"
+                  >
+                    <p className="font-medium">Filter loaded items</p>
+                    {filterControls}
+                  </PopoverContent>
+                </Popover>
+              )}
               <div className="spec400-library-display-controls">
                 <Button
                   variant="outline"

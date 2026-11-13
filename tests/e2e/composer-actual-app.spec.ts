@@ -356,8 +356,10 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await page.goto("/");
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
+  const mobileDrawer = (await sidebar.getAttribute("role")) === "dialog";
   await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
-  if (page.viewportSize()!.width < 1024) await dismissMobileSidebar(page);
+  if (mobileDrawer) await expect(sidebar).toBeHidden();
+  else await expect(sidebar).toBeVisible();
   await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();
@@ -634,27 +636,36 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   });
 });
 
-test("requested polish: Health and Finances own separate connection panels without tab counts", async ({
+test("requested polish: Health stays in Connections and Finances opens its own page", async ({
   page,
 }, info) => {
   await coreFixture(page, "dark");
+  await page.route("**/api/finances/manage", (route) =>
+    route.fulfill({ json: { configured: true, connections: [] } }),
+  );
   await page.goto("/apps");
   await waitForKovaHydration(page);
   const tabs = page.getByRole("tablist", { name: "Connections", exact: true });
-  for (const name of ["All", "Connected", "Health", "Finances"]) {
-    await expect(tabs.getByRole("tab", { name, exact: true })).toBeVisible();
-  }
-  await tabs.getByRole("tab", { name: "Finances", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeVisible();
-  await expect(page.getByText("$12,483.92", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Bank accounts", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Health accounts", exact: true })).toBeHidden();
-  await page.screenshot({ path: info.outputPath("polish-finances.png"), animations: "disabled" });
+  await expect(tabs.getByRole("tab")).toHaveText(["All", "Connected", "Health"]);
   await tabs.getByRole("tab", { name: "Health", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Health accounts", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("polish-health.png"), animations: "disabled" });
+
+  await page.getByRole("link", { name: "Finances", exact: true }).click();
+  await expect(page).toHaveURL(/\/finances$/u);
+  await expect(page.getByRole("heading", { name: "Finances", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toBeEnabled();
+  await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeVisible();
+  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
+  await expect(page.getByText("$12,483.92", { exact: true })).toBeVisible();
+  await expect(tabs).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("polish-finances.png"), animations: "disabled" });
+  await page.getByRole("link", { name: "Back to Connections", exact: true }).click();
+  await expect(page).toHaveURL(/\/apps$/u);
+  await expect(tabs.getByRole("tab", { name: "Health", exact: true })).toBeVisible();
 });
 
 test("requested polish: phone sidebar leaves a chat preview and settings has touch navigation", async ({

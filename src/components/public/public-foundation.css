@@ -926,6 +926,7 @@
 }
 [data-public-shell] [data-kova-revealed="true"] {
   animation: kova-public-enter 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--kova-reveal-delay, 0ms);
 }
 [data-public-shell]
   :is(.public-use-case, .public-plan-card, .public-workflow-example, .kova-public-interactive) {

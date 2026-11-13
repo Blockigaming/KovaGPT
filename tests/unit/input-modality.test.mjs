@@ -126,7 +126,10 @@ test("pointer-origin menu focus stays quiet while keyboard outlines remain visib
 
 test("chat focus highlights the full row while its title control stays transparent", () => {
   const css = readFileSync("src/styles/sidebar-core.css", "utf8");
-  assert.match(css, /\.kova-sidebar \.kova-chat-row:is\([^)]*:focus-within[^)]*\)/);
+  assert.match(
+    css,
+    /:root:not\(\[data-kova-input-modality="pointer"\]\)\s*\.kova-sidebar\s*\.kova-chat-row:focus-within\s*\{[^}]*outline:/,
+  );
   const sheet = postcss.parse(css);
   const title = sheet.nodes.find(
     (node) => node.type === "rule" && node.selector === ".kova-sidebar .kova-chat-row-main",

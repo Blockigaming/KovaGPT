@@ -3423,7 +3423,7 @@ function KovaGPT() {
                       />
                       <div
                         aria-hidden="true"
-                        className="max-h-24 min-h-0 w-3/4 flex-[2] rounded-[var(--kova-radius-message)] bg-muted motion-safe:animate-pulse"
+                        className="max-h-16 min-h-0 w-3/4 flex-[2] bg-[repeating-linear-gradient(to_bottom,var(--muted)_0_8px,transparent_8px_20px)] motion-safe:animate-pulse"
                       />
                     </div>
                   }

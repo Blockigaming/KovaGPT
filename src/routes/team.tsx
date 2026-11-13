@@ -38,7 +38,7 @@ export function TeamPage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="mx-auto min-h-dvh w-full max-w-6xl space-y-8 px-4 py-6 sm:px-8 sm:py-10"
+      className="kova-team-page mx-auto min-h-dvh w-full max-w-6xl space-y-8 px-4 py-6 sm:px-8 sm:py-10"
     >
       <header className="flex flex-wrap items-start justify-between gap-5">
         <div className="space-y-3">

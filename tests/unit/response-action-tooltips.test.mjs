@@ -99,7 +99,9 @@ test("pending actions cannot be repeated, and a saved response retains its fille
   assert.equal(busy.buttons[2].props.disabled, true);
   const saved = fixture({ saved: true });
   assert.equal(saved.buttons[2].props["aria-pressed"], true);
-  assert.equal(saved.buttons[2].props["aria-label"], "Saved to Library");
+  assert.equal(saved.buttons[2].props["aria-label"], "Remove from Library");
+  saved.buttons[2].props.onClick();
+  assert.deepEqual(saved.calls, ["save"]);
   assert.match(
     elements(saved.buttons[2], (n) => n.type === "Bookmark")[0].props.className,
     /fill-current/,
