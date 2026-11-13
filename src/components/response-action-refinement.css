@@ -57,7 +57,7 @@
   min-width: 32px;
   min-height: 32px;
   flex-basis: 32px;
-  border-radius: var(--kova-radius-compact);
+  border-radius: 8px;
   padding: 6px;
 }
 .kova-response-action-bar button.kova-message-icon-action > svg {

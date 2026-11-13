@@ -32,6 +32,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
   const canInstall = useSyncExternalStore(subscribeInstallPrompt, canPromptInstall, noServerPrompt);
   const [status, setStatus] = useState<Status | null>(null),
     [binding, setBinding] = useState<PushDeviceBinding | null>(null),
+    [deviceReady, setDeviceReady] = useState(false),
     [permission, setPermission] = useState<NotificationPermission | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
@@ -74,12 +75,10 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
     setBusy(true);
     setError(null);
     try {
-      await setPwaOwner(ownerId);
-      next.signal.throwIfAborted();
-      const [value, local] = await Promise.all([
-        pushApi(ownerId, next.signal),
-        pwaMessage({ type: "BINDING", ownerId }, next.signal),
-      ]);
+      const localBinding = setPwaOwner(ownerId)
+        .then(() => pwaMessage({ type: "BINDING", ownerId }, next.signal))
+        .catch(() => null);
+      const [value, local] = await Promise.all([pushApi(ownerId, next.signal), localBinding]);
       const state = value as unknown as Status;
       if (
         typeof state.ready !== "boolean" ||
@@ -90,13 +89,15 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
         throw Error("invalid state");
       if (current !== generation.current) return;
       setStatus(state);
-      setBinding((local.binding as PushDeviceBinding | null) ?? null);
+      setDeviceReady(local !== null);
+      setBinding((local?.binding as PushDeviceBinding | null) ?? null);
       setQuiet(Boolean(state.quietHours));
       setStart(state.quietHours?.start ?? "22:00");
       setEnd(state.quietHours?.end ?? "07:00");
     } catch {
       if (current === generation.current) {
         setStatus(null);
+        setDeviceReady(false);
         setBinding(null);
         setError("Notification settings could not be loaded.");
       }
@@ -116,6 +117,9 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
     const reset = (event: Event) => {
       if (ownerId && isPrincipalBrowserStorageClearedEvent(event, ownerId)) {
         invalidate();
+        busyRef.current = false;
+        setBusy(false);
+        setDeviceReady(false);
         setBinding(null);
         setStatus(null);
       }
@@ -140,7 +144,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
     controller.current = next;
     try {
       if (action === "enable") {
-        if (!status.ready || !status.publicKey) throw Error("Push is not enabled.");
+        if (!deviceReady || !status.ready || !status.publicKey) throw Error("Push is not enabled.");
         await enableDevicePush(ownerId, status.publicKey, next.signal);
       } else if (action === "disable") await disableDevicePush(ownerId, next.signal);
       else if (action === "preferences")
@@ -210,7 +214,17 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
               {error}
             </p>
           )}
-          {!status?.ready && (
+          {busy && !status && (
+            <p role="status" className="text-sm">
+              Loading notification settings…
+            </p>
+          )}
+          {status && !deviceReady && (
+            <p role="status" className="text-sm">
+              This browser’s subscription could not be checked. Select Refresh to try again.
+            </p>
+          )}
+          {status && !status.ready && (
             <p className="text-sm">Browser notification delivery is not currently enabled.</p>
           )}
           {permission === "denied" ? (
@@ -219,11 +233,11 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
               for KovaGPT and change Notifications to Allow, if available. Then return here or
               choose Refresh. KovaGPT cannot change this permission for you.
             </p>
-          ) : permission === "default" ? (
+          ) : status?.ready && deviceReady && permission === "default" ? (
             <p className="text-xs text-muted-foreground">
               Choose Enable browser notifications to ask this browser for permission.
             </p>
-          ) : permission === "granted" && !binding ? (
+          ) : status?.ready && deviceReady && permission === "granted" && !binding ? (
             <p className="text-xs text-muted-foreground">
               Your browser allows notifications. Choose Enable browser notifications to subscribe
               this browser.
@@ -239,6 +253,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
               disabled={
                 busy ||
                 !status?.ready ||
+                !deviceReady ||
                 permission === null ||
                 permission === "denied" ||
                 (Boolean(binding) && permission === "granted")
@@ -247,14 +262,16 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
             >
               Enable browser notifications
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy || !binding}
-              onClick={() => void act("disable")}
-            >
-              Turn off on this browser
-            </Button>
+            {binding && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => void act("disable")}
+              >
+                Turn off on this browser
+              </Button>
+            )}
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => void load()}>
               Refresh
             </Button>

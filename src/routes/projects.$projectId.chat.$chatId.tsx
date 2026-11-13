@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "@/lib/response-followups.mjs";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -306,16 +307,18 @@ function ProjectChatPage() {
     abortControllerRef.current = controller;
     const userMessage: ProjectChatMessage = { role: "user", content: text };
     const nextHistory = [...messages, userMessage];
-    setComposerAttachments([]);
+    if (followUp === undefined) setComposerAttachments([]);
     setMessages([...nextHistory, { role: "assistant", content: "" }]);
     setSending(true);
 
     let assistant = "";
+    let assistantFollowups: string[] = [];
     let responseCompleted = false;
     let assistantSources: ResponseSource[] | undefined;
     const responseMessage = (): ProjectChatMessage => ({
       role: "assistant",
       content: assistant,
+      ...(assistantFollowups.length ? { followups: assistantFollowups } : {}),
       ...(assistantSources ? { sources: assistantSources } : {}),
     });
     try {
@@ -323,6 +326,7 @@ function ProjectChatPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Kova-Response-Followups": "1",
           "Idempotency-Key": crypto.randomUUID(),
         },
         signal: controller.signal,
@@ -365,6 +369,7 @@ function ProjectChatPage() {
           }
         },
       });
+      ({ content: assistant, followups: assistantFollowups } = extractResponseFollowups(assistant));
       responseCompleted = true;
     } catch (error) {
       if (isCurrent() && !isAbortError(error)) {
@@ -563,6 +568,7 @@ function ProjectChatPage() {
                   role: message.role,
                   content: message.content,
                   sources: message.sources,
+                  followups: message.followups,
                 }}
                 streaming={
                   sending && index === visibleMessages.length - 1 && message.role === "assistant"
