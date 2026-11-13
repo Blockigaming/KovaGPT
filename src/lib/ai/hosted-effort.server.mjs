@@ -16,7 +16,7 @@ const TASKS = [
 export async function requestHostedEffort({
   request,
   mode,
-  freeChat = false,
+  freeChat,
   token,
   signal,
   onUsage,
@@ -166,7 +166,7 @@ export async function requestHostedEffort({
       fetchImpl,
       beforeRetry: beforeSend,
       freeChat,
-      effort: freeChat ? (profile.id === "instant" ? "low" : "medium") : profile.effort,
+      effort: profile.effort,
     });
   } catch (error) {
     cancellation.abort();
