@@ -18,7 +18,7 @@ targets:
       path: Info.plist
       properties:
         UILaunchScreen: {}
-        NSHealthShareUsageDescription: Kova Health reads today's step total so you can choose to share it with KovaGPT.
+        NSHealthShareUsageDescription: Kova Health reads steps, sleep, and resting heart rate so you can choose which summaries to share with KovaGPT.
     entitlements:
       path: KovaHealth.entitlements
       properties:

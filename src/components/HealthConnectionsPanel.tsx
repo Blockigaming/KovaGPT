@@ -31,6 +31,11 @@ export function HealthConnectionsPanel({
   const [result, setResult] = useState<HealthSummary | null>(null);
   const [showDemo, setShowDemo] = useState(false);
   const [appleSteps, setAppleSteps] = useState("");
+  const [whoopImport, setWhoopImport] = useState("");
+  const whoopSummary =
+    /^WHOOP via Apple Health \| Sleep \(last 24 hours\): (unavailable|[0-9]{1,4}) \| Resting heart rate \(bpm\): (unavailable|[0-9]{1,3})$/u.exec(
+      whoopImport.trim(),
+    );
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
   useEffect(() => {
@@ -317,6 +322,56 @@ export function HealthConnectionsPanel({
               Clear
             </Button>
           </div>
+        )}
+      </section>
+      <section
+        className="space-y-3 rounded-xl border border-border p-4"
+        aria-labelledby="whoop-apple-health-title"
+      >
+        <h3 id="whoop-apple-health-title" className="font-medium">
+          WHOOP via Apple Health
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Enable Apple Health sharing in WHOOP on your iPhone. In the Kova Health companion app,
+          read and copy the WHOOP summary, then paste it here. This preview stays in this tab until
+          you leave or refresh.
+        </p>
+        <label className="block space-y-1 text-sm">
+          <span>WHOOP summary from Kova Health</span>
+          <input
+            className="block w-full rounded-lg border border-border bg-background px-3 py-2"
+            autoComplete="off"
+            maxLength={180}
+            value={whoopImport}
+            onChange={(event) => setWhoopImport(event.target.value)}
+          />
+        </label>
+        {whoopImport && (
+          <>
+            {whoopSummary ? (
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt>Sleep in the last 24 hours</dt>
+                  <dd>
+                    {whoopSummary[1] === "unavailable"
+                      ? "Unavailable"
+                      : `${whoopSummary[1]} minutes`}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Latest resting heart rate in the last 24 hours</dt>
+                  <dd>
+                    {whoopSummary[2] === "unavailable" ? "Unavailable" : `${whoopSummary[2]} bpm`}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p role="status">Paste the complete WHOOP summary copied from the Kova Health app.</p>
+            )}
+            <Button variant="outline" onClick={() => setWhoopImport("")}>
+              Clear WHOOP summary
+            </Button>
+          </>
         )}
       </section>
       <p className="text-sm text-muted-foreground">Android Health Connect requires a mobile app.</p>
