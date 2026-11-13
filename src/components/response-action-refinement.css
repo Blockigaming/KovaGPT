@@ -1,4 +1,4 @@
-/* Keep both message surfaces rounded and align their actions to the text. */
+/* Align message actions to the text. */
 .kova-message {
   scroll-margin-top: 80px;
 }
@@ -227,4 +227,18 @@ body .kova-response-retry-menu[role="menu"] {
 }
 .kova-response-change-draft button:hover:not(:disabled) {
   background: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kova-conversation-scroll[data-chat-transcript] {
+    animation: kova-transcript-enter 180ms ease-out;
+  }
+  @keyframes kova-transcript-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }

@@ -70,6 +70,7 @@ export function AppShell({
         work: "Work",
         "scheduled-tasks": "Scheduled tasks",
         apps: "Connections",
+        finances: "Finances",
         settings: "Settings",
         images: "Images",
         profile: "Profile",

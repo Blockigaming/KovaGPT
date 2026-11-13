@@ -24,7 +24,11 @@ type HourlyRow = { regular_messages: number; thinking_messages: number };
 export type PlanUsageDto = {
   tier: BillingTier;
   usageMultiplier?: 1 | 5;
-  windows: (ChatWindow & { regularUsed: number; thinkingUsed: number; costPercentUsed: number })[];
+  windows: (ChatWindow & {
+    regularUsed: number;
+    thinkingUsed: number;
+    costPercentUsed: number | null;
+  })[];
   images: number;
   uploads: number;
 };
@@ -66,7 +70,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
         .rpc("kova_plan_cost_progress", { _user_id: context.userId, _plan: tier })
         .abortSignal(AbortSignal.timeout(10_000)),
     ]);
-    if (ledger.error || shortWindow?.error || costProgress.error)
+    if (ledger.error || shortWindow?.error)
       throw new Error("Usage data is temporarily unavailable.");
     const rows: {
       usage_date: string;
@@ -98,7 +102,8 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
           five_hour_allowance: number | string | null;
         }
       | undefined;
-    if (!costState) throw new Error("Usage data is temporarily unavailable.");
+    if (costProgress.error)
+      console.error("[getMyPlanUsage] cost progress unavailable", costProgress.error.code);
     const asPercent = (used: number | string, allowance: number | string | null) => {
       const consumed = Number(used);
       const capacity = Number(allowance);
@@ -115,8 +120,9 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       windows: windows.map((window) => ({
         ...window,
         ...(window.id === "five_hour" ? shortTotals : total),
-        costPercentUsed:
-          window.id === "five_hour"
+        costPercentUsed: !costState
+          ? null
+          : window.id === "five_hour"
             ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
             : asPercent(costState.weekly_used, costState.weekly_allowance),
       })),

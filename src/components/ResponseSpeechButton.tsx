@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 const errors: Record<string, string> = {
   speech_unauthorized: "Sign in with a verified account to read aloud.",
-  speech_not_eligible: "Read aloud is available for saved replies from approved OpenAI models.",
+  speech_not_eligible: "Read aloud is unavailable for this reply. Try a newly generated reply.",
   speech_voice_plan_required: "This voice requires a different plan.",
   speech_forbidden: "Read aloud is not available for this account right now.",
   speech_message_unavailable: "Save this response to your chat history before reading it aloud.",

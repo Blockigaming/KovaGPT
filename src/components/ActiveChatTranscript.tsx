@@ -36,7 +36,6 @@ type ActiveChatTranscriptProps = {
   readingAnchorControllerRef: RefObject<ReadingController | null>;
   transcriptScope: string;
   transcriptScopeRef: RefObject<string>;
-  setShowJumpToLatest: (show: boolean) => void;
   renderMessage: TranscriptMessageRenderer;
 };
 
@@ -55,7 +54,6 @@ export function ActiveChatTranscript({
   readingAnchorControllerRef,
   transcriptScope,
   transcriptScopeRef,
-  setShowJumpToLatest,
   renderMessage,
 }: ActiveChatTranscriptProps) {
   // Branch rows are keyed by the family's root conversation, so a branched chat
@@ -94,8 +92,7 @@ export function ActiveChatTranscript({
     const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
     const near = distance < 120;
     nearBottomRef.current = near;
-    setShowJumpToLatest(!near && Boolean(active?.messages.length));
-  }, [active?.messages.length]);
+  }, [scrollRef, nearBottomRef]);
 
   const activeMessageCount = active.messages.length;
   const latestMessageContent = active.messages.at(-1)?.content;
@@ -122,9 +119,6 @@ export function ActiveChatTranscript({
     if (!el) return;
     if (nearBottomRef.current) {
       el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
-      setShowJumpToLatest(false);
-    } else {
-      setShowJumpToLatest(true);
     }
   }, [activeMessageCount, latestMessageContent, isStreaming]);
 

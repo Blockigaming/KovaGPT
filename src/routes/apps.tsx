@@ -5,7 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
@@ -35,7 +35,6 @@ import {
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
-import { BankConnectionsPanel } from "@/components/BankConnectionsPanel";
 import { HealthConnectionsPanel } from "@/components/HealthConnectionsPanel";
 import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
 import {
@@ -838,11 +837,16 @@ function AppsPage() {
       isLoaded ? userKey : undefined,
       parsePluginFilters,
     );
-  const [connectionGroup, setConnectionGroup] = useState<"health" | "finances" | null>(null);
+  const [connectionGroup, setConnectionGroup] = useState<"health" | null>(null);
   useEffect(() => {
     const params = new URL(window.location.href).searchParams;
-    if (params.has("oauth_state_id")) setConnectionGroup("finances");
-    else if (["oura", "whoop"].includes(params.get("integration_connected") ?? ""))
+    if (params.has("oauth_state_id")) {
+      // Existing Plaid OAuth registrations may still return to /apps.
+      params.set("kova_plaid_return", "apps");
+      window.location.replace(`/finances?${params}`);
+      return;
+    }
+    if (["oura", "whoop"].includes(params.get("integration_connected") ?? ""))
       setConnectionGroup("health");
   }, []);
   const setQuery = (query: string) => setListPreferences({ query });
@@ -1823,7 +1827,7 @@ function AppsPage() {
             <Tabs
               value={connectionGroup ?? connectionFilter}
               onValueChange={(value) => {
-                if (value === "health" || value === "finances") setConnectionGroup(value);
+                if (value === "health") setConnectionGroup(value);
                 else {
                   setConnectionGroup(null);
                   setConnectionFilter(value);
@@ -1835,7 +1839,12 @@ function AppsPage() {
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="connected">Connected</TabsTrigger>
                 <TabsTrigger value="health">Health</TabsTrigger>
-                <TabsTrigger value="finances">Finances</TabsTrigger>
+                <Link
+                  to="/finances"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Finances
+                </Link>
               </TabsList>
               <div className="spec400-plugin-filters" hidden={connectionGroup !== null}>
                 <label className="spec400-plugin-search">
@@ -1911,13 +1920,6 @@ function AppsPage() {
                     </Button>
                   </section>
                 )}
-              </TabsContent>
-              <TabsContent forceMount value="finances" className="spec400-connection-group">
-                <BankConnectionsPanel
-                  key={`banks:${userKey ?? "guest"}`}
-                  visible={connectionGroup === "finances"}
-                  ownerId={isSignedIn ? userKey : null}
-                />
               </TabsContent>
               <TabsContent forceMount value="health" className="spec400-connection-group">
                 <HealthConnectionsPanel

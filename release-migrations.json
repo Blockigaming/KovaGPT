@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 219,
-  "latest": "20261112023605_kova_public_chat_share_full_snapshots.sql",
+  "count": 220,
+  "latest": "20261113012000_public_chat_share_reader_privileges.sql",
   "migrations": [
     {
       "order": 1,
@@ -4638,6 +4638,20 @@
       "tables": [],
       "functions": ["guard_public_chat_share"],
       "destructive": true,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 220,
+      "filename": "20261113012000_public_chat_share_reader_privileges.sql",
+      "timestamp": "20261113012000",
+      "sha256": "973c186cb36623f3d2493b569eb9dc31e81c6907163d51384e28289609db2643",
+      "tables": [],
+      "functions": ["read_public_chat_share"],
+      "destructive": false,
       "dataBackfill": false,
       "reversible": false,
       "rls": [],

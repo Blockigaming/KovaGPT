@@ -149,7 +149,10 @@ export async function handlePublicChatShare(request: Request, token: string) {
     const result = await (supabaseAdmin as SupabaseClient)
       .rpc("read_public_chat_share", { p_token_hash: hash })
       .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]));
-    if (result.error) throw new Error();
+    if (result.error) {
+      console.error("[public chat share] lookup failed", { code: result.error.code });
+      throw new Error();
+    }
     return result.data
       ? json(result.data)
       : json({ error: "This shared chat expired or was removed." }, 404);

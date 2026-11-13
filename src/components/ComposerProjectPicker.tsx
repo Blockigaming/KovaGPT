@@ -14,9 +14,8 @@ import {
 
 type ProjectSnapshot = {
   principalId: string;
-  cycle: number;
   projects: ProjectSummary[];
-  status: "loading" | "ready" | "error";
+  status: "ready" | "error";
 };
 
 /** Reads existing projects only. Opening a project never moves or copies this chat. */
@@ -70,13 +69,15 @@ export function ComposerProjectPicker({
   const generation = useRef(0);
   const current = useRef({ open, principalId, cycle, canAccess, navigationBlocked });
   current.current = { open, principalId, cycle, canAccess, navigationBlocked };
-  const visible =
-    canAccess && snapshot?.principalId === principalId && snapshot.cycle === cycle
-      ? snapshot
-      : null;
+  const visible = canAccess && snapshot?.principalId === principalId ? snapshot : null;
 
   useEffect(() => {
-    if (open) setProjectQuery("");
+    if (open) {
+      setProjectQuery("");
+      setNavigationError("");
+      setNavigating(null);
+      navigationPending.current = false;
+    }
   }, [open, principalId]);
 
   useEffect(() => {
@@ -89,24 +90,16 @@ export function ComposerProjectPicker({
   useEffect(() => {
     const request = ++generation.current;
     let active = true;
-    setSnapshot(null);
-    setNavigationError("");
-    setNavigating(null);
-    navigationPending.current = false;
-    if (canAccess && principalId) {
-      setSnapshot({ principalId, cycle, projects: [], status: "loading" });
+    if (!principalId) setSnapshot(null);
+    if (principalId) {
+      setSnapshot((previous) => (previous?.principalId === principalId ? previous : null));
       const isCurrent = () =>
-        active &&
-        request === generation.current &&
-        current.current.canAccess &&
-        current.current.principalId === principalId &&
-        current.current.cycle === cycle;
+        active && request === generation.current && current.current.principalId === principalId;
       void getProjects().then(
         (projects) => {
           if (!isCurrent()) return;
           setSnapshot({
             principalId,
-            cycle,
             projects: projects.filter(
               (project) => !project.archived_at && !project.deletion_requested_at,
             ),
@@ -114,20 +107,20 @@ export function ComposerProjectPicker({
           });
         },
         () => {
-          if (isCurrent()) setSnapshot({ principalId, cycle, projects: [], status: "error" });
+          if (isCurrent()) setSnapshot({ principalId, projects: [], status: "error" });
         },
       );
     }
     return () => {
       active = false;
     };
-  }, [canAccess, principalId, cycle, getProjects, attempt]);
+  }, [principalId, getProjects, attempt, open]);
 
   useEffect(() => {
-    if (!open || !principalId) return;
+    if (!principalId) return;
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, principalId)) return;
-      opening.current.invalidated = true;
+      opening.current.invalidated = open;
       current.current.canAccess = false;
       generation.current++;
       setSnapshot(null);
@@ -257,10 +250,12 @@ export function ComposerProjectPicker({
           <p role="status" className="text-sm text-muted-foreground">
             Close this picker and open it again after signing in to your account.
           </p>
-        ) : !visible || visible.status === "loading" ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            Loading projects…
-          </p>
+        ) : !visible ? (
+          <div
+            aria-busy="true"
+            aria-label="Projects"
+            className="h-10 rounded-lg bg-muted motion-safe:animate-pulse"
+          />
         ) : visible.status === "error" ? (
           <div className="space-y-3">
             <p role="alert" className="text-sm">

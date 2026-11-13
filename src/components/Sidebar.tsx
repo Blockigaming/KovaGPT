@@ -955,73 +955,55 @@ export function Sidebar({
       key={conversation.id}
       className={`kova-chat-row group ${activeId === conversation.id ? "is-active" : ""}`}
     >
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="kova-chat-row-main"
-              onPointerDown={(event) => {
-                selectionPointerTypeRef.current = event.pointerType;
-              }}
-              onClick={(event) => {
-                const pointerType = selectionPointerTypeRef.current;
-                const fineMouse =
-                  pointerType === "mouse" ||
-                  (pointerType === null &&
-                    window.matchMedia("(hover: hover) and (pointer: fine)").matches);
-                cancelPendingSelection();
-                const select = () => {
-                  selectTimerRef.current = null;
-                  closeAfterMobileNavigation("/");
-                  onSelect(conversation.id);
-                };
-                // Keep double-click rename on the current page; keyboard and touch stay immediate.
-                if (onRename && event.detail > 0 && fineMouse && !isMobileViewport())
-                  selectTimerRef.current = window.setTimeout(select, 350);
-                else select();
-              }}
-              onDoubleClick={(event) => {
-                if (
-                  !onRename ||
-                  renamePending ||
-                  selectionPointerTypeRef.current === "touch" ||
-                  selectionPointerTypeRef.current === "pen" ||
-                  (selectionPointerTypeRef.current === null &&
-                    !window.matchMedia("(hover: hover) and (pointer: fine)").matches)
-                )
-                  return;
-                event.preventDefault();
-                beginRename(conversation, event.currentTarget);
-              }}
-              aria-label={`Open chat ${conversation.title}`}
-              aria-current={activeId === conversation.id ? "page" : undefined}
-              aria-description={
-                unreadReplyIds?.has(conversation.id) && activeId !== conversation.id
-                  ? "Unread reply"
-                  : undefined
-              }
-            >
-              <span className="truncate">{conversation.title}</span>
-              {unreadReplyIds?.has(conversation.id) && activeId !== conversation.id && (
-                <span
-                  className="kova-chat-unread-dot"
-                  data-testid="chat-unread-dot"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            align="start"
-            collisionPadding={8}
-            className="max-w-[min(240px,calc(100vw-16px))] whitespace-normal break-words"
-          >
-            {conversation.title}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <button
+        type="button"
+        className="kova-chat-row-main"
+        onPointerDown={(event) => {
+          selectionPointerTypeRef.current = event.pointerType;
+        }}
+        onClick={(event) => {
+          const pointerType = selectionPointerTypeRef.current;
+          const fineMouse =
+            pointerType === "mouse" ||
+            (pointerType === null &&
+              window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+          cancelPendingSelection();
+          const select = () => {
+            selectTimerRef.current = null;
+            closeAfterMobileNavigation("/");
+            onSelect(conversation.id);
+          };
+          // Keep double-click rename on the current page; keyboard and touch stay immediate.
+          if (onRename && event.detail > 0 && fineMouse && !isMobileViewport())
+            selectTimerRef.current = window.setTimeout(select, 350);
+          else select();
+        }}
+        onDoubleClick={(event) => {
+          if (
+            !onRename ||
+            renamePending ||
+            selectionPointerTypeRef.current === "touch" ||
+            selectionPointerTypeRef.current === "pen" ||
+            (selectionPointerTypeRef.current === null &&
+              !window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+          )
+            return;
+          event.preventDefault();
+          beginRename(conversation, event.currentTarget);
+        }}
+        aria-label={`Open chat ${conversation.title}`}
+        aria-current={activeId === conversation.id ? "page" : undefined}
+        aria-description={
+          unreadReplyIds?.has(conversation.id) && activeId !== conversation.id
+            ? "Unread reply"
+            : undefined
+        }
+      >
+        <span className="truncate">{conversation.title}</span>
+        {unreadReplyIds?.has(conversation.id) && activeId !== conversation.id && (
+          <span className="kova-chat-unread-dot" data-testid="chat-unread-dot" aria-hidden="true" />
+        )}
+      </button>
       {onTogglePin ? (
         <button
           type="button"
@@ -1058,7 +1040,7 @@ export function Sidebar({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           side={mobileViewport ? "bottom" : "right"}
-          align={mobileViewport ? "end" : "start"}
+          align={mobileViewport ? "end" : "center"}
           sideOffset={mobileViewport ? 10 : 14}
           collisionPadding={12}
           className="kova-sidebar-chat-menu"

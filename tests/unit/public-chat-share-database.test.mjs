@@ -48,6 +48,21 @@ test("public-share lookup respects expiration, revocation, account deletion and 
         await db.exec("reset role");
       }
     };
+    // The service role can call the reader even when it cannot call internal
+    // auth helpers directly, as can happen on a restored database.
+    await db.exec(
+      "revoke execute on function kova_private.auth_user_exists(uuid) from public, service_role",
+    );
+    await assert.rejects(read, /permission denied/);
+    await db.exec(
+      readFileSync(
+        new URL(
+          "../../supabase/migrations/20261113012000_public_chat_share_reader_privileges.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
     assert.equal((await read()).title, "Review");
     assert.equal((await read()).owner_id, undefined);
     await db.query("update public.chat_public_shares set revoked_at=now() where token_hash=$1", [

@@ -132,7 +132,7 @@ export function BankConnectionsPanel({
         {
           method: body ? "POST" : "GET",
           cache: "no-store",
-          headers: { "Content-Type": "application/json", "X-Kova-Expected-Owner": ownerId ?? "" },
+          headers: { "Content-Type": "application/json", "X-Kova-Owner": ownerId ?? "" },
           ...(body ? { body: JSON.stringify(body) } : {}),
         },
         30_000,
@@ -168,7 +168,8 @@ export function BankConnectionsPanel({
   const openLink = useCallback(
     async (linkToken: string, receivedRedirectUri?: string) => {
       const sdk = await getPlaidSdk();
-      if (!sdk || !active.current) return;
+      if (!active.current) return;
+      if (!sdk) throw new Error("plaid_sdk_unavailable");
       let settled = false;
       handler.current?.destroy();
       handler.current = sdk.create({
@@ -189,7 +190,7 @@ export function BankConnectionsPanel({
               if (active.current) {
                 newlyLinked.current = connection.id;
                 initialRead.current = false;
-                toast.success("Bank connected.");
+                toast.success("Accounts linked");
                 await reload();
               }
             } catch {
@@ -242,7 +243,12 @@ export function BankConnectionsPanel({
       return;
     }
     setBusy(true);
-    void openLink(token, window.location.href).catch(() => {
+    const callbackUrl = new URL(window.location.href);
+    if (callbackUrl.searchParams.get("kova_plaid_return") === "apps") {
+      callbackUrl.pathname = "/apps";
+      callbackUrl.searchParams.delete("kova_plaid_return");
+    }
+    void openLink(token, callbackUrl.href).catch(() => {
       if (active.current) {
         setBusy(false);
         toast.error("Bank sign-in could not resume. Start a new bank connection.", {
@@ -376,7 +382,9 @@ export function BankConnectionsPanel({
     <section className="mt-8 space-y-5" aria-labelledby="bank-connections-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="bank-connections-title" className="text-xl font-semibold tracking-tight">
-          Bank accounts
+          {status?.connections.some((connection) => connection.status === "connected")
+            ? "Accounts linked"
+            : "Bank accounts"}
         </h2>
         <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
           Read-only connections

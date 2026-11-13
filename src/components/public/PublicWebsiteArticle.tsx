@@ -1,5 +1,6 @@
+import "./public-website.css";
 import { Link } from "@tanstack/react-router";
-import { PublicWebsiteLayout } from "./PublicWebsite";
+import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
 
 export function websitePageHead(item: WebsitePage) {
@@ -33,8 +34,8 @@ export function websitePageHead(item: WebsitePage) {
 export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
   const category = item.path.split("/")[1];
   return (
-    <PublicWebsiteLayout>
-      <main id="main-content" tabIndex={-1} className="public-website-article">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="public-website public-website-article">
         <nav className="public-website-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">KovaGPT</Link>
           <span aria-hidden="true"> / </span>
@@ -94,6 +95,6 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
           </section>
         )}
       </main>
-    </PublicWebsiteLayout>
+    </PublicShell>
   );
 }

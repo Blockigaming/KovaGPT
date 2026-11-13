@@ -209,7 +209,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
     };
     const animated = Array.from(
       root.querySelectorAll<HTMLElement>(
-        "main > section, main > article, main article > section, .public-use-case, .public-plan-card, .public-section-heading, .public-workflow-example",
+        "main > section, main > article, main article > section, main section article, .public-article-body section, .public-directory-links > a, .spec400-review-card, .public-use-case, .public-plan-card, .public-section-heading, .public-workflow-example, .kova-public-interactive",
       ),
     ).slice(0, 100);
     const observer =
@@ -225,7 +225,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
             { threshold: 0.07, rootMargin: "0px 0px -20px 0px" },
           )
         : null;
-    for (const item of animated) {
+    for (const [index, item] of animated.entries()) {
+      item.style.setProperty("--kova-reveal-delay", `${(index % 4) * 45}ms`);
       if (observer) observer.observe(item);
       else item.setAttribute("data-kova-revealed", "true");
     }

@@ -30,6 +30,7 @@ import { Route as ContextPacksRouteImport } from './routes/context-packs'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as FilesRouteImport } from './routes/files'
+import { Route as FinancesRouteImport } from './routes/finances'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HelpRouteImport } from './routes/help'
@@ -338,6 +339,11 @@ const DownloadRoute = DownloadRouteImport.update({
 const FilesRoute = FilesRouteImport.update({
   id: '/files',
   path: '/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinancesRoute = FinancesRouteImport.update({
+  id: '/finances',
+  path: '/finances',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GettingStartedRoute = GettingStartedRouteImport.update({
@@ -1419,6 +1425,7 @@ export interface FileRoutesByFullPath {
   '/discovery': typeof DiscoveryRoute
   '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
+  '/finances': typeof FinancesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
@@ -1646,6 +1653,7 @@ export interface FileRoutesByTo {
   '/discovery': typeof DiscoveryRoute
   '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
+  '/finances': typeof FinancesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
@@ -1874,6 +1882,7 @@ export interface FileRoutesById {
   '/discovery': typeof DiscoveryRoute
   '/download': typeof DownloadRoute
   '/files': typeof FilesRoute
+  '/finances': typeof FinancesRoute
   '/getting-started': typeof GettingStartedRoute
   '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
@@ -2103,6 +2112,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/download'
     | '/files'
+    | '/finances'
     | '/getting-started'
     | '/goals'
     | '/help'
@@ -2330,6 +2340,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/download'
     | '/files'
+    | '/finances'
     | '/getting-started'
     | '/goals'
     | '/help'
@@ -2557,6 +2568,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/download'
     | '/files'
+    | '/finances'
     | '/getting-started'
     | '/goals'
     | '/help'
@@ -2785,6 +2797,7 @@ export interface RootRouteChildren {
   DiscoveryRoute: typeof DiscoveryRoute
   DownloadRoute: typeof DownloadRoute
   FilesRoute: typeof FilesRoute
+  FinancesRoute: typeof FinancesRoute
   GettingStartedRoute: typeof GettingStartedRoute
   GoalsRoute: typeof GoalsRoute
   HelpRoute: typeof HelpRoute
@@ -3126,6 +3139,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof FilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finances': {
+      id: '/finances'
+      path: '/finances'
+      fullPath: '/finances'
+      preLoaderRoute: typeof FinancesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/getting-started': {
@@ -4701,6 +4721,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoveryRoute: DiscoveryRoute,
   DownloadRoute: DownloadRoute,
   FilesRoute: FilesRoute,
+  FinancesRoute: FinancesRoute,
   GettingStartedRoute: GettingStartedRoute,
   GoalsRoute: GoalsRoute,
   HelpRoute: HelpRoute,
