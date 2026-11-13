@@ -2,7 +2,7 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { File, FileText, Image, Share, Download, LayoutList, ChevronDown } from "lucide-react";
+import { File, FileText, Image, Share, Download, List, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -24,7 +24,7 @@ import { ConversationSourcesPanel, ConversationActivitySummary } from "./Convers
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <LayoutList aria-hidden="true" />;
+  return <List aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
