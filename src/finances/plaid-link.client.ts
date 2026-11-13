@@ -3,6 +3,7 @@ export type PlaidSdk = {
   create: (options: {
     token: string;
     receivedRedirectUri?: string;
+    onLoad: () => void;
     onSuccess: (token: string) => void;
     onExit: (error: unknown) => void;
   }) => PlaidHandler;
