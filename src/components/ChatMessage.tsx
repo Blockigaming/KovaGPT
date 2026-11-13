@@ -112,10 +112,1407 @@ const MessageVersionHistoryDialog = lazy(() =>
   })),
 );
 
+// Preserve the model's markdown exactly enough for source links, citation
+// markers, lists, and typography to survive rendering. ReactMarkdown handles
+// escaping; this normalization only makes streamed Windows line endings
+// deterministic.
 function cleanAssistantText(text: string): string {
   return text.replace(/\r\n?/g, "\n");
 }
 
-export function ChatMessagePLACEHOLDER_NEED_FULL_FILE() {
-  return null;
+function ChatMessageInner({
+  message,
+  streaming,
+  streamingStartedAt,
+  onSkipThinking,
+  onFollowUp,
+  interactiveDisabledReason,
+  onDraftPrompt,
+  onRetry,
+  userTier,
+  onBranch,
+  onSaveMemory,
+  onEdit,
+  onUpdatePendingConfirm,
+  userKey,
+  principalResolved,
+  chatId,
+  temporary = false,
+  projectId,
+  onReplaceContent,
+  onOpenResult,
+  onOpenCanvas,
+  onSelectSuggestion,
+  showAdvertisement = false,
+}: {
+  message: Message;
+  showAdvertisement?: boolean;
+  streaming?: boolean;
+  /** Request start time survives chat navigation while the response remains active. */
+  streamingStartedAt?: number;
+  onSkipThinking?: () => void;
+  /** Executes an explicit editor improvement request. */
+  onFollowUp?: (prompt: string) => boolean | void;
+  interactiveDisabledReason?: string;
+  /** Preserves the composer draft; invoke the returned focus handoff after dismissing a popup. */
+  onDraftPrompt?: (prompt: string) => (() => void) | undefined;
+  onRetry?: (options?: { webSearch?: boolean }) => void;
+  userTier?: "free" | "plus" | "pro";
+  onBranch?: () => void;
+  onSaveMemory?: (trigger: HTMLElement | null) => void;
+  onEdit?: () => void;
+  onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
+  userKey: string | null;
+  principalResolved: boolean;
+  /** Enables durable, per-message edit history in Canvas when signed in. */
+  chatId?: string | null;
+  /** Temporary chats never persist edits or versions. */
+  temporary?: boolean;
+  projectId?: string | null;
+  /** Applies an accepted selection edit / restored version to this message. */
+  onReplaceContent?: (messageId: string, nextContent: string) => void;
+  onOpenResult?: (
+    result: ResultDescriptor & { canvasSourceKey?: string },
+    trigger?: HTMLElement,
+  ) => void;
+  onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
+  onSelectSuggestion?: (prompt: string) => void;
+}) {
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const lifecycleGenerationRef = useRef(0);
+  const { isSignedIn } = useUser();
+  const timeFormat = useTimeFormatPreference(userKey, principalResolved);
+  useEffect(() => {
+    lifecycleGenerationRef.current += 1;
+    return () => {
+      lifecycleGenerationRef.current += 1;
+    };
+  }, [principal, message.id, message.content]);
+  const isUser = message.role === "user";
+  const imageActions = useMemo<ChatImageActions | undefined>(
+    () =>
+      isSignedIn && principalResolved && userKey && principal && chatId
+        ? {
+            ownerId: userKey,
+            scope: JSON.stringify([principal, chatId, message.id]),
+            temporary,
+            prepareAdd: () => prepareChatImageAttachment(principal, chatId),
+          }
+        : undefined,
+    [chatId, isSignedIn, message.id, principal, principalResolved, temporary, userKey],
+  );
+  const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
+  const [copied, setCopied] = useState(false);
+  const [copyFallbackOpen, setCopyFallbackOpen] = useState(false);
+  const copyFallbackRef = useRef<HTMLTextAreaElement>(null);
+  const copyFallbackReturnRef = useRef<HTMLElement | null>(null);
+  const rememberCopyTrigger = () => {
+    copyFallbackReturnUrlRef.current = window.location.href;
+    copyFallbackReturnRef.current =
+      typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  };
+  const copyFallbackReturnUrlRef = useRef<string | undefined>(undefined);
+  useEffect(() => setCopyFallbackOpen(false), [principal, message.id]);
+  const localStreamingStartedAtRef = useRef<number | null>(null);
+  if (!streaming) localStreamingStartedAtRef.current = null;
+  else if (localStreamingStartedAtRef.current === null)
+    localStreamingStartedAtRef.current = Date.now();
+  const resolvedStreamingStartedAt =
+    streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
+  const waitingForFirstToken = Boolean(streaming && !message.content && !message.pendingImage);
+  const { isMobile } = useLayout();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const pressTimer = useRef<number | null>(null);
+  const startLongPress = useCallback(() => {
+    if (!isMobile) return;
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(() => {
+      try {
+        navigator.vibrate?.(12);
+      } catch {
+        /* ignore */
+      }
+      setMobileSheetOpen(true);
+    }, 480);
+  }, [isMobile]);
+  const cancelLongPress = useCallback(() => {
+    if (pressTimer.current) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  }, []);
+
+  const [retryInstruction, setRetryInstruction] = useState("");
+  const [retryMenuOpen, setRetryMenuOpen] = useState(false);
+  const retryFocusRef = useRef<(() => void) | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const bookmarkPending = useRef(false);
+  const [saved, setSaved] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const sharingPending = useRef(false);
+  const sharedResponse = useRef<{ key: string; url: string } | null>(null);
+  const [copyFallbackText, setCopyFallbackText] = useState<string | null>(null);
+  useEffect(() => {
+    let ids: string[] = [];
+    bookmarkPending.current = false;
+    setSaving(false);
+    try {
+      ids = JSON.parse(
+        safeBrowserStorage("localStorage")?.getItem(
+          principalScopedStorageKey("kovagpt-saved-message-ids", userKey) ?? "",
+        ) || "[]",
+      );
+    } catch {
+      /* Storage is optional. */
+    }
+    setSaved(principalResolved && Array.isArray(ids) && ids.includes(message.id));
+    sharingPending.current = false;
+    setSharing(false);
+    sharedResponse.current = null;
+  }, [principal, principalResolved, userKey, message.id]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const [selectionTarget, setSelectionTarget] = useState<{
+    source: string;
+    start: number;
+    end: number;
+  } | null>(null);
+  const [selectionOpen, setSelectionOpen] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionInstruction, setSelectionInstruction] = useState("");
+  const [selectionQuestion, setSelectionQuestion] = useState("");
+  const [selectionAskOpen, setSelectionAskOpen] = useState(false);
+  const [selectionAskPassage, setSelectionAskPassage] = useState("");
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [compareVersions, setCompareVersions] = useState(false);
+  const [studySession, setStudySession] = useState<{ key: string; source: string } | null>(null);
+  const responseMoreRef = useRef<HTMLButtonElement | null>(null);
+  const memoryReviewOpeningRef = useRef(false);
+  const responseDraftFocusRef = useRef<(() => void) | null>(null);
+  const studyReturnFocusRef = useRef<HTMLElement | null>(null);
+  const studyReturnUrlRef = useRef<string | undefined>(undefined);
+  const studyOpeningRef = useRef(false);
+  const studyContextKey = JSON.stringify([principal, chatId, message.id, temporary]);
+  const studyContextRef = useRef(studyContextKey);
+  studyContextRef.current = studyContextKey;
+  useEffect(() => {
+    responseDraftFocusRef.current = null;
+    setSelectionAskOpen(false);
+    setSelectionQuestion("");
+    setStudySession(null);
+    studyReturnFocusRef.current = null;
+    studyOpeningRef.current = false;
+  }, [studyContextKey]);
+  const openStudy = () => {
+    if (!principalResolved || isUser || streaming || !message.content.trim()) return;
+    studyReturnFocusRef.current = responseMoreRef.current;
+    studyReturnUrlRef.current = window.location.href;
+    studyOpeningRef.current = true;
+    setStudySession({ key: studyContextKey, source: message.content });
+  };
+  const sourcesContextKey = JSON.stringify([principal, chatId, message.id, temporary]);
+  const sourcesContextRef = useRef(sourcesContextKey);
+  sourcesContextRef.current = sourcesContextKey;
+  const [sourcesSession, setSourcesSession] = useState<{
+    key: string;
+    trigger: HTMLElement | null;
+    openedUrl: string;
+  } | null>(null);
+  const sourcesReturnFocusRef = useRef<typeof sourcesSession>(null);
+  const sourcesPillRef = useRef<HTMLButtonElement | null>(null);
+  const sourcesOpen = sourcesSession?.key === sourcesContextKey;
+  const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
+  const closeSources = useCallback(() => setSourcesSession(null), []);
+  useEffect(() => {
+    closeSources();
+    sourcesReturnFocusRef.current = null;
+    return () => {
+      sourcesReturnFocusRef.current = null;
+    };
+  }, [closeSources, sourcesContextKey]);
+  const openSources = useCallback(
+    (trigger: HTMLElement | null, id: string | null = null) => {
+      if (!principalResolved || !message.sources?.length) return;
+      const session = { key: sourcesContextKey, trigger, openedUrl: window.location.href };
+      sourcesReturnFocusRef.current = session;
+      setSourcesSession(session);
+      setActiveSourceId(id);
+    },
+    [principalResolved, sourcesContextKey, message.sources?.length],
+  );
+  const openSource = useCallback(
+    (id: string, trigger: HTMLButtonElement) => openSources(trigger, id),
+    [openSources],
+  );
+  const [memoryOpenFor, setMemoryOpenFor] = useState<string | null>(null);
+  const memorySources =
+    principalResolved && !isUser
+      ? normalizeMemorySources(message.memorySources, userKey, temporary)
+      : undefined;
+  const memoryKey = `${principal}:${message.id}`;
+  const memoryReturnFocusRef = useRef<HTMLElement | null>(null);
+  const memoryReturnUrlRef = useRef<string | undefined>(undefined);
+  const memoryContextRef = useRef(memoryKey);
+  memoryContextRef.current = memoryKey;
+  const closeMemory = useCallback(() => setMemoryOpenFor(null), []);
+  useEffect(() => {
+    closeMemory();
+    memoryReturnFocusRef.current = null;
+  }, [closeMemory, principal, message.id]);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const lastSelectionRef = useRef<string>("");
+  const selectionActionsRef = useRef<HTMLDivElement>(null);
+  const selectionMountedRef = useRef(false);
+  useEffect(() => {
+    selectionMountedRef.current = true;
+    return () => {
+      selectionMountedRef.current = false;
+    };
+  }, []);
+  const selectionSourceRef = useRef({ key: studyContextKey, content: message.content });
+  selectionSourceRef.current = { key: studyContextKey, content: message.content };
+  useEffect(() => {
+    lastSelectionRef.current = "";
+    setSelectedText("");
+    setSelectionOpen(false);
+    setSelectionTarget(null);
+    setSelectionAskOpen(false);
+    setSelectionAskPassage("");
+  }, [studyContextKey, message.content]);
+
+  // Keep native selection and mobile handles intact. The toolbar sits below the response.
+  const rememberSelection = useCallback(() => {
+    const selection = window.getSelection();
+    const container = bodyRef.current;
+    if (
+      !selection ||
+      selection.isCollapsed ||
+      !container ||
+      !selection.anchorNode ||
+      !selection.focusNode ||
+      !container.contains(selection.anchorNode) ||
+      !container.contains(selection.focusNode)
+    ) {
+      // Keyboard focus on an action may collapse the native range before click.
+      if (selection?.isCollapsed && selectionActionsRef.current?.contains(document.activeElement))
+        return;
+      lastSelectionRef.current = "";
+      setSelectedText("");
+      return;
+    }
+    const text = selection.toString();
+    lastSelectionRef.current = text;
+    setSelectedText(text);
+  }, []);
+  const openSelectionEdit = useCallback(
+    async (instruction = "") => {
+      // Snapshot the intended passage before focus or the lazy load can change selection.
+      const picked = lastSelectionRef.current;
+      const generation = lifecycleGenerationRef.current;
+      const { locateSelection } = await import("@/lib/selection-edit.mjs");
+      if (
+        !selectionMountedRef.current ||
+        generation !== lifecycleGenerationRef.current ||
+        selectionSourceRef.current.key !== studyContextKey ||
+        selectionSourceRef.current.content !== message.content
+      )
+        return;
+      try {
+        const range = locateSelection(message.content, picked);
+        setSelectionTarget({ source: message.content, start: range.start, end: range.end });
+        setSelectionInstruction(instruction);
+        setSelectionOpen(true);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Select some text in the response first.",
+        );
+      }
+    },
+    [message.content, studyContextKey],
+  );
+
+  const saveFn = useServerFn(saveToLibrary);
+  const findBookmark = useServerFn(findResponseBookmark);
+  const deleteBookmark = useServerFn(deleteLibraryItem);
+  const saveImageFn = useServerFn(saveImageToLibrary);
+  const imageSaveIds = useRef(new Map<string, string>());
+  const saveResponseImage = useCallback(
+    async (src: string, title: string) => {
+      if (!isSignedIn || !userKey)
+        throw new Error(
+          "Sign in to save generated images to Library. You can download this image now.",
+        );
+      let key = imageSaveIds.current.get(src);
+      if (!key) {
+        key = crypto.randomUUID();
+        imageSaveIds.current.set(src, key);
+      }
+      await saveImageFn({
+        data: {
+          expectedOwnerId: userKey,
+          idempotencyKey: key,
+          imageUrl: src,
+          title: title.slice(0, 200) || "Generated image",
+        },
+      });
+    },
+    [isSignedIn, saveImageFn, userKey],
+  );
+
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      lifecycleGenerationRef.current += 1;
+      setSaving(false);
+      setSaved(false);
+      setCopied(false);
+      setCopyFallbackOpen(false);
+      setEditorOpen(false);
+      responseDraftFocusRef.current = null;
+      setSelectionAskOpen(false);
+      setSelectionQuestion("");
+      setSelectionAskPassage("");
+      lastSelectionRef.current = "";
+      setSelectedText("");
+      setSelectionOpen(false);
+      setSelectionTarget(null);
+      setStudySession(null);
+      studyReturnFocusRef.current = null;
+      closeSources();
+      sourcesReturnFocusRef.current = null;
+      setMemoryOpenFor(null);
+      memoryReturnFocusRef.current = null;
+      setMobileSheetOpen(false);
+      cancelLongPress();
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [cancelLongPress, closeSources, isSignedIn, isUser, principal, principalResolved, userKey]);
+
+  const cleanedResponse = useMemo(
+    () => (isUser ? "" : cleanAssistantText(message.content)),
+    [isUser, message.content],
+  );
+  const chartParts = useMemo(() => extractCharts(cleanedResponse), [cleanedResponse]);
+  const canvasParts = useMemo(
+    () => (isUser || streaming ? [] : splitGenerativeContent(cleanedResponse)),
+    [cleanedResponse, isUser, streaming],
+  );
+  const hasWidget = canvasParts.some((part) => part.kind === "widget");
+  // Validated kova-interactive blocks render as native controls; everything else
+  // (including malformed or still-streaming blocks) stays ordinary markdown.
+  const submitInteractive = onFollowUp ?? undefined;
+  const renderResponseText = (text: string, key: React.Key | undefined) => {
+    const parts = isUser || streaming ? [] : splitInteractiveContent(text);
+    const markdown = (value: string, k?: React.Key) => (
+      <ResponseMarkdown
+        key={k}
+        sources={message.sources}
+        onSourceClick={openSource}
+        onSaveImage={saveResponseImage}
+        imageActions={imageActions}
+      >
+        {value}
+      </ResponseMarkdown>
+    );
+    if (!parts.some((part) => part.kind === "interactive")) return markdown(text, key);
+    return (
+      <div key={key} className="space-y-1">
+        {parts.map((part, i) =>
+          part.kind === "interactive" ? (
+            <InteractiveBlock
+              key={`i${i}:${part.block.id}`}
+              block={part.block}
+              storageKey={
+                temporary
+                  ? null
+                  : `kova-interactive:v1:${chatId ?? "local"}:${message.id}:${key ?? 0}:${part.index}:${part.block.id}`
+              }
+              onSubmit={submitInteractive}
+              disabledReason={interactiveDisabledReason}
+            />
+          ) : part.text.trim() ? (
+            markdown(part.text, `t${i}`)
+          ) : null,
+        )}
+      </div>
+    );
+  };
+  const artifactKind = useMemo(
+    () => (isUser || streaming || hasWidget ? null : detectArtifactKind(cleanedResponse)),
+    [cleanedResponse, hasWidget, isUser, streaming],
+  );
+  const responseChip = useMemo(
+    () => (artifactKind || streaming || isUser ? null : detectInfoChip(cleanedResponse)),
+    [artifactKind, cleanedResponse, isUser, streaming],
+  );
+  const editorContent = useMemo(() => {
+    if (!artifactKind) return message.content;
+    if (artifactKind === "writing") return message.content;
+    const blocks = extractCodeBlocks(message.content);
+    return blocks.length > 1
+      ? blocks.map((b, i) => `// --- Block ${i + 1} ---\n${b}`).join("\n\n")
+      : (blocks[0] ?? message.content);
+  }, [artifactKind, message.content]);
+
+  const openResult = (mode: "edit" | "preview" = "edit", trigger?: HTMLElement) => {
+    if (isUser || streaming || !message.content.trim()) return;
+    if (onOpenResult) {
+      onOpenResult(
+        {
+          title:
+            message.content.match(/^#{1,3}\s+(.+)$/m)?.[1]?.slice(0, 120) ||
+            (!artifactKind || artifactKind === "writing"
+              ? "Writing result"
+              : artifactKind === "website"
+                ? "Website result"
+                : "Code result"),
+          initialContent: editorContent,
+          kind: artifactKind ?? "writing",
+          initialMode: mode,
+          chatId: temporary ? null : chatId,
+          messageId: temporary ? null : message.id,
+          projectId: temporary ? null : projectId,
+        },
+        trigger,
+      );
+    } else {
+      setEditorMode(mode);
+      setEditorOpen(true);
+    }
+  };
+
+  const email = useMemo(
+    () => (isUser ? null : extractEmailFromMessage(message.content || "")),
+    [isUser, message.content],
+  );
+
+  const copy = async () => {
+    setCopyFallbackText(null);
+    rememberCopyTrigger();
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      if (
+        generation !== lifecycleGenerationRef.current ||
+        requestPrincipal !== principalRef.current
+      )
+        return;
+      setCopied(false);
+      setCopyFallbackOpen(true);
+    }
+  };
+
+  const share = async () => {
+    if (!principalResolved || !isSignedIn || !userKey || temporary || sharingPending.current)
+      return;
+    const generation = lifecycleGenerationRef.current;
+    const owner = principal;
+    const active = () =>
+      generation === lifecycleGenerationRef.current && owner === principalRef.current;
+    const key = JSON.stringify([principal, chatId, message.id, message.content]);
+    sharingPending.current = true;
+    setSharing(true);
+    rememberCopyTrigger();
+    try {
+      let url = sharedResponse.current?.key === key ? sharedResponse.current.url : null;
+      if (!url) {
+        const response = await fetchWithTimeoutAuthenticated("/api/chat-share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Kova-Owner": userKey },
+          body: JSON.stringify({
+            title: "KovaGPT response",
+            messages: [{ role: "assistant", content: message.content }],
+          }),
+        });
+        if (!active()) return;
+        const data = await response.json();
+        if (!response.ok) throw new Error("The public link could not be created. Try again.");
+        if (typeof data.path !== "string" || !/^\/share\/[0-9a-f]{64}$/u.test(data.path))
+          throw new Error("The share service returned an invalid link.");
+        url = new URL(data.path, window.location.origin).href;
+        sharedResponse.current = { key, url };
+      }
+      if (!active()) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        if (active()) toast.success("Public view-only link copied");
+      } catch {
+        if (!active()) return;
+        setCopyFallbackText(url);
+        setCopyFallbackOpen(true);
+      }
+    } catch (error) {
+      if (active())
+        toast.error(error instanceof Error ? error.message : "Could not share response");
+    } finally {
+      if (active()) {
+        sharingPending.current = false;
+        setSharing(false);
+      }
+    }
+  };
+
+  const saveItem = async () => {
+    if (bookmarkPending.current) return;
+    // Guests can save to a local-only library while signed-in users persist through Supabase.
+    const dedupKey = principalResolved
+      ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
+      : null;
+    if (!principal || !dedupKey) {
+      toast.error("Your account is still loading. Try again.");
+      return;
+    }
+    const requestGeneration = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      requestGeneration === lifecycleGenerationRef.current &&
+      requestPrincipal === principalRef.current;
+    let savedIds: string[];
+    try {
+      const stored: unknown = JSON.parse(
+        safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]",
+      );
+      savedIds = Array.isArray(stored)
+        ? stored.filter((id): id is string => typeof id === "string")
+        : [];
+    } catch {
+      savedIds = [];
+    }
+    const updateBookmark = (value: boolean) => {
+      try {
+        const storage = safeBrowserStorage("localStorage");
+        const stored: unknown = JSON.parse(storage?.getItem(dedupKey) || "[]");
+        const ids = Array.isArray(stored) ? stored.filter((id) => id !== message.id) : [];
+        if (value) ids.push(message.id);
+        storage?.setItem(dedupKey, JSON.stringify(ids.slice(-500)));
+      } catch {
+        /* Storage is optional for server-backed Library items. */
+      }
+      setSaved(value);
+    };
+    bookmarkPending.current = true;
+    setSaving(true);
+    try {
+      const wasSaved = savedIds.includes(message.id);
+      const guestLibrary = isSignedIn ? null : await import("@/lib/guest-library");
+      const guestItems = guestLibrary?.loadGuestLibrary() ?? [];
+      const guestItem = guestItems.find((item) => item.response_message_id === message.id);
+      const legacyGuestItems =
+        wasSaved && !guestItem
+          ? guestItems.filter(
+              (item) =>
+                !item.response_message_id &&
+                item.source === "chat" &&
+                (item.item_type === "code" || item.item_type === "chat_artifact") &&
+                item.content_text === message.content,
+            )
+          : [];
+      if (legacyGuestItems.length > 1)
+        throw new Error(
+          "Multiple older saves match this reply. Remove the intended one from Library.",
+        );
+      const bookmarkId =
+        isSignedIn && userKey
+          ? await findBookmark({
+              data: {
+                ownerId: userKey,
+                messageId: message.id,
+                ...(wasSaved &&
+                  message.content.length <= 300_000 && { legacyContent: message.content }),
+              },
+            })
+          : (guestItem ?? legacyGuestItems[0])?.id;
+      if (!isCurrent()) return;
+      if (bookmarkId) {
+        if (guestLibrary) guestLibrary.deleteGuestItem(bookmarkId);
+        else if (userKey)
+          await deleteBookmark({ data: { id: bookmarkId, expectedOwnerId: userKey } });
+        if (!isCurrent()) return;
+        updateBookmark(false);
+        toast.success("Removed from Library");
+        return;
+      }
+      const content = message.content.trim();
+      if (content.length > (isSignedIn ? 300_000 : 100_000))
+        throw new Error(
+          "This response is too large for Library. Open the result and export the complete text instead.",
+        );
+      const codeRatio = (content.match(/```/g)?.length ?? 0) >= 2;
+      let title: string;
+      if (codeRatio) title = "Saved code response";
+      else if (content.length > 1200) title = "Saved writing draft";
+      else {
+        const firstSentence = content.split(/(?<=[.!?])\s+/)[0] ?? content;
+        const words = firstSentence.replace(/\s+/g, " ").split(" ").slice(0, 10).join(" ");
+        title = words ? words.slice(0, 120) : "Saved chat response";
+      }
+      const payload = {
+        title,
+        item_type: (codeRatio ? "code" : "chat_artifact") as "code" | "chat_artifact",
+        source: "chat" as const,
+        content_text: message.content,
+      };
+      if (guestLibrary) {
+        const item = guestLibrary.saveGuestItem({ ...payload, responseMessageId: message.id });
+        if (!guestLibrary.loadGuestLibrary().some((savedItem) => savedItem.id === item.id))
+          throw new Error(
+            "Library could not save on this device. Your response is preserved; copy or export it instead.",
+          );
+      } else if (userKey) {
+        await saveFn({
+          data: { ...payload, expectedOwnerId: userKey, responseMessageId: message.id },
+        });
+      }
+      if (!isCurrent()) return;
+      updateBookmark(true);
+      toast.success("Saved to Library");
+    } catch (error) {
+      if (isCurrent()) toast.error(error instanceof Error ? error.message : "Could not save");
+    } finally {
+      if (isCurrent()) {
+        bookmarkPending.current = false;
+        setSaving(false);
+      }
+    }
+  };
+
+  return (
+    <article
+      id={`message-${message.id}`}
+      data-message-id={message.id}
+      data-message-role={message.role}
+      data-ui-reference="chatgpt-message"
+      className="kova-message group w-full px-4 py-3 text-base leading-[26px] sm:px-6 lg:px-8"
+      aria-label={isUser ? "Your message" : "KovaGPT response"}
+    >
+      {isUser ? (
+        <div className="mx-auto flex w-full kova-message-reading-column justify-end">
+          <div className="kova-user-message-group flex min-w-0 flex-col items-end">
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                {message.attachments
+                  .filter(
+                    (attachment): attachment is Extract<typeof attachment, { kind: "image" }> =>
+                      attachment.kind === "image",
+                  )
+                  .map((attachment, index) => (
+                    <ChatImage
+                      key={index}
+                      src={attachment.dataUrl}
+                      alt={
+                        message.content?.trim()
+                          ? `User-uploaded image: ${message.content.slice(0, 120)}`
+                          : "User-uploaded image attached to message"
+                      }
+                      actions={imageActions}
+                      imageClassName="max-h-64 max-w-full rounded-2xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  ))}
+                {message.attachments
+                  .filter((attachment) => attachment.kind !== "image")
+                  .map((attachment) =>
+                    attachment.kind === "library_file" ? (
+                      <HistoricalLibraryAttachment
+                        key={attachment.libraryItemId}
+                        attachment={attachment}
+                        ownerId={principalResolved && isSignedIn ? userKey : null}
+                      />
+                    ) : (
+                      <span
+                        key={`${attachment.name}:${attachment.size ?? 0}`}
+                        className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground"
+                        title={attachment.name}
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="max-w-48 truncate">{attachment.name}</span>
+                        <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                          Attached
+                        </span>
+                      </span>
+                    ),
+                  )}
+              </div>
+            )}
+            {message.content && (
+              <PromptMessage
+                content={message.content}
+                copied={copied}
+                onCopy={() => void copy()}
+                onEdit={onEdit}
+                onBranch={onBranch}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
+          <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
+            {message.activities
+              ?.filter((activity) => activity.tool === "scheduled_task")
+              .map((activity, index) => (
+                <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
+              ))}
+            <MessageActivityList activities={message.activities} />
+            {message.pendingConfirms?.map((confirm) => (
+              <ToolConfirmCard
+                key={confirm.actionId}
+                confirm={confirm}
+                onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
+              />
+            ))}
+            <div ref={bodyRef} className="prose-chat">
+              {message.pendingImage && !message.content ? (
+                <div
+                  role="status"
+                  className="flex min-h-24 items-center gap-3 rounded-xl border border-border bg-muted p-4"
+                >
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>Generating image…</span>
+                </div>
+              ) : waitingForFirstToken ? (
+                <StreamingStatus
+                  activities={message.activities}
+                  startedAt={resolvedStreamingStartedAt}
+                  onSkipThinking={onSkipThinking}
+                />
+              ) : (
+                (() => {
+                  const hasChart = chartParts.some((part) => part.kind === "chart");
+                  const markdown = hasWidget ? (
+                    <div className="space-y-3">
+                      {canvasParts.map((part, index) =>
+                        part.kind === "widget" ? (
+                          <GenerativeCanvas
+                            key={`${principal}:${message.id}:${index}:${part.source}`}
+                            widget={part.widget}
+                            onOpenCanvas={
+                              onOpenCanvas
+                                ? (widget, trigger) =>
+                                    onOpenCanvas(
+                                      widget,
+                                      trigger,
+                                      `${message.id}:${index}:${part.source}`,
+                                    )
+                                : undefined
+                            }
+                            onOpenEditor={
+                              onOpenResult
+                                ? (content, kind, title) =>
+                                    onOpenResult({
+                                      title,
+                                      initialContent: content,
+                                      canvasSourceKey: `${message.id}:${index}:${part.source}:editor`,
+                                      kind,
+                                      initialMode: "edit",
+                                      // A widget is a fragment of a response: never replace
+                                      // the whole saved response with a fragment on autosave.
+                                      chatId: null,
+                                      messageId: null,
+                                      projectId: null,
+                                    })
+                                : undefined
+                            }
+                          />
+                        ) : part.text.trim() ? (
+                          renderResponseText(part.text, index)
+                        ) : null,
+                      )}
+                    </div>
+                  ) : hasChart ? (
+                    <div className="space-y-2">
+                      {chartParts.map((part, index) =>
+                        part.kind === "chart" ? (
+                          <Suspense key={index} fallback={null}>
+                            <ChatChart spec={part.spec} />
+                          </Suspense>
+                        ) : part.value.trim() ? (
+                          renderResponseText(part.value, index)
+                        ) : null,
+                      )}
+                    </div>
+                  ) : (
+                    renderResponseText(cleanedResponse, undefined)
+                  );
+                  if (responseChip)
+                    return (
+                      <InfoChip
+                        kind={responseChip}
+                        rawText={cleanedResponse}
+                        userKey={userKey}
+                        principalResolved={principalResolved}
+                      >
+                        {markdown}
+                      </InfoChip>
+                    );
+                  return markdown;
+                })()
+              )}
+              {streaming && message.content && <span className="cursor-blink" />}
+            </div>
+            {!streaming && message.generationStatus === "stopped" && (
+              <div
+                className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"
+                role="status"
+              >
+                <span>Response stopped</span>
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={() => onRetry()}
+                    className="rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Retry stopped response"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="mx-auto kova-message-reading-column">
+        <div className={isUser ? "flex justify-end" : "flex justify-start"}>
+          {!streaming && !isUser && message.content && (
+            <div
+              className="kova-message-actions kova-response-action-bar max-w-full overflow-x-auto"
+              role="toolbar"
+              aria-label="Response actions"
+            >
+              <button
+                type="button"
+                onClick={() => void copy()}
+                className="kova-message-icon-action"
+                aria-label={copied ? "Copied" : "Copy response"}
+                title="Copy response"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </button>
+              <ResponseSpeechButton
+                ownerId={userKey ?? ""}
+                chatId={chatId ?? ""}
+                messageId={message.id}
+                content={message.content}
+                disabled={
+                  !isSignedIn ||
+                  !principalResolved ||
+                  !userKey ||
+                  !chatId ||
+                  temporary ||
+                  !!message.generationStatus ||
+                  !!message.pendingImage
+                }
+              />
+              <button
+                type="button"
+                className="kova-message-icon-action"
+                aria-label="Share response"
+                title="Copy public view-only link"
+                disabled={sharing || !principalResolved || !isSignedIn || !userKey || temporary}
+                onClick={() => void share()}
+              >
+                {sharing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveItem()}
+                disabled={saving}
+                className="kova-message-icon-action"
+                aria-label={saved ? "Remove from Library" : "Save to Library"}
+                aria-pressed={saved}
+                title={saved ? "Remove from Library" : "Save to Library"}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+                )}
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    ref={responseMoreRef}
+                    type="button"
+                    className="kova-message-icon-action"
+                    title="More actions"
+                    aria-label="More actions"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="kova-response-menu w-60">
+                  <DropdownMenuItem onSelect={() => onRetry?.()} disabled={!onRetry}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Try again
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => onBranch?.()} disabled={!onBranch}>
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    Branch into new chat
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
+      </div>
+      {!isUser &&
+        !streaming &&
+        !message.generationStatus &&
+        onSelectSuggestion &&
+        normalizeResponseFollowups(message.followups).length > 0 && (
+          <nav className="kova-response-followups" aria-label="Suggested follow-ups">
+            {normalizeResponseFollowups(message.followups).map((suggestion) => (
+              <button type="button" key={suggestion} onClick={() => onSelectSuggestion(suggestion)}>
+                <Sparkles aria-hidden="true" />
+                <span>{suggestion}</span>
+              </button>
+            ))}
+          </nav>
+        )}
+      {showAdvertisement &&
+        !isUser &&
+        !streaming &&
+        !temporary &&
+        message.content.trim() &&
+        !message.generationStatus && <SafeResponseAdvertisement key={message.id} />}
+      {studySession?.key === studyContextKey && (
+        <Suspense
+          fallback={
+            <p className="sr-only" role="status">
+              Loading practice…
+            </p>
+          }
+        >
+          <ChatStudyControl
+            key={studySession.key}
+            open
+            ownerId={userKey}
+            temporary={temporary}
+            source={studySession.source}
+            onOpenChange={(open) => {
+              if (!open) setStudySession(null);
+            }}
+            onRestoreFocus={() => {
+              if (studySession.key !== studyContextRef.current) return;
+              restoreDialogFocus(studyReturnFocusRef.current, studyReturnUrlRef.current);
+            }}
+          />
+        </Suspense>
+      )}
+      {!isUser && message.content.trim() && (
+        <Suspense fallback={null}>
+          <ArtifactEditor
+            open={editorOpen}
+            onClose={() => setEditorOpen(false)}
+            initialContent={editorContent}
+            kind={artifactKind ?? "writing"}
+            onImprove={onFollowUp}
+            initialMode={editorMode}
+            chatId={temporary ? null : (chatId ?? null)}
+            messageId={temporary ? null : (message.id ?? null)}
+            projectId={temporary ? null : (projectId ?? null)}
+          />
+        </Suspense>
+      )}
+      {sourcesOpen && sourcesSession && message.sources?.length ? (
+        <Dialog
+          open={sourcesOpen}
+          onOpenChange={(open) => {
+            if (!open) closeSources();
+          }}
+        >
+          <DialogContent
+            id={`message-sources-${message.id}`}
+            className="kova-sources-inspector"
+            aria-describedby="response-sources-description"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              // A delayed close belongs only to this opening, never a newer inspector.
+              if (sourcesReturnFocusRef.current !== sourcesSession) return;
+              sourcesReturnFocusRef.current = null;
+              if (sourcesSession.key !== sourcesContextRef.current) return;
+              const active = document.activeElement;
+              const closingContent = event.target instanceof HTMLElement ? event.target : null;
+              if (
+                active &&
+                active !== document.body &&
+                active !== sourcesSession.trigger &&
+                !closingContent?.contains(active)
+              )
+                return;
+              restoreDialogFocus(sourcesSession.trigger, sourcesSession.openedUrl);
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Sources</DialogTitle>
+              <DialogDescription id="response-sources-description">
+                Sources returned with this response. Select a citation to inspect its supporting
+                passage.
+              </DialogDescription>
+            </DialogHeader>
+            <ol className="space-y-4 overflow-y-auto">
+              {message.sources.map((source) => {
+                const retrievedAt = normalizeSourceRetrievedAt(source.retrievedAt);
+                return (
+                  <li
+                    key={source.id}
+                    id={`source-${source.id}`}
+                    className={`rounded-xl border p-4 ${source.id === activeSourceId ? "border-ring" : "border-border"}`}
+                  >
+                    <p className="text-xs text-muted-foreground">Web page</p>
+                    <h3 className="mt-1 text-base font-medium">{source.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Publisher: {source.domain}</p>
+                    {source.publishedAt && (
+                      <p className="text-sm text-muted-foreground">
+                        Published: {source.publishedAt}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {retrievedAt ? (
+                        <>
+                          Retrieved:{" "}
+                          <time dateTime={retrievedAt}>
+                            {formatDisplayDateTime(retrievedAt, timeFormat)}
+                          </time>{" "}
+                          (device time zone)
+                        </>
+                      ) : (
+                        "Retrieval time not provided"
+                      )}
+                    </p>
+                    {source.snippet ? (
+                      <p className="mt-3 text-sm leading-relaxed">{source.snippet}</p>
+                    ) : (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        No supporting passage was provided.
+                      </p>
+                    )}
+                    <a
+                      className="mt-3 block break-all text-sm underline"
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {source.url}
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border border-border px-4"
+              onClick={closeSources}
+            >
+              Close Sources
+            </button>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+      {selectionAskOpen && (
+        <Dialog open onOpenChange={setSelectionAskOpen}>
+          <DialogContent
+            onCloseAutoFocus={(event) => {
+              const focusDraft = responseDraftFocusRef.current;
+              if (!focusDraft) return;
+              responseDraftFocusRef.current = null;
+              event.preventDefault();
+              focusDraft();
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Ask about this passage</DialogTitle>
+              <DialogDescription>
+                Your question and selected text will be added to your draft. Send when ready.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="max-h-40 overflow-auto whitespace-pre-wrap text-sm">
+              {selectionAskPassage}
+            </p>
+            <label htmlFor={`selection-question-${message.id}`}>Your question</label>
+            <textarea
+              id={`selection-question-${message.id}`}
+              className="min-h-24 rounded-lg border p-3"
+              value={selectionQuestion}
+              onChange={(event) => setSelectionQuestion(event.target.value)}
+            />
+            <button
+              type="button"
+              disabled={!selectionQuestion.trim()}
+              className="min-h-11 rounded-lg bg-foreground px-4 text-background disabled:opacity-50"
+              onClick={() => {
+                responseDraftFocusRef.current =
+                  onDraftPrompt?.(
+                    `${selectionQuestion.trim()}\n\nSelected passage:\n${selectionAskPassage}`,
+                  ) ?? null;
+                setSelectionAskOpen(false);
+              }}
+            >
+              Add to draft
+            </button>
+          </DialogContent>
+        </Dialog>
+      )}
+      {memorySources && memoryOpenFor === memoryKey && (
+        <Suspense fallback={null}>
+          <MemorySourcesDialog
+            sources={memorySources}
+            onClose={closeMemory}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              restoreDialogFocus(
+                memoryReturnFocusRef.current,
+                memoryReturnUrlRef.current,
+                memoryContextRef.current !== memoryKey,
+              );
+            }}
+          />
+        </Suspense>
+      )}
+      {copyFallbackOpen && (
+        <Dialog open={copyFallbackOpen} onOpenChange={setCopyFallbackOpen}>
+          <DialogContent
+            className="sm:max-w-[640px]"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              copyFallbackRef.current?.focus();
+              copyFallbackRef.current?.select();
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              restoreDialogFocus(copyFallbackReturnRef.current, copyFallbackReturnUrlRef.current);
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>{copyFallbackText ? "Copy public link" : "Copy response"}</DialogTitle>
+              <DialogDescription>
+                Copy is unavailable here. Select this text and copy it manually.
+              </DialogDescription>
+            </DialogHeader>
+            <textarea
+              ref={copyFallbackRef}
+              readOnly
+              value={copyFallbackText ?? message.content}
+              aria-label={copyFallbackText ? "Public link to copy" : "Response text to copy"}
+              rows={10}
+              className="max-h-[50vh] w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  copyFallbackRef.current?.focus();
+                  copyFallbackRef.current?.select();
+                }}
+                className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+              >
+                Select text
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyFallbackOpen(false)}
+                className="min-h-11 rounded-full bg-foreground px-4 text-sm font-medium text-background hover:opacity-90"
+              >
+                Close
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      {!isUser && (selectionOpen || versionsOpen) && (
+        <Suspense fallback={null}>
+          {selectionOpen && (
+            <SelectionEditDialog
+              open={selectionOpen}
+              onOpenChange={(open) => {
+                setSelectionOpen(open);
+                if (!open) setSelectionTarget(null);
+              }}
+              target={selectionTarget}
+              initialInstruction={selectionInstruction}
+              chatId={chatId ?? null}
+              messageId={message.id ?? null}
+              temporary={temporary}
+              onApply={(next) => onReplaceContent?.(message.id, next)}
+            />
+          )}
+          {versionsOpen && (
+            <MessageVersionHistoryDialog
+              open={versionsOpen}
+              onOpenChange={setVersionsOpen}
+              compareInitially={compareVersions}
+              chatId={chatId ?? null}
+              messageId={message.id ?? null}
+              currentContent={message.content}
+              onRestore={(next) => onReplaceContent?.(message.id, next)}
+            />
+          )}
+        </Suspense>
+      )}
+      {!isUser && message.content && (
+        <MobileBottomSheet
+          open={mobileSheetOpen}
+          onOpenChange={setMobileSheetOpen}
+          title="Message actions"
+          restoreFocus={!copyFallbackOpen && !selectionOpen && !versionsOpen && !sourcesOpen}
+        >
+          <div className="flex flex-col py-1">
+            {[
+              {
+                label: copied ? "Copied" : "Copy",
+                icon: Copy,
+                onClick: () => {
+                  copy();
+                  setMobileSheetOpen(false);
+                },
+              },
+              {
+                label: "Share",
+                icon: Share2,
+                onClick: async () => {
+                  setMobileSheetOpen(false);
+                  await share();
+                },
+              },
+              ...(message.sources?.length
+                ? [
+                    {
+                      label: sourcesOpen
+                        ? "Hide sources"
+                        : `View ${message.sources.length} sources`,
+                      icon: Globe,
+                      onClick: () => {
+                        if (sourcesOpen) closeSources();
+                        else openSources(sourcesPillRef.current);
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onReplaceContent
+                ? [
+                    {
+                      label: "Edit selection",
+                      icon: TextSelect,
+                      onClick: () => {
+                        setMobileSheetOpen(false);
+                        void openSelectionEdit();
+                      },
+                    },
+                  ]
+                : []),
+              ...(chatId && message.id
+                ? [
+                    {
+                      label: "Version history",
+                      icon: History,
+                      onClick: () => {
+                        setMobileSheetOpen(false);
+                        setVersionsOpen(true);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onEdit
+                ? [
+                    {
+                      label: "Edit",
+                      icon: Pencil,
+                      onClick: () => {
+                        onEdit();
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onRetry && message.generationStatus !== "stopped"
+                ? [
+                    {
+                      label: retryActionLabel,
+                      icon: RefreshCw,
+                      onClick: () => {
+                        onRetry();
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onBranch
+                ? [
+                    {
+                      label: "Branch in new chat",
+                      icon: GitBranch,
+                      onClick: () => {
+                        onBranch();
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              {
+                label: "Search the web",
+                icon: Globe,
+                onClick: () => {
+                  const query = encodeURIComponent(message.content.slice(0, 300));
+                  window.open(
+                    `https://www.google.com/search?q=${query}`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                  setMobileSheetOpen(false);
+                },
+              },
+              ...(onSaveMemory
+                ? [
+                    {
+                      label: "Save a reviewed memory",
+                      icon: Brain,
+                      onClick: () => {
+                        setMobileSheetOpen(false);
+                        onSaveMemory(responseMoreRef.current);
+                      },
+                    },
+                  ]
+                : []),
+              {
+                label: saved ? "Remove from Library" : "Save to Library",
+                icon: Bookmark,
+                onClick: () => {
+                  saveItem();
+                  setMobileSheetOpen(false);
+                },
+              },
+            ].map((action) => (
+              <button
+                key={action.label}
+                onClick={action.onClick}
+                className="flex items-center gap-3 px-4 py-3 text-left text-[15px] rounded-lg hover:bg-accent active:bg-accent/70 transition"
+              >
+                <action.icon className="w-5 h-5 text-muted-foreground shrink-0" />
+                <span className="flex-1">{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </MobileBottomSheet>
+      )}
+    </article>
+  );
 }
+
+export const ChatMessage = memo(ChatMessageInner);
