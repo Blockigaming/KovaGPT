@@ -42,7 +42,7 @@ function SharedChatPage() {
     return () => controller.abort();
   }, [token, retry]);
   return (
-    <main id="main-content" tabIndex={-1} className="kova-public-share">
+    <main className="kova-public-share">
       <header>
         <Link to="/">
           <NovaLogo decorative />

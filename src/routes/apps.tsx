@@ -1464,7 +1464,6 @@ function AppsPage() {
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent
-            phoneSheet
             className="spec400-plugin-detail"
             data-ui-reference="chatgpt.apps.details-dialog"
             closeLabel="Close connection details"
@@ -1836,19 +1835,17 @@ function AppsPage() {
               }}
               className="spec400-plugin-directory"
             >
-              <div className="kova-connection-navigation">
-                <TabsList className="spec400-plugin-tabs" aria-label="Connections">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="connected">Connected</TabsTrigger>
-                  <TabsTrigger value="health">Health</TabsTrigger>
-                </TabsList>
+              <TabsList className="spec400-plugin-tabs" aria-label="Connections">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="connected">Connected</TabsTrigger>
+                <TabsTrigger value="health">Health</TabsTrigger>
                 <Link
                   to="/finances"
-                  className="kova-connection-finances inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm text-muted-foreground hover:text-foreground"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm text-muted-foreground hover:text-foreground"
                 >
                   Finances
                 </Link>
-              </div>
+              </TabsList>
               <div className="spec400-plugin-filters" hidden={connectionGroup !== null}>
                 <label className="spec400-plugin-search">
                   <span className="sr-only">Search connections</span>

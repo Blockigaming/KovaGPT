@@ -37,21 +37,17 @@ const hasAncestor = (node, ancestor) => {
   return false;
 };
 
-test("the desktop popover and phone sheet share filters while active chips remain outside", () => {
+test("metadata fields live in the closed-by-default Filters popover while active chips remain outside", () => {
   const popover = elements.find((node) => tag(node) === "Popover");
-  const panels = elements.filter((node) => hasClass(node, "spec400-library-filter-panel"));
+  const panel = elementWithClass("spec400-library-filter-panel");
   const metadata = elementWithClass("spec400-library-metadata-filters");
   const chips = elementWithClass("spec400-filter-chips");
-  assert.ok(popover && metadata && chips);
-  assert.equal(panels.length, 2);
-  const desktop = panels.find((node) => tag(node) === "PopoverContent");
-  const phone = panels.find((node) => tag(node) === "DialogContent");
-  assert.ok(hasAncestor(desktop, popover));
-  assert.match(phone.openingElement.getText(parsed), /\bphoneSheet\b/);
-  for (const panel of panels) assert.match(panel.getText(parsed), /\{filterControls\}/);
+  assert.ok(popover && panel && metadata && chips);
+  assert.ok(hasAncestor(metadata, panel));
+  assert.ok(hasAncestor(panel, popover));
   assert.equal(hasAncestor(chips, popover), false);
   assert.equal(popover.openingElement.attributes.properties.length, 0);
-  assert.match(library, /Source and date filters apply to loaded items/);
+  assert.match(panel.getText(parsed), /Source and date filters apply to loaded items/);
   assert.match(
     metadata.getText(parsed),
     /value=\{sourceFilter\} onValueChange=\{setSourceFilter\}/,

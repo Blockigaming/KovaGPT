@@ -73,7 +73,7 @@ export function FinanceActivityDashboard({ snapshot }: { snapshot: FinanceSnapsh
         </p>
       ) : (
         <>
-          <dl className="kova-finance-metrics grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {metrics.map(({ label, value }) => (
               <div key={label} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
                 <dt className="text-sm text-muted-foreground">{label}</dt>
@@ -102,7 +102,7 @@ export function FinanceActivityDashboard({ snapshot }: { snapshot: FinanceSnapsh
               </div>
               {days.length ? (
                 <div
-                  className="kova-finance-chart mt-4 h-64 w-full"
+                  className="mt-4 h-64 w-full"
                   role="img"
                   aria-label={`Daily cash flow over ${days.length} active days. Spent ${dollars.format(spent)} and received ${dollars.format(received)}.`}
                 >

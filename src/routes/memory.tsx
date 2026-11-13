@@ -206,7 +206,7 @@ function MemoryPage() {
         />
         {isSignedIn && !isLoading && !error && items.length > 0 ? (
           <section
-            className="kova-memory-summary my-6 rounded-3xl border border-border bg-card/40 p-5"
+            className="my-6 rounded-3xl border border-border bg-card/40 p-5"
             aria-label="Memory summary"
           >
             <h2 className="text-base font-semibold">What Kova remembers</h2>

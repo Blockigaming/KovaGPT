@@ -468,7 +468,6 @@ function ScheduledTaskEditorBody({
     >
       <DialogContent
         ref={dialogRef}
-        phoneSheet
         className="spec400-schedule-dialog"
         onOpenAutoFocus={(event) => {
           if (!opensHistory || !active.current) return;

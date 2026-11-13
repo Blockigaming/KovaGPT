@@ -21,12 +21,12 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
       <main
         id="main-content"
         tabIndex={-1}
-        className="kova-seo-landing mx-auto min-w-0 w-full max-w-3xl flex-1 px-6 py-14 [overflow-wrap:anywhere]"
+        className="mx-auto min-w-0 w-full max-w-3xl flex-1 px-6 py-14 [overflow-wrap:anywhere]"
       >
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-4">{h1}</h1>
         <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-10">{intro}</p>
 
-        <section className="kova-seo-actions flex flex-wrap gap-3 mb-12">
+        <section className="flex flex-wrap gap-3 mb-12">
           {ctas.map((c, i) => (
             <Link
               key={c.to}

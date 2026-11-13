@@ -36,7 +36,6 @@ import {
   Copy,
 } from "lucide-react";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
-import { MobileTopBar } from "@/components/MobileTopBar";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { settingsSectionForTab } from "@/lib/settings-types";
@@ -899,7 +898,6 @@ function ImagesPage() {
     <div
       className="kova-app-shell kova-images-workspace flex h-dvh w-full bg-background text-foreground"
       data-ui="modern"
-      data-workspace-page="images"
     >
       <Sidebar
         conversations={[]}
@@ -921,13 +919,7 @@ function ImagesPage() {
         className="spec400-images flex min-w-0 flex-1 flex-col"
         data-ui-reference="chatgpt.images.gallery"
       >
-        <MobileTopBar
-          workspace
-          title="Images"
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onNewChat={() => void navigate({ to: "/" })}
-        />
-        <header className="kova-images-desktop-header hidden h-14 shrink-0 items-center px-3 lg:flex">
+        <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
             <Button
               variant="ghost"
@@ -975,7 +967,7 @@ function ImagesPage() {
                 e.preventDefault();
                 generate(prompt);
               }}
-              className="kova-images-prompt-form mt-5"
+              className="mt-5"
             >
               <div className="kova-composer spec400-image-prompt flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
                 <input

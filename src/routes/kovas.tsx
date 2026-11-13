@@ -472,9 +472,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
     `${c.config.name} ${c.config.description}`.toLowerCase().includes(query.toLowerCase()),
   );
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
+    <div
       className="kova-page kova-secondary-page kova-assistants-page"
       data-ui-reference="chatgpt.gpts.directory"
     >
@@ -1251,6 +1249,6 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           </form>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

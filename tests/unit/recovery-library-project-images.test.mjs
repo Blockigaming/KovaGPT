@@ -121,8 +121,8 @@ test("Library shared preview and item/version inspectors keep bounded, padded sc
   const versionContents = dialogContents(versions);
   assert.equal(
     libraryContents.length,
-    3,
-    "Library has an item inspector, shared snapshot preview, and phone filter sheet",
+    2,
+    "Library retains its item and existing snapshot inspectors",
   );
   assert.doesNotMatch(library, /<ChatTrashPanel/);
   assert.equal(versionContents.length, 1, "Version history uses its own inspector component");

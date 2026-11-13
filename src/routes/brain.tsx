@@ -120,8 +120,6 @@ function BrainPage() {
   return (
     <AppShell>
       <main
-        id="main-content"
-        tabIndex={-1}
         data-ui-reference="claude.project.overview"
         className={"kova-tool-page " + "mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"}
       >

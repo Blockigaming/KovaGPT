@@ -22,8 +22,6 @@ function ShareInbox() {
   return (
     <AppShell>
       <main
-        id="main-content"
-        tabIndex={-1}
         data-ui-reference="chatgpt.shared.chat-review"
         className={"kova-tool-page " + "mx-auto max-w-3xl space-y-4 p-6"}
       >

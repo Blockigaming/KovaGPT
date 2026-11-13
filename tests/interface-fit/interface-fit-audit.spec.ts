@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { coreFixture } from "../e2e/core-app-fixture";
 import { fixture } from "../e2e/actual-app-fixture";
@@ -329,7 +328,7 @@ if (scope === "public") {
       name: "Settings sidebar width",
       exact: true,
     });
-    const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+    const phone = page.viewportSize()!.width < 768;
     const controls = phone
       ? ([[size, "85", "125"]] as const)
       : ([

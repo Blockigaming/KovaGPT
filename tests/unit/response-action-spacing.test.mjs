@@ -12,7 +12,7 @@ test("response actions use compact desktop geometry and 44px coarse targets", ()
   sheet.walkRules((rule) => {
     if (
       rule.selector.includes(".kova-response-action-bar") &&
-      rule.selector.includes("button.kova-message-icon-action")
+      rule.selector.endsWith("button.kova-message-icon-action")
     )
       controls.push(rule);
   });
@@ -25,7 +25,7 @@ test("response actions use compact desktop geometry and 44px coarse targets", ()
     if (coarse) assert.match(rule.parent.params, /any-pointer: coarse/);
     for (const key of ["width", "height", "min-width", "min-height", "flex-basis"])
       assert.equal(values[key], coarse ? "44px" : "32px");
-    if (!coarse) assert.equal(values["border-radius"], "var(--kova-radius-compact)");
+    if (!coarse) assert.equal(values["border-radius"], "8px");
     assert.ok(!rule.nodes.some((node) => node.important));
   }
   assert.match(styles, /stroke-linecap: round/);

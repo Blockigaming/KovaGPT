@@ -71,29 +71,12 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
             ))}
           </div>
           <aside aria-label="On this page">
-            <h2 className="kova-article-desktop-index">On this page</h2>
-            <div className="kova-article-desktop-index">
-              {item.sections.map((section, index) => (
-                <a key={section.title} href={`#section-${index + 1}`}>
-                  {section.title}
-                </a>
-              ))}
-            </div>
-            <details className="kova-article-phone-index hidden">
-              <summary>On this page</summary>
-              {item.sections.map((section, index) => (
-                <a
-                  key={section.title}
-                  href={`#section-${index + 1}`}
-                  onClick={(event) => {
-                    const details = event.currentTarget.closest("details");
-                    if (details) details.open = false;
-                  }}
-                >
-                  {section.title}
-                </a>
-              ))}
-            </details>
+            <h2>On this page</h2>
+            {item.sections.map((section, index) => (
+              <a key={section.title} href={`#section-${index + 1}`}>
+                {section.title}
+              </a>
+            ))}
           </aside>
         </div>
         {item.related.length > 0 && (

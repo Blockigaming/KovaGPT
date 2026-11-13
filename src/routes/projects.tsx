@@ -1513,7 +1513,6 @@ function ProjectsPage() {
       <Dialog open={renameVisible} onOpenChange={(open) => !open && requestRenameClose()}>
         <DialogContent
           ref={renameDialogRef}
-          phoneSheet
           className="spec400-management-dialog"
           onCloseAutoFocus={restoreRenameFocus}
           onPointerDownOutside={(event) => {
@@ -1643,7 +1642,6 @@ function ProjectsPage() {
         }}
       >
         <DialogContent
-          phoneSheet
           className="spec400-management-dialog kova-project-create-dialog"
           ref={createDialogRef}
           onCloseAutoFocus={restoreCreateFocus}

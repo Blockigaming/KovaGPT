@@ -207,9 +207,7 @@ function CheckoutReturn() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10 text-foreground">
       <main
-        id="main-content"
-        tabIndex={-1}
-        className="kova-phone-account-flow flex w-full min-w-0 max-w-md flex-col items-center text-center [overflow-wrap:anywhere] [&>p]:leading-relaxed"
+        className="flex w-full min-w-0 max-w-md flex-col items-center text-center [overflow-wrap:anywhere] [&>p]:leading-relaxed"
         aria-live="polite"
         aria-busy={Boolean(
           session_id && (!isLoaded || (isSignedIn && verification.kind === "checking")),
