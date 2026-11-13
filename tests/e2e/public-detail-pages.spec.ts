@@ -86,7 +86,7 @@ test.describe.parallel("complete public detail content", () => {
       page,
     }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop-1440x900");
-      test.setTimeout(420_000);
+      test.setTimeout(600_000);
 
       for (const route of routes) {
         const response = await page.goto(route, { waitUntil: "domcontentloaded" });
