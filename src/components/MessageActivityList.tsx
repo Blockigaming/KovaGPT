@@ -47,11 +47,13 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
             className="kova-activity-row"
             data-status={activity.status}
           >
-            {logo ? (
-              <img src={logo} className="kova-activity-icon" alt="" />
-            ) : (
-              <Icon className="kova-activity-icon" aria-hidden="true" />
-            )}
+            <span className="kova-activity-logo" aria-hidden="true">
+              {logo ? (
+                <img src={logo} alt="" />
+              ) : (
+                <Icon className="kova-activity-icon" />
+              )}
+            </span>
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
               <span>{activity.label}</span>
