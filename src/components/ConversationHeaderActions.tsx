@@ -2,7 +2,7 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { File, FileText, Image, Share, Download, SlidersHorizontal } from "lucide-react";
+import { File, FileText, Image, Share, Download, List, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -24,7 +24,7 @@ import { ConversationSourcesPanel, ConversationActivitySummary } from "./Convers
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <SlidersHorizontal aria-hidden="true" />;
+  return <List aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
@@ -51,7 +51,6 @@ export function ConversationHeaderActions({
   navigationBlocked = false,
   isStreaming = false,
   onShare,
-  onOpenContext,
   browserPresentation,
 }: {
   browserPresentation?: {
@@ -113,6 +112,7 @@ export function ConversationHeaderActions({
   };
   const restrictedTemporary = Boolean(conversation.temporary);
   const steps = conversation.messages.flatMap((message) => message.activities ?? []);
+  const hasSteps = steps.some((step) => step.tool !== "scheduled_task");
   const activityContent = (
     <>
       <ConversationSourcesPanel
@@ -133,86 +133,92 @@ export function ConversationHeaderActions({
           setSelectedBrowser(activity);
         }}
       />
-      {steps.some((step) => step.tool !== "scheduled_task") && (
-        <section className="kova-activity-steps" aria-label="Steps">
-          <h2>Steps</h2>
-          <MessageActivityList activities={steps} />
-        </section>
-      )}
-      <h2>Outputs</h2>
-      {generatedOutputs.length === 0 ? <p className="kova-header-note">No outputs yet.</p> : null}
-      {generatedOutputs.length > 0 && (
-        <>
-          <div className="kova-output-list">
-            {generatedOutputs.map((output) => (
-              <button
-                key={output.id}
-                type="button"
-                className="kova-output-row"
-                onClick={() => {
-                  rememberFocus(outputsRef.current);
-                  setSelectedOutput(output);
-                  setOutputsOpen(false);
-                }}
-                title={output.name}
-              >
-                {output.kind === "image" ? (
-                  <Image aria-hidden="true" />
-                ) : output.kind === "artifact" ? (
-                  <FileText aria-hidden="true" />
-                ) : (
-                  <File aria-hidden="true" />
-                )}
-                <span className="kova-output-name">{output.name}</span>
-                <span className="kova-output-label">{output.label}</span>
-              </button>
-            ))}
+      {hasSteps && (
+        <details className="kova-activity-section" open>
+          <summary className="kova-activity-section-summary">
+            <ChevronRight className="kova-activity-chevron" aria-hidden="true" />
+            <span>Steps</span>
+          </summary>
+          <div className="kova-activity-section-body">
+            <MessageActivityList activities={steps} />
           </div>
-        </>
+        </details>
       )}
-      <ConversationSourcesPanel
-        hideBrowser
-        showActivity={false}
-        browserTabCount={
-          signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
-        }
-        browserPreview={
-          signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
-        }
-        activeBrowserOnly
-        separateInputs
-        conversation={conversation}
-        onOpenBrowser={(activity) => {
-          rememberFocus(outputsRef.current);
-          setOutputsOpen(false);
-          setSelectedBrowser(activity);
-        }}
-        onOpenMemory={(sources) => {
-          rememberFocus(outputsRef.current);
-          setOutputsOpen(false);
-          setSelectedMemory(sources);
-        }}
-        onOpenAttachment={(outputId) => {
-          const output = outputs.find((item) => item.id === outputId);
-          if (!output) return;
-          rememberFocus(outputsRef.current);
-          setSelectedOutput(output);
-          setOutputsOpen(false);
-        }}
-      />
-      {onOpenContext ? (
-        <button
-          type="button"
-          className="kova-activity-context"
-          onClick={(event) => {
-            dialogOpeningRef.current = true;
-            setOutputsOpen(false);
-            onOpenContext(outputsRef.current ?? event.currentTarget);
-          }}
-        >
-          Chat instructions and context
-        </button>
-      ) : null}
+      <details className="kova-activity-section" open>
+        <summary className="kova-activity-section-summary">
+          <ChevronRight className="kova-activity-chevron" aria-hidden="true" />
+          <span>Outputs</span>
+        </summary>
+        <div className="kova-activity-section-body">
+          {generatedOutputs.length === 0 ? (
+            <p className="kova-header-note">No outputs yet.</p>
+          ) : (
+            <div className="kova-output-list">
+              {generatedOutputs.map((output) => (
+                <button
+                  key={output.id}
+                  type="button"
+                  className="kova-output-row"
+                  onClick={() => {
+                    rememberFocus(outputsRef.current);
+                    setSelectedOutput(output);
+                    setOutputsOpen(false);
+                  }}
+                  title={output.name}
+                >
+                  {output.kind === "image" ? (
+                    <Image aria-hidden="true" />
+                  ) : output.kind === "artifact" ? (
+                    <FileText aria-hidden="true" />
+                  ) : (
+                    <File aria-hidden="true" />
+                  )}
+                  <span className="kova-output-name">{output.name}</span>
+                  <span className="kova-output-label">{output.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
+      <details className="kova-activity-section" open>
+        <summary className="kova-activity-section-summary">
+          <ChevronRight className="kova-activity-chevron" aria-hidden="true" />
+          <span>Inputs</span>
+        </summary>
+        <div className="kova-activity-section-body">
+          <ConversationSourcesPanel
+            hideBrowser
+            showActivity={false}
+            browserTabCount={
+              signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+            }
+            browserPreview={
+              signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
+            }
+            activeBrowserOnly
+            separateInputs
+            conversation={conversation}
+            onOpenBrowser={(activity) => {
+              rememberFocus(outputsRef.current);
+              setOutputsOpen(false);
+              setSelectedBrowser(activity);
+            }}
+            onOpenMemory={(sources) => {
+              rememberFocus(outputsRef.current);
+              setOutputsOpen(false);
+              setSelectedMemory(sources);
+            }}
+            onOpenAttachment={(outputId) => {
+              const output = outputs.find((item) => item.id === outputId);
+              if (!output) return;
+              rememberFocus(outputsRef.current);
+              setSelectedOutput(output);
+              setOutputsOpen(false);
+            }}
+          />
+        </div>
+      </details>
       {isStreaming ? (
         <p className="kova-header-note">
           A response is still being generated. Its output may change.
