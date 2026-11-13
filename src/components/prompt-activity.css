@@ -59,10 +59,26 @@
   line-height: 1.5;
   animation: kova-activity-appear 180ms ease-out;
 }
-.kova-activity-icon {
+.kova-activity-logo {
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 4%, var(--background));
+  overflow: hidden;
+}
+.kova-activity-logo img {
   width: 16px;
   height: 16px;
+  object-fit: contain;
+}
+.kova-activity-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 .kova-activity-row[data-status="failed"] {
   color: var(--destructive);
