@@ -4,7 +4,16 @@ import { MessageActivityList } from "./MessageActivityList";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { NovaLogo } from "./NovaLogo";
-import { X, File, FileText, Image, Share, Download, LayoutList, ChevronDown } from "lucide-react";
+import {
+  X,
+  File,
+  FileText,
+  Image,
+  Share,
+  Download,
+  SlidersHorizontal,
+  ChevronDown,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -26,7 +35,7 @@ import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <LayoutList aria-hidden="true" />;
+  return <SlidersHorizontal aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
