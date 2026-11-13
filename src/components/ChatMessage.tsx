@@ -142,7 +142,6 @@ function ChatMessageInner({
   onReplaceContent,
   onOpenResult,
   onOpenCanvas,
-  onSelectSuggestion,
   showAdvertisement = false,
 }: {
   message: Message;
@@ -176,7 +175,6 @@ function ChatMessageInner({
     trigger?: HTMLElement,
   ) => void;
   onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
-  onSelectSuggestion?: (prompt: string) => void;
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
@@ -1078,11 +1076,12 @@ function ChatMessageInner({
       {!isUser &&
         !streaming &&
         !message.generationStatus &&
-        onSelectSuggestion &&
+        onFollowUp &&
         normalizeResponseFollowups(message.followups).length > 0 && (
           <nav className="kova-response-followups" aria-label="Suggested follow-ups">
+            <p>Suggested follow-ups</p>
             {normalizeResponseFollowups(message.followups).map((suggestion) => (
-              <button type="button" key={suggestion} onClick={() => onSelectSuggestion(suggestion)}>
+              <button type="button" key={suggestion} onClick={() => onFollowUp(suggestion)}>
                 <Sparkles aria-hidden="true" />
                 <span>{suggestion}</span>
               </button>

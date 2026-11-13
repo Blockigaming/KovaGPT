@@ -260,19 +260,30 @@ body .prose-chat .kova-table-scroll:focus-visible {
 }
 .kova-response-followups {
   display: grid;
-  gap: 2px;
+  gap: 6px;
   max-width: 100%;
-  margin-top: 6px;
+  margin-top: 12px;
+}
+.kova-response-followups p {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
 }
 .kova-response-followups button {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   min-height: 44px;
-  padding: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
   border-radius: var(--kova-radius-button);
-  color: var(--muted-foreground);
+  color: var(--foreground);
   text-align: start;
+}
+.kova-response-followups button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 .kova-response-followups button:hover {
   background: var(--accent);

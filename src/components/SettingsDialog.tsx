@@ -1508,11 +1508,15 @@ export function SettingsDialog({
                   <p>{SETTINGS_DESCRIPTIONS[tab]}</p>
                 </div>
                 <span
-                  aria-live="polite"
+                  role="status"
                   className={savedPulse ? "kova-settings-saved visible" : "kova-settings-saved"}
                 >
-                  <Check aria-hidden="true" />
-                  Updated
+                  {savedPulse && (
+                    <>
+                      <Check aria-hidden="true" />
+                      Updated
+                    </>
+                  )}
                 </span>
                 {page ? (
                   <div className="kova-settings-page-actions">
@@ -1934,10 +1938,6 @@ export function SettingsDialog({
                 className="overflow-y-auto px-7 pb-8 space-y-7 py-6"
               >
                 <section className="space-y-3">
-                  <h3>Plan limits</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Account-wide usage for chat, images, and file uploads.
-                  </p>
                   <div
                     ref={usageStatusRef}
                     className="kova-settings-usage-summary"
@@ -1947,21 +1947,15 @@ export function SettingsDialog({
                     aria-busy={usageLoading}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm">Current usage</p>
-                      </div>
-                      {subSummary?.effectiveTier && (
-                        <span className="kova-settings-current-plan">
-                          {subSummary.effectiveTier === "free"
-                            ? "Free"
-                            : subSummary.effectiveTier === "plus"
-                              ? "Plus"
-                              : "Pro"}
+                      <h3>Current usage</h3>
+                      {(usage || subSummary) && (
+                        <span className="kova-settings-current-plan capitalize">
+                          {usage?.tier ?? subSummary?.effectiveTier}
                         </span>
                       )}
                     </div>
                     {(!usageLoaded || usageLoading) && !usage ? (
-                      <div className="kova-settings-skeleton" role="status">
+                      <div className="text-sm text-muted-foreground" role="status">
                         Loading usage…
                       </div>
                     ) : usage ? (
@@ -1969,7 +1963,7 @@ export function SettingsDialog({
                     ) : (
                       <div className="kova-settings-inline-error" role="alert">
                         <p>Usage data isn't available right now.</p>
-                        <button type="button" className="min-h-11" onClick={retryUsage}>
+                        <button type="button" onClick={retryUsage}>
                           Retry usage
                         </button>
                       </div>
@@ -1978,11 +1972,10 @@ export function SettingsDialog({
                 </section>
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Free and Plus have rolling 5-hour and weekly chat usage meters. The 5-hour meter
-                    refreshes hourly as older activity expires. Pro has one weekly chat meter.
-                    Percentages reflect regular, Thinking, and cost-weighted usage, with additional
-                    token safety limits for longer conversations.
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Free and Plus have a rolling 5-hour chat limit and a weekly limit. The 5-hour
+                    meter refreshes hourly. Pro has a weekly chat limit. Chat limits account for
+                    regular messages, Thinking messages, and model usage.
                   </p>
                   <Link
                     to="/pricing"
@@ -2299,7 +2292,6 @@ export function SettingsDialog({
                 value="notifications"
                 className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
               >
-                {!page ? <h3 className="text-sm font-semibold">Notifications</h3> : null}
                 <PwaSettings ownerId={isLoaded ? userKey : null} />
                 <AccountEmailPreferences ownerId={isLoaded ? userKey : null} />
               </TabsContent>
