@@ -13,7 +13,8 @@ const mocks: Record<string, string> = {
       window.financeStatusRequests++;
       return Response.json(window.financeStatus);
     }
-    window.operations.push([url,body,init.headers['X-Kova-Expected-Owner']]);
+    const ownerHeader=url.startsWith('/api/finances/')?'X-Kova-Owner':'X-Kova-Expected-Owner';
+    window.operations.push([url,body,init.headers[ownerHeader]]);
     if(url==='/api/finances/link-token')return Response.json({link_token:'link-production-fixture',expiration:new Date(Date.now()+600000).toISOString()});
     if(url==='/api/finances/exchange'){window.financeStatus.connections=[{id:'00000000-0000-4000-8000-000000000004',status:'connected'}];return Response.json({id:'00000000-0000-4000-8000-000000000004'},{status:201})}
     if(url==='/api/finances/manage'&&body.action==='disconnect'){window.financeStatus.connections=[];return Response.json({disconnected:true})}
@@ -148,14 +149,14 @@ async function boot(
   }, options);
   await page.addStyleTag({
     content:
-      "*{box-sizing:border-box}body{font:16px Arial;margin:24px}div[role=img]{height:256px}button{padding:10px;margin:4px}table{width:100%}td,th{padding:8px;text-align:left}[role=alertdialog]{position:fixed;inset:15%;background:white;border:1px solid;padding:20px}",
+      "*{box-sizing:border-box}body{font:16px Arial;margin:24px}.hidden{display:none}div[role=img]{height:256px}button{padding:10px;margin:4px}table{width:100%}td,th{padding:8px;text-align:left}[role=alertdialog]{position:fixed;inset:15%;background:white;border:1px solid;padding:20px}",
   });
   await page.addScriptTag({ content: script });
   await expect
     .poll(() => page.evaluate(() => (window as StateWindow).financeStatusRequests))
     .toBe(1);
   await expect(
-    page.getByRole("heading", { name: options.connection ? "Bank accounts" : "Spending" }),
+    page.getByRole("heading", { name: options.connection ? "Accounts linked" : "Spending" }),
   ).toBeVisible();
 }
 
@@ -173,6 +174,8 @@ test("bank Link is explicit and exchanges one public token after successful cons
     (window as StateWindow).finishLink();
     (window as StateWindow).finishLink();
   });
+  await expect(page.getByRole("heading", { name: "Accounts linked", exact: true })).toBeVisible();
+  await expect(page.getByText("Sample data", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Recent activity" })).toBeVisible();
   await expect(page.getByRole("img", { name: /Daily cash flow/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Spending by category/ })).toBeVisible();
@@ -189,7 +192,7 @@ test("bank Link is explicit and exchanges one public token after successful cons
     "00000000-0000-4000-8000-000000000001",
   );
   await expect(page.getByText("Fixture checking")).toBeVisible();
-  await expect(page.getByText("Fixture coffee")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Fixture coffee", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Disconnect bank 1" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Cancel", exact: true }).click();
   expect(
