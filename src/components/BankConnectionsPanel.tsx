@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CreditCard,
   Globe2,
-  LoaderCircle,
   PackageOpen,
 } from "./ui/product-icons.tsx";
 import { toast } from "sonner";
@@ -347,13 +346,16 @@ export function BankConnectionsPanel({
       onClick={() => void connect()}
       disabled={busy || !status?.configured}
       aria-busy={linking}
-      className="relative bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
+      aria-label={linking ? "Connecting a bank" : undefined}
+      className="min-w-[132px] bg-white text-neutral-950 hover:bg-neutral-100 disabled:opacity-100"
     >
-      <span className={linking ? "opacity-0" : undefined}>Connect a bank</span>
-      {linking && (
-        <span className="absolute inset-0 grid place-items-center">
-          <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
-        </span>
+      {linking ? (
+        <span
+          aria-hidden="true"
+          className="size-4 rounded-full border-2 border-current border-r-transparent motion-safe:animate-spin"
+        />
+      ) : (
+        "Connect a bank"
       )}
     </Button>
   );

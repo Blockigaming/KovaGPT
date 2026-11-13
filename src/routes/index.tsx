@@ -1146,7 +1146,7 @@ function KovaGPT() {
           (item) => typeof item?.title === "string" && typeof item?.content === "string",
         )
       ) {
-        throw new Error("invalid_context_pack_handoff");
+        throw new Error();
       }
       const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
       return () =>
@@ -1170,7 +1170,7 @@ function KovaGPT() {
           !Array.isArray(steps) ||
           !steps.every((step) => typeof step?.text === "string")
         )
-          throw new Error("invalid_work_handoff");
+          throw new Error();
         return () =>
           setInput(
             `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
@@ -1181,7 +1181,7 @@ function KovaGPT() {
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
       if (typeof appContext?.prompt !== "string" || appContext.tool !== "web_search")
-        throw new Error("invalid_app_handoff");
+        throw new Error();
       return () => {
         setInput(appContext.prompt);
         setSelectedTool("web_search");
@@ -1189,7 +1189,7 @@ function KovaGPT() {
     });
 
     consume<ConversationWorkflowSkill>("kova-workflow-skill-chat", (skill) => {
-      if (!isConversationWorkflowSkill(skill)) throw new Error("invalid_workflow_skill_handoff");
+      if (!isConversationWorkflowSkill(skill)) throw new Error();
       return () => {
         setActiveId(null);
         setPendingWorkflowSkill(skill);
@@ -1210,7 +1210,7 @@ function KovaGPT() {
               (item) => typeof item?.title === "string" && typeof item?.content === "string",
             )))
       ) {
-        throw new Error("invalid_prompt_handoff");
+        throw new Error();
       }
       const context = launch.pack
         ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
