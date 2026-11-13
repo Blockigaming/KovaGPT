@@ -1660,7 +1660,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Plaid",
     description: "Reference connected financial account summaries.",
     category: "Productivity",
-    status: "setup_required",
+    status: "planned",
     domain: "plaid.com",
   },
   {
