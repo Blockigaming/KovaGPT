@@ -54,12 +54,17 @@ for (const [width, height] of viewports) {
         }),
         "```",
       ].join("\n");
-      await page.route("**/api/chat", (route) =>
-        route.fulfill({
+      let releaseReply!: () => void;
+      const replyReady = new Promise<void>((resolve) => {
+        releaseReply = resolve;
+      });
+      await page.route("**/api/chat", async (route) => {
+        await replyReady;
+        await route.fulfill({
           contentType: "text/event-stream",
           body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`,
-        }),
-      );
+        });
+      });
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
 
@@ -98,7 +103,13 @@ for (const [width, height] of viewports) {
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
       }
 
-      await send.click();
+      try {
+        await send.click();
+        const stop = page.getByRole("button", { name: "Stop generating" });
+        await expect(stop).toBeInViewport({ ratio: 1 });
+      } finally {
+        releaseReply();
+      }
       await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();
       const chart = page.getByRole("figure", { name: "Interactive chart: Measurements" });
       await chart.getByRole("button", { name: "Table", exact: true }).click();
