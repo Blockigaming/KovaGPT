@@ -128,15 +128,14 @@ function PricingPage() {
         className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
         <section aria-labelledby="pricing-title" className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 text-sm font-semibold text-muted-foreground">Plans and pricing</p>
           <h1
             id="pricing-title"
-            className="mb-5 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl"
+            className="mb-5 text-balance text-4xl font-semibold tracking-[-0.055em] sm:text-6xl"
           >
-            Upgrade your plan
+            Plans for how you use KovaGPT
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Choose the plan that fits how you work. Some features depend on connected services.
+            Start free, or choose Plus or Pro for more chat capacity and access to more tools.
           </p>
           <div
             role="group"

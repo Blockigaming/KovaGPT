@@ -5,7 +5,7 @@ export const Route = createFileRoute("/developers/")({
   component: DevelopersOverview,
   head: () => ({
     meta: [
-      { title: "Developer Platform Availability | KovaGPT" },
+      { title: "KovaGPT API | Developer Platform" },
       {
         name: "description",
         content: "Current availability of developer APIs and integration tools for KovaGPT.",
@@ -20,33 +20,38 @@ function DevelopersOverview() {
   return (
     <PublicPageView
       eyebrow="Developers"
-      title="Build with KovaGPT"
-      summary="Prepare scoped API keys, spending limits, and integrations in the developer console. Paid execution requires an enabled, funded account and current pricing."
+      title="Bring KovaGPT into your app"
+      summary="Generate text and images or create embeddings through the KovaGPT API. Manage keys and spending in one console."
+      primaryAction={{ label: "Open developer console", to: "/developers/console" }}
+      secondaryAction={{ label: "Read the quickstart", to: "/developers/quickstart" }}
     >
-      <article className="rounded-2xl border border-border bg-background p-6">
-        <h2 className="text-xl font-semibold">Current status</h2>
+      <article className="min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
+        <h2 className="text-xl font-semibold">Start with the model catalog</h2>
         <p className="mt-3 leading-7 text-muted-foreground">
-          The versioned API supports quoted text generation, image generation, and embeddings. The
-          console shows whether paid execution is enabled. No official SDK is published yet.
+          List the models available to your key before requesting a generation quote.
         </p>
-        <Link to="/developers/console" className="mt-4 inline-flex min-h-11 items-center underline">
-          Open developer console
-        </Link>
-        <Link
-          to="/developers/$docSlug"
-          params={{ docSlug: "quickstart" }}
-          className="ml-5 mt-4 inline-flex min-h-11 items-center underline"
+        <pre
+          aria-label="List models with curl"
+          className="mt-6 overflow-x-auto rounded-xl border border-border bg-muted p-4 font-mono text-sm leading-7"
         >
-          Read the quickstart
-        </Link>
+          <code>
+            {
+              'curl https://kovagpt.com/api/v1/models \\\n  -H "Authorization: Bearer $KOVA_API_KEY"'
+            }
+          </code>
+        </pre>
       </article>
-      <article className="rounded-2xl border border-border bg-background p-6">
-        <h2 className="text-xl font-semibold">Questions about integrations?</h2>
+      <article className="min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
+        <h2 className="text-xl font-semibold">Set your budget before you run</h2>
         <p className="mt-3 leading-7 text-muted-foreground">
-          Contact support to discuss the current product and available app connections.
+          Use a scoped key, request a quote, and review the estimated cost. The console shows
+          whether your account can fund and run paid requests.
         </p>
-        <Link to="/contact-support" className="mt-4 inline-flex min-h-11 items-center underline">
-          Contact support
+        <Link
+          to="/developers/pricing"
+          className="mt-4 inline-flex min-h-11 items-center underline underline-offset-4"
+        >
+          View API pricing
         </Link>
       </article>
     </PublicPageView>

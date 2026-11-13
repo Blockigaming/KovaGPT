@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
-import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
+import { chatUsageWindows, legacyFiveHourWindow } from "../../src/lib/plan-usage-policy.mjs";
 
 const owner = "11111111-1111-4111-8111-111111111111";
 const sqlPath = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
@@ -175,4 +175,17 @@ test("only server service role can query raw cost limits and budget ledger", asy
   } finally {
     await db.close();
   }
+});
+
+test("legacy five-hour meter matches epoch-aligned SQL windows across UTC midnight", () => {
+  for (const at of ["2026-11-13T23:59:59Z", "2026-11-14T00:59:59Z"]) {
+    assert.deepEqual(legacyFiveHourWindow(new Date(at)), {
+      start: "2026-11-13T20:00:00.000Z",
+      resetsAt: "2026-11-14T01:00:00.000Z",
+    });
+  }
+  assert.deepEqual(legacyFiveHourWindow(new Date("2026-11-14T01:15:00Z")), {
+    start: "2026-11-14T01:00:00.000Z",
+    resetsAt: "2026-11-14T06:00:00.000Z",
+  });
 });

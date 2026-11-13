@@ -6,7 +6,7 @@ import {
   resolveEffectiveUsageMultiplier,
 } from "@/lib/billing-entitlement.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { chatUsageWindows } from "@/lib/plan-usage-policy.mjs";
+import { chatUsageWindows, legacyFiveHourWindow } from "@/lib/plan-usage-policy.mjs";
 import type { BillingTier } from "@/lib/billing-plans";
 
 export type DailyUsageDto = {
@@ -28,6 +28,7 @@ export type PlanUsageDto = {
     regularUsed: number | null;
     thinkingUsed: number | null;
     costPercentUsed: number | null;
+    fixedWindow?: true;
   })[];
   images: number | null;
   uploads: number | null;
@@ -45,8 +46,9 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       tier === "pro" ? await resolveEffectiveUsageMultiplier(supabaseAdmin, context.userId) : 1;
     const windows = chatUsageWindows(tier, now, usageMultiplier);
     const ledgerStart = windows.find(({ id }) => id === "weekly")?.start.slice(0, 10) ?? today;
+    const legacyBounds = legacyFiveHourWindow(now);
     const short = windows.find(({ id }) => id === "five_hour");
-    const [ledger, shortWindow, costProgress] = await Promise.all([
+    const [ledger, hourlyWindow, costProgress] = await Promise.all([
       loose(supabaseAdmin)
         .from("daily_usage")
         .select("usage_date, chats, thinking_chats, images, uploads")
@@ -70,6 +72,18 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
         .rpc("kova_plan_cost_progress", { _user_id: context.userId, _plan: tier })
         .abortSignal(AbortSignal.timeout(10_000)),
     ]);
+    // Older deployments enforce fixed, epoch-aligned five-hour windows.
+    // Only fall back when the hourly relation is missing, not on transient failures.
+    const legacyWindow =
+      hourlyWindow?.error && ["42P01", "PGRST205"].includes(hourlyWindow.error.code)
+        ? await loose(supabaseAdmin)
+            .from("message_usage_short_window")
+            .select("regular_messages, thinking_messages")
+            .eq("user_id", context.userId)
+            .eq("window_start", legacyBounds.start)
+            .abortSignal(AbortSignal.timeout(10_000))
+        : null;
+    const shortWindow = legacyWindow ?? hourlyWindow;
     if (ledger.error || shortWindow?.error)
       console.error("[getMyPlanUsage] usage ledger unavailable", {
         daily: ledger.error?.code,
@@ -124,6 +138,9 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       usageMultiplier,
       windows: windows.map((window) => ({
         ...window,
+        ...(window.id === "five_hour" && legacyWindow
+          ? { ...legacyBounds, fixedWindow: true as const }
+          : {}),
         ...(window.id === "five_hour"
           ? shortWindow?.error
             ? { regularUsed: null, thinkingUsed: null }
@@ -131,11 +148,12 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
           : ledger.error
             ? { regularUsed: null, thinkingUsed: null }
             : total),
-        costPercentUsed: !costState
-          ? null
-          : window.id === "five_hour"
-            ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
-            : asPercent(costState.weekly_used, costState.weekly_allowance),
+        costPercentUsed:
+          !costState || (window.id === "five_hour" && legacyWindow)
+            ? null
+            : window.id === "five_hour"
+              ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
+              : asPercent(costState.weekly_used, costState.weekly_allowance),
       })),
       images: ledger.error ? null : (daily?.images ?? 0),
       uploads: ledger.error ? null : (daily?.uploads ?? 0),
