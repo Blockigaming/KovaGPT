@@ -197,12 +197,14 @@
   .kova-settings-route section.kova-settings-page .kova-settings-content-header {
     min-height: 64px;
     border-bottom: 1px solid var(--border);
-    padding: max(10px, var(--safe-top, 0px)) 16px 10px;
+    padding: max(10px, var(--safe-top, 0px)) max(16px, var(--safe-right, 0px)) 10px
+      max(16px, var(--safe-left, 0px));
     gap: 8px;
   }
   .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
     max-width: 600px;
-    padding: 0 16px max(32px, var(--safe-bottom, 0px));
+    padding: 0 max(16px, var(--safe-right, 0px)) max(32px, var(--safe-bottom, 0px))
+      max(16px, var(--safe-left, 0px));
   }
   .kova-settings-route section.kova-settings-page .kova-settings-related {
     padding-inline: 16px;
