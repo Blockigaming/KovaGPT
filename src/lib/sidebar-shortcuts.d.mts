@@ -1,5 +1,4 @@
 export type SidebarShortcutId =
-  | "images"
   | "library"
   | "projects"
   | "scheduled-tasks"
