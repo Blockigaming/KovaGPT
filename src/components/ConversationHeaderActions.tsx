@@ -218,8 +218,32 @@ export function ConversationHeaderActions({
           setOutputsOpen(false);
           setSelectedMemory(sources);
         }}
-        onOpenAttachment={() => {}}
+        onOpenAttachment={(outputId) => {
+          const output = outputs.find((item) => item.id === outputId);
+          if (!output) return;
+          rememberFocus(outputsRef.current);
+          setSelectedOutput(output);
+          setOutputsOpen(false);
+        }}
       />
+      {onOpenContext ? (
+        <button
+          type="button"
+          className="kova-activity-context"
+          onClick={(event) => {
+            dialogOpeningRef.current = true;
+            setOutputsOpen(false);
+            onOpenContext(outputsRef.current ?? event.currentTarget);
+          }}
+        >
+          Chat instructions and context
+        </button>
+      ) : null}
+      {isStreaming ? (
+        <p className="kova-header-note">
+          A response is still being generated. Its output may change.
+        </p>
+      ) : null}
     </>
   );
 
