@@ -13,6 +13,7 @@ import {
   DAILY_UPLOAD_LIMIT_BY_TIER,
 } from "@/lib/modes";
 import { GENERATIVE_UI_INSTRUCTIONS } from "@/lib/generative-ui.mjs";
+import { RESPONSE_FOLLOWUP_INSTRUCTIONS } from "@/lib/response-followups.mjs";
 import { INTERACTIVE_UI_INSTRUCTIONS } from "@/lib/interactive-ui.mjs";
 import {
   assertFeatureEnabled,
@@ -1556,6 +1557,9 @@ export const Route = createFileRoute("/api/chat")({
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
                     INTERACTIVE_UI_INSTRUCTIONS +
+                    (request.headers.get("X-Kova-Response-Followups") === "1"
+                      ? RESPONSE_FOLLOWUP_INSTRUCTIONS
+                      : "") +
                     "\n\n" +
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +

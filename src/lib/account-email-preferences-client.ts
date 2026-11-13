@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getCapturedKovaPrincipal, isKovaSessionActive } from "@/lib/kova-auth-browser";
 import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import {
   ACCOUNT_EMAIL_EVENTS,
@@ -16,23 +17,30 @@ export async function requestAccountEmailPreferences(
 ): Promise<AccountEmailPreferences> {
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(15_000)]);
   deadline.throwIfAborted();
-  const session = await new Promise<Awaited<ReturnType<typeof supabase.auth.getSession>>>(
-    (resolve, reject) => {
-      const abort = () => reject(new Error("Email settings request canceled."));
-      deadline.addEventListener("abort", abort, { once: true });
-      Promise.resolve(supabase.auth.getSession())
-        .then(resolve, reject)
-        .finally(() => deadline.removeEventListener("abort", abort));
-      if (deadline.aborted) abort();
-    },
-  );
-  deadline.throwIfAborted();
-  if (
-    session.error ||
-    session.data.session?.user.id !== ownerId ||
-    !session.data.session.access_token
-  ) {
-    throw new Error("Your account changed. Reload email settings.");
+  let authorization: string | undefined;
+  if (isKovaSessionActive()) {
+    if (getCapturedKovaPrincipal()?.accountId !== ownerId)
+      throw new Error("Your account changed. Reload email settings.");
+  } else {
+    const session = await new Promise<Awaited<ReturnType<typeof supabase.auth.getSession>>>(
+      (resolve, reject) => {
+        const abort = () => reject(new Error("Email settings request canceled."));
+        deadline.addEventListener("abort", abort, { once: true });
+        Promise.resolve(supabase.auth.getSession())
+          .then(resolve, reject)
+          .finally(() => deadline.removeEventListener("abort", abort));
+        if (deadline.aborted) abort();
+      },
+    );
+    deadline.throwIfAborted();
+    if (
+      session.error ||
+      session.data.session?.user.id !== ownerId ||
+      !session.data.session.access_token
+    ) {
+      throw new Error("Your account changed. Reload email settings.");
+    }
+    authorization = `Bearer ${session.data.session.access_token}`;
   }
   const response = await fetch("/api/account/email-preferences", {
     method: patch ? "PATCH" : "GET",
@@ -42,7 +50,7 @@ export async function requestAccountEmailPreferences(
     cache: "no-store",
     signal: deadline,
     headers: {
-      Authorization: `Bearer ${session.data.session.access_token}`,
+      ...(authorization ? { Authorization: authorization } : {}),
       "X-Kova-Owner": ownerId,
       ...(patch ? { "Content-Type": "application/json" } : {}),
     },
@@ -53,9 +61,11 @@ export async function requestAccountEmailPreferences(
     throw new Error(
       response.status === 401 || response.status === 409
         ? "Your account changed. Reload email settings."
-        : response.status === 429
-          ? "Too many changes. Wait a moment, then reload email settings."
-          : "Email settings are unavailable. Reload to check their current state.",
+        : response.status === 403
+          ? "Verify your email address to manage email notifications."
+          : response.status === 429
+            ? "Too many changes. Wait a moment, then reload email settings."
+            : "Email settings are unavailable. Reload to check their current state.",
     );
   }
   const text = new TextDecoder().decode(

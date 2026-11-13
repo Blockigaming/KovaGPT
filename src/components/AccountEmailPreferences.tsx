@@ -46,9 +46,9 @@ function AccountEmailControls({ ownerId }: { ownerId: string | null }) {
     try {
       const value = await requestAccountEmailPreferences(ownerId, next.signal);
       if (current === generation.current) setPreferences(value);
-    } catch {
+    } catch (cause) {
       if (current === generation.current)
-        setError("Email settings could not be loaded. Reload to try again.");
+        setError(cause instanceof Error ? cause.message : "Email settings could not be loaded.");
     } finally {
       if (current === generation.current) {
         busyRef.current = false;
@@ -166,7 +166,7 @@ function AccountEmailControls({ ownerId }: { ownerId: string | null }) {
           )}
           <Button
             type="button"
-            variant="outline"
+            variant={error ? "outline" : "ghost"}
             size="sm"
             disabled={busy}
             onClick={() => void load()}

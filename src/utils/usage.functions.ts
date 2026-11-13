@@ -25,12 +25,12 @@ export type PlanUsageDto = {
   tier: BillingTier;
   usageMultiplier?: 1 | 5;
   windows: (ChatWindow & {
-    regularUsed: number;
-    thinkingUsed: number;
+    regularUsed: number | null;
+    thinkingUsed: number | null;
     costPercentUsed: number | null;
   })[];
-  images: number;
-  uploads: number;
+  images: number | null;
+  uploads: number | null;
 };
 
 export const getMyPlanUsage = createServerFn({ method: "GET" })
@@ -47,7 +47,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
     const ledgerStart = windows.find(({ id }) => id === "weekly")?.start.slice(0, 10) ?? today;
     const short = windows.find(({ id }) => id === "five_hour");
     const [ledger, shortWindow, costProgress] = await Promise.all([
-      loose(context.supabase)
+      loose(supabaseAdmin)
         .from("daily_usage")
         .select("usage_date, chats, thinking_chats, images, uploads")
         .eq("user_id", context.userId)
@@ -71,6 +71,11 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
         .abortSignal(AbortSignal.timeout(10_000)),
     ]);
     if (ledger.error || shortWindow?.error)
+      console.error("[getMyPlanUsage] usage ledger unavailable", {
+        daily: ledger.error?.code,
+        hourly: shortWindow?.error?.code,
+      });
+    if (ledger.error && (shortWindow === null || shortWindow.error) && !costProgress.data?.[0])
       throw new Error("Usage data is temporarily unavailable.");
     const rows: {
       usage_date: string;
@@ -119,15 +124,21 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       usageMultiplier,
       windows: windows.map((window) => ({
         ...window,
-        ...(window.id === "five_hour" ? shortTotals : total),
+        ...(window.id === "five_hour"
+          ? shortWindow?.error
+            ? { regularUsed: null, thinkingUsed: null }
+            : shortTotals
+          : ledger.error
+            ? { regularUsed: null, thinkingUsed: null }
+            : total),
         costPercentUsed: !costState
           ? null
           : window.id === "five_hour"
             ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
             : asPercent(costState.weekly_used, costState.weekly_allowance),
       })),
-      images: daily?.images ?? 0,
-      uploads: daily?.uploads ?? 0,
+      images: ledger.error ? null : (daily?.images ?? 0),
+      uploads: ledger.error ? null : (daily?.uploads ?? 0),
     };
   });
 

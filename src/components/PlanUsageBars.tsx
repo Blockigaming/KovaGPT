@@ -19,11 +19,16 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
   return (
     <div className="kova-plan-usage">
       {windows.map((window) => {
-        const percent = Math.max(
-          boundedPercent(window.regularUsed, window.regularLimit),
-          boundedPercent(window.thinkingUsed, window.thinkingLimit),
-          window.costPercentUsed ?? 0,
-        );
+        const percentages = [
+          window.regularUsed === null
+            ? null
+            : boundedPercent(window.regularUsed, window.regularLimit),
+          window.thinkingUsed === null
+            ? null
+            : boundedPercent(window.thinkingUsed, window.thinkingLimit),
+          window.costPercentUsed,
+        ].filter((value): value is number => value !== null);
+        const percent = percentages.length ? Math.max(...percentages) : null;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
         const resetLabel =
           window.id === "five_hour" ? "Rolling activity · Next hourly refresh" : "Weekly reset";
@@ -31,18 +36,20 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
           <div key={window.id} className="kova-plan-usage-row">
             <div>
               <span>{label}</span>
-              <strong>{percent}% used</strong>
+              <strong>{percent === null ? "Unavailable" : `${percent}% used`}</strong>
             </div>
-            <div
-              className="kova-usage-track"
-              role="progressbar"
-              aria-label={label}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={percent}
-            >
-              <span style={{ width: `${percent}%` }} />
-            </div>
+            {percent !== null && (
+              <div
+                className="kova-usage-track"
+                role="progressbar"
+                aria-label={label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percent}
+              >
+                <span style={{ width: `${percent}%` }} />
+              </div>
+            )}
             <p className="text-xs leading-5 text-muted-foreground">
               {resetLabel} {resetFormat.format(new Date(window.resetsAt))}
             </p>
@@ -50,13 +57,13 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
         );
       })}
       <p className="text-xs leading-5 text-muted-foreground">
-        Today's images {boundedPercent(images, base.images * multiplier)}% used · uploads{" "}
-        {boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.
+        {images === null || uploads === null
+          ? "Today’s image and upload usage is temporarily unavailable."
+          : `Today’s images ${boundedPercent(images, base.images * multiplier)}% used · uploads ${boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.`}
       </p>
-      {windows.some((window) => window.costPercentUsed === null) && (
+      {windows.some((window) => window.regularUsed === null || window.costPercentUsed === null) && (
         <p className="text-xs leading-5 text-muted-foreground">
-          Chat percentages currently reflect message counts. Cost-based usage is temporarily
-          unavailable.
+          Some chat usage data is temporarily unavailable. Meters show the data we could load.
         </p>
       )}
       <p className="text-xs leading-5 text-muted-foreground">
