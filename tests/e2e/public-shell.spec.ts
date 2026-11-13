@@ -44,10 +44,8 @@ test("public routes share one landmark and a working skip target", async ({ page
       page.getByRole("link", { name: "Skip to content" }),
       `${route} should expose one root-level skip link`,
     ).toHaveCount(1);
-    if (route === "/pricing") {
-      await expect(page.locator("[data-billing-page]")).toHaveCount(1);
-      await expect(page.getByRole("link", { name: "Back to chat", exact: true })).toBeVisible();
-    } else await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
+    if (route === "/pricing") await expect(page.locator("[data-billing-page]")).toHaveCount(1);
+    await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
 
     const viewport = await page.evaluate(() => ({
@@ -119,8 +117,8 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   await page.getByRole("button", { name: "Open navigation" }).click();
   await menu.getByRole("link", { name: "Pricing" }).click();
   await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Back to chat", exact: true })).toBeVisible();
+  await expect(menu).toBeHidden();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
 
   const targets = page.locator("header a, header button, footer a");
   const count = await targets.count();
