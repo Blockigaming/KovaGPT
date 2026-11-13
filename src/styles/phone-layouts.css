@@ -665,9 +665,16 @@
     margin-top: 10px;
     grid-template-columns: 1fr;
   }
-  .kova-individual-plans > article {
+  .kova-individual-plans > .kova-plan-card {
     display: none;
     grid-row: auto;
+    grid-template-rows: none;
+    height: auto;
+    gap: 14px;
+  }
+  .kova-individual-plans .kova-plan-card > ul {
+    justify-content: flex-start;
+    padding-top: 0;
   }
   .kova-individual-plans[data-phone-selected-plan="free"] > #free,
   .kova-individual-plans[data-phone-selected-plan="plus"] > #plus,
