@@ -227,66 +227,104 @@ export function ConversationHeaderActions({
     <>
       <div
         className={`kova-conversation-actions${compact ? " kova-conversation-actions-compact" : ""}`}
+        aria-label="Conversation actions"
       >
-        <Popover open={outputsOpen} onOpenChange={setOutputsOpen}>
-          <PopoverTrigger asChild>
+        <button
+          ref={shareRef}
+          type="button"
+          className="kova-conversation-share"
+          aria-label="Share chat"
+          title="Share chat"
+          onClick={() => {
+            if (restrictedTemporary || !signedIn) {
+              rememberFocus(shareRef.current);
+              dialogOpeningRef.current = false;
+              setDialog("share-restricted");
+            } else onShare(shareRef.current);
+          }}
+        >
+          <Share aria-hidden="true" />
+          <span>Share</span>
+        </button>
+        {!isDesktop ? (
+          <>
             <button
-              type="button"
               ref={outputsRef}
+              type="button"
               className="kova-conversation-icon"
               aria-label="Activity"
               title="Activity"
+              aria-haspopup="dialog"
+              aria-expanded={outputsOpen}
+              onClick={() => {
+                dialogOpeningRef.current = false;
+                setOutputsOpen(true);
+              }}
             >
               <OutputsIcon />
             </button>
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            className="kova-conversation-outputs"
-            onCloseAutoFocus={(event) => {
-              if (dialogOpeningRef.current) {
+            <MobileBottomSheet
+              open={outputsOpen}
+              onOpenChange={setOutputsOpen}
+              title="Activity"
+              restoreFocus={!dialogOpeningRef.current}
+            >
+              <div className="kova-conversation-outputs kova-conversation-outputs-touch">
+                {activityContent}
+              </div>
+            </MobileBottomSheet>
+          </>
+        ) : (
+          <Popover
+            open={outputsOpen}
+            onOpenChange={(open) => {
+              if (open) dialogOpeningRef.current = false;
+              setOutputsOpen(open);
+            }}
+          >
+            <PopoverTrigger asChild>
+              <button
+                ref={outputsRef}
+                type="button"
+                className="kova-conversation-icon"
+                aria-label="Activity"
+                title="Activity"
+              >
+                <OutputsIcon />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={10}
+              className="kova-conversation-outputs"
+              aria-label="Activity"
+              onCloseAutoFocus={(event) => {
+                if (!dialogOpeningRef.current) return;
                 event.preventDefault();
                 dialogOpeningRef.current = false;
-              }
-            }}
-          >
-            {activityContent}
-          </PopoverContent>
-        </Popover>
-        {!compact && (
-          <button
-            type="button"
-            ref={shareRef}
-            className="kova-conversation-share"
-            onClick={() => {
-              if (restrictedTemporary) {
-                setDialog("share-restricted");
-                return;
-              }
-              onShare(shareRef.current);
-            }}
-          >
-            <Share aria-hidden="true" />
-            <span>Share</span>
-          </button>
+              }}
+            >
+              {activityContent}
+            </PopoverContent>
+          </Popover>
         )}
       </div>
       <Dialog
         open={dialog === "share-restricted"}
-        onOpenChange={(open) => !open && setDialog(null)}
+        onOpenChange={(open) => {
+          if (!open) setDialog(null);
+        }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sharing is unavailable</DialogTitle>
-            <DialogDescription>
-              Temporary chats cannot be shared. Start a saved chat to share it.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="kova-header-dialog-buttons">
-            <Button variant="outline" onClick={() => setDialog(null)}>
-              Close
-            </Button>
-          </div>
+        <DialogContent className="sm:max-w-md" onCloseAutoFocus={restoreFocus}>
+          <DialogTitle>Sharing unavailable</DialogTitle>
+          <DialogDescription>
+            {restrictedTemporary
+              ? "Temporary chats cannot be shared. Start a regular chat to share a conversation."
+              : "Sign in to share this conversation."}
+          </DialogDescription>
+          <Button variant="outline" onClick={() => setDialog(null)}>
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
       <Dialog
