@@ -53,9 +53,7 @@ for (const width of [390, 1440]) {
           .getByRole("link", { name: "Explore plans" })
           .click();
       }
-      await expect(
-        page.getByRole("region", { name: "Plan comparison", exact: true }),
-      ).toBeVisible();
+      await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
       await expect(page.locator("#main-content")).toBeFocused();
       await expect(page.locator('a[href="/pricing"]').first()).toHaveAttribute(
         "aria-current",
@@ -160,71 +158,60 @@ for (const width of [320, 390, 768, 1440]) {
         (theme) => document.documentElement.classList.toggle("dark", theme === "dark"),
         theme,
       );
-      const region = page.getByRole("region", { name: "Plan comparison", exact: true });
-      const plans = ["Free", "Plus", "Pro"];
-      const features = [
+      const region = page.getByRole("region", { name: "Plan comparison" });
+      await expect(region.getByRole("columnheader")).toHaveText([
+        "Included",
+        "Free",
+        "Plus",
+        "Pro",
+      ]);
+      await expect(region.getByRole("rowheader")).toHaveText([
         "Chat modes",
         "Usage",
         "Basic chat",
         "Advanced chat",
         "Images and files",
         "Cloud storage",
-      ];
-      const comparisons = [
-        ["Usage", ["Very limited", "5× Free", "100× Free (20× Plus)"]],
-        ["Basic chat", ["Limited", "Limited", "Unlimited with Argon Lite"]],
-      ] as const;
-      if (width < 768) {
-        await expect(region.locator("summary")).toHaveText(features);
-        for (const [feature, values] of comparisons) {
-          const details = region.locator("details").filter({
-            has: page.getByText(feature, { exact: true }),
-          });
-          const summary = details.locator("summary");
-          await expect(details.locator("dl")).toBeHidden();
-          await summary.focus();
-          await expect(summary).toBeFocused();
-          expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-          await page.keyboard.press("Space");
-          await expect(details.locator("dl")).toBeVisible();
-          await expect(details.getByRole("term")).toHaveText(plans);
-          await expect(details.getByRole("definition")).toHaveText([...values]);
-          await page.keyboard.press("Space");
-          await expect(details.locator("dl")).toBeHidden();
-          await expect(summary).toBeFocused();
-        }
-      } else {
-        await expect(region.getByRole("columnheader")).toHaveText(["Included", ...plans]);
-        await expect(region.getByRole("rowheader")).toHaveText(features);
-        for (const [feature, values] of comparisons) {
-          await expect(
-            region
-              .getByRole("row")
-              .filter({
-                has: page.getByRole("rowheader", { name: feature, exact: true }),
-              })
-              .getByRole("cell"),
-          ).toHaveText([...values]);
-        }
-        const included = region.getByRole("columnheader", { name: "Included", exact: true });
-        await expect
-          .poll(async () => {
-            const [regionBox, includedBox] = await Promise.all([
-              region.boundingBox(),
-              included.boundingBox(),
-            ]);
-            if (!regionBox || !includedBox) return false;
-            return (
-              includedBox.x >= regionBox.x &&
-              includedBox.x + includedBox.width <= regionBox.x + regionBox.width
-            );
-          })
-          .toBe(true);
-        expect(await region.evaluate((el) => el.scrollLeft)).toBe(0);
-        await region.focus();
-        await expect(region).toBeFocused();
-      }
+      ]);
+      await expect(
+        region
+          .getByRole("row")
+          .filter({ has: page.getByRole("rowheader", { name: "Usage", exact: true }) })
+          .getByRole("cell"),
+      ).toHaveText(["Very limited", "5× Free", "100× Free (20× Plus)"]);
+      await expect(
+        region
+          .getByRole("row")
+          .filter({ has: page.getByRole("rowheader", { name: "Basic chat", exact: true }) })
+          .getByRole("cell"),
+      ).toHaveText(["Limited", "Limited", "Unlimited with Argon Lite"]);
+      const included = region.getByRole("columnheader", { name: "Included", exact: true });
+      await expect
+        .poll(async () => {
+          const [regionBox, includedBox] = await Promise.all([
+            region.boundingBox(),
+            included.boundingBox(),
+          ]);
+          if (!regionBox || !includedBox) return false;
+          return (
+            includedBox.x >= regionBox.x &&
+            includedBox.x + includedBox.width <= regionBox.x + regionBox.width
+          );
+        })
+        .toBe(true);
+      expect(await region.evaluate((el) => el.scrollLeft)).toBe(0);
       await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
+
+      await region.focus();
+      await expect(region).toBeFocused();
+      if (width < 672) {
+        await page.keyboard.press("ArrowRight");
+        await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+        await page.screenshot({
+          path: info.outputPath("comparison-scrolled.png"),
+          fullPage: true,
+        });
+      }
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

@@ -1159,7 +1159,7 @@ function ScheduledTasksPage() {
                     {visibleTasks.map((t) => (
                       <li
                         key={t.id}
-                        className="kova-task-list-row kova-row flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
+                        className="kova-row flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
                       >
                         <div className="flex-1 min-w-0">
                           <button

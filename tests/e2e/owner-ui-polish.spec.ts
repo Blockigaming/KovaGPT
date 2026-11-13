@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { fixture, owner, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
@@ -72,7 +71,7 @@ test("dedicated settings excludes workspace navigation and supports desktop drag
   await waitForKovaHydration(page);
   await expect(page.locator(".kova-sidebar, .kova-sidebar-rail")).toHaveCount(0);
   const navigation = page.getByRole("complementary", { name: "Settings navigation" });
-  const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+  const phone = page.viewportSize()!.width < 768;
   if (!phone) {
     const edge = page.getByRole("separator", { name: "Resize settings navigation" });
     await edge.focus();

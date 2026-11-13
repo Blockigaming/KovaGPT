@@ -1,3 +1,12 @@
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { HealthDashboardPreview } from "@/components/HealthDashboardPreview";
@@ -29,7 +38,6 @@ export function HealthConnectionsPanel({
   };
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<HealthSummary | null>(null);
-  const [showDemo, setShowDemo] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
   useEffect(() => {
@@ -119,36 +127,25 @@ export function HealthConnectionsPanel({
     }
   };
   return (
-    <section
-      className="mt-6 space-y-5 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6"
-      aria-labelledby="health-connections-title"
-    >
+    <section className="mt-8 space-y-5" aria-labelledby="health-connections-title">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="health-connections-title" className="text-xl font-semibold tracking-tight">
           Health accounts
         </h2>
-        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-          Coming soon
-        </span>
+        {data &&
+          !loading &&
+          !error &&
+          !data.configuredProviders.some(({ id }) => Object.hasOwn(HEALTH_PROVIDERS, id)) && (
+            <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Coming soon
+            </span>
+          )}
       </div>
       <p className="text-sm text-muted-foreground">
         Choose a provider and review its permissions. Summaries are fetched only when you click Read
         summaries. They are not added to chat or saved to your search index.
       </p>
-      <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-medium">Health dashboard preview</p>
-            <p className="text-xs text-muted-foreground">
-              See an example of future health visualizations.
-            </p>
-          </div>
-          <Button variant="outline" aria-pressed={showDemo} onClick={() => setShowDemo((v) => !v)}>
-            {showDemo ? "Hide example" : "View example"}
-          </Button>
-        </div>
-        {showDemo && <HealthDashboardPreview />}
-      </div>
+      {!result && <HealthDashboardPreview />}
       {!ownerId ? (
         <p>Sign in to manage health connections.</p>
       ) : (
@@ -166,12 +163,19 @@ export function HealthConnectionsPanel({
                 data?.configuredProviders.some((entry) => entry.id === id) === true;
               const accounts = data?.accounts.filter((account) => account.provider_id === id) ?? [];
               return (
-                <div key={id} className="rounded-xl border border-border p-4 space-y-3">
-                  <h3 className="font-medium">{provider.label}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Sleep, recovery and activity summaries. Basic profile access identifies the
-                    account.
-                  </p>
+                <div
+                  key={id}
+                  className="space-y-3 rounded-2xl border border-border bg-card/40 p-4 transition-colors hover:border-foreground/20"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold tracking-tight">{provider.label}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Sleep, recovery and activity summaries. Basic profile access identifies the
+                        account.
+                      </p>
+                    </div>
+                  </div>
                   {!loading && !error && !configured && (
                     <p className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700 dark:text-amber-300">
                       Coming soon
@@ -179,6 +183,7 @@ export function HealthConnectionsPanel({
                   )}
                   <Button
                     variant="outline"
+                    className="rounded-full"
                     disabled={!configured || busy || loading || error}
                     onClick={() => void connect(id)}
                   >
@@ -237,6 +242,57 @@ export function HealthConnectionsPanel({
             </p>
           )}
           {result.limited && <p>A limited page of summaries is shown.</p>}
+          <div className="grid gap-3 lg:grid-cols-2">
+            {[
+              ["Sleep score", "sleep", "score", "#8b5cf6"],
+              ["Recovery score", "recovery", "score", "#0891b2"],
+              [
+                result.provider === "whoop" ? "Strain" : "Activity score",
+                "activity",
+                "score",
+                "#b45309",
+              ],
+              ["Steps", "activity", "steps", "#059669"],
+              ["Resting heart rate", "recovery", "restingHeartRate", "#db2777"],
+            ].map(([label, metric, field, color]) => {
+              const valueKey = field as "score" | "steps" | "restingHeartRate";
+              const points = result.summaries
+                .filter((item) => item.metric === metric && item.date && item[valueKey] !== null)
+                .map((item) => ({ date: item.date!, value: item[valueKey] }))
+                .sort((a, b) => a.date.localeCompare(b.date));
+              if (!points.length) return null;
+              return (
+                <section key={label} className="min-w-0 rounded-2xl border border-border p-4">
+                  <h3 className="mb-2 font-medium">{label}</h3>
+                  <div className="h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={points} accessibilityLayer>
+                        <CartesianGrid
+                          vertical={false}
+                          stroke="currentColor"
+                          strokeOpacity={0.12}
+                        />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(value: string) => value.slice(5)}
+                          fontSize={11}
+                        />
+                        <YAxis width={42} fontSize={11} />
+                        <Tooltip />
+                        <Line
+                          name={label}
+                          dataKey="value"
+                          stroke={color}
+                          strokeWidth={2}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <caption className="text-left font-medium mb-2">

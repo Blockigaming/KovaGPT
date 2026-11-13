@@ -35,6 +35,15 @@
   background: transparent;
   box-shadow: none;
   font-size: 14px;
+  transition: color 140ms ease, background 140ms ease;
+}
+.spec400-plugin-tabs [role="tab"]:hover:not([data-state="active"]) {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.spec400-plugin-tabs [role="tab"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 .spec400-plugin-tabs [role="tab"][data-state="active"] {
   color: var(--foreground);
@@ -537,11 +546,4 @@
 }
 .spec400-connection-group[data-state="inactive"] {
   display: none;
-}
-
-.kova-connection-navigation {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
 }

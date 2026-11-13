@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { PHONE_LAYOUT_QUERY } from "../../src/hooks/use-mobile";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
@@ -112,7 +111,7 @@ for (const theme of ["dark", "light"] as const) {
     const panel = page.locator("section.kova-settings-page");
     await expect(screen).toBeVisible();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
-    const phone = await page.evaluate((query) => matchMedia(query).matches, PHONE_LAYOUT_QUERY);
+    const phone = page.viewportSize()!.width < 768;
     if (!phone) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toBeVisible();
     } else {

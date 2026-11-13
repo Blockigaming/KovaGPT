@@ -27,8 +27,8 @@ function DownloadPage() {
             Install KovaGPT
           </Button>
         )}
-        <div className="kova-download-options mt-12 grid gap-5 sm:grid-cols-2">
-          <section className="kova-desktop-download rounded-2xl border border-border p-6">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2">
+          <section className="rounded-2xl border border-border p-6">
             <h2 className="font-semibold">Mac and Windows</h2>
             <p className="mt-3 text-muted-foreground">
               Open KovaGPT in Chrome or Edge, then choose the install icon in the address bar. In

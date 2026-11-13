@@ -193,6 +193,19 @@ body .kova-assistant textarea.font-mono {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
 }
 
+@media (max-width: 767px) {
+  .kova-library-page #library-title {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
+}
+
 /* Keep page gutters outside the password form so fields can use the full width. */
 body .kova-auth-page > main {
   box-sizing: border-box;

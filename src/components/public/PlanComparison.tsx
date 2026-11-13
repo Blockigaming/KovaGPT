@@ -4,12 +4,6 @@ import { PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
 const tiers = ["free", "plus", "pro"] as const;
 const rows = [
   {
-    label: "Chat modes",
-    values: tiers.map((tier) =>
-      CAPABILITY_REGISTRY.modesByTier[tier].map((mode) => mode.label).join(", "),
-    ),
-  },
-  {
     label: "Usage",
     values: [
       "Very limited",
@@ -36,7 +30,7 @@ export function PlanComparison() {
         Model access and relative usage for each individual plan.
       </p>
       <div
-        className="kova-desktop-plan-comparison public-table-scroll overflow-x-auto rounded-2xl border border-border"
+        className="public-table-scroll overflow-x-auto rounded-2xl border border-border"
         role="region"
         aria-label="Plan comparison"
         tabIndex={0}
@@ -56,6 +50,14 @@ export function PlanComparison() {
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <th scope="row">Chat modes</th>
+              {tiers.map((tier) => (
+                <td key={tier}>
+                  {CAPABILITY_REGISTRY.modesByTier[tier].map((mode) => mode.label).join(", ")}
+                </td>
+              ))}
+            </tr>
             {rows.map((row) => (
               <tr key={row.label}>
                 <th scope="row">{row.label}</th>
@@ -66,21 +68,6 @@ export function PlanComparison() {
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="kova-phone-plan-comparison hidden" role="region" aria-label="Plan comparison">
-        {rows.map(({ label, values }) => (
-          <details key={label}>
-            <summary>{label}</summary>
-            <dl>
-              {tiers.map((tier, index) => (
-                <div key={tier}>
-                  <dt>{CAPABILITY_REGISTRY.plans[tier].name}</dt>
-                  <dd>{values[index]}</dd>
-                </div>
-              ))}
-            </dl>
-          </details>
-        ))}
       </div>
     </section>
   );

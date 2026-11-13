@@ -1,0 +1,19 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { parseChartSpec, extractCharts } from "../../src/components/chat-chart-utils.ts";
+import { splitGenerativeContent } from "../../src/lib/generative-ui.mjs";
+
+test("a chart survives alongside a calendar widget in response order", () => {
+  const chart =
+    '\x60\x60\x60kova-chart\n{"type":"bar","data":[{"name":"A","value":4}]}\n\x60\x60\x60';
+  const widget =
+    '\x60\x60\x60kova-ui\n{"version":1,"type":"date","title":"Choose a day","value":""}\n\x60\x60\x60';
+  const parts = splitGenerativeContent(chart + "\n\n" + widget);
+  assert.equal(parts[1]?.kind, "widget");
+  assert.equal(extractCharts(parts[0].text)[0].kind, "chart");
+});
+
+test("invalid chart cells and color metadata fall back to text", () => {
+  assert.equal(parseChartSpec('{"type":"bar","data":[{"x":{"nested":1}}]}'), null);
+  assert.equal(parseChartSpec('{"type":"bar","colors":"red","data":[{"x":1}]}'), null);
+});

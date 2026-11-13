@@ -449,12 +449,8 @@ function ProjectChatPage() {
   }
 
   return (
-    <AppShell hideUtilities hideMobileTopBar>
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="kova-project-conversation flex min-h-0 w-full flex-1 flex-col overflow-hidden"
-      >
+    <AppShell>
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2 sm:gap-3 sm:px-4">
           <Link
             to="/projects/$projectId"
@@ -683,7 +679,7 @@ function ProjectChatPage() {
             }
           />
         </div>
-      </main>
+      </div>
 
       <AlertDialog
         open={navigationBlocker.status === "blocked"}

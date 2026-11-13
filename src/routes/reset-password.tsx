@@ -262,9 +262,7 @@ function ResetPassword() {
   };
 
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
+    <div
       data-ui-reference="chatgpt-auth-recovery"
       className="kova-auth-page min-h-screen flex items-center justify-center px-4 py-8 bg-background"
     >
@@ -344,6 +342,6 @@ function ResetPassword() {
           </form>
         )}
       </div>
-    </main>
+    </div>
   );
 }

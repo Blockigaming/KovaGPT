@@ -29,13 +29,11 @@ assert.match(shared, /-translate-x-1\/2 -translate-y-1\/2/);
 
 test("full-screen phone Settings cancels both transform systems for guests and signed-in users", () => {
   const path = "src/styles/settings-reference.css";
-  const phoneLayouts =
-    "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)";
   for (const selector of [
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ]) {
-    const css = declarations(path, selector, phoneLayouts);
+    const css = declarations(path, selector, "(max-width: 767px)");
     assert.equal(css.inset, "0");
     assert.equal(css.width, "100%");
     assert.equal(css.height, "100dvh");

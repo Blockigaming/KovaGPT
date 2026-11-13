@@ -22,8 +22,6 @@ export default function SitesPage() {
   return (
     <AppShell>
       <main
-        id="main-content"
-        tabIndex={-1}
         data-ui-reference="claude.artifacts.sites"
         className={"kova-tool-page " + "mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6"}
       >
@@ -260,7 +258,7 @@ function SitesContent({ userId }: { userId: string }) {
           hosting is activated.
         </div>
       )}
-      <div className="kova-site-open flex flex-wrap items-end gap-3 rounded-xl border p-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border p-4">
         <label className="min-w-60 flex-1 text-sm">
           Open a shared Site
           <Input
@@ -283,7 +281,7 @@ function SitesContent({ userId }: { userId: string }) {
         </Button>
       </div>
       <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
-        <aside aria-label="Saved Sites" className="kova-site-picker space-y-2">
+        <aside className="space-y-2">
           <Button
             className="w-full"
             variant="outline"
@@ -306,7 +304,6 @@ function SitesContent({ userId }: { userId: string }) {
                 data-kova-button-shape="preserve"
                 key={item.id}
                 type="button"
-                aria-pressed={selected === item.id}
                 disabled={busy}
                 className={`kova-tool-card-action h-auto w-full whitespace-normal rounded-[var(--kova-radius-card)] border text-left ${selected === item.id ? "bg-muted" : "hover:bg-muted/50"}`}
                 onClick={() => void refresh(item.id)}

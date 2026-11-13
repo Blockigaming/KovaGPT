@@ -175,7 +175,9 @@ test("bank Link is explicit and exchanges one public token after successful cons
     (window as StateWindow).finishLink();
   });
   await expect(page.getByRole("heading", { name: "Accounts linked", exact: true })).toBeVisible();
-  await expect(page.getByText("Sample data", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Spending" }).getByText("Sample data", { exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Recent activity" })).toBeVisible();
   await expect(page.getByRole("img", { name: /Daily cash flow/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Spending by category/ })).toBeVisible();
@@ -205,7 +207,9 @@ test("unconfigured finance and health stay disabled and never fetch private data
   page,
 }) => {
   await boot(page, { configured: false });
-  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Spending" }).getByText("Sample data", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
@@ -238,7 +242,9 @@ test("switching account hides a pending bank read", async ({ page }) => {
     (window as StateWindow).renderPanels();
   });
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
-  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Spending" }).getByText("Sample data", { exact: true }),
+  ).toBeVisible();
   await page.evaluate(() => (window as StateWindow).resolveRead());
   await expect(page.getByText("Fixture checking")).toHaveCount(0);
 });
@@ -254,7 +260,9 @@ test("an old Plaid success callback cannot exchange its token after account swit
     (window as StateWindow).renderPanels();
   });
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
-  await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Spending" }).getByText("Sample data", { exact: true }),
+  ).toBeVisible();
   await page.evaluate(() => (window as StateWindow).finishLink());
   expect(
     (await page.evaluate(() => (window as StateWindow).operations)).some(
