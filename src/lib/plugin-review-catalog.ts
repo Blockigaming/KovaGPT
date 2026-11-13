@@ -69,7 +69,7 @@ function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewE
   const connector = getConnector(id);
   if (!connector) throw new Error(`Missing launch review connector: ${id}`);
   const implemented =
-    ["gmail", "google-calendar", "google-drive", "github"].includes(id) ||
+    ["gmail", "google-calendar", "google-drive", "github", "plaid"].includes(id) ||
     Boolean(CONNECTION_FLOWS[id]);
   return {
     connector,
