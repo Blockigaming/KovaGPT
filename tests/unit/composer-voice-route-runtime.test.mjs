@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -70,6 +71,7 @@ globalThis.setAttachments = ${arrow("setAttachments")};
 globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
+  extractResponseFollowups,
   helpers,
   React,
   // This reused send fixture does not render controls; keep its transparent

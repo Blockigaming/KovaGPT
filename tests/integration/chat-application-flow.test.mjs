@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -635,6 +636,7 @@ function composer(f) {
   const ref = (current) => ({ current });
   const no = () => {};
   const context = {
+    extractResponseFollowups,
     principalReady: true,
     userKey: ownerId,
     isSignedIn: true,

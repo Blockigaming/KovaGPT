@@ -102,7 +102,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(popover, /overflow-y-auto overflow-x-hidden overscroll-contain/);
   const scrim = declarations(sidebarStyles, "button.kova-sidebar-scrim");
   assert.equal(scrim["border-radius"], "0");
-  assert.equal(scrim.background, "#0008");
+  assert.equal(scrim.background, "rgb(0 0 0 / 45%)");
   assert.equal(scrim["backdrop-filter"], undefined);
   assert.match(
     coreStyles,
