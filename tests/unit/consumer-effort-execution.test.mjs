@@ -76,7 +76,7 @@ function fixture({ failReview = false, emptyReviewFinish = null, signal } = {}) 
     usages,
     peak: () => peak,
     fences: () => fences,
-    run: (model, mode, freeChat = false) =>
+    run: (model, mode, freeChat) =>
       requestHostedEffort({
         request: {
           model,
@@ -100,17 +100,17 @@ function fixture({ failReview = false, emptyReviewFinish = null, signal } = {}) 
   };
 }
 
-test("Free chat sends Luna at low or medium effort while retaining its Kova identity", async () => {
-  for (const [mode, effort] of [
-    ["instant", "low"],
-    ["thinking", "medium"],
+test("Free chat sends each requested GPT-5 model with its Kova identity", async () => {
+  for (const [mode, effort, model, label] of [
+    ["instant", "low", "gpt-5-mini", "Argon 4.6 mini"],
+    ["thinking", "medium", "gpt-5", "Argon 4.5"],
   ]) {
     const f = fixture();
-    assert.match(await (await f.run("kova-argon-4.6", mode, true)).text(), /437/);
+    assert.match(await (await f.run("kova-argon-4.6", mode, mode)).text(), /437/);
     assert.equal(f.calls.length, 1);
-    assert.equal(f.calls[0].model, "gpt-5.6-luna");
+    assert.equal(f.calls[0].model, model);
     assert.deepEqual(f.calls[0].reasoning, { effort });
-    assert.match(f.calls[0].instructions, /You are Kova Argon 4\.6/);
+    assert.ok(f.calls[0].instructions.includes(`You are ${label},`));
   }
   const paid = fixture();
   await (await paid.run("kova-argon-4.6", "thinking")).text();

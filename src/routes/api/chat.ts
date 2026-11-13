@@ -67,10 +67,7 @@ import {
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { hostedEffortBudget } from "@/lib/consumer-effort-policy.mjs";
-import {
-  FREE_CHAT_FOUNDATION,
-  isKovaHostedModelId,
-} from "@/lib/ai/kova-hosted-inference.server.mjs";
+import { FREE_CHAT_MODELS, isKovaHostedModelId } from "@/lib/ai/kova-hosted-inference.server.mjs";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import {
   FreeConnectorBudget,
@@ -1166,7 +1163,10 @@ export const Route = createFileRoute("/api/chat")({
               !capture &&
               (!acceptanceFlag || acceptanceFlag === "false") &&
               !explicitHostedTool &&
-              (m.id === "instant" || m.id === "thinking");
+              (m.id === "instant" || m.id === "thinking")
+                ? m.id
+                : undefined;
+            const freeChatModel = freeChat ? FREE_CHAT_MODELS[freeChat] : undefined;
             const model = freeChat ? "kova-argon-4.6" : routeDecision.modelId;
             // Check the resolved hosted alias too: a role misconfiguration must
             // not grant a foundation outside the consumer's plan.
@@ -1202,7 +1202,8 @@ export const Route = createFileRoute("/api/chat")({
             const modelIdentityInstructions = buildKovaModelIdentityInstructions({
               role: routeDecision.role,
               modelId: model,
-              foundation: freeChat ? FREE_CHAT_FOUNDATION : undefined,
+              foundation: freeChatModel?.foundation,
+              productLabel: freeChatModel?.label,
               provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
               hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
             });
@@ -1722,8 +1723,8 @@ export const Route = createFileRoute("/api/chat")({
             const productModel = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
               (entry) => entry.id === model,
             );
-            const foundationModel = freeChat
-              ? KOVA_HOSTED_TEXT_MODELS.find((entry) => entry.id === "kova-argon-4.5")
+            const foundationModel = freeChatModel
+              ? OPENAI_TEXT_MODELS.find((entry) => entry.id === freeChatModel.foundation)
               : productModel;
             if (!productModel || !foundationModel) {
               return Response.json(

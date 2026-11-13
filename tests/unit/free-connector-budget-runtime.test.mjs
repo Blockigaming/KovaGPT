@@ -359,7 +359,7 @@ function fixture(options = {}) {
     fixture: fixtures,
     provider: async (body, init, scope, execution) => {
       providers.push(structuredClone(body));
-      normalizedProviders.push(context.prepareConnectorRequest(body));
+      normalizedProviders.push(context.prepareConnectorRequest(body, execution?.freeChat));
       assert.equal(acquisitions.length, 1, "Provider work must follow authoritative admission");
       assert.ok(!options.rejection);
       if (options.abortPlanning && !body.stream) {
@@ -927,7 +927,7 @@ const hostedRouting = {
   KOVA_MODEL_PREMIUM_REASONING: "kova-xenon-5",
 };
 for (const [tier, mode, alias, foundation] of [
-  ["free", "instant", "kova-argon-4.6", "gpt-6-luna"],
+  ["free", "instant", "kova-argon-4.6", "gpt-5-mini"],
   ["plus", "thinking", "kova-neon-4.6", "gpt-6.1-terra"],
   ["pro", "max", "kova-xenon-5", "gpt-6.1-sol"],
   ["plus", "max", "kova-xenon-6.1", "gpt-6-astra"],
@@ -955,7 +955,7 @@ test("Argon connector fallback retains the selected hosted model and complete co
   const { response, text } = await f.post();
   assert.equal(response.status, 200, text);
   assert.equal(f.providers.length, 1);
-  assert.equal(f.normalizedProviders[0].model, "gpt-6-luna");
+  assert.equal(f.normalizedProviders[0].model, "gpt-5-mini");
   const sent = JSON.stringify({
     input: f.normalizedProviders[0].input,
     instructions: f.normalizedProviders[0].instructions,

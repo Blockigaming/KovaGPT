@@ -6,13 +6,13 @@ import { KOVA_MODEL_LABELS as KOVA_ASSISTANT_IDENTITY } from "../kova-foundation
  */
 export { KOVA_MODEL_LABELS as KOVA_ASSISTANT_IDENTITY } from "../kova-foundation-models.mjs";
 
-export function kovaIdentityInstruction(modelId) {
+export function kovaIdentityInstruction(modelId, productLabel) {
   const name = Object.hasOwn(KOVA_ASSISTANT_IDENTITY, modelId)
     ? KOVA_ASSISTANT_IDENTITY[modelId]
     : null;
   if (!name) throw new Error("unknown_kova_model");
   return [
-    `You are ${name}, an AI assistant offered by KovaGPT.`,
+    `You are ${productLabel ?? name}, an AI assistant offered by KovaGPT.`,
     "Introduce yourself using your Kova product name.",
     "Do not volunteer implementation details, infrastructure, or foundation-model provenance when unrelated to the user's request.",
     "When explicitly asked about the underlying foundation model, its developer, or licensing, answer accurately using verified deployment metadata. Never invent or conceal required attribution.",
