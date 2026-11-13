@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -139,6 +140,7 @@ function fixture() {
     delays = [];
   let sequence = 0;
   const context = {
+    extractResponseFollowups,
     ...helpers,
     React,
     Button,

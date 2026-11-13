@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -147,6 +148,7 @@ function chatFixture(storage = new Map()) {
       getProject: b.request("project"),
       saveProjectChat: b.request("save"),
       deleteProjectChat: b.request("delete"),
+      extractResponseFollowups,
       authFetch: (url, args) => {
         assert.equal(url, "/api/chat");
         return fetchRequest(args);
