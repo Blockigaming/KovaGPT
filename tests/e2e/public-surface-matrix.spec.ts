@@ -90,9 +90,6 @@ async function verifyRoute(
   if ((await publicNavigation.count()) === 1) {
     await expect(publicNavigation, `${route} ${colorScheme} navigation`).toBeVisible();
     await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
-  } else if (route === "/pricing") {
-    await expect(page.locator("[data-billing-page]")).toHaveCount(1);
-    await expect(page.getByRole("link", { name: "Back to chat", exact: true })).toBeVisible();
   } else {
     await expect(
       page.getByRole("button", { name: /^Log in(?: to KovaGPT)?$/u }).first(),

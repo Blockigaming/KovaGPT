@@ -57,7 +57,7 @@ test("public-share lookup respects expiration, revocation, account deletion and 
     await db.exec(
       readFileSync(
         new URL(
-          "../../supabase/migrations/20261113012000_public_chat_share_reader_privileges.sql",
+          "../../supabase/migrations/20261113012000_kova_public_chat_share_reader_privileges.sql",
           import.meta.url,
         ),
         "utf8",

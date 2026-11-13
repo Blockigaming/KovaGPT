@@ -1750,6 +1750,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => {
                     cancelPendingSelection();
+                    closeAfterMobileNavigation("/");
                     onNew();
                   }}
                   className="kova-new-chat kova-nav-row"

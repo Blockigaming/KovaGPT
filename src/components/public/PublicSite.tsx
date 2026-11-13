@@ -48,7 +48,7 @@ export function PublicPageView({
         tabIndex={-1}
         className="min-w-0 [overflow-wrap:anywhere]"
       >
-        <section className="relative overflow-hidden border-b border-border/70">
+        <section className="kova-public-page-intro relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
             <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>
             <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-.04em] text-balance sm:text-6xl">
@@ -84,7 +84,7 @@ export function PublicPageView({
           </div>
         </section>
         <section className="bg-muted/25">
-          <div className="mx-auto grid max-w-7xl gap-5 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-2">
+          <div className="kova-public-page-directory mx-auto grid max-w-7xl gap-5 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-2">
             {children}
           </div>
         </section>
@@ -112,7 +112,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         tabIndex={-1}
         className="min-w-0 [overflow-wrap:anywhere]"
       >
-        <section className="relative overflow-hidden border-b border-border/70">
+        <section className="kova-public-page-intro relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
             <nav
               aria-label="Breadcrumb"
@@ -184,13 +184,13 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2">
+        <section className="kova-public-page-directory mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2">
           {item.sections.map((section, index) => (
             <article
               key={section.title}
               className="min-w-0 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="kova-public-section-number text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {String(index + 1).padStart(2, "0")}
               </p>
               <h2 className="mt-4 text-2xl font-semibold tracking-[-.025em]">{section.title}</h2>

@@ -41,9 +41,15 @@ const exampleSpending = [
 const exampleTotal = exampleSpending.reduce((total, category) => total + category.cents, 0);
 const exampleCurrency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
-function FinanceSpendingPreview({ action }: { action?: React.ReactNode }) {
+function FinanceSpendingPreview({
+  action,
+  unavailable,
+}: {
+  action?: React.ReactNode;
+  unavailable: boolean;
+}) {
   return (
-    <div className="mx-auto w-full max-w-[680px] space-y-14 py-8 sm:py-14">
+    <div className="kova-finance-preview mx-auto w-full max-w-[680px] space-y-14 py-8 sm:py-14">
       <header className="flex flex-col items-center gap-4 text-center">
         <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
           <span aria-hidden="true" className="text-2xl font-semibold text-emerald-500">
@@ -57,7 +63,8 @@ function FinanceSpendingPreview({ action }: { action?: React.ReactNode }) {
           See how Kova can help you make sense of spending, subscriptions, balances, and
           investments.
         </p>
-        {action ?? (
+        {action}
+        {unavailable && (
           <span className="rounded-full border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground">
             Coming soon
           </span>
@@ -366,7 +373,15 @@ export function BankConnectionsPanel({
   if (!hasConnections) {
     return (
       <>
-        <FinanceSpendingPreview action={ownerId && status?.configured ? linkButton : undefined} />
+        <FinanceSpendingPreview
+          action={ownerId && status?.configured ? linkButton : undefined}
+          unavailable={status?.configured === false}
+        />
+        {ownerId && !status && !statusFailed && (
+          <p className="text-center text-sm text-muted-foreground" role="status">
+            Checking bank connections…
+          </p>
+        )}
         {ownerId && statusFailed && (
           <div className="text-center">
             <Button variant="outline" onClick={() => void reload()}>
@@ -458,7 +473,7 @@ export function BankConnectionsPanel({
               </li>
             ))}
           </ul>
-          <div className="overflow-x-auto">
+          <div className="kova-transaction-table overflow-x-auto">
             <table className="w-full text-left text-sm">
               <caption className="text-left font-medium mb-2">
                 Recent transactions{snapshot.limited ? " (limited to 100)" : ""}
@@ -486,6 +501,28 @@ export function BankConnectionsPanel({
               </tbody>
             </table>
           </div>
+          {snapshot.transactions.length > 0 && (
+            <section className="kova-transaction-list hidden" aria-label="Recent transactions">
+              <h3 className="font-medium">Recent transactions</h3>
+              {snapshot.limited && (
+                <p className="text-sm text-muted-foreground">Latest 100 transactions</p>
+              )}
+              <ul>
+                {snapshot.transactions.map((transaction, index) => (
+                  <li key={transaction.id ?? index}>
+                    <div>
+                      <strong>
+                        {transaction.name}
+                        {transaction.pending ? " (pending)" : ""}
+                      </strong>
+                      <time dateTime={transaction.date}>{transaction.date}</time>
+                    </div>
+                    <span>{money(transaction.amount, transaction.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {!snapshot.transactions.length && (
             <p>
               {snapshot.transactionsPending

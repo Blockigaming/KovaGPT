@@ -1,7 +1,7 @@
 import { PublicShell } from "@/components/public/PublicShell";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
-import { useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { PlanComparison } from "@/components/public/PlanComparison";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
@@ -113,6 +113,17 @@ export const Route = createFileRoute("/pricing")({
 function PricingPage() {
   const [planType, setPlanType] = useState<"individual" | "organizations">("individual");
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
+  const [phonePlan, setPhonePlan] = useState<(typeof PRICING_TIERS)[number]>("plus");
+  useEffect(() => {
+    const selectFromHash = () => {
+      const hash = window.location.hash.slice(1);
+      const tier = PRICING_TIERS.find((candidate) => candidate === hash);
+      if (tier) setPhonePlan(tier);
+    };
+    selectFromHash();
+    window.addEventListener("hashchange", selectFromHash);
+    return () => window.removeEventListener("hashchange", selectFromHash);
+  }, []);
   const navigate = useNavigate();
   const startCheckout = (priceId: string) => {
     void navigate({ to: "/subscribe" as never, search: { plan: priceId } as never });
@@ -164,9 +175,23 @@ function PricingPage() {
 
         {planType === "individual" ? (
           <>
+            <div className="kova-phone-plan-picker hidden" role="group" aria-label="Choose a plan">
+              {PRICING_TIERS.map((tier) => (
+                <button
+                  key={tier}
+                  type="button"
+                  aria-controls={tier}
+                  aria-pressed={phonePlan === tier}
+                  onClick={() => setPhonePlan(tier)}
+                >
+                  {CAPABILITY_REGISTRY.plans[tier].name}
+                </button>
+              ))}
+            </div>
             <section
               aria-label="KovaGPT plans"
-              className="mt-12 grid items-stretch gap-5 md:grid-cols-3"
+              data-phone-selected-plan={phonePlan}
+              className="kova-individual-plans mt-12 grid items-stretch gap-5 md:grid-cols-3"
             >
               <PlanCard
                 name="Kova Free"

@@ -106,8 +106,9 @@ function CategoryFilters({
     selected ? "border-foreground bg-foreground text-background" : "text-muted-foreground";
   return (
     <div
+      role="group"
       aria-label="Help categories"
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+      className="kova-help-categories -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
     >
       <Button
         variant="outline"

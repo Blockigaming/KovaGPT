@@ -15,6 +15,7 @@
 @import "./styles/workspace-layout.css";
 @import "./styles/tool-workspaces.css";
 @import "./styles/app-finish.css";
+@import "./styles/phone-layouts.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -2021,4 +2022,10 @@ body {
   outline: 2px solid color-mix(in srgb, var(--foreground) 65%, transparent) !important;
   outline-offset: -2px !important;
   box-shadow: none !important;
+}
+
+:root:not([data-kova-input-modality="pointer"])
+  .kova-sidebar
+  button.kova-chat-row-main:focus-visible {
+  outline: none !important;
 }

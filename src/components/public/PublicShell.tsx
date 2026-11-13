@@ -139,12 +139,15 @@ export function PublicHeader() {
           <Link to="/">Open KovaGPT</Link>
         </Button>
 
+        <Link to="/" className="kova-public-phone-cta hidden min-h-11 items-center">
+          Open KovaGPT
+        </Link>
         <Button
           ref={menuButtonRef}
           type="button"
           variant="ghost"
           size="icon"
-          className="ml-auto lg:hidden"
+          className="kova-public-menu-toggle ml-auto lg:hidden"
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-controls="public-mobile-navigation"
           aria-expanded={open}
@@ -165,7 +168,7 @@ export function PublicHeader() {
           className="min-h-0 overflow-y-auto overscroll-contain border-t border-border bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 lg:hidden"
           aria-label="Mobile public navigation"
         >
-          <div className="mx-auto grid max-w-7xl gap-1">
+          <div className="kova-public-mobile-menu-grid mx-auto grid max-w-7xl gap-1">
             {navigation.map((item) => (
               <PublicNavigationLink
                 key={item.to}

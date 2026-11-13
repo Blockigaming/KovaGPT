@@ -1383,6 +1383,7 @@ export function SettingsDialog({
           />
         ) : (
           <Tabs
+            data-settings-phone-view={mobileHome ? "index" : "section"}
             value={tab}
             onValueChange={selectTab}
             orientation="vertical"

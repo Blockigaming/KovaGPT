@@ -156,7 +156,7 @@ function FilesPage() {
           </section>
         ) : (
           <>
-            <section className="my-6 grid gap-3 rounded-2xl border bg-card/40 p-4 sm:grid-cols-3">
+            <section className="kova-file-totals my-6 grid gap-3 rounded-2xl border bg-card/40 p-4 sm:grid-cols-3">
               <div>
                 <div className="text-xs text-muted-foreground">Stored files</div>
                 <div className="text-xl font-semibold">{files.length}</div>

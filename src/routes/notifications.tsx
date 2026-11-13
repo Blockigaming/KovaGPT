@@ -150,6 +150,8 @@ function NotificationsRoute() {
   return (
     <AppShell>
       <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="chatgpt.activity.notifications"
         className={
           "kova-tool-page " + "mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6"
