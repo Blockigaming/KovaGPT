@@ -24,6 +24,28 @@ for (const [width, height] of viewports) {
   for (const theme of ["light", "dark"] as const) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
       await page.setViewportSize({ width, height });
+      const content = [
+        "## Responsive report",
+        "AnUnbrokenToken".repeat(30),
+        "",
+        "| Category | Measurement |",
+        "| --- | --- |",
+        "| One | " + "x".repeat(90) + " |",
+        "",
+        "```kova-chart",
+        JSON.stringify({
+          title: "Measurements",
+          type: "bar",
+          data: [{ name: "A very long axis label", value: 4 }],
+        }),
+        "```",
+      ].join("\n");
+      await page.route("**/api/chat", (route) =>
+        route.fulfill({
+          contentType: "text/event-stream",
+          body: `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: [DONE]\n\n`,
+        }),
+      );
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
 
@@ -48,6 +70,12 @@ for (const [width, height] of viewports) {
         await expect(drawer).toBeHidden();
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
       }
+
+      await send.click();
+      await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();
+      const chart = page.getByRole("figure", { name: "Interactive chart: Measurements" });
+      await chart.getByRole("button", { name: "Table", exact: true }).click();
+      await expect(chart.getByRole("table")).toBeVisible();
 
       expect(await html.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
     });
