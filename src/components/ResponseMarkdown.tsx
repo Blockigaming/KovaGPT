@@ -15,6 +15,9 @@ import type { ChatImageActions } from "./ChatImage";
 import type { Components, ExtraProps } from "react-markdown";
 import type { Element, Root, RootContent } from "hast";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { Check, Copy, Download } from "lucide-react";
 import type { ResponseSource } from "@/lib/response-sources";
 import "./response-output-blocks.css";
@@ -455,8 +458,11 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
             ? url
             : defaultUrlTransform(url)
         }
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[separateTextOutputs, { boxLongProse }]]}
+        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+        rehypePlugins={[
+          [separateTextOutputs, { boxLongProse }],
+          [rehypeKatex, { trust: false, maxExpand: 300, maxSize: 30, strict: "ignore" }],
+        ]}
         components={markdownComponents}
       >
         {children}
