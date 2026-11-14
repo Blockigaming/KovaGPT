@@ -599,7 +599,12 @@ test("a streamed response composes interactive study, simulation, diagram, and c
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Show interactive examples.");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  const simulation = page.getByRole("region", { name: "Explore rectangle area" });
+  const conversation = page.locator("#conversation-pane");
+  await expect(page.getByRole("button", { name: "Close Canvas", exact: true })).toBeVisible();
+  const conversationTab = page.getByRole("tab", { name: "Conversation", exact: true });
+  if (await conversationTab.isVisible()) await conversationTab.click();
+
+  const simulation = conversation.getByRole("region", { name: "Explore rectangle area" });
   await expect(simulation.getByText("Area = 25", { exact: true })).toBeVisible();
   await simulation.getByRole("slider", { name: "Width" }).press("ArrowRight");
   await expect(simulation.getByText("Area = 30", { exact: true })).toBeVisible();
@@ -623,7 +628,7 @@ test("a streamed response composes interactive study, simulation, diagram, and c
   const download = await downloadEvent;
   expect(download.suggestedFilename()).toBe("notes.txt");
   expect(await download.failure()).toBeNull();
-  const draft = page.getByRole("region", { name: "Example document workspace" });
+  const draft = conversation.getByRole("region", { name: "Example document workspace" });
   await draft.getByRole("button", { name: "Preview PDF", exact: true }).click();
   await expect(draft.getByText("Page 1 of 1", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(draft.getByRole("img", { name: "Example document, page 1" })).toBeVisible();
