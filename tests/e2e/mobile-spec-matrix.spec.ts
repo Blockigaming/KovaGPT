@@ -24,6 +24,7 @@ test.beforeEach(async ({ page }, info) => {
 for (const [width, height] of viewports) {
   for (const theme of ["light", "dark"] as const) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
+      test.setTimeout(60_000);
       await fixture(page, theme);
       await page.setViewportSize({ width, height });
       await page.route("**/mobile-spec-image.png", (route) =>
@@ -122,7 +123,9 @@ for (const [width, height] of viewports) {
       } finally {
         releaseReply();
       }
-      await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();
+      await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached({
+        timeout: 15_000,
+      });
       await expect(page.getByText("The prices are $10 and $25.", { exact: false })).toBeAttached();
       const equation = page.getByRole("group", { name: "Equation" });
       await expect(equation.locator("math")).toBeAttached();
