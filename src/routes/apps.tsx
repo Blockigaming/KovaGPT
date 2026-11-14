@@ -1405,7 +1405,11 @@ function AppsPage() {
         : githubLoadError ||
             otherConnections.error ||
             [...WORKING_IDS]
-              .filter((id) => !CONNECTION_FLOWS[id] || configuredOf(id))
+              // Count providers owned by this tab. Plaid is managed by the Finances tab.
+              .filter(
+                (id) =>
+                  isGoogleId(id) || id === "github" || (CONNECTION_FLOWS[id] && configuredOf(id)),
+              )
               .some((id) => stateOf(id) === "temporarily_unavailable")
           ? "unavailable"
           : !visibleGoogleStatus || !visibleGithubData
