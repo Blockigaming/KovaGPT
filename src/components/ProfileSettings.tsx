@@ -159,7 +159,7 @@ function AccountProfileEditor({ user }: { user: ReturnType<typeof useUser>["user
     }
   }
   return (
-    <section className="space-y-4" aria-label="Account details">
+    <section aria-label="Account details">
       <div className="kova-settings-reference-row">
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12" aria-label="Profile photo">
@@ -206,7 +206,7 @@ function AccountProfileEditor({ user }: { user: ReturnType<typeof useUser>["user
         </div>
       </div>
       <form
-        className="kova-settings-reference-row"
+        className="kova-settings-reference-row kova-settings-form-row"
         onSubmit={(event) => {
           event.preventDefault();
           if (name.trim()) void update(async () => ({ name: name.trim() }));

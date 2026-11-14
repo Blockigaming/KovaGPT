@@ -1616,6 +1616,7 @@ export function Sidebar({
             data-ui-reference="chatgpt-collapsed-sidebar"
             aria-label="Collapsed navigation"
             data-kova-core-rail=""
+            data-kova-signed-in=""
             data-kova-refined-sidebar=""
             data-state={collapsed ? "open" : "closed"}
             aria-hidden={!collapsed || workspaceSearchOpen}
@@ -1717,6 +1718,7 @@ export function Sidebar({
         ref={drawerRef}
         id="kova-primary-navigation"
         data-kova-core-sidebar=""
+        data-kova-signed-in={signedIn ? "" : undefined}
         data-kova-refined-sidebar=""
         style={sidebarStyle}
         data-resizing={resizing || undefined}
