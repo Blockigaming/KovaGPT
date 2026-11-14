@@ -1,21 +1,26 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { recordSpriteVideo, spriteVideoFormat } from "@/lib/response-sprite-video";
 import { readChatImage } from "@/lib/chat-image-actions";
 import { downloadBytes, safeDocumentFilename } from "@/lib/writing-export/common";
+
+type ExportKind = "gif" | "zip" | "video";
 
 export function ResponseSpriteExport({ src, title }: { src: string; title: string }) {
   const id = useId();
   const [columns, setColumns] = useState(4);
   const [rows, setRows] = useState(2);
   const [delay, setDelay] = useState(160);
-  const [busy, setBusy] = useState<"gif" | "zip" | null>(null);
-  const [preview, setPreview] = useState("");
+  const [busy, setBusy] = useState<ExportKind | null>(null);
+  const [preview, setPreview] = useState<{ url: string; extension: string }>();
+  const [videoFormat, setVideoFormat] = useState<ReturnType<typeof spriteVideoFormat>>();
+  useEffect(() => setVideoFormat(spriteVideoFormat()), []);
   const [error, setError] = useState("");
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);
   useEffect(
     () => () => {
-      if (preview) URL.revokeObjectURL(preview);
+      if (preview) URL.revokeObjectURL(preview.url);
     },
     [preview],
   );
@@ -30,8 +35,8 @@ export function ResponseSpriteExport({ src, title }: { src: string; title: strin
     delay >= 40 &&
     delay <= 2000 &&
     delay % 10 === 0;
-  async function exportSprite(kind: "gif" | "zip") {
-    if (!valid || request.current || (kind === "gif" && columns * rows < 2)) return;
+  async function exportSprite(kind: ExportKind) {
+    if (!valid || request.current || (kind !== "zip" && columns * rows < 2)) return;
     const controller = new AbortController();
     request.current = controller;
     setError("");
@@ -56,10 +61,8 @@ export function ResponseSpriteExport({ src, title }: { src: string; title: strin
       canvas.height = Math.max(1, Math.round(maxHeight * scale));
       const context = canvas.getContext("2d", { willReadFrequently: kind === "gif" });
       if (!context) throw new Error("This browser could not prepare the image.");
-      const writer = kind === "gif" ? createGifWriter(canvas.width, canvas.height, delay) : null;
-      const stickers: Record<string, Uint8Array> = {};
-      for (const [index, frame] of frames.entries()) {
-        if (controller.signal.aborted) return;
+      const draw = (index: number) => {
+        const frame = frames[index];
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.drawImage(
           image,
@@ -72,6 +75,26 @@ export function ResponseSpriteExport({ src, title }: { src: string; title: strin
           canvas.width,
           canvas.height,
         );
+      };
+      if (kind === "video") {
+        if (!videoFormat) throw new Error("Video export is unavailable in this browser.");
+        const video = await recordSpriteVideo(
+          canvas,
+          draw,
+          frames.length,
+          delay,
+          videoFormat.mime,
+          controller.signal,
+        );
+        if (!controller.signal.aborted)
+          setPreview({ url: URL.createObjectURL(video), extension: videoFormat.extension });
+        return;
+      }
+      const writer = kind === "gif" ? createGifWriter(canvas.width, canvas.height, delay) : null;
+      const stickers: Record<string, Uint8Array> = {};
+      for (const [index] of frames.entries()) {
+        if (controller.signal.aborted) return;
+        draw(index);
         if (writer) writer.write(context.getImageData(0, 0, canvas.width, canvas.height).data);
         else {
           const sticker = await new Promise<Blob>((resolve, reject) => {
@@ -90,7 +113,10 @@ export function ResponseSpriteExport({ src, title }: { src: string; title: strin
       if (controller.signal.aborted) return;
       if (writer) {
         const bytes = writer.finish();
-        setPreview(URL.createObjectURL(new Blob([bytes as BlobPart], { type: "image/gif" })));
+        setPreview({
+          url: URL.createObjectURL(new Blob([bytes as BlobPart], { type: "image/gif" })),
+          extension: "gif",
+        });
       } else {
         const { zipSync } = await import("fflate");
         if (controller.signal.aborted) return;
@@ -156,6 +182,16 @@ export function ResponseSpriteExport({ src, title }: { src: string; title: strin
         >
           {busy === "zip" ? "Preparing stickers…" : "Download sticker ZIP"}
         </Button>
+        {videoFormat && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!!busy || !valid || columns * rows < 2}
+            onClick={() => void exportSprite("video")}
+          >
+            {busy === "video" ? "Creating video…" : "Create video"}
+          </Button>
+        )}
       </div>
       {error && (
         <p role="alert" className="text-destructive">
@@ -164,20 +200,30 @@ export function ResponseSpriteExport({ src, title }: { src: string; title: strin
       )}
       {preview && (
         <div className="grid justify-items-start gap-2">
-          <img
-            src={preview}
-            alt={`Animated preview of ${title}`}
-            className="max-h-64 max-w-full object-contain"
-          />
+          {preview.extension === "gif" ? (
+            <img
+              src={preview.url}
+              alt={`Animated preview of ${title}`}
+              className="max-h-64 max-w-full object-contain"
+            />
+          ) : (
+            <video
+              controls
+              playsInline
+              src={preview.url}
+              aria-label={`Video preview of ${title}`}
+              className="max-h-64 max-w-full object-contain"
+            />
+          )}
           <div className="flex flex-wrap gap-3">
             <a
               className="inline-flex min-h-11 items-center underline"
-              href={preview}
-              download={safeDocumentFilename(title, "gif")}
+              href={preview.url}
+              download={safeDocumentFilename(title, preview.extension)}
             >
-              Download GIF
+              {preview.extension === "gif" ? "Download GIF" : "Download video"}
             </a>
-            <Button type="button" variant="ghost" onClick={() => setPreview("")}>
+            <Button type="button" variant="ghost" onClick={() => setPreview(undefined)}>
               Close preview
             </Button>
           </div>

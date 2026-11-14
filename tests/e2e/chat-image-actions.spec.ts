@@ -225,4 +225,13 @@ test("an assistant sprite sheet exports a GIF and a ZIP of separately cropped PN
   for (const file of Object.values(files)) {
     expect([...file.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   }
+  await modal.getByRole("button", { name: "Create video", exact: true }).click();
+  const video = modal.locator("video");
+  await expect(video).toBeVisible();
+  await expect.poll(() => video.evaluate((element) => element.readyState)).toBeGreaterThan(0);
+  const videoDownload = page.waitForEvent("download");
+  await modal.getByRole("link", { name: "Download video" }).click();
+  const clip = await videoDownload;
+  expect(clip.suggestedFilename()).toMatch(/\.(webm|mp4)$/);
+  expect((await readFile((await clip.path())!)).byteLength).toBeGreaterThan(100);
 });
