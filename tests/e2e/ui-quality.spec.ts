@@ -576,6 +576,12 @@ test("a streamed response composes interactive study, simulation, diagram, and c
       title: "Example notes",
       files: [{ name: "notes.txt", content: "Example file content." }],
     }),
+    fence("kova-ui", {
+      version: 1,
+      type: "document",
+      title: "Example document",
+      content: "# Example\n\nA short draft.",
+    }),
     "The examples use sample data.",
   ].join("\n\n");
   await page.route("**/api/chat", (route) =>
@@ -617,5 +623,9 @@ test("a streamed response composes interactive study, simulation, diagram, and c
   const download = await downloadEvent;
   expect(download.suggestedFilename()).toBe("notes.txt");
   expect(await download.failure()).toBeNull();
+  const draft = page.getByRole("region", { name: "Example document workspace" });
+  await draft.getByRole("button", { name: "Preview PDF", exact: true }).click();
+  await expect(draft.getByText("Page 1 of 1", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(draft.getByRole("img", { name: "Example document, page 1" })).toBeVisible();
   await expect(page.getByText("The examples use sample data.", { exact: true })).toBeVisible();
 });
