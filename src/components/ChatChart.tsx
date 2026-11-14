@@ -9,6 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   AreaChart,
   Area,
   LineChart,
@@ -36,12 +41,75 @@ const chartNames = {
 
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
+function ChartHeatmap({ spec, xKey, keys }: { spec: ChartSpec; xKey: string; keys: string[] }) {
+  const values = spec.data.flatMap((row) =>
+    keys.map((key) => row[key]).filter((value): value is number => typeof value === "number"),
+  );
+  const min = values.reduce((current, value) => Math.min(current, value), Infinity);
+  const max = values.reduce((current, value) => Math.max(current, value), -Infinity);
+  const scale = Math.max(Math.abs(min), Math.abs(max)) || 1;
+  const span = max / scale - min / scale;
+  return (
+    <div
+      role="region"
+      aria-label="Scrollable heatmap"
+      tabIndex={0}
+      className="max-h-96 overflow-auto"
+    >
+      <table className="w-full text-left text-sm">
+        <caption className="sr-only">{spec.title ?? "Chart"} heatmap</caption>
+        <thead>
+          <tr>
+            <th scope="col" className="p-2">
+              {xKey}
+            </th>
+            {keys.map((key) => (
+              <th key={key} scope="col" className="p-2">
+                {key}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {spec.data.map((row, index) => (
+            <tr key={index}>
+              <th scope="row" className="p-2 font-medium">
+                {row[xKey] ?? index + 1}
+              </th>
+              {keys.map((key) => {
+                const value = row[key];
+                const ratio =
+                  typeof value === "number"
+                    ? max === min
+                      ? 0.5
+                      : (value / scale - min / scale) / span
+                    : 0;
+                return (
+                  <td
+                    key={key}
+                    className="border border-border p-2 tabular-nums"
+                    style={{
+                      backgroundColor: `color-mix(in srgb, var(--primary) ${Math.round(ratio * 32)}%, var(--card))`,
+                    }}
+                  >
+                    {typeof value === "number" ? value : "—"}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function ChatChart({ spec }: { spec: ChartSpec }) {
   const xKey = spec.xKey ?? "name";
   const keys = useMemo(
     () =>
       spec.keys?.length
-        ? spec.keys
+        ? spec.keys.filter((key) => spec.data.some((row) => typeof row[key] === "number"))
         : Object.keys(spec.data[0] ?? {}).filter(
             (key) => key !== xKey && spec.data.some((row) => typeof row[key] === "number"),
           ),
@@ -157,6 +225,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
           This chart has no numeric series to display. The source data is preserved below.
         </div>
+      ) : type === "heatmap" ? (
+        <ChartHeatmap spec={spec} xKey={xKey} keys={keys} />
       ) : (
         <div
           className="h-56 w-full sm:h-72"
@@ -164,7 +234,27 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           aria-label={`${type} chart with ${spec.data.length} data points`}
         >
           <ResponsiveContainer width="100%" height="100%">
-            {type === "pie" || type === "donut" ? (
+            {type === "radar" ? (
+              <RadarChart data={spec.data}>
+                <PolarGrid stroke="var(--border)" />
+                <PolarAngleAxis
+                  dataKey={xKey}
+                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+                />
+                <PolarRadiusAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                {keys.map((key, index) => (
+                  <Radar
+                    key={key}
+                    dataKey={key}
+                    fill={colors[index % colors.length]}
+                    stroke={colors[index % colors.length]}
+                    fillOpacity={0.18}
+                  />
+                ))}
+              </RadarChart>
+            ) : type === "pie" || type === "donut" ? (
               <PieChart>
                 <Tooltip />
                 <Legend />

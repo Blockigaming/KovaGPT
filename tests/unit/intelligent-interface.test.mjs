@@ -34,6 +34,7 @@ function fixture(onSubmit, block = nextSteps) {
         "@/lib/interactive-ui.mjs": interactive,
         "./StudyCards": { StudyCards: () => null },
         "./ResponseDiagram": { ResponseDiagram: () => null },
+        "./ResponsePattern": { ResponsePattern: () => null },
         "./ResponseSimulation": { ResponseSimulation: () => null },
         "lucide-react": { Check: "check-icon" },
         "@/components/ui/checkbox": { Checkbox: "checkbox" },

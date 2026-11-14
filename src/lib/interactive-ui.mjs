@@ -401,6 +401,28 @@ function validateDiagram(value) {
   };
 }
 
+function validatePattern(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "pattern", "colors"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (
+    !["stripes", "dots", "checks", "gradient"].includes(value.pattern) ||
+    !Array.isArray(value.colors) ||
+    value.colors.length !== 2 ||
+    !value.colors.every((color) => typeof color === "string" && /^#[a-f0-9]{6}$/i.test(color))
+  )
+    return null;
+  return {
+    version: 1,
+    type: "pattern",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    pattern: value.pattern,
+    colors: [...value.colors],
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -410,6 +432,7 @@ export function validateInteractiveBlock(value) {
     if (value.type === "table") return validateTable(value);
     if (value.type === "simulation") return validateSimulation(value);
     if (value.type === "diagram") return validateDiagram(value);
+    if (value.type === "pattern") return validatePattern(value);
     if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
   } catch {
@@ -528,4 +551,5 @@ quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"f
 flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}
 simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years). Include all required inputs. Use local simulations for these formulas only.
 diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
-IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations and diagrams work locally; they do not execute external actions, grant access, or prove success.`;
+pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
+IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations, diagrams and pattern previews work locally; they do not execute external actions, grant access, or prove success.`;

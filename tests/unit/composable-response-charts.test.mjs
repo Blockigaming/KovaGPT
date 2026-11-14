@@ -17,3 +17,24 @@ test("invalid chart cells and color metadata fall back to text", () => {
   assert.equal(parseChartSpec('{"type":"bar","data":[{"x":{"nested":1}}]}'), null);
   assert.equal(parseChartSpec('{"type":"bar","colors":"red","data":[{"x":1}]}'), null);
 });
+
+test("heatmaps and radar charts use the same bounded data contract", () => {
+  for (const type of ["heatmap", "radar"]) {
+    assert.equal(
+      parseChartSpec(
+        JSON.stringify({
+          type,
+          xKey: "name",
+          keys: ["score"],
+          data: [{ name: "A", score: 4 }],
+        }),
+      )?.type,
+      type,
+    );
+  }
+  assert.equal(
+    parseChartSpec('{"type":"heatmap","keys":["score","score"],"data":[{"score":4}]}'),
+    null,
+  );
+  assert.equal(parseChartSpec('{"type":"radar","colors":["#12345"],"data":[{"score":4}]}'), null);
+});

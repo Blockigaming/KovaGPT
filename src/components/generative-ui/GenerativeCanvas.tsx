@@ -3,6 +3,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useId, useRef, useState } from "react";
 import { validateGenerativeWidget, type GenerativeWidget } from "@/lib/generative-ui.mjs";
+import type { DocumentExportFormat } from "@/lib/writing-export/export";
 import { resultRevisionDiff } from "@/lib/result-revision-diff.mjs";
 import {
   Select,
@@ -12,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import "./generative-canvas.css";
+
+const documentFormats = ["pdf", "docx", "xlsx", "pptx"] as const;
 
 export type GenerativeCanvasProps = {
   widget: GenerativeWidget;
@@ -33,6 +36,9 @@ export function GenerativeCanvas({
   const [applied, setApplied] = useState<GenerativeWidget>(widget);
   const [comparing, setComparing] = useState(false);
   const [notice, setNotice] = useState("");
+  const [exportFormat, setExportFormat] = useState<DocumentExportFormat>("pdf");
+  const [exporting, setExporting] = useState(false);
+  const exportInProgress = useRef(false);
   const original = useRef(widget);
   const sequence = useRef(0);
   const fieldId = useId();
@@ -56,6 +62,22 @@ export function GenerativeCanvas({
     setApplied(validated);
     setNotice("Draft applied in this tab.");
     onDraftChange?.(validated);
+  };
+  const exportDocument = async () => {
+    if (draft.type !== "document" || !validated || exportInProgress.current) return;
+    exportInProgress.current = true;
+    setExporting(true);
+    setNotice("");
+    try {
+      const { downloadDocument } = await import("@/lib/writing-export/export");
+      await downloadDocument(exportFormat, draft.title, draft.content);
+      setNotice(`${exportFormat.toUpperCase()} download started.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not create the download.");
+    } finally {
+      exportInProgress.current = false;
+      setExporting(false);
+    }
   };
   const nextId = (prefix: string, used: string[]) => {
     let id;
@@ -444,6 +466,37 @@ export function GenerativeCanvas({
       </div>
 
       <footer className="kova-generative-footer">
+        {draft.type === "document" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor={`${fieldId}-export`} className="text-sm">
+              Download format
+            </label>
+            <select
+              id={`${fieldId}-export`}
+              value={exportFormat}
+              disabled={exporting}
+              className="min-h-11 rounded-lg border border-border bg-background px-2 text-sm"
+              onChange={(event) =>
+                setExportFormat(event.currentTarget.value as DocumentExportFormat)
+              }
+            >
+              {documentFormats.map((format) => (
+                <option key={format} value={format}>
+                  {format.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={exporting || !validated}
+              onClick={() => void exportDocument()}
+            >
+              {exporting ? "Preparing download…" : "Download document"}
+            </Button>
+          </div>
+        )}
         <div className="kova-generative-actions">
           <Button
             variant="ghost"

@@ -9,6 +9,8 @@ export const CHART_TYPES = [
   "step",
   "area",
   "stacked-area",
+  "heatmap",
+  "radar",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -35,17 +37,23 @@ export function parseChartSpec(raw: string): ChartSpec | null {
       (object.title !== undefined && typeof object.title !== "string") ||
       (object.xKey !== undefined && typeof object.xKey !== "string") ||
       (object.keys !== undefined &&
-        (!Array.isArray(object.keys) || object.keys.some((key) => typeof key !== "string"))) ||
+        (!Array.isArray(object.keys) ||
+          object.keys.length > 24 ||
+          new Set(object.keys).size !== object.keys.length ||
+          object.keys.some((key) => typeof key !== "string" || !key.trim() || key.length > 120))) ||
       (object.colors !== undefined &&
         (!Array.isArray(object.colors) ||
           object.colors.some(
-            (color) => typeof color !== "string" || !/^#[0-9a-f]{3,8}$/i.test(color),
+            (color) =>
+              typeof color !== "string" ||
+              !/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color),
           ))) ||
       object.data.some(
         (row) =>
           !row ||
           typeof row !== "object" ||
           Array.isArray(row) ||
+          Object.keys(row).length > 25 ||
           Object.values(row).some((cell) => typeof cell !== "string" && !Number.isFinite(cell)),
       )
     )

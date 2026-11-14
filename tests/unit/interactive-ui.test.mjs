@@ -177,3 +177,20 @@ test("diagram schemas require unique nodes, real endpoints and inert labels", ()
     null,
   );
 });
+
+test("pattern previews only accept a named pattern and two literal colors", () => {
+  const block = {
+    version: 1,
+    type: "pattern",
+    id: "palette",
+    title: "Pattern",
+    pattern: "checks",
+    colors: ["#123456", "#abcdef"],
+  };
+  assert.equal(validateInteractiveBlock(block)?.pattern, "checks");
+  assert.equal(
+    validateInteractiveBlock({ ...block, colors: ["url(https://example.com)", "#abcdef"] }),
+    null,
+  );
+  assert.equal(validateInteractiveBlock({ ...block, pattern: "custom" }), null);
+});

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { StudyCards } from "./StudyCards";
+import { ResponsePattern } from "./ResponsePattern";
 import { ResponseDiagram } from "./ResponseDiagram";
 import { ResponseSimulation } from "./ResponseSimulation";
 import { Check } from "lucide-react";
@@ -123,6 +124,8 @@ export function InteractiveBlock({
   if (block.type === "simulation")
     return <ResponseSimulation key={JSON.stringify(block)} block={block} />;
   if (block.type === "diagram") return <ResponseDiagram block={block} />;
+  if (block.type === "pattern")
+    return <ResponsePattern key={JSON.stringify(block)} block={block} />;
 
   return (
     <section

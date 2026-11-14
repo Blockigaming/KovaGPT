@@ -65,8 +65,13 @@ export type DiagramBlock = StudyDeck & {
   }[];
   edges: { from: string; to: string; label?: string }[];
 };
+export type PatternBlock = StudyDeck & {
+  type: "pattern";
+  pattern: "stripes" | "dots" | "checks" | "gradient";
+  colors: [string, string];
+};
 export type InteractiveBlock =
-  InteractiveForm | InteractiveTable | StudyBlock | SimulationBlock | DiagramBlock;
+  InteractiveForm | InteractiveTable | StudyBlock | SimulationBlock | DiagramBlock | PatternBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };
