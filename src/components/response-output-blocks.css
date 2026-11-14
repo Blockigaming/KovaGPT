@@ -390,8 +390,9 @@ body .prose-chat .kova-table-scroll:focus-visible {
 }
 
 .kova-image-zoom {
-  justify-self: start;
+  align-self: flex-start;
   min-height: 44px;
+  min-width: 44px;
   padding-inline: 16px;
   border: 1px solid var(--border-strong);
   border-radius: var(--kova-radius-button);
@@ -425,7 +426,7 @@ body .prose-chat .kova-table-scroll:focus-visible {
   max-height: none;
 }
 
-@media (width < 768px) {
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
   .kova-response-image img {
     width: 100%;
   }

@@ -8,6 +8,9 @@ test("mobile chat restores the reading position after switching conversations", 
 }) => {
   test.skip(page.viewportSize()!.width >= 1024, "compact shell");
   await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
+  await page.route("**/mobile-reading-preview.png", (route) =>
+    route.fulfill({ contentType: "image/png", path: "public/kova-logo.png" }),
+  );
   await page.addInitScript((userId) => {
     const now = Date.now();
     const thumbnail =
@@ -35,7 +38,11 @@ test("mobile chat restores the reading position after switching conversations", 
         id: "different-chat",
         title: "Different chat",
         messages: [
-          { id: "different-message", role: "assistant", content: "A separate conversation." },
+          {
+            id: "different-message",
+            role: "assistant",
+            content: `A separate conversation.\n\n![A separate preview](${location.origin}/mobile-reading-preview.png)`,
+          },
         ],
       },
     ].map((chat) => ({ ...chat, mode: "instant", createdAt: now, updatedAt: now }));
@@ -87,6 +94,27 @@ test("mobile chat restores the reading position after switching conversations", 
   const originalOffset = await passageOffset();
   await openChat("Different chat");
   await expect(transcript.getByText("A separate conversation.")).toBeVisible();
+  const preview = transcript.getByRole("button", { name: "View full size" });
+  await preview.tap();
+  const imageViewer = page.getByRole("dialog", { name: "A separate preview" });
+  await expect(imageViewer).toBeVisible();
+  const viewport = page.viewportSize()!;
+  if (viewport.width < 768 || viewport.height <= 500) {
+    await expect.poll(async () => (await imageViewer.boundingBox())?.width).toBe(viewport.width);
+    await expect.poll(async () => (await imageViewer.boundingBox())?.height).toBe(viewport.height);
+  }
+  const zoom = imageViewer.getByRole("button", { name: "Zoom image" });
+  const close = imageViewer.getByRole("button", { name: "Close", exact: true });
+  const [zoomBox, closeBox] = await Promise.all([zoom.boundingBox(), close.boundingBox()]);
+  expect(Math.min(zoomBox!.width, zoomBox!.height)).toBeGreaterThanOrEqual(44);
+  expect(Math.min(closeBox!.width, closeBox!.height)).toBeGreaterThanOrEqual(44);
+  const controlGap = Math.max(
+    closeBox!.x - (zoomBox!.x + zoomBox!.width),
+    zoomBox!.y - (closeBox!.y + closeBox!.height),
+  );
+  expect(controlGap).toBeGreaterThanOrEqual(8);
+  await close.tap();
+  await expect(preview).toBeFocused();
   await openChat("Reading position");
   await expect(passage).toBeInViewport();
   await expect.poll(passageOffset).toBeCloseTo(originalOffset, 0);
