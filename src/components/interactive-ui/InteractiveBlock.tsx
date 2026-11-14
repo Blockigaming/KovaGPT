@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { StudyCards } from "./StudyCards";
+import { ResponseDiagram } from "./ResponseDiagram";
+import { ResponseSimulation } from "./ResponseSimulation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,6 +119,10 @@ export function InteractiveBlock({
 
   if (block.type === "quiz" || block.type === "flashcards")
     return <StudyCards key={JSON.stringify(block)} block={block} />;
+
+  if (block.type === "simulation")
+    return <ResponseSimulation key={JSON.stringify(block)} block={block} />;
+  if (block.type === "diagram") return <ResponseDiagram block={block} />;
 
   return (
     <section

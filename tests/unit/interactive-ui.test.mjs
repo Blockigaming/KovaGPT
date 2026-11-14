@@ -131,3 +131,49 @@ test("study decks render only bounded text and valid answer options", () => {
     "flashcards",
   );
 });
+
+test("simulation schemas accept bounded controls and reject formulas or unsafe ranges", () => {
+  const range = { min: 1, max: 20, step: 1, value: 5 };
+  const block = {
+    version: 1,
+    type: "simulation",
+    id: "area",
+    title: "Area",
+    model: "rectangle",
+    inputs: { width: range, height: range },
+  };
+  assert.equal(validateInteractiveBlock(block)?.type, "simulation");
+  assert.equal(validateInteractiveBlock({ ...block, formula: "width * height" }), null);
+  assert.equal(validateInteractiveBlock({ ...block, model: "custom" }), null);
+  assert.equal(
+    validateInteractiveBlock({ ...block, inputs: { width: range, height: { ...range, step: 0 } } }),
+    null,
+  );
+});
+
+test("diagram schemas require unique nodes, real endpoints and inert labels", () => {
+  const block = {
+    version: 1,
+    type: "diagram",
+    id: "flow",
+    title: "Flow",
+    nodes: [
+      { id: "a", label: "Start", x: 5, y: 10 },
+      { id: "b", label: "Finish", x: 80, y: 70 },
+    ],
+    edges: [{ from: "a", to: "b", label: "Then" }],
+  };
+  assert.equal(validateInteractiveBlock(block)?.nodes[0].shape, "box");
+  assert.equal(validateInteractiveBlock({ ...block, edges: [{ from: "a", to: "c" }] }), null);
+  assert.equal(
+    validateInteractiveBlock({ ...block, nodes: [...block.nodes, block.nodes[0]] }),
+    null,
+  );
+  assert.equal(
+    validateInteractiveBlock({
+      ...block,
+      edges: [{ ...block.edges[0], url: "https://example.com" }],
+    }),
+    null,
+  );
+});

@@ -37,12 +37,36 @@ export type InteractiveTable = {
   submitLabel?: string;
 };
 export type Flashcard = { front: string; back: string };
-export type QuizCard = Flashcard & { options: InteractiveOption[]; answer: string; hint?: string };
+export type QuizCard = Flashcard & { hint?: string } & (
+    | { kind: "choice"; options: InteractiveOption[]; answer: string }
+    | { kind: "multiple"; options: InteractiveOption[]; answer: string[] }
+    | { kind: "number"; answer: number; tolerance: number }
+    | { kind: "short"; answer: string[] }
+  );
 type StudyDeck = { version: 1; id: string; title: string; description?: string };
 export type StudyBlock =
   | (StudyDeck & { type: "flashcards"; cards: Flashcard[] })
   | (StudyDeck & { type: "quiz"; cards: QuizCard[] });
-export type InteractiveBlock = InteractiveForm | InteractiveTable | StudyBlock;
+export type SimulationRange = { min: number; max: number; step: number; value: number };
+export type SimulationModel = "linear" | "quadratic" | "rectangle" | "compound-interest";
+export type SimulationBlock = StudyDeck & {
+  type: "simulation";
+  model: SimulationModel;
+  inputs: Record<string, SimulationRange>;
+};
+export type DiagramBlock = StudyDeck & {
+  type: "diagram";
+  nodes: {
+    id: string;
+    label: string;
+    x: number;
+    y: number;
+    shape: "box" | "decision" | "terminal";
+  }[];
+  edges: { from: string; to: string; label?: string }[];
+};
+export type InteractiveBlock =
+  InteractiveForm | InteractiveTable | StudyBlock | SimulationBlock | DiagramBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };

@@ -1,24 +1,60 @@
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { StudyBlock } from "@/lib/interactive-ui.mjs";
+import type { QuizCard, StudyBlock } from "@/lib/interactive-ui.mjs";
+
+function matchesAnswer(question: QuizCard, entry: string, selected: string[]) {
+  switch (question.kind) {
+    case "choice":
+      return entry === question.answer;
+    case "multiple":
+      return (
+        selected.length === question.answer.length &&
+        question.answer.every((answer) => selected.includes(answer))
+      );
+    case "number":
+      return entry.trim() !== "" && Math.abs(Number(entry) - question.answer) <= question.tolerance;
+    case "short": {
+      const normalize = (text: string) =>
+        text.trim().normalize("NFKC").toLowerCase().replace(/\s+/g, " ");
+      return question.answer.some((answer) => normalize(answer) === normalize(entry));
+    }
+  }
+}
 
 export function StudyCards({ block }: { block: StudyBlock }) {
   const id = useId();
   const [index, setIndex] = useState(0);
-  const [choice, setChoice] = useState("");
+  const [order, setOrder] = useState(() => block.cards.map((_, position) => position));
+  const [entry, setEntry] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
   const [showHint, setShowHint] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(0);
   const done = index === block.cards.length;
   const flashcards = block.type === "flashcards";
-  const card = block.cards[index];
-  const question = block.type === "quiz" ? block.cards[index] : undefined;
+  const card = block.cards[order[index]];
+  const question = block.type === "quiz" ? block.cards[order[index]] : undefined;
+  const correct = question ? matchesAnswer(question, entry, selected) : false;
+  const answered = question?.kind === "multiple" ? selected.length > 0 : entry.trim() !== "";
 
   function advance(earned: boolean) {
     setScore((total) => total + Number(earned));
     setIndex((current) => current + 1);
-    setChoice("");
+    setEntry("");
+    setSelected([]);
     setShowHint(false);
+    setRevealed(false);
+  }
+
+  function shuffle() {
+    const shuffled = [...order];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    setOrder(shuffled);
+    setIndex(0);
+    setScore(0);
     setRevealed(false);
   }
 
@@ -33,6 +69,11 @@ export function StudyCards({ block }: { block: StudyBlock }) {
       </h3>
       {block.description && (
         <p className="mt-1 text-sm text-muted-foreground">{block.description}</p>
+      )}
+      {flashcards && block.cards.length > 1 && (
+        <Button type="button" variant="ghost" className="mt-2 min-h-11" onClick={shuffle}>
+          Shuffle and restart
+        </Button>
       )}
       {done ? (
         <div className="mt-4 grid gap-3">
@@ -59,22 +100,48 @@ export function StudyCards({ block }: { block: StudyBlock }) {
           {question ? (
             <fieldset disabled={revealed} className="grid min-w-0 gap-1">
               <legend className="mb-2 font-medium">{question.front}</legend>
-              {question.options.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent"
-                >
-                  <input
-                    type="radio"
-                    className="shrink-0 accent-primary"
-                    name={id}
-                    value={option.value}
-                    checked={choice === option.value}
-                    onChange={() => setChoice(option.value)}
-                  />
-                  {option.label}
-                </label>
-              ))}
+              {"options" in question ? (
+                question.options.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-accent"
+                  >
+                    <input
+                      type={question.kind === "multiple" ? "checkbox" : "radio"}
+                      className="shrink-0 accent-primary"
+                      name={id}
+                      value={option.value}
+                      checked={
+                        question.kind === "multiple"
+                          ? selected.includes(option.value)
+                          : entry === option.value
+                      }
+                      onChange={(event) => {
+                        if (question.kind === "choice") setEntry(option.value);
+                        else {
+                          const checked = event.currentTarget.checked;
+                          setSelected((current) =>
+                            checked
+                              ? [...current, option.value]
+                              : current.filter((value) => value !== option.value),
+                          );
+                        }
+                      }}
+                    />
+                    {option.label}
+                  </label>
+                ))
+              ) : (
+                <input
+                  aria-label="Your answer"
+                  type={question.kind === "number" ? "number" : "text"}
+                  step={question.kind === "number" ? "any" : undefined}
+                  maxLength={question.kind === "short" ? 200 : undefined}
+                  className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-3"
+                  value={entry}
+                  onChange={(event) => setEntry(event.currentTarget.value)}
+                />
+              )}
             </fieldset>
           ) : (
             <p className="py-3 text-lg font-medium">{card.front}</p>
@@ -82,11 +149,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
           {showHint && question?.hint && <p role="status">{question.hint}</p>}
           {revealed && (
             <div role="status" className="rounded-lg bg-muted p-3">
-              {question && (
-                <p className="font-medium">
-                  {choice === question.answer ? "Correct" : "Incorrect"}
-                </p>
-              )}
+              {question && <p className="font-medium">{correct ? "Correct" : "Incorrect"}</p>}
               <p>{card.back}</p>
             </div>
           )}
@@ -95,7 +158,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
               <Button
                 type="button"
                 className="min-h-11"
-                disabled={!!question && !choice}
+                disabled={!!question && !answered}
                 onClick={() => setRevealed(true)}
               >
                 {flashcards ? "Reveal answer" : "Check answer"}
@@ -113,11 +176,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
             )}
             {revealed &&
               (question ? (
-                <Button
-                  type="button"
-                  className="min-h-11"
-                  onClick={() => advance(choice === question.answer)}
-                >
+                <Button type="button" className="min-h-11" onClick={() => advance(correct)}>
                   {index + 1 === block.cards.length ? "See score" : "Next question"}
                 </Button>
               ) : (

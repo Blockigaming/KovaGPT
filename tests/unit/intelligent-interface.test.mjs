@@ -33,6 +33,8 @@ function fixture(onSubmit, block = nextSteps) {
       modules: {
         "@/lib/interactive-ui.mjs": interactive,
         "./StudyCards": { StudyCards: () => null },
+        "./ResponseDiagram": { ResponseDiagram: () => null },
+        "./ResponseSimulation": { ResponseSimulation: () => null },
         "lucide-react": { Check: "check-icon" },
         "@/components/ui/checkbox": { Checkbox: "checkbox" },
         "@/components/ui/radio-group": { RadioGroup: "radiogroup", RadioGroupItem: "radio" },
@@ -169,4 +171,77 @@ test("radio click remains selected across rapid date/text updates and submits th
   assert.match(messages[0], /Start date: 2026-11-05/);
   assert.match(messages[0], /Style: Detailed/);
   assert.match(messages[0], /Notes: Keep this selection/);
+});
+
+test("a simulated rectangle updates its result and resets to the original inputs", async () => {
+  const block = interactive.validateInteractiveBlock({
+    version: 1,
+    type: "simulation",
+    id: "area",
+    title: "Area",
+    model: "rectangle",
+    inputs: {
+      width: { min: 1, max: 10, step: 1, value: 5 },
+      height: { min: 1, max: 10, step: 1, value: 4 },
+    },
+  });
+  const f = reactFixture(
+    "src/components/interactive-ui/ResponseSimulation.tsx",
+    (module) => () => module.ResponseSimulation({ block }),
+  );
+  await f.flush();
+  assert.match(f.text(), /Area = 20/);
+  f.find("input").props.onChange({ currentTarget: { valueAsNumber: 8 } });
+  await f.flush();
+  assert.match(f.text(), /Area = 32/);
+  await f.click("Reset");
+  assert.match(f.text(), /Area = 20/);
+});
+
+test("multiple-select and numerical quiz items reveal feedback and score locally", async () => {
+  const block = interactive.validateInteractiveBlock({
+    version: 1,
+    type: "quiz",
+    id: "practice",
+    title: "Practice",
+    cards: [
+      {
+        kind: "multiple",
+        front: "Choose both factors.",
+        back: "Both divide six.",
+        options: [
+          { value: "two", label: "2" },
+          { value: "three", label: "3" },
+        ],
+        answer: ["two", "three"],
+      },
+      {
+        kind: "number",
+        front: "What is one third?",
+        back: "About 0.333.",
+        answer: 1 / 3,
+        tolerance: 0.001,
+      },
+    ],
+  });
+  const f = reactFixture(
+    "src/components/interactive-ui/StudyCards.tsx",
+    (module) => () => module.StudyCards({ block }),
+  );
+  await f.flush();
+  f.find("input", (n) => n.props.value === "two").props.onChange({
+    currentTarget: { checked: true },
+  });
+  f.find("input", (n) => n.props.value === "three").props.onChange({
+    currentTarget: { checked: true },
+  });
+  await f.flush();
+  await f.click("Check answer");
+  assert.match(f.text(), /Correct.*Both divide six/);
+  await f.click("Next question");
+  f.find("input").props.onChange({ currentTarget: { value: "0.333" } });
+  await f.flush();
+  await f.click("Check answer");
+  await f.click("See score");
+  assert.match(f.text(), /2 of 2 correct/);
 });

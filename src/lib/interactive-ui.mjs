@@ -249,18 +249,45 @@ function validateStudyBlock(value) {
       cards.push({ front: card.front, back: card.back });
       continue;
     }
-    if (!onlyKeys(card, ["front", "back", "options", "answer", "hint"])) return null;
-    const options = validateOptions(card.options);
-    if (!options || options.length < 2 || !options.some(({ value }) => value === card.answer))
+    if (!onlyKeys(card, ["front", "back", "kind", "options", "answer", "hint", "tolerance"]))
       return null;
     if ("hint" in card && !str(card.hint, 400)) return null;
-    cards.push({
-      front: card.front,
-      back: card.back,
-      options,
-      answer: card.answer,
-      hint: card.hint,
-    });
+    const shared = { front: card.front, back: card.back, hint: card.hint };
+    const kind = card.kind ?? "choice";
+    if (kind === "choice" || kind === "multiple") {
+      if ("tolerance" in card) return null;
+      const options = validateOptions(card.options);
+      const answers = kind === "choice" ? [card.answer] : card.answer;
+      if (
+        !options ||
+        options.length < 2 ||
+        !Array.isArray(answers) ||
+        !answers.length ||
+        !uniq(answers) ||
+        !answers.every((answer) => options.some(({ value }) => value === answer))
+      )
+        return null;
+      cards.push({ ...shared, kind, options, answer: card.answer });
+    } else if (kind === "number") {
+      if (
+        "options" in card ||
+        !num(card.answer) ||
+        ("tolerance" in card && (!num(card.tolerance) || card.tolerance < 0))
+      )
+        return null;
+      cards.push({ ...shared, kind, answer: card.answer, tolerance: card.tolerance ?? 0 });
+    } else if (kind === "short") {
+      if (
+        "options" in card ||
+        "tolerance" in card ||
+        !Array.isArray(card.answer) ||
+        card.answer.length < 1 ||
+        card.answer.length > 12 ||
+        !card.answer.every((answer) => str(answer, 200))
+      )
+        return null;
+      cards.push({ ...shared, kind, answer: card.answer.map((answer) => answer.trim()) });
+    } else return null;
   }
   return {
     version: 1,
@@ -272,6 +299,108 @@ function validateStudyBlock(value) {
   };
 }
 
+const simulationModels = {
+  linear: ["slope", "intercept", "x"],
+  quadratic: ["a", "b", "c", "x"],
+  rectangle: ["width", "height"],
+  "compound-interest": ["principal", "rate", "years"],
+};
+
+function validateSimulation(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "model", "inputs"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Object.hasOwn(simulationModels, value.model) || !isPlain(value.inputs)) return null;
+  const keys = simulationModels[value.model];
+  if (!onlyKeys(value.inputs, keys)) return null;
+  const inputs = {};
+  for (const key of keys) {
+    const range = value.inputs[key];
+    if (!isPlain(range) || !onlyKeys(range, ["min", "max", "step", "value"])) return null;
+    const { min, max, step, value: initial } = range;
+    if (![min, max, step, initial].every(num) || min < -1e6 || max > 1e6) return null;
+    if (min >= max || step <= 0 || step > max - min || initial < min || initial > max) return null;
+    const offset = (initial - min) / step;
+    if ((max - min) / step > 1e5 || Math.abs(offset - Math.round(offset)) > 1e-7) return null;
+    if (["width", "height", "principal", "years"].includes(key) && min < 0) return null;
+    if (key === "rate" && (min <= -100 || max > 100)) return null;
+    if (key === "years" && (max > 100 || ![min, max, step, initial].every(Number.isInteger)))
+      return null;
+    inputs[key] = { min, max, step, value: initial };
+  }
+  return {
+    version: 1,
+    type: "simulation",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    model: value.model,
+    inputs,
+  };
+}
+
+function validateDiagram(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "nodes", "edges"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (
+    !Array.isArray(value.nodes) ||
+    value.nodes.length < 1 ||
+    value.nodes.length > 24 ||
+    !Array.isArray(value.edges) ||
+    value.edges.length > 60
+  )
+    return null;
+  const nodes = [];
+  for (const node of value.nodes) {
+    if (
+      !isPlain(node) ||
+      !onlyKeys(node, ["id", "label", "x", "y", "shape"]) ||
+      typeof node.id !== "string" ||
+      !ID.test(node.id) ||
+      !str(node.label, 26) ||
+      ![node.x, node.y].every((n) => num(n) && n >= 0 && n <= 100) ||
+      !["box", "decision", "terminal"].includes(node.shape ?? "box")
+    )
+      return null;
+    nodes.push({
+      id: node.id,
+      label: node.label.trim(),
+      x: node.x,
+      y: node.y,
+      shape: node.shape ?? "box",
+    });
+  }
+  if (!uniq(nodes.map(({ id }) => id))) return null;
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const edges = [];
+  for (const edge of value.edges) {
+    if (
+      !isPlain(edge) ||
+      !onlyKeys(edge, ["from", "to", "label"]) ||
+      !byId.has(edge.from) ||
+      !byId.has(edge.to) ||
+      edge.from === edge.to ||
+      ("label" in edge && !str(edge.label, 48))
+    )
+      return null;
+    const from = byId.get(edge.from);
+    const to = byId.get(edge.to);
+    if (from.x === to.x && from.y === to.y) return null;
+    edges.push({ from: edge.from, to: edge.to, label: edge.label });
+  }
+  if (!uniq(edges.map(({ from, to }) => from + ":" + to))) return null;
+  return {
+    version: 1,
+    type: "diagram",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    nodes,
+    edges,
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -279,6 +408,8 @@ export function validateInteractiveBlock(value) {
     if (typeof value.id !== "string" || !ID.test(value.id) || !str(value.title, 160)) return null;
     if (value.type === "form") return validateForm(value);
     if (value.type === "table") return validateTable(value);
+    if (value.type === "simulation") return validateSimulation(value);
+    if (value.type === "diagram") return validateDiagram(value);
     if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
   } catch {
@@ -388,11 +519,13 @@ export function splitInteractiveContent(value) {
   return parts;
 }
 
-export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
+export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). Only choice and multiple use options. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
 next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
 form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
 field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
 table: {"version":1,"type":"table","id":"plans","title":"Compare plans","columns":[{"id":"name","label":"Plan"},{"id":"price","label":"Price","align":"end"}],"rows":[{"id":"basic","cells":["Basic","$10"]}],"selection":"single","submitLabel":"Choose"} (selection: none, single or multiple; cells are strings or numbers; max 8 columns, 50 rows).
 quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"front":"What is 2 + 2?","options":[{"value":"a","label":"3"},{"value":"b","label":"4"}],"answer":"b","back":"Adding two and two gives four.","hint":"Count two pairs."}]}
 flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}
-IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quiz and flashcard controls work locally; they do not execute external actions, grant access, or prove success.`;
+simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years). Include all required inputs. Use local simulations for these formulas only.
+diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
+IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations and diagrams work locally; they do not execute external actions, grant access, or prove success.`;
