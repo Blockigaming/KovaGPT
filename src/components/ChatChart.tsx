@@ -9,6 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  FunnelChart,
+  Funnel,
   RadarChart,
   Radar,
   PolarGrid,
@@ -32,11 +34,19 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-chart-utils";
+import {
+  CHART_TYPES,
+  candlestickRows,
+  chartToCsv,
+  histogramRows,
+  type ChartSpec,
+  type ChartType,
+} from "./chat-chart-utils";
 const chartNames = {
   "horizontal-bar": "Horizontal bar",
   "stacked-bar": "Stacked bar",
   "stacked-area": "Stacked area",
+  "percent-stacked-bar": "100% stacked bar",
 } as const;
 
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
@@ -104,6 +114,53 @@ function ChartHeatmap({ spec, xKey, keys }: { spec: ChartSpec; xKey: string; key
   );
 }
 
+function CandlePlot({ rows }: { rows: NonNullable<ReturnType<typeof candlestickRows>> }) {
+  const low = Math.min(...rows.map((row) => row.low));
+  const high = Math.max(...rows.map((row) => row.high));
+  const scale = Math.max(Math.abs(high), Math.abs(low)) || 1;
+  const span = high / scale - low / scale;
+  const y = (value: number) =>
+    span === 0 ? 100 : 188 - ((value / scale - low / scale) / span) * 172;
+  const distance = 560 / rows.length;
+  return (
+    <svg
+      viewBox="0 0 600 205"
+      className="block h-auto w-full"
+      role="img"
+      aria-label="Candlestick plot"
+    >
+      <path d="M20 10V192H580" fill="none" stroke="var(--border)" />
+      {rows.map(({ label, open, high, low, close }, index) => {
+        const x = 20 + distance * (index + 0.5);
+        const width = Math.min(distance * 0.65, 24);
+        const top = Math.min(y(open), y(close));
+        const increased = close >= open;
+        return (
+          <g
+            key={index}
+            className={
+              increased
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-rose-600 dark:text-rose-400"
+            }
+          >
+            <title>{`${label}: Open ${open}, High ${high}, Low ${low}, Close ${close}`}</title>
+            <line x1={x} x2={x} y1={y(high)} y2={y(low)} stroke="currentColor" />
+            <rect
+              x={x - width / 2}
+              y={top}
+              width={width}
+              height={Math.max(1, Math.abs(y(open) - y(close)))}
+              fill={increased ? "var(--card)" : "currentColor"}
+              stroke="currentColor"
+            />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export function ChatChart({ spec }: { spec: ChartSpec }) {
   const xKey = spec.xKey ?? "name";
   const keys = useMemo(
@@ -143,9 +200,20 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       anchor?.remove();
     }
   };
+  const candles = type === "candlestick" ? candlestickRows(spec) : null;
+  const percent = type === "percent-stacked-bar";
+  const nonNegative = spec.data.every((row) =>
+    keys.every((key) => typeof row[key] !== "number" || row[key] >= 0),
+  );
+  const histogram = type === "histogram" && keys[0] ? histogramRows(spec, keys[0]) : [];
   const horizontal = type === "horizontal-bar";
   const scatter = type === "scatter";
-  const displayTypes = CHART_TYPES.filter((candidate) => candidate !== "scatter" || numericX);
+  const displayTypes = CHART_TYPES.filter(
+    (candidate) =>
+      (candidate !== "scatter" || numericX) &&
+      (candidate !== "candlestick" || !!candlestickRows(spec)) &&
+      (!["percent-stacked-bar", "funnel"].includes(candidate) || nonNegative),
+  );
   const axes = (
     <>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -160,8 +228,9 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         type={horizontal ? "category" : "number"}
         stroke="var(--muted-foreground)"
         fontSize={12}
+        tickFormatter={percent ? (value: number) => `${Math.round(value * 100)}%` : undefined}
       />
-      <Tooltip />
+      <Tooltip formatter={percent ? (value: number) => String(value) : undefined} />
       <Legend />
     </>
   );
@@ -221,9 +290,12 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           <Download className="h-4 w-4" /> CSV
         </button>
       </div>
-      {keys.length === 0 ? (
+      {candles ? (
+        <CandlePlot rows={candles} />
+      ) : keys.length === 0 ||
+        (["percent-stacked-bar", "funnel"].includes(type) && !nonNegative) ? (
         <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
-          This chart has no numeric series to display. The source data is preserved below.
+          This chart has no compatible numeric series. The source data is preserved below.
         </div>
       ) : type === "heatmap" ? (
         <ChartHeatmap spec={spec} xKey={xKey} keys={keys} />
@@ -234,7 +306,27 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           aria-label={`${type} chart with ${spec.data.length} data points`}
         >
           <ResponsiveContainer width="100%" height="100%">
-            {type === "radar" ? (
+            {type === "histogram" ? (
+              <BarChart data={histogram} barCategoryGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="range" fontSize={11} />
+                <YAxis allowDecimals={false} fontSize={12} />
+                <Tooltip
+                  labelFormatter={(label, payload) => {
+                    const bin = payload[0]?.payload;
+                    return bin
+                      ? `${label}: ${Number(bin.lower.toPrecision(4))} to ${Number(bin.upper.toPrecision(4))}`
+                      : label;
+                  }}
+                />
+                <Bar dataKey="count" name="Count" fill={colors[0]} />
+              </BarChart>
+            ) : type === "funnel" ? (
+              <FunnelChart>
+                <Tooltip />
+                <Funnel data={spec.data} dataKey={keys[0]} nameKey={xKey} fill={colors[0]} />
+              </FunnelChart>
+            ) : type === "radar" ? (
               <RadarChart data={spec.data}>
                 <PolarGrid stroke="var(--border)" />
                 <PolarAngleAxis
@@ -271,15 +363,19 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                   ))}
                 </Pie>
               </PieChart>
-            ) : type === "bar" || type === "stacked-bar" || horizontal ? (
-              <BarChart data={spec.data} layout={horizontal ? "vertical" : "horizontal"}>
+            ) : type === "bar" || type === "stacked-bar" || percent || horizontal ? (
+              <BarChart
+                data={spec.data}
+                layout={horizontal ? "vertical" : "horizontal"}
+                stackOffset={percent ? "expand" : undefined}
+              >
                 {axes}
                 {keys.map((key, index) => (
                   <Bar
                     key={key}
                     dataKey={key}
                     fill={colors[index % colors.length]}
-                    stackId={type === "stacked-bar" ? "series" : undefined}
+                    stackId={type === "stacked-bar" || percent ? "series" : undefined}
                     radius={type === "bar" ? [4, 4, 0, 0] : undefined}
                   />
                 ))}
@@ -329,7 +425,9 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           </ResponsiveContainer>
         </div>
       )}
-      {(table || keys.length === 0) && (
+      {(table ||
+        keys.length === 0 ||
+        (["percent-stacked-bar", "funnel"].includes(type) && !nonNegative)) && (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Data used in {spec.title ?? "chart"}</caption>

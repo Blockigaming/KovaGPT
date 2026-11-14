@@ -54,3 +54,32 @@ test("nested chart and study examples remain literal while top-level fences comp
   assert.equal(extractCharts(sample + chart)[1].kind, "chart");
   assert.equal(splitInteractiveContent(sample + quiz)[1].kind, "interactive");
 });
+
+test("candlesticks preserve valid ranges and reject inconsistent OHLC", () => {
+  const candle = {
+    type: "candlestick",
+    data: [{ name: "Monday", open: 3, close: 1, high: 4, low: 0 }],
+  };
+  assert.equal(parseChartSpec(JSON.stringify(candle))?.type, "candlestick");
+  assert.equal(
+    parseChartSpec(JSON.stringify({ ...candle, data: [{ ...candle.data[0], high: 2 }] })),
+    null,
+  );
+  assert.equal(
+    parseChartSpec(JSON.stringify({ ...candle, data: [{ ...candle.data[0], low: 2 }] })),
+    null,
+  );
+});
+
+test("histogram assigns the final edge and repeated measurements to exactly one bin", async () => {
+  const { histogramRows } = await import("../../src/components/chat-chart-utils.ts");
+  const spec = { type: "histogram", data: [0, 1, 2, 3].map((value) => ({ value })) };
+  assert.deepEqual(
+    histogramRows(spec, "value").map((bin) => bin.count),
+    [2, 2],
+  );
+  assert.deepEqual(histogramRows({ ...spec, data: [{ value: 7 }, { value: 7 }] }, "value"), [
+    { range: "Bin 1", lower: 7, upper: 7, count: 2 },
+  ]);
+  assert.deepEqual(histogramRows(spec, "absent"), []);
+});

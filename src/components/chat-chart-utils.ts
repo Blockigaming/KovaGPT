@@ -13,6 +13,10 @@ export const CHART_TYPES = [
   "stacked-area",
   "heatmap",
   "radar",
+  "candlestick",
+  "histogram",
+  "percent-stacked-bar",
+  "funnel",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -24,6 +28,51 @@ export type ChartSpec = {
   colors?: string[];
   data: Array<Record<string, string | number>>;
 };
+
+export function candlestickRows(spec: ChartSpec) {
+  const labelKey = spec.xKey ?? "name";
+  const rows = spec.data.map((row, index) => {
+    const { open, high, low, close } = row;
+    if (
+      typeof open !== "number" ||
+      typeof high !== "number" ||
+      typeof low !== "number" ||
+      typeof close !== "number" ||
+      high < Math.max(open, close) ||
+      low > Math.min(open, close)
+    )
+      return null;
+    return { label: String(row[labelKey] ?? index + 1), open, high, low, close };
+  });
+  return rows.length && rows.length <= 100 && rows.every((row) => row !== null) ? rows : null;
+}
+
+export function histogramRows(spec: ChartSpec, key: string) {
+  const values = spec.data
+    .map((row) => row[key])
+    .filter((value): value is number => typeof value === "number");
+  if (!values.length) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const count = min === max ? 1 : Math.min(16, Math.ceil(Math.sqrt(values.length)));
+  const bins = Array.from({ length: count }, (_, index) => ({
+    range: `Bin ${index + 1}`,
+    lower: min * (1 - index / count) + max * (index / count),
+    upper: min * (1 - (index + 1) / count) + max * ((index + 1) / count),
+    count: 0,
+  }));
+  const scale = Math.max(Math.abs(min), Math.abs(max)) || 1;
+  const start = min / scale;
+  const span = max / scale - start;
+  for (const value of values) {
+    const bin =
+      span === 0
+        ? 0
+        : Math.max(0, Math.min(count - 1, Math.floor(((value / scale - start) / span) * count)));
+    bins[bin].count += 1;
+  }
+  return bins;
+}
 
 export function parseChartSpec(raw: string): ChartSpec | null {
   if (raw.length > 64_000) return null;
@@ -60,7 +109,9 @@ export function parseChartSpec(raw: string): ChartSpec | null {
       )
     )
       return null;
-    return object as ChartSpec;
+    const spec = object as ChartSpec;
+    if (spec.type === "candlestick" && !candlestickRows(spec)) return null;
+    return spec;
   } catch {
     return null;
   }
