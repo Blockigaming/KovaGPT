@@ -1,4 +1,5 @@
 import "./public-website.css";
+import "./product-showcase.css";
 import { Link } from "@tanstack/react-router";
 import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
@@ -32,32 +33,44 @@ export function websitePageHead(item: WebsitePage) {
 }
 
 export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
+  const showcase = item.path === "/features";
   const category = item.path.split("/")[1];
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="public-website public-website-article">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`public-website public-website-article ${showcase ? "kova-editorial-product" : ""}`}
+      >
         <nav className="public-website-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">KovaGPT</Link>
           <span aria-hidden="true"> / </span>
           <span aria-current="page">{item.title}</span>
         </nav>
-        <p className="public-article-label">
-          {category === "help"
-            ? "Help Center"
-            : category === "developers"
-              ? "Developers"
-              : category === "connections"
-                ? "Connections"
-                : "KovaGPT"}
-        </p>
-        <h1>{item.title}</h1>
-        <p className="public-article-lede">{item.description}</p>
-        {item.availability && <p className="public-availability">{item.availability}</p>}
-        {item.review && <p className="public-availability">{item.review}</p>}
+        {showcase && <div className="kova-showcase-progress" aria-hidden="true" />}
+        <div className={showcase ? "kova-showcase-hero" : "contents"}>
+          <p className="public-article-label">
+            {category === "help"
+              ? "Help Center"
+              : category === "developers"
+                ? "Developers"
+                : category === "connections"
+                  ? "Connections"
+                  : "KovaGPT"}
+          </p>
+          <h1>{item.title}</h1>
+          <p className="public-article-lede">{item.description}</p>
+          {item.availability && <p className="public-availability">{item.availability}</p>}
+          {item.review && <p className="public-availability">{item.review}</p>}
+        </div>
         <div className="public-article-body">
           <div>
             {item.sections.map((section, index) => (
-              <section key={section.title} id={`section-${index + 1}`}>
+              <section
+                key={section.title}
+                id={`section-${index + 1}`}
+                className={showcase ? "kova-showcase-enter" : undefined}
+              >
                 <h2>{section.title}</h2>
                 <p>{section.body}</p>
                 {section.points.length > 0 && (

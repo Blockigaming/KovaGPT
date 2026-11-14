@@ -50,7 +50,7 @@ test("does not expose a Checkout return URL browser input", async () => {
       "utf8",
     ),
     pricingSource = await readFile(
-      new URL("../../src/routes/pricing.tsx", import.meta.url),
+      new URL("../../src/components/public/PricingPlans.tsx", import.meta.url),
       "utf8",
     ),
     returnSource = await readFile(

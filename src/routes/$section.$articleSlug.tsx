@@ -1,3 +1,4 @@
+import { MarketingPublication } from "@/components/public/MarketingLanding";
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
@@ -116,6 +117,7 @@ function Article() {
   if (data.kind === "review") return <ReviewWorkspace key={data.item.slug} page={data.item} />;
   if (data.kind === "detail") return <PublicDetailPageView item={data.item} />;
   const item = data.item;
+  if (item.section === "news") return <MarketingPublication item={item} />;
   return (
     <PublicPageView
       eyebrow={`${item.section.replaceAll("-", " ")} · ${item.publishedAt}`}

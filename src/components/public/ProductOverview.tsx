@@ -1,238 +1,480 @@
-import { NovaLogo } from "@/components/NovaLogo";
-import { useState } from "react";
-import { PublicShell } from "@/components/public/PublicShell";
-import { PublicAction, PublicHero } from "@/components/public/PublicSections";
-import { Button } from "@/components/ui/button";
-import { ArrowUp, FileText, MessageSquare, Plus, Search } from "lucide-react";
-
-const examples = [
-  {
-    label: "Write",
-    prompt: "Help me turn these rough notes into a clear first draft.",
-    title: "Find the thread in your ideas.",
-    body: "Start with the main point, give it a little context, and close with a useful next step. Then refine the tone until it sounds like you.",
-    steps: ["A clear opening", "The details that matter", "A next step your reader can take"],
-  },
-  {
-    label: "Learn",
-    prompt: "Explain a difficult idea, then help me check my understanding.",
-    title: "Make room for the next question.",
-    body: "Break a topic into smaller parts. Try an example, explain it in your own words, and revisit the part that still feels unclear.",
-    steps: ["Understand the idea", "Work through an example", "Try it for yourself"],
-  },
-  {
-    label: "Plan",
-    prompt: "Help me turn a big project into a manageable plan.",
-    title: "Give the work a place to start.",
-    body: "Define the outcome, gather what you need, and choose the first useful task. Keep the plan flexible as you learn more.",
-    steps: ["Define the outcome", "Set a few milestones", "Choose the first task"],
-  },
-] as const;
-
+import { PricingPage } from "./PricingPlans";
+import { MarketingHeader, MarketingFooter } from "./MarketingChrome";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { ArrowRight, ArrowUpRight, Code2 } from "lucide-react";
+import "./approved-marketing.css";
+const galleryImages = Array.from({ length: 6 }, (_, i) => `/marketing/scene-${i + 1}.jpg`);
+const words = ["build", "write", "learn", "create"];
 export function ProductOverview() {
-  const [selected, setSelected] = useState(0);
-  const example = examples[selected];
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [wordIndex, setWordIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const images = window.setInterval(() => {
+      if (!motion.matches && !document.hidden) setImageIndex((i) => (i + 1) % galleryImages.length);
+    }, 2000);
+    const headline = window.setInterval(() => {
+      if (!motion.matches && !document.hidden) setWordIndex((i) => (i + 1) % words.length);
+    }, 2800);
+    root.querySelectorAll<HTMLDetailsElement>(".nav-dropdown").forEach((menu) => {
+      menu.addEventListener(
+        "mouseenter",
+        () => {
+          if (window.matchMedia("(hover:hover)").matches) menu.open = true;
+        },
+        options,
+      );
+      menu.addEventListener(
+        "mouseleave",
+        () => {
+          if (window.matchMedia("(hover:hover)").matches) menu.open = false;
+        },
+        options,
+      );
+      menu.addEventListener(
+        "focusout",
+        (event) => {
+          if (!menu.contains(event.relatedTarget as Node | null)) menu.open = false;
+        },
+        options,
+      );
+    });
+    document.addEventListener(
+      "click",
+      (event) =>
+        root.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+          if (!menu.contains(event.target as Node)) menu.open = false;
+        }),
+      options,
+    );
+    root.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key === "Escape")
+          root.querySelectorAll<HTMLDetailsElement>("details[open]").forEach((menu) => {
+            menu.open = false;
+            menu.querySelector("summary")?.focus();
+          });
+      },
+      options,
+    );
+    return () => {
+      clearInterval(images);
+      clearInterval(headline);
+      controller.abort();
+    };
+  }, []);
   return (
-    <PublicShell>
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="public-overview"
-        data-ui-reference="grok-product-overview"
-      >
-        <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
-          <PublicAction to="/">Open KovaGPT</PublicAction>
-          <PublicAction to="/download" secondary>
-            Use KovaGPT on the web
-          </PublicAction>
-        </PublicHero>
-
-        <section
-          className="public-workflow-example"
-          data-ui-reference="chatgpt-conversation-example"
-          aria-labelledby="workflow-example-title"
-        >
-          <aside className="public-example-sidebar" aria-hidden="true">
-            <span className="public-example-sidebar-brand">
-              <NovaLogo decorative className="h-6 w-6" /> KovaGPT
-            </span>
+    <div id="kx" ref={rootRef} data-public-shell data-ui="modern">
+      <MarketingHeader />
+      <main id="main-content" tabIndex={-1}>
+        <section className="hero">
+          <a className="badge" href="#kx-products">
+            <em>{"Explore"}</em>
+            <span>{"Meet KovaGPT · Your AI workspace"}</span>
             <span>
-              <Plus size={15} /> New chat
+              <ArrowUpRight aria-hidden="true" />
             </span>
-            <span>
-              <Search size={15} /> Search chats
+          </a>
+          <h1>
+            {"AI for everything"}
+            <br />
+            {"you think, create, and "}
+            <span className="word" id="kx-word">
+              {words[wordIndex]}
             </span>
-            <span>
-              <FileText size={15} /> Library
-            </span>
-            <small>Conversations</small>
-            <span className="is-current">
-              <MessageSquare size={15} /> A fresh perspective
-            </span>
-            <span>Making a plan</span>
-            <span>Working through an idea</span>
-          </aside>
-          <div className="public-example-main">
-            <div className="public-example-toolbar">
-              <h2 id="workflow-example-title">One conversation. Many possibilities.</h2>
-              <div className="public-example-options" role="group" aria-label="Choose an example">
-                {examples.map((item, index) => (
-                  <Button
-                    key={item.label}
-                    type="button"
-                    variant={selected === index ? "secondary" : "ghost"}
-                    size="sm"
-                    aria-pressed={selected === index}
-                    aria-controls="workflow-example-content"
-                    onClick={() => setSelected(index)}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
+            {"."}
+          </h1>
+          <p>{"Chat. Create. Code. All in KovaGPT."}</p>
+          <div className="actions">
+            <a className="pill black" href="/">
+              {"Try KovaGPT "}
+              <ArrowUpRight aria-hidden="true" />
+            </a>
+            <a className="pill" href="#kx-products">
+              {"Explore features"}
+            </a>
+          </div>
+        </section>
+        <section className="products" id="kx-products">
+          <a className="product code" href="/features/code">
+            <div className="terminal">
+              <div className="bar">{"● ● ●　 kova_client.py"}</div>
+              <div className="long-code-viewport">
+                <div className="long-code-track">
+                  <pre>
+                    <span className="kw">{"import"}</span>
+                    {" os\n"}
+                    <span className="kw">{"import"}</span>
+                    {" time\n"}
+                    <span className="kw">{"from"}</span>
+                    {" dataclasses "}
+                    <span className="kw">{"import"}</span>
+                    {" dataclass\n"}
+                    <span className="kw">{"from"}</span>
+                    {" typing "}
+                    <span className="kw">{"import"}</span>
+                    {" Any\n"}
+                    <span className="kw">{"import"}</span>
+                    {" requests\n\n@dataclass\n"}
+                    <span className="kw">{"class"}</span>
+                    {" KovaClient:\n    api_key: str\n    base_url: str = "}
+                    <span className="str">{'"https://kovagpt.com/api/v1"'}</span>
+                    {"\n    timeout: int = 30\n\n    "}
+                    <span className="kw">{"def"}</span>
+                    {" headers(self) -> dict[str, str]:\n        "}
+                    <span className="kw">{"return"}</span>
+                    {" {\n            "}
+                    <span className="str">{'"Authorization"'}</span>
+                    {": f"}
+                    <span className="str">{'"Bearer {self.api_key}"'}</span>
+                    {",\n            "}
+                    <span className="str">{'"Accept"'}</span>
+                    {": "}
+                    <span className="str">{'"application/json"'}</span>
+                    {",\n        }\n\n    "}
+                    <span className="kw">{"def"}</span>
+                    {" list_models(self) -> Any:\n        response = requests.get(\n            f"}
+                    <span className="str">{'"{self.base_url}/models"'}</span>
+                    {
+                      ",\n            headers=self.headers(),\n            timeout=self.timeout,\n        )\n        response.raise_for_status()\n        "
+                    }
+                    <span className="kw">{"return"}</span>
+                    {" response.json()\n\n    "}
+                    <span className="kw">{"def"}</span>
+                    {" check_connection(self) -> bool:\n        "}
+                    <span className="kw">{"try"}</span>
+                    {":\n            self.list_models()\n            "}
+                    <span className="kw">{"return"}</span>
+                    <span className="kw">{"True"}</span>
+                    <span className="kw">{"except"}</span>
+                    {" requests.RequestException:\n            "}
+                    <span className="kw">{"return"}</span>
+                    <span className="kw">{"False"}</span>
+                    <span className="kw">{"def"}</span>
+                    {" main() -> None:\n    key = os.environ["}
+                    <span className="str">{'"KOVA_API_KEY"'}</span>
+                    {
+                      "]\n    client = KovaClient(api_key=key)\n    started = time.monotonic()\n    catalog = client.list_models()\n    elapsed = time.monotonic() - started\n    print("
+                    }
+                    <span className="str">{'"Available models:"'}</span>
+                    {")\n    print(catalog)\n    print(f"}
+                    <span className="str">{'"Loaded in {elapsed:.2f}s"'}</span>
+                    {")\n\n"}
+                    <span className="kw">{"if"}</span>
+                    {" __name__ == "}
+                    <span className="str">{'"__main__"'}</span>
+                    {":\n    main()"}
+                  </pre>
+                  <pre aria-hidden="true">
+                    <span className="kw">{"import"}</span>
+                    {" os\n"}
+                    <span className="kw">{"import"}</span>
+                    {" time\n"}
+                    <span className="kw">{"from"}</span>
+                    {" dataclasses "}
+                    <span className="kw">{"import"}</span>
+                    {" dataclass\n"}
+                    <span className="kw">{"from"}</span>
+                    {" typing "}
+                    <span className="kw">{"import"}</span>
+                    {" Any\n"}
+                    <span className="kw">{"import"}</span>
+                    {" requests\n\n@dataclass\n"}
+                    <span className="kw">{"class"}</span>
+                    {" KovaClient:\n    api_key: str\n    base_url: str = "}
+                    <span className="str">{'"https://kovagpt.com/api/v1"'}</span>
+                    {"\n    timeout: int = 30\n\n    "}
+                    <span className="kw">{"def"}</span>
+                    {" headers(self) -> dict[str, str]:\n        "}
+                    <span className="kw">{"return"}</span>
+                    {" {\n            "}
+                    <span className="str">{'"Authorization"'}</span>
+                    {": f"}
+                    <span className="str">{'"Bearer {self.api_key}"'}</span>
+                    {",\n            "}
+                    <span className="str">{'"Accept"'}</span>
+                    {": "}
+                    <span className="str">{'"application/json"'}</span>
+                    {",\n        }\n\n    "}
+                    <span className="kw">{"def"}</span>
+                    {" list_models(self) -> Any:\n        response = requests.get(\n            f"}
+                    <span className="str">{'"{self.base_url}/models"'}</span>
+                    {
+                      ",\n            headers=self.headers(),\n            timeout=self.timeout,\n        )\n        response.raise_for_status()\n        "
+                    }
+                    <span className="kw">{"return"}</span>
+                    {" response.json()\n\n    "}
+                    <span className="kw">{"def"}</span>
+                    {" check_connection(self) -> bool:\n        "}
+                    <span className="kw">{"try"}</span>
+                    {":\n            self.list_models()\n            "}
+                    <span className="kw">{"return"}</span>
+                    <span className="kw">{"True"}</span>
+                    <span className="kw">{"except"}</span>
+                    {" requests.RequestException:\n            "}
+                    <span className="kw">{"return"}</span>
+                    <span className="kw">{"False"}</span>
+                    <span className="kw">{"def"}</span>
+                    {" main() -> None:\n    key = os.environ["}
+                    <span className="str">{'"KOVA_API_KEY"'}</span>
+                    {
+                      "]\n    client = KovaClient(api_key=key)\n    started = time.monotonic()\n    catalog = client.list_models()\n    elapsed = time.monotonic() - started\n    print("
+                    }
+                    <span className="str">{'"Available models:"'}</span>
+                    {")\n    print(catalog)\n    print(f"}
+                    <span className="str">{'"Loaded in {elapsed:.2f}s"'}</span>
+                    {")\n\n"}
+                    <span className="kw">{"if"}</span>
+                    {" __name__ == "}
+                    <span className="str">{'"__main__"'}</span>
+                    {":\n    main()"}
+                  </pre>
+                </div>
               </div>
+            </div>
+            <footer>
+              <span>{"Code"}</span>
+              <span>
+                {"Explore "}
+                <ArrowRight aria-hidden="true" />
+              </span>
+            </footer>
+          </a>
+          <a className="product" href="/projects">
+            <div className="taskdemo">
+              <div className="request">{"Turn my notes into a plan for the week."}</div>
+              <div className="reply">{"Three priorities. A clear next step."}</div>
+              <div className="done">
+                {"✓ Monday · Start the draft"}
+                <br />
+                {"✓ Tuesday · Review the details"}
+                <br />
+                {"✓ Wednesday · Share your work"}
+              </div>
+            </div>
+            <footer>
+              <span>{"Projects"}</span>
+              <span>
+                {"Explore "}
+                <ArrowRight aria-hidden="true" />
+              </span>
+            </footer>
+          </a>
+          <a className="product wide" href="/images">
+            <div className="image-demo">
+              {galleryImages.map((src, index) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt={index === imageIndex ? "AI-generated showcase" : ""}
+                  aria-hidden={index !== imageIndex}
+                  className="marketing-gallery-frame"
+                  style={{ opacity: index === imageIndex ? 1 : 0 }}
+                />
+              ))}
+              <div className="scene-controls">
+                <button
+                  id="kx-scene-prev"
+                  aria-label="Previous image"
+                  type="button"
+                  onClick={() =>
+                    setImageIndex((i) => (i + galleryImages.length - 1) % galleryImages.length)
+                  }
+                >
+                  {"‹"}
+                </button>
+                <span id="kx-scene-count">
+                  {imageIndex + 1} / {galleryImages.length}
+                </span>
+                <button
+                  id="kx-scene-next"
+                  aria-label="Next image"
+                  type="button"
+                  onClick={() => setImageIndex((i) => (i + 1) % galleryImages.length)}
+                >
+                  {"›"}
+                </button>
+              </div>
+              <span className="image-credit">AI-generated examples</span>
+              <small>{"Make something your own."}</small>
+              <strong>{"Create images."}</strong>
+            </div>
+            <footer>
+              <span>{"Images"}</span>
+              <span>
+                {"Explore "}
+                <ArrowRight aria-hidden="true" />
+              </span>
+            </footer>
+          </a>
+          <a className="product wide" href="/features/voice">
+            <div className="voice-demo" aria-label="Voice waveform">
+              <i style={{ "--height": "16px" } as CSSProperties}></i>
+              <i style={{ "--height": "25px" } as CSSProperties}></i>
+              <i style={{ "--height": "54px" } as CSSProperties}></i>
+              <i style={{ "--height": "80px" } as CSSProperties}></i>
+              <i style={{ "--height": "43px" } as CSSProperties}></i>
+              <i style={{ "--height": "98px" } as CSSProperties}></i>
+              <i style={{ "--height": "125px" } as CSSProperties}></i>
+              <i style={{ "--height": "82px" } as CSSProperties}></i>
+              <i style={{ "--height": "49px" } as CSSProperties}></i>
+              <i style={{ "--height": "73px" } as CSSProperties}></i>
+              <i style={{ "--height": "40px" } as CSSProperties}></i>
+              <i style={{ "--height": "22px" } as CSSProperties}></i>
+            </div>
+            <footer>
+              <span>{"Voice"}</span>
+              <span>
+                {"Explore "}
+                <ArrowRight aria-hidden="true" />
+              </span>
+            </footer>
+          </a>
+        </section>
+        <section className="section developer" id="kx-developer">
+          <div>
+            <div className="eyebrow">{"For developers"}</div>
+            <h2>
+              {"Your next idea."}
+              <br />
+              {"Powered by Kova."}
+            </h2>
+            <p>
+              {"Build with the KovaGPT API."}
+              <br />
+              {"Start with Python. Explore the model catalog."}
+            </p>
+            <div className="leftactions">
+              <a className="pill black" href="/developers">
+                {"Explore the API "}
+                <ArrowUpRight aria-hidden="true" />
+              </a>
+              <a className="pill" href="/developers/quickstart">
+                {"Read docs"}
+              </a>
+            </div>
+          </div>
+          <div className="api-window">
+            <div className="api-top">
+              <span>{"Python"}</span>
+              <button
+                type="button"
+                className="cursor-interaction"
+                id="kx-pause"
+                onClick={() => setPaused((value) => !value)}
+                aria-pressed={paused}
+              >
+                {paused ? "Resume animation" : "Pause animation"}
+              </button>
             </div>
             <div
-              id="workflow-example-content"
-              className="public-example-conversation"
-              aria-live="polite"
+              className="api-viewport"
+              aria-label="Python example: list available KovaGPT models"
             >
-              <p className="public-example-prompt">{example.prompt}</p>
-              <div className="public-example-answer">
-                <p className="public-eyebrow">KovaGPT · Example response</p>
-                <h3>{example.title}</h3>
-                <p>{example.body}</p>
-                <ol>
-                  {example.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-            <div className="public-example-composer" aria-hidden="true">
-              <span>
-                <Plus size={20} />
-              </span>
-              <span>Ask a follow-up…</span>
-              <span>
-                <ArrowUp size={20} />
-              </span>
-            </div>
-            <p className="public-example-caption">
-              Illustrative conversation. Open KovaGPT to start your own.
-            </p>
-          </div>
-        </section>
-
-        <section className="public-use-cases" aria-labelledby="use-cases-title">
-          <div className="public-section-heading">
-            <h2 id="use-cases-title">
-              For your work, your ideas,
-              <br />
-              and everything in between.
-            </h2>
-          </div>
-          <div className="public-use-case-grid">
-            <article className="public-use-case">
-              <h3>Find the right words.</h3>
-              <p>
-                Shape a first draft, try a different tone, or make a complicated idea easier to
-                follow.
-              </p>
-              <div
-                className="public-document-illustration"
-                aria-label="Illustrative writing outline"
+              <pre
+                className="api-scroll"
+                data-paused={paused}
+                style={{ animationPlayState: paused ? "paused" : "running" }}
               >
-                <span className="public-illustration-label">Example · First draft</span>
-                <strong>
-                  A small idea.
-                  <br />A clear beginning.
-                </strong>
-                <span className="public-illustration-rule" />
-                <span className="public-illustration-rule" />
-                <span className="public-illustration-rule is-short" />
-                <span className="public-illustration-note">Make it sound like you.</span>
+                <code>
+                  <span className="kw">{"import"}</span>
+                  {" os\n"}
+                  <span className="kw">{"import"}</span>
+                  {" requests\n"}
+                  <span className="comment">{"# Connect with your developer key"}</span>
+                  {"\nheaders = {\n    "}
+                  <span className="str">{'"Authorization"'}</span>
+                  {": "}
+                  <span className="str">{"f\"Bearer {os.environ['KOVA_API_KEY']}\""}</span>
+                  {"\n}\n"}
+                  <span className="comment">{"# Discover available models"}</span>
+                  {"\nresponse = requests."}
+                  <span className="fn">{"get"}</span>
+                  {"(\n    "}
+                  <span className="str">{'"https://kovagpt.com/api/v1/models"'}</span>
+                  {",\n    headers=headers,\n    timeout="}
+                  <span className="num">{"30"}</span>
+                  {",\n)\nresponse."}
+                  <span className="fn">{"raise_for_status"}</span>
+                  {"()\nmodels = response."}
+                  <span className="fn">{"json"}</span>
+                  {"()\n"}
+                  <span className="fn">{"print"}</span>
+                  {"(models)\n"}
+                </code>
+              </pre>
+            </div>
+            <div className="api-caption">{"Model catalog example · Python / requests"}</div>
+          </div>
+        </section>
+        <section className="news" id="kx-news">
+          <div className="news-heading">
+            <div>
+              <div className="eyebrow">{"Latest from KovaGPT"}</div>
+              <h2>{"Kovapedia"}</h2>
+            </div>
+            <a href="/news">
+              {"Explore all "}
+              <ArrowUpRight aria-hidden="true" />
+            </a>
+          </div>
+          <div className="news-grid">
+            <a href="/news/argon">
+              <div className="news-art argon">
+                <div className="model-face argon-face" aria-hidden="true">
+                  <i></i>
+                  <i></i>
+                  <b></b>
+                </div>
+                <strong>{"Argon"}</strong>
               </div>
-            </article>
-            <article className="public-use-case">
-              <h3>Follow your curiosity.</h3>
-              <p>
-                Ask a follow-up, work through an example, and find a way of understanding that
-                clicks.
-              </p>
-              <div
-                className="public-learning-illustration"
-                aria-label="Illustrative learning conversation"
-              >
-                <span className="public-illustration-label">Example · Learn together</span>
-                <span className="public-learning-question">Can you explain it another way?</span>
-                <span className="public-learning-answer">Let’s start with something familiar.</span>
-                <span className="public-learning-question">Now give me a question to try.</span>
+              <small>{"KovaGPT model"}</small>
+              <h3>{"Inside Argon: from question to clarity"}</h3>
+            </a>
+            <a href="/news/neon">
+              <div className="news-art neon">
+                <div className="model-face neon-face" aria-hidden="true">
+                  <i></i>
+                  <i></i>
+                  <b></b>
+                </div>
+                <strong>{"Neon"}</strong>
               </div>
-            </article>
-            <article className="public-use-case">
-              <h3>See the next step.</h3>
-              <p>
-                Break a big task into smaller pieces and turn an open-ended idea into a useful plan.
-              </p>
-              <div className="public-plan-illustration" aria-label="Illustrative project plan">
-                <span className="public-illustration-label">Example · Project outline</span>
-                <ol>
-                  <li>
-                    <span>01</span>Define the outcome
-                  </li>
-                  <li>
-                    <span>02</span>Gather your ideas
-                  </li>
-                  <li>
-                    <span>03</span>Choose where to start
-                  </li>
-                </ol>
+              <small>{"KovaGPT model"}</small>
+              <h3>{"Meet Neon. Explore another way to think."}</h3>
+            </a>
+            <a href="/news/interactive-workspace">
+              <div className="news-art interface">
+                <div className="matching-mark workspace-mark product-brand-mark">
+                  <img src="/kova-logo.png" alt="KovaGPT logo" />
+                </div>
+                <strong className="matching-name">{"KovaGPT"}</strong>
               </div>
-            </article>
+              <small>{"Product · Feature guide"}</small>
+              <h3>{"KovaGPT is moving beyond the chat box"}</h3>
+            </a>
+            <a href="/news/developer-platform">
+              <div className="news-art api-art">
+                <div className="matching-mark api-mark" aria-hidden="true">
+                  <Code2 aria-hidden="true" />
+                </div>
+                <strong className="matching-name">{"KovaGPT API"}</strong>
+              </div>
+              <small>{"Developers · Platform overview"}</small>
+              <h3>{"Your next app could start with KovaGPT"}</h3>
+            </a>
           </div>
         </section>
-
-        <section className="public-plan-band" aria-labelledby="overview-plans-title">
-          <div>
-            <h2 id="overview-plans-title">A plan for the way you work.</h2>
-            <p>Compare Free, Plus, and Pro, with the modes and allowances included in each.</p>
-          </div>
-          <PublicAction to="/pricing">Explore plans</PublicAction>
-        </section>
-
-        <section className="public-control-section" aria-labelledby="overview-control-title">
-          <div className="public-section-heading">
-            <h2 id="overview-control-title">Your work. Your choices.</h2>
-            <p>Understand your settings and take a thoughtful approach to every answer.</p>
-          </div>
-          <div className="public-control-grid">
-            <article>
-              <h3>Know your privacy options.</h3>
-              <p>
-                Review how KovaGPT handles information and where to find your account and data
-                controls.
-              </p>
-              <PublicAction to="/consumer-privacy" secondary>
-                Explore privacy controls
-              </PublicAction>
-            </article>
-            <article>
-              <h3>Keep your judgment in the loop.</h3>
-              <p>
-                AI can make mistakes. Check sources, review important details, and decide what works
-                for you.
-              </p>
-              <PublicAction to="/" secondary>
-                Start a conversation
-              </PublicAction>
-            </article>
-          </div>
-        </section>
-        <section className="public-closing" aria-labelledby="overview-closing-title">
-          <h2 id="overview-closing-title">Start with KovaGPT.</h2>
-          <PublicAction to="/">Open KovaGPT</PublicAction>
-        </section>
+        <PricingPage embedded />
       </main>
-    </PublicShell>
+      <MarketingFooter />
+    </div>
   );
 }

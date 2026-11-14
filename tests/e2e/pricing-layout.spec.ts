@@ -14,7 +14,7 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   });
 
   await expect(page.locator("main#main-content")).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1, name: "Upgrade your plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Pricing" })).toBeVisible();
   await expect(page.locator("[data-pricing-plan]")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Individual" })).toHaveAttribute(
     "aria-pressed",

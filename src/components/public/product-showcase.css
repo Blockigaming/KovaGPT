@@ -1,0 +1,141 @@
+[data-public-shell] .kova-showcase-hero {
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+[data-public-shell] .kova-showcase-hero h1 {
+  max-width: 18ch;
+  font-size: clamp(2.85rem, 7vw, 7rem);
+  font-weight: 550;
+  line-height: 1;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+[data-public-shell] .public-overview .kova-showcase-hero .public-hero {
+  padding-block: clamp(3rem, 8vw, 7rem);
+}
+.kova-showcase-jump {
+  scroll-margin-top: 6rem;
+}
+.kova-showcase-progress {
+  display: none;
+}
+.kova-showcase-screen {
+  min-width: 0;
+  background: var(--background);
+}
+.kova-showcase-code {
+  overflow: auto;
+  overscroll-behavior-inline: contain;
+  white-space: pre;
+}
+.kova-overview-story {
+  display: grid;
+  gap: clamp(1.5rem, 5vw, 5rem);
+  padding-block: clamp(2rem, 5vw, 5rem);
+  align-items: start;
+}
+[data-public-shell] .kova-overview-story .public-workflow-example {
+  min-width: 0;
+  margin: 0;
+  width: 100%;
+}
+.kova-overview-chapter {
+  border-top: 1px solid var(--border);
+  padding-block: 1.5rem;
+}
+.kova-overview-chapter h2 {
+  font-size: clamp(2rem, 4vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+  font-weight: 550;
+}
+.kova-overview-chapter p {
+  margin-top: 0.75rem;
+  color: var(--muted-foreground);
+}
+.kova-overview-chapter button {
+  min-height: 44px;
+  margin-top: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .kova-showcase-enter {
+      animation: kova-showcase-arrive linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 26%;
+    }
+    .kova-showcase-enter:focus-within {
+      animation: none;
+    }
+    .kova-showcase-progress {
+      display: block;
+      position: fixed;
+      z-index: 41;
+      inset: 0 0 auto;
+      height: 3px;
+      pointer-events: none;
+      background: var(--foreground);
+      transform-origin: left;
+      animation: kova-showcase-progress linear both;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+@keyframes kova-showcase-arrive {
+  from {
+    opacity: 0.6;
+    translate: 0 24px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes kova-showcase-progress {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+
+[data-public-shell] .kova-product-overview .public-hero,
+[data-public-shell] .kova-editorial-product .kova-showcase-hero {
+  text-align: center;
+}
+[data-public-shell]
+  :is(.kova-product-overview, .kova-editorial-product)
+  .kova-showcase-hero
+  :is(h1, h1 + p) {
+  margin-inline: auto;
+}
+[data-public-shell] .kova-product-overview .public-hero .public-actions,
+[data-public-shell] .kova-editorial-product .kova-showcase-hero h1 + p + div {
+  justify-content: center;
+}
+[data-public-shell] .kova-product-overview .public-hero h1 {
+  max-width: 18ch;
+  font-size: clamp(2.75rem, 6vw, 6rem);
+  line-height: 1.04;
+}
+.kova-overview-chapters {
+  display: grid;
+  gap: 1.5rem;
+}
+.kova-api-hero > .kova-showcase-screen {
+  width: min(100%, 56rem);
+  margin: 3rem auto 0;
+  text-align: start;
+}
+[data-public-shell] .kova-pricing-hero h1 {
+  font-size: clamp(3rem, 6vw, 5rem);
+  line-height: 1;
+}
+@media (min-width: 48rem) {
+  .kova-overview-chapters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

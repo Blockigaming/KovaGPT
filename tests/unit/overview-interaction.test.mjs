@@ -2,54 +2,40 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHookHarness, elements, loadUiModule, text } from "../helpers/ui-state-harness.mjs";
 
-test("overview example selection updates the response and exposes a single selected option", () => {
+test("overview gallery controls wrap, API motion pauses, and article links navigate", () => {
   const hooks = createHookHarness();
   const { ProductOverview } = loadUiModule("src/components/public/ProductOverview.tsx", {
     react: hooks.react,
-    "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
+    "./PricingPlans": { PricingPage: "PricingPage" },
+    "./MarketingChrome": { MarketingHeader: "MarketingHeader", MarketingFooter: "MarketingFooter" },
     "lucide-react": Object.fromEntries(
-      [
-        "ArrowRight",
-        "ArrowUp",
-        "BookOpen",
-        "Check",
-        "FileText",
-        "Folder",
-        "ListChecks",
-        "MessageSquare",
-        "PenLine",
-        "Plus",
-        "Search",
-        "ShieldCheck",
-      ].map((name) => [name, name]),
+      ["ArrowRight", "ArrowUpRight", "Code2", "ChevronDown"].map((name) => [name, name]),
     ),
-    "@/components/public/PublicShell": { PublicShell: "PublicShell" },
-    "@/components/public/PublicSections": {
-      PublicAction: "PublicAction",
-      PublicHero: "PublicHero",
-      PublicSection: "PublicSection",
-    },
-    "@/components/public/PublicFaq": { PublicFaq: "PublicFaq" },
   });
   let tree = hooks.render(ProductOverview);
-  const options = () => elements(tree, (node) => node.type === "button");
-  assert.equal(options().filter((node) => node.props["aria-pressed"]).length, 1);
-  assert.match(text(tree), /Illustrative conversation/);
-  assert.match(text(tree), /Find the thread in your ideas/);
-  options()
-    .find((node) => text(node) === "Learn")
-    .props.onClick();
-  tree = hooks.render(ProductOverview);
-  assert.match(text(tree), /Make room for the next question/);
-  assert.doesNotMatch(text(tree), /Find the thread in your ideas/);
-  assert.equal(text(options().find((node) => node.props["aria-pressed"])), "Learn");
-  options()
-    .find((node) => text(node) === "Plan")
-    .props.onClick();
-  tree = hooks.render(ProductOverview);
-  assert.match(text(tree), /Give the work a place to start/);
+  const get = (id) => elements(tree, (node) => node.props.id === id)[0];
   assert.equal(elements(tree, (node) => node.type === "main").length, 1);
-  assert.equal(options().filter((node) => node.props["aria-pressed"]).length, 1);
+  assert.match(text(get("kx-scene-count")), /1.*6/);
+  get("kx-scene-prev").props.onClick();
+  tree = hooks.render(ProductOverview);
+  assert.match(text(get("kx-scene-count")), /6.*6/);
+  get("kx-scene-next").props.onClick();
+  tree = hooks.render(ProductOverview);
+  assert.match(text(get("kx-scene-count")), /1.*6/);
+  get("kx-pause").props.onClick();
+  tree = hooks.render(ProductOverview);
+  assert.equal(get("kx-pause").props["aria-pressed"], true);
+  assert.match(text(get("kx-pause")), /Resume/);
+  const links = elements(tree, (node) => node.type === "a").map((node) => node.props.href);
+  for (const href of [
+    "/news/argon",
+    "/news/neon",
+    "/news/interactive-workspace",
+    "/news/developer-platform",
+    "/developers/quickstart",
+  ])
+    assert.ok(links.includes(href), href);
+  assert.equal(elements(tree, (node) => node.type === "dialog").length, 0);
 });
 
 test("comparison keeps each tier's mode and allowance data in the correct column", () => {
