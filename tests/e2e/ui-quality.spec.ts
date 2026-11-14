@@ -570,6 +570,12 @@ test("a streamed response composes interactive study, simulation, diagram, and c
       ],
       edges: [{ from: "start", to: "finish", label: "Next" }],
     }),
+    interactive({
+      type: "files",
+      id: "notes",
+      title: "Example notes",
+      files: [{ name: "notes.txt", content: "Example file content." }],
+    }),
     "The examples use sample data.",
   ].join("\n\n");
   await page.route("**/api/chat", (route) =>
@@ -604,5 +610,12 @@ test("a streamed response composes interactive study, simulation, diagram, and c
   await expect(page.getByRole("table", { name: "Sample scores heatmap" })).toBeVisible();
   await page.getByText("Diagram text", { exact: true }).click();
   await expect(page.getByText("Start → Finish (Next)", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Preview notes.txt" }).click();
+  await expect(page.getByText("Example file content.", { exact: true })).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download notes.txt" }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe("notes.txt");
+  expect(await download.failure()).toBeNull();
   await expect(page.getByText("The examples use sample data.", { exact: true })).toBeVisible();
 });
