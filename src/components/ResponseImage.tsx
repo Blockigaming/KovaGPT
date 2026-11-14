@@ -56,6 +56,7 @@ export function ResponseImage({
           <button
             type="button"
             disabled={saving || saved}
+            aria-busy={saving}
             onClick={async () => {
               if (saving) return;
               setSaving(true);
@@ -71,22 +72,36 @@ export function ResponseImage({
               }
             }}
           >
-            {saved ? <Check /> : <Bookmark />}
+            {!saving && (saved ? <Check /> : <Bookmark />)}
             {saved ? (
               "Saved to Library"
             ) : saving ? (
               <span className="spec400-loading-label">
                 <span className="spec400-loading-spinner" aria-hidden="true" />
-                Saving…
+                <span className="kova-image-busy-label">Saving…</span>
               </span>
             ) : (
               "Save to Library"
             )}
           </button>
         )}
-        <button type="button" onClick={() => void download()} disabled={downloading}>
-          <Download />
-          {downloading ? "Downloading…" : "Download"}
+        <button
+          type="button"
+          onClick={() => void download()}
+          disabled={downloading}
+          aria-busy={downloading}
+        >
+          {downloading ? (
+            <span className="spec400-loading-label">
+              <span className="spec400-loading-spinner" aria-hidden="true" />
+              <span className="kova-image-busy-label">Downloading…</span>
+            </span>
+          ) : (
+            <>
+              <Download />
+              Download
+            </>
+          )}
         </button>
         <button ref={viewButton} type="button" onClick={() => setFull(true)}>
           <ExpandViewIcon />

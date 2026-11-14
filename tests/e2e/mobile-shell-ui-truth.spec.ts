@@ -264,7 +264,15 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await page.keyboard.press("Escape");
   await expect(palette).toBeHidden();
 
-  await textbox.blur();
+  await expect(textbox).toBeFocused();
+  await page.locator(".kova-greeting h1").click();
   await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  await expect(textbox).not.toBeFocused();
+  await expect(textbox).toHaveValue("Keep this draft");
+  const collapsedChromeHeight = viewport.height + 48;
+  await page.setViewportSize({ width: viewport.width, height: collapsedChromeHeight });
+  await expect.poll(async () => (await shell.boundingBox())?.height).toBe(collapsedChromeHeight);
+  await page.setViewportSize(viewport);
+  await expect.poll(async () => (await shell.boundingBox())?.height).toBe(viewport.height);
   await expect(textbox).toHaveValue("Keep this draft");
 });

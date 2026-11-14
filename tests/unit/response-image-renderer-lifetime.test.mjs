@@ -162,6 +162,20 @@ function fixture(initial = {}) {
   };
 }
 
+test("image zoom resets when the viewer is reopened", () => {
+  const view = fixture();
+  view.button("View full size").props.onClick();
+  view.render();
+  view.button("Zoom image").props.onClick();
+  view.render();
+  assert.equal(view.button("Zoom image").props["aria-pressed"], true);
+  view.dialog.props.onOpenChange(false);
+  view.render();
+  view.button("View full size").props.onClick();
+  view.render();
+  assert.equal(view.button("Zoom image").props["aria-pressed"], false);
+});
+
 for (const wrap of [(value) => value, (value) => `> ${value}`, (value) => `Before\n\n${value}`]) {
   test(`same image preserves its viewer across callback and source refresh: ${wrap("image")}`, () => {
     const view = fixture({ children: wrap(imageMarkdown()) });

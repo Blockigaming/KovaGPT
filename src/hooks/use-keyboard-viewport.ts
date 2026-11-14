@@ -50,9 +50,26 @@ export function useKeyboardViewport() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(update);
     };
+    const dismissFromCanvas = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        !root.hasAttribute("data-kova-keyboard") ||
+        !(event.target instanceof Element) ||
+        document.getSelection()?.toString()
+      )
+        return;
+      const canvas = event.target.closest(".kova-conversation-scroll, .kova-empty-chat");
+      const control = event.target.closest(
+        "a, button, input, textarea, select, label, [role=button], [role=link], [tabindex], [contenteditable]",
+      );
+      if (!canvas || (control !== canvas && canvas.contains(control))) return;
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    };
 
     viewport.addEventListener("resize", scheduleUpdate);
     viewport.addEventListener("scroll", scheduleUpdate);
+    window.addEventListener("resize", scheduleUpdate);
+    document.addEventListener("click", dismissFromCanvas);
     compact.addEventListener("change", scheduleUpdate);
     document.addEventListener("focusin", scheduleUpdate);
     document.addEventListener("focusout", scheduleUpdate);
@@ -65,6 +82,8 @@ export function useKeyboardViewport() {
       root.style.removeProperty("--kova-visible-top");
       viewport.removeEventListener("resize", scheduleUpdate);
       viewport.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      document.removeEventListener("click", dismissFromCanvas);
       compact.removeEventListener("change", scheduleUpdate);
       document.removeEventListener("focusin", scheduleUpdate);
       document.removeEventListener("focusout", scheduleUpdate);
