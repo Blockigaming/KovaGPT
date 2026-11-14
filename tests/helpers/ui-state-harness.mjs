@@ -28,6 +28,7 @@ export function loadUiModule(path, dependencies, globals = {}) {
     exports: module.exports,
     require(id) {
       if (id === "react/jsx-runtime") return jsxRuntime;
+      if (id.endsWith(".css")) return {}; // Styles are validated separately from hook behavior.
       if (Object.hasOwn(dependencies, id)) return dependencies[id];
       if (Object.hasOwn(nativeControlModules, id)) return nativeControlModules[id];
       throw new Error(`Unexpected dependency ${id} in ${path}`);

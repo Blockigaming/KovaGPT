@@ -102,7 +102,10 @@ test("both existing section rules use the shared responsive spacing for ordinary
     children: "Content",
   });
   const pageMain = elements(page, (node) => node.type === "main")[0];
-  const ordinary = pageMain.props.children[1];
+  const ordinary = elements(
+    pageMain,
+    (node) => node.type === "section" && node.props.className === "bg-muted/25",
+  )[0];
   assert.equal(paddingRules(ordinary, ordinary.props.children).length, 2);
   assert.equal(classes(ordinary.props.children).includes("public-highlights-grid"), false);
 });

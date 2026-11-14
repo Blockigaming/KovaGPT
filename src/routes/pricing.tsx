@@ -133,6 +133,7 @@ function PricingPage() {
           aria-labelledby="pricing-title"
           className="kova-pricing-hero mx-auto px-5 py-14 text-center sm:py-20"
         >
+          <p className="text-sm font-semibold text-muted-foreground">Plans and pricing</p>
           <h1
             id="pricing-title"
             className="mx-auto mb-5 text-balance text-4xl font-semibold tracking-[-0.055em] sm:text-6xl"
