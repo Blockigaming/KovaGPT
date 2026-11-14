@@ -27,7 +27,7 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
             ? null
             : boundedPercent(window.thinkingUsed, window.thinkingLimit),
           window.costPercentUsed,
-        ].filter((value): value is number => value !== null);
+        ].filter((value): value is number => Number.isFinite(value));
         const percent = percentages.length ? Math.max(...percentages) : null;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
         const resetLabel =
