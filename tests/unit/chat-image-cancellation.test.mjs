@@ -107,3 +107,18 @@ test("normal chat image response retains pending, image and terminal frames", as
   assert.equal(f.calls[0].body.model, "synthetic-retained-image-model");
   assert.equal(f.logs.length, 0);
 });
+
+test("animation requests return a true sprite-sheet label and the conversion action", async () => {
+  const f = fixture();
+  const response = await f.handle(
+    "Eight frames in reading order",
+    {},
+    new AbortController().signal,
+    "animation",
+  );
+  f.release(image());
+  const body = await response.text();
+  assert.match(body, /Animation sprite sheet/);
+  assert.match(body, /GIF or sticker pack/);
+  assert.equal(f.calls.length, 1);
+});

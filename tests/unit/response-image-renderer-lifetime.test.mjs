@@ -50,6 +50,7 @@ function fixture(initial = {}) {
       "./ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
       "./ui/dialog": { Dialog: "dialog", DialogContent: "dialog-content", DialogTitle: "title" },
       "./ChatImage": { ChatImage: "chat-image" },
+      "./ResponseSpriteExport": { ResponseSpriteExport: "response-sprite-export" },
       "@/lib/chat-image-actions": { downloadChatImage: async () => {} },
     },
     { Error },
