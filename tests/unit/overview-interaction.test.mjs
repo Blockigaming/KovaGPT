@@ -6,6 +6,7 @@ test("overview gallery controls wrap, API motion pauses, and article links navig
   const hooks = createHookHarness();
   const { ProductOverview } = loadUiModule("src/components/public/ProductOverview.tsx", {
     react: hooks.react,
+    "./PricingPlans": { PricingPage: "PricingPage" },
     "./MarketingChrome": { MarketingHeader: "MarketingHeader", MarketingFooter: "MarketingFooter" },
     "lucide-react": Object.fromEntries(
       ["ArrowRight", "ArrowUpRight", "Code2", "ChevronDown"].map((name) => [name, name]),

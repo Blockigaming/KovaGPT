@@ -1,3 +1,4 @@
+import { PricingPage } from "./PricingPlans";
 import { MarketingHeader, MarketingFooter } from "./MarketingChrome";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowRight, ArrowUpRight, Code2 } from "lucide-react";
@@ -471,37 +472,7 @@ export function ProductOverview() {
             </a>
           </div>
         </section>
-        <section className="getting" id="kx-get-started">
-          <h2>{"Choose how to get started"}</h2>
-          <div className="choices">
-            <article className="choice">
-              <h3>{"Make it your everyday AI"}</h3>
-              <p>{"Start a conversation with KovaGPT."}</p>
-              <ul>
-                <li>{"Ask questions and explore ideas"}</li>
-                <li>{"Get help with writing and code"}</li>
-                <li>{"Keep your work in one place"}</li>
-              </ul>
-              <a className="pill black" href="/">
-                {"Try for free "}
-                <ArrowUpRight aria-hidden="true" />
-              </a>
-            </article>
-            <article className="choice">
-              <h3>{"Get more from Kova"}</h3>
-              <p>{"Find the plan that fits how you work."}</p>
-              <ul>
-                <li>{"Compare Free, Plus, and Pro"}</li>
-                <li>{"Explore included features"}</li>
-                <li>{"Review your plan allowances"}</li>
-              </ul>
-              <a className="pill black" href="/pricing">
-                {"Explore plans "}
-                <ArrowUpRight aria-hidden="true" />
-              </a>
-            </article>
-          </div>
-        </section>
+        <PricingPage embedded />
       </main>
       <MarketingFooter />
     </div>

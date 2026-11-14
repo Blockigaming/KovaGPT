@@ -13,12 +13,12 @@ test("paid monthly plans keep their billing terms while pricing removes the offe
   }
   assert.equal(registry.plans.plus.monthlyPriceUsd, 16);
   assert.equal(registry.plans.pro.monthlyPriceUsd, 80);
-  const pricing = readFileSync("src/routes/pricing.tsx", "utf8");
+  const pricing = readFileSync("src/components/public/PricingPlans.tsx", "utf8");
   assert.doesNotMatch(pricing, /50% off the first paid month, once per account/);
   assert.doesNotMatch(pricing, /Regular monthly pricing follows/);
   const cards = [...pricing.matchAll(/<PlanCard\b[\s\S]*?\/>/g)].map(([card]) => card);
   assert.equal(cards.length, 3, "Individual pricing contains exactly Free, Plus, and Pro");
-  assert.match(pricing, /PRICING_TIERS = \["free", "plus", "pro"\]/);
+  assert.match(readFileSync("src/routes/pricing.tsx", "utf8"), /PRICING_TIERS = \["free", "plus", "pro"\]/);
   for (const tier of ["plus", "pro"]) {
     const card = cards.find((value) => value.includes(`planId="${tier}"`));
     assert.ok(card, `missing ${tier} card`);

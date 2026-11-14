@@ -155,8 +155,8 @@ function pricingFixture(isSignedIn) {
     isLoaded: true,
   };
   const checkout = { open: false };
-  const f = reactFixture("src/routes/pricing.tsx", (exports) => exports.PricingPage, {
-    sourceSuffix: "\nexport { PricingPage };",
+  const f = reactFixture("src/components/public/PricingPlans.tsx", (exports) => exports.PricingPage, {
+    sourceSuffix: "",
     modules: {
       "@tanstack/react-router": {
         createFileRoute: () => (config) => config,

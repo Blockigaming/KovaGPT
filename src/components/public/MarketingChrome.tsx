@@ -68,7 +68,7 @@ export function MarketingHeader() {
       </a>
       <button
         ref={toggleRef}
-        className="marketing-menu"
+        className="marketing-menu pill sales"
         type="button"
         aria-expanded={open}
         aria-controls="marketing-navigation"

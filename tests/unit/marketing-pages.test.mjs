@@ -13,6 +13,7 @@ const icons = Object.fromEntries(
 const pageHooks = createHookHarness();
 const landing = loadUiModule("src/components/public/MarketingLanding.tsx", {
   react: pageHooks.react,
+  "./PricingPlans": { PricingPage: "PricingPage" },
   "lucide-react": icons,
   "./PublicShell": { PublicShell: "PublicShell" },
   "@/lib/publications": publications,

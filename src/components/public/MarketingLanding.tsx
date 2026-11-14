@@ -1,3 +1,4 @@
+import { PricingPage } from "./PricingPlans";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Code2, Folder, Image, MessageSquare, Search, Mic } from "lucide-react";
 import { PublicShell } from "./PublicShell";
@@ -545,15 +546,7 @@ export function MarketingLanding({ page }: { page: MarketingLandingKey }) {
             </section>
           </>
         )}
-        {page !== "business" && (
-          <section className="editor-end">
-            <p>{page === "news" ? "Put the ideas to work." : "Make KovaGPT part of your day."}</p>
-            <a href="/pricing">
-              Explore plans
-              <ArrowUpRight aria-hidden="true" />
-            </a>
-          </section>
-        )}
+        {page !== "business" && <PricingPage embedded />}
       </main>
     </PublicShell>
   );

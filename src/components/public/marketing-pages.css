@@ -488,43 +488,43 @@
     min-height: 44px;
   }
 }
-#kx.marketing-interior .kova-pricing-page {
+#kx .kova-pricing-page {
   max-width: 1200px;
   padding: 0 32px 80px;
 }
-#kx.marketing-interior .kova-pricing-hero {
+#kx .kova-pricing-hero {
   padding: 80px 0 36px;
   background: transparent;
   color: #f5f5f7;
 }
-#kx.marketing-interior .kova-pricing-hero h1 {
+#kx .kova-pricing-hero h1 {
   font-weight: 500;
   letter-spacing: -0.055em;
 }
-#kx.marketing-interior .kova-plan-card {
+#kx .kova-plan-card {
   border-width: 1px;
   border-color: #29292e;
   background: #0b0b0e;
   border-radius: 18px;
   padding: 24px;
 }
-#kx.marketing-interior .kova-plan-card#plus {
+#kx .kova-plan-card#plus {
   border-color: #5984c0;
   background: linear-gradient(160deg, #10203a, #0b0b0e 65%);
 }
-#kx.marketing-interior .kova-plan-card button {
+#kx .kova-plan-card button {
   min-height: 40px;
   height: auto;
   padding: 10px 16px;
 }
-#kx.marketing-interior .kova-showcase-progress {
+#kx .kova-showcase-progress {
   display: none;
 }
 @media (max-width: 700px) {
-  #kx.marketing-interior .kova-pricing-page {
+  #kx .kova-pricing-page {
     padding: 0 20px 56px;
   }
-  #kx.marketing-interior .kova-pricing-hero {
+  #kx .kova-pricing-hero {
     padding: 48px 0 24px;
   }
 }
@@ -1335,25 +1335,25 @@
     min-height: 44px;
   }
 }
-#kx.marketing-interior .kova-pricing-page {
+#kx .kova-pricing-page {
   width: 100%;
   margin: auto;
 }
-#kx.marketing-interior .kova-pricing-hero {
+#kx .kova-pricing-hero {
   text-align: center;
 }
-#kx.marketing-interior .kova-pricing-hero h1 {
+#kx .kova-pricing-hero h1 {
   font-size: 64px;
   line-height: 1;
   margin: 18px 0;
 }
-#kx.marketing-interior .kova-pricing-hero p {
+#kx .kova-pricing-hero p {
   color: #a6acb7;
   line-height: 1.7;
   margin: 12px auto;
   max-width: 600px;
 }
-#kx.marketing-interior .kova-pricing-hero [role="group"] {
+#kx .kova-pricing-hero [role="group"] {
   display: inline-flex;
   gap: 4px;
   padding: 4px;
@@ -1361,7 +1361,7 @@
   border-radius: 999px;
   margin-top: 24px;
 }
-#kx.marketing-interior .kova-pricing-hero button {
+#kx .kova-pricing-hero button {
   border: 0;
   border-radius: 999px;
   padding: 10px 17px;
@@ -1369,51 +1369,51 @@
   color: #929baa;
   font-size: 13px;
 }
-#kx.marketing-interior .kova-pricing-hero button[aria-pressed="true"] {
+#kx .kova-pricing-hero button[aria-pressed="true"] {
   background: #2a3445;
   color: #f1f4f8;
 }
-#kx.marketing-interior [aria-label="KovaGPT plans"] {
+#kx [aria-label="KovaGPT plans"] {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-top: 32px;
 }
-#kx.marketing-interior .kova-plan-card {
+#kx .kova-plan-card {
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-width: 0;
 }
-#kx.marketing-interior .kova-plan-card h2 {
+#kx .kova-plan-card h2 {
   font-size: 23px;
   letter-spacing: -0.03em;
   margin: 0;
 }
-#kx.marketing-interior .kova-plan-card p,
-#kx.marketing-interior .kova-plan-card li {
+#kx .kova-plan-card p,
+#kx .kova-plan-card li {
   font-size: 13px;
   line-height: 1.7;
   color: #aab0bb;
   margin: 0;
 }
-#kx.marketing-interior .kova-plan-card > div:nth-child(2) > div > span:first-child {
+#kx .kova-plan-card > div:nth-child(2) > div > span:first-child {
   font-size: 42px;
   color: #f1f3f6;
   letter-spacing: -0.05em;
 }
-#kx.marketing-interior .kova-plan-card > div:nth-child(2) > div > span + span {
+#kx .kova-plan-card > div:nth-child(2) > div > span + span {
   font-size: 12px;
   color: #919baa;
   padding-left: 6px;
 }
-#kx.marketing-interior .kova-plan-card > div:nth-child(2) > span {
+#kx .kova-plan-card > div:nth-child(2) > span {
   display: block;
   font-size: 10px;
   color: #929aaa;
   margin-top: 4px;
 }
-#kx.marketing-interior .kova-plan-card button {
+#kx .kova-plan-card button {
   border: 1px solid #35435a;
   background: #141e2d;
   color: #e8edf7;
@@ -1422,14 +1422,14 @@
   width: 100%;
   margin-top: auto;
 }
-#kx.marketing-interior .kova-plan-card#plus button {
+#kx .kova-plan-card#plus button {
   background: #eef3fb;
   color: #0a1019;
 }
-#kx.marketing-interior .kova-plan-card button:disabled {
+#kx .kova-plan-card button:disabled {
   opacity: 0.5;
 }
-#kx.marketing-interior .kova-plan-card ul {
+#kx .kova-plan-card ul {
   padding: 0;
   margin: 0;
   list-style: none;
@@ -1437,32 +1437,32 @@
   flex-direction: column;
   gap: 12px;
 }
-#kx.marketing-interior .kova-plan-card li {
+#kx .kova-plan-card li {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
-#kx.marketing-interior .kova-plan-card li svg {
+#kx .kova-plan-card li svg {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
   margin-top: 4px;
   color: #a8c7f0;
 }
-#kx.marketing-interior .kova-pricing-page table {
+#kx .kova-pricing-page table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 24px;
   font-size: 13px;
 }
-#kx.marketing-interior .kova-pricing-page th,
-#kx.marketing-interior .kova-pricing-page td {
+#kx .kova-pricing-page th,
+#kx .kova-pricing-page td {
   padding: 14px 12px;
   border-bottom: 1px solid #252c36;
   text-align: left;
   line-height: 1.6;
 }
-#kx.marketing-interior .kova-pricing-page > p {
+#kx .kova-pricing-page > p {
   font-size: 12px;
   color: #939cab;
   text-align: center;
@@ -1492,13 +1492,13 @@
   margin: 0;
 }
 @media (max-width: 700px) {
-  #kx.marketing-interior [aria-label="KovaGPT plans"] {
+  #kx [aria-label="KovaGPT plans"] {
     grid-template-columns: 1fr;
   }
   #kx.marketing-interior [aria-labelledby="pricing-faq-title"] > div {
     grid-template-columns: 1fr;
   }
-  #kx.marketing-interior .kova-pricing-hero h1 {
+  #kx .kova-pricing-hero h1 {
     font-size: 44px;
   }
 }
@@ -1520,5 +1520,78 @@
   }
   #kx .editor-gallery-lane:nth-child(3) {
     display: none;
+  }
+}
+
+/* Use the same compact pill geometry for every header action. */
+#kx .nav .marketing-menu {
+  min-height: 0;
+  height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+}
+#kx .editorial-v2 > .kova-pricing-page {
+  padding-left: 0;
+  padding-right: 0;
+}
+#kx:not(.marketing-interior) .kova-pricing-page {
+  margin: 64px 32px;
+}
+
+#kx [aria-labelledby="organization-plans-title"] > div {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+  margin-top: 28px;
+}
+#kx [aria-labelledby="organization-plans-title"] > h2 {
+  font-size: 28px;
+  font-weight: 500;
+}
+#kx [aria-labelledby="organization-plans-title"] p {
+  color: #a8a8b0;
+  line-height: 1.6;
+}
+#kx [aria-labelledby="organization-plans-title"] article {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #0b0b0d;
+  border: 1px solid #29292e;
+  border-radius: 16px;
+  padding: 24px;
+}
+#kx [aria-labelledby="organization-plans-title"] h3 {
+  font-size: 26px;
+  margin: 6px 0;
+}
+#kx [aria-labelledby="organization-plans-title"] article > .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+#kx [aria-labelledby="organization-plans-title"] .bg-muted {
+  background: #15171d;
+  padding: 16px;
+  border-radius: 12px;
+}
+#kx [aria-labelledby="organization-plans-title"] :is(button, article > a) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  min-height: 38px;
+  border: 1px solid #393939;
+  border-radius: 999px;
+  background: #242424;
+  color: #f5f5f7;
+  padding: 8px 16px;
+}
+@media (max-width: 700px) {
+  #kx [aria-labelledby="organization-plans-title"] > div {
+    grid-template-columns: 1fr;
   }
 }
