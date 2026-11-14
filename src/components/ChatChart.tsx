@@ -9,6 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AreaChart,
+  Area,
   LineChart,
   Line,
   BarChart,
@@ -26,6 +28,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-chart-utils";
+const chartNames = {
+  "horizontal-bar": "Horizontal bar",
+  "stacked-bar": "Stacked bar",
+  "stacked-area": "Stacked area",
+} as const;
+
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
@@ -39,7 +47,10 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           ),
     [spec, xKey],
   );
-  const [type, setType] = useState<ChartType>(spec.type);
+  const numericX = spec.data.every((row) => typeof row[xKey] === "number");
+  const [type, setType] = useState<ChartType>(
+    spec.type === "scatter" && !numericX ? "line" : spec.type,
+  );
   const [table, setTable] = useState(false);
   const figureRef = useRef<HTMLElement>(null);
   const chartTypeId = useId();
@@ -64,11 +75,24 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       anchor?.remove();
     }
   };
+  const horizontal = type === "horizontal-bar";
+  const scatter = type === "scatter";
+  const displayTypes = CHART_TYPES.filter((candidate) => candidate !== "scatter" || numericX);
   const axes = (
     <>
       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-      <XAxis dataKey={xKey} stroke="var(--muted-foreground)" fontSize={12} />
-      <YAxis stroke="var(--muted-foreground)" fontSize={12} />
+      <XAxis
+        dataKey={horizontal ? undefined : xKey}
+        type={horizontal || scatter ? "number" : "category"}
+        stroke="var(--muted-foreground)"
+        fontSize={12}
+      />
+      <YAxis
+        dataKey={horizontal ? xKey : scatter ? keys[0] : undefined}
+        type={horizontal ? "category" : "number"}
+        stroke="var(--muted-foreground)"
+        fontSize={12}
+      />
       <Tooltip />
       <Legend />
     </>
@@ -90,9 +114,11 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {CHART_TYPES.map((item) => (
+            {displayTypes.map((item) => (
               <SelectItem key={item} value={item}>
-                {item[0].toUpperCase() + item.slice(1)}
+                {item in chartNames
+                  ? chartNames[item as keyof typeof chartNames]
+                  : item[0].toUpperCase() + item.slice(1)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -155,19 +181,34 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                   ))}
                 </Pie>
               </PieChart>
-            ) : type === "bar" ? (
-              <BarChart data={spec.data}>
+            ) : type === "bar" || type === "stacked-bar" || horizontal ? (
+              <BarChart data={spec.data} layout={horizontal ? "vertical" : "horizontal"}>
                 {axes}
                 {keys.map((key, index) => (
                   <Bar
                     key={key}
                     dataKey={key}
                     fill={colors[index % colors.length]}
-                    radius={[4, 4, 0, 0]}
+                    stackId={type === "stacked-bar" ? "series" : undefined}
+                    radius={type === "bar" ? [4, 4, 0, 0] : undefined}
                   />
                 ))}
               </BarChart>
-            ) : type === "scatter" ? (
+            ) : type === "area" || type === "stacked-area" ? (
+              <AreaChart data={spec.data}>
+                {axes}
+                {keys.map((key, index) => (
+                  <Area
+                    key={key}
+                    dataKey={key}
+                    stackId={type === "stacked-area" ? "series" : undefined}
+                    stroke={colors[index % colors.length]}
+                    fill={colors[index % colors.length]}
+                    fillOpacity={0.28}
+                  />
+                ))}
+              </AreaChart>
+            ) : scatter ? (
               <ScatterChart>
                 {axes}
                 {keys.slice(0, 1).map((key, index) => (
@@ -186,7 +227,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                 {keys.map((key, index) => (
                   <Line
                     key={key}
-                    type="monotone"
+                    type={type === "step" ? "stepAfter" : "monotone"}
                     dataKey={key}
                     stroke={colors[index % colors.length]}
                     strokeWidth={2}

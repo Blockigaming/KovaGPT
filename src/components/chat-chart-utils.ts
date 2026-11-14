@@ -1,4 +1,16 @@
-export type ChartType = "line" | "bar" | "pie" | "donut" | "scatter";
+export const CHART_TYPES = [
+  "bar",
+  "line",
+  "pie",
+  "donut",
+  "scatter",
+  "horizontal-bar",
+  "stacked-bar",
+  "step",
+  "area",
+  "stacked-area",
+] as const;
+export type ChartType = (typeof CHART_TYPES)[number];
 
 export type ChartSpec = {
   type: ChartType;
@@ -8,8 +20,6 @@ export type ChartSpec = {
   colors?: string[];
   data: Array<Record<string, string | number>>;
 };
-
-export const CHART_TYPES: ChartType[] = ["bar", "line", "pie", "donut", "scatter"];
 
 export function parseChartSpec(raw: string): ChartSpec | null {
   if (raw.length > 64_000) return null;
