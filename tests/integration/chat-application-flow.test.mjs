@@ -1,3 +1,5 @@
+import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { completedChatReply } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -738,8 +740,10 @@ function composer(f) {
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
         withResponsePresentation,
+        completedChatReply,
+        chatRequestHeaders,
         createChatHistoryPayload: async (messages) => ({ messages }),
-        chatRequestProfile: () => ({}),
+        chatRequestUser: () => ({ user: {} }),
         fetchForPrincipal: async (owner, url, init) => {
           assert.equal(owner, ownerId);
           assert.equal(url, "/api/chat");
@@ -877,6 +881,7 @@ test("actual application guard clamps final output and permits only one quoted O
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": "new-attempt-123",
+        "X-Kova-Response-Followups": "1",
         "x-kova-acceptance-operation": a.plan.operationId,
       },
       body: f.applicationBody,

@@ -18,7 +18,7 @@ import {
   type NextPromptScope,
 } from "@/lib/chat-send-next";
 import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversation.mjs";
-import { appendFollowupToDraft, extractResponseFollowups } from "@/lib/response-followups.mjs";
+import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
 import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
@@ -204,7 +204,6 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
-import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
   consumePrincipalHandoff,
@@ -2132,8 +2131,9 @@ function KovaGPT() {
         const {
           createChatHistoryPayload,
           fetchForPrincipal,
-          chatRequestProfile,
-          withResponsePresentation,
+          chatRequestUser,
+          completedChatReply,
+          chatRequestHeaders,
         } = await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
@@ -2151,12 +2151,7 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(!voiceRequest ? { "X-Kova-Response-Followups": "1" } : {}),
-            "Idempotency-Key": userMsg.id,
-            "X-Kova-Assistant-Message-Id": assistantMsg.id,
-          },
+          headers: chatRequestHeaders(userMsg.id, assistantMsg.id, voiceRequest),
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
@@ -2172,28 +2167,16 @@ function KovaGPT() {
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            user:
-              tempChat && tempChatContext === "clean"
-                ? requestWebSearch === undefined
-                  ? undefined
-                  : { webSearch: requestWebSearch }
-                : withResponsePresentation(
-                    chatRequestProfile({
-                      ...settings,
-                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
-                    }),
-                    settings,
-                  ),
+            ...(await chatRequestUser(
+              settings,
+              tempChat && tempChatContext === "clean",
+              requestWebSearch,
+              isLoaded ? userKey : undefined,
+              tier,
+              Boolean(voiceRequest),
+            )),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
-            personality:
-              tempChat && tempChatContext === "clean"
-                ? undefined
-                : personalityToInstruction(
-                    loadPersonality(isLoaded ? userKey : undefined),
-                    isLoaded ? userKey : undefined,
-                    tier,
-                  ) || undefined,
           }),
           signal: controller.signal,
         });
@@ -2297,14 +2280,9 @@ function KovaGPT() {
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (requestSucceeded) {
-          const { content, followups } = extractResponseFollowups(assembledReply);
-          assembledReply = content;
-          updateAssistantMessage((message) => ({
-            ...message,
-            content,
-            ...(followups.length ? { followups } : {}),
-            createdAt: Date.now(),
-          }));
+          const reply = completedChatReply(assembledReply, Boolean(voiceRequest));
+          assembledReply = reply.content;
+          updateAssistantMessage((message) => ({ ...message, ...reply }));
         }
         if (activeIdRef.current === nextConvId) {
           if (assembledReply) setStreamAnnouncement("KovaGPT response complete");

@@ -105,3 +105,34 @@ An expressive v4 entry can be a deliberate separately selected option. Bind no
 real voices until their current IDs, account availability and sample quality are
 verified. The daily request allowance remains a request counter, not a currency
 budget: different configured models and output lengths incur different charges.
+
+## Activating Live Voice
+
+With `KOVA_VOICE_REALTIME_ENABLED=true` and at least three catalog entries, the
+composer switches to the inline Live Voice panel. The browser requests a fresh
+single-use Scribe token for each listening turn. It streams 16 kHz mono audio
+while listening, submits the committed transcript through ordinary chat, and
+reopens listening after the saved assistant reply finishes playing. The browser
+releases the microphone during the reply and on End Voice. Dictation remains a
+separate, review-before-send ElevenLabs recording tool.
+
+1. In ElevenLabs, confirm that the restricted server key can use Speech to Text
+   (including Realtime Scribe tokens), Text to Speech, and Speech to Speech if
+   voice conversion is enabled. Store any replacement key in Azure Key Vault
+   and bind the new version to the existing `ELEVENLABS_API_KEY` server setting.
+2. Set `KOVA_VOICE_CATALOG` to the curated provider voices in priority order.
+   Free can pick from the first three, Plus gets the first ten, and Pro gets the whole configured catalog. This catalog order
+   controls availability while the realtime flag is enabled. Test each chosen
+   voice with the configured ElevenLabs key and TTS model.
+3. Confirm the existing voice/audio/speech flags, account feature flag, and
+   production model receipt settings. Set `voiceRealtimeEnabled=true` in
+   the Azure deployment parameters. Validate microphone consent, consecutive
+   turns, saved transcripts, playback, End Voice, and plan restrictions on
+   a signed-in staging account before production activation.
+
+Free and Plus spend one existing voice usage unit when each listening turn is
+opened, including the first turn. Pro skips that daily voice bucket for Live
+Voice. The chat and saved-speech rate limits, provider credits, and provider
+availability still apply across plans. The Live Voice panel imposes no
+59-second timer. Provider disconnections can end listening and surface a
+restart control.

@@ -17,7 +17,7 @@ test("both settings entry modes expose all twenty-two destinations through the g
     "Security and login",
     "Account",
     "Parental controls",
-    "Voice",
+    "Live Voice",
     "Storage",
     "Data controls",
     "Personalization",

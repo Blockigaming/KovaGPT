@@ -81,32 +81,26 @@ export function ConsumerModelSelector({
       ) : null}
     </div>
   );
-  return (
-    <Popover open={open && !locked} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          ref={trigger}
-          type="button"
-          disabled={locked}
-          aria-label={`Choose Kova model: ${current?.label ?? "Unavailable"}`}
-          aria-haspopup="dialog"
-          aria-expanded={open && !locked}
-          data-testid="consumer-model-trigger"
-          onClick={
-            sheet
-              ? (event) => {
-                  event.preventDefault();
-                  setOpen(true);
-                }
-              : undefined
-          }
-          className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-        >
-          <span className="truncate">{current?.label ?? "Model unavailable"}</span>
-          <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
-        </button>
-      </PopoverTrigger>
-      {sheet ? (
+  const triggerButton = (
+    <button
+      ref={trigger}
+      type="button"
+      disabled={locked}
+      aria-label={`Choose Kova model: ${current?.label ?? "Unavailable"}`}
+      aria-haspopup="dialog"
+      aria-expanded={open && !locked}
+      data-testid="consumer-model-trigger"
+      onClick={sheet ? () => setOpen(true) : undefined}
+      className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+    >
+      <span className="truncate">{current?.label ?? "Model unavailable"}</span>
+      <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+    </button>
+  );
+  if (sheet) {
+    return (
+      <>
+        {triggerButton}
         <MobileBottomSheet
           open={open && !locked}
           onOpenChange={(next) => (next ? setOpen(true) : close())}
@@ -115,18 +109,22 @@ export function ConsumerModelSelector({
         >
           {options}
         </MobileBottomSheet>
-      ) : (
-        <PopoverContent
-          role="dialog"
-          aria-label="Choose Kova model"
-          side="top"
-          align="start"
-          collisionPadding={12}
-          className="w-72 max-w-[calc(100vw-24px)] rounded-2xl p-2"
-        >
-          {options}
-        </PopoverContent>
-      )}
+      </>
+    );
+  }
+  return (
+    <Popover open={open && !locked} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+      <PopoverContent
+        role="dialog"
+        aria-label="Choose Kova model"
+        side="top"
+        align="start"
+        collisionPadding={12}
+        className="w-72 max-w-[calc(100vw-24px)] rounded-2xl p-2"
+      >
+        {options}
+      </PopoverContent>
     </Popover>
   );
 }

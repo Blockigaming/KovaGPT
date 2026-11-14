@@ -1,3 +1,5 @@
+import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { completedChatReply } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -71,6 +73,8 @@ globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
+  completedChatReply,
+  chatRequestHeaders,
   React,
   // This reused send fixture does not render controls; keep its transparent
   // shared Button dependency bound while exercising the actual chat callbacks.
@@ -86,6 +90,13 @@ const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
 });
 const sendFixture = () => {
   const f = sendFixtureFactory();
+  f.context.summaryModule = f.context.summaryModule.then((module) => ({
+    ...module,
+    chatRequestUser: (_settings, _temporary, _webSearch, _owner, _tier, voice) => ({
+      voice,
+      user: { responseLength: "medium", customInstructions: "Use simple examples." },
+    }),
+  }));
   f.context.stopComposerVoiceRequestRef = { current: f.context.stop };
   return f;
 };
@@ -114,6 +125,10 @@ test("voice uses actual chat submission and returns only its exact successful as
   await settle();
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0].url, "/api/chat");
+  const payload = JSON.parse(f.requests[0].args.body);
+  assert.equal(payload.voice, true);
+  assert.equal(payload.user.responseLength, "medium");
+  assert.match(payload.user.customInstructions, /Use simple examples/);
   // This UI fixture does not sign receipts: it simulates the authenticated
   // chat route emitting a receipt alongside the streamed assistant answer.
   const receipt = `${"a".repeat(16)}.${"b".repeat(43)}`;

@@ -51,10 +51,16 @@ test("Temporary Chat enforces clean or personalized context without new memory",
     /No history or memory\. Profile, instructions, personality and connected apps stay off\./,
   );
   assert.match(page, /temporaryContext: tempChat \? tempChatContext : undefined/);
-  assert.match(chatRequest, /user:\s*tempChat && tempChatContext === "clean"[\s\S]*?\? undefined/);
   assert.match(
     chatRequest,
-    /personality:\s*tempChat && tempChatContext === "clean"[\s\S]*?\? undefined/,
+    /chatRequestUser\(\s*settings,\s*tempChat && tempChatContext === "clean"/,
+  );
+  const profileBuilder = read("src/lib/chat-summary-snapshot.mjs").split(
+    "export async function chatRequestUser",
+  )[1];
+  assert.match(
+    profileBuilder,
+    /^.*?\{\s*if \(cleanTemporaryChat\) return \{ user: webSearch === undefined \? undefined : \{ webSearch \} \};/,
   );
   assert.match(chatApi, /temporaryContext === "personalized"/);
   assert.match(chatApi, /const personalContext = usesExistingContext \? user : undefined/);

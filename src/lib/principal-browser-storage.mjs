@@ -13,6 +13,8 @@ export const PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT = "kova:principal-browser-s
 export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-workspace-defaults-v1",
   "kova-voice-selection-v1",
+  "kova-voice-glow-v1",
+  "kova-live-voice-reply-v1",
   "kova-sidebar-shortcuts-v1",
   "kova-location",
   "kova-memory-write-block-v1",

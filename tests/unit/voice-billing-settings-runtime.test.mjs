@@ -8,6 +8,7 @@ import {
   settle,
   text,
 } from "../helpers/ui-state-harness.mjs";
+import * as principalStorage from "../../src/lib/principal-browser-storage.mjs";
 import { parseAllowedBillingPortalUrl } from "../../src/lib/billing-portal-url.mjs";
 import { voiceReadiness } from "../../scripts/voice/check-elevenlabs.mjs";
 
@@ -43,9 +44,12 @@ function fixture(kind) {
     },
     "@/lib/billing-portal-url.mjs": { parseAllowedBillingPortalUrl },
   };
+  deps["@/lib/principal-browser-storage.mjs"] = principalStorage;
+  deps["@/lib/voice/preference"] = loadUiModule("src/lib/voice/preference.ts", deps);
   const name = kind === "voice" ? "VoiceConnectionStatus" : "BillingPortalButton";
   const module = loadUiModule(`src/components/${name}.tsx`, deps, {
     window: { location: { assign: (url) => redirects.push(url) } },
+    AbortSignal,
   });
   let tree;
   const render = () => (tree = hooks.render(module[name], { priceId }));
@@ -74,6 +78,7 @@ function fixture(kind) {
 }
 test("voice configuration probe is authenticated and consumes no provider request", async () => {
   const f = fixture("voice");
+  assert.equal(f.requests.length, 1);
   f.click();
   f.click();
   assert.equal(f.requests.length, 1);

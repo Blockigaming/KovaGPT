@@ -177,7 +177,9 @@ for (const [tier, count] of [
     const labels = ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"];
     for (const model of products) {
       await page.getByTestId("consumer-model-trigger").click();
-      await page.getByTestId(`consumer-model-${model}`).click();
+      const picker = page.getByRole("dialog", { name: /^(Choose Kova model|Kova models)$/ });
+      await picker.getByTestId(`consumer-model-${model}`).click();
+      await expect(picker).toBeHidden();
       for (const [index, mode] of efforts.entries()) {
         await page.getByTestId("model-selector-trigger").click();
         const slider = page.getByRole("slider", { name: "Response effort", exact: true });
