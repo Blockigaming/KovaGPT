@@ -17,6 +17,7 @@ export function ResponseImage({
   imageActions?: ChatImageActions;
 }) {
   const [full, setFull] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -98,7 +99,13 @@ export function ResponseImage({
         </span>
       )}
       {full && (
-        <Dialog open onOpenChange={setFull}>
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            setFull(open);
+            if (!open) setZoomed(false);
+          }}
+        >
           <DialogContent
             constrainToViewport={false}
             data-kova-response-image-view=""
@@ -110,13 +117,32 @@ export function ResponseImage({
             }}
           >
             <DialogTitle>{alt}</DialogTitle>
-            <ChatImage
-              src={src}
-              alt={alt}
-              actions={imageActions}
-              imageClassName="max-h-[75dvh] w-auto max-w-full object-contain"
-              onHide={() => setFull(false)}
-            />
+            <button
+              type="button"
+              className="kova-image-zoom"
+              aria-pressed={zoomed}
+              onClick={() => setZoomed((value) => !value)}
+            >
+              Zoom image
+            </button>
+            <div
+              className="kova-image-view-scroll"
+              data-zoomed={zoomed}
+              role="region"
+              aria-label="Image preview"
+              tabIndex={zoomed ? 0 : undefined}
+            >
+              <ChatImage
+                src={src}
+                alt={alt}
+                actions={imageActions}
+                imageClassName="max-h-[70dvh] w-auto max-w-full object-contain"
+                onHide={() => {
+                  setZoomed(false);
+                  setFull(false);
+                }}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}

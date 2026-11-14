@@ -129,6 +129,21 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+@media (pointer: coarse) {
+  .prose-chat a {
+    text-underline-offset: 0.2em;
+  }
+
+  .prose-chat :is(a, .kova-citation-link) + :is(a, .kova-citation-link) {
+    margin-inline-start: 8px;
+  }
+
+  .prose-chat .kova-citation-link {
+    min-height: 24px;
+    padding-inline: 4px;
+  }
+}
 .kova-table-scroll {
   overflow-x: auto;
   max-width: 100%;
@@ -338,6 +353,35 @@ body .prose-chat .kova-table-scroll:focus-visible {
 .kova-copy-label-reserve {
   visibility: hidden;
   pointer-events: none;
+}
+
+.kova-image-zoom {
+  justify-self: start;
+  min-height: 44px;
+  padding-inline: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--kova-radius-button);
+}
+
+.kova-image-zoom[aria-pressed="true"] {
+  background: var(--accent);
+}
+
+.kova-image-view-scroll {
+  min-width: 0;
+  max-height: 65dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.kova-image-view-scroll[data-zoomed="true"] > [data-chat-image] {
+  width: 200%;
+  max-width: none;
+}
+
+[data-kova-response-image-view] .kova-image-view-scroll[data-zoomed="true"] img {
+  width: 100%;
+  max-height: none;
 }
 
 @media (width < 768px) {

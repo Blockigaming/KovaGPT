@@ -180,6 +180,18 @@ for (const [width, height] of viewports) {
       await openImage.click();
       const imageView = page.getByRole("dialog", { name: "Responsive preview" });
       await expect(imageView.getByRole("img", { name: "Responsive preview" })).toBeVisible();
+      const zoom = imageView.getByRole("button", { name: "Zoom image" });
+      await zoom.click();
+      await expect(zoom).toHaveAttribute("aria-pressed", "true");
+      await expect
+        .poll(() =>
+          imageView
+            .getByRole("region", { name: "Image preview" })
+            .evaluate((element) => element.scrollWidth - element.clientWidth),
+        )
+        .toBeGreaterThan(0);
+      await zoom.click();
+      await expect(zoom).toHaveAttribute("aria-pressed", "false");
       if (width < 768) {
         await expect.poll(async () => (await imageView.boundingBox())?.width).toBe(width);
       }
