@@ -62,6 +62,7 @@ const defaults = {
   readingWidth: 760,
   density: "comfortable",
   motion: "full",
+  contrast: "system",
   mode: "dark",
 };
 
@@ -182,17 +183,25 @@ test("mounted Appearance settings immediately propagate all three Result reading
 test("mounted settings preserve bounded width, density and motion application", () => {
   const f = fixture();
   f.load();
-  f.change({ readingWidth: 900, density: "compact", motion: "reduced" });
+  f.change({ readingWidth: 900, density: "compact", motion: "reduced", contrast: "high" });
   assert.equal(f.properties.get("--kova-reading-width"), "900px");
   assert.equal(
     f.properties.has("--chat-content-width"),
     false,
     "Reading preferences must not restore the obsolete separate content-width override",
   );
-  assert.deepEqual(f.root.dataset, { kovaDensity: "compact", kovaMotion: "reduced" });
+  assert.deepEqual(f.root.dataset, {
+    kovaDensity: "compact",
+    kovaMotion: "reduced",
+    kovaContrast: "high",
+  });
   f.change(defaults);
   assert.equal(f.properties.get("--kova-reading-width"), "760px");
-  assert.deepEqual(f.root.dataset, { kovaDensity: "comfortable", kovaMotion: "full" });
+  assert.deepEqual(f.root.dataset, {
+    kovaDensity: "comfortable",
+    kovaMotion: "full",
+    kovaContrast: "system",
+  });
 });
 
 test("reading application waits for the current principal while guest theme remains canonical", () => {
