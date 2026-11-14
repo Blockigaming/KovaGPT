@@ -18,7 +18,7 @@ import {
   type NextPromptScope,
 } from "@/lib/chat-send-next";
 import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversation.mjs";
-import { appendFollowupToDraft, extractResponseFollowups } from "@/lib/response-followups.mjs";
+import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
 import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
@@ -2128,8 +2128,13 @@ function KovaGPT() {
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
-        const { createChatHistoryPayload, fetchForPrincipal, chatRequestUser } =
-          await import("@/lib/chat-summary-snapshot.mjs");
+        const {
+          createChatHistoryPayload,
+          fetchForPrincipal,
+          chatRequestUser,
+          completedChatReply,
+          chatRequestHeaders,
+        } = await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2146,12 +2151,7 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(!voiceRequest ? { "X-Kova-Response-Followups": "1" } : {}),
-            "Idempotency-Key": userMsg.id,
-            "X-Kova-Assistant-Message-Id": assistantMsg.id,
-          },
+          headers: chatRequestHeaders(userMsg.id, assistantMsg.id, voiceRequest),
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
@@ -2280,16 +2280,9 @@ function KovaGPT() {
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (requestSucceeded) {
-          const { content, followups } = voiceRequest
-            ? { content: assembledReply, followups: [] }
-            : extractResponseFollowups(assembledReply);
-          assembledReply = content;
-          updateAssistantMessage((message) => ({
-            ...message,
-            content,
-            ...(followups.length ? { followups } : {}),
-            createdAt: Date.now(),
-          }));
+          const reply = completedChatReply(assembledReply, Boolean(voiceRequest));
+          assembledReply = reply.content;
+          updateAssistantMessage((message) => ({ ...message, ...reply }));
         }
         if (activeIdRef.current === nextConvId) {
           if (assembledReply) setStreamAnnouncement("KovaGPT response complete");

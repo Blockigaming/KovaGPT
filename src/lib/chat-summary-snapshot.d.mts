@@ -87,3 +87,11 @@ export function chatRequestUser(
   tier: import("@/hooks/useTier").Tier,
   voice: boolean,
 ): Promise<{ voice?: true; user?: Record<string, unknown>; personality?: string }>;
+
+export { completedChatReply } from "./response-followups.mjs";
+
+export function chatRequestHeaders(
+  requestId: string,
+  messageId: string,
+  voiceRequest?: { signal: AbortSignal },
+): Record<string, string>;

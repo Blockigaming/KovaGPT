@@ -1,4 +1,5 @@
-import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
+import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { completedChatReply } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -260,10 +261,11 @@ function fixture() {
     createMemorySourceUpdater: () => () => {},
     normalizeResponseSources: (value) => value,
     chatRequestMessages: (prior, user) => [...prior, user],
-    extractResponseFollowups,
     chatResponseError: async (response) => response.error,
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
+      completedChatReply,
+      chatRequestHeaders,
       createChatHistoryPayload: async (messages) => ({ messages }),
       chatRequestUser: () => ({}),
       fetchForPrincipal: (principal, url, args) => {

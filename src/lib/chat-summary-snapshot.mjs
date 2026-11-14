@@ -392,3 +392,14 @@ export async function chatRequestUser(settings, cleanTemporaryChat, webSearch, o
     personality: personalityToInstruction(loadPersonality(owner), owner, tier) || undefined,
   };
 }
+
+export { completedChatReply } from "./response-followups.mjs";
+
+export function chatRequestHeaders(requestId, messageId, voiceRequest) {
+  return {
+    "Content-Type": "application/json",
+    "Idempotency-Key": requestId,
+    "X-Kova-Assistant-Message-Id": messageId,
+    ...(voiceRequest ? {} : { "X-Kova-Response-Followups": "1" }),
+  };
+}
