@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import test from "node:test";
 import vm from "node:vm";
 import { createRequire } from "node:module";
@@ -722,6 +723,7 @@ function composer(f) {
     chatRequestMessages: (prior, user) => [...prior, user],
     createMemorySourceUpdater: () => no,
     normalizeResponseSources: () => [],
+    extractResponseFollowups,
     safeLocale: () => "en-US",
     tier: "free",
     personalityToInstruction: () => "",
@@ -877,6 +879,7 @@ test("actual application guard clamps final output and permits only one quoted O
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": "new-attempt-123",
+        "X-Kova-Response-Followups": "1",
         "x-kova-acceptance-operation": a.plan.operationId,
       },
       body: f.applicationBody,
