@@ -864,7 +864,7 @@ function ChatMessageInner({
                       >
                         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="max-w-48 truncate">{attachment.name}</span>
-                        <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                        <span className="sr-only lg:not-sr-only lg:shrink-0 lg:text-[10px] lg:uppercase lg:text-muted-foreground">
                           Attached
                         </span>
                       </span>

@@ -51,6 +51,11 @@ export function ResponseImage({
       className="kova-response-image"
       onHide={() => setFull(false)}
     >
+      {alt && (
+        <span className="kova-image-hover-detail" aria-hidden="true">
+          {alt}
+        </span>
+      )}
       <span className="kova-image-actions">
         {onSave && (
           <button

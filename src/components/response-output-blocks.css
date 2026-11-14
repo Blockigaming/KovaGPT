@@ -177,8 +177,31 @@
   outline-offset: 2px;
 }
 .kova-response-image {
+  position: relative;
   display: block;
   max-width: 100%;
+}
+.kova-image-hover-detail {
+  display: none;
+}
+@media (width >= 1024px) and (hover: hover) and (pointer: fine) {
+  .kova-response-image > img:is(:hover, :focus-visible) + .kova-image-hover-detail {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-start: 8px;
+    display: block;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--kova-radius-compact);
+    background: var(--surface-secondary);
+    color: var(--foreground);
+    padding: 4px 8px;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+  }
 }
 .kova-response-image img {
   display: block;

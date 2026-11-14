@@ -231,9 +231,12 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
 });
 
 test("a reduced visual viewport keeps the mobile composer reachable", async ({ page }) => {
-  const viewport = page.viewportSize()!;
-  test.skip(viewport.width >= 1024, "compact shell");
-  await installAuthenticatedFixture(page);
+  const projectViewport = page.viewportSize()!;
+  test.skip(projectViewport.width >= 1024, "compact shell");
+  const viewport =
+    projectViewport.width > projectViewport.height ? { width: 667, height: 375 } : projectViewport;
+  await page.setViewportSize(viewport);
+  await fixture(page, "dark");
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 

@@ -237,8 +237,14 @@ export function CommandPalette({
     const returnTarget = returnFocusRef.current;
     // Own keyboard focus before paint; Escape must work during the opening frame.
     searchInputRef.current?.focus({ preventScroll: true });
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (document.activeElement === document.body || document.activeElement === returnTarget) {
+        searchInputRef.current?.focus({ preventScroll: true });
+      }
+    });
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       if (!shouldRestoreFocusRef.current) return;
       const restoreFocus = () => {
         const target = resolveReturnFocusTarget(returnTarget);

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
@@ -23,7 +24,7 @@ test.beforeEach(async ({ page }, info) => {
 for (const [width, height] of viewports) {
   for (const theme of ["light", "dark"] as const) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
-      await installAuthenticatedFixture(page);
+      await fixture(page, theme);
       await page.setViewportSize({ width, height });
       await page.route("**/mobile-spec-image.png", (route) =>
         route.fulfill({
@@ -110,7 +111,6 @@ for (const [width, height] of viewports) {
       if (width < 768 && height > width) {
         await page.setViewportSize({ width: height, height: width });
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
-        await installAuthenticatedFixture(page);
         await page.setViewportSize({ width, height });
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
       }
@@ -177,6 +177,13 @@ for (const [width, height] of viewports) {
       await expect(chart.getByRole("table")).toBeVisible();
 
       const openImage = page.getByRole("button", { name: "View full size" });
+      const preview = page.locator(".kova-response-image");
+      const hoverDetail = preview.locator(".kova-image-hover-detail");
+      await expect(hoverDetail).toBeHidden();
+      if (width === 1440) {
+        await preview.getByRole("img", { name: "Responsive preview" }).hover();
+        await expect(hoverDetail).toBeVisible();
+      }
       await openImage.click();
       const imageView = page.getByRole("dialog", { name: "Responsive preview" });
       await expect(imageView.getByRole("img", { name: "Responsive preview" })).toBeVisible();
