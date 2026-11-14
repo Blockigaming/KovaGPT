@@ -99,7 +99,10 @@ export async function installAuthenticatedFixture(
   const mockedBackendOrigins = new Set<string>();
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-    if (!functionNames.get(id)?.startsWith("getMyPlanTier_")) return route.fallback();
+    const name = functionNames.get(id);
+    if (name?.startsWith("listProjects_"))
+      return route.fulfill({ json: { result: [], context: {} } });
+    if (!name?.startsWith("getMyPlanTier_")) return route.fallback();
     return route.fulfill({
       json: { result: { ownerId: e2eUser.id, tier: options.tier ?? "free" }, context: {} },
     });

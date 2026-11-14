@@ -19,6 +19,7 @@ export function planUsageFixture(tier: "free" | "plus" | "pro") {
       ...window,
       regularUsed: 0,
       thinkingUsed: 0,
+      costPercentUsed: 0,
     })),
     images: 0,
     uploads: 0,

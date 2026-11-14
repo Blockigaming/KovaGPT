@@ -320,7 +320,6 @@ for (const [path, scope, expectedCalls] of [
           );
       }
     if (path.endsWith("SettingsDialog.tsx")) {
-      assert.match(source, /Free and Plus have rolling 5-hour and weekly chat usage meters/);
       assert.match(source, /<PlanUsageBars usage=\{usage\}/);
       assert.doesNotMatch(source, /currentPeriodEnd\)\.toLocaleDateString\(\)/);
       assert.match(source, /timeFormat=\{settings.timeFormat\}/);

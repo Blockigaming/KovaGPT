@@ -69,6 +69,7 @@ const script = bundled.outputFiles.find((file) => file.path.endsWith(".js"))!.te
 type StateWindow = Window & {
   operations: unknown[][];
   financeStatusRequests: number;
+  finishLinkLoading: () => void;
   finishLink: (token?: string) => void;
   owner: string | null;
   renderPanels: () => void;
@@ -77,7 +78,12 @@ type StateWindow = Window & {
 };
 async function boot(
   page: import("@playwright/test").Page,
-  options: { health?: boolean; configured?: boolean; connection?: boolean } = {},
+  options: {
+    health?: boolean;
+    configured?: boolean;
+    connection?: boolean;
+    delayLink?: boolean;
+  } = {},
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-sensitive-fixture.test/")
@@ -88,7 +94,7 @@ async function boot(
       : route.abort(),
   );
   await page.goto("https://kova-sensitive-fixture.test/apps");
-  await page.evaluate(({ health, configured, connection }) => {
+  await page.evaluate(({ health, configured, connection, delayLink }) => {
     Object.assign(window, {
       owner: "00000000-0000-4000-8000-000000000001",
       operations: [],
@@ -136,7 +142,13 @@ async function boot(
           : [],
       },
       Plaid: {
-        create: (options: { token: string; onSuccess: (token: string) => void }) => {
+        create: (options: {
+          token: string;
+          onLoad: () => void;
+          onSuccess: (token: string) => void;
+        }) => {
+          (window as StateWindow).finishLinkLoading = options.onLoad;
+          if (!delayLink) queueMicrotask(options.onLoad);
           (window as StateWindow).finishLink = (token = "public-production-fixture") =>
             options.onSuccess(token);
           return {
@@ -163,12 +175,21 @@ async function boot(
 test("bank Link is explicit and exchanges one public token after successful consent", async ({
   page,
 }) => {
-  await boot(page);
+  await boot(page, { delayLink: true });
   await expect(page.getByRole("heading", { name: "Bank accounts" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Refresh bank status" })).toHaveCount(0);
   await expect(page.getByText("Read-only connections")).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
   await page.getByRole("button", { name: "Connect a bank", exact: true }).click();
+  const loadingButton = page.getByRole("button", { name: "Connecting a bank", exact: true });
+  await expect(loadingButton).toHaveAttribute("aria-busy", "true");
+  await expect(loadingButton.locator("span")).toHaveCount(1);
+  await expect(loadingButton).toHaveText("");
+  await expect
+    .poll(() => page.evaluate(() => typeof (window as StateWindow).finishLinkLoading))
+    .toBe("function");
+  expect(await page.evaluate(() => (window as StateWindow).operations.length)).toBe(1);
+  await page.evaluate(() => (window as StateWindow).finishLinkLoading());
   await expect.poll(() => page.evaluate(() => (window as StateWindow).operations.length)).toBe(2);
   await page.evaluate(() => {
     (window as StateWindow).finishLink();
