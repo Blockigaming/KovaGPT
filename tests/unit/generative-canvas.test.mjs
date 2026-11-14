@@ -21,6 +21,7 @@ function fixture(widget, overrides = {}) {
     {
       modules: {
         "./generative-canvas.css": {},
+        "./GeneratedPdfPreview": { GeneratedPdfPreview: "generated-pdf-preview" },
         "@/lib/generative-ui.mjs": {
           // The test hook renderer runs callbacks in a VM realm. Normalizing
           // only that realm boundary keeps the real strict validator in use.
@@ -207,4 +208,18 @@ test("expanded workspace emits only explicit applied changes and retains the las
   await separate.flush();
   assert.equal(separate.find("textarea").props.value, writing.content);
   assert.equal(separate.applied.length, 0);
+});
+
+test("PDF preview follows the current editable draft and closes when that draft changes", async () => {
+  const f = fixture(writing);
+  await f.flush();
+  await f.click("Preview PDF");
+  assert.equal(f.find("generated-pdf-preview").props.content, writing.content);
+  await f.change("textarea", () => true, "Revised content");
+  assert.equal(
+    f.nodes().some((node) => node.type === "generated-pdf-preview"),
+    false,
+  );
+  await f.click("Preview PDF");
+  assert.equal(f.find("generated-pdf-preview").props.content, "Revised content");
 });

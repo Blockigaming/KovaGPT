@@ -278,6 +278,24 @@ export async function loadLibraryPdfPreview(
   scope: { ownerId: string; id: string; generation: string; signal: AbortSignal },
   dependencies?: PreviewDependencies,
 ): Promise<LibraryPdfPreview> {
+  return loadPdfPreview(
+    async (signal) => {
+      const readOriginal =
+        dependencies?.readOriginal ??
+        (await import("./library-original-client")).readOriginalLibraryFile;
+      return readOriginal(scope.ownerId, scope.id, scope.generation, signal);
+    },
+    scope.signal,
+    dependencies?.loadRenderer,
+  );
+}
+
+/** Render locally produced PDF bytes with the same bounds and isolation as Library. */
+export async function loadPdfPreview(
+  readPdf: (signal: AbortSignal) => Promise<Blob>,
+  signal: AbortSignal,
+  loadRenderer?: PreviewDependencies["loadRenderer"],
+): Promise<LibraryPdfPreview> {
   const controller = new AbortController();
   let renderer: PreviewRenderer | undefined;
   let loadingTask: PDFDocumentLoadingTask | undefined;
@@ -313,26 +331,17 @@ export async function loadLibraryPdfPreview(
     activePage?.cleanup();
     void loadingTask?.destroy().catch(() => undefined);
     renderer?.destroy();
-    scope.signal.removeEventListener("abort", destroy);
+    signal.removeEventListener("abort", destroy);
   };
-  scope.signal.addEventListener("abort", destroy, { once: true });
+  signal.addEventListener("abort", destroy, { once: true });
   const check = () => {
-    if (scope.signal.aborted || destroyed) throw new DOMException("Aborted", "AbortError");
+    if (signal.aborted || destroyed) throw new DOMException("Aborted", "AbortError");
   };
   try {
     check();
     await boundedOperation(
       (async () => {
-        const readOriginal =
-          dependencies?.readOriginal ??
-          (await import("./library-original-client")).readOriginalLibraryFile;
-        check();
-        const blob = await readOriginal(
-          scope.ownerId,
-          scope.id,
-          scope.generation,
-          controller.signal,
-        );
+        const blob = await readPdf(controller.signal);
         check();
         if (
           blob.type !== "application/pdf" ||
@@ -344,11 +353,11 @@ export async function loadLibraryPdfPreview(
         check();
         if (!/^%PDF-(?:1\.[0-7]|2\.0)/u.test(new TextDecoder().decode(bytes.subarray(0, 8))))
           throw new LibraryPreviewError("The original file is not a supported PDF.");
-        const loadedRenderer = dependencies
-          ? await dependencies.loadRenderer()
+        const loadedRenderer = loadRenderer
+          ? await loadRenderer()
           : await (await import("./library-pdf-renderer")).createLibraryPdfRenderer();
         // A late dynamic import must not leave a worker running after a scope change.
-        if (destroyed || scope.signal.aborted) {
+        if (destroyed || signal.aborted) {
           loadedRenderer.destroy();
           check();
         }

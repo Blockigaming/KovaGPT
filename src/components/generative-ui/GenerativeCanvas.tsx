@@ -1,3 +1,4 @@
+import { GeneratedPdfPreview } from "./GeneratedPdfPreview";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function GenerativeCanvas({
   const [notice, setNotice] = useState("");
   const [exportFormat, setExportFormat] = useState<DocumentExportFormat>("pdf");
   const [exporting, setExporting] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState(false);
   const exportInProgress = useRef(false);
   const original = useRef(widget);
   const sequence = useRef(0);
@@ -54,6 +56,7 @@ export function GenerativeCanvas({
   const comparison = comparing ? resultRevisionDiff(originalText, currentText) : [];
   const update = (next: GenerativeWidget) => {
     setDraft(next);
+    setPdfPreview(false);
     setNotice("");
   };
   const apply = () => {
@@ -434,6 +437,9 @@ export function GenerativeCanvas({
           </div>
         )}
 
+        {pdfPreview && draft.type === "document" && (
+          <GeneratedPdfPreview key={draft.content} title={draft.title} content={draft.content} />
+        )}
         {comparing && (
           <section className="kova-generative-comparison" aria-label="Changes from original">
             <h4>Changes from original</h4>
@@ -495,6 +501,16 @@ export function GenerativeCanvas({
             >
               {exporting ? "Preparing download…" : "Download document"}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={!validated}
+              aria-expanded={pdfPreview}
+              onClick={() => setPdfPreview((open) => !open)}
+            >
+              {pdfPreview ? "Close PDF preview" : "Preview PDF"}
+            </Button>
           </div>
         )}
         <div className="kova-generative-actions">
@@ -513,6 +529,7 @@ export function GenerativeCanvas({
             disabled={!changed}
             onClick={() => {
               setDraft(applied);
+              setPdfPreview(false);
               setNotice("Unapplied changes discarded.");
             }}
           >
