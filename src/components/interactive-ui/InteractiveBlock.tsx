@@ -4,6 +4,7 @@ import { ResponseSpeech } from "./ResponseSpeech";
 import { ResponseMemoryGame } from "./ResponseMemoryGame";
 import { ResponseFiles } from "./ResponseFiles";
 import { ResponsePattern } from "./ResponsePattern";
+import { ResponseMap } from "./ResponseMap";
 import { ResponseDiagram } from "./ResponseDiagram";
 import { ResponseSimulation } from "./ResponseSimulation";
 import { Check } from "lucide-react";
@@ -135,6 +136,7 @@ export function InteractiveBlock({
       <ResponseSpeech key={JSON.stringify([ownerId, block])} block={block} ownerId={ownerId} />
     );
   if (block.type === "files") return <ResponseFiles key={JSON.stringify(block)} block={block} />;
+  if (block.type === "map") return <ResponseMap key={JSON.stringify(block)} block={block} />;
   if (block.type === "diagram") return <ResponseDiagram block={block} />;
   if (block.type === "pattern")
     return <ResponsePattern key={JSON.stringify(block)} block={block} />;

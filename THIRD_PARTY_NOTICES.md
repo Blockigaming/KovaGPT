@@ -34,3 +34,9 @@ The upstream license follows verbatim:
 > LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 > SOFTWARE.
+
+## Response map land outlines
+
+The offline response map reprojects Natural Earth 1:110m land geometry from
+[world-atlas 2.0.2](https://github.com/topojson/world-atlas/tree/v2.0.2)
+into a bundled SVG. Natural Earth geographic data is public domain.

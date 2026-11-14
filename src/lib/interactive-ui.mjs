@@ -569,6 +569,48 @@ function validateSpeechBlock(value) {
   };
 }
 
+function validateResponseMap(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "places", "connect"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if ("connect" in value && typeof value.connect !== "boolean") return null;
+  if (!Array.isArray(value.places) || value.places.length < 1 || value.places.length > 30)
+    return null;
+  const places = [];
+  for (const place of value.places) {
+    if (
+      !isPlain(place) ||
+      !onlyKeys(place, ["id", "label", "latitude", "longitude", "detail"]) ||
+      typeof place.id !== "string" ||
+      !ID.test(place.id) ||
+      !str(place.label, 100) ||
+      !num(place.latitude) ||
+      Math.abs(place.latitude) > 90 ||
+      !num(place.longitude) ||
+      Math.abs(place.longitude) > 180 ||
+      ("detail" in place && !str(place.detail, 400))
+    )
+      return null;
+    places.push({
+      id: place.id,
+      label: place.label.trim(),
+      latitude: place.latitude,
+      longitude: place.longitude,
+      detail: place.detail,
+    });
+  }
+  if (!uniq(places.map((place) => place.id))) return null;
+  return {
+    version: 1,
+    type: "map",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    places,
+    connect: value.connect === true,
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -578,6 +620,7 @@ export function validateInteractiveBlock(value) {
     if (value.type === "table") return validateTable(value);
     if (value.type === "simulation") return validateSimulation(value);
     if (value.type === "diagram") return validateDiagram(value);
+    if (value.type === "map") return validateResponseMap(value);
     if (value.type === "pattern") return validatePattern(value);
     if (value.type === "files") return validateFileBundle(value);
     if (value.type === "speech") return validateSpeechBlock(value);
@@ -701,6 +744,7 @@ quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"f
 flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}
 simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years), constant-acceleration (initialVelocity in m/s, acceleration in m/s², seconds), independent-events (probability in percent, whole trials), molarity (moles, liters). Include all required inputs. Use local simulations for these formulas only.
 diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
+map: {"version":1,"type":"map","id":"sites","title":"Locations","places":[{"id":"london","label":"London","latitude":51.5074,"longitude":-0.1278}],"connect":false}. Use supplied or verified coordinates. Optional connect draws a schematic line in list order, never claim it is a navigation route. The offline map does not request device location, map tiles or searches.
 pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
 files: {"version":1,"type":"files","id":"notes","title":"Research notes","files":[{"name":"notes.md","content":"# Notes"}]}. Use for actual text, Markdown, CSV, TSV, JSON, YAML, TOML or notebook output; no paths or external URLs. A user can preview or download individual files or a ZIP. Do not claim files have already been downloaded.
 memory-game: {"version":1,"type":"memory-game","id":"pairs","title":"Find the pairs","pairs":[{"first":"2 + 2","second":"4"},{"first":"3 + 3","second":"6"}]}. Use 2–12 distinct pairs of short labels. Labels may match within one pair, and cannot be reused across different pairs.

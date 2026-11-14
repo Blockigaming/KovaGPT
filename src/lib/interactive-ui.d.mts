@@ -94,6 +94,11 @@ export type DiagramBlock = StudyDeck & {
   }[];
   edges: { from: string; to: string; label?: string }[];
 };
+export type ResponseMapBlock = StudyDeck & {
+  type: "map";
+  places: { id: string; label: string; latitude: number; longitude: number; detail?: string }[];
+  connect: boolean;
+};
 export type PatternBlock = StudyDeck & {
   type: "pattern";
   pattern: "stripes" | "dots" | "checks" | "gradient";
@@ -114,6 +119,7 @@ export type InteractiveBlock =
   | StudyBlock
   | SimulationBlock
   | DiagramBlock
+  | ResponseMapBlock
   | PatternBlock
   | FileBundleBlock
   | MemoryGameBlock

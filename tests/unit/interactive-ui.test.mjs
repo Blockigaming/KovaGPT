@@ -244,3 +244,23 @@ test("time, search, and color controls validate and format local input", () => {
     /Time: 12:30\n- Color: #008844\n- Search: coffee/,
   );
 });
+
+test("response maps normalize named coordinates and reject network and out-of-range inputs", () => {
+  const block = {
+    version: 1,
+    type: "map",
+    id: "boston",
+    title: "Locations",
+    places: [{ id: "b", label: "Boston", latitude: 42.36, longitude: -71.06 }],
+  };
+  assert.equal(validateInteractiveBlock(block)?.places[0].longitude, -71.06);
+  assert.equal(validateInteractiveBlock({ ...block, tiles: "https://example.com/" }), null);
+  assert.equal(
+    validateInteractiveBlock({ ...block, places: [{ ...block.places[0], latitude: 91 }] }),
+    null,
+  );
+  assert.equal(
+    validateInteractiveBlock({ ...block, places: [...block.places, ...block.places] }),
+    null,
+  );
+});

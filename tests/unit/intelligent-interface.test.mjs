@@ -36,6 +36,7 @@ function fixture(onSubmit, block = nextSteps) {
         "./ResponseDiagram": { ResponseDiagram: () => null },
         "./ResponsePattern": { ResponsePattern: () => null },
         "./ResponseFiles": { ResponseFiles: () => null },
+        "./ResponseMap": { ResponseMap: () => null },
         "./ResponseSpeech": { ResponseSpeech: () => null },
         "./ResponseMemoryGame": { ResponseMemoryGame: () => null },
         "./ResponseSimulation": { ResponseSimulation: () => null },
@@ -403,4 +404,33 @@ test("science simulations compute displacement, probability, and concentration",
     await f.flush();
     assert.match(f.text(), expected);
   }
+});
+
+test("response map pans and zooms around a selected location without external tiles", async () => {
+  const block = interactive.validateInteractiveBlock({
+    version: 1,
+    type: "map",
+    id: "places",
+    title: "Locations",
+    places: [
+      { id: "greenwich", label: "Greenwich", latitude: 50, longitude: 0 },
+      { id: "quiro", label: "Second point", latitude: 0, longitude: 90 },
+    ],
+  });
+  const f = reactFixture(
+    "src/components/interactive-ui/ResponseMap.tsx",
+    (subject) => () => subject.ResponseMap({ block }),
+    { modules: { "@/assets/response-world-land.svg": { default: "/bundled/world.svg" } } },
+  );
+  await f.flush();
+  assert.equal(f.find("svg").props.viewBox, "0 0 720 360");
+  f.find("select").props.onChange({ currentTarget: { value: "1" } });
+  await f.flush();
+  await f.click("Zoom in");
+  assert.equal(f.find("svg").props.viewBox, "360 90 360 180");
+  await f.click("Pan west");
+  assert.equal(f.find("svg").props.viewBox, "270 90 360 180");
+  assert.equal(f.find("image").props.href, "/bundled/world.svg");
+  await f.click("World view");
+  assert.equal(f.find("svg").props.viewBox, "0 0 720 360");
 });
