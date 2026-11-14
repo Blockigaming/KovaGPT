@@ -37,7 +37,11 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
   const category = item.path.split("/")[1];
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="public-website public-website-article">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`public-website public-website-article ${showcase ? "kova-editorial-product" : ""}`}
+      >
         <nav className="public-website-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">KovaGPT</Link>
           <span aria-hidden="true"> / </span>

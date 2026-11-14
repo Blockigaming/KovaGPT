@@ -124,7 +124,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         data-ui-reference="grok-editorial-page"
         id="main-content"
         tabIndex={-1}
-        className={`min-w-0 [overflow-wrap:anywhere] ${heroMedia ? "kova-xai-api" : showcase ? "kova-editorial-product" : ""}`}
+        className="min-w-0 [overflow-wrap:anywhere]"
       >
         <section className="relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
