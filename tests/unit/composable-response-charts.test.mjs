@@ -83,3 +83,19 @@ test("histogram assigns the final edge and repeated measurements to exactly one 
   ]);
   assert.deepEqual(histogramRows(spec, "absent"), []);
 });
+
+test("bubble and treemap specs preserve their size data and reject invalid metadata", () => {
+  const points = {
+    type: "bubble",
+    xKey: "x",
+    keys: ["y"],
+    sizeKey: "volume",
+    data: [{ x: 2, y: 3, volume: 5 }],
+  };
+  assert.deepEqual(parseChartSpec(JSON.stringify(points)), points);
+  assert.equal(parseChartSpec(JSON.stringify({ ...points, sizeKey: " " })), null);
+  assert.equal(
+    parseChartSpec('{"type":"treemap","data":[{"name":"A","value":9}]}')?.type,
+    "treemap",
+  );
+});

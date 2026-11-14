@@ -17,6 +17,8 @@ export const CHART_TYPES = [
   "histogram",
   "percent-stacked-bar",
   "funnel",
+  "bubble",
+  "treemap",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -25,6 +27,7 @@ export type ChartSpec = {
   title?: string;
   xKey?: string;
   keys?: string[];
+  sizeKey?: string;
   colors?: string[];
   data: Array<Record<string, string | number>>;
 };
@@ -87,6 +90,10 @@ export function parseChartSpec(raw: string): ChartSpec | null {
       object.data.length > 500 ||
       (object.title !== undefined && typeof object.title !== "string") ||
       (object.xKey !== undefined && typeof object.xKey !== "string") ||
+      (object.sizeKey !== undefined &&
+        (typeof object.sizeKey !== "string" ||
+          !object.sizeKey.trim() ||
+          object.sizeKey.length > 120)) ||
       (object.keys !== undefined &&
         (!Array.isArray(object.keys) ||
           object.keys.length > 24 ||

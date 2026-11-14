@@ -9,6 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Treemap,
+  ZAxis,
   FunnelChart,
   Funnel,
   RadarChart,
@@ -163,14 +165,18 @@ function CandlePlot({ rows }: { rows: NonNullable<ReturnType<typeof candlestickR
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
   const xKey = spec.xKey ?? "name";
+  const sizeKey = spec.sizeKey ?? "size";
   const keys = useMemo(
     () =>
       spec.keys?.length
         ? spec.keys.filter((key) => spec.data.some((row) => typeof row[key] === "number"))
         : Object.keys(spec.data[0] ?? {}).filter(
-            (key) => key !== xKey && spec.data.some((row) => typeof row[key] === "number"),
+            (key) =>
+              key !== xKey &&
+              (spec.type !== "bubble" || key !== sizeKey) &&
+              spec.data.some((row) => typeof row[key] === "number"),
           ),
-    [spec, xKey],
+    [spec, xKey, sizeKey],
   );
   const numericX = spec.data.every((row) => typeof row[xKey] === "number");
   const [type, setType] = useState<ChartType>(
@@ -207,12 +213,35 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   );
   const histogram = type === "histogram" && keys[0] ? histogramRows(spec, keys[0]) : [];
   const horizontal = type === "horizontal-bar";
-  const scatter = type === "scatter";
+  const scatter = type === "scatter" || type === "bubble";
+  const bubbleY = keys.find((key) => key !== sizeKey && key !== xKey);
+  const hasBubble =
+    numericX &&
+    bubbleY &&
+    spec.data.every(
+      (row) =>
+        typeof row[bubbleY] === "number" && typeof row[sizeKey] === "number" && row[sizeKey] >= 0,
+    );
+  const tree = keys[0]
+    ? spec.data.flatMap((row, index) => {
+        const size = row[keys[0]];
+        return typeof size === "number" && size > 0
+          ? [{ name: String(row[xKey] ?? index + 1), size }]
+          : [];
+      })
+    : [];
+  const noCompatibleSeries =
+    !keys.length ||
+    (["percent-stacked-bar", "funnel", "treemap"].includes(type) && !nonNegative) ||
+    (type === "treemap" && !tree.length) ||
+    (type === "bubble" && !hasBubble);
   const displayTypes = CHART_TYPES.filter(
     (candidate) =>
       (candidate !== "scatter" || numericX) &&
+      (candidate !== "bubble" || hasBubble) &&
+      (candidate !== "treemap" || tree.length > 0) &&
       (candidate !== "candlestick" || !!candlestickRows(spec)) &&
-      (!["percent-stacked-bar", "funnel"].includes(candidate) || nonNegative),
+      (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
   );
   const axes = (
     <>
@@ -224,7 +253,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         fontSize={12}
       />
       <YAxis
-        dataKey={horizontal ? xKey : scatter ? keys[0] : undefined}
+        dataKey={horizontal ? xKey : type === "bubble" ? bubbleY : scatter ? keys[0] : undefined}
         type={horizontal ? "category" : "number"}
         stroke="var(--muted-foreground)"
         fontSize={12}
@@ -292,8 +321,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       </div>
       {candles ? (
         <CandlePlot rows={candles} />
-      ) : keys.length === 0 ||
-        (["percent-stacked-bar", "funnel"].includes(type) && !nonNegative) ? (
+      ) : noCompatibleSeries ? (
         <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
           This chart has no compatible numeric series. The source data is preserved below.
         </div>
@@ -306,7 +334,18 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           aria-label={`${type} chart with ${spec.data.length} data points`}
         >
           <ResponsiveContainer width="100%" height="100%">
-            {type === "histogram" ? (
+            {type === "treemap" ? (
+              <Treemap
+                data={tree}
+                dataKey="size"
+                nameKey="name"
+                fill={colors[0]}
+                stroke="var(--card)"
+                isAnimationActive={false}
+              >
+                <Tooltip />
+              </Treemap>
+            ) : type === "histogram" ? (
               <BarChart data={histogram} barCategoryGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="range" fontSize={11} />
@@ -397,7 +436,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
             ) : scatter ? (
               <ScatterChart>
                 {axes}
-                {keys.slice(0, 1).map((key, index) => (
+                {type === "bubble" && <ZAxis type="number" dataKey={sizeKey} range={[30, 360]} />}
+                {(type === "bubble" && bubbleY ? [bubbleY] : keys.slice(0, 1)).map((key, index) => (
                   <Scatter
                     key={key}
                     name={key}
@@ -425,9 +465,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           </ResponsiveContainer>
         </div>
       )}
-      {(table ||
-        keys.length === 0 ||
-        (["percent-stacked-bar", "funnel"].includes(type) && !nonNegative)) && (
+      {(table || noCompatibleSeries) && (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Data used in {spec.title ?? "chart"}</caption>
