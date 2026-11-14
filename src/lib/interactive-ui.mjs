@@ -1,3 +1,5 @@
+import { responseFences } from "./response-fences.mjs";
+
 // Model-generated interactive response components ("kova-interactive" fences).
 // A closed, strictly validated data schema: React renders every string as text,
 // nothing here can carry HTML, scripts, URLs to navigate, or event handlers.
@@ -518,14 +520,11 @@ export function splitInteractiveContent(value) {
   if (value.length > MAX_MESSAGE_CHARS || !value.includes("kova-interactive"))
     return [{ kind: "text", text: value }];
   const parts = [];
-  const re = /(^|\n) {0,3}(`{3,})kova-interactive[ \t]*\n([\s\S]*?)\n {0,3}\2[ \t]*(?=\n|$)/g;
   let last = 0;
   let count = 0;
-  let m;
-  while ((m = re.exec(value)) && count < MAX_BLOCKS) {
-    const start = m.index + m[1].length;
-    const body = m[3];
-    if (body.length > MAX_BLOCK_CHARS) continue;
+  for (const { info, start, body, end } of responseFences(value)) {
+    if (count === MAX_BLOCKS) break;
+    if (info !== "kova-interactive" || body.length > MAX_BLOCK_CHARS) continue;
     let block = null;
     try {
       block = validateInteractiveBlock(JSON.parse(body));
@@ -535,7 +534,7 @@ export function splitInteractiveContent(value) {
     if (!block) continue;
     if (start > last) parts.push({ kind: "text", text: value.slice(last, start) });
     parts.push({ kind: "interactive", block, index: count });
-    last = m.index + m[0].length;
+    last = end;
     count += 1;
   }
   if (last < value.length) parts.push({ kind: "text", text: value.slice(last) });

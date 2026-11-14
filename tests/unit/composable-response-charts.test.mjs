@@ -38,3 +38,19 @@ test("heatmaps and radar charts use the same bounded data contract", () => {
   );
   assert.equal(parseChartSpec('{"type":"radar","colors":["#12345"],"data":[{"score":4}]}'), null);
 });
+
+test("nested chart and study examples remain literal while top-level fences compose", async () => {
+  const { splitInteractiveContent } = await import("../../src/lib/interactive-ui.mjs");
+  const fence = "`".repeat(3);
+  const outer = fence + "`";
+  const chart = fence + 'kova-chart\n{"type":"bar","data":[{"score":4}]}\n' + fence;
+  const quiz =
+    fence +
+    'kova-interactive\n{"version":1,"type":"flashcards","id":"test","title":"Study","cards":[{"front":"A","back":"B"}]}\n' +
+    fence;
+  const sample = [outer + "md", chart, quiz, outer].join("\n") + "\n";
+  assert.deepEqual(extractCharts(sample), [{ kind: "text", value: sample }]);
+  assert.deepEqual(splitInteractiveContent(sample), [{ kind: "text", text: sample }]);
+  assert.equal(extractCharts(sample + chart)[1].kind, "chart");
+  assert.equal(splitInteractiveContent(sample + quiz)[1].kind, "interactive");
+});

@@ -1,3 +1,5 @@
+import { responseFences } from "../lib/response-fences.mjs";
+
 export const CHART_TYPES = [
   "bar",
   "line",
@@ -80,16 +82,20 @@ export function chartToCsv(spec: ChartSpec) {
 export function extractCharts(
   content: string,
 ): Array<{ kind: "text"; value: string } | { kind: "chart"; spec: ChartSpec }> {
-  const pattern = /```kova-chart\s*\n([\s\S]*?)```/g;
+  if (!content.includes("kova-chart") || content.length > 128 * 1024)
+    return [{ kind: "text", value: content }];
   const parts: Array<{ kind: "text"; value: string } | { kind: "chart"; spec: ChartSpec }> = [];
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(content)) !== null) {
-    if (match.index > lastIndex)
-      parts.push({ kind: "text", value: content.slice(lastIndex, match.index) });
-    const spec = parseChartSpec(match[1].trim());
-    parts.push(spec ? { kind: "chart", spec } : { kind: "text", value: match[0] });
-    lastIndex = pattern.lastIndex;
+  let count = 0;
+  for (const { info, start, body, end } of responseFences(content)) {
+    if (count === 8) break;
+    if (info !== "kova-chart" || body.length > 64_000) continue;
+    const spec = parseChartSpec(body);
+    if (!spec) continue;
+    if (start > lastIndex) parts.push({ kind: "text", value: content.slice(lastIndex, start) });
+    parts.push({ kind: "chart", spec });
+    lastIndex = end;
+    count += 1;
   }
   if (lastIndex < content.length) parts.push({ kind: "text", value: content.slice(lastIndex) });
   if (!parts.length) parts.push({ kind: "text", value: content });
