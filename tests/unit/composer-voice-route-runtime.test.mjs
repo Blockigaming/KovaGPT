@@ -6,6 +6,7 @@ import ts from "typescript";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 
 const parse = (path) =>
   ts.createSourceFile(
@@ -70,6 +71,7 @@ globalThis.setAttachments = ${arrow("setAttachments")};
 globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
+  extractResponseFollowups,
   helpers,
   React,
   // This reused send fixture does not render controls; keep its transparent
