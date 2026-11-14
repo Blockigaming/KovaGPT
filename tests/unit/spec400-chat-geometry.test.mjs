@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import postcss from "postcss";
 import ts from "typescript";
+import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
 const css = readFileSync("src/styles/spec400-chat.css", "utf8");
 const sheet = postcss.parse(css);
 const composer = readFileSync("src/components/ChatInput.tsx", "utf8");
@@ -89,7 +90,11 @@ test("home has one content layout while viewport panels retain bounded shared co
 test("spec400 failures retry only through a guarded explicit action using the original idempotency identity", () => {
   const route = readFileSync("src/routes/index.tsx", "utf8");
   assert.match(route, /id: requestId \?\? newId\(\)/);
-  assert.match(route, /"Idempotency-Key": userMsg\.id/);
+  assert.match(route, /headers: chatRequestHeaders\(userMsg\.id, assistantMsg\.id, voiceRequest\)/);
+  assert.equal(
+    chatRequestHeaders("original-request", "assistant")["Idempotency-Key"],
+    "original-request",
+  );
   assert.doesNotMatch(route, /_retryAttempt\s*\+\s*1/);
   const ast = ts.createSourceFile(
     "index.tsx",
