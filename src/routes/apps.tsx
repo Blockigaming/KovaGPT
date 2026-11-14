@@ -100,7 +100,6 @@ const WORKING_IDS = new Set<string>([
   "google-drive",
   "google-calendar",
   "github",
-  "plaid",
   ...Object.keys(CONNECTION_FLOWS),
 ]);
 
@@ -1385,9 +1384,19 @@ function AppsPage() {
     .slice()
     .sort((a, b) => {
       const aWorking =
-        WORKING_IDS.has(a.id) || a.status === "live" || a.status === "setup_required" ? 0 : 1;
+        a.id === "plaid" ||
+        WORKING_IDS.has(a.id) ||
+        a.status === "live" ||
+        a.status === "setup_required"
+          ? 0
+          : 1;
       const bWorking =
-        WORKING_IDS.has(b.id) || b.status === "live" || b.status === "setup_required" ? 0 : 1;
+        b.id === "plaid" ||
+        WORKING_IDS.has(b.id) ||
+        b.status === "live" ||
+        b.status === "setup_required"
+          ? 0
+          : 1;
       if (aWorking !== bWorking) return aWorking - bWorking;
       return a.label.localeCompare(b.label);
     });
