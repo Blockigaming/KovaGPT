@@ -194,3 +194,22 @@ test("pattern previews only accept a named pattern and two literal colors", () =
   );
   assert.equal(validateInteractiveBlock({ ...block, pattern: "custom" }), null);
 });
+
+test("file bundles preserve the payload and reject unsafe, duplicate or nested names", () => {
+  const file = { name: "report.md", content: "# Results\n" };
+  const block = { version: 1, type: "files", id: "report", title: "Report", files: [file] };
+  assert.deepEqual(validateInteractiveBlock(block)?.files, [file]);
+  assert.equal(
+    validateInteractiveBlock({ ...block, files: [{ ...file, name: "../report.md" }] }),
+    null,
+  );
+  assert.equal(validateInteractiveBlock({ ...block, files: [{ ...file, name: "CON.md" }] }), null);
+  assert.equal(
+    validateInteractiveBlock({ ...block, files: [file, { ...file, name: "REPORT.MD" }] }),
+    null,
+  );
+  assert.equal(
+    validateInteractiveBlock({ ...block, files: [{ ...file, name: "index.html" }] }),
+    null,
+  );
+});

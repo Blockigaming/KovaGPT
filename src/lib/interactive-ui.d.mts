@@ -70,6 +70,10 @@ export type PatternBlock = StudyDeck & {
   pattern: "stripes" | "dots" | "checks" | "gradient";
   colors: [string, string];
 };
+export type FileBundleBlock = StudyDeck & {
+  type: "files";
+  files: { name: string; content: string }[];
+};
 export type InteractiveBlock =
   InteractiveForm | InteractiveTable | StudyBlock | SimulationBlock | DiagramBlock | PatternBlock;
 export type FormValue = string | number | boolean | string[];

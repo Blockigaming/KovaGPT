@@ -35,6 +35,7 @@ function fixture(onSubmit, block = nextSteps) {
         "./StudyCards": { StudyCards: () => null },
         "./ResponseDiagram": { ResponseDiagram: () => null },
         "./ResponsePattern": { ResponsePattern: () => null },
+        "./ResponseFiles": { ResponseFiles: () => null },
         "./ResponseSimulation": { ResponseSimulation: () => null },
         "lucide-react": { Check: "check-icon" },
         "@/components/ui/checkbox": { Checkbox: "checkbox" },

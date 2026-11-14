@@ -425,6 +425,36 @@ function validatePattern(value) {
   };
 }
 
+function validateFileBundle(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "files"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Array.isArray(value.files) || value.files.length < 1 || value.files.length > 12) return null;
+  const files = [];
+  for (const file of value.files) {
+    if (
+      !isPlain(file) ||
+      !onlyKeys(file, ["name", "content"]) ||
+      typeof file.name !== "string" ||
+      !/^[a-z0-9][a-z0-9 _.-]{0,79}\.(?:txt|md|csv|tsv|json|yaml|yml|toml|ipynb)$/i.test(
+        file.name,
+      ) ||
+      !str(file.content, 24_000, true)
+    )
+      return null;
+    if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:[. ]|$)/i.test(file.name)) return null;
+    files.push({ name: file.name, content: file.content });
+  }
+  if (!uniq(files.map((file) => file.name.toLowerCase()))) return null;
+  return {
+    version: 1,
+    type: "files",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    files,
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -435,6 +465,7 @@ export function validateInteractiveBlock(value) {
     if (value.type === "simulation") return validateSimulation(value);
     if (value.type === "diagram") return validateDiagram(value);
     if (value.type === "pattern") return validatePattern(value);
+    if (value.type === "files") return validateFileBundle(value);
     if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
   } catch {
@@ -551,4 +582,5 @@ flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","car
 simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years). Include all required inputs. Use local simulations for these formulas only.
 diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
 pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
+files: {"version":1,"type":"files","id":"notes","title":"Research notes","files":[{"name":"notes.md","content":"# Notes"}]}. Use for actual text, Markdown, CSV, TSV, JSON, YAML, TOML or notebook output; no paths or external URLs. A user can preview or download individual files or a ZIP. Do not claim files have already been downloaded.
 IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations, diagrams and pattern previews work locally; they do not execute external actions, grant access, or prove success.`;
