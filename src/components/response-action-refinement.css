@@ -65,6 +65,11 @@
   height: 20px;
   flex-shrink: 0;
 }
+.kova-response-action-bar button.kova-message-icon-action:disabled {
+  color: var(--muted-foreground);
+  opacity: 1;
+  cursor: not-allowed;
+}
 @media (hover: hover) {
   .kova-response-action-bar button.kova-message-icon-action:hover:not(:disabled) {
     background: var(--accent);
@@ -124,6 +129,20 @@
   max-width: min(80%, 640px);
   align-items: flex-end;
 }
+.kova-message-image-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+.kova-message-image-group[data-multiple="true"] img {
+  width: min(8rem, 36vw);
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--surface-secondary);
+}
 .kova-message .kova-user-message {
   border-radius: var(--kova-radius-message);
   max-width: 100%;
@@ -156,6 +175,18 @@
 @media (max-width: 767px) {
   .kova-message .kova-user-message-group {
     max-width: 90%;
+  }
+  .kova-message-image-group[data-multiple="true"] {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: inline proximity;
+    padding: 2px;
+  }
+  .kova-message-image-group[data-multiple="true"] > * {
+    flex: none;
+    scroll-snap-align: start;
   }
 }
 @media (any-pointer: coarse), (max-width: 1023px) {

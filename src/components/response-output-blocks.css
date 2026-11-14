@@ -176,6 +176,9 @@
   height: 16px;
 }
 @media (max-width: 767px) {
+  .kova-response-output[data-output-kind="text"] .kova-response-output-content {
+    padding-inline: 12px;
+  }
   .kova-response-output {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "header" "body" "actions" "error";
@@ -223,7 +226,9 @@
   height: 20px;
 }
 .kova-image-actions button:disabled {
-  opacity: 0.6;
+  color: var(--muted-foreground);
+  background: var(--surface-secondary);
+  cursor: not-allowed;
 }
 
 /* ChatGPT inline code uses a quiet neutral chip, separate from fenced output. */

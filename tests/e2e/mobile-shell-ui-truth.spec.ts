@@ -10,12 +10,19 @@ test("mobile chat restores the reading position after switching conversations", 
   await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
   await page.addInitScript((userId) => {
     const now = Date.now();
+    const thumbnail =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     const chats = [
       {
         id: "reading-position",
         title: "Reading position",
         messages: [
-          { id: "prompt", role: "user", content: "Read these passages." },
+          {
+            id: "prompt",
+            role: "user",
+            content: "Read these passages.",
+            attachments: Array.from({ length: 4 }, () => ({ kind: "image", dataUrl: thumbnail })),
+          },
           ...Array.from({ length: 18 }, (_, index) => ({
             id: `passage-${index}`,
             role: "assistant",
@@ -53,6 +60,18 @@ test("mobile chat restores the reading position after switching conversations", 
   const bubble = transcript.getByLabel("Sent prompt");
   await expect(bubble).toHaveCSS("background-color", "rgb(18, 171, 205)");
   await expect(bubble).toHaveCSS("color", "rgb(0, 0, 0)");
+  const images = transcript.getByRole("group", { name: "Attached images" });
+  await expect(images.getByRole("img")).toHaveCount(4);
+  const thumbnails = await images.evaluate((element) => ({
+    overflow: element.scrollWidth - element.clientWidth,
+    mode: getComputedStyle(element).overflowX,
+  }));
+  if (page.viewportSize()!.width < 768) {
+    expect(thumbnails.overflow).toBeGreaterThan(0);
+    expect(thumbnails.mode).toBe("auto");
+  } else {
+    expect(thumbnails.overflow).toBeLessThanOrEqual(1);
+  }
   const passage = transcript.locator('[data-message-id="passage-5"]');
   await expect(passage).toBeAttached();
   await expect.poll(() => transcript.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);

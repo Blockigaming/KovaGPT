@@ -154,6 +154,26 @@ for (const [width, height] of viewports) {
       expect(heights.after).toBe(heights.before);
 
       const chart = page.getByRole("figure", { name: "Interactive chart: Measurements" });
+      const legend = chart.locator(".recharts-legend-wrapper");
+      await expect(legend).toContainText("value", { timeout: 10_000 });
+      const legendPosition = () =>
+        legend.evaluate((element) => {
+          const chartArea = element.closest(".recharts-responsive-container")!;
+          const legendBounds = element.getBoundingClientRect();
+          const chartBounds = chartArea.getBoundingClientRect();
+          return {
+            beside:
+              legendBounds.width <= 120 &&
+              legendBounds.left > chartBounds.left + chartBounds.width / 2,
+            wide: chartBounds.width >= 600,
+          };
+        });
+      await expect
+        .poll(async () => {
+          const position = await legendPosition();
+          return position.beside === position.wide;
+        })
+        .toBe(true);
       await chart.getByRole("button", { name: "Table", exact: true }).click();
       await expect(chart.getByRole("table")).toBeVisible();
 

@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { BarChart3, Copy, Download, Table2 } from "lucide-react";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -44,9 +44,30 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   );
   const [type, setType] = useState<ChartType>(spec.type);
   const [table, setTable] = useState(false);
-  const figureRef = useRef<HTMLElement>(null);
+  const [chartWidth, setChartWidth] = useState(0);
   const chartTypeId = useId();
   const colors = spec.colors?.length ? spec.colors : DEFAULT_COLORS;
+  const legendBeside =
+    chartWidth >= 600 && (type === "pie" || type === "donut" ? spec.data.length : keys.length) <= 8;
+  const legendLabel = (value: string) => (
+    <span style={{ color: "var(--foreground)", overflowWrap: "anywhere" }}>{value}</span>
+  );
+  const legend = legendBeside ? (
+    <Legend
+      layout="vertical"
+      align="right"
+      verticalAlign="middle"
+      width={120}
+      formatter={legendLabel}
+    />
+  ) : (
+    <Legend
+      layout="horizontal"
+      verticalAlign="bottom"
+      formatter={legendLabel}
+      wrapperStyle={{ maxHeight: 72, overflowY: "auto", overflowWrap: "anywhere" }}
+    />
+  );
   const save = (content: string, mime: string, extension: string) => {
     let url: string | null = null;
     let anchor: HTMLAnchorElement | null = null;
@@ -67,28 +88,25 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       anchor?.remove();
     }
   };
-  const axes = (
-    <>
-      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-      <XAxis
-        dataKey={xKey}
-        stroke="var(--muted-foreground)"
-        fontSize={isMobile ? 11 : 12}
-        minTickGap={isMobile ? 16 : 5}
-        tickFormatter={(value) => {
-          const label = String(value);
-          return isMobile && label.length > 12 ? `${label.slice(0, 11)}…` : label;
-        }}
-      />
-      <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-      <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />
-      <Legend />
-    </>
-  );
+  const axes = [
+    <CartesianGrid key="grid" strokeDasharray="3 3" stroke="var(--border)" />,
+    <XAxis
+      key="x"
+      dataKey={xKey}
+      stroke="var(--muted-foreground)"
+      fontSize={isMobile ? 11 : 12}
+      minTickGap={isMobile ? 16 : 5}
+      tickFormatter={(value) => {
+        const label = String(value);
+        return isMobile && label.length > 12 ? `${label.slice(0, 11)}…` : label;
+      }}
+    />,
+    <YAxis key="y" stroke="var(--muted-foreground)" fontSize={12} />,
+  ];
+  const tooltip = <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />;
 
   return (
     <figure
-      ref={figureRef}
       className="my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
       aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
     >
@@ -151,11 +169,11 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           role="img"
           aria-label={`${type} chart with ${spec.data.length} data points`}
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" onResize={setChartWidth}>
             {type === "pie" || type === "donut" ? (
               <PieChart>
-                <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />
-                <Legend />
+                {tooltip}
+                {legend}
                 <Pie
                   isAnimationActive={false}
                   data={spec.data}
@@ -173,6 +191,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
             ) : type === "bar" ? (
               <BarChart data={spec.data}>
                 {axes}
+                {tooltip}
+                {legend}
                 {keys.map((key, index) => (
                   <Bar
                     isAnimationActive={false}
@@ -186,6 +206,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
             ) : type === "scatter" ? (
               <ScatterChart>
                 {axes}
+                {tooltip}
+                {legend}
                 {keys.slice(0, 1).map((key, index) => (
                   <Scatter
                     isAnimationActive={false}
@@ -200,6 +222,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
             ) : (
               <LineChart data={spec.data}>
                 {axes}
+                {tooltip}
+                {legend}
                 {keys.map((key, index) => (
                   <Line
                     isAnimationActive={false}
