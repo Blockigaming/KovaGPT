@@ -25,5 +25,8 @@ declare module "gifenc" {
       bytes(): Uint8Array;
     };
   };
+  export const GIFEncoder: typeof gifenc.GIFEncoder;
+  export const quantize: typeof gifenc.quantize;
+  export const applyPalette: typeof gifenc.applyPalette;
   export default gifenc;
 }

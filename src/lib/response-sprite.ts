@@ -1,4 +1,7 @@
-import gifenc from "gifenc";
+import * as gifModule from "gifenc";
+
+// The package exposes named exports to Vite and a CommonJS namespace to Node.
+const gifenc = typeof gifModule.GIFEncoder === "function" ? gifModule : gifModule.default;
 
 export type SpriteGrid = { columns: number; rows: number };
 export type SpriteFrame = { x: number; y: number; width: number; height: number };
