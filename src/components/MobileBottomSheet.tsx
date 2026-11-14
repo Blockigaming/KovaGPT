@@ -86,9 +86,8 @@ export function MobileBottomSheet({
           style={{
             transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
             transition: reduceMotion || dragY > 0 ? "none" : "transform 160ms ease-out",
-            paddingBottom: "env(safe-area-inset-bottom)",
           }}
-          className="fixed inset-x-0 bottom-0 z-[100] flex min-w-0 max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-2xl border-t border-border bg-popover text-popover-foreground shadow-lg outline-none [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom duration-150 motion-reduce:animate-none"
+          className="fixed inset-x-0 bottom-0 z-[100] flex min-w-0 max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-2xl pb-[var(--safe-bottom)] border-t border-border bg-popover text-popover-foreground shadow-lg outline-none [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom duration-150 motion-reduce:animate-none"
         >
           <div
             className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"

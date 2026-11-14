@@ -162,6 +162,17 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   const sendBox = (await send.boundingBox())!;
   expect(sendBox.y + sendBox.height).toBeLessThanOrEqual(visibleHeight + 1);
 
+  await page.keyboard.press("Control+K");
+  const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
+  await expect(palette).toBeVisible();
+  await expect(palette.getByRole("combobox")).toBeFocused();
+  await expect.poll(async () => (await palette.boundingBox())?.height).toBe(visibleHeight);
+  const panel = palette.locator('[data-slot="command-palette-content"]');
+  const panelBox = (await panel.boundingBox())!;
+  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(visibleHeight + 1);
+  await page.keyboard.press("Escape");
+  await expect(palette).toBeHidden();
+
   await textbox.blur();
   await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
   await expect(textbox).toHaveValue("Keep this draft");

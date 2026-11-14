@@ -180,7 +180,6 @@ body .kova-assistant .kova-desktop-topbar {
   border-bottom: 1px solid var(--border) !important;
 }
 body :is(.kova-assistant, .kova-app-shell) .kova-topbar:not(.kova-desktop-topbar) {
-  min-height: 56px !important;
   border-bottom: 1px solid var(--border) !important;
 }
 body .kova-page,

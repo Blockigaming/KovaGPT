@@ -166,8 +166,13 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
-.kova-sidebar :is(.kova-nav-row, .kova-header-button, .kova-account-main):hover {
-  background: var(--sidebar-hover);
+@media (hover: hover) {
+  .kova-sidebar :is(.kova-nav-row, .kova-header-button, .kova-account-main):hover {
+    background: var(--sidebar-hover);
+  }
+}
+.kova-sidebar :is(.kova-nav-row, .kova-header-button, .kova-account-main):active {
+  background: var(--sidebar-active);
 }
 .kova-sidebar .kova-nav-row:is([aria-current="page"], .is-active),
 .kova-sidebar .kova-chat-row.is-active {

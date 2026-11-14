@@ -1634,6 +1634,15 @@ body {
       calc(100dvh - var(--kova-visible-height, 100dvh) - var(--kova-visible-top, 0px))
     );
     max-height: min(calc(var(--kova-visible-height, 100dvh) * 0.88), 44rem);
+    padding-bottom: 0;
+  }
+
+  :root[data-kova-keyboard] [data-slot="command-palette-overlay"] {
+    top: var(--kova-visible-top, 0px);
+    bottom: auto;
+    height: var(--kova-visible-height);
+    --kova-palette-top: 8px;
+    --kova-palette-bottom: 8px;
   }
 
   .kova-assistant .prose-chat {
@@ -1653,10 +1662,17 @@ body {
   }
 }
 
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
+  :root[data-kova-keyboard] .kova-settings-dialog[data-kova-dialog-surface] {
+    top: var(--kova-visible-top, 0px);
+    bottom: auto;
+    height: var(--kova-visible-height);
+    translate: none;
+  }
+}
+
 @media (width < 768px) {
-  :root[data-kova-keyboard]
-    body
-    :is(.kova-settings-dialog, .spec400-expanded-input)[data-kova-dialog-surface] {
+  :root[data-kova-keyboard] body .spec400-expanded-input[data-kova-dialog-surface] {
     top: var(--kova-visible-top, 0px);
     bottom: auto;
     height: var(--kova-visible-height);

@@ -73,6 +73,19 @@
   border-radius: 16px;
   background: var(--surface-secondary);
 }
+@media (max-width: 599px) {
+  .kova-image-presets-scroll {
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: inline proximity;
+    scroll-padding-inline: 1rem;
+  }
+
+  .kova-image-presets-scroll [data-ui-reference="chatgpt.images.preset-card"] {
+    width: max(160px, calc(100vw - 4.5rem));
+    scroll-snap-align: start;
+  }
+}
+
 @media (max-width: 767px) {
   [data-ui-reference="chatgpt.images.gallery"] > header {
     padding-inline: 12px;

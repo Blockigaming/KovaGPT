@@ -30,7 +30,8 @@ import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
-  const { isMobile } = useLayout();
+  const { isMobile, interaction } = useLayout();
+  const tooltipTrigger = interaction === "touch" ? "click" : "hover";
   const xKey = spec.xKey ?? "name";
   const keys = useMemo(
     () =>
@@ -80,7 +81,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         }}
       />
       <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-      <Tooltip />
+      <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />
       <Legend />
     </>
   );
@@ -153,9 +154,10 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           <ResponsiveContainer width="100%" height="100%">
             {type === "pie" || type === "donut" ? (
               <PieChart>
-                <Tooltip />
+                <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />
                 <Legend />
                 <Pie
+                  isAnimationActive={false}
                   data={spec.data}
                   dataKey={keys[0]}
                   nameKey={xKey}
@@ -173,6 +175,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                 {axes}
                 {keys.map((key, index) => (
                   <Bar
+                    isAnimationActive={false}
                     key={key}
                     dataKey={key}
                     fill={colors[index % colors.length]}
@@ -185,6 +188,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                 {axes}
                 {keys.slice(0, 1).map((key, index) => (
                   <Scatter
+                    isAnimationActive={false}
                     key={key}
                     name={key}
                     data={spec.data}
@@ -198,6 +202,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
                 {axes}
                 {keys.map((key, index) => (
                   <Line
+                    isAnimationActive={false}
                     key={key}
                     type="monotone"
                     dataKey={key}
