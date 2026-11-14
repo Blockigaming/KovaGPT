@@ -61,7 +61,8 @@ export default defineConfig(({ mode }) => {
           find: "entities/lib/encode.js",
           replacement: path.resolve(configDir, "node_modules/entities/lib/encode.js"),
         },
-        { find: "entities", replacement: path.resolve(configDir, "node_modules/entities") },
+        // Modern parser dependencies resolve their own entities export map.
+        { find: /^entities$/, replacement: path.resolve(configDir, "node_modules/entities") },
       ],
     },
     worker: { format: "es" },
