@@ -36,7 +36,13 @@ export type InteractiveTable = {
   selection: "none" | "single" | "multiple";
   submitLabel?: string;
 };
-export type InteractiveBlock = InteractiveForm | InteractiveTable;
+export type Flashcard = { front: string; back: string };
+export type QuizCard = Flashcard & { options: InteractiveOption[]; answer: string; hint?: string };
+type StudyDeck = { version: 1; id: string; title: string; description?: string };
+export type StudyBlock =
+  | (StudyDeck & { type: "flashcards"; cards: Flashcard[] })
+  | (StudyDeck & { type: "quiz"; cards: QuizCard[] });
+export type InteractiveBlock = InteractiveForm | InteractiveTable | StudyBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };

@@ -236,6 +236,42 @@ function validateTable(v) {
   };
 }
 
+function validateStudyBlock(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "cards"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Array.isArray(value.cards) || value.cards.length < 1 || value.cards.length > 30) return null;
+  const quiz = value.type === "quiz";
+  const cards = [];
+  for (const card of value.cards) {
+    if (!isPlain(card) || !str(card.front, 600) || !str(card.back, 1200)) return null;
+    if (!quiz) {
+      if (!onlyKeys(card, ["front", "back"])) return null;
+      cards.push({ front: card.front, back: card.back });
+      continue;
+    }
+    if (!onlyKeys(card, ["front", "back", "options", "answer", "hint"])) return null;
+    const options = validateOptions(card.options);
+    if (!options || options.length < 2 || !options.some(({ value }) => value === card.answer))
+      return null;
+    if ("hint" in card && !str(card.hint, 400)) return null;
+    cards.push({
+      front: card.front,
+      back: card.back,
+      options,
+      answer: card.answer,
+      hint: card.hint,
+    });
+  }
+  return {
+    version: 1,
+    type: value.type,
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    cards,
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -243,6 +279,7 @@ export function validateInteractiveBlock(value) {
     if (typeof value.id !== "string" || !ID.test(value.id) || !str(value.title, 160)) return null;
     if (value.type === "form") return validateForm(value);
     if (value.type === "table") return validateTable(value);
+    if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
   } catch {
     return null;
@@ -313,7 +350,7 @@ export function formatSubmission(block, submission) {
       else shown = v === undefined || v === "" ? "" : String(labelOf(f, String(v)));
       if (shown) lines.push(`- ${f.label}: ${shown}`);
     }
-  } else {
+  } else if (block.type === "table") {
     const picked = block.rows.filter((r) => submission.selected?.includes(r.id));
     lines.push(picked.length ? "Selected:" : "Selected: none");
     for (const r of picked) lines.push(`- ${r.cells.join(" · ")}`);
@@ -351,9 +388,11 @@ export function splitInteractiveContent(value) {
   return parts;
 }
 
-export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. When the user asks for a quiz or practice question, present the question with a required radio field and a “Check answer” submit button. Use neutral option IDs and grade the submitted answer in the next reply with a brief explanation. For a step-by-step quiz, offer one question at a time. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
+export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
 next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
 form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
 field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
 table: {"version":1,"type":"table","id":"plans","title":"Compare plans","columns":[{"id":"name","label":"Plan"},{"id":"price","label":"Price","align":"end"}],"rows":[{"id":"basic","cells":["Basic","$10"]}],"selection":"single","submitLabel":"Choose"} (selection: none, single or multiple; cells are strings or numbers; max 8 columns, 50 rows).
-IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Clicks send the next user message; they do not execute external actions, grant access, or prove success.`;
+quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"front":"What is 2 + 2?","options":[{"value":"a","label":"3"},{"value":"b","label":"4"}],"answer":"b","back":"Adding two and two gives four.","hint":"Count two pairs."}]}
+flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}
+IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quiz and flashcard controls work locally; they do not execute external actions, grant access, or prove success.`;

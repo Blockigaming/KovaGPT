@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { StudyCards } from "./StudyCards";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,6 +114,9 @@ export function InteractiveBlock({
     if (submitError) setSubmitError(false);
   };
   const headingId = useId();
+
+  if (block.type === "quiz" || block.type === "flashcards")
+    return <StudyCards key={JSON.stringify(block)} block={block} />;
 
   return (
     <section

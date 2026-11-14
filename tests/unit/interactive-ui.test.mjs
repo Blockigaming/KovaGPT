@@ -88,3 +88,46 @@ test("splits fenced blocks and leaves invalid ones as text", () => {
   const bad = "```kova-interactive\n{not json}\n```";
   assert.deepEqual(splitInteractiveContent(bad), [{ kind: "text", text: bad }]);
 });
+
+test("study decks render only bounded text and valid answer options", () => {
+  const deck = {
+    version: 1,
+    type: "quiz",
+    id: "practice",
+    title: "Practice",
+    cards: [
+      {
+        front: "What is 2 + 2?",
+        back: "Four.",
+        options: [
+          { value: "a", label: "3" },
+          { value: "b", label: "4" },
+        ],
+        answer: "b",
+      },
+    ],
+  };
+  assert.equal(validateInteractiveBlock(deck)?.cards[0].answer, "b");
+  assert.equal(
+    validateInteractiveBlock({ ...deck, cards: [{ ...deck.cards[0], answer: "x" }] }),
+    null,
+  );
+  assert.equal(
+    validateInteractiveBlock({ ...deck, cards: [{ ...deck.cards[0], onClick: "x" }] }),
+    null,
+  );
+  assert.equal(
+    splitInteractiveContent(
+      "Before\n\`\`\`kova-interactive\n" + JSON.stringify(deck) + "\n\`\`\`\nAfter",
+    )[1].kind,
+    "interactive",
+  );
+  assert.equal(
+    validateInteractiveBlock({
+      ...deck,
+      type: "flashcards",
+      cards: [{ front: "2 + 2", back: "4" }],
+    })?.type,
+    "flashcards",
+  );
+});

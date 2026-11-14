@@ -32,6 +32,7 @@ function fixture(onSubmit, block = nextSteps) {
     {
       modules: {
         "@/lib/interactive-ui.mjs": interactive,
+        "./StudyCards": { StudyCards: () => null },
         "lucide-react": { Check: "check-icon" },
         "@/components/ui/checkbox": { Checkbox: "checkbox" },
         "@/components/ui/radio-group": { RadioGroup: "radiogroup", RadioGroupItem: "radio" },
