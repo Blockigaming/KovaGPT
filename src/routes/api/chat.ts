@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 33557)
-Total output lines: 3002
-
 import { MEMORY_TIERS } from "@/lib/memory-tier-policy.mjs";
 import { enforceDailyMessageQuota } from "@/lib/message-quota.server";
 import { reserveUploads } from "@/lib/upload-quota.server.mjs";
@@ -970,7 +967,1135 @@ export const Route = createFileRoute("/api/chat")({
               if (!isOwner) {
                 if (!auth.emailVerified) {
                   return new Response(
-                  …13557 tokens truncated…ol_hop_failed",
+                    JSON.stringify({
+                      error:
+                        "Please verify your email address before generating images. Check your inbox for the confirmation link.",
+                    }),
+                    {
+                      status: 403,
+                      headers: { "Content-Type": "application/json" },
+                    },
+                  );
+                }
+                const maint = await preflight.run("image_feature", () =>
+                  assertFeatureEnabled(auth, "images"),
+                );
+                if (maint) return maint;
+                const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
+                const quota = await preflight.run("image_quota", (signal) =>
+                  enforceQuota(auth, "images", imgLimit, 1, signal),
+                );
+                if (quota) return quota;
+              }
+              // Recheck after quota authorization too, so a concurrent uninstall or
+              // version change cannot reach the provider after the quota boundary.
+              await assertSelectedContextsCurrent(request.signal);
+              return handleImageRequest(imagePrompt, logContext, request.signal);
+            }
+
+            const missingProvider = capture ? null : missingAiProviderResponse();
+            if (missingProvider) return missingProvider;
+
+            // Every chat requires an account; each plan has an authoritative daily allowance.
+            if (auth && !isOwner) {
+              const maint = await preflight.run("chat_feature", () =>
+                assertFeatureEnabled(auth, "chat"),
+              );
+              if (maint) return maint;
+              // Research authorization can be slow. Recheck selected context
+              // after it and before quota so a revoked skill cannot consume a
+              // chat request without reaching a provider.
+              await assertSelectedContextsCurrent(request.signal);
+            }
+
+            // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
+            // only honored if the user's resolved tier permits it; anything
+            // above a paid tier is downgraded to "auto". Free requests were rejected
+            // above before quota/provider work. Owner resolves to the Pro tier.
+            // Study needs enough structured-output capacity for its six-card JSON.
+            // Select it from the server-authoritative tier so paid users do not
+            // silently fall back when the client sends the Free Study mode.
+            const requested = getMode(
+              !customKova && clientTool === "study" && auth
+                ? studyModeForTier(callerTier)
+                : (customKova?.config.mode ?? mode ?? "auto"),
+            );
+            const allowed = isOwner || isModeAllowedForTier(callerTier, requested.id);
+            // Guests always receive the basic instant agent, even if a custom
+            // client attempts to submit a higher mode directly to the API.
+            const m = !auth ? getMode("instant") : allowed ? requested : getMode("auto");
+            const MAX_ATTACHMENTS_PER_REQUEST = 2;
+            // Quotas apply to files submitted in this turn, not attachments in
+            // older conversation history. This also keeps edit/regenerate from
+            // being charged for unrelated files in prior turns.
+            const totalAttachments = currentAttachments.length;
+            // Guest uploads were rejected before provider work above.
+            // Signed-in uploads also retain per-request and per-day caps.
+            if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
+              return new Response(
+                JSON.stringify({
+                  error: `Too many image attachments in this request (max ${MAX_ATTACHMENTS_PER_REQUEST}).`,
+                }),
+                {
+                  status: 429,
+                  headers: { "Content-Type": "application/json" },
+                },
+              );
+            }
+            // Server-side daily upload quota + maintenance flag. The
+            // localStorage counter is only a UX hint; this is real enforcement.
+            if (auth && !isOwner && totalAttachments > 0) {
+              if (!auth.emailVerified) {
+                return new Response(
+                  JSON.stringify({
+                    error:
+                      "Please verify your email address before uploading files or photos. Check your inbox for the confirmation link.",
+                  }),
+                  {
+                    status: 403,
+                    headers: { "Content-Type": "application/json" },
+                  },
+                );
+              }
+              const maint = await preflight.run("upload_feature", () =>
+                assertFeatureEnabled(auth, "uploads"),
+              );
+              if (maint) return maint;
+              const uploadAllowed = await preflight.run("upload_quota", (signal) =>
+                reserveUploads(
+                  auth,
+                  currentAttachments,
+                  DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
+                  signal,
+                ),
+              );
+              if (!uploadAllowed)
+                return Response.json(
+                  { error: "Daily file upload limit reached. Resets at midnight UTC." },
+                  { status: 429 },
+                );
+            }
+            const hasAttachments = totalAttachments > 0;
+            const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
+
+            // Keep the latest 12 messages. The optional durable same-chat summary
+            // below can retain earlier context only after its exact eligible
+            // prefix is verified against this request. Existing cross-chat memory
+            // remains a separate, consent-bound source.
+            const HISTORY_TURNS = 12;
+            const trimmedMessages =
+              messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
+
+            const transformed = await Promise.all(
+              trimmedMessages.map(async (msg) => {
+                // SECURITY: client-supplied "system" messages would otherwise sit
+                // next to the server's authoritative system prompt and could
+                // override it. Demote any non-assistant/non-user role to "user".
+                const safeRole: "user" | "assistant" =
+                  msg.role === "assistant" ? "assistant" : "user";
+                if (safeRole === "user" && msg.attachments && msg.attachments.length > 0) {
+                  const parts: ChatContentPart[] = [];
+                  if (msg.content) parts.push({ type: "text", text: msg.content });
+                  for (const att of msg.attachments) {
+                    if (att.kind === "image") {
+                      parts.push({
+                        type: "image_url",
+                        image_url: { url: att.dataUrl },
+                      });
+                    } else if (att.kind === "text_file") {
+                      parts.push({
+                        type: "text",
+                        text: `[Attached text file: ${att.name} (${att.fileType ?? "text/plain"})]\n--- BEGIN ATTACHED FILE ---\n${att.content}\n--- END ATTACHED FILE ---`,
+                      });
+                    } else if (att.kind === "library_file") {
+                      let libraryContent = "";
+                      if (auth && msg === lastUser) {
+                        const libraryResult = await preflight.run(
+                          "library_attachment",
+                          () =>
+                            auth.supabaseAdmin
+                              .from("user_library_items")
+                              .select("content_text")
+                              .eq("id", att.libraryItemId)
+                              .eq("user_id", auth.userId)
+                              .maybeSingle(),
+                          { required: false },
+                        );
+                        const data = libraryResult?.data;
+                        const row = data as { content_text?: unknown } | null;
+                        if (typeof row?.content_text === "string") {
+                          libraryContent = row.content_text.slice(0, MAX_TEXT_ATTACHMENT_CHARS);
+                        }
+                      }
+                      parts.push({
+                        type: "text",
+                        text: libraryContent
+                          ? `[Attached Library file: ${att.name} (${att.fileType ?? "unknown type"}). Do not expose private URLs.]\n--- BEGIN LIBRARY CONTENT ---\n${libraryContent}\n--- END LIBRARY CONTENT ---`
+                          : `[Attached Library file: ${att.name} (${att.fileType ?? "unknown type"}). The file's extracted content is unavailable, so do not claim to have read it and do not expose private URLs.]`,
+                      });
+                    }
+                  }
+                  return { role: "user", content: parts };
+                }
+                return { role: safeRole, content: msg.content };
+              }),
+            );
+
+            // Centralized server-side routing validates a named consumer alias
+            // against its exact trusted role and plan. Legacy callers without
+            // a named choice retain their existing automatic routing.
+            const routeDecision = routeAiModel(
+              {
+                task: "chat",
+                mode: m.id,
+                hostedModel: ingress.hostedModel,
+                tier: callerTier,
+                deepMode: m.id === "max" || m.id === "ultra",
+                hasImages,
+                needsTools: Boolean(auth),
+                text: lastText ?? "",
+                contextChars: transformed.reduce(
+                  (total, msg) =>
+                    total + (typeof msg.content === "string" ? msg.content.length : 0),
+                  0,
+                ),
+                attachmentCount: totalAttachments,
+                historyTurns: transformed.length,
+              },
+              { requestId },
+            );
+            const acceptanceFlag = runtimeEnv("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+            const freeChat =
+              callerTier === "free" &&
+              runtimeEnv("KOVA_HOSTED_INFERENCE_ENABLED") === "true" &&
+              !capture &&
+              (!acceptanceFlag || acceptanceFlag === "false") &&
+              !explicitHostedTool &&
+              (m.id === "instant" || m.id === "thinking")
+                ? m.id
+                : undefined;
+            const freeChatModel = freeChat ? FREE_CHAT_MODELS[freeChat] : undefined;
+            const model = freeChat ? "kova-argon-4.6" : routeDecision.modelId;
+            // Check the resolved hosted alias too: a role misconfiguration must
+            // not grant a foundation outside the consumer's plan.
+            if (
+              isKovaHostedModelId(model) &&
+              !KOVA_HOSTED_TEXT_MODELS.some(
+                (entry) => entry.id === model && entry.tiers.includes(callerTier),
+              )
+            ) {
+              return Response.json(
+                {
+                  error: "This Kova model is unavailable for your plan.",
+                  code: "kova_model_not_entitled",
+                  upgradeUrl: "/pricing",
+                  retryable: false,
+                },
+                { status: 403, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+            if (auth && !isOwner && !capture) {
+              await assertSelectedContextsCurrent(request.signal);
+              const quota = await preflight.run("chat_quota", (signal) =>
+                enforceDailyMessageQuota(
+                  auth,
+                  callerTier,
+                  m.id !== "instant" && m.id !== "medium",
+                  signal,
+                  { modelId: model, mode: m.id },
+                ),
+              );
+              if (quota) return quota;
+            }
+            const modelIdentityInstructions = buildKovaModelIdentityInstructions({
+              role: routeDecision.role,
+              modelId: model,
+              foundation: freeChatModel?.foundation,
+              productLabel: freeChatModel?.label,
+              provider: isKovaHostedModelId(model) ? "openai" : getAiProviderConfig().provider,
+              hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
+            });
+
+            // Instant stays fast for incidental time-sensitive words, but an
+            // explicit request to search must retrieve sources or fail clearly.
+            const explicitWebSearch =
+              clientTool === "web_search" || isExplicitWebSearchRequest(lastText);
+            let webBlock = "";
+            let webSources: KovaSource[] = [];
+            if (
+              !explicitHostedTool &&
+              !lockdownBlocksNetwork &&
+              (!customKova || customKova.allows("web")) &&
+              lastText &&
+              !hasImages &&
+              (m.id !== "instant" || explicitWebSearch)
+            ) {
+              if (explicitWebSearch || shouldRunWebSearch(lastText, personalContext?.webSearch)) {
+                const search = async (signal: AbortSignal) => {
+                  await assertSelectedContextsCurrent(signal);
+                  return searchWeb(lastText, {
+                    wantsNews: NEWS_TRIGGER.test(lastText),
+                    signal,
+                    requestId,
+                  });
+                };
+                const result = explicitWebSearch
+                  ? await preflight.run("web_search", search, {
+                      required: true,
+                      timeoutMs: 20_000,
+                    })
+                  : await preflight.run("web_search", search, {
+                      required: false,
+                      timeoutMs: 8_000,
+                    });
+                if (explicitWebSearch && result?.status !== "ok")
+                  return Response.json(
+                    {
+                      error: "Web search could not be completed. Please try again.",
+                      code: "web_search_unavailable",
+                    },
+                    { status: 503, headers: { "Cache-Control": "no-store" } },
+                  );
+                if (result) {
+                  webBlock = formatSearchResultsForPrompt(result) ?? "";
+                  webSources = result.kovaSources;
+                }
+              }
+            }
+
+            // Cross-chat memory: for Plus+ signed-in users, inject short
+            // summaries of their recent past chats so KovaGPT can recall
+            // context across conversations. Consent is opt-in. A personalized
+            // Temporary Chat may read existing memory but never writes it.
+            let memoryBlock = "";
+            const memorySourceRefs: MemorySourceRef[] = [];
+            if (auth && personalContext?.rememberAcross === true && usesExistingContext) {
+              try {
+                const memoryResult = await preflight.run(
+                  "memory_context",
+                  () =>
+                    (
+                      auth.supabaseAdmin as unknown as {
+                        from: (t: string) => ChainableQueryLike;
+                      }
+                    )
+                      .from("chat_memories")
+                      .select("id, title, summary, updated_at")
+                      .eq("user_id", auth.userId)
+                      .order("updated_at", { ascending: false })
+                      .limit(MEMORY_TIERS[callerTier].returned),
+                  { required: false },
+                );
+                const memRows = memoryResult?.data;
+                if (Array.isArray(memRows) && memRows.length > 0) {
+                  const memories = (
+                    memRows as { id: string; title?: string | null; summary: string }[]
+                  ).map((r): KovaMemory => ({
+                    id: r.id,
+                    userId: auth.userId,
+                    content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
+                    category: "personal_context",
+                  }));
+                  const selectedMemories = selectRelevantMemories(memories, lastText, {
+                    enabled: personalContext.rememberAcross === true,
+                    temporary: !usesExistingContext,
+                    maxItems: MEMORY_TIERS[callerTier].returned,
+                  });
+                  memoryBlock = formatMemoryBlock(selectedMemories);
+                  memorySourceRefs.push(
+                    ...selectedMemories.map(({ id }) => ({ kind: "chat_memory" as const, id })),
+                  );
+                }
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
+                logSafeFailure("warn", "[chat] optional memory context unavailable", logContext, {
+                  status: 200,
+                  category: "optional_context",
+                  code: "memory_context_unavailable",
+                });
+              }
+            }
+
+            // Same-chat summaries have a separate opt-in deployment gate. Never
+            // read Temporary turns or pre-conversion history; older clients
+            // without an explicit privacy boundary retain the recent-turn path.
+            let conversationSummary:
+              import("@/lib/chat-summary-policy.server.mjs").SummaryContext | null = null;
+            if (
+              auth &&
+              chatId &&
+              !temporary &&
+              memoryStartIndex !== undefined &&
+              personalContext?.rememberAcross === true
+            ) {
+              const { buildChatSummaryContext } = await import("@/lib/chat-summary.server");
+              conversationSummary =
+                (await preflight.run(
+                  "conversation_summary",
+                  (signal) =>
+                    buildChatSummaryContext(
+                      auth.supabaseAdmin,
+                      {
+                        userId: auth.userId,
+                        chatId,
+                        messages,
+                        memoryStartIndex,
+                        historyOffset,
+                        summaryProof,
+                        temporary: Boolean(temporary),
+                        memoryEnabled: personalContext.rememberAcross === true,
+                      },
+                      signal,
+                    ),
+                  { required: false },
+                )) ?? null;
+              if (conversationSummary) {
+                memorySourceRefs.push({
+                  kind: "conversation_summary",
+                  id: conversationSummary.source.id,
+                });
+              }
+            }
+
+            // Project workspace context: only for signed-in members of `projectId`.
+            // Injects project instructions, project memory, and top-k retrieved
+            // knowledge-base chunks matched against the user's last message.
+            let projectBlock = "";
+            if (
+              auth &&
+              usesExistingContext &&
+              typeof projectId === "string" &&
+              /^[0-9a-f-]{36}$/i.test(projectId)
+            ) {
+              try {
+                const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
+                // Verify caller is a member of the project.
+                const membershipResult = await preflight.run(
+                  "project_membership",
+                  () =>
+                    admin.rpc("is_project_member", {
+                      _user_id: auth.userId,
+                      _project_id: projectId,
+                    }),
+                  { required: false },
+                );
+                const isMember = membershipResult?.data;
+                if (isMember === true) {
+                  const projRes = await preflight.run(
+                    "project_context",
+                    () =>
+                      admin
+                        .from("projects")
+                        .select("id, name, system_prompt")
+                        .eq("id", projectId)
+                        .maybeSingle(),
+                    { required: false },
+                  );
+                  const proj = projRes?.data as {
+                    id: string;
+                    name: string;
+                    system_prompt: string | null;
+                  } | null;
+                  if (proj) {
+                    const parts: string[] = [];
+                    parts.push(
+                      `You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`,
+                    );
+                    if (proj.system_prompt && proj.system_prompt.trim()) {
+                      parts.push(
+                        `Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`,
+                      );
+                    }
+                    const memRes = await preflight.run(
+                      "project_memory",
+                      () =>
+                        admin
+                          .from("project_memory")
+                          .select("id, content")
+                          .eq("project_id", projectId)
+                          .order("created_at", { ascending: false })
+                          .limit(20),
+                      { required: false },
+                    );
+                    const memRows =
+                      (memRes?.data as Array<{ id: string; content: string }> | null) ?? [];
+                    if (memRows.length > 0) {
+                      parts.push(
+                        "Project memory (facts the user has saved about this project - honor them):\n" +
+                          memRows.map((r, i) => `${i + 1}. ${r.content}`).join("\n"),
+                      );
+                    }
+                    // RAG over uploaded documents. Build a plain-text query.
+                    const lastUser = [...messages].reverse().find((mm) => mm.role === "user");
+                    let q = "";
+                    if (lastUser) {
+                      const c: unknown = (lastUser as { content: unknown }).content;
+                      if (typeof c === "string") q = c;
+                      else if (Array.isArray(c)) {
+                        q = c
+                          .map((p) => {
+                            const part = p as { text?: unknown } | null;
+                            return typeof part?.text === "string" ? part.text : "";
+                          })
+                          .join(" ");
+                      }
+                    }
+                    if (q.trim()) {
+                      const { retrieveProjectContext } = await import("@/lib/project-rag.server");
+                      const chunks =
+                        (await preflight.run(
+                          "project_retrieval",
+                          (signal) =>
+                            retrieveProjectContext({
+                              // The matching RPC checks auth.uid(); retain the verified caller.
+                              supabase: auth.supabaseUser as unknown as SupabaseAdminLike,
+                              project_id: projectId,
+                              query: q,
+                              k: 6,
+                              signal,
+                            }),
+                          { required: false, timeoutMs: 5_000 },
+                        )) ?? [];
+                      const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
+                      if (rel.length > 0) {
+                        parts.push(
+                          "Relevant excerpts from this project's uploaded files (use as ground truth when the user's question maps to them; never invent content not present):\n" +
+                            rel.map((c, i) => `[Excerpt ${i + 1}]\n${c.content}`).join("\n\n"),
+                        );
+                      }
+                    }
+                    projectBlock =
+                      "\n\n--- PROJECT CONTEXT ---\n" +
+                      parts.join("\n\n") +
+                      "\n--- END PROJECT CONTEXT ---";
+                    memorySourceRefs.push(
+                      ...memRows.map(({ id }) => ({
+                        kind: "project_memory" as const,
+                        id,
+                        projectId,
+                      })),
+                    );
+                  }
+                }
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
+                logSafeFailure("warn", "[chat] optional project context unavailable", logContext, {
+                  status: 200,
+                  category: "optional_context",
+                  code: "project_context_unavailable",
+                });
+              }
+            }
+
+            // Chat-scoped workspace context: per-chat rules and pinned files.
+            // Read server-side from owner-scoped rows so a client cannot inject
+            // rules text or pin a file it does not own. Skipped for guests and
+            // for Temporary Chat.
+            let chatWorkspaceBlock = "";
+            if (auth && typeof chatId === "string" && chatId && !temporary) {
+              const { buildChatWorkspaceBlock } =
+                await import("@/lib/chat-workspace-context.server");
+              const workspace = await preflight.run(
+                "chat_workspace",
+                () =>
+                  buildChatWorkspaceBlock(auth.supabaseAdmin, {
+                    userId: auth.userId,
+                    chatId,
+                    temporary: Boolean(temporary),
+                  }),
+                { required: false },
+              );
+              chatWorkspaceBlock = workspace?.block ?? "";
+            }
+
+            const toolInstruction =
+              clientTool === "web_search"
+                ? "\n\nWEB SEARCH MODE: Use live web results above when present, cite source titles/domains naturally, and never fabricate links or citations."
+                : clientTool === "study"
+                  ? "\n\nSTUDY MODE: Teach step by step, check understanding, and end with a short quiz."
+                  : clientTool === "data_analysis" || clientTool === "file_analysis"
+                    ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
+                    : "";
+
+            const body: Record<string, unknown> = {
+              model,
+              stream: true,
+              // A client cannot override this value: it is derived only from
+              // the server-authorized mode and entitlement above.
+              max_completion_tokens: Math.min(
+                modelForPolicy(
+                  m.id === "instant"
+                    ? "instant"
+                    : m.id === "thinking"
+                      ? "thinking"
+                      : ["high", "extra_high", "max", "ultra"].includes(m.id)
+                        ? "deep"
+                        : "normal",
+                ).outputCeiling,
+                model === "kova-xenon-5"
+                  ? 16384
+                  : model === "kova-neon-4.6"
+                    ? 8192
+                    : isKovaHostedModelId(model)
+                      ? 4096
+                      : 128000,
+              ),
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    m.systemPrompt +
+                    TONE_INSTRUCTION +
+                    ADAPTIVE_INSTRUCTION +
+                    UNRESTRICTED_INSTRUCTION +
+                    ACCURACY_INSTRUCTION +
+                    FINAL_CHART_INSTRUCTION +
+                    GENERATIVE_UI_INSTRUCTIONS +
+                    "\n\n" +
+                    INTERACTIVE_UI_INSTRUCTIONS +
+                    (request.headers.get("X-Kova-Response-Followups") === "1"
+                      ? RESPONSE_FOLLOWUP_INSTRUCTIONS
+                      : "") +
+                    "\n\n" +
+                    CREATOR_INSTRUCTION +
+                    buildUserContextBlock(personalContext ?? {}) +
+                    personalityBlock +
+                    memoryBlock +
+                    (conversationSummary?.block ?? "") +
+                    projectBlock +
+                    chatWorkspaceBlock +
+                    (customKova?.block ?? "") +
+                    (workflowSkill?.block ?? "") +
+                    webBlock +
+                    toolInstruction +
+                    (callerTier === "plus" || callerTier === "pro"
+                      ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                      : "") +
+                    `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                    buildCurrentDateInstruction(timezone, locale) +
+                    modelIdentityInstructions,
+                },
+                ...transformed,
+              ],
+            };
+            // Cost control: cap output length per mode from the router config.
+            if (routeDecision.maxOutputTokens > 0) {
+              body.max_completion_tokens = routeDecision.maxOutputTokens;
+            }
+            // Only enable reasoning when the user explicitly chose a backed
+            // reasoning mode. Every visible selector option maps to this real behavior.
+            if (m.reasoning) {
+              body.reasoning = { effort: m.reasoning };
+            }
+
+            // The actual authenticated/context-assembled instant request stops
+            // here: before connector planning, quota/usage reservation, acceptance
+            // claims, provider credentials, developer billing and provider HTTP.
+            if (capture) {
+              await assertSelectedContextsCurrent(request.signal);
+              const receipt = await captureConstructedRequest({
+                capture,
+                body: prepareChatResponsesRequest(body),
+                authMode: auth!.authProvider,
+                signal: request.signal,
+              });
+              return Response.json(receipt, {
+                status: 201,
+                headers: {
+                  "Cache-Control": "private, no-store",
+                  "X-Content-Type-Options": "nosniff",
+                },
+              });
+            }
+
+            // === TOOL-CALLING PRE-LOOP ============================================
+            // Only for signed-in users who've connected Google, on a real text
+            // turn (no attachments, including Default/Instant mode). We run up to
+            // MAX_TOOL_HOPS non-streaming calls with tools enabled. Each hop
+            // that produces tool_calls gets executed server-side and streams a
+            // typed `activity` event back to the client so the user sees
+            // "Searching Gmail…" while it happens. Once the model returns a
+            // stop/content response (no more tool_calls), we do ONE final
+            // streaming call and pipe it through to the browser.
+            //
+            // If any step fails, or the user has no Google connection, we fall
+            // through to the original streaming behavior with zero change.
+            // A greeting needs no external account access. Avoid loading every
+            // connected tool schema and reserving a second model call for it.
+            // This only skips connector discovery; normal auth, quota and
+            // per-request cost enforcement still run on the standard chat path.
+            const simpleGreeting =
+              /^(?:hi|hello|hey|hey there|hello there|hi there|good morning|good afternoon|good evening)[!?.\s]*$/i.test(
+                lastText.trim(),
+              );
+            // These complete, literal requests need no connected account data.
+            // Keep ambiguous follow-ups and all external-data requests on the
+            // normal planner path, with its existing authorization and budget.
+            const selfContainedTurn =
+              simpleGreeting ||
+              /^(?:reply|respond)(?: with)? exactly\s*:\s*[^\r\n]{1,240}$/i.test(lastText.trim()) ||
+              /^(?:(?:what is|what's|calculate|compute)\s+)?[-+]?\d+(?:\.\d+)?(?:\s*[+*/×÷-]\s*[-+]?\d+(?:\.\d+)?)+\s*[?!.]?$/i.test(
+                lastText.trim(),
+              );
+            const selectedHostedTool = explicitHostedTool ? clientTool : null;
+            const googleContext =
+              !selectedHostedTool &&
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasAttachments &&
+              lastText.length > 0 &&
+              !selfContainedTurn
+                ? ((await preflight.run(
+                    "connector_tools",
+                    () => getGoogleToolContext(auth.userId),
+                    { required: false },
+                  )) ?? null)
+                : null;
+            const connectedContext =
+              !selectedHostedTool &&
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasAttachments &&
+              lastText.length > 0 &&
+              !selfContainedTurn
+                ? ((await preflight.run(
+                    "other_connector_tools",
+                    () => getConnectedToolContext(auth.userId),
+                    { required: false },
+                  )) ?? null)
+                : null;
+            const connectionTools = [
+              ...(googleContext?.tools ?? []),
+              ...(connectedContext?.tools ?? []),
+            ];
+            const availableTools = customKova
+              ? customKova.filterTools(connectionTools)
+              : connectionTools;
+            const googleBinding = googleContext?.binding ?? undefined;
+            let enableTools = availableTools.length > 0;
+
+            const freeConnectorRequest = enableTools && callerTier === "free";
+            let finalMessages = body.messages as unknown as ChatMsg[];
+            // A selected workflow resource may have influenced any earlier
+            // assistant response (and therefore a durable conversation summary).
+            // Tool planning gets a fresh, provenance-isolated transcript: only
+            // authoritative runtime instructions, the resource-free skill
+            // instructions, and the user's current text request. The complete
+            // conversation and resource bodies return only for the final call,
+            // where no connector tools are available.
+            let toolPlanningMessages: ChatMsg[] = workflowSkill
+              ? [
+                  {
+                    role: "system",
+                    content:
+                      (freeConnectorRequest
+                        ? FREE_CONNECTOR_PLANNING_INSTRUCTION
+                        : m.systemPrompt) +
+                      TONE_INSTRUCTION +
+                      ADAPTIVE_INSTRUCTION +
+                      UNRESTRICTED_INSTRUCTION +
+                      ACCURACY_INSTRUCTION +
+                      CHART_INSTRUCTION +
+                      CREATOR_INSTRUCTION +
+                      (customKova?.block ?? "") +
+                      workflowSkill.toolPlanningBlock +
+                      toolInstruction +
+                      (callerTier === "plus" || callerTier === "pro"
+                        ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                        : "") +
+                      `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                      buildCurrentDateInstruction(timezone, locale) +
+                      modelIdentityInstructions,
+                  },
+                  { role: "user", content: lastText },
+                ]
+              : freeConnectorRequest
+                ? [
+                    {
+                      role: "system",
+                      content:
+                        FREE_CONNECTOR_PLANNING_INSTRUCTION +
+                        buildUserContextBlock(personalContext ?? {}) +
+                        personalityBlock +
+                        memoryBlock +
+                        (conversationSummary?.block ?? "") +
+                        projectBlock +
+                        chatWorkspaceBlock +
+                        (customKova?.block ?? "") +
+                        webBlock +
+                        toolInstruction,
+                    },
+                    ...finalMessages.slice(1),
+                  ]
+                : finalMessages;
+
+            const productModel = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
+              (entry) => entry.id === model,
+            );
+            const foundationModel = freeChatModel
+              ? OPENAI_TEXT_MODELS.find((entry) => entry.id === freeChatModel.foundation)
+              : productModel;
+            if (!productModel || !foundationModel) {
+              return Response.json(
+                { error: "AI model configuration is unavailable." },
+                { status: 503 },
+              );
+            }
+            const catalogModel = {
+              ...productModel,
+              pricePerMillion: foundationModel.pricePerMillion,
+            };
+            let inputEstimate = estimateProviderInput({
+              messages: body.messages,
+              tools: availableTools,
+            });
+            let outputCeiling = Number(body.max_completion_tokens);
+            const paidToolHopLimit = 3;
+            let maximumProviderCalls = enableTools ? paidToolHopLimit + 1 : 1;
+            let estimatedCost =
+              estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
+                maximumProviderCalls +
+              (selectedHostedTool === "data_analysis"
+                ? 0.03
+                : selectedHostedTool === "file_analysis"
+                  ? 0.01
+                  : 0);
+            let runtimeConfig;
+            try {
+              runtimeConfig = getAiRuntimeConfig();
+            } catch {
+              return Response.json(
+                { error: "AI runtime configuration is unavailable." },
+                { status: 503 },
+              );
+            }
+            let freeHeadroom: Awaited<ReturnType<typeof getGenerationTokenHeadroom>> | null = null;
+            if (auth && callerTier === "free") {
+              try {
+                freeHeadroom = await preflight.run("usage_headroom", (signal) =>
+                  getGenerationTokenHeadroom({ userId: auth!.userId, plan: "free", signal }),
+                );
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
+                return Response.json(
+                  {
+                    error: "Usage authorization is temporarily unavailable.",
+                    code: "usage_authorization_unavailable",
+                    retryable: true,
+                  },
+                  { status: 503, headers: { "Retry-After": "5" } },
+                );
+              }
+              if (freeHeadroom.tokenLimit === 0) {
+                return Response.json(
+                  {
+                    error: "Your generation allowance has been reached. Try again when it resets.",
+                    code: freeHeadroom.limitingQuota,
+                    category: "quota_exceeded",
+                    retryable: false,
+                    requestId,
+                  },
+                  { status: 429 },
+                );
+              }
+            }
+            let freeConnectorBudget: FreeConnectorBudget | null = null;
+            if (freeConnectorRequest && freeHeadroom) {
+              try {
+                freeConnectorBudget = new FreeConnectorBudget({
+                  planningMessages: toolPlanningMessages,
+                  finalMessages,
+                  tools: availableTools,
+                  outputCeiling,
+                  tokenLimit: Math.min(
+                    freeHeadroom.tokenLimit,
+                    planAllowance(runtimeConfig.maxTokensPerUserDay, "free"),
+                    planAllowance(runtimeConfig.maxTokensPerUserMonth, "free"),
+                  ),
+                });
+                body.max_completion_tokens = freeConnectorBudget.finalOutputTokens;
+                estimatedCost = estimateMaximumCostUsd(
+                  catalogModel,
+                  freeConnectorBudget.planningInputTokens +
+                    freeConnectorBudget.finalInputTokenLimit,
+                  freeConnectorBudget.planningOutputTokens + freeConnectorBudget.finalOutputTokens,
+                );
+              } catch (error) {
+                if (
+                  !(error instanceof Error) ||
+                  error.message !== "connector_request_budget_exceeded"
+                )
+                  throw error;
+                // Optional connector discovery must not reject an ordinary chat
+                // turn. Keep every instruction/message, disclose that no private
+                // access occurred, and reserve the full single-call cost below.
+                // The connector budget itself and all account limits stay intact.
+                enableTools = false;
+                finalMessages = connectedToolsUnavailableMessages(finalMessages);
+                toolPlanningMessages = finalMessages;
+                body.messages = finalMessages;
+                inputEstimate = estimateProviderInput(
+                  prepareChatResponsesRequest({ ...body, stream: true }, freeChat),
+                );
+                maximumProviderCalls = 1;
+                estimatedCost = estimateMaximumCostUsd(
+                  catalogModel,
+                  inputEstimate.tokens,
+                  outputCeiling,
+                );
+              }
+            }
+            if (freeHeadroom && !freeConnectorBudget) {
+              // The complete input is mandatory; the answer's maximum length is
+              // not. A short turn must not require enough headroom for the full
+              // mode ceiling. The atomic admission gate still rechecks usage.
+              inputEstimate = estimateProviderInput(
+                prepareChatResponsesRequest({ ...body, stream: true }, freeChat),
+              );
+              outputCeiling = Math.min(
+                outputCeiling,
+                freeHeadroom.tokenLimit - inputEstimate.tokens,
+              );
+              if (outputCeiling < 1) {
+                return Response.json(
+                  {
+                    error: "Your generation allowance has been reached. Try again when it resets.",
+                    code: freeHeadroom.limitingQuota,
+                    category: "quota_exceeded",
+                    retryable: false,
+                    requestId,
+                  },
+                  { status: 429 },
+                );
+              }
+              body.max_completion_tokens = outputCeiling;
+              estimatedCost =
+                estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) +
+                (selectedHostedTool === "data_analysis"
+                  ? 0.03
+                  : selectedHostedTool === "file_analysis"
+                    ? 0.01
+                    : 0);
+            }
+            const hostedExecutionBudget = isKovaHostedModelId(model)
+              ? hostedEffortBudget(
+                  model,
+                  m.id,
+                  inputEstimate.tokens,
+                  outputCeiling,
+                  maximumProviderCalls,
+                )
+              : null;
+            if (hostedExecutionBudget) {
+              estimatedCost =
+                estimateMaximumCostUsd(
+                  catalogModel,
+                  hostedExecutionBudget.inputTokens,
+                  hostedExecutionBudget.outputTokens,
+                ) +
+                (selectedHostedTool === "data_analysis"
+                  ? 0.03
+                  : selectedHostedTool === "file_analysis"
+                    ? 0.01
+                    : 0);
+            }
+            if (estimatedCost > runtimeConfig.maxCostUsdPerRequest) {
+              return Response.json(
+                {
+                  error: "This request exceeds KovaGPT's safe generation budget.",
+                  code: "request_budget",
+                },
+                { status: 413 },
+              );
+            }
+            const idempotencyKey = request.headers.get("idempotency-key");
+            if (!idempotencyKey || !/^[A-Za-z0-9:_-]{8,200}$/.test(idempotencyKey)) {
+              return Response.json(
+                { error: "A valid generation identifier is required." },
+                { status: 400 },
+              );
+            }
+            let usageEventId: string;
+            try {
+              const guestIpHash = clientKey
+                ? await preflight.run("guest_identity", () => hashGuestIp(clientKey))
+                : null;
+              const acquisition = await preflight.run("usage_authorization", (signal) =>
+                acquireGeneration({
+                  requestId,
+                  idempotencyKey,
+                  userId: auth?.userId ?? null,
+                  guestIpHash,
+                  conversationId: chatId,
+                  mode: m.id,
+                  plan: auth ? callerTier : "guest",
+                  premium: ["thinking", "high", "extra_high", "max", "ultra"].includes(m.id),
+                  model: catalogModel,
+                  estimatedInputTokens: inputEstimate.tokens,
+                  reservedTokens:
+                    freeConnectorBudget?.reservedTokens ??
+                    hostedExecutionBudget?.reservedTokens ??
+                    (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
+                  estimatedCostUsd: estimatedCost,
+                  contextTrimmed: messages.length > HISTORY_TURNS,
+                  signal,
+                }),
+              );
+              if ("rejection" in acquisition) {
+                const duplicate = acquisition.rejection === "duplicate";
+                const quota = [
+                  "daily_tokens",
+                  "monthly_tokens",
+                  "monthly_cost",
+                  "weekly_cost",
+                  "five_hour_cost",
+                  "premium_period",
+                  "premium_quota",
+                  "guest_daily",
+                  "guest_quota",
+                ].includes(acquisition.rejection);
+                return Response.json(
+                  {
+                    error: duplicate
+                      ? "This generation request is already running."
+                      : quota
+                        ? "Your generation allowance has been reached. Try again when it resets."
+                        : "Too many generation requests are running. Please try again shortly.",
+                    code: acquisition.rejection,
+                    category: quota ? "quota_exceeded" : duplicate ? "bad_request" : "rate_limit",
+                    retryable: !quota && !duplicate,
+                    requestId,
+                  },
+                  { status: duplicate ? 409 : 429 },
+                );
+              }
+              usageEventId = acquisition.eventId;
+            } catch (error) {
+              if (error instanceof ChatPreflightError) throw error;
+              return Response.json(
+                {
+                  error: "Usage authorization is temporarily unavailable.",
+                  code: "usage_authorization_unavailable",
+                  retryable: true,
+                },
+                { status: 503, headers: { "Retry-After": "5" } },
+              );
+            }
+
+            const workingMessages: ChatMsg[] = [...toolPlanningMessages];
+            const finalToolMessages: ChatMsg[] = [];
+            const appendToolMessage = (message: ChatMsg) => {
+              workingMessages.push(message);
+              finalToolMessages.push(message);
+            };
+            let providerCalls = 0;
+            const hostedInternalUsage = { input: 0, output: 0, cachedInput: 0, reasoning: 0 };
+            const hostedExecution = {
+              mode: m.id,
+              freeChat,
+              beforeSend: () => assertSelectedContextsCurrent(request.signal),
+              onUsage: (usage: typeof hostedInternalUsage) => {
+                for (const key of ["input", "output", "cachedInput", "reasoning"] as const)
+                  hostedInternalUsage[key] += usage[key];
+              },
+            };
+            const activityEvents: Array<{
+              tool: string;
+              label: string;
+              args?: unknown;
+            }> = [];
+            if (webSources.length) {
+              const activity = createToolActivityEvent(
+                "search_web",
+                `Searched ${webSources.length} ${webSources.length === 1 ? "source" : "sources"}`,
+                "complete",
+              );
+              activityEvents.push({ tool: activity.type, label: activity.label });
+            }
+
+            const settleDisconnectedConnector = async () => {
+              if (!freeConnectorBudget) return;
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "client_disconnected",
+                model: catalogModel,
+                ...freeConnectorBudget.usage(),
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: "client_disconnected",
+              }).catch(() => undefined);
+            };
+
+            if (enableTools) {
+              const MAX_TOOL_HOPS = freeConnectorBudget ? 1 : paidToolHopLimit;
+              const MAX_TOOL_CALLS_TOTAL = 16;
+              const PER_HOP_TIMEOUT_MS = 12_000;
+              let totalToolCalls = 0;
+              let toolsWereUsed = false;
+              let hopFailed = false;
+              const pendingConfirms: Array<{
+                id: string;
+                tool: string;
+                summary: string;
+                args_preview: Record<string, unknown>;
+              }> = [];
+              // Dedup identical tool calls (same name + normalized args) within
+              // one request to prevent runaway loops where the model retries
+              // the same call. Returns cached result to the model instead.
+              const dedupCache = new Map<string, string>();
+              const dedupKey = (name: string, args: Record<string, unknown>) => {
+                try {
+                  return `${name}::${JSON.stringify(args, Object.keys(args).sort())}`;
+                } catch {
+                  return `${name}::${Math.random()}`;
+                }
+              };
+
+              for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
+                // Per-hop abort: user disconnect OR 25s timeout, whichever first.
+                const hopCtl = new AbortController();
+                const hopTimer = setTimeout(() => hopCtl.abort(), PER_HOP_TIMEOUT_MS);
+                const onReqAbort = () => hopCtl.abort();
+                request.signal?.addEventListener("abort", onReqAbort, {
+                  once: true,
+                });
+                let hopRes: Response;
+                try {
+                  await assertSelectedContextsCurrent(hopCtl.signal);
+                  freeConnectorBudget?.startPlanning();
+                  providerCalls += 1;
+                  hopRes = await chatCompletions(
+                    {
+                      model,
+                      messages: workingMessages,
+                      tools: availableTools,
+                      tool_choice: "auto",
+                      stream: false,
+                      max_completion_tokens:
+                        freeConnectorBudget?.planningOutputTokens ?? outputCeiling,
+                    },
+                    { signal: hopCtl.signal },
+                    {
+                      ownerId: auth?.userId ?? "",
+                      operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
+                      chatId: chatId ?? "",
+                    },
+                    { mode: m.id, freeChat },
+                  );
+                } catch {
+                  clearTimeout(hopTimer);
+                  request.signal?.removeEventListener("abort", onReqAbort);
+                  if (request.signal?.aborted) {
+                    await settleDisconnectedConnector();
+                    return new Response(null, { status: 499 });
+                  }
+                  hopFailed = true;
+                  logSafeFailure("warn", "[chat] tool hop failed", logContext, {
+                    status: 502,
+                    category: "provider",
+                    code: "tool_hop_failed",
                   });
                   break;
                 }
