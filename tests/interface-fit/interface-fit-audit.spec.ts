@@ -328,7 +328,12 @@ if (scope === "public") {
       name: "Settings sidebar width",
       exact: true,
     });
-    const phone = page.viewportSize()!.width < 768;
+    const phone = await page.evaluate(
+      () =>
+        matchMedia(
+          "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
+        ).matches,
+    );
     const controls = phone
       ? ([[size, "85", "125"]] as const)
       : ([

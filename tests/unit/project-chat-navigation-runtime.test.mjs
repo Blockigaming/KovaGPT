@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -152,6 +153,7 @@ function chatFixture(storage = new Map()) {
         return fetchRequest(args);
       },
       consumeChatSse: (body, options) => consumeRequest(options),
+      extractResponseFollowups,
       chatResponseError: async () => new Error("request failed"),
       normalizeResponseSources: (value) => value,
       AbortController,

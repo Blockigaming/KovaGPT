@@ -2280,7 +2280,9 @@ function KovaGPT() {
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (requestSucceeded) {
-          const { content, followups } = extractResponseFollowups(assembledReply);
+          const { content, followups } = voiceRequest
+            ? { content: assembledReply, followups: [] }
+            : extractResponseFollowups(assembledReply);
           assembledReply = content;
           updateAssistantMessage((message) => ({
             ...message,

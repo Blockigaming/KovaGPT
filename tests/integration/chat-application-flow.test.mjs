@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -727,6 +728,7 @@ function composer(f) {
     personalityToInstruction: () => "",
     loadPersonality: no,
     USER_STOP_REASON: "kova_user_stopped_generation",
+    extractResponseFollowups,
     consumeChatSse,
     chatResponseError,
     withResponsePresentation,
@@ -877,6 +879,7 @@ test("actual application guard clamps final output and permits only one quoted O
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": "new-attempt-123",
+        "X-Kova-Response-Followups": "1",
         "x-kova-acceptance-operation": a.plan.operationId,
       },
       body: f.applicationBody,
