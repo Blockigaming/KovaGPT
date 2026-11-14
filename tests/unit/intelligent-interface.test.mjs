@@ -247,3 +247,48 @@ test("multiple-select and numerical quiz items reveal feedback and score locally
   await f.click("See score");
   assert.match(f.text(), /2 of 2 correct/);
 });
+
+test("an adaptive quiz can review only missed questions and grade a corrected order", async () => {
+  const block = interactive.validateInteractiveBlock({
+    version: 1,
+    type: "quiz",
+    id: "ordering",
+    title: "Ordering practice",
+    adaptive: true,
+    cards: [
+      {
+        kind: "ordering",
+        front: "Order the numbers.",
+        back: "Two comes before three.",
+        options: [
+          { value: "two", label: "Two" },
+          { value: "three", label: "Three" },
+        ],
+        answer: ["two", "three"],
+      },
+      { kind: "number", front: "Two plus two?", back: "Four.", answer: 4 },
+    ],
+  });
+  const f = reactFixture(
+    "src/components/interactive-ui/StudyCards.tsx",
+    (module) => () => module.StudyCards({ block }),
+  );
+  await f.flush();
+  await f.click("Three");
+  await f.click("Two");
+  await f.click("Check answer");
+  assert.match(f.text(), /Incorrect/);
+  await f.click("Next question");
+  f.find("input").props.onChange({ currentTarget: { value: "4" } });
+  await f.flush();
+  await f.click("Check answer");
+  await f.click("See score");
+  await f.click("Review missed questions");
+  assert.match(f.text(), /Question 1 of 1/);
+  await f.click("Two");
+  await f.click("Three");
+  await f.click("Check answer");
+  assert.match(f.text(), /Correct/);
+  await f.click("See score");
+  assert.match(f.text(), /1 of 1 correct/);
+});

@@ -39,14 +39,20 @@ export type InteractiveTable = {
 export type Flashcard = { front: string; back: string };
 export type QuizCard = Flashcard & { hint?: string } & (
     | { kind: "choice"; options: InteractiveOption[]; answer: string }
-    | { kind: "multiple"; options: InteractiveOption[]; answer: string[] }
+    | { kind: "multiple" | "ordering"; options: InteractiveOption[]; answer: string[] }
+    | {
+        kind: "matching";
+        items: InteractiveOption[];
+        options: InteractiveOption[];
+        answer: string[];
+      }
     | { kind: "number"; answer: number; tolerance: number }
     | { kind: "short"; answer: string[] }
   );
 type StudyDeck = { version: 1; id: string; title: string; description?: string };
 export type StudyBlock =
-  | (StudyDeck & { type: "flashcards"; cards: Flashcard[] })
-  | (StudyDeck & { type: "quiz"; cards: QuizCard[] });
+  | (StudyDeck & { type: "flashcards"; cards: Flashcard[]; adaptive?: boolean })
+  | (StudyDeck & { type: "quiz"; cards: QuizCard[]; adaptive?: boolean });
 export type SimulationRange = { min: number; max: number; step: number; value: number };
 export type SimulationModel = "linear" | "quadratic" | "rectangle" | "compound-interest";
 export type SimulationBlock = StudyDeck & {

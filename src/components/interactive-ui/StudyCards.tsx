@@ -11,6 +11,12 @@ function matchesAnswer(question: QuizCard, entry: string, selected: string[]) {
         selected.length === question.answer.length &&
         question.answer.every((answer) => selected.includes(answer))
       );
+    case "ordering":
+    case "matching":
+      return (
+        selected.length === question.answer.length &&
+        question.answer.every((answer, index) => selected[index] === answer)
+      );
     case "number":
       return entry.trim() !== "" && Math.abs(Number(entry) - question.answer) <= question.tolerance;
     case "short": {
@@ -30,14 +36,23 @@ export function StudyCards({ block }: { block: StudyBlock }) {
   const [showHint, setShowHint] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(0);
-  const done = index === block.cards.length;
+  const [missed, setMissed] = useState<number[]>([]);
+  const done = index >= order.length;
   const flashcards = block.type === "flashcards";
   const card = block.cards[order[index]];
   const question = block.type === "quiz" ? block.cards[order[index]] : undefined;
   const correct = question ? matchesAnswer(question, entry, selected) : false;
-  const answered = question?.kind === "multiple" ? selected.length > 0 : entry.trim() !== "";
+  const answered =
+    question?.kind === "ordering"
+      ? selected.length === question.options.length
+      : question?.kind === "matching"
+        ? question.items.every((_, position) => !!selected[position])
+        : question?.kind === "multiple"
+          ? selected.length > 0
+          : entry.trim() !== "";
 
   function advance(earned: boolean) {
+    if (!earned) setMissed((current) => [...current, order[index]]);
     setScore((total) => total + Number(earned));
     setIndex((current) => current + 1);
     setEntry("");
@@ -46,16 +61,21 @@ export function StudyCards({ block }: { block: StudyBlock }) {
     setRevealed(false);
   }
 
+  function restart(nextOrder: number[]) {
+    setOrder(nextOrder);
+    setIndex(0);
+    setScore(0);
+    setMissed([]);
+    setRevealed(false);
+  }
+
   function shuffle() {
-    const shuffled = [...order];
+    const shuffled = block.cards.map((_, position) => position);
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    setOrder(shuffled);
-    setIndex(0);
-    setScore(0);
-    setRevealed(false);
+    restart(shuffled);
   }
 
   return (
@@ -78,29 +98,94 @@ export function StudyCards({ block }: { block: StudyBlock }) {
       {done ? (
         <div className="mt-4 grid gap-3">
           <p role="status">
-            {score} of {block.cards.length} {flashcards ? "known" : "correct"}
+            {score} of {order.length} {flashcards ? "known" : "correct"}
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11 justify-self-start"
-            onClick={() => {
-              setScore(0);
-              setIndex(0);
-            }}
-          >
-            Start over
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {block.adaptive && missed.length > 0 && (
+              <Button type="button" className="min-h-11" onClick={() => restart(missed)}>
+                Review missed {flashcards ? "cards" : "questions"}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => restart(block.cards.map((_, position) => position))}
+            >
+              Start over
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="mt-4 grid gap-3">
           <p aria-live="polite" className="text-sm text-muted-foreground">
-            {flashcards ? "Card" : "Question"} {index + 1} of {block.cards.length}
+            {flashcards ? "Card" : "Question"} {index + 1} of {order.length}
           </p>
           {question ? (
             <fieldset disabled={revealed} className="grid min-w-0 gap-1">
               <legend className="mb-2 font-medium">{question.front}</legend>
-              {"options" in question ? (
+              {question.kind === "ordering" ? (
+                <div className="grid gap-2">
+                  <ol className="list-decimal pl-6" aria-label="Your order">
+                    {selected.map((value) => (
+                      <li key={value}>
+                        {question.options.find((option) => option.value === value)?.label}
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="flex flex-wrap gap-2">
+                    {question.options
+                      .filter(({ value }) => !selected.includes(value))
+                      .map(({ value, label }) => (
+                        <Button
+                          key={value}
+                          type="button"
+                          variant="outline"
+                          className="min-h-11"
+                          disabled={revealed}
+                          onClick={() => setSelected([...selected, value])}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    {selected.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={revealed}
+                        onClick={() => setSelected(selected.slice(0, -1))}
+                      >
+                        Undo last choice
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : question.kind === "matching" ? (
+                question.items.map((item, position) => (
+                  <label key={item.value} className="grid gap-1 text-sm">
+                    {item.label}
+                    <select
+                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-2"
+                      value={selected[position] ?? ""}
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setSelected((current) =>
+                          question.items.map((_, i) =>
+                            i === position ? value : (current[i] ?? ""),
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="">Choose an answer</option>
+                      {question.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))
+              ) : "options" in question ? (
                 question.options.map((option) => (
                   <label
                     key={option.value}
@@ -177,7 +262,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
             {revealed &&
               (question ? (
                 <Button type="button" className="min-h-11" onClick={() => advance(correct)}>
-                  {index + 1 === block.cards.length ? "See score" : "Next question"}
+                  {index + 1 === order.length ? "See score" : "Next question"}
                 </Button>
               ) : (
                 <>

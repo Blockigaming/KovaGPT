@@ -239,10 +239,12 @@ function validateTable(v) {
 }
 
 function validateStudyBlock(value) {
-  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "cards"])) return null;
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "cards", "adaptive"]))
+    return null;
   if ("description" in value && !str(value.description, 800)) return null;
   if (!Array.isArray(value.cards) || value.cards.length < 1 || value.cards.length > 30) return null;
   const quiz = value.type === "quiz";
+  if ("adaptive" in value && typeof value.adaptive !== "boolean") return null;
   const cards = [];
   for (const card of value.cards) {
     if (!isPlain(card) || !str(card.front, 600) || !str(card.back, 1200)) return null;
@@ -251,12 +253,30 @@ function validateStudyBlock(value) {
       cards.push({ front: card.front, back: card.back });
       continue;
     }
-    if (!onlyKeys(card, ["front", "back", "kind", "options", "answer", "hint", "tolerance"]))
+    if (
+      !onlyKeys(card, ["front", "back", "kind", "options", "answer", "hint", "tolerance", "items"])
+    )
       return null;
     if ("hint" in card && !str(card.hint, 400)) return null;
     const shared = { front: card.front, back: card.back, hint: card.hint };
     const kind = card.kind ?? "choice";
-    if (kind === "choice" || kind === "multiple") {
+    if (kind !== "matching" && "items" in card) return null;
+    if (kind === "matching") {
+      if ("tolerance" in card) return null;
+      const options = validateOptions(card.options);
+      const items = validateOptions(card.items);
+      if (
+        !options ||
+        options.length < 2 ||
+        !items ||
+        items.length < 2 ||
+        !Array.isArray(card.answer) ||
+        card.answer.length !== items.length ||
+        !card.answer.every((answer) => options.some(({ value }) => value === answer))
+      )
+        return null;
+      cards.push({ ...shared, kind, options, items, answer: [...card.answer] });
+    } else if (kind === "choice" || kind === "multiple" || kind === "ordering") {
       if ("tolerance" in card) return null;
       const options = validateOptions(card.options);
       const answers = kind === "choice" ? [card.answer] : card.answer;
@@ -266,6 +286,7 @@ function validateStudyBlock(value) {
         !Array.isArray(answers) ||
         !answers.length ||
         !uniq(answers) ||
+        (kind === "ordering" && answers.length !== options.length) ||
         !answers.every((answer) => options.some(({ value }) => value === answer))
       )
         return null;
@@ -297,6 +318,7 @@ function validateStudyBlock(value) {
     id: value.id,
     title: value.title.trim(),
     description: value.description,
+    ...(value.adaptive ? { adaptive: true } : {}),
     cards,
   };
 }
@@ -572,7 +594,7 @@ export function splitInteractiveContent(value) {
   return parts;
 }
 
-export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). Only choice and multiple use options. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
+export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). For ordering cards, include options in scrambled order and answer as an array of all option IDs in correct order. For matching or classification, include items and options (each an array of value/label pairs), and answer as an array containing the correct option ID for each item in order. Set deck-level adaptive to true to offer targeted review of missed items. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
 next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
 form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
 field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
