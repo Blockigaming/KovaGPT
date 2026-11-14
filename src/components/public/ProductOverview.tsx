@@ -492,6 +492,7 @@ export function ProductOverview() {
             >
               <pre
                 className="api-scroll"
+                data-paused={paused}
                 style={{ animationPlayState: paused ? "paused" : "running" }}
               >
                 <code>
@@ -531,7 +532,7 @@ export function ProductOverview() {
               <div className="eyebrow">{"Latest from KovaGPT"}</div>
               <h2>{"Kovapedia"}</h2>
             </div>
-            <a href="/features">
+            <a href="/news">
               {"Explore all "}
               <ArrowUpRight aria-hidden="true" />
             </a>
