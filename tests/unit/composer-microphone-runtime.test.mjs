@@ -172,6 +172,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     "ComposerVoiceDialog",
   ])
     modules[`@/components/${name}`] = { [name]: name };
+  modules["@/components/ComposerPluginList"].useComposerPluginConnections = () => ({});
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
     ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],
