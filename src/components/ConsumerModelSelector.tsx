@@ -100,7 +100,7 @@ export function ConsumerModelSelector({
                 }
               : undefined
           }
-          className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          className="inline-flex min-h-11 min-w-0 max-w-36 items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
         >
           <span className="truncate">{current?.label ?? "Model unavailable"}</span>
           <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />

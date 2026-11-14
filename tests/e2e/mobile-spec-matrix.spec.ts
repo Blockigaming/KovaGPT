@@ -15,14 +15,14 @@ const viewports = [
   [1920, 1080],
 ] as const;
 
-test.beforeEach(async ({ page }, info) => {
+test.beforeEach(({}, info) => {
   test.skip(info.project.name !== "desktop-1440x900", "this spec sets its own viewport");
-  await installAuthenticatedFixture(page);
 });
 
 for (const [width, height] of viewports) {
   for (const theme of ["light", "dark"] as const) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
+      await installAuthenticatedFixture(page);
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.route("**/mobile-spec-image.png", (route) =>
@@ -105,6 +105,7 @@ for (const [width, height] of viewports) {
       if (width < 768 && height > width) {
         await page.setViewportSize({ width: height, height: width });
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
+        await installAuthenticatedFixture(page);
         await page.setViewportSize({ width, height });
         await expect(composer).toHaveValue("First line\nA second line for this draft.");
       }
@@ -148,4 +149,28 @@ for (const [width, height] of viewports) {
       expect(await html.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
     });
   }
+}
+
+for (const [width, height] of viewports) {
+  test(`long model names leave the composer usable at ${width}×${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await installAuthenticatedFixture(page, { tier: "plus" });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+
+    const composer = page.locator(".spec400-composer");
+    const model = composer.getByTestId("consumer-model-trigger");
+    await expect(model).toBeVisible();
+    await composer.getByRole("textbox", { name: "Message KovaGPT" }).fill("Draft");
+    await model.locator("span.truncate").evaluate((label) => {
+      label.textContent = "Kova long model label for narrow viewports ".repeat(5);
+    });
+    await expect(composer.getByRole("button", { name: "Send message" })).toBeInViewport();
+    const bounds = await model.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, viewport: document.documentElement.clientWidth };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewport);
+  });
 }
