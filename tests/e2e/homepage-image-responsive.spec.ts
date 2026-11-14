@@ -21,6 +21,14 @@ test("logged-out homepage loads its restored image with a device-specific crop",
   });
   expect(rendered.source).toMatch(/classroom-hero-restored(?:-768)?\.webp$/);
   expect(rendered.width).toBeGreaterThan(0);
-  expect(rendered.aspect).toBe(page.viewportSize()!.width <= 1023 ? "4 / 3" : "4 / 5");
+  const compact = await page.evaluate(
+    () =>
+      matchMedia(
+        "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
+      ).matches,
+  );
+  expect(rendered.aspect).toBe(
+    compact ? "2.1 / 1" : page.viewportSize()!.width <= 1023 ? "4 / 3" : "4 / 5",
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

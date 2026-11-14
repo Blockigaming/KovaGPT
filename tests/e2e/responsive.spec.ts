@@ -33,7 +33,7 @@ async function noHorizontalOverflow(page: Page) {
 test.describe("KovaGPT responsive shell", () => {
   test("home renders and has no horizontal overflow", async ({ page }, testInfo) => {
     const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (e) => errors.push(e.stack ?? e.message));
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
