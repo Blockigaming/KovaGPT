@@ -99,3 +99,38 @@ test("bubble and treemap specs preserve their size data and reject invalid metad
     "treemap",
   );
 });
+
+test("Sankey data preserves weighted links and rejects disconnected cycles", async () => {
+  const { sankeyData } = await import("../../src/components/chat-chart-utils.ts");
+  const spec = {
+    type: "sankey",
+    data: [
+      { source: "A", target: "B", value: 3 },
+      { source: "B", target: "C", value: 2 },
+    ],
+  };
+  assert.deepEqual(sankeyData(spec), {
+    nodes: [{ name: "A" }, { name: "B" }, { name: "C" }],
+    links: [
+      { source: 0, target: 1, value: 3 },
+      { source: 1, target: 2, value: 2 },
+    ],
+  });
+  assert.equal(
+    parseChartSpec(
+      JSON.stringify({
+        ...spec,
+        data: [
+          ...spec.data,
+          { source: "X", target: "Y", value: 1 },
+          { source: "Y", target: "X", value: 1 },
+        ],
+      }),
+    ),
+    null,
+  );
+  assert.equal(
+    parseChartSpec(JSON.stringify({ ...spec, data: [...spec.data, spec.data[0]] })),
+    null,
+  );
+});

@@ -19,6 +19,7 @@ export const CHART_TYPES = [
   "funnel",
   "bubble",
   "treemap",
+  "sankey",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -77,6 +78,56 @@ export function histogramRows(spec: ChartSpec, key: string) {
   return bins;
 }
 
+export function sankeyData(spec: ChartSpec) {
+  if (!spec.data.length || spec.data.length > 80) return null;
+  const nodes: { name: string }[] = [];
+  const names = new Map<string, number>();
+  const links: { source: number; target: number; value: number }[] = [];
+  const outbound = new Map<number, number[]>();
+  const indegrees: number[] = [];
+  const nodeId = (name: string) => {
+    const existing = names.get(name);
+    if (existing !== undefined) return existing;
+    const index = nodes.length;
+    nodes.push({ name });
+    names.set(name, index);
+    indegrees.push(0);
+    return index;
+  };
+  const edges = new Set<string>();
+  for (const row of spec.data) {
+    if (
+      typeof row.source !== "string" ||
+      typeof row.target !== "string" ||
+      typeof row.value !== "number" ||
+      row.value <= 0 ||
+      row.value > 1e12
+    )
+      return null;
+    const from = row.source.trim();
+    const to = row.target.trim();
+    if (!from || !to || from === to || from.length > 80 || to.length > 80) return null;
+    const source = nodeId(from);
+    const target = nodeId(to);
+    const edge = source + ":" + target;
+    if (nodes.length > 32 || edges.has(edge)) return null;
+    edges.add(edge);
+    links.push({ source, target, value: row.value });
+    const children = outbound.get(source) ?? [];
+    children.push(target);
+    outbound.set(source, children);
+    indegrees[target]++;
+  }
+  const queue = indegrees.flatMap((degree, index) => (degree === 0 ? [index] : []));
+  for (let visit = 0; visit < queue.length; visit++) {
+    for (const neighbor of outbound.get(queue[visit]) ?? []) {
+      indegrees[neighbor]--;
+      if (indegrees[neighbor] === 0) queue.push(neighbor);
+    }
+  }
+  return queue.length === nodes.length ? { nodes, links } : null;
+}
+
 export function parseChartSpec(raw: string): ChartSpec | null {
   if (raw.length > 64_000) return null;
   try {
@@ -118,6 +169,7 @@ export function parseChartSpec(raw: string): ChartSpec | null {
       return null;
     const spec = object as ChartSpec;
     if (spec.type === "candlestick" && !candlestickRows(spec)) return null;
+    if (spec.type === "sankey" && !sankeyData(spec)) return null;
     return spec;
   } catch {
     return null;

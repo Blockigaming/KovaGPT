@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Sankey,
   Treemap,
   ZAxis,
   FunnelChart,
@@ -41,6 +42,7 @@ import {
   candlestickRows,
   chartToCsv,
   histogramRows,
+  sankeyData,
   type ChartSpec,
   type ChartType,
 } from "./chat-chart-utils";
@@ -207,6 +209,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
     }
   };
   const candles = type === "candlestick" ? candlestickRows(spec) : null;
+  const flow = sankeyData(spec);
   const percent = type === "percent-stacked-bar";
   const nonNegative = spec.data.every((row) =>
     keys.every((key) => typeof row[key] !== "number" || row[key] >= 0),
@@ -241,6 +244,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       (candidate !== "bubble" || hasBubble) &&
       (candidate !== "treemap" || tree.length > 0) &&
       (candidate !== "candlestick" || !!candlestickRows(spec)) &&
+      (candidate !== "sankey" || !!flow) &&
       (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
   );
   const axes = (
@@ -319,7 +323,21 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           <Download className="h-4 w-4" /> CSV
         </button>
       </div>
-      {candles ? (
+      {type === "sankey" && flow ? (
+        <div className="h-64 w-full sm:h-80" role="img" aria-label="Sankey flow diagram">
+          <ResponsiveContainer width="100%" height="100%">
+            <Sankey
+              data={flow}
+              nodePadding={6}
+              nodeWidth={14}
+              node={{ fill: colors[0] }}
+              link={{ stroke: colors[0], strokeOpacity: 0.35 }}
+            >
+              <Tooltip />
+            </Sankey>
+          </ResponsiveContainer>
+        </div>
+      ) : candles ? (
         <CandlePlot rows={candles} />
       ) : noCompatibleSeries ? (
         <div role="alert" className="rounded-xl bg-muted p-4 text-sm text-muted-foreground">
@@ -465,7 +483,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           </ResponsiveContainer>
         </div>
       )}
-      {(table || noCompatibleSeries) && (
+      {(table || noCompatibleSeries || type === "sankey") && (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Data used in {spec.title ?? "chart"}</caption>
