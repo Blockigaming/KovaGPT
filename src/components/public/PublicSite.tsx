@@ -51,14 +51,14 @@ export function PublicPageView({
         data-ui-reference={reference}
         id="main-content"
         tabIndex={-1}
-        className={`min-w-0 [overflow-wrap:anywhere] ${heroMedia ? "kova-xai-api" : showcase ? "kova-editorial-product" : ""}`}
+        className={`min-w-0 [overflow-wrap:anywhere] ${showcase ? "kova-editorial-product" : ""}`}
       >
         {showcase && <div className="kova-showcase-progress" aria-hidden="true" />}
         <section
           className={`relative overflow-hidden border-b border-border/70 ${showcase ? "kova-showcase-hero" : ""}`}
         >
           <div
-            className={`relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24 ${heroMedia ? "kova-split-hero" : ""}`}
+            className={`relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24 ${heroMedia ? "kova-api-hero" : ""}`}
           >
             <div>
               <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>

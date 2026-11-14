@@ -125,7 +125,7 @@ function PricingPage() {
         id="main-content"
         tabIndex={-1}
         data-billing-page
-        data-ui-reference="grok-pricing"
+        data-ui-reference="chatgpt-pricing"
         className="kova-secondary-page kova-pricing-page kova-editorial-product mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
         <div className="kova-showcase-progress" aria-hidden="true" />

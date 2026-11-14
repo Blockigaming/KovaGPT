@@ -1,6 +1,6 @@
 import "./product-showcase.css";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { PublicAction, PublicHero } from "@/components/public/PublicSections";
 import { Button } from "@/components/ui/button";
@@ -33,48 +33,29 @@ const examples = [
 export function ProductOverview() {
   const [selected, setSelected] = useState(0);
   const example = examples[selected];
-  const story = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!story.current || !("IntersectionObserver" in window)) return;
-    const desktop = window.matchMedia(
-      "(min-width: 64rem) and (min-height: 48rem) and (prefers-reduced-motion: no-preference)",
-    );
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!desktop.matches) return;
-        const current = entries.find((entry) => entry.isIntersecting);
-        if (current) setSelected(Number((current.target as HTMLElement).dataset.example));
-      },
-      { rootMargin: "-35% 0px -50% 0px" },
-    );
-    story.current
-      .querySelectorAll("[data-example]")
-      .forEach((chapter) => observer.observe(chapter));
-    return () => observer.disconnect();
-  }, []);
   return (
     <PublicShell>
       <main
         id="main-content"
         tabIndex={-1}
-        className="public-overview kova-xai-overview"
-        data-ui-reference="grok-product-overview"
+        className="public-overview kova-product-overview"
+        data-ui-reference="chatgpt-product-overview"
       >
         <div className="kova-showcase-progress" aria-hidden="true" />
         <div className="kova-showcase-hero">
           <PublicHero
             eyebrow=""
-            title="AI for everything you do."
+            title="Chat, write, and plan in one place."
             description="Write a first draft, understand a new idea, or turn a project into a plan."
           >
             <PublicAction to="/">Open KovaGPT</PublicAction>
-            <a href="#workflow-example" className="kova-button public-action is-secondary">
-              Explore KovaGPT <span aria-hidden="true">↓</span>
-            </a>
+            <PublicAction to="/download" secondary>
+              Download the app
+            </PublicAction>
           </PublicHero>
         </div>
 
-        <div className="kova-overview-story" ref={story}>
+        <div className="kova-overview-story">
           <section
             id="workflow-example"
             className="public-workflow-example kova-showcase-jump"
