@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { StudyCards } from "./StudyCards";
+import { ResponseMemoryGame } from "./ResponseMemoryGame";
 import { ResponseFiles } from "./ResponseFiles";
 import { ResponsePattern } from "./ResponsePattern";
 import { ResponseDiagram } from "./ResponseDiagram";
@@ -124,6 +125,8 @@ export function InteractiveBlock({
 
   if (block.type === "simulation")
     return <ResponseSimulation key={JSON.stringify(block)} block={block} />;
+  if (block.type === "memory-game")
+    return <ResponseMemoryGame key={JSON.stringify(block)} block={block} />;
   if (block.type === "files") return <ResponseFiles key={JSON.stringify(block)} block={block} />;
   if (block.type === "diagram") return <ResponseDiagram block={block} />;
   if (block.type === "pattern")

@@ -497,6 +497,39 @@ function validateFileBundle(value) {
   };
 }
 
+function validateMemoryGame(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "pairs"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Array.isArray(value.pairs) || value.pairs.length < 2 || value.pairs.length > 12) return null;
+  const pairs = [];
+  for (const pair of value.pairs) {
+    if (
+      !isPlain(pair) ||
+      !onlyKeys(pair, ["first", "second"]) ||
+      !str(pair.first, 48) ||
+      !str(pair.second, 48)
+    )
+      return null;
+    pairs.push({ first: pair.first.trim(), second: pair.second.trim() });
+  }
+  const identities = pairs.map(({ first, second }) =>
+    JSON.stringify([first.toLowerCase(), second.toLowerCase()].sort()),
+  );
+  if (!uniq(identities)) return null;
+  const labels = pairs.flatMap(({ first, second }) => [
+    ...new Set([first.toLowerCase(), second.toLowerCase()]),
+  ]);
+  if (!uniq(labels)) return null;
+  return {
+    version: 1,
+    type: "memory-game",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    pairs,
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -508,6 +541,7 @@ export function validateInteractiveBlock(value) {
     if (value.type === "diagram") return validateDiagram(value);
     if (value.type === "pattern") return validatePattern(value);
     if (value.type === "files") return validateFileBundle(value);
+    if (value.type === "memory-game") return validateMemoryGame(value);
     if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
   } catch {
@@ -625,4 +659,5 @@ simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectan
 diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
 pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
 files: {"version":1,"type":"files","id":"notes","title":"Research notes","files":[{"name":"notes.md","content":"# Notes"}]}. Use for actual text, Markdown, CSV, TSV, JSON, YAML, TOML or notebook output; no paths or external URLs. A user can preview or download individual files or a ZIP. Do not claim files have already been downloaded.
+memory-game: {"version":1,"type":"memory-game","id":"pairs","title":"Find the pairs","pairs":[{"first":"2 + 2","second":"4"},{"first":"3 + 3","second":"6"}]}. Use 2–12 distinct pairs of short labels. Labels may match within one pair, and cannot be reused across different pairs.
 IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations, diagrams and pattern previews work locally; they do not execute external actions, grant access, or prove success.`;

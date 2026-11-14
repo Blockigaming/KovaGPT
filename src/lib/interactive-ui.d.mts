@@ -85,6 +85,10 @@ export type FileBundleBlock = StudyDeck & {
   type: "files";
   files: { name: string; content: string }[];
 };
+export type MemoryGameBlock = StudyDeck & {
+  type: "memory-game";
+  pairs: { first: string; second: string }[];
+};
 export type InteractiveBlock =
   | InteractiveForm
   | InteractiveTable
@@ -92,7 +96,8 @@ export type InteractiveBlock =
   | SimulationBlock
   | DiagramBlock
   | PatternBlock
-  | FileBundleBlock;
+  | FileBundleBlock
+  | MemoryGameBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };

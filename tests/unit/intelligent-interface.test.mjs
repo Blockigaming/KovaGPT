@@ -36,6 +36,7 @@ function fixture(onSubmit, block = nextSteps) {
         "./ResponseDiagram": { ResponseDiagram: () => null },
         "./ResponsePattern": { ResponsePattern: () => null },
         "./ResponseFiles": { ResponseFiles: () => null },
+        "./ResponseMemoryGame": { ResponseMemoryGame: () => null },
         "./ResponseSimulation": { ResponseSimulation: () => null },
         "lucide-react": { Check: "check-icon" },
         "@/components/ui/checkbox": { Checkbox: "checkbox" },
@@ -336,4 +337,36 @@ test("timed practice starts on request, expires correctly, and still has an unti
   await untimed.click("Practice without timer");
   assert.match(untimed.text(), /Two plus two/);
   assert.doesNotMatch(untimed.text(), /seconds left/);
+});
+
+test("the memory game plays to completion and counts matching turns", async () => {
+  const block = interactive.validateInteractiveBlock({
+    version: 1,
+    type: "memory-game",
+    id: "pairs",
+    title: "Find the pairs",
+    pairs: [
+      { first: "A", second: "a" },
+      { first: "B", second: "b" },
+    ],
+  });
+  assert.ok(block);
+  const f = reactFixture(
+    "src/components/interactive-ui/ResponseMemoryGame.tsx",
+    (module) => () => module.ResponseMemoryGame({ block }),
+    { globals: { Math: { floor: Math.floor, random: () => 0.999 } } },
+  );
+  await f.flush();
+  await f.click("Start game");
+  await f.click("Turn over card 1");
+  await f.click("Turn over card 3");
+  assert.match(f.text(), /do not match/);
+  await f.click("Turn cards back over");
+  await f.click("Turn over card 1");
+  await f.click("Turn over card 2");
+  await f.click("Turn over card 3");
+  await f.click("Turn over card 4");
+  assert.match(f.text(), /All pairs matched\. 3 turns\./);
+  await f.click("Shuffle and restart");
+  assert.match(f.text(), /0 of 2 pairs matched\. 0 turns\./);
 });
