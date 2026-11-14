@@ -134,3 +134,20 @@ test("Sankey data preserves weighted links and rejects disconnected cycles", asy
     null,
   );
 });
+
+test("waterfalls preserve signed changes and range charts require ordered bounds", async () => {
+  const { rangeChartRows } = await import("../../src/components/chat-chart-utils.ts");
+  const spec = {
+    type: "waterfall",
+    data: [
+      { name: "Start", value: 8 },
+      { name: "Drop", value: -11 },
+    ],
+  };
+  assert.deepEqual(rangeChartRows(spec), [
+    { label: "Start", interval: [0, 8], detail: 8 },
+    { label: "Drop", interval: [-3, 8], detail: -11 },
+  ]);
+  assert.equal(parseChartSpec('{"type":"range","data":[{"low":5,"high":4}]}'), null);
+  assert.equal(parseChartSpec('{"type":"range","data":[{"low":4,"high":5}]}')?.type, "range");
+});

@@ -43,6 +43,7 @@ import {
   chartToCsv,
   histogramRows,
   sankeyData,
+  rangeChartRows,
   type ChartSpec,
   type ChartType,
 } from "./chat-chart-utils";
@@ -210,6 +211,12 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   };
   const candles = type === "candlestick" ? candlestickRows(spec) : null;
   const flow = sankeyData(spec);
+  const waterfall = rangeChartRows(
+    { ...spec, type: "waterfall" },
+    spec.type === "waterfall" ? spec.keys?.[0] : keys[0],
+  );
+  const range = rangeChartRows({ ...spec, type: "range" });
+  const intervals = type === "waterfall" ? waterfall : type === "range" ? range : null;
   const percent = type === "percent-stacked-bar";
   const nonNegative = spec.data.every((row) =>
     keys.every((key) => typeof row[key] !== "number" || row[key] >= 0),
@@ -245,6 +252,8 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       (candidate !== "treemap" || tree.length > 0) &&
       (candidate !== "candlestick" || !!candlestickRows(spec)) &&
       (candidate !== "sankey" || !!flow) &&
+      (candidate !== "waterfall" || !!waterfall) &&
+      (candidate !== "range" || !!range) &&
       (!["percent-stacked-bar", "funnel", "treemap"].includes(candidate) || nonNegative),
   );
   const axes = (
@@ -352,7 +361,32 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           aria-label={`${type} chart with ${spec.data.length} data points`}
         >
           <ResponsiveContainer width="100%" height="100%">
-            {type === "treemap" ? (
+            {intervals ? (
+              <BarChart data={intervals}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="label" fontSize={12} />
+                <YAxis domain={["auto", "auto"]} fontSize={12} />
+                <Tooltip
+                  formatter={(value: number | number[], name, item) => {
+                    if (type === "waterfall" && item.payload)
+                      return [String(item.payload.detail), "Change"];
+                    return [Array.isArray(value) ? value.join(" to ") : value, name];
+                  }}
+                />
+                <Bar dataKey="interval" name="Range">
+                  {intervals.map((item, index) => (
+                    <Cell
+                      key={index}
+                      fill={
+                        type === "waterfall" && item.detail < 0
+                          ? "var(--destructive)"
+                          : colors[index % colors.length]
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            ) : type === "treemap" ? (
               <Treemap
                 data={tree}
                 dataKey="size"

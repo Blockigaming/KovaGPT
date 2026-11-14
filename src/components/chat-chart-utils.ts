@@ -20,6 +20,8 @@ export const CHART_TYPES = [
   "bubble",
   "treemap",
   "sankey",
+  "waterfall",
+  "range",
 ] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
@@ -128,6 +130,34 @@ export function sankeyData(spec: ChartSpec) {
   return queue.length === nodes.length ? { nodes, links } : null;
 }
 
+export function rangeChartRows(spec: ChartSpec, key?: string) {
+  const labelKey = spec.xKey ?? "name";
+  let total = 0;
+  const rows = [];
+  for (const [index, row] of spec.data.entries()) {
+    const label = String(row[labelKey] ?? index + 1);
+    if (spec.type === "waterfall") {
+      const value = row[key ?? "value"];
+      if (typeof value !== "number") return null;
+      const next = total + value;
+      if (!Number.isFinite(next)) return null;
+      rows.push({ label, interval: [Math.min(total, next), Math.max(total, next)], detail: value });
+      total = next;
+    } else {
+      const { low, high } = row;
+      if (
+        typeof low !== "number" ||
+        typeof high !== "number" ||
+        high < low ||
+        !Number.isFinite(high - low)
+      )
+        return null;
+      rows.push({ label, interval: [low, high], detail: high - low });
+    }
+  }
+  return rows.length ? rows : null;
+}
+
 export function parseChartSpec(raw: string): ChartSpec | null {
   if (raw.length > 64_000) return null;
   try {
@@ -170,6 +200,8 @@ export function parseChartSpec(raw: string): ChartSpec | null {
     const spec = object as ChartSpec;
     if (spec.type === "candlestick" && !candlestickRows(spec)) return null;
     if (spec.type === "sankey" && !sankeyData(spec)) return null;
+    if (["waterfall", "range"].includes(spec.type) && !rangeChartRows(spec, spec.keys?.[0]))
+      return null;
     return spec;
   } catch {
     return null;
