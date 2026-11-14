@@ -316,7 +316,7 @@ function countFixture(overrides = {}) {
       loading: false,
       error: false,
     },
-    WORKING_IDS: new Set(ids),
+    WORKING_IDS: new Set([...ids, "plaid"]),
     isLoaded: true,
     isSignedIn: true,
     activityReady: true,
