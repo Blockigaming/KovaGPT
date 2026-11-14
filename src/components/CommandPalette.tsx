@@ -237,8 +237,14 @@ export function CommandPalette({
     const returnTarget = returnFocusRef.current;
     // Own keyboard focus before paint; Escape must work during the opening frame.
     searchInputRef.current?.focus({ preventScroll: true });
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (document.activeElement === document.body || document.activeElement === returnTarget) {
+        searchInputRef.current?.focus({ preventScroll: true });
+      }
+    });
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       if (!shouldRestoreFocusRef.current) return;
       const restoreFocus = () => {
         const target = resolveReturnFocusTarget(returnTarget);
@@ -517,7 +523,7 @@ export function CommandPalette({
       ref={dialogRef}
       data-kova-shell-overlay=""
       data-slot="command-palette-overlay"
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-[var(--surface-scrim)] px-[max(1rem,var(--safe-left),var(--safe-right))] pb-[max(1rem,var(--safe-bottom))] pt-[max(12vh,var(--safe-top))] [font-family:var(--font-ui,var(--font-sans))]"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-[var(--surface-scrim)] px-[max(1rem,var(--safe-left),var(--safe-right))] [--kova-palette-bottom:max(1rem,var(--safe-bottom))] [--kova-palette-top:max(12vh,var(--safe-top))] pb-[var(--kova-palette-bottom)] pt-[var(--kova-palette-top)] [font-family:var(--font-ui,var(--font-sans))]"
       role="dialog"
       aria-modal="true"
       aria-label="Search workspace, chats, and actions"
@@ -577,7 +583,7 @@ export function CommandPalette({
         className="flex min-w-0 w-full max-w-[720px] flex-col overflow-hidden rounded-[var(--kova-radius-panel)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] animate-in fade-in duration-100"
         style={{
           maxHeight:
-            "min(80dvh, calc(100dvh - max(12vh, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
+            "min(80dvh, calc(var(--kova-visible-height, 100dvh) - var(--kova-palette-top) - var(--kova-palette-bottom)))",
         }}
       >
         <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 sm:px-6">

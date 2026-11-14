@@ -189,6 +189,12 @@ function ChatMessageInner({
     };
   }, [principal, message.id, message.content]);
   const isUser = message.role === "user";
+  const imageAttachments = isUser
+    ? message.attachments?.filter((attachment) => attachment.kind === "image")
+    : undefined;
+  const imageCount = imageAttachments?.length ?? 0;
+  const multipleImages = imageCount > 1;
+  const imageDescription = message.content.trim().slice(0, 120);
   const imageActions = useMemo<ChatImageActions | undefined>(
     () =>
       isSignedIn && principalResolved && userKey && principal && chatId
@@ -816,25 +822,31 @@ function ChatMessageInner({
         <div className="mx-auto flex w-full kova-message-reading-column justify-end">
           <div className="kova-user-message-group flex min-w-0 flex-col items-end">
             {message.attachments && message.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                {message.attachments
-                  .filter(
-                    (attachment): attachment is Extract<typeof attachment, { kind: "image" }> =>
-                      attachment.kind === "image",
-                  )
-                  .map((attachment, index) => (
-                    <ChatImage
-                      key={index}
-                      src={attachment.dataUrl}
-                      alt={
-                        message.content?.trim()
-                          ? `User-uploaded image: ${message.content.slice(0, 120)}`
-                          : "User-uploaded image attached to message"
-                      }
-                      actions={imageActions}
-                      imageClassName="max-h-64 max-w-full rounded-2xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  ))}
+              <div className="flex max-w-full flex-wrap gap-2 mb-2 justify-end">
+                {imageAttachments?.length ? (
+                  <div
+                    className="kova-message-image-group"
+                    data-multiple={multipleImages ? "true" : undefined}
+                    role={multipleImages ? "group" : undefined}
+                    aria-label={multipleImages ? "Attached images" : undefined}
+                  >
+                    {imageAttachments.map((attachment, index) => (
+                      <ChatImage
+                        key={index}
+                        src={attachment.dataUrl}
+                        alt={
+                          multipleImages
+                            ? `Attached image ${index + 1} of ${imageCount}`
+                            : imageDescription
+                              ? `User-uploaded image: ${imageDescription}`
+                              : "User-uploaded image attached to message"
+                        }
+                        actions={imageActions}
+                        imageClassName="max-h-64 max-w-full rounded-2xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    ))}
+                  </div>
+                ) : null}
                 {message.attachments
                   .filter((attachment) => attachment.kind !== "image")
                   .map((attachment) =>
@@ -852,7 +864,7 @@ function ChatMessageInner({
                       >
                         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="max-w-48 truncate">{attachment.name}</span>
-                        <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                        <span className="sr-only lg:not-sr-only lg:shrink-0 lg:text-[10px] lg:uppercase lg:text-muted-foreground">
                           Attached
                         </span>
                       </span>

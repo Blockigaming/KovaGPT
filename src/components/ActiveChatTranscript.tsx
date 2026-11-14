@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useRef,
   type ReactNode,
   type RefObject,
   type SetStateAction,
@@ -12,7 +13,10 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatBranchBar } from "@/components/ChatBranchBar";
 import { useChatBranches } from "@/hooks/useChatBranches";
 import { branchConversation, type Conversation, type Message } from "@/lib/chat-store";
-import { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
+import {
+  createTranscriptReadingAnchorController,
+  type TranscriptReadingAnchor,
+} from "@/lib/chat-reading-anchor";
 
 type ReadingController = ReturnType<typeof createTranscriptReadingAnchorController>;
 export type TranscriptMessageRenderer = (
@@ -33,6 +37,7 @@ type ActiveChatTranscriptProps = {
   openChatWorkspace: (trigger: HTMLElement) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
   nearBottomRef: RefObject<boolean>;
+  readingPositionsRef: RefObject<Map<string, TranscriptReadingAnchor>>;
   readingAnchorControllerRef: RefObject<ReadingController | null>;
   transcriptScope: string;
   transcriptScopeRef: RefObject<string>;
@@ -51,6 +56,7 @@ export function ActiveChatTranscript({
   openChatWorkspace,
   scrollRef,
   nearBottomRef,
+  readingPositionsRef,
   readingAnchorControllerRef,
   transcriptScope,
   transcriptScopeRef,
@@ -96,23 +102,50 @@ export function ActiveChatTranscript({
 
   const activeMessageCount = active.messages.length;
   const latestMessageContent = active.messages.at(-1)?.content;
+  const lastConversation = useRef(active);
+  lastConversation.current = active;
 
   const hasTranscript = Boolean(activeMessageCount);
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!hasTranscript || !element) return;
+    const positions = readingPositionsRef.current;
+    const remembered = positions.get(transcriptScope);
+    nearBottomRef.current = !remembered || remembered.kind === "end";
     const controller = createTranscriptReadingAnchorController(element, {
       isCurrent: () =>
         transcriptScopeRef.current === transcriptScope && scrollRef.current === element,
       isFollowingBottom: () => nearBottomRef.current,
+      initialAnchor: remembered,
     });
+    const canRemember = () =>
+      readingPositionsRef.current === positions && !lastConversation.current.temporary;
     readingAnchorControllerRef.current = controller;
     return () => {
+      if (canRemember()) {
+        const position = controller.snapshot();
+        positions.delete(transcriptScope);
+        if (position && position.kind !== "end") {
+          positions.set(transcriptScope, position);
+          if (positions.size > 64) {
+            const oldest = positions.keys().next().value;
+            if (oldest !== undefined) positions.delete(oldest);
+          }
+        }
+      }
       controller.dispose();
       if (readingAnchorControllerRef.current === controller)
         readingAnchorControllerRef.current = null;
     };
-  }, [transcriptScope, hasTranscript]);
+  }, [
+    hasTranscript,
+    nearBottomRef,
+    readingAnchorControllerRef,
+    readingPositionsRef,
+    scrollRef,
+    transcriptScope,
+    transcriptScopeRef,
+  ]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -120,7 +153,7 @@ export function ActiveChatTranscript({
     if (nearBottomRef.current) {
       el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
     }
-  }, [activeMessageCount, latestMessageContent, isStreaming]);
+  }, [activeMessageCount, latestMessageContent, isStreaming, nearBottomRef, scrollRef]);
 
   const branchMessage = (m: Message, i: number) => {
     const element = scrollRef.current;

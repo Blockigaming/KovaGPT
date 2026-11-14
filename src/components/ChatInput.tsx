@@ -232,6 +232,7 @@ export function ChatInput({
   showResources = true,
   savedConversations = [],
   surface = "conversation",
+  viewportManaged = false,
   attachmentContext,
   latestAssistantText = "",
   latestAssistantReply,
@@ -291,6 +292,7 @@ export function ChatInput({
   savedConversations?: readonly Conversation[];
   /** Controls whether the desktop add menu opens below the centered composer or above a docked one. */
   surface?: "empty" | "conversation";
+  viewportManaged?: boolean;
   /** Invalidate pending reads when changing chat or entering/leaving prompt edit. */
   attachmentContext?: string;
   /** Completed assistant reply available for explicitly requested speech playback. */
@@ -687,7 +689,7 @@ export function ChatInput({
 
   // Track on-screen keyboard on mobile so the composer floats above it.
   useEffect(() => {
-    if (!isMobileLayout || typeof window === "undefined") return;
+    if (viewportManaged || !isMobileLayout || typeof window === "undefined") return;
     const vv = window.visualViewport;
     if (!vv) return;
     const update = () => {
@@ -713,7 +715,7 @@ export function ChatInput({
       document.removeEventListener("focusout", update);
       setKbOffset(0);
     };
-  }, [isMobileLayout]);
+  }, [isMobileLayout, viewportManaged]);
 
   useEffect(() => {
     if (!isStreaming) submittingRef.current = false;

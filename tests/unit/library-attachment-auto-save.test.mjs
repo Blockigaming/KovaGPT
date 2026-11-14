@@ -106,8 +106,9 @@ test("composer assigns IDs at file selection and passes its captured privacy sco
     ).length,
     2,
   );
-  assert.equal(
-    (route.match(/saveAttachmentsToLibrary=\{principalReady && !tempChat\}/g) || []).length,
-    2,
+  assert.match(
+    route,
+    /const composer = \(\s*<ChatInput[\s\S]*?saveAttachmentsToLibrary=\{principalReady && !tempChat\}/,
   );
+  assert.equal((route.match(/\{composer\}/g) || []).length, 2);
 });

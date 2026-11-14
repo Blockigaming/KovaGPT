@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -635,6 +636,7 @@ function composer(f) {
   const ref = (current) => ({ current });
   const no = () => {};
   const context = {
+    extractResponseFollowups,
     principalReady: true,
     userKey: ownerId,
     isSignedIn: true,
@@ -850,7 +852,8 @@ test("partial provider failure retains visible output, exits loading and require
 
 test("actual application guard clamps final output and permits only one quoted OpenAI request", async () => {
   // The guard and provider adapter must share a fixed clock away from the bucket edge.
-  const now = () => Date.UTC(2026, 9, 20, 0, 10);
+  const acceptanceTime = liveAcceptanceFixtureTime();
+  const now = () => acceptanceTime;
   const capture = fixture({ prompt: ACCEPTANCE_PROMPT, now }),
     captureUi = composer(capture);
   const capturing = captureUi.send();
@@ -878,6 +881,7 @@ test("actual application guard clamps final output and permits only one quoted O
         "Content-Type": "application/json",
         "Idempotency-Key": "new-attempt-123",
         "x-kova-acceptance-operation": a.plan.operationId,
+        "X-Kova-Response-Followups": "1",
       },
       body: f.applicationBody,
     }),

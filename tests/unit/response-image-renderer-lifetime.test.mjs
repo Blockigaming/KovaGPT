@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { observeTableOverflow } from "../../src/lib/table-overflow.ts";
 import {
   createHookHarness,
@@ -58,6 +60,9 @@ function fixture(initial = {}) {
     react,
     "react-markdown": { __esModule: true, default: ReactMarkdown, defaultUrlTransform },
     "remark-gfm": { __esModule: true, default: remarkGfm },
+    "remark-math": { __esModule: true, default: remarkMath },
+    "rehype-katex": { __esModule: true, default: rehypeKatex },
+    "katex/dist/katex.min.css": {},
     "./ResponseImage": image,
     "lucide-react": icons,
     "./response-output-blocks.css": {},
@@ -156,6 +161,20 @@ function fixture(initial = {}) {
     },
   };
 }
+
+test("image zoom resets when the viewer is reopened", () => {
+  const view = fixture();
+  view.button("View full size").props.onClick();
+  view.render();
+  view.button("Zoom image").props.onClick();
+  view.render();
+  assert.equal(view.button("Zoom image").props["aria-pressed"], true);
+  view.dialog.props.onOpenChange(false);
+  view.render();
+  view.button("View full size").props.onClick();
+  view.render();
+  assert.equal(view.button("Zoom image").props["aria-pressed"], false);
+});
 
 for (const wrap of [(value) => value, (value) => `> ${value}`, (value) => `Before\n\n${value}`]) {
   test(`same image preserves its viewer across callback and source refresh: ${wrap("image")}`, () => {

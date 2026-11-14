@@ -17,6 +17,7 @@ export function ResponseImage({
   imageActions?: ChatImageActions;
 }) {
   const [full, setFull] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -50,11 +51,17 @@ export function ResponseImage({
       className="kova-response-image"
       onHide={() => setFull(false)}
     >
+      {alt && (
+        <span className="kova-image-hover-detail" aria-hidden="true">
+          {alt}
+        </span>
+      )}
       <span className="kova-image-actions">
         {onSave && (
           <button
             type="button"
             disabled={saving || saved}
+            aria-busy={saving}
             onClick={async () => {
               if (saving) return;
               setSaving(true);
@@ -70,22 +77,36 @@ export function ResponseImage({
               }
             }}
           >
-            {saved ? <Check /> : <Bookmark />}
+            {!saving && (saved ? <Check /> : <Bookmark />)}
             {saved ? (
               "Saved to Library"
             ) : saving ? (
               <span className="spec400-loading-label">
                 <span className="spec400-loading-spinner" aria-hidden="true" />
-                Saving…
+                <span className="kova-image-busy-label">Saving…</span>
               </span>
             ) : (
               "Save to Library"
             )}
           </button>
         )}
-        <button type="button" onClick={() => void download()} disabled={downloading}>
-          <Download />
-          {downloading ? "Downloading…" : "Download"}
+        <button
+          type="button"
+          onClick={() => void download()}
+          disabled={downloading}
+          aria-busy={downloading}
+        >
+          {downloading ? (
+            <span className="spec400-loading-label">
+              <span className="spec400-loading-spinner" aria-hidden="true" />
+              <span className="kova-image-busy-label">Downloading…</span>
+            </span>
+          ) : (
+            <>
+              <Download />
+              Download
+            </>
+          )}
         </button>
         <button ref={viewButton} type="button" onClick={() => setFull(true)}>
           <ExpandViewIcon />
@@ -98,8 +119,16 @@ export function ResponseImage({
         </span>
       )}
       {full && (
-        <Dialog open onOpenChange={setFull}>
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            setFull(open);
+            if (!open) setZoomed(false);
+          }}
+        >
           <DialogContent
+            constrainToViewport={false}
+            data-kova-response-image-view=""
             className="sm:max-w-[92vw]"
             onCloseAutoFocus={(event) => {
               event.preventDefault();
@@ -108,13 +137,32 @@ export function ResponseImage({
             }}
           >
             <DialogTitle>{alt}</DialogTitle>
-            <ChatImage
-              src={src}
-              alt={alt}
-              actions={imageActions}
-              imageClassName="max-h-[75dvh] w-auto max-w-full object-contain"
-              onHide={() => setFull(false)}
-            />
+            <button
+              type="button"
+              className="kova-image-zoom"
+              aria-pressed={zoomed}
+              onClick={() => setZoomed((value) => !value)}
+            >
+              Zoom image
+            </button>
+            <div
+              className="kova-image-view-scroll"
+              data-zoomed={zoomed}
+              role="region"
+              aria-label="Image preview"
+              tabIndex={zoomed ? 0 : undefined}
+            >
+              <ChatImage
+                src={src}
+                alt={alt}
+                actions={imageActions}
+                imageClassName="max-h-[70dvh] w-auto max-w-full object-contain"
+                onHide={() => {
+                  setZoomed(false);
+                  setFull(false);
+                }}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       )}

@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
-import { functionNames } from "./server-function-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { loopbackPreviewHeaders } from "../helpers/loopback-preview-headers.mjs";
 export { functionNames } from "./server-function-fixture";
 
@@ -104,7 +104,7 @@ export async function fixture(
   );
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-    const name = functionNames.get(id) ?? "";
+    const name = resolveFixtureFunctionName(id) ?? "";
     const result = name.startsWith("getMyPlanTier_")
       ? { ownerId: owner, tier }
       : name.startsWith("listProjects_")

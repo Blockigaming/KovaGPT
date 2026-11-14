@@ -7,9 +7,12 @@ const read = (path) => readFileSync(path, "utf8");
 const declarations = (path, selector, media = null) => {
   const matches = [];
   postcss.parse(read(path)).walkRules((rule) => {
+    const query = rule.parent.type === "atrule" ? rule.parent.params : null;
     if (
       rule.selectors.includes(selector) &&
-      (rule.parent.type === "atrule" ? rule.parent.params : null) === media
+      (media === null
+        ? query === null
+        : query?.split(",").some((branch) => branch.trim() === media))
     )
       matches.push(rule);
   });

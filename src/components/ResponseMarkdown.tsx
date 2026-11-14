@@ -15,8 +15,11 @@ import type { ChatImageActions } from "./ChatImage";
 import type { Components, ExtraProps } from "react-markdown";
 import type { Element, Root, RootContent } from "hast";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { Check, Copy, Download } from "lucide-react";
 import type { ResponseSource } from "@/lib/response-sources";
+import "katex/dist/katex.min.css";
 import "./response-output-blocks.css";
 import { observeTableOverflow } from "@/lib/table-overflow";
 
@@ -404,6 +407,31 @@ function MarkdownImage({ src, alt }: ComponentProps<"img"> & ExtraProps) {
   );
 }
 
+function MarkdownSpan({
+  node: _node,
+  className,
+  children,
+  ...props
+}: ComponentProps<"span"> & ExtraProps) {
+  if (className?.split(/\s+/).includes("katex-display")) {
+    return (
+      <span
+        className="katex-display kova-response-math"
+        role="group"
+        aria-label="Equation"
+        tabIndex={0}
+      >
+        {children}
+      </span>
+    );
+  }
+  return (
+    <span {...props} className={className}>
+      {children}
+    </span>
+  );
+}
+
 // React treats these functions as component types. Keep every type stable when
 // callbacks or source metadata refresh so image viewers, errors and focus survive.
 const markdownComponents: Components = {
@@ -430,6 +458,7 @@ const markdownComponents: Components = {
   ),
   a: MarkdownLink,
   img: MarkdownImage,
+  span: MarkdownSpan,
 };
 
 export const ResponseMarkdown = memo(function ResponseMarkdown({
@@ -455,8 +484,11 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
             ? url
             : defaultUrlTransform(url)
         }
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[separateTextOutputs, { boxLongProse }]]}
+        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+        rehypePlugins={[
+          [separateTextOutputs, { boxLongProse }],
+          [rehypeKatex, { trust: false, maxExpand: 500, maxSize: 20 }],
+        ]}
         components={markdownComponents}
       >
         {children}

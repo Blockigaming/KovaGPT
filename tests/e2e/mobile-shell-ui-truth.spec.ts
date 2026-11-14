@@ -1,7 +1,126 @@
 import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { functionNames } from "./actual-app-fixture";
+import { fixture, functionNames, owner } from "./actual-app-fixture";
+
+test("mobile chat restores the reading position after switching conversations", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 1024, "compact shell");
+  await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
+  await page.route("**/mobile-reading-preview.png", (route) =>
+    route.fulfill({ contentType: "image/png", path: "public/kova-logo.png" }),
+  );
+  await page.addInitScript((userId) => {
+    const now = Date.now();
+    const thumbnail =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    const chats = [
+      {
+        id: "reading-position",
+        title: "Reading position",
+        messages: [
+          {
+            id: "prompt",
+            role: "user",
+            content: "Read these passages.",
+            attachments: Array.from({ length: 4 }, () => ({ kind: "image", dataUrl: thumbnail })),
+          },
+          ...Array.from({ length: 18 }, (_, index) => ({
+            id: `passage-${index}`,
+            role: "assistant",
+            content: `Passage ${index + 1}. ${"The previous page should stay available. ".repeat(4)}`,
+            timestamp: now,
+          })),
+        ],
+      },
+      {
+        id: "different-chat",
+        title: "Different chat",
+        messages: [
+          {
+            id: "different-message",
+            role: "assistant",
+            content: `A separate conversation.\n\n![A separate preview](${location.origin}/mobile-reading-preview.png)`,
+          },
+        ],
+      },
+    ].map((chat) => ({ ...chat, mode: "instant", createdAt: now, updatedAt: now }));
+    localStorage.setItem(`nova-gpt-conversations-v3:user:${userId}`, JSON.stringify(chats));
+    localStorage.setItem(
+      `nova-gpt-settings-v1:${userId}`,
+      JSON.stringify({ interfaceAccent: "#12abcd", contrast: "high" }),
+    );
+  }, owner);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  const openChat = async (title: string) => {
+    await page.getByRole("button", { name: "Open menu" }).tap();
+    await drawer.getByRole("button", { name: `Open chat ${title}` }).tap();
+    await expect(drawer).toBeHidden();
+  };
+  await openChat("Reading position");
+  const transcript = page.locator("[data-chat-transcript]");
+  const bubble = transcript.getByLabel("Sent prompt");
+  await expect(bubble).toHaveCSS("background-color", "rgb(18, 171, 205)");
+  await expect(bubble).toHaveCSS("color", "rgb(0, 0, 0)");
+  const images = transcript.getByRole("group", { name: "Attached images" });
+  await expect(images.getByRole("img")).toHaveCount(4);
+  const thumbnails = await images.evaluate((element) => ({
+    overflow: element.scrollWidth - element.clientWidth,
+    mode: getComputedStyle(element).overflowX,
+  }));
+  if (page.viewportSize()!.width < 768) {
+    expect(thumbnails.overflow).toBeGreaterThan(0);
+    expect(thumbnails.mode).toBe("auto");
+  } else {
+    expect(thumbnails.overflow).toBeLessThanOrEqual(1);
+  }
+  const passage = transcript.locator('[data-message-id="passage-5"]');
+  await expect(passage).toBeAttached();
+  await expect.poll(() => transcript.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await passage.evaluate((element) =>
+    element.scrollIntoView({ block: "start", behavior: "instant" }),
+  );
+  await expect(passage).toBeInViewport();
+  const passageOffset = () =>
+    passage.evaluate((element) => {
+      const viewport = element.closest("[data-chat-transcript]")!;
+      return element.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+    });
+  const originalOffset = await passageOffset();
+  await openChat("Different chat");
+  await expect(transcript.getByText("A separate conversation.")).toBeVisible();
+  const preview = transcript.getByRole("button", { name: "View full size" });
+  await preview.tap();
+  const imageViewer = page.getByRole("dialog", { name: "A separate preview" });
+  await expect(imageViewer).toBeVisible();
+  const viewport = page.viewportSize()!;
+  if (viewport.width < 768 || viewport.height <= 500) {
+    await expect.poll(async () => (await imageViewer.boundingBox())?.width).toBe(viewport.width);
+    await expect.poll(async () => (await imageViewer.boundingBox())?.height).toBe(viewport.height);
+  }
+  const zoom = imageViewer.getByRole("button", { name: "Zoom image" });
+  const close = imageViewer.getByRole("button", { name: "Close", exact: true });
+  const [zoomBox, closeBox] = await Promise.all([zoom.boundingBox(), close.boundingBox()]);
+  expect(Math.min(zoomBox!.width, zoomBox!.height)).toBeGreaterThanOrEqual(44);
+  expect(Math.min(closeBox!.width, closeBox!.height)).toBeGreaterThanOrEqual(44);
+  const controlGap = Math.max(
+    closeBox!.x - (zoomBox!.x + zoomBox!.width),
+    zoomBox!.y - (closeBox!.y + closeBox!.height),
+  );
+  expect(controlGap).toBeGreaterThanOrEqual(8);
+  await close.tap();
+  await expect(preview).toBeFocused();
+  await openChat("Reading position");
+  await expect(passage).toBeInViewport();
+  await expect.poll(passageOffset).toBeCloseTo(originalOffset, 0);
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).not.toBeFocused();
+  await expect(page.locator("html")).toHaveAttribute("data-kova-contrast", "high");
+});
 
 test.describe("mobile shell UI truth", () => {
   test.beforeEach(async ({ page }) => {
@@ -107,4 +226,84 @@ test.describe("mobile shell UI truth", () => {
       .poll(() => openerHandle!.evaluate((element) => element === document.activeElement))
       .toBe(false);
   });
+});
+
+test("compact chat starts closed and keeps its canvas in place behind the drawer", async ({
+  page,
+}) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 1024, "compact shell");
+  await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const main = page.locator(".kova-chat-main");
+  const opener = page.getByRole("button", { name: "Open menu" });
+  await expect(opener).toBeVisible();
+  await expect(main).toHaveAttribute("data-sidebar", "closed");
+  await opener.click();
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  await expect(drawer).toBeVisible();
+  await expect
+    .poll(async () => (await drawer.boundingBox())?.width)
+    .toBeCloseTo(Math.min(viewport.width * 0.86, 320), 0);
+  const mainBox = (await main.boundingBox())!;
+  expect(mainBox.x).toBe(0);
+  expect(mainBox.width).toBe(viewport.width);
+
+  await page.evaluate(() => localStorage.setItem("kova-mobile-sidebar-open", "1"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await expect(opener).toBeVisible();
+  await expect(main).toHaveAttribute("data-sidebar", "closed");
+});
+
+test("a reduced visual viewport keeps the mobile composer reachable", async ({ page }) => {
+  const projectViewport = page.viewportSize()!;
+  test.skip(projectViewport.width >= 1024, "compact shell");
+  const viewport =
+    projectViewport.width > projectViewport.height ? { width: 667, height: 375 } : projectViewport;
+  await page.setViewportSize(viewport);
+  await fixture(page, "dark");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const textbox = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await textbox.fill("Keep this draft");
+  const visibleHeight = viewport.height - (viewport.height < 500 ? 145 : 300);
+  await page.evaluate((height) => {
+    const visual = window.visualViewport!;
+    Object.defineProperty(visual, "height", { configurable: true, value: height });
+    visual.dispatchEvent(new Event("resize"));
+  }, visibleHeight);
+
+  const shell = page.locator(".kova-assistant[data-ui=modern]");
+  await expect(shell).toHaveAttribute("data-keyboard-open", "true");
+  await expect.poll(async () => (await shell.boundingBox())?.height).toBe(visibleHeight);
+  const send = page.getByRole("button", { name: "Send message" });
+  const sendBox = (await send.boundingBox())!;
+  expect(sendBox.y + sendBox.height).toBeLessThanOrEqual(visibleHeight + 1);
+
+  await page.keyboard.press("Control+K");
+  const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
+  await expect(palette).toBeVisible();
+  await expect(palette.getByRole("combobox")).toBeFocused();
+  await expect.poll(async () => (await palette.boundingBox())?.height).toBe(visibleHeight);
+  const panel = palette.locator('[data-slot="command-palette-content"]');
+  const panelBox = (await panel.boundingBox())!;
+  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(visibleHeight + 1);
+  await page.keyboard.press("Escape");
+  await expect(palette).toBeHidden();
+
+  await expect(textbox).toBeFocused();
+  await page.locator(".kova-greeting h1").click();
+  await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  await expect(textbox).not.toBeFocused();
+  await expect(textbox).toHaveValue("Keep this draft");
+  const collapsedChromeHeight = viewport.height + 48;
+  await page.setViewportSize({ width: viewport.width, height: collapsedChromeHeight });
+  await expect.poll(async () => (await shell.boundingBox())?.height).toBe(collapsedChromeHeight);
+  await page.setViewportSize(viewport);
+  await expect.poll(async () => (await shell.boundingBox())?.height).toBe(viewport.height);
+  await expect(textbox).toHaveValue("Keep this draft");
 });

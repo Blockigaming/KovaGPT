@@ -72,7 +72,10 @@ test("empty workspace remains contained and composer focus is deliberate", async
     const style = getComputedStyle(element);
     return {
       radius: Number.parseFloat(style.borderRadius),
-      radiusToken: Number.parseFloat(style.getPropertyValue("--kova-radius-composer")),
+      radiusToken: Number.parseFloat(
+        style.getPropertyValue("--chat-composer-corner") ||
+          style.getPropertyValue("--kova-radius-composer"),
+      ),
       borderColor: style.borderColor,
       color: style.color,
       outlineColor: style.outlineColor,

@@ -9,6 +9,7 @@ export type AppearancePreferences = {
   readingWidth: 680 | 760 | 900;
   density: "comfortable" | "compact";
   motion: "full" | "reduced";
+  contrast: "system" | "high";
 };
 export const APPEARANCE_DEFAULTS: Readonly<AppearancePreferences>;
 export function resetAppearance<T>(settings: T): T & AppearancePreferences;

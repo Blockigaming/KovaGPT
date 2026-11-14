@@ -93,11 +93,24 @@ test("pointer-origin menu focus stays quiet while keyboard outlines remain visib
     if (rule.selector.includes(":focus-visible")) focusRules.push(rule);
   });
   assert.ok(focusRules.some((rule) => rule.selector.includes("input")));
-  assert.ok(focusRules.some((rule) => rule.selector.includes("button")));
-  for (const rule of focusRules.filter((rule) => rule.selector.includes("button"))) {
+  const buttons = focusRules.filter((rule) => rule.selector.includes("button"));
+  assert.equal(buttons.length, 3);
+  for (const rule of buttons) {
+    const increasedContrast = !rule.selector.startsWith(":where");
     assert.ok(
-      rule.nodes.some((node) => node.prop === "outline" && node.value === "2px solid var(--ring)"),
+      rule.nodes.some(
+        (node) =>
+          node.prop === "outline" &&
+          node.value === (increasedContrast ? "2px solid currentColor" : "2px solid var(--ring)"),
+      ),
     );
+    if (increasedContrast) {
+      assert.match(rule.selector, /:not\(\[data-kova-input-modality="pointer"\]\)/);
+      assert.ok(
+        rule.selector.includes('[data-kova-contrast="high"]') ||
+          rule.parent.params === "(prefers-contrast: more)",
+      );
+    }
     assert.ok(rule.nodes.some((node) => node.prop === "outline-offset" && node.value === "2px"));
     assert.ok(
       !rule.nodes.some((node) => /^(?:background|background-color)$/.test(node.prop)),

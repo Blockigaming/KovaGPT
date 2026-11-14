@@ -8,7 +8,10 @@ async function expectRestingComposer(page: Page) {
   const compactDesktop = await page.evaluate(
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );
-  await expect(composer).toHaveCSS("border-radius", "26px");
+  await expect(composer).toHaveCSS(
+    "border-radius",
+    page.viewportSize()!.width < 1024 ? "22px" : "26px",
+  );
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );

@@ -13,6 +13,7 @@ import {
 import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
+import { useKeyboardViewport } from "@/hooks/use-keyboard-viewport";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -344,6 +345,7 @@ function RootThemeManager() {
 }
 
 function RootComponent() {
+  useKeyboardViewport();
   const { queryClient } = Route.useRouteContext();
   return (
     <ClerkProvider>

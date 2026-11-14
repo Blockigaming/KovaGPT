@@ -168,7 +168,7 @@ test("sidebar geometry has one owner and keeps compact desktop rows separate fro
   assert.match(css, /max-width: calc\(100vw - 24px\)/);
   assert.match(tokens, /--kova-sidebar-width: 260px/);
   assert.match(tokens, /--kova-sidebar-rail-width: 60px/);
-  assert.match(tokens, /--kova-sidebar-drawer-width: min\(320px, calc\(100vw - 32px\)\)/);
+  assert.match(tokens, /--kova-sidebar-drawer-width: min\(86vw, 320px\)/);
   const row = rules("src/styles/sidebar-core.css", ".kova-sidebar .kova-nav-row").find(
     (rule) => rule.selector === ".kova-sidebar .kova-nav-row",
   );

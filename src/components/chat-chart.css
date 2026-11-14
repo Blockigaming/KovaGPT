@@ -1,0 +1,51 @@
+.kova-chart {
+  container-type: inline-size;
+}
+
+.kova-chart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.kova-chart .kova-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  max-height: 5em;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.kova-chart .kova-chart-legend li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.kova-chart-legend li span {
+  flex: none;
+  width: 0.75em;
+  height: 0.75em;
+  margin-top: 0.3em;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+@container (min-width: 600px) {
+  .kova-chart-layout:not([data-compact-legend]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 120px);
+    align-items: center;
+  }
+
+  .kova-chart-layout:not([data-compact-legend]) .kova-chart-legend {
+    display: grid;
+    max-height: 16rem;
+  }
+}

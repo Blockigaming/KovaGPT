@@ -1132,3 +1132,108 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     border-radius: 20px;
   }
 }
+
+/* Chat uses the visual viewport when the software keyboard overlays the page. */
+.kova-assistant[data-ui="modern"] {
+  height: 100dvh;
+}
+
+.kova-assistant[data-keyboard-open="true"] {
+  position: relative;
+  top: var(--kova-visible-top, 0px);
+  height: var(--kova-visible-height, 100dvh);
+  --safe-bottom: 0px;
+}
+
+@media (width < 1024px) {
+  .kova-assistant[data-ui="modern"] {
+    --chat-gutter: 16px;
+    --chat-composer-corner: 22px;
+  }
+
+  .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
+    min-height: calc(52px + var(--safe-top));
+  }
+
+  .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
+    min-height: 52px;
+    padding-block: 4px;
+  }
+
+  .kova-assistant .kova-empty-chat {
+    padding-inline: max(var(--chat-gutter), var(--safe-left))
+      max(var(--chat-gutter), var(--safe-right));
+  }
+
+  .kova-assistant .kova-greeting h1 {
+    font-size: 1.625rem;
+  }
+
+  .kova-assistant .kova-conversation-scroll {
+    min-height: 0;
+    scroll-padding-block: 8px 16px;
+  }
+
+  .kova-assistant .kova-message {
+    padding-inline: max(var(--chat-gutter), var(--safe-left))
+      max(var(--chat-gutter), var(--safe-right));
+    line-height: 1.5;
+  }
+
+  .kova-assistant .kova-assistant-message .prose-chat {
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .kova-assistant .spec400-composer-dock > .spec400-chat-input {
+    scrollbar-gutter: auto;
+  }
+
+  .kova-assistant .spec400-result-tabs > button {
+    min-height: 44px;
+  }
+}
+
+@media (width < 360px) {
+  .kova-assistant[data-ui="modern"] {
+    --chat-gutter: 12px;
+  }
+}
+
+.kova-assistant[data-keyboard-open="true"] .kova-empty-chat {
+  padding-block: 16px 8px;
+}
+
+.kova-assistant[data-keyboard-open="true"] .spec400-composer-dock {
+  display: flex;
+  min-height: 0;
+  max-height: 65%;
+  flex-direction: column;
+}
+
+.kova-assistant[data-keyboard-open="true"] .spec400-composer-dock > .spec400-chat-input {
+  min-height: 0;
+  padding-bottom: 6px;
+}
+
+@media (width < 1024px) and (height <= 420px) {
+  .kova-assistant .kova-empty-chat {
+    padding-block: 14px;
+  }
+
+  .kova-assistant .kova-greeting {
+    margin-bottom: 12px;
+  }
+}
+
+.kova-assistant[data-keyboard-open="true"]
+  .spec400-chat-input[data-composer-surface="empty"]
+  .spec400-composer {
+  min-height: 0 !important;
+}
+
+.kova-assistant[data-keyboard-open="true"]
+  .spec400-chat-input[data-composer-surface="empty"]
+  .spec400-composer-input {
+  min-height: 32px !important;
+}

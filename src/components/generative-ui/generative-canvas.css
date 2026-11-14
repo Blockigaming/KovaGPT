@@ -234,6 +234,7 @@
   padding: 8px 0 14px;
 }
 .kova-generative-comparison {
+  container-type: inline-size;
   border-top: 1px solid var(--border);
   margin-top: 20px;
   padding-top: 16px;
@@ -274,6 +275,16 @@
 .kova-generative-change ins {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+@container (min-width: 560px) {
+  .kova-generative-change:has(> div + div) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kova-generative-change > div + div {
+    border-top: 0;
+    border-inline-start: 1px solid var(--border);
+  }
 }
 .kova-generative-footer {
   flex: none;
@@ -321,7 +332,8 @@
   .kova-generative-footer {
     padding: 12px 14px;
   }
-  .kova-generative-dates {
+  .kova-generative-dates,
+  .kova-generative-board {
     grid-template-columns: minmax(0, 1fr);
   }
 }

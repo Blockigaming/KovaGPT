@@ -17,6 +17,16 @@
 :root:not(.dark) .kova-free-offer {
   color: #0369a1;
 }
+@media (max-width: 599px) {
+  .kova-mobile-conversation-tools .kova-free-offer {
+    min-width: 44px;
+    padding-inline: 0;
+  }
+  .kova-mobile-conversation-tools .kova-free-offer span {
+    display: none;
+  }
+}
+
 .kova-free-offer:hover {
   background: color-mix(in srgb, currentColor 10%, transparent);
 }

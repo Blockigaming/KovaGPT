@@ -12,7 +12,10 @@ import { fixture, functionNames, owner, chatA } from "./actual-app-fixture";
 
 async function geometry(page: Page) {
   const composer = page.locator(".spec400-composer");
-  await expect(composer).toHaveCSS("border-radius", "26px");
+  await expect(composer).toHaveCSS(
+    "border-radius",
+    page.viewportSize()!.width < 1024 ? "22px" : "26px",
+  );
   const coarseLayout = await page.evaluate(
     () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
   );

@@ -1,5 +1,5 @@
 import { Toaster as Sonner } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useLayout } from "@/hooks/use-mobile";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
@@ -25,16 +25,21 @@ const toastButtonClassName =
   "group-[.toast]:!h-8 group-[.toast]:!rounded-full group-[.toast]:!px-[15.96px] group-[.toast]:!text-sm group-[.toast]:!font-medium group-[.toast]:!leading-5 group-[.toast]:!transition-[background-color,color,border-color,box-shadow,opacity] group-[.toast]:!duration-150 group-[.toast]:!ease-[ease] group-[.toast]:focus-visible:!outline-none group-[.toast]:focus-visible:!ring-2 group-[.toast]:focus-visible:!ring-ring group-[.toast]:focus-visible:!ring-offset-2 group-[.toast]:focus-visible:!ring-offset-background [@media(pointer:coarse)]:!min-h-11";
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
-  const mobile = useIsMobile();
+  const { isDesktop } = useLayout();
   return (
     <Sonner
       className="toaster group"
-      position={mobile ? "top-center" : "bottom-right"}
+      position={isDesktop ? "bottom-right" : "top-center"}
       closeButton
       duration={4_000}
       visibleToasts={4}
       gap={8}
-      mobileOffset={{ top: "calc(72px + env(safe-area-inset-top))", left: 16, right: 16 }}
+      offset={{ top: "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))" }}
+      mobileOffset={{
+        top: "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))",
+        left: "max(16px, env(safe-area-inset-left))",
+        right: "max(16px, env(safe-area-inset-right))",
+      }}
       style={{ ...toasterStyle, ...style }}
       toastOptions={{
         classNames: {

@@ -106,8 +106,14 @@ test("imported interface preferences are bounded and cannot inject arbitrary CSS
   assert.equal(root.style.fontSize, "17.6px");
   assert.equal(properties.get("--kova-settings-navigation-width"), "320px");
   assert.equal(properties.get("--primary"), "#12abcd");
+  assert.equal(properties.get("--kova-message-accent"), "#12abcd");
+  assert.equal(properties.get("--kova-message-accent-text"), "#000000");
+  applyReadingPreferences(root, { interfaceAccent: "#123456" });
+  assert.equal(properties.get("--kova-message-accent-text"), "#ffffff");
   applyReadingPreferences(root, {});
   assert.equal(properties.has("--primary"), false);
+  assert.equal(properties.has("--kova-message-accent"), false);
+  assert.equal(properties.has("--kova-message-accent-text"), false);
 });
 
 test("daily message quota rejects with the popup category while unavailable accounting remains a service error", async () => {

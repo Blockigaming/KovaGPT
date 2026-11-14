@@ -52,7 +52,11 @@ test("mobile settings and bottom sheets have bounded, safe-area-aware behavior",
     /padding: max\(24px, var\(--safe-top, 0px\)\) 20px max\(32px, var\(--safe-bottom, 0px\)\)/,
   );
   assert.match(sheet, /max-h-\[min\(88dvh,44rem\)\]/);
-  assert.match(sheet, /paddingBottom: "env\(safe-area-inset-bottom\)"/);
+  assert.match(sheet, /pb-\[var\(--safe-bottom\)\]/);
+  assert.match(
+    styles,
+    /\[data-kova-keyboard\] \[data-kova-bottom-sheet\]\s*\{[^}]*padding-bottom: 0/,
+  );
   assert.match(sheet, /onTouchCancel=\{resetDrag\}/);
   assert.doesNotMatch(sheet, /navigator\.vibrate/);
 });
