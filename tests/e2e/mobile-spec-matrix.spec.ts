@@ -53,6 +53,12 @@ for (const [width, height] of viewports) {
           data: [{ name: "A very long axis label", value: 4 }],
         }),
         "```",
+        "",
+        ...Array.from(
+          { length: 18 },
+          (_, index) =>
+            `Paragraph ${index + 1}. This longer response checks scrolling while the message composer stays reachable.`,
+        ),
       ].join("\n");
       let releaseReply!: () => void;
       const replyReady = new Promise<void>((resolve) => {
@@ -111,6 +117,20 @@ for (const [width, height] of viewports) {
         releaseReply();
       }
       await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();
+      const transcript = page.locator("[data-chat-transcript]");
+      await expect
+        .poll(() => transcript.evaluate((el) => el.scrollHeight - el.clientHeight))
+        .toBeGreaterThan(0);
+
+      const header = page.locator(".kova-topbar:visible").first();
+      const headerHeight = (await header.boundingBox())!.height;
+      await html.evaluate((element) => element.classList.toggle("dark"));
+      await expect.poll(async () => (await header.boundingBox())?.height).toBe(headerHeight);
+      await html.evaluate(
+        (element, mode) => element.classList.toggle("dark", mode === "dark"),
+        theme,
+      );
+
       const chart = page.getByRole("figure", { name: "Interactive chart: Measurements" });
       await chart.getByRole("button", { name: "Table", exact: true }).click();
       await expect(chart.getByRole("table")).toBeVisible();
