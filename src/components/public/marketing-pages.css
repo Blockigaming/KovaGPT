@@ -1595,3 +1595,102 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Align row numerals to the heading, not the whole description block. */
+#kx .editor-rows > a {
+  align-items: baseline;
+  gap: 20px;
+}
+#kx .editor-row-number {
+  align-self: baseline;
+  padding-top: 0;
+  font-size: 21px;
+  line-height: 1.3;
+  min-width: 28px;
+  font-variant-numeric: tabular-nums;
+}
+#kx .editor-rows h3 {
+  line-height: 1.3;
+}
+#kx .editor-rows > a > svg {
+  align-self: flex-start;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+#kx .workspace-top {
+  padding: 14px 18px;
+}
+#kx .workspace-top small {
+  font-size: 11px;
+}
+#kx .editor-workspace .workspace-body {
+  grid-template-columns: 132px minmax(0, 1fr);
+  min-height: 0;
+}
+#kx .editor-workspace .workspace-document {
+  padding: 26px;
+}
+#kx .editor-workspace .workspace-document h3 {
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 12px 0;
+}
+#kx .editor-workspace .workspace-document p {
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 42ch;
+}
+#kx .editor-workspace .workspace-document > small {
+  font-size: 11px;
+}
+#kx .workspace-body aside {
+  font-size: 12px;
+  padding: 16px 10px;
+}
+#kx .workspace-body aside small,
+#kx .workspace-body aside p {
+  font-size: 11px;
+}
+#kx .workspace-next-step {
+  margin-top: 20px;
+}
+#kx .editor-prompt {
+  padding: 16px 18px;
+  margin: 20px 0;
+  border: 1px solid #30343c;
+  border-radius: 12px;
+  background: #11151c;
+  font-size: 14px;
+  line-height: 1.6;
+}
+#kx .kova-plan-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+#kx .kova-plan-popular {
+  white-space: nowrap;
+  border: 1px solid #536987;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #21334e;
+  color: #dceaff;
+  font-size: 11px;
+  line-height: 16px;
+}
+@media (max-width: 520px) {
+  #kx .editor-workspace .workspace-body {
+    grid-template-columns: 1fr;
+  }
+  #kx .workspace-body aside {
+    display: none;
+  }
+  #kx .editor-workspace .workspace-document {
+    padding: 22px;
+  }
+  #kx .editor-business-stage {
+    padding: 14px;
+  }
+}

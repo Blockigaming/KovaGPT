@@ -272,17 +272,12 @@ function WorkspaceStudy() {
         </aside>
         <div className="workspace-document">
           <small>PROJECT BRIEF</small>
-          <h3>
-            A clearer path
-            <br />
-            from idea to launch.
-          </h3>
+          <h3>Launch brief</h3>
           <p>
             Bring your notes together. Identify the open questions. Turn the next conversation into
             a useful draft.
           </p>
-          <div className="document-rule" />
-          <div className="document-rule short" />
+          <p className="workspace-next-step">Next step: turn the research into a first draft.</p>
           <div className="workspace-chips">
             <span>Research</span>
             <span>Outline</span>

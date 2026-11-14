@@ -215,8 +215,9 @@ function PlanCard({
             : "border-border bg-card"
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="kova-plan-heading flex items-center justify-between gap-3">
         <h2 className="text-2xl font-medium">{name}</h2>
+        {planId === "plus" && <span className="kova-plan-popular">Most popular</span>}
       </div>
       <div className="flex flex-col justify-start md:min-h-[3.25rem]">
         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
