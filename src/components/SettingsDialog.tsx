@@ -1973,9 +1973,8 @@ export function SettingsDialog({
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Free and Plus have a rolling 5-hour chat limit and a weekly limit. The 5-hour
-                    meter refreshes hourly. Pro has a weekly chat limit. Chat limits account for
-                    regular messages, Thinking messages, and model usage.
+                    Free and Plus have a 5-hour chat limit and a weekly limit. Pro has a weekly chat
+                    limit. Each meter shows its next reset or refresh.
                   </p>
                   <Link
                     to="/pricing"
