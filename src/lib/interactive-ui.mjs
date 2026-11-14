@@ -361,6 +361,9 @@ const simulationModels = {
   linear: ["slope", "intercept", "x"],
   quadratic: ["a", "b", "c", "x"],
   rectangle: ["width", "height"],
+  "constant-acceleration": ["initialVelocity", "acceleration", "seconds"],
+  "independent-events": ["probability", "trials"],
+  molarity: ["moles", "liters"],
   "compound-interest": ["principal", "rate", "years"],
 };
 
@@ -380,7 +383,15 @@ function validateSimulation(value) {
     if (min >= max || step <= 0 || step > max - min || initial < min || initial > max) return null;
     const offset = (initial - min) / step;
     if ((max - min) / step > 1e5 || Math.abs(offset - Math.round(offset)) > 1e-7) return null;
-    if (["width", "height", "principal", "years"].includes(key) && min < 0) return null;
+    if (["width", "height", "principal", "years", "seconds", "moles"].includes(key) && min < 0)
+      return null;
+    if (key === "liters" && min < 0.001) return null;
+    if (key === "probability" && (min < 0 || max > 100)) return null;
+    if (
+      key === "trials" &&
+      (min < 1 || max > 1000 || ![min, max, step, initial].every(Number.isInteger))
+    )
+      return null;
     if (key === "rate" && (min <= -100 || max > 100)) return null;
     if (key === "years" && (max > 100 || ![min, max, step, initial].every(Number.isInteger)))
       return null;
@@ -688,7 +699,7 @@ field kinds: text, search, textarea, number, radio, checkbox, select, slider, da
 table: {"version":1,"type":"table","id":"plans","title":"Compare plans","columns":[{"id":"name","label":"Plan"},{"id":"price","label":"Price","align":"end"}],"rows":[{"id":"basic","cells":["Basic","$10"]}],"selection":"single","submitLabel":"Choose"} (selection: none, single or multiple; cells are strings or numbers; max 8 columns, 50 rows).
 quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"front":"What is 2 + 2?","options":[{"value":"a","label":"3"},{"value":"b","label":"4"}],"answer":"b","back":"Adding two and two gives four.","hint":"Count two pairs."}]}
 flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}
-simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years). Include all required inputs. Use local simulations for these formulas only.
+simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years), constant-acceleration (initialVelocity in m/s, acceleration in m/s², seconds), independent-events (probability in percent, whole trials), molarity (moles, liters). Include all required inputs. Use local simulations for these formulas only.
 diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
 pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
 files: {"version":1,"type":"files","id":"notes","title":"Research notes","files":[{"name":"notes.md","content":"# Notes"}]}. Use for actual text, Markdown, CSV, TSV, JSON, YAML, TOML or notebook output; no paths or external URLs. A user can preview or download individual files or a ZIP. Do not claim files have already been downloaded.

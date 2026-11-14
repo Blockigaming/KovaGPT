@@ -371,3 +371,36 @@ test("the memory game plays to completion and counts matching turns", async () =
   await f.click("Shuffle and restart");
   assert.match(f.text(), /0 of 2 pairs matched\. 0 turns\./);
 });
+
+test("science simulations compute displacement, probability, and concentration", async () => {
+  const range = (value) => ({ min: 1, max: 20, step: 1, value });
+  for (const [model, inputs, expected] of [
+    [
+      "constant-acceleration",
+      { initialVelocity: range(3), acceleration: range(2), seconds: range(4) },
+      /Displacement \(m\) = 28/,
+    ],
+    [
+      "independent-events",
+      { probability: { min: 0, max: 100, step: 1, value: 50 }, trials: range(2) },
+      /Chance \(%\) = 75/,
+    ],
+    ["molarity", { moles: range(4), liters: range(2) }, /Concentration \(mol\/L\) = 2/],
+  ]) {
+    const block = interactive.validateInteractiveBlock({
+      version: 1,
+      type: "simulation",
+      id: model,
+      title: model,
+      model,
+      inputs,
+    });
+    assert.ok(block);
+    const f = reactFixture(
+      "src/components/interactive-ui/ResponseSimulation.tsx",
+      (module) => () => module.ResponseSimulation({ block }),
+    );
+    await f.flush();
+    assert.match(f.text(), expected);
+  }
+});

@@ -21,6 +21,22 @@ const models: Record<
     result: "Area",
     compute: ({ width, height }) => width * height,
   },
+  "constant-acceleration": {
+    formula: "Displacement = v₀t + ½at²",
+    result: "Displacement (m)",
+    compute: ({ initialVelocity, acceleration, seconds }) =>
+      initialVelocity * seconds + 0.5 * acceleration * seconds ** 2,
+  },
+  "independent-events": {
+    formula: "P(at least one) = 1 − (1 − p)ⁿ",
+    result: "Chance (%)",
+    compute: ({ probability, trials }) => (1 - (1 - probability / 100) ** trials) * 100,
+  },
+  molarity: {
+    formula: "Molarity = moles ÷ liters",
+    result: "Concentration (mol/L)",
+    compute: ({ moles, liters }) => moles / liters,
+  },
   "compound-interest": {
     formula: "Balance = principal × (1 + rate ÷ 100)ʸᵉᵃʳˢ",
     result: "Balance",
@@ -39,6 +55,13 @@ const labels: Record<string, string> = {
   principal: "Starting principal",
   rate: "Annual rate (%)",
   years: "Years",
+  initialVelocity: "Initial velocity (m/s)",
+  acceleration: "Acceleration (m/s²)",
+  seconds: "Time (seconds)",
+  probability: "Chance per trial (%)",
+  trials: "Number of trials",
+  moles: "Moles of solute",
+  liters: "Liters of solution",
 };
 const numberFormat = new Intl.NumberFormat("en", { maximumSignificantDigits: 10 });
 
@@ -49,13 +72,26 @@ export function ResponseSimulation({ block }: { block: SimulationBlock }) {
   );
   const [values, setValues] = useState(initial);
   const model = models[block.model];
-  const graphRange = block.inputs.x ?? block.inputs.years;
-  const graphKey = block.inputs.x ? "x" : "years";
+  const graphKey = (
+    {
+      linear: "x",
+      quadratic: "x",
+      "compound-interest": "years",
+      "constant-acceleration": "seconds",
+      "independent-events": "trials",
+      molarity: "liters",
+      rectangle: "width",
+    } as const
+  )[block.model];
+  const graphRange = block.model === "rectangle" ? undefined : block.inputs[graphKey];
   const series = graphRange
     ? Array.from({ length: 41 }, (_, i) =>
         model.compute({
           ...values,
-          [graphKey]: graphRange.min + ((graphRange.max - graphRange.min) * i) / 40,
+          [graphKey]: (() => {
+            const sample = graphRange.min + ((graphRange.max - graphRange.min) * i) / 40;
+            return graphKey === "trials" || graphKey === "years" ? Math.round(sample) : sample;
+          })(),
         }),
       )
     : [];

@@ -70,7 +70,14 @@ export type StudyBlock =
       secondsPerQuestion?: number;
     });
 export type SimulationRange = { min: number; max: number; step: number; value: number };
-export type SimulationModel = "linear" | "quadratic" | "rectangle" | "compound-interest";
+export type SimulationModel =
+  | "linear"
+  | "quadratic"
+  | "rectangle"
+  | "compound-interest"
+  | "constant-acceleration"
+  | "independent-events"
+  | "molarity";
 export type SimulationBlock = StudyDeck & {
   type: "simulation";
   model: SimulationModel;
