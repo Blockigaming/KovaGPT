@@ -112,12 +112,12 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
     const asPercent = (used: number | string, allowance: number | string | null) => {
       const consumed = Number(used);
       const capacity = Number(allowance);
-      return allowance !== null &&
+      return allowance != null &&
         Number.isFinite(consumed) &&
         Number.isFinite(capacity) &&
         capacity > 0
         ? Math.min(100, Math.max(0, Math.ceil((100 * consumed) / capacity)))
-        : 0;
+        : null;
     };
     return {
       tier,

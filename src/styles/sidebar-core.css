@@ -866,3 +866,7 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   color: var(--foreground);
   opacity: 1;
 }
+
+[data-sidebar-ready="false"] :is(.kova-sidebar, .kova-sidebar-rail, .kova-sidebar-scrim) {
+  transition: none;
+}

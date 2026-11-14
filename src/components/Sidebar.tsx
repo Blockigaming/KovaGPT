@@ -16,8 +16,6 @@ import {
 import {
   Archive,
   Brain,
-  Heart,
-  CreditCard,
   Bell,
   PanelLeft,
   ArrowLeft,
@@ -87,8 +85,6 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   projects: ProjectsGlyph,
   "scheduled-tasks": TasksGlyph,
   apps: PluginsGlyph,
-  health: Heart,
-  finances: CreditCard,
   maps: Map,
   memory: Brain,
   settings: SettingsGlyph,

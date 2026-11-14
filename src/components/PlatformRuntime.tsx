@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { platformEvents } from "@/platform/events";
+import { watchInstallPrompt } from "@/lib/pwa/install";
 import { recordMetric } from "@/platform/observability";
 const WorkSyncRuntime = lazy(() =>
   import("@/components/WorkSyncStatus").then((module) => ({ default: module.WorkSyncRuntime })),
@@ -20,6 +21,7 @@ const DeveloperConsole = import.meta.env.DEV
 
 export function PlatformRuntime() {
   const location = useLocation();
+  useEffect(watchInstallPrompt, []);
   useEffect(() => {
     const started = performance.now();
     const frame = requestAnimationFrame(() => {

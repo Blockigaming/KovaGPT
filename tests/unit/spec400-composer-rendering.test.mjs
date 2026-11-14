@@ -50,7 +50,10 @@ const closedSurfaces = {
   "@/components/ResponsiveModelSelector": { ResponsiveModelSelector: empty },
   "@/components/ConsumerModelSelector": { ConsumerModelSelector: empty },
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
-  "@/components/ComposerPluginList": { ComposerPluginList: empty },
+  "@/components/ComposerPluginList": {
+    ComposerPluginList: empty,
+    useComposerPluginConnections: () => ({}),
+  },
 };
 
 // Render the actual shared composer. Replace only account, service and closed
@@ -229,7 +232,7 @@ test("spec400 typing stays available during generation and Stop stays visible", 
   assert.match(html, /data-testid="stop-button"/);
   assert.doesNotMatch(html, /data-testid="send-button"/);
   assert.equal(textareaProps.disabled, false);
-  assert.match(html, /Send it when this response finishes/);
+  assert.doesNotMatch(html, /Send it when this response finishes/);
 });
 
 test("spec400 desktop and mobile have the same toolbar and exact placeholder", () => {
@@ -289,87 +292,11 @@ test("spec400 guards repeated activation with the same pending request", () => {
   assert.equal(sends, 1);
 });
 
-test("Send next is explicit, bounded and never submitted by incidental typing or Enter", () => {
-  let queued = 0;
-  const html = render({
-    value: "Next prompt",
-    isStreaming: true,
-    onSendNext: () => {
-      queued++;
-      return true;
-    },
-  });
-  assert.match(html, />Send next</);
+test("Streaming keeps the next draft editable without adding a second send control", () => {
+  const html = render({ value: "Next prompt", isStreaming: true });
+  assert.doesNotMatch(html, />Send next</);
   assert.equal(textareaProps.disabled, false);
-  textareaProps.onKeyDown({ key: "Enter", nativeEvent: { keyCode: 13 }, preventDefault() {} });
-  assert.equal(queued, 0);
-  const next = controlProps.get("Send next");
-  assert.equal(next.disabled, false);
-  next.onClick();
-  next.onClick();
-  assert.equal(queued, 1);
   assert.ok(controlProps.has("Stop generating"));
-  render({
-    value: "Later draft",
-    isStreaming: true,
-    onSendNext: () => true,
-    sendNextDisabled: true,
-  });
-  assert.equal(controlProps.get("Send next").disabled, true);
-});
-
-test("Send next keeps mobile text label visible and respects failed attachment and guest gates", () => {
-  let queued = 0;
-  const html = render(
-    {
-      value: "Next prompt",
-      isStreaming: true,
-      onSendNext: () => {
-        queued++;
-        return true;
-      },
-    },
-    signedInAccount,
-    phoneLayout,
-  );
-  assert.match(html, />Send next</);
-  assert.doesNotMatch(controlProps.get("Send next").className, /spec400-send-button/);
-  render({
-    value: "File",
-    isStreaming: true,
-    onSendNext: () => {
-      queued++;
-      return true;
-    },
-    attachments: [
-      { kind: "text_file", dataUrl: "", textContent: "text", name: "failed.txt", status: "failed" },
-    ],
-  });
-  assert.equal(controlProps.get("Send next").disabled, true);
-  controlProps.get("Send next").onClick();
-  assert.equal(queued, 0);
-  render(
-    {
-      value: "Guest file",
-      isStreaming: true,
-      onSendNext: () => {
-        queued++;
-        return true;
-      },
-      attachments: [
-        {
-          kind: "text_file",
-          dataUrl: "",
-          textContent: "text",
-          name: "file.txt",
-          status: "complete",
-        },
-      ],
-    },
-    { isLoaded: true, user: null },
-  );
-  controlProps.get("Send next").onClick();
-  assert.equal(queued, 0);
 });
 
 test("request recovery stays beside the editable composer without submitting or clearing its draft", () => {

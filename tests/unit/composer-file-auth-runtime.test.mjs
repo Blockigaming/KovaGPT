@@ -166,6 +166,7 @@ function fixture(
     "ComposerPluginList",
   ])
     modules[`@/components/${name}`] = { [name]: name };
+  modules["@/components/ComposerPluginList"].useComposerPluginConnections = () => ({});
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
     ["popover", ["Popover", "PopoverContent", "PopoverTrigger", "PopoverAnchor"]],
@@ -637,26 +638,13 @@ for (const [label, tool] of [
     }
   });
 
-  test(`guests cannot select or submit ${label}, including a queued draft`, async () => {
+  test(`guests cannot select or submit ${label}`, async () => {
     const f = fixture();
     assert.deepEqual(f.toolChanges, []);
     const submitted = fixture({ selectedTool: tool });
     await submitted.click("Send message");
     assert.ok(submitted.signIn());
     assert.deepEqual(submitted.submittedTools, []);
-    const queued = [];
-    const next = fixture({
-      selectedTool: tool,
-      isStreaming: true,
-      onSendNext: (value) => {
-        queued.push(value);
-        return true;
-      },
-    });
-    await next.click("Send next");
-    assert.ok(next.signIn());
-    assert.deepEqual(queued, []);
-    assert.equal(next.input().value, "Keep my draft");
   });
 }
 
@@ -722,54 +710,18 @@ test("removing a file also blocks a stale Send callback and queued file analysis
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   assert.match(text(f.nodes()), /Attach a text file/);
-  const queued = [];
-  const next = fixture(
-    {
-      selectedTool: "file_analysis",
-      attachments: [attachment],
-      isStreaming: true,
-      onSendNext: (tool) => {
-        queued.push(tool);
-        return true;
-      },
-    },
-    { isLoaded: true, user: { id: "owner-a" } },
-  );
-  const staleNext = next.button("Send next").onClick;
-  await next.click("Remove Data.csv");
-  staleNext();
-  await next.flush();
-  assert.deepEqual(queued, []);
-  await next.update({ attachments: [attachment] });
-  await next.click("Send next");
-  assert.deepEqual(queued, ["file_analysis"]);
 });
 
-test("image selection toggles off and data analysis queues without any file or new allowance", async () => {
+test("image selection toggles off", async () => {
   const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
   await f.click("Create an image");
   await f.click("Create an image");
   assert.deepEqual(f.toolChanges, ["image", null]);
   await f.click("Send message");
   assert.deepEqual(f.submittedTools, [null]);
-  const queued = [];
-  const next = fixture(
-    {
-      selectedTool: "data_analysis",
-      isStreaming: true,
-      onSendNext: (tool) => {
-        queued.push(tool);
-        return true;
-      },
-    },
-    { isLoaded: true, user: { id: "owner-a" } },
-  );
-  await next.click("Send next");
-  assert.deepEqual(queued, ["data_analysis"]);
-  assert.deepEqual([next.quotas, next.saves, next.reads], [[], [], []]);
 });
 
-test("stale analysis Send and queued Send callbacks cannot run for a replacement account", async () => {
+test("stale analysis Send callbacks cannot run for a replacement account", async () => {
   const f = fixture({ selectedTool: "data_analysis" }, { isLoaded: true, user: { id: "owner-a" } });
   const staleSend = f.button("Send message").onClick;
   await f.account({ isLoaded: true, user: { id: "owner-b" } });
@@ -778,25 +730,6 @@ test("stale analysis Send and queued Send callbacks cannot run for a replacement
   assert.deepEqual(f.submittedTools, []);
   await f.click("Send message");
   assert.deepEqual(f.submittedTools, ["data_analysis"]);
-  const queued = [];
-  const next = fixture(
-    {
-      selectedTool: "data_analysis",
-      isStreaming: true,
-      onSendNext: (tool) => {
-        queued.push(tool);
-        return true;
-      },
-    },
-    { isLoaded: true, user: { id: "owner-a" } },
-  );
-  const staleNext = next.button("Send next").onClick;
-  await next.account({ isLoaded: true, user: { id: "owner-b" } });
-  staleNext();
-  await next.flush();
-  assert.deepEqual(queued, []);
-  await next.click("Send next");
-  assert.deepEqual(queued, ["data_analysis"]);
 });
 
 test("plus menus contain exactly the requested actions on each layout", () => {
