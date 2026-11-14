@@ -11,6 +11,9 @@ export const INTELLIGENT_INTERFACE_NAME = "Intelligent Interface";
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 export const FIELD_KINDS = [
   "text",
+  "search",
+  "time",
+  "color",
   "textarea",
   "number",
   "radio",
@@ -35,6 +38,8 @@ const isDate = (v) => {
   const d = new Date(`${v}T00:00:00.000Z`);
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v;
 };
+const isTime = (value) => typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+const isColor = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
 const uniq = (ids) => new Set(ids).size === ids.length;
 
 function validateOptions(options) {
@@ -77,12 +82,13 @@ function validateField(f) {
     if (!options) return null;
     field.options = options;
   } else if ("options" in f) return null;
-  const ranged = ["number", "slider", "date"].includes(f.kind);
+  const ranged = ["number", "slider", "date", "time"].includes(f.kind);
   if (!ranged && ("min" in f || "max" in f || "step" in f)) return null;
-  if (f.kind === "date") {
+  if (f.kind === "date" || f.kind === "time") {
     if ("step" in f) return null;
-    if ("min" in f && !isDate(f.min)) return null;
-    if ("max" in f && !isDate(f.max)) return null;
+    const valid = f.kind === "date" ? isDate : isTime;
+    if ("min" in f && !valid(f.min)) return null;
+    if ("max" in f && !valid(f.max)) return null;
     if (f.min && f.max && f.min > f.max) return null;
     if (f.min) field.min = f.min;
     if (f.max) field.max = f.max;
@@ -98,6 +104,7 @@ function validateField(f) {
     let ok = false;
     switch (f.kind) {
       case "text":
+      case "search":
       case "textarea":
         ok = str(d, 4000, true);
         break;
@@ -108,8 +115,15 @@ function validateField(f) {
           (field.min === undefined || d >= field.min) &&
           (field.max === undefined || d <= field.max);
         break;
+      case "color":
+        ok = isColor(d);
+        break;
       case "date":
-        ok = isDate(d) && (!field.min || d >= field.min) && (!field.max || d <= field.max);
+      case "time":
+        ok =
+          (f.kind === "date" ? isDate(d) : isTime(d)) &&
+          (!field.min || d >= field.min) &&
+          (!field.max || d <= field.max);
         break;
       case "toggle":
         ok = typeof d === "boolean";
@@ -571,6 +585,7 @@ export function initialFormValues(block) {
     if ("default" in f) values[f.id] = Array.isArray(f.default) ? [...f.default] : f.default;
     else if (f.kind === "checkbox") values[f.id] = [];
     else if (f.kind === "toggle") values[f.id] = false;
+    else if (f.kind === "color") values[f.id] = "#000000";
     else if (f.kind === "slider") values[f.id] = f.min;
     else values[f.id] = "";
   }
@@ -594,8 +609,11 @@ export function validateFormValues(block, values) {
         errors[f.id] = `${f.label} must be at least ${f.min}.`;
       else if (f.max !== undefined && n > f.max)
         errors[f.id] = `${f.label} must be at most ${f.max}.`;
-    } else if (f.kind === "date") {
-      if (!isDate(v)) errors[f.id] = `${f.label} must be a valid date.`;
+    } else if (f.kind === "color") {
+      if (!isColor(v)) errors[f.id] = `${f.label} must be a valid color.`;
+    } else if (f.kind === "date" || f.kind === "time") {
+      if (!(f.kind === "date" ? isDate(v) : isTime(v)))
+        errors[f.id] = `${f.label} must be a valid ${f.kind}.`;
       else if (f.min && v < f.min) errors[f.id] = `${f.label} must be on or after ${f.min}.`;
       else if (f.max && v > f.max) errors[f.id] = `${f.label} must be on or before ${f.max}.`;
     } else if (f.kind === "radio" || f.kind === "select") {
@@ -603,7 +621,7 @@ export function validateFormValues(block, values) {
     } else if (f.kind === "checkbox") {
       if (!Array.isArray(v) || !v.every((x) => f.options.some((o) => o.value === x)))
         errors[f.id] = `Choose valid ${f.label} options.`;
-    } else if (f.kind === "text" || f.kind === "textarea") {
+    } else if (f.kind === "text" || f.kind === "search" || f.kind === "textarea") {
       if (typeof v !== "string" || v.length > 4000) errors[f.id] = `${f.label} is too long.`;
     }
   }
@@ -666,7 +684,7 @@ export function splitInteractiveContent(value) {
 export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). For ordering cards, include options in scrambled order and answer as an array of all option IDs in correct order. For matching or classification, include items and options (each an array of value/label pairs), and answer as an array containing the correct option ID for each item in order. Set deck-level adaptive to true to offer targeted review of missed items. Quizzes can include secondsPerQuestion (5–600) for timed practice that the learner starts explicitly. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
 next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
 form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
-field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
+field kinds: text, search, textarea, number, radio, checkbox, select, slider, date, time, color, toggle. Use HH:MM for time and #RRGGBB for color. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
 table: {"version":1,"type":"table","id":"plans","title":"Compare plans","columns":[{"id":"name","label":"Plan"},{"id":"price","label":"Price","align":"end"}],"rows":[{"id":"basic","cells":["Basic","$10"]}],"selection":"single","submitLabel":"Choose"} (selection: none, single or multiple; cells are strings or numbers; max 8 columns, 50 rows).
 quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"front":"What is 2 + 2?","options":[{"value":"a","label":"3"},{"value":"b","label":"4"}],"answer":"b","back":"Adding two and two gives four.","hint":"Count two pairs."}]}
 flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}

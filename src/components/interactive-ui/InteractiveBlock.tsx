@@ -343,8 +343,11 @@ function FieldControl({
       );
       break;
     case "text":
+    case "search":
     case "number":
     case "date":
+    case "time":
+    case "color":
       control = (
         <Input
           {...common}
@@ -354,7 +357,7 @@ function FieldControl({
           min={field.min as string | number | undefined}
           max={field.max as string | number | undefined}
           step={field.step}
-          maxLength={field.kind === "text" ? 4000 : undefined}
+          maxLength={field.kind === "text" || field.kind === "search" ? 4000 : undefined}
           placeholder={field.placeholder}
           className="min-h-11 min-w-0 max-w-full sm:min-h-9"
           onChange={(e) => onChange(e.target.value)}

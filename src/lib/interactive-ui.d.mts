@@ -1,6 +1,17 @@
 export type InteractiveOption = { value: string; label: string };
 export type InteractiveFieldKind =
-  "text" | "textarea" | "number" | "radio" | "checkbox" | "select" | "slider" | "date" | "toggle";
+  | "text"
+  | "search"
+  | "time"
+  | "color"
+  | "textarea"
+  | "number"
+  | "radio"
+  | "checkbox"
+  | "select"
+  | "slider"
+  | "date"
+  | "toggle";
 export type InteractiveField = {
   id: string;
   label: string;

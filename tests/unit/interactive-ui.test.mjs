@@ -221,3 +221,26 @@ test("speech blocks carry only a bounded transcript and no provider instructions
   assert.equal(validateInteractiveBlock({ ...speech, url: "https://example.com/audio.mp3" }), null);
   assert.equal(validateInteractiveBlock({ ...speech, script: "x".repeat(5001) }), null);
 });
+
+test("time, search, and color controls validate and format local input", () => {
+  const block = validateInteractiveBlock({
+    ...form,
+    fields: [
+      { id: "time", label: "Time", kind: "time", min: "08:00", max: "18:00", required: true },
+      { id: "color", label: "Color", kind: "color", default: "#008844" },
+      { id: "term", label: "Search", kind: "search" },
+    ],
+  });
+  assert.ok(block);
+  assert.equal(initialFormValues(block).color, "#008844");
+  assert.ok(validateFormValues(block, { time: "25:10", color: "url(x)" }).time);
+  assert.ok(validateFormValues(block, { time: "07:59", color: "#008844" }).time);
+  assert.deepEqual(
+    validateFormValues(block, { time: "12:30", color: "#008844", term: "coffee" }),
+    {},
+  );
+  assert.match(
+    formatSubmission(block, { values: { time: "12:30", color: "#008844", term: "coffee" } }),
+    /Time: 12:30\n- Color: #008844\n- Search: coffee/,
+  );
+});
