@@ -15,8 +15,9 @@ const viewports = [
   [1920, 1080],
 ] as const;
 
-test.beforeEach(({}, info) => {
+test.beforeEach(async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1440x900", "this spec sets its own viewport");
+  await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
 for (const [width, height] of viewports) {
@@ -24,7 +25,6 @@ for (const [width, height] of viewports) {
     test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
       await installAuthenticatedFixture(page);
       await page.setViewportSize({ width, height });
-      await page.emulateMedia({ reducedMotion: "reduce" });
       await page.route("**/mobile-spec-image.png", (route) =>
         route.fulfill({
           contentType: "image/png",
