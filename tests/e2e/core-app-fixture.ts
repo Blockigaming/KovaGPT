@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
-import { fixture, functionNames, owner, planUsageFixture } from "./actual-app-fixture";
+import { fixture, owner, planUsageFixture } from "./actual-app-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 
 export const reviewProject = {
   id: "33333333-3333-4333-8333-333333333333",
@@ -53,7 +54,7 @@ export async function coreFixture(
   await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-    const name = (functionNames.get(id) ?? "").split("_")[0];
+    const name = (resolveFixtureFunctionName(id) ?? "").split("_")[0];
     const reads: Record<string, unknown> = {
       getMyPlanTier: { ownerId: owner, tier },
       listProjects: [reviewProject],

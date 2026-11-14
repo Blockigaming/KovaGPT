@@ -8,25 +8,27 @@ const resetFormat = new Intl.DateTimeFormat(undefined, {
   timeZoneName: "short",
 });
 
-const boundedPercent = (used: number, limit: number) =>
-  limit > 0 ? Math.min(100, Math.max(0, Math.round((used / limit) * 100))) : 100;
+const boundedPercent = (used: number | null, limit: number) =>
+  typeof used === "number" && Number.isFinite(used) && Number.isFinite(limit)
+    ? limit > 0
+      ? Math.min(100, Math.max(0, Math.round((used / limit) * 100)))
+      : 100
+    : null;
 
 export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
   const { tier, windows, images, uploads } = usage;
   const base = DAILY_PLAN_ALLOWANCES[tier];
   const multiplier = usage.usageMultiplier ?? 1;
+  const imagePercent = boundedPercent(images, base.images * multiplier);
+  const uploadPercent = boundedPercent(uploads, base.uploads * multiplier);
 
   return (
     <div className="kova-plan-usage">
       {windows.map((window) => {
         const percentages = [
-          window.regularUsed === null
-            ? null
-            : boundedPercent(window.regularUsed, window.regularLimit),
-          window.thinkingUsed === null
-            ? null
-            : boundedPercent(window.thinkingUsed, window.thinkingLimit),
-          window.costPercentUsed,
+          boundedPercent(window.regularUsed, window.regularLimit),
+          boundedPercent(window.thinkingUsed, window.thinkingLimit),
+          boundedPercent(window.costPercentUsed, 100),
         ].filter((value): value is number => value !== null);
         const percent = percentages.length ? Math.max(...percentages) : null;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
@@ -57,9 +59,9 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
         );
       })}
       <p className="text-xs leading-5 text-muted-foreground">
-        {images === null || uploads === null
+        {imagePercent === null || uploadPercent === null
           ? "Today’s image and upload usage is temporarily unavailable."
-          : `Today’s images ${boundedPercent(images, base.images * multiplier)}% used · uploads ${boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.`}
+          : `Today’s images ${imagePercent}% used · uploads ${uploadPercent}% used. These reset daily.`}
       </p>
       {windows.some((window) => window.regularUsed === null || window.costPercentUsed === null) && (
         <p className="text-xs leading-5 text-muted-foreground">

@@ -3,6 +3,7 @@ import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { loopbackPreviewHeaders } from "../helpers/loopback-preview-headers.mjs";
+import type { PlanUsageDto } from "../../src/utils/usage.functions";
 export { functionNames } from "./server-function-fixture";
 
 const applicationUrl = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4189");
@@ -12,13 +13,14 @@ export const origin = applicationUrl.origin;
 export const owner = "22222222-2222-4222-8222-222222222222";
 export const chatA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 export const chatB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-export function planUsageFixture(tier: "free" | "plus" | "pro") {
+export function planUsageFixture(tier: "free" | "plus" | "pro"): PlanUsageDto {
   return {
     tier,
     windows: chatUsageWindows(tier).map((window) => ({
       ...window,
       regularUsed: 0,
       thinkingUsed: 0,
+      costPercentUsed: 0,
     })),
     images: 0,
     uploads: 0,

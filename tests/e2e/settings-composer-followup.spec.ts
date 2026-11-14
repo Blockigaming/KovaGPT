@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { closeCurrentSettings, openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions, usesCompactSettings } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: Settings has full-height navigation and one visible title`, async ({
@@ -21,7 +21,7 @@ for (const theme of ["dark", "light"] as const) {
     const top = (await surface.boundingBox())!.y;
     const header = surface.locator(".kova-settings-content-header");
     expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-    const phone = page.viewportSize()!.width < 768;
+    const phone = await usesCompactSettings(page);
     if (!phone) {
       const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);

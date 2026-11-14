@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { fixture, owner, chatA, functionNames } from "./actual-app-fixture";
+import { fixture, owner, chatA, planUsageFixture } from "./actual-app-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { chatUsageWindows, CHAT_USAGE_WINDOWS } from "../../src/lib/plan-usage-policy.mjs";
+import { CHAT_USAGE_WINDOWS } from "../../src/lib/plan-usage-policy.mjs";
 
 test("a signed-out visitor must choose login or signup", async ({ page }) => {
   await fixture(page, "dark", false);
@@ -93,15 +94,16 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
 for (const tier of ["free", "plus", "pro"] as const)
   test(`${tier} settings display percentages from actual mode-specific usage`, async ({ page }) => {
     await fixture(page, "dark", true, false, tier);
-    const windows = chatUsageWindows(tier).map((window) => ({
+    const windows = planUsageFixture(tier).windows.map((window) => ({
       ...window,
       regularUsed: Math.floor(window.regularLimit / 2),
       thinkingUsed: Math.floor(window.thinkingLimit / 5),
+      costPercentUsed: 10,
     }));
     const usage = { tier, windows, images: 2, uploads: 1 };
     await page.route("**/_serverFn/**", (route) => {
       const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-      if (!functionNames.get(id)?.startsWith("getMyPlanUsage_")) return route.fallback();
+      if (!resolveFixtureFunctionName(id)?.startsWith("getMyPlanUsage_")) return route.fallback();
       return route.fulfill({ json: { result: usage, context: {} } });
     });
     for (const section of ["usage", "billing"]) {
@@ -119,7 +121,7 @@ for (const tier of ["free", "plus", "pro"] as const)
           String(Math.round((regularUsed / regularLimit) * 100)),
         );
       }
-      await expect(page.locator(".kova-plan-usage")).toContainText(/Today's images \d+% used/);
+      await expect(page.locator(".kova-plan-usage")).toContainText(/Today’s images \d+% used/);
       await expect(page.locator(".kova-plan-usage")).not.toContainText(/\d+\s*\/\s*\d+\s+images/);
     }
     await page.screenshot({

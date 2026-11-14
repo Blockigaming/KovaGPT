@@ -142,7 +142,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/product-completeness.spec.ts", 4, 4],
     ["tests/e2e/production-audit.spec.ts", 4, 3],
     ["tests/e2e/projects-library-workspaces.spec.ts", 3, 3],
-    ["tests/e2e/responsive.spec.ts", 2, 2],
+    ["tests/e2e/responsive.spec.ts", 3, 3],
     ["tests/e2e/secondary-screens.spec.ts", 3, 3],
     ["tests/e2e/seo-indexing.spec.ts", 3, 2],
     ["tests/e2e/ui-quality.spec.ts", 6, 8, 6],

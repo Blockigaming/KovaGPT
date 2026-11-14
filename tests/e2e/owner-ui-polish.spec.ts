@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { fixture, owner, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { usesCompactSettings } from "./current-ui";
 
 async function setup(page: import("@playwright/test").Page, saved = false) {
   await fixture(page, "dark", true, saved);
@@ -71,7 +72,7 @@ test("dedicated settings excludes workspace navigation and supports desktop drag
   await waitForKovaHydration(page);
   await expect(page.locator(".kova-sidebar, .kova-sidebar-rail")).toHaveCount(0);
   const navigation = page.getByRole("complementary", { name: "Settings navigation" });
-  const phone = page.viewportSize()!.width < 768;
+  const phone = await usesCompactSettings(page);
   if (!phone) {
     const edge = page.getByRole("separator", { name: "Resize settings navigation" });
     await edge.focus();

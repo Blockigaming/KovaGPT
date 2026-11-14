@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { usesCompactSettings } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: review home, navigation and routable Appearance`, async ({ page }, info) => {
@@ -111,7 +112,7 @@ for (const theme of ["dark", "light"] as const) {
     const panel = page.locator("section.kova-settings-page");
     await expect(screen).toBeVisible();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
-    const phone = page.viewportSize()!.width < 768;
+    const phone = await usesCompactSettings(page);
     if (!phone) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toBeVisible();
     } else {

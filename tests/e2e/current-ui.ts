@@ -1,6 +1,15 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 
+export function usesCompactSettings(page: Page) {
+  return page.evaluate(
+    () =>
+      matchMedia(
+        "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
+      ).matches,
+  );
+}
+
 // Response preferences remain in Settings after the composer tray was simplified.
 export async function openResponseOptions(page: Page, recordTrigger?: (trigger: Locator) => void) {
   const panel = await openCurrentSettings(page);

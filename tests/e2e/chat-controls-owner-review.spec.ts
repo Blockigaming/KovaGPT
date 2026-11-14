@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
-import { owner, chatA, functionNames } from "./actual-app-fixture";
+import { owner, chatA } from "./actual-app-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar } from "./current-ui";
 
 test("response is unboxed with five ordered actions, public sharing, and a bookmark that saves and removes", async ({
   page,
@@ -28,7 +30,7 @@ test("response is unboxed with five ordered actions, public sharing, and a bookm
   });
   await page.route("**/_serverFn/**", async (route) => {
     const name =
-      functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!) || "";
+      resolveFixtureFunctionName(new URL(route.request().url()).pathname.split("/").at(-1)!) ?? "";
     if (name.startsWith("findResponseBookmark_"))
       return route.fulfill({ json: { result: savedBookmark, context: {} } });
     if (name.startsWith("saveToLibrary_")) {
@@ -107,7 +109,7 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
     );
   await page.route("**/_serverFn/**", async (route) => {
     const name =
-      functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!) || "";
+      resolveFixtureFunctionName(new URL(route.request().url()).pathname.split("/").at(-1)!) ?? "";
     if (name.startsWith("createCheckoutSession_")) {
       creates++;
       return route.fulfill({
@@ -118,10 +120,15 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
   });
   await page.goto("/");
   await waitForKovaHydration(page);
+  const sidebar = await revealSidebar(page);
+  await sidebar
+    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+    .click();
+  await expect(page.getByRole("article", { name: "KovaGPT response", exact: true })).toBeVisible();
   const offer = page
     .getByRole("button", { name: "Free offer: 50% off your first month", exact: true })
     .filter({ visible: true });
-  await expect(offer.getByText("Free offer", { exact: true })).toBeVisible();
+  await expect(offer).toBeVisible();
   await expect(offer).toHaveCSS("display", /^(inline-)?flex$/);
   await expect(offer).toHaveCSS("color", "rgb(56, 189, 248)");
   // Read both boxes in one frame: opening the returning sidebar can move the header.
@@ -129,10 +136,18 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
     iconBox: node.querySelector("svg")!.getBoundingClientRect().toJSON(),
     labelBox: node.querySelector("span")!.getBoundingClientRect().toJSON(),
   }));
-  expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(labelBox.x);
-  expect(Math.abs(iconBox.y + iconBox.height / 2 - labelBox.y - labelBox.height / 2)).toBeLessThan(
-    2,
-  );
+  const compact = await page.evaluate(() => matchMedia("(max-width: 599px)").matches);
+  if (compact) {
+    await expect(offer.getByText("Free offer", { exact: true })).toBeHidden();
+    const box = (await offer.boundingBox())!;
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+  } else {
+    await expect(offer.getByText("Free offer", { exact: true })).toBeVisible();
+    expect(iconBox.x + iconBox.width).toBeLessThanOrEqual(labelBox.x);
+    expect(
+      Math.abs(iconBox.y + iconBox.height / 2 - labelBox.y - labelBox.height / 2),
+    ).toBeLessThan(2);
+  }
   await offer.click();
   const dialog = page.getByRole("dialog", {
     name: "50% off your first month of Plus",
@@ -223,6 +238,10 @@ test("cloud browser and steps precede outputs in the borderless activity surface
   );
   await page.goto("/");
   await waitForKovaHydration(page);
+  const sidebar = await revealSidebar(page);
+  await sidebar
+    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Activity", exact: true })
     .filter({ visible: true })
@@ -258,7 +277,15 @@ test("cloud browser and steps precede outputs in the borderless activity surface
       page.getByRole("button", { name: "Activity", exact: true }).filter({ visible: true }),
     ).toBeFocused();
     const title = page.locator("[data-kova-navigation-heading]").filter({ visible: true });
-    expect((await title.boundingBox())!.width).toBeGreaterThan(120);
+    await expect(title).toHaveText("Composer review chat");
+    await expect(title).toHaveCSS("text-overflow", "ellipsis");
+    const titleBox = (await title.boundingBox())!;
+    const header = page.locator(".kova-topbar-inner:visible");
+    const menuBox = (await header.getByRole("button", { name: "Open menu" }).boundingBox())!;
+    const offerBox = (await header.getByRole("button", { name: /Free offer/ }).boundingBox())!;
+    expect(titleBox.width).toBeGreaterThanOrEqual(64);
+    expect(titleBox.x).toBeGreaterThanOrEqual(menuBox.x + menuBox.width);
+    expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(offerBox.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       page.viewportSize()!.width + 1,
     );
