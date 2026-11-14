@@ -23,7 +23,7 @@ test("composer menus own scrolling without a nested plugin scroll region", () =>
   assert.match(menu, /overflow-y: auto/);
   assert.match(menu, /overscroll-behavior: contain/);
   assert.doesNotMatch(styles, /\.kova-composer-plugin-list\s*\{[^}]*(?:overflow|max-height)/);
-  assert.match(styles, /\.kova-composer-plugins\s*\{[^}]*border-top:/);
+  assert.doesNotMatch(styles, /\.kova-composer-plugins\s*\{[^}]*border-top:/);
 });
 
 test("phone Attach uses the same anchored menu with phone upload options", () => {

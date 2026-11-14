@@ -166,10 +166,10 @@ test("new project directories default to list without overriding saved or migrat
 });
 test("project details retain association and explicitly save instructions", () => {
   const primaryTabs = [
-    '<TabsTrigger value="chats">Chats</TabsTrigger>',
-    '<TabsTrigger value="files">Files</TabsTrigger>',
-    '<TabsTrigger value="context">Context</TabsTrigger>',
-  ].map((tab) => project.indexOf(tab));
+    '<TabsTrigger className="rounded-full" value="chats">Chats</TabsTrigger>',
+    '<TabsTrigger className="rounded-full" value="files">Files</TabsTrigger>',
+    '<TabsTrigger className="rounded-full" value="context">Context</TabsTrigger>',
+  ].map((tab) => project.replace(/>\s+|\s+</g, (match) => match.trim()).indexOf(tab));
   assert.ok(primaryTabs.every((offset) => offset >= 0));
   assert.ok(primaryTabs[0] < primaryTabs[1] && primaryTabs[1] < primaryTabs[2]);
   assert.match(project, /aria-label="More project tools"/);

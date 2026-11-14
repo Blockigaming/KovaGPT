@@ -20,14 +20,14 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
     <div className="kova-plan-usage">
       {windows.map((window) => {
         const percentages = [
-          window.regularUsed === null
+          window.regularUsed == null
             ? null
             : boundedPercent(window.regularUsed, window.regularLimit),
-          window.thinkingUsed === null
+          window.thinkingUsed == null
             ? null
             : boundedPercent(window.thinkingUsed, window.thinkingLimit),
           window.costPercentUsed,
-        ].filter((value): value is number => value !== null);
+        ].filter((value): value is number => typeof value === "number" && Number.isFinite(value));
         const percent = percentages.length ? Math.max(...percentages) : null;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
         const resetLabel =
@@ -61,7 +61,7 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
           ? "Today’s image and upload usage is temporarily unavailable."
           : `Today’s images ${boundedPercent(images, base.images * multiplier)}% used · uploads ${boundedPercent(uploads, base.uploads * multiplier)}% used. These reset daily.`}
       </p>
-      {windows.some((window) => window.regularUsed === null || window.costPercentUsed === null) && (
+      {windows.some((window) => window.regularUsed == null || window.costPercentUsed == null) && (
         <p className="text-xs leading-5 text-muted-foreground">
           Some chat usage data is temporarily unavailable. Meters show the data we could load.
         </p>

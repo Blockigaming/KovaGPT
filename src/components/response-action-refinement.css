@@ -52,17 +52,17 @@
 :is(.kova-assistant, .kova-project-chat)
   .kova-message-actions.kova-response-action-bar
   button.kova-message-icon-action {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
-  flex-basis: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  flex-basis: 28px;
   border-radius: 8px;
   padding: 6px;
 }
 .kova-response-action-bar button.kova-message-icon-action > svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 @media (hover: hover) {
@@ -253,5 +253,23 @@ body .kova-response-retry-menu[role="menu"] {
     to {
       opacity: 1;
     }
+  }
+}
+
+.kova-message :is(.kova-user-message, .kova-assistant-message .prose-chat) {
+  font-size: var(--kova-reading-size, 1rem);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kova-message .prose-chat[data-waiting-for-response] > .kova-thinking-indicator,
+  .kova-message[data-streaming="true"] .prose-chat:not([data-waiting-for-response]) {
+    animation: kova-response-appear 160ms ease-out both;
+  }
+}
+@keyframes kova-response-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

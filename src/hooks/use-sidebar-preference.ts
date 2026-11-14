@@ -47,5 +47,5 @@ export function useSidebarPreference() {
     }
   }, [preference]);
 
-  return [preference?.open ?? false, setOpen] as const;
+  return [preference?.open ?? false, setOpen, preference !== null] as const;
 }

@@ -87,7 +87,7 @@ import {
 } from "@/components/ui/dialog";
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
-import { ComposerPluginList } from "@/components/ComposerPluginList";
+import { ComposerPluginList, useComposerPluginConnections } from "@/components/ComposerPluginList";
 import { LinkPreviewChip } from "@/components/LinkPreviewChip";
 import {
   COMPOSER_LINK_MARKER,
@@ -197,8 +197,6 @@ export function ChatInput({
   onChange,
   onSubmit,
   onStop,
-  onSendNext,
-  sendNextDisabled = false,
   nextPromptPanel,
   requestStatusPanel,
   isStreaming,
@@ -229,6 +227,10 @@ export function ChatInput({
   recentLibraryError = null,
   onRecentLibraryRetry,
   showChooseProject = false,
+  projectContext,
+  onProjectContext,
+  pluginContext,
+  onPluginContext,
   showResources = true,
   savedConversations = [],
   surface = "conversation",
@@ -243,9 +245,6 @@ export function ChatInput({
   onChange: (v: string) => void;
   onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
   onStop: () => void;
-  /** Explicitly snapshot one next message; ordinary typing and Enter never enqueue. */
-  onSendNext?: (tool?: ComposerToolId | null, trigger?: HTMLButtonElement | null) => boolean;
-  sendNextDisabled?: boolean;
   nextPromptPanel?: ReactNode;
   requestStatusPanel?: ReactNode | ((hasPendingMessage: boolean) => ReactNode);
   isStreaming: boolean;
@@ -286,6 +285,10 @@ export function ChatInput({
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
   showChooseProject?: boolean;
+  projectContext?: { id: string; name: string } | null;
+  onProjectContext?: (project: { id: string; name: string } | null) => void;
+  pluginContext?: { id: string; label: string } | null;
+  onPluginContext?: (plugin: { id: string; label: string } | null) => void;
   /** The welcome tray disappears once a conversation has messages. */
   showResources?: boolean;
   savedConversations?: readonly Conversation[];
@@ -814,42 +817,6 @@ export function ChatInput({
       submittingRef.current = false;
       setUploadAnnouncement("Message could not be sent. Your draft is still available.");
       toast.error("Message could not be sent. Please try again.");
-    }
-  };
-
-  const nextSubmittingRef = useRef(false);
-  useEffect(() => {
-    nextSubmittingRef.current = false;
-  }, [sendNextDisabled, isStreaming, attachmentContext]);
-  const triggerSendNext = (event?: React.MouseEvent<HTMLButtonElement>) => {
-    if (
-      !onSendNext ||
-      !isStreaming ||
-      sendNextDisabled ||
-      nextSubmittingRef.current ||
-      disabled ||
-      pasteOffer ||
-      !online
-    )
-      return;
-    if (!value.trim() && !validAttachmentInstruction) return;
-    if ((attachments.length > 0 || selectedToolRef.current === "image") && !requireFileAccount())
-      return;
-    if (blockedAttachmentMessage) {
-      setUploadAnnouncement(blockedAttachmentMessage);
-      return;
-    }
-    if (!requireAnalysisInput()) return;
-    nextSubmittingRef.current = true;
-    try {
-      if (onSendNext(selectedToolRef.current, event?.currentTarget))
-        setUploadAnnouncement(
-          "Next message queued. You can cancel it before this response finishes.",
-        );
-      else nextSubmittingRef.current = false;
-    } catch {
-      nextSubmittingRef.current = false;
-      setUploadAnnouncement("The next message was not queued. Your draft is still here.");
     }
   };
 
@@ -1554,6 +1521,11 @@ export function ChatInput({
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
+  const pluginConnections = useComposerPluginConnections(
+    isLoaded && showAddMenu ? (user?.id ?? null) : null,
+    isLoaded,
+  );
+
   const renderComposerActions = (
     mobile: boolean,
     section: "all" | "files" | "plugins" = "all",
@@ -1577,10 +1549,19 @@ export function ChatInput({
     if (section === "plugins") {
       return (
         <ComposerPluginList
+          connections={pluginConnections}
           userId={isLoaded ? (user?.id ?? null) : null}
           authLoaded={isLoaded}
           conversations={user ? savedConversations : []}
           navigationBlocked={Boolean(value.length || attachments.length || isStreaming || disabled)}
+          onSelect={
+            onPluginContext
+              ? (plugin) => {
+                  onPluginContext(plugin);
+                  closeActions();
+                }
+              : undefined
+          }
           onRequireSignIn={() => {
             closeActions();
             setSignInRequest({ description: "Sign in to manage your plugins.", trigger });
@@ -1713,6 +1694,7 @@ export function ChatInput({
         ) : null}
         {user ? (
           <ComposerPluginList
+            connections={pluginConnections}
             userId={user.id}
             authLoaded={isLoaded}
             conversations={savedConversations}
@@ -2004,6 +1986,36 @@ export function ChatInput({
             <ExpandViewIcon />
           </button>
         </div>
+        {(projectContext || pluginContext) && (
+          <div className="flex min-w-0 flex-wrap gap-2 px-3">
+            {projectContext && (
+              <button
+                type="button"
+                className="spec400-selected-tool min-w-0"
+                disabled={isStreaming}
+                onClick={() => onProjectContext?.(null)}
+                aria-label={`Remove project ${projectContext.name}`}
+              >
+                <Folder aria-hidden="true" />
+                <span className="truncate">{projectContext.name}</span>
+                <X aria-hidden="true" />
+              </button>
+            )}
+            {pluginContext && (
+              <button
+                type="button"
+                className="spec400-selected-tool min-w-0"
+                disabled={isStreaming}
+                onClick={() => onPluginContext?.(null)}
+                aria-label={`Remove plugin ${pluginContext.label}`}
+              >
+                <Plug aria-hidden="true" />
+                <span className="truncate">{pluginContext.label}</span>
+                <X aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
           <button
             type="button"
@@ -2434,29 +2446,7 @@ export function ChatInput({
           );
         }}
       />
-      {isStreaming && onSendNext && (
-        <div className="flex justify-end px-3 pb-3">
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border bg-primary px-3 text-sm text-primary-foreground disabled:opacity-50"
-            aria-label="Send next"
-            data-testid="send-next-button"
-            disabled={!canSubmit || sendNextDisabled}
-            onClick={triggerSendNext}
-          >
-            <ArrowUp className="h-4 w-4" aria-hidden="true" />
-            <span>Send next</span>
-          </button>
-        </div>
-      )}
       {nextPromptPanel}
-      {isStreaming && value.trim() && !nextPromptPanel && (
-        <p className="spec400-composer-hint">
-          {onSendNext
-            ? "Your next draft is kept here. Choose Send next to send this version after the response finishes."
-            : "Your next draft is kept here. Send it when this response finishes."}
-        </p>
-      )}
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent
           onCloseAutoFocus={(event) => {
@@ -2779,8 +2769,11 @@ export function ChatInput({
           <ComposerProjectPicker
             open={projectPickerOpen}
             onOpenChange={setProjectPickerOpen}
+            onSelectProject={onProjectContext}
             navigationBlocked={Boolean(
-              value.length || attachments.length || isStreaming || disabled,
+              isStreaming ||
+              disabled ||
+              ((!onProjectContext || startProjectChat) && (value.length || attachments.length)),
             )}
             navigationBlockedReason="Send or clear this message and its attachments before opening a project. Your current chat will not be moved."
             anchorRef={projectAnchorRef}

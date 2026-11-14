@@ -16,8 +16,6 @@ import {
 import {
   Archive,
   Brain,
-  Heart,
-  CreditCard,
   Bell,
   PanelLeft,
   ArrowLeft,
@@ -87,8 +85,6 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   projects: ProjectsGlyph,
   "scheduled-tasks": TasksGlyph,
   apps: PluginsGlyph,
-  health: Heart,
-  finances: CreditCard,
   maps: Map,
   memory: Brain,
   settings: SettingsGlyph,
@@ -1616,6 +1612,7 @@ export function Sidebar({
             data-ui-reference="chatgpt-collapsed-sidebar"
             aria-label="Collapsed navigation"
             data-kova-core-rail=""
+            data-kova-signed-in=""
             data-kova-refined-sidebar=""
             data-state={collapsed ? "open" : "closed"}
             aria-hidden={!collapsed || workspaceSearchOpen}
@@ -1717,6 +1714,7 @@ export function Sidebar({
         ref={drawerRef}
         id="kova-primary-navigation"
         data-kova-core-sidebar=""
+        data-kova-signed-in={signedIn ? "" : undefined}
         data-kova-refined-sidebar=""
         style={sidebarStyle}
         data-resizing={resizing || undefined}

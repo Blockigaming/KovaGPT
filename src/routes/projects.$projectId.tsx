@@ -438,7 +438,7 @@ function ProjectDetailPage() {
           id="main-content"
           tabIndex={-1}
           aria-busy="true"
-          className="mx-auto w-full max-w-6xl p-4 md:p-8"
+          className="mx-auto grid w-full flex-1 place-items-center p-4 md:p-8"
         >
           <section
             role="status"
@@ -751,9 +751,15 @@ function ProjectDetailPage() {
         <Tabs value={tab} onValueChange={setTab} className="kova-project-content">
           <div className="spec400-project-navigation">
             <TabsList aria-label="Project sections">
-              <TabsTrigger value="chats">Chats</TabsTrigger>
-              <TabsTrigger value="files">Files</TabsTrigger>
-              <TabsTrigger value="context">Context</TabsTrigger>
+              <TabsTrigger className="rounded-full" value="chats">
+                Chats
+              </TabsTrigger>
+              <TabsTrigger className="rounded-full" value="files">
+                Files
+              </TabsTrigger>
+              <TabsTrigger className="rounded-full" value="context">
+                Context
+              </TabsTrigger>
             </TabsList>
             <div className="spec400-project-tools">
               <DropdownMenu>

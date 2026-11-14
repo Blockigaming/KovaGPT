@@ -809,6 +809,7 @@ function ChatMessageInner({
       data-message-id={message.id}
       data-message-role={message.role}
       data-ui-reference="chatgpt-message"
+      data-streaming={streaming || undefined}
       className="kova-message group w-full px-4 py-3 text-base leading-[26px] sm:px-6 lg:px-8"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
@@ -879,7 +880,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            <MessageActivityList activities={message.activities} />
+            {!streaming && <MessageActivityList activities={message.activities} />}
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}
@@ -887,7 +888,11 @@ function ChatMessageInner({
                 onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
               />
             ))}
-            <div ref={bodyRef} className="prose-chat">
+            <div
+              ref={bodyRef}
+              className="prose-chat"
+              data-waiting-for-response={waitingForFirstToken || undefined}
+            >
               {message.pendingImage && !message.content ? (
                 <div
                   role="status"

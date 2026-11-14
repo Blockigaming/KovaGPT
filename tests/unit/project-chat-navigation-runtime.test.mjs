@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import {
   createHookHarness,
   elements,
@@ -153,6 +154,7 @@ function chatFixture(storage = new Map()) {
       },
       consumeChatSse: (body, options) => consumeRequest(options),
       chatResponseError: async () => new Error("request failed"),
+      extractResponseFollowups,
       normalizeResponseSources: (value) => value,
       AbortController,
       crypto: { randomUUID: () => "fixture-request" },

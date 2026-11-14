@@ -7,7 +7,6 @@ import {
 } from "@/lib/consumer-model-selection.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
-  snapshotNextPrompt,
   sameNextPromptScope,
   sameNextPromptContext,
   advanceNextPromptScope,
@@ -367,6 +366,24 @@ function KovaGPT() {
     composerDraftRef.current = { ...composerDraftRef.current, tool };
     setSelectedToolState(tool);
   }, []);
+  const [projectSelection, setProjectSelection] = useState<{
+    owner: string | null;
+    chat: string | null;
+    value: { id: string; name: string };
+  } | null>(null);
+  const [pluginSelection, setPluginSelection] = useState<{
+    owner: string | null;
+    chat: string | null;
+    value: { id: string; label: string };
+  } | null>(null);
+  const projectContext =
+    projectSelection?.owner === userKey && projectSelection.chat === activeId
+      ? projectSelection.value
+      : null;
+  const pluginContext =
+    pluginSelection?.owner === userKey && pluginSelection.chat === activeId
+      ? pluginSelection.value
+      : null;
   const [pendingWorkflowSkill, setPendingWorkflowSkill] =
     useState<ConversationWorkflowSkill | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
@@ -382,7 +399,7 @@ function KovaGPT() {
     }
   }, [activeId, storagePrincipal, editingMessage]);
 
-  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
+  const [sidebarOpen, setSidebarOpen, sidebarReady] = useSidebarPreference();
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -1577,6 +1594,8 @@ function KovaGPT() {
     setAttachments([]);
     setEditingMessage(null);
     setPendingWorkflowSkill(null);
+    setProjectSelection(null);
+    setPluginSelection(null);
   }, [setConversations, setInput, setAttachments]);
 
   const startNewChat = useCallback(() => {
@@ -1909,6 +1928,10 @@ function KovaGPT() {
         nextPromptMountedRef.current &&
         isCurrentRequest() &&
         sameNextPromptScope(requestScope, nextPromptScopeRef.current);
+      if (projectContext && projectSelection)
+        setProjectSelection({ ...projectSelection, chat: nextConvId });
+      if (pluginContext && pluginSelection)
+        setPluginSelection({ ...pluginSelection, chat: nextConvId });
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
@@ -2169,6 +2192,8 @@ function KovaGPT() {
             mode: requestMode,
             hostedModel: requestHostedModel,
             clientTool: activeTool,
+            projectId: tempChat ? undefined : projectContext?.id,
+            connectorId: tempChat ? undefined : pluginContext?.id,
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
@@ -2548,6 +2573,10 @@ function KovaGPT() {
       openSignIn,
       userKey,
       pendingWorkflowSkill,
+      projectContext,
+      pluginContext,
+      projectSelection,
+      pluginSelection,
       updateNextPrompt,
       updateRequestNotice,
       updateQuotaRejectedDrafts,
@@ -2611,41 +2640,6 @@ function KovaGPT() {
     [],
   );
 
-  const queueNextPrompt = (
-    tool?: ComposerToolId | null,
-    trigger?: HTMLButtonElement | null,
-  ): boolean => {
-    const target = inFlightTargetRef.current;
-    if (
-      !principalReady ||
-      !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current) ||
-      !nextPromptMountedRef.current ||
-      !target ||
-      !inFlightRef.current ||
-      target.conversationId !== activeId ||
-      target.controller.signal.aborted ||
-      editingMessage ||
-      nextPromptRef.current ||
-      (!input.trim() && !attachments.length) ||
-      hasPendingChatAttachments(attachments) ||
-      attachments.some((file) => file.status === "failed") ||
-      (!isSignedIn && (attachments.length > 0 || tool === "image"))
-    )
-      return false;
-    const next = snapshotNextPrompt({
-      id: newId(),
-      scope: nextPromptScopeRef.current,
-      waitingFor: target.assistantMessageId,
-      text: input,
-      attachments,
-      tool: tool ?? null,
-      mode,
-      hostedModel: active?.kova ? undefined : hostedModel,
-    });
-    updateNextPrompt(next);
-    scheduleNextPromptFocus(trigger, "queued", next);
-    return true;
-  };
   useEffect(() => {
     const next = nextPromptRef.current;
     if (!next || next.status !== "ready" || isStreaming || inFlightRef.current) return;
@@ -3215,6 +3209,16 @@ function KovaGPT() {
       </Suspense>
     ) : null;
 
+  const composerContext = tempChat
+    ? {}
+    : {
+        projectContext,
+        pluginContext,
+        onProjectContext: (value: typeof projectContext) =>
+          setProjectSelection(value && { owner: userKey, chat: activeId, value }),
+        onPluginContext: (value: typeof pluginContext) =>
+          setPluginSelection(value && { owner: userKey, chat: activeId, value }),
+      };
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
       <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
@@ -3293,6 +3297,7 @@ function KovaGPT() {
 
   return (
     <div
+      data-sidebar-ready={sidebarReady && isLoaded}
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
       style={{ height: "100dvh" }}
@@ -3487,8 +3492,6 @@ function KovaGPT() {
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}
                     onStop={stop}
-                    onSendNext={queueNextPrompt}
-                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
                     nextPromptPanel={composerPromptPanel}
                     requestStatusPanel={requestStatusPanel}
                     isStreaming={isStreaming}
@@ -3523,6 +3526,7 @@ function KovaGPT() {
                     userTier={tier}
                     canChangeAgent={!active?.kova}
                     showModelStatus
+                    {...composerContext}
                     showChooseProject
                     showResources={!chatStarted}
                     savedConversations={userKey && principalReady ? conversations : []}
@@ -3625,8 +3629,6 @@ function KovaGPT() {
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}
                     onStop={stop}
-                    onSendNext={queueNextPrompt}
-                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
                     nextPromptPanel={composerPromptPanel}
                     requestStatusPanel={requestStatusPanel}
                     isStreaming={isStreaming}
@@ -3661,6 +3663,7 @@ function KovaGPT() {
                     userTier={tier}
                     canChangeAgent={!active?.kova}
                     showModelStatus
+                    {...composerContext}
                     showChooseProject
                     showResources={!chatStarted}
                     savedConversations={userKey && principalReady ? conversations : []}

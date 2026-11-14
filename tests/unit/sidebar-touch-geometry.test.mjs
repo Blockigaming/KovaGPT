@@ -82,13 +82,13 @@ test("sidebar glyphs and account avatars retain square viewports", () => {
   assert.equal(declaration(avatar, "height").value, "32px");
 });
 
-test("response actions retain 32px desktop density and 44px touch targets inside a wrapping toolbar", () => {
+test("response actions use 28px desktop density and 44px touch targets inside a wrapping toolbar", () => {
   const selector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const desktop = ruleFor(responseCss, selector);
   const touch = ruleFor(responseCss, selector, "(any-pointer: coarse), (max-width: 1023px)");
   for (const property of ["width", "height", "min-width", "min-height", "flex-basis"]) {
-    assert.equal(declaration(desktop, property).value, "32px");
+    assert.equal(declaration(desktop, property).value, "28px");
     assert.equal(declaration(touch, property).value, "44px");
     assert.ok(!declaration(touch, property).important);
   }

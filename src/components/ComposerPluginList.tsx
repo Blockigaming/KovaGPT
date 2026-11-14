@@ -20,29 +20,11 @@ import {
 } from "@/lib/composer-plugin-usage.mjs";
 
 /** Inspection only: opening a plugin never grants access or executes an action. */
-export function ComposerPluginList({
-  userId,
-  authLoaded,
-  onNavigate,
-  conversations,
-  onRequireSignIn,
-  inline = false,
-  navigationBlocked = false,
-}: {
-  userId: string | null;
-  authLoaded: boolean;
-  onNavigate: () => void;
-  /** Only the current, principal-ready account’s saved conversations. */
-  conversations: readonly ComposerSavedConversation[];
-  onRequireSignIn?: () => void;
-  inline?: boolean;
-  navigationBlocked?: boolean;
-}) {
+export function useComposerPluginConnections(userId: string | null, authLoaded: boolean) {
   const accounts = useConnectedAccounts(userId, authLoaded && Boolean(userId));
   const readGitHub = useServerFn(getGitHubManagement);
   const readGitHubAccess = useServerFn(getGitHubChatReadAccess);
   const [snapshot, setSnapshot] = useState<ComposerConnectionSnapshot | null>(null);
-  const [pluginQuery, setPluginQuery] = useState("");
   useEffect(() => {
     if (!userId || !authLoaded) {
       setSnapshot(null);
@@ -58,7 +40,7 @@ export function ComposerPluginList({
           loading: false,
           google: google.status === "fulfilled" ? google.value : undefined,
           github: github.status === "fulfilled" ? github.value : undefined,
-          githubReadAccess: access.status === "fulfilled" ? access.value.readable : undefined,
+          githubReadAccess: access.status === "fulfilled" ? access.value?.readable : undefined,
         });
       },
     );
@@ -66,6 +48,33 @@ export function ComposerPluginList({
       active = false;
     };
   }, [userId, authLoaded, readGitHub, readGitHubAccess]);
+  return { accounts, snapshot };
+}
+
+export function ComposerPluginList({
+  userId,
+  authLoaded,
+  connections,
+  onSelect,
+  onNavigate,
+  conversations,
+  onRequireSignIn,
+  inline = false,
+  navigationBlocked = false,
+}: {
+  userId: string | null;
+  authLoaded: boolean;
+  connections: ReturnType<typeof useComposerPluginConnections>;
+  onSelect?: (plugin: { id: string; label: string }) => void;
+  onNavigate: () => void;
+  /** Only the current, principal-ready account’s saved conversations. */
+  conversations: readonly ComposerSavedConversation[];
+  onRequireSignIn?: () => void;
+  inline?: boolean;
+  navigationBlocked?: boolean;
+}) {
+  const { accounts, snapshot } = connections;
+  const [pluginQuery, setPluginQuery] = useState("");
   const blockedNavigationTitle = "Finish or clear your current message before opening plugins.";
   const handleNavigate = (event: MouseEvent<HTMLAnchorElement>) => {
     if (navigationBlocked) {
@@ -98,20 +107,8 @@ export function ComposerPluginList({
     plugins.filter((plugin) => connection(plugin.id).connected).map((plugin) => plugin.id),
   );
 
-  const row = (plugin: ConnectorItem) => (
-    <Link
-      key={plugin.id}
-      to="/apps"
-      preload={false}
-      className="kova-composer-plugin"
-      onClick={handleNavigate}
-      aria-disabled={navigationBlocked || undefined}
-      title={
-        navigationBlocked
-          ? blockedNavigationTitle
-          : `Review ${plugin.label} connection and permissions`
-      }
-    >
+  const rowContent = (plugin: ConnectorItem) => (
+    <>
       <img
         src={PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id]}
         className="kova-composer-plugin-logo"
@@ -121,8 +118,35 @@ export function ComposerPluginList({
       {inline ? (
         <small>{CONNECTION_FLOWS[plugin.id]?.description ?? plugin.description}</small>
       ) : null}
-    </Link>
+    </>
   );
+  const row = (plugin: ConnectorItem) =>
+    onSelect ? (
+      <button
+        key={plugin.id}
+        type="button"
+        className="kova-composer-plugin w-full text-left"
+        onClick={() => onSelect({ id: plugin.id, label: plugin.label })}
+      >
+        {rowContent(plugin)}
+      </button>
+    ) : (
+      <Link
+        key={plugin.id}
+        to="/apps"
+        preload={false}
+        className="kova-composer-plugin"
+        onClick={handleNavigate}
+        aria-disabled={navigationBlocked || undefined}
+        title={
+          navigationBlocked
+            ? blockedNavigationTitle
+            : `Review ${plugin.label} connection and permissions`
+        }
+      >
+        {rowContent(plugin)}
+      </Link>
+    );
   if (inline)
     return connected.length ? (
       <div className="kova-composer-plugins" aria-label="Your connected plugins">
@@ -145,13 +169,13 @@ export function ComposerPluginList({
         />
       </label>
       <div className="kova-composer-plugin-list">
-        {connected.length === 0 ? (
+        {connected.length === 0 &&
+        authLoaded &&
+        (!userId || snapshot?.principal === userId) &&
+        !snapshot?.loading &&
+        !accounts.loading ? (
           <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
-            {!authLoaded || snapshot?.loading || accounts.loading
-              ? "Loading your plugins…"
-              : normalizedQuery
-                ? "No matching connected plugins."
-                : "No connected plugins."}
+            {normalizedQuery ? "No matching connected plugins." : "No connected plugins."}
           </p>
         ) : null}
         {connected.map(({ id }) => row(plugins.find((plugin) => plugin.id === id)!))}

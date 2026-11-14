@@ -46,7 +46,10 @@ const closedSurfaces = {
   "@/components/ResponsiveModelSelector": { ResponsiveModelSelector: empty },
   "@/components/ConsumerModelSelector": { ConsumerModelSelector: empty },
   "@/components/ComposerDrawingDialog": { ComposerDrawingDialog: empty },
-  "@/components/ComposerPluginList": { ComposerPluginList: empty },
+  "@/components/ComposerPluginList": {
+    ComposerPluginList: empty,
+    useComposerPluginConnections: () => ({}),
+  },
 };
 
 // Render the actual shared composer. Replace only account, service and closed

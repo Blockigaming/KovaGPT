@@ -329,12 +329,7 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
   const status = page.locator(".kova-thinking-indicator");
   await page.clock.runFor(1_000);
   await expect(status).toContainText(/Working for \d+s/);
-  await expect(page.getByRole("list", { name: "Activity", exact: true })).toBeVisible();
-  await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
-  await expect(page.getByText("Read example.org", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("list", { name: "Activity", exact: true }).getByRole("listitem"),
-  ).toHaveCount(2);
+  await expect(status).toContainText("Read example.org");
   await page.clock.runFor(8_000);
   await expect(status).toHaveAttribute("data-wait-stage", "continued");
   await page.clock.runFor(22_000);

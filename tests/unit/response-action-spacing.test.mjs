@@ -24,7 +24,7 @@ test("response actions use compact desktop geometry and 44px coarse targets", ()
     const coarse = rule.parent.type === "atrule";
     if (coarse) assert.match(rule.parent.params, /any-pointer: coarse/);
     for (const key of ["width", "height", "min-width", "min-height", "flex-basis"])
-      assert.equal(values[key], coarse ? "44px" : "32px");
+      assert.equal(values[key], coarse ? "44px" : "28px");
     if (!coarse) assert.equal(values["border-radius"], "8px");
     assert.ok(!rule.nodes.some((node) => node.important));
   }

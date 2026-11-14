@@ -1087,6 +1087,7 @@ export function SettingsDialog({
   const importFileRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!open) return;
+    setSavedPulse(false);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const saved = (event: Event) => {
       if ((event as CustomEvent<{ ownerId: string | null }>).detail?.ownerId !== userKey) return;
@@ -1217,8 +1218,8 @@ export function SettingsDialog({
   }, [mobileFocusRequest, mobileHome, tab]);
 
   useEffect(() => {
-    if (page && contentScrollRef.current) contentScrollRef.current.scrollTop = 0;
-  }, [page, tab]);
+    if (open && contentScrollRef.current) contentScrollRef.current.scrollTop = 0;
+  }, [open, tab, mobileHome]);
 
   const closeForNavigation = () => {
     if (!page) onOpenChange(false);
@@ -1386,6 +1387,7 @@ export function SettingsDialog({
             value={tab}
             onValueChange={selectTab}
             orientation="vertical"
+            activationMode="manual"
             className="flex-1 overflow-hidden flex flex-col md:flex-row"
           >
             {page ? (
@@ -1486,7 +1488,7 @@ export function SettingsDialog({
 
             <div
               ref={contentScrollRef}
-              className={`kova-settings-content flex-1 overflow-hidden flex flex-col ${mobileHome ? "mobile-hidden" : "mobile-content"}`}
+              className={`kova-settings-content ${mobileHome ? "mobile-hidden" : "mobile-content"}`}
             >
               <header className="kova-settings-content-header">
                 <button
@@ -1507,10 +1509,7 @@ export function SettingsDialog({
                   </h2>
                   <p>{SETTINGS_DESCRIPTIONS[tab]}</p>
                 </div>
-                <span
-                  role="status"
-                  className={savedPulse ? "kova-settings-saved visible" : "kova-settings-saved"}
-                >
+                <span role="status" className="kova-settings-saved">
                   {savedPulse && (
                     <>
                       <Check aria-hidden="true" />
@@ -1527,26 +1526,14 @@ export function SettingsDialog({
               </header>
               <p className="kova-settings-mobile-intro">{SETTINGS_DESCRIPTIONS[tab]}</p>
               {/* DIRECT ACCOUNT SETTINGS */}
-              <TabsContent
-                value="voice"
-                aria-labelledby={currentSectionHeadingId}
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent value="voice" aria-labelledby={currentSectionHeadingId}>
                 <VoiceConnectionStatus />
               </TabsContent>
               {/* GENERAL */}
-              <TabsContent
-                value="cloud-browser"
-                aria-labelledby={currentSectionHeadingId}
-                className="overflow-y-auto px-7 pb-8 py-5"
-              >
+              <TabsContent value="cloud-browser" aria-labelledby={currentSectionHeadingId}>
                 {userKey && <CloudBrowserSettings key={userKey} ownerId={userKey} />}
               </TabsContent>
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="general"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="general">
                 <section className="kova-settings-general-overview">
                   <h3 className="text-sm font-semibold">Chat behavior</h3>
                   <div className="kova-settings-reference-group kova-settings-general-options">
@@ -1773,11 +1760,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* PROFILE */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="personalization"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="personalization">
                 <ProfileSettings
                   user={user}
                   principalResolved={isLoaded}
@@ -1787,11 +1770,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* MEMORY */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="memory"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="memory">
                 <section className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Brain className="w-4 h-4" />
@@ -1887,11 +1866,7 @@ export function SettingsDialog({
                 </section>
               </TabsContent>
 
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="linked"
-                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="linked">
                 {!loggedIn ? (
                   <SignInGate label="Apps" />
                 ) : (
@@ -1916,11 +1891,7 @@ export function SettingsDialog({
               {/* Library and Finances tabs intentionally removed from Settings. */}
 
               {/* EMAIL */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="email"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="email">
                 <h3 className="text-sm font-semibold">Email address</h3>
                 <div className="rounded-lg border border-border p-4">
                   <div className="text-sm font-medium">Primary email</div>
@@ -1932,11 +1903,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* USAGE */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="usage"
-                className="overflow-y-auto px-7 pb-8 space-y-7 py-6"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="usage">
                 <section className="space-y-3">
                   <div
                     ref={usageStatusRef}
@@ -1954,7 +1921,9 @@ export function SettingsDialog({
                         </span>
                       )}
                     </div>
-                    {(!usageLoaded || usageLoading) && !usage ? (
+                    {!userKey ? (
+                      <p className="text-sm text-muted-foreground">Sign in to see your usage.</p>
+                    ) : (!usageLoaded || usageLoading) && !usage ? (
                       <div className="text-sm text-muted-foreground" role="status">
                         Loading usage…
                       </div>
@@ -1991,7 +1960,7 @@ export function SettingsDialog({
               <TabsContent
                 aria-labelledby={currentSectionHeadingId}
                 value="billing"
-                className="kova-billing-details kova-adapted-controls overflow-y-auto px-7 pb-8 space-y-5 py-5"
+                className="kova-billing-details kova-adapted-controls"
               >
                 <BillingWorkspace
                   key={`${userKey}:${open}`}
@@ -2120,7 +2089,7 @@ export function SettingsDialog({
                     </div>
                     {!loggedIn ? (
                       <p className="text-xs text-muted-foreground">Sign in to see your usage.</p>
-                    ) : usageLoading && !usage ? (
+                    ) : (!usageLoaded || usageLoading) && !usage ? (
                       <p className="text-xs text-muted-foreground">Loading usage…</p>
                     ) : usage ? (
                       <PlanUsageBars usage={usage} />
@@ -2278,30 +2247,19 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* APPEARANCE */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="appearance"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="appearance">
                 <AppearanceSettings settings={settings} onChange={onChange} />
               </TabsContent>
 
               {/* NOTIFICATIONS */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="notifications"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="notifications">
+                {!page ? <h3 className="text-sm font-semibold">Notifications</h3> : null}
                 <PwaSettings ownerId={isLoaded ? userKey : null} />
                 <AccountEmailPreferences ownerId={isLoaded ? userKey : null} />
               </TabsContent>
 
               {/* PARENTAL */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="parental"
-                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="parental">
                 <h3 className="text-sm font-semibold">Parental controls</h3>
                 <FamilyControlsUnavailable />
                 <p className="text-xs text-muted-foreground">
@@ -2311,11 +2269,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* KEYBOARD SHORTCUTS */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="shortcuts"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="shortcuts">
                 <div>
                   <h3 className="text-sm font-semibold">Keyboard shortcuts</h3>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -2326,11 +2280,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* LOCATION */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="location"
-                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="location">
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -2341,11 +2291,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* SAFETY & SECURITY */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="security"
-                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="security">
                 <Link
                   to="/trusted-contacts"
                   onClick={closeForNavigation}
@@ -2369,11 +2315,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* DATA CONTROL */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="data"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="data">
                 <h3 className="text-sm font-semibold">Privacy and data</h3>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => selectTab("memory")}>
@@ -2527,11 +2469,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* STORAGE */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="storage"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="storage">
                 <StorageDashboard signedIn={loggedIn} />
                 <div className="rounded-xl border border-border bg-card/60 p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
@@ -2555,20 +2493,12 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* FAMILY CENTER */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="family"
-                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="family">
                 {!loggedIn ? <SignInGate label="Family Sharing" /> : <FamilySharingPanel />}
               </TabsContent>
 
               {/* REPORT ISSUE */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="report"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="report">
                 <p className="text-xs text-muted-foreground">
                   Found a bug or something off? Send it to our team and we'll take a look.
                 </p>
@@ -2581,11 +2511,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* HELP CENTER */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="help"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="help">
                 <p className="text-xs text-muted-foreground">
                   Get help, contact support, or browse common questions.
                 </p>
@@ -2598,11 +2524,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* ABOUT */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="about"
-                className="overflow-y-auto px-7 pb-8 space-y-3 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="about">
                 <p className="text-sm text-muted-foreground">
                   KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and
                   trustworthy AI available to everyone.
@@ -2622,11 +2544,7 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* LOG OUT */}
-              <TabsContent
-                aria-labelledby={currentSectionHeadingId}
-                value="logout"
-                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
-              >
+              <TabsContent aria-labelledby={currentSectionHeadingId} value="logout">
                 <p className="text-sm text-muted-foreground">
                   You'll be signed out of KovaGPT on this device.
                 </p>

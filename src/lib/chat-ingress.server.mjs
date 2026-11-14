@@ -1,6 +1,8 @@
 import { BoundedJsonError, readBoundedJsonObject } from "./bounded-json.server.mjs";
 import { normalizeWorkflowSkillSelection } from "./workflow-skills-policy.mjs";
 import { parseKovaChatSelection } from "./kova-chat-policy.mjs";
+import { READ_ONLY_PLUGIN_TOOLS } from "./composer-plugin-usage.mjs";
+import { CONNECTION_FLOWS } from "../integrations/connection-flows.mjs";
 import { consumerModel } from "./consumer-model-selection.mjs";
 
 export const CHAT_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
@@ -36,6 +38,10 @@ const MODE_ALIASES = Object.freeze({
   kova_o3: "medium",
 });
 const MODE_IDS = new Set(["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"]);
+const CONNECTOR_IDS = new Set([
+  ...Object.values(READ_ONLY_PLUGIN_TOOLS),
+  ...Object.keys(CONNECTION_FLOWS),
+]);
 const CLIENT_TOOLS = new Set(["web_search", "image", "study", "data_analysis", "file_analysis"]);
 const RESPONSE_LENGTHS = new Set(["short", "medium", "long"]);
 const TEMPORARY_CONTEXTS = new Set(["clean", "personalized"]);
@@ -409,6 +415,11 @@ export function normalizeChatPayload(value) {
   if (temporary !== undefined) payload.temporary = temporary;
   if (temporaryContext !== undefined) payload.temporaryContext = temporaryContext;
   if (clientTool !== undefined) payload.clientTool = clientTool;
+  if (value.connectorId !== undefined) {
+    if (typeof value.connectorId !== "string" || !CONNECTOR_IDS.has(value.connectorId))
+      invalid("invalid_connector", "Invalid chat connection.");
+    payload.connectorId = value.connectorId;
+  }
   return payload;
 }
 

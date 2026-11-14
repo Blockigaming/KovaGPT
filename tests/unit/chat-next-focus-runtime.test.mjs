@@ -164,15 +164,14 @@ test("replacement focus intent cancels the older frame and background state chan
   assert.equal(f.focused.length, 0);
   f.frames[1]();
   assert.equal(f.focused[0].name, "Message KovaGPT");
-  assert.equal((source.match(/scheduleNextPromptFocus\(/g) ?? []).length, 4);
-  assert.match(source, /scheduleNextPromptFocus\(trigger, "queued", next\)/);
+  assert.equal((source.match(/scheduleNextPromptFocus\(/g) ?? []).length, 3);
   assert.match(source, /scheduleNextPromptFocus\(event\?\.currentTarget, "composer", null\)/);
   assert.match(
     source,
     /scheduleNextPromptFocus\(event\.currentTarget, "composer", nextPromptRef\.current\)/,
   );
   const composer = readFileSync("src/components/ChatInput.tsx", "utf8");
-  assert.match(composer, /onSendNext\(selectedToolRef.current, event\?\.currentTarget\)/);
+  assert.doesNotMatch(composer, /aria-label="Send next"/);
 });
 
 test("explicit quota recovery returns focus to the composer without disturbing a held next message", () => {
