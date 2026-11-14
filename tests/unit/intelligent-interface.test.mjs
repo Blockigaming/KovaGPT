@@ -292,3 +292,48 @@ test("an adaptive quiz can review only missed questions and grade a corrected or
   await f.click("See score");
   assert.match(f.text(), /1 of 1 correct/);
 });
+
+test("timed practice starts on request, expires correctly, and still has an untimed option", async () => {
+  const block = interactive.validateInteractiveBlock({
+    version: 1,
+    type: "quiz",
+    id: "timed",
+    title: "Timed quiz",
+    secondsPerQuestion: 5,
+    cards: [{ front: "Two plus two?", back: "Four.", kind: "number", answer: 4 }],
+  });
+  let now = 1000;
+  let tick;
+  const globals = {
+    Date: { now: () => now },
+    window: {
+      setInterval: (callback) => {
+        tick = callback;
+        return 1;
+      },
+      clearInterval: () => {},
+    },
+  };
+  const run = () =>
+    reactFixture(
+      "src/components/interactive-ui/StudyCards.tsx",
+      (module) => () => module.StudyCards({ block }),
+      { globals },
+    );
+  const timed = run();
+  await timed.flush();
+  assert.doesNotMatch(timed.text(), /Two plus two/);
+  await timed.click("Start timed practice");
+  assert.match(timed.text(), /5 seconds left/);
+  now += 5000;
+  tick();
+  await timed.flush();
+  assert.match(timed.text(), /Time is up.*Four/);
+  await timed.click("See score");
+  assert.match(timed.text(), /0 of 1 correct/);
+  const untimed = run();
+  await untimed.flush();
+  await untimed.click("Practice without timer");
+  assert.match(untimed.text(), /Two plus two/);
+  assert.doesNotMatch(untimed.text(), /seconds left/);
+});

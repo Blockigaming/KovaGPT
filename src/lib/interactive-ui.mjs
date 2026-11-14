@@ -239,12 +239,31 @@ function validateTable(v) {
 }
 
 function validateStudyBlock(value) {
-  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "cards", "adaptive"]))
+  if (
+    !onlyKeys(value, [
+      "version",
+      "type",
+      "id",
+      "title",
+      "description",
+      "cards",
+      "adaptive",
+      "secondsPerQuestion",
+    ])
+  )
     return null;
   if ("description" in value && !str(value.description, 800)) return null;
   if (!Array.isArray(value.cards) || value.cards.length < 1 || value.cards.length > 30) return null;
   const quiz = value.type === "quiz";
   if ("adaptive" in value && typeof value.adaptive !== "boolean") return null;
+  if (
+    "secondsPerQuestion" in value &&
+    (!quiz ||
+      !Number.isInteger(value.secondsPerQuestion) ||
+      value.secondsPerQuestion < 5 ||
+      value.secondsPerQuestion > 600)
+  )
+    return null;
   const cards = [];
   for (const card of value.cards) {
     if (!isPlain(card) || !str(card.front, 600) || !str(card.back, 1200)) return null;
@@ -319,6 +338,7 @@ function validateStudyBlock(value) {
     title: value.title.trim(),
     description: value.description,
     ...(value.adaptive ? { adaptive: true } : {}),
+    ...(value.secondsPerQuestion ? { secondsPerQuestion: value.secondsPerQuestion } : {}),
     cards,
   };
 }
@@ -594,7 +614,7 @@ export function splitInteractiveContent(value) {
   return parts;
 }
 
-export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). For ordering cards, include options in scrambled order and answer as an array of all option IDs in correct order. For matching or classification, include items and options (each an array of value/label pairs), and answer as an array containing the correct option ID for each item in order. Set deck-level adaptive to true to offer targeted review of missed items. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
+export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). For ordering cards, include options in scrambled order and answer as an array of all option IDs in correct order. For matching or classification, include items and options (each an array of value/label pairs), and answer as an array containing the correct option ID for each item in order. Set deck-level adaptive to true to offer targeted review of missed items. Quizzes can include secondsPerQuestion (5–600) for timed practice that the learner starts explicitly. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
 next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
 form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
 field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).

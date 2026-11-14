@@ -52,7 +52,12 @@ export type QuizCard = Flashcard & { hint?: string } & (
 type StudyDeck = { version: 1; id: string; title: string; description?: string };
 export type StudyBlock =
   | (StudyDeck & { type: "flashcards"; cards: Flashcard[]; adaptive?: boolean })
-  | (StudyDeck & { type: "quiz"; cards: QuizCard[]; adaptive?: boolean });
+  | (StudyDeck & {
+      type: "quiz";
+      cards: QuizCard[];
+      adaptive?: boolean;
+      secondsPerQuestion?: number;
+    });
 export type SimulationRange = { min: number; max: number; step: number; value: number };
 export type SimulationModel = "linear" | "quadratic" | "rectangle" | "compound-interest";
 export type SimulationBlock = StudyDeck & {

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { QuizCard, StudyBlock } from "@/lib/interactive-ui.mjs";
 
@@ -29,6 +29,10 @@ function matchesAnswer(question: QuizCard, entry: string, selected: string[]) {
 
 export function StudyCards({ block }: { block: StudyBlock }) {
   const id = useId();
+  const seconds = block.type === "quiz" ? block.secondsPerQuestion : undefined;
+  const [clockMode, setClockMode] = useState<"timed" | "untimed">();
+  const [deadline, setDeadline] = useState<number>();
+  const [remaining, setRemaining] = useState(seconds);
   const [index, setIndex] = useState(0);
   const [order, setOrder] = useState(() => block.cards.map((_, position) => position));
   const [entry, setEntry] = useState("");
@@ -41,7 +45,27 @@ export function StudyCards({ block }: { block: StudyBlock }) {
   const flashcards = block.type === "flashcards";
   const card = block.cards[order[index]];
   const question = block.type === "quiz" ? block.cards[order[index]] : undefined;
-  const correct = question ? matchesAnswer(question, entry, selected) : false;
+  const timedOut = clockMode === "timed" && remaining === 0;
+  const correct = question && !timedOut ? matchesAnswer(question, entry, selected) : false;
+  const showAnswer = revealed || timedOut;
+
+  useEffect(() => {
+    if (deadline === undefined || revealed || done) return;
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setRemaining(next);
+      if (!next) window.clearInterval(interval);
+    };
+    const interval = window.setInterval(tick, 250);
+    tick();
+    return () => window.clearInterval(interval);
+  }, [deadline, revealed, done]);
+
+  function startClock() {
+    if (seconds === undefined) return;
+    setRemaining(seconds);
+    setDeadline(Date.now() + seconds * 1000);
+  }
   const answered =
     question?.kind === "ordering"
       ? selected.length === question.options.length
@@ -59,6 +83,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
     setSelected([]);
     setShowHint(false);
     setRevealed(false);
+    if (clockMode === "timed" && index + 1 < order.length) startClock();
   }
 
   function restart(nextOrder: number[]) {
@@ -67,6 +92,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
     setScore(0);
     setMissed([]);
     setRevealed(false);
+    if (clockMode === "timed") startClock();
   }
 
   function shuffle() {
@@ -95,7 +121,29 @@ export function StudyCards({ block }: { block: StudyBlock }) {
           Shuffle and restart
         </Button>
       )}
-      {done ? (
+      {seconds && !clockMode ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <p className="w-full text-sm">{seconds} seconds per question</p>
+          <Button
+            type="button"
+            className="min-h-11"
+            onClick={() => {
+              setClockMode("timed");
+              startClock();
+            }}
+          >
+            Start timed practice
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            onClick={() => setClockMode("untimed")}
+          >
+            Practice without timer
+          </Button>
+        </div>
+      ) : done ? (
         <div className="mt-4 grid gap-3">
           <p role="status">
             {score} of {order.length} {flashcards ? "known" : "correct"}
@@ -121,8 +169,13 @@ export function StudyCards({ block }: { block: StudyBlock }) {
           <p aria-live="polite" className="text-sm text-muted-foreground">
             {flashcards ? "Card" : "Question"} {index + 1} of {order.length}
           </p>
+          {clockMode === "timed" && !showAnswer && (
+            <p role="timer" className="text-sm tabular-nums">
+              {remaining} seconds left
+            </p>
+          )}
           {question ? (
-            <fieldset disabled={revealed} className="grid min-w-0 gap-1">
+            <fieldset disabled={showAnswer} className="grid min-w-0 gap-1">
               <legend className="mb-2 font-medium">{question.front}</legend>
               {question.kind === "ordering" ? (
                 <div className="grid gap-2">
@@ -142,7 +195,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
                           type="button"
                           variant="outline"
                           className="min-h-11"
-                          disabled={revealed}
+                          disabled={showAnswer}
                           onClick={() => setSelected([...selected, value])}
                         >
                           {label}
@@ -152,7 +205,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
                       <Button
                         type="button"
                         variant="ghost"
-                        disabled={revealed}
+                        disabled={showAnswer}
                         onClick={() => setSelected(selected.slice(0, -1))}
                       >
                         Undo last choice
@@ -232,24 +285,31 @@ export function StudyCards({ block }: { block: StudyBlock }) {
             <p className="py-3 text-lg font-medium">{card.front}</p>
           )}
           {showHint && question?.hint && <p role="status">{question.hint}</p>}
-          {revealed && (
+          {showAnswer && (
             <div role="status" className="rounded-lg bg-muted p-3">
-              {question && <p className="font-medium">{correct ? "Correct" : "Incorrect"}</p>}
+              {question && (
+                <p className="font-medium">
+                  {timedOut ? "Time is up" : correct ? "Correct" : "Incorrect"}
+                </p>
+              )}
               <p>{card.back}</p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {!revealed && (
+            {!showAnswer && (
               <Button
                 type="button"
                 className="min-h-11"
                 disabled={!!question && !answered}
-                onClick={() => setRevealed(true)}
+                onClick={() => {
+                  if (deadline === undefined || Date.now() < deadline) setRevealed(true);
+                  else setRemaining(0);
+                }}
               >
                 {flashcards ? "Reveal answer" : "Check answer"}
               </Button>
             )}
-            {!revealed && !showHint && question?.hint && (
+            {!showAnswer && !showHint && question?.hint && (
               <Button
                 type="button"
                 variant="outline"
@@ -259,7 +319,7 @@ export function StudyCards({ block }: { block: StudyBlock }) {
                 Show hint
               </Button>
             )}
-            {revealed &&
+            {showAnswer &&
               (question ? (
                 <Button type="button" className="min-h-11" onClick={() => advance(correct)}>
                   {index + 1 === order.length ? "See score" : "Next question"}
