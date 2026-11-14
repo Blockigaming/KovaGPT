@@ -10,7 +10,9 @@ const icons = Object.fromEntries(
     (x) => [x, x],
   ),
 );
+const pageHooks = createHookHarness();
 const landing = loadUiModule("src/components/public/MarketingLanding.tsx", {
+  react: pageHooks.react,
   "lucide-react": icons,
   "./PublicShell": { PublicShell: "PublicShell" },
   "@/lib/publications": publications,
@@ -26,6 +28,7 @@ test("every main marketing destination renders original content and navigable gu
     "/use-cases",
     "/help",
     "/developers/pricing",
+    "/developers/console",
     ...PUBLIC_WEBSITE_PAGE_BY_PATH.keys(),
     ...content.PUBLIC_PAGES.map((p) => `/${p.slug}`),
     ...publications.PUBLICATIONS.map((p) => `/${p.section}/${p.slug}`),

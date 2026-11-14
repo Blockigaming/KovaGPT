@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ArrowUpRight, Code2, Folder, Image, MessageSquare, Search, Mic } from "lucide-react";
 import { PublicShell } from "./PublicShell";
 import { PUBLICATIONS, type Publication } from "@/lib/publications";
@@ -114,109 +115,445 @@ export function PublicationArtwork({ slug }: { slug: string }) {
     </div>
   );
 }
+const samples = {
+  Python: `import os\nimport requests\n\n# Discover models available to your key.\nresponse = requests.get(\n    "https://kovagpt.com/api/v1/models",\n    headers={\n        "Authorization": "Bearer " + os.environ["KOVA_API_KEY"]\n    },\n    timeout=30,\n)\nresponse.raise_for_status()\n\nfor model in response.json().get("data", []):\n    print(model["id"])`,
+  JavaScript: `const response = await fetch(\n  "https://kovagpt.com/api/v1/models",\n  {\n    headers: {\n      Authorization: "Bearer " + process.env.KOVA_API_KEY,\n    },\n  },\n);\n\nif (!response.ok) throw new Error(await response.text());\nconst catalog = await response.json();\nconsole.log(catalog);`,
+  cURL: `curl https://kovagpt.com/api/v1/models \\\n  -H "Authorization: Bearer $KOVA_API_KEY"`,
+};
+function DemoCode() {
+  const [language, setLanguage] = useState<keyof typeof samples>("Python");
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="editor-code">
+      <div className="editor-code-bar">
+        <div role="group" aria-label="Code language">
+          {(Object.keys(samples) as (keyof typeof samples)[]).map((l) => (
+            <button
+              type="button"
+              key={l}
+              aria-pressed={language === l}
+              onClick={() => {
+                setLanguage(l);
+                setCopied(false);
+              }}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(samples[language]);
+              setCopied(true);
+            } catch {
+              setCopied(false);
+            }
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre aria-label={`${language} model catalog example`}>
+        <code>
+          {samples[language].split("\n").map((line, index) => (
+            <span className="editor-code-line" key={index}>
+              <span className="editor-line-number" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span
+                className={
+                  line.trim().startsWith("#")
+                    ? "syntax-comment"
+                    : line.includes('"')
+                      ? "syntax-string"
+                      : /import|const|for |if |print/.test(line)
+                        ? "syntax-keyword"
+                        : ""
+                }
+              >
+                {line || " "}
+              </span>
+              {"\n"}
+            </span>
+          ))}
+        </code>
+      </pre>
+      <div className="editor-code-foot">
+        GET /api/v1/models <span>Model discovery</span>
+      </div>
+    </div>
+  );
+}
+function ProductGallery() {
+  const [frame, setFrame] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused) return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const id = window.setInterval(() => {
+      if (!media.matches && !document.hidden) setFrame((i) => (i + 1) % 6);
+    }, 2000);
+    return () => clearInterval(id);
+  }, [paused]);
+  return (
+    <div className="editor-gallery">
+      {[0, 1, 2].map((lane) => (
+        <div className="editor-gallery-lane" key={lane}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <img
+              key={i}
+              src={`/marketing/scene-${i + 1}.jpg`}
+              alt={i === (frame + lane) % 6 ? "Image creation example" : ""}
+              aria-hidden={i !== (frame + lane) % 6}
+              className={i === (frame + lane) % 6 ? "active" : ""}
+            />
+          ))}
+        </div>
+      ))}
+      <div className="editor-gallery-shade" />
+      <div className="editor-gallery-caption">
+        <div>
+          <small>CREATE IMAGES</small>
+          <h2>See where an idea takes you.</h2>
+          <a href="/features/images">
+            Explore images <ArrowUpRight aria-hidden="true" />
+          </a>
+        </div>
+        <button type="button" aria-pressed={paused} onClick={() => setPaused(!paused)}>
+          {paused ? "Play" : "Pause"}
+        </button>
+      </div>
+    </div>
+  );
+}
+function GuideRows({ page }: { page: Exclude<MarketingLandingKey, "news"> }) {
+  return (
+    <div className="editor-rows">
+      {cards[page].map(([title, description, to], i) => (
+        <a href={to} key={to}>
+          <span className="editor-row-number">{String(i + 1).padStart(2, "0")}</span>
+          <div>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </div>
+          <ArrowUpRight aria-hidden="true" />
+        </a>
+      ))}
+    </div>
+  );
+}
+function WorkspaceStudy() {
+  return (
+    <div className="editor-workspace" aria-label="Illustrative project workspace">
+      <div className="workspace-top">
+        <span>
+          <Folder aria-hidden="true" /> Launch plan
+        </span>
+        <small>EXAMPLE PROJECT</small>
+      </div>
+      <div className="workspace-body">
+        <aside>
+          <span className="workspace-selected">Overview</span>
+          <span>Research</span>
+          <span>Drafts</span>
+          <span>Files</span>
+          <hr />
+          <small>PROJECT CONTEXT</small>
+          <p>
+            Audience notes
+            <br />
+            Brand guidelines
+            <br />
+            Launch brief
+          </p>
+        </aside>
+        <div className="workspace-document">
+          <small>PROJECT BRIEF</small>
+          <h3>
+            A clearer path
+            <br />
+            from idea to launch.
+          </h3>
+          <p>
+            Bring your notes together. Identify the open questions. Turn the next conversation into
+            a useful draft.
+          </p>
+          <div className="document-rule" />
+          <div className="document-rule short" />
+          <div className="workspace-chips">
+            <span>Research</span>
+            <span>Outline</span>
+            <span>Draft</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 export function MarketingLanding({ page }: { page: MarketingLandingKey }) {
   const item = MARKETING_LANDINGS[page];
+  const articles = PUBLICATIONS.filter((p) => p.section === "news");
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className={`marketing-page marketing-${page}`}>
-        <section className="marketing-hero">
-          <div>
-            <p className="marketing-eyebrow">{item.label}</p>
-            <h1>{item.title}</h1>
-            <p className="marketing-lede">{item.description}</p>
-            <a className="marketing-action" href={item.to}>
-              {item.action}
-              <ArrowUpRight aria-hidden="true" />
-            </a>
-          </div>
-          {page !== "news" && (
-            <div className={`marketing-art art-${page}`} aria-hidden="true">
-              {page === "developers" ? (
-                <pre>
-                  <code>
-                    <span>import</span> os
-                    <br />
-                    <span>import</span> requests
-                    <br />
-                    <br />
-                    response = requests.get(
-                    <br /> <b>"https://kovagpt.com/api/v1/models"</b>,<br /> headers=&#123;
-                    <br /> <b>"Authorization"</b>: <em>"Bearer "</em> +<br /> os.environ[
-                    <b>"KOVA_API_KEY"</b>]<br /> &#125;,
-                    <br /> timeout=<em>30</em>,<br />)<br />
-                    response.raise_for_status()
-                    <br />
-                    <span>print</span>(response.json())
-                  </code>
-                </pre>
-              ) : (
-                <>
-                  <div className="marketing-orbit" />
-                  <img src="/kova-logo.png" alt="" />
-                  <span>
-                    {page === "business"
-                      ? "Space for the work that matters."
-                      : page === "info"
-                        ? "A little context goes a long way."
-                        : "Think it. Make it. Keep going."}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-        </section>
-        {page === "news" ? (
-          <section className="marketing-collection" aria-label="Kovapedia articles">
-            <div className="news-grid">
-              {PUBLICATIONS.filter((p) => p.section === "news").map((p) => (
-                <a key={p.slug} href={`/news/${p.slug}`}>
-                  <PublicationArtwork slug={p.slug} />
-                  <small>Product · {p.publishedAt}</small>
-                  <h2>{p.title}</h2>
-                  <p>{p.description}</p>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`marketing-page editorial-v2 editorial-${page}`}
+      >
+        {page === "features" && (
+          <>
+            <section className="editor-heading">
+              <p className="editor-label">KOVAGPT / PRODUCTS</p>
+              <div className="editor-heading-split">
+                <h1>
+                  More ways
+                  <br />
+                  to make it happen.
+                </h1>
+                <div>
+                  <p>
+                    From the first question to the finished work. Explore what you can do with
+                    KovaGPT.
+                  </p>
+                  <a className="editor-pill" href="/">
+                    Open KovaGPT
+                    <ArrowUpRight aria-hidden="true" />
+                  </a>
+                </div>
+              </div>
+            </section>
+            <ProductGallery />
+            <section className="editor-product-row">
+              <div className="editor-section-copy">
+                <p className="editor-label">YOUR WORK, CONNECTED</p>
+                <h2>
+                  A place for the
+                  <br />
+                  whole project.
+                </h2>
+                <p>
+                  Keep the files, conversations, and instructions that belong together in one place.
+                </p>
+                <a href="/features/projects">
+                  Explore Projects
+                  <ArrowUpRight aria-hidden="true" />
                 </a>
-              ))}
+              </div>
+              <WorkspaceStudy />
+            </section>
+            <section className="editor-directory">
+              <div>
+                <p className="editor-label">EXPLORE KOVAGPT</p>
+                <h2>Find your next tool.</h2>
+              </div>
+              <GuideRows page="features" />
+            </section>
+          </>
+        )}
+        {page === "developers" && (
+          <>
+            <section className="editor-heading developer-heading">
+              <p className="editor-label">KOVAGPT / DEVELOPERS</p>
+              <h1>
+                Build something
+                <br />
+                worth using.
+              </h1>
+              <p className="editor-intro">
+                Bring KovaGPT into your application. Discover the models, explore the API, and start
+                with a scoped key.
+              </p>
+              <div className="editor-actions">
+                <a className="editor-pill" href="/developers/console">
+                  Open console
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+                <a href="/developers/quickstart">
+                  Read the quickstart
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              </div>
+            </section>
+            <section className="editor-developer-grid">
+              <div className="editor-section-copy">
+                <p className="editor-label">A SIMPLE START</p>
+                <h2>Your first request.</h2>
+                <p>
+                  List the models available to your key. Then use the documentation to request a
+                  quote and build your integration.
+                </p>
+                <a href="/developers/authentication">
+                  Authentication guide
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+                <div className="editor-api-note">
+                  Keep API keys on your server. Available operations depend on your account,
+                  budgets, and platform configuration.
+                </div>
+              </div>
+              <DemoCode />
+            </section>
+            <section className="editor-directory">
+              <div>
+                <p className="editor-label">DEVELOPER RESOURCES</p>
+                <h2>Go from here.</h2>
+              </div>
+              <GuideRows page="developers" />
+            </section>
+          </>
+        )}
+        {page === "business" && (
+          <>
+            <section className="editor-heading business-heading">
+              <p className="editor-label">KOVAGPT / BUSINESS</p>
+              <h1>
+                Less scattered.
+                <br />
+                More focused.
+              </h1>
+              <div className="editor-heading-split">
+                <p className="editor-intro">
+                  Research, writing, and everyday projects—brought into one workspace.
+                </p>
+                <a className="editor-pill" href="/contact-support">
+                  Contact sales
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              </div>
+            </section>
+            <div className="editor-business-stage">
+              <WorkspaceStudy />
             </div>
-          </section>
-        ) : (
-          <section className="marketing-collection" aria-label={`${item.label} guides`}>
-            <div className="marketing-section-title">
+            <section className="editor-business-copy">
               <h2>
-                {page === "features"
-                  ? "Find your next possibility."
-                  : page === "developers"
-                    ? "From first request to what’s next."
-                    : page === "business"
-                      ? "Built around your day."
-                      : "Start here. Go anywhere."}
+                Give the work
+                <br />
+                some context.
               </h2>
-              <a href={page === "developers" ? "/developers/docs" : "/features"}>
-                Explore the guides
+              <div>
+                <p>
+                  A brief. A set of notes. The documents you keep coming back to. Bring the right
+                  material into a project, then work through the next step with KovaGPT.
+                </p>
+                <a href="/features/projects">
+                  See how Projects work
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              </div>
+            </section>
+            <GuideRows page="business" />
+            <section className="editor-contact">
+              <p>
+                Find the right fit
+                <br />
+                for your work.
+              </p>
+              <a className="editor-pill" href="/contact-support">
+                Talk to us
                 <ArrowUpRight aria-hidden="true" />
               </a>
-            </div>
-            <div className="marketing-card-grid">
-              {cards[page].map(([title, description, to, Icon]) => (
-                <a className="marketing-card" href={to} key={to}>
-                  <Icon aria-hidden="true" />
-                  <h3>{title}</h3>
-                  <p>{description}</p>
-                  <span>
-                    Explore
-                    <ArrowUpRight aria-hidden="true" />
-                  </span>
+            </section>
+          </>
+        )}
+        {page === "info" && (
+          <>
+            <section className="editor-heading">
+              <p className="editor-label">KOVAGPT / INFO</p>
+              <h1>
+                A little guidance.
+                <br />A lot of possibility.
+              </h1>
+              <p className="editor-intro">
+                Get started, explore the tools, and understand your controls.
+              </p>
+            </section>
+            <section className="editor-info-layout">
+              <div className="editor-info-feature">
+                <p className="editor-label">START HERE</p>
+                <h2>
+                  Make your first
+                  <br />
+                  conversation count.
+                </h2>
+                <p>
+                  Tell KovaGPT what you’re working on, what you already know, and what a useful
+                  answer should look like.
+                </p>
+                <div className="editor-prompt">
+                  “Help me turn these notes into a clear plan. Start with the three most important
+                  next steps.”
+                </div>
+                <a className="editor-pill" href="/help/getting-started">
+                  Getting started
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              </div>
+              <GuideRows page="info" />
+            </section>
+            <section className="editor-info-bottom">
+              <div>
+                <p className="editor-label">YOUR CHOICES</p>
+                <h2>
+                  Your workspace.
+                  <br />
+                  Your controls.
+                </h2>
+              </div>
+              <p>
+                Learn how history, memory, and data settings work, and choose what’s right for you.
+                <a href="/data-controls">
+                  Explore data controls
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
+              </p>
+            </section>
+          </>
+        )}
+        {page === "news" && (
+          <>
+            <section className="editor-heading editor-news-heading">
+              <p className="editor-label">ARTICLES / KOVAPEDIA</p>
+              <h1>Inside KovaGPT.</h1>
+              <p className="editor-intro">
+                Stories about the models, the product, and what comes next.
+              </p>
+            </section>
+            <section className="editor-news-list" aria-label="Kovapedia articles">
+              {articles.map((article, i) => (
+                <a
+                  className={i === 0 ? "editor-lead-story" : "editor-story"}
+                  href={`/news/${article.slug}`}
+                  key={article.slug}
+                >
+                  <PublicationArtwork slug={article.slug} />
+                  <div>
+                    <small>
+                      {article.slug === "argon" || article.slug === "neon" ? "MODELS" : "PRODUCT"} /{" "}
+                      {article.publishedAt}
+                    </small>
+                    <h2>{article.title}</h2>
+                    <p>{article.description}</p>
+                    <span>
+                      Read article
+                      <ArrowUpRight aria-hidden="true" />
+                    </span>
+                  </div>
                 </a>
               ))}
-            </div>
+            </section>
+          </>
+        )}
+        {page !== "business" && (
+          <section className="editor-end">
+            <p>{page === "news" ? "Put the ideas to work." : "Make KovaGPT part of your day."}</p>
+            <a href="/pricing">
+              Explore plans
+              <ArrowUpRight aria-hidden="true" />
+            </a>
           </section>
         )}
-        <section className="marketing-closing">
-          <p>Make it your everyday AI.</p>
-          <a className="marketing-action" href="/pricing">
-            Explore plans
-            <ArrowUpRight aria-hidden="true" />
-          </a>
-        </section>
       </main>
     </PublicShell>
   );
