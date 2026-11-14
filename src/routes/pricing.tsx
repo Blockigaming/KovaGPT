@@ -131,16 +131,16 @@ function PricingPage() {
         <div className="kova-showcase-progress" aria-hidden="true" />
         <section
           aria-labelledby="pricing-title"
-          className="kova-showcase-hero mx-auto rounded-3xl px-5 py-14 text-center sm:py-20"
+          className="kova-pricing-hero mx-auto px-5 py-14 text-center sm:py-20"
         >
           <h1
             id="pricing-title"
             className="mx-auto mb-5 text-balance text-4xl font-semibold tracking-[-0.055em] sm:text-6xl"
           >
-            Plans for how you use KovaGPT
+            Pricing
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Start free, or choose Plus or Pro for more chat capacity and access to more tools.
+            Compare individual, business, and enterprise plans.
           </p>
           <div
             role="group"

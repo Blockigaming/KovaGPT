@@ -32,18 +32,8 @@ function DevelopersOverview() {
   return (
     <PublicPageView
       showcase
-      eyebrow="Developers"
-      title="Bring KovaGPT into your app"
-      summary="Generate text and images or create embeddings through the KovaGPT API. Manage keys and spending in one console."
-      primaryAction={{ label: "Open developer console", to: "/developers/console" }}
-      secondaryAction={{ label: "Read the quickstart", to: "/developers/quickstart" }}
-    >
-      <article className="kova-showcase-enter min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
-        <h2 className="text-xl font-semibold">Start with the model catalog</h2>
-        <p className="mt-3 leading-7 text-muted-foreground">
-          List the models available to your key before requesting a generation quote.
-        </p>
-        <div className="kova-showcase-screen mt-6 rounded-xl border border-border">
+      heroMedia={
+        <div className="kova-showcase-screen rounded-xl border border-border">
           <div
             role="group"
             aria-label="Code language"
@@ -71,6 +61,18 @@ function DevelopersOverview() {
             <code>{modelExamples[language]}</code>
           </pre>
         </div>
+      }
+      eyebrow="Developers"
+      title="Build with the KovaGPT API"
+      summary="Generate text and images or create embeddings through the KovaGPT API. Manage keys and spending in one console."
+      primaryAction={{ label: "Open developer console", to: "/developers/console" }}
+      secondaryAction={{ label: "Read the quickstart", to: "/developers/quickstart" }}
+    >
+      <article className="kova-showcase-enter min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
+        <h2 className="text-xl font-semibold">Start with the model catalog</h2>
+        <p className="mt-3 leading-7 text-muted-foreground">
+          List the models available to your key before requesting a generation quote.
+        </p>
       </article>
       <article className="kova-showcase-enter min-w-0 rounded-2xl border border-border bg-background p-6 sm:p-8">
         <h2 className="text-xl font-semibold">Set your budget before you run</h2>

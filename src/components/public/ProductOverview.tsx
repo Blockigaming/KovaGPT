@@ -57,19 +57,19 @@ export function ProductOverview() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="public-overview"
+        className="public-overview kova-xai-overview"
         data-ui-reference="grok-product-overview"
       >
         <div className="kova-showcase-progress" aria-hidden="true" />
         <div className="kova-showcase-hero">
           <PublicHero
             eyebrow=""
-            title="Meet KovaGPT."
+            title="AI for everything you do."
             description="Write a first draft, understand a new idea, or turn a project into a plan."
           >
             <PublicAction to="/">Open KovaGPT</PublicAction>
             <a href="#workflow-example" className="kova-button public-action is-secondary">
-              Explore the demo <span aria-hidden="true">↓</span>
+              Explore KovaGPT <span aria-hidden="true">↓</span>
             </a>
           </PublicHero>
         </div>

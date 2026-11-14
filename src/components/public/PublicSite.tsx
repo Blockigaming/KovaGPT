@@ -32,6 +32,7 @@ export function PublicPageView({
   secondaryAction,
   reference = "grok-editorial-page",
   showcase = false,
+  heroMedia,
 }: {
   eyebrow: string;
   title: string;
@@ -39,6 +40,7 @@ export function PublicPageView({
   children: ReactNode;
   review?: "legal" | "admin";
   showcase?: boolean;
+  heroMedia?: ReactNode;
   primaryAction?: { label: string; to: string };
   secondaryAction?: { label: string; to: string };
   reference?: "grok-editorial-page" | "claude-documentation" | "chatgpt-settings-form";
@@ -49,44 +51,50 @@ export function PublicPageView({
         data-ui-reference={reference}
         id="main-content"
         tabIndex={-1}
-        className="min-w-0 [overflow-wrap:anywhere]"
+        className={`min-w-0 [overflow-wrap:anywhere] ${heroMedia ? "kova-xai-api" : showcase ? "kova-editorial-product" : ""}`}
       >
         {showcase && <div className="kova-showcase-progress" aria-hidden="true" />}
         <section
           className={`relative overflow-hidden border-b border-border/70 ${showcase ? "kova-showcase-hero" : ""}`}
         >
-          <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
-            <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-.04em] text-balance sm:text-6xl">
-              {title}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground text-pretty">
-              {summary}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link
-                to={primaryAction.to as never}
-                data-public-primary
-                className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                {primaryAction.label} <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-              </Link>
-              {secondaryAction ? (
+          <div
+            className={`relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24 ${heroMedia ? "kova-split-hero" : ""}`}
+          >
+            <div>
+              <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>
+              <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-.04em] text-balance sm:text-6xl">
+                {title}
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground text-pretty">
+                {summary}
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
-                  to={secondaryAction.to as never}
-                  className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  to={primaryAction.to as never}
+                  data-public-primary
+                  className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  {secondaryAction.label}
+                  {primaryAction.label}{" "}
+                  <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
                 </Link>
+                {secondaryAction ? (
+                  <Link
+                    to={secondaryAction.to as never}
+                    className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {secondaryAction.label}
+                  </Link>
+                ) : null}
+              </div>
+              {review ? (
+                <p className="mt-5 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
+                  {review === "legal"
+                    ? "Draft — legal review required"
+                    : "Verified content required before publication"}
+                </p>
               ) : null}
             </div>
-            {review ? (
-              <p className="mt-5 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
-                {review === "legal"
-                  ? "Draft — legal review required"
-                  : "Verified content required before publication"}
-              </p>
-            ) : null}
+            {heroMedia}
           </div>
         </section>
         <section className="bg-muted/25">
@@ -116,7 +124,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         data-ui-reference="grok-editorial-page"
         id="main-content"
         tabIndex={-1}
-        className="min-w-0 [overflow-wrap:anywhere]"
+        className={`min-w-0 [overflow-wrap:anywhere] ${heroMedia ? "kova-xai-api" : showcase ? "kova-editorial-product" : ""}`}
       >
         <section className="relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
