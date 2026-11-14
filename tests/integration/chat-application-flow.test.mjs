@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -679,6 +680,8 @@ function composer(f) {
     conversations: [],
     editingMessage: null,
     pendingWorkflowSkill: null,
+    projectContext: null,
+    pluginContext: null,
     mode: "instant",
     // This suite exercises the legacy OpenAI Responses transport explicitly.
     // Hosted aliases have separate request/routing qualification; never label
@@ -730,6 +733,7 @@ function composer(f) {
     consumeChatSse,
     chatResponseError,
     withResponsePresentation,
+    extractResponseFollowups,
     AbortController,
     DOMException,
     Error,
@@ -877,6 +881,7 @@ test("actual application guard clamps final output and permits only one quoted O
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": "new-attempt-123",
+        "X-Kova-Response-Followups": "1",
         "x-kova-acceptance-operation": a.plan.operationId,
       },
       body: f.applicationBody,
