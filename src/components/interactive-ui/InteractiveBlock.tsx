@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { StudyCards } from "./StudyCards";
+import { ResponseSpeech } from "./ResponseSpeech";
 import { ResponseMemoryGame } from "./ResponseMemoryGame";
 import { ResponseFiles } from "./ResponseFiles";
 import { ResponsePattern } from "./ResponsePattern";
@@ -62,6 +63,7 @@ function preserveActionFocus(event: React.PointerEvent<HTMLButtonElement>) {
 }
 
 export type InteractiveBlockProps = {
+  ownerId?: string;
   block: Block;
   /** Stable per-response key; state and submissions persist under it. */
   storageKey: string | null;
@@ -76,6 +78,7 @@ export function InteractiveBlock({
   storageKey,
   onSubmit,
   disabledReason,
+  ownerId,
 }: InteractiveBlockProps) {
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
@@ -127,6 +130,10 @@ export function InteractiveBlock({
     return <ResponseSimulation key={JSON.stringify(block)} block={block} />;
   if (block.type === "memory-game")
     return <ResponseMemoryGame key={JSON.stringify(block)} block={block} />;
+  if (block.type === "speech")
+    return (
+      <ResponseSpeech key={JSON.stringify([ownerId, block])} block={block} ownerId={ownerId} />
+    );
   if (block.type === "files") return <ResponseFiles key={JSON.stringify(block)} block={block} />;
   if (block.type === "diagram") return <ResponseDiagram block={block} />;
   if (block.type === "pattern")

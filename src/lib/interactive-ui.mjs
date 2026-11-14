@@ -530,6 +530,20 @@ function validateMemoryGame(value) {
   };
 }
 
+function validateSpeechBlock(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "script"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!str(value.script, 5000)) return null;
+  return {
+    version: 1,
+    type: "speech",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    script: value.script.trim(),
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -541,6 +555,7 @@ export function validateInteractiveBlock(value) {
     if (value.type === "diagram") return validateDiagram(value);
     if (value.type === "pattern") return validatePattern(value);
     if (value.type === "files") return validateFileBundle(value);
+    if (value.type === "speech") return validateSpeechBlock(value);
     if (value.type === "memory-game") return validateMemoryGame(value);
     if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
@@ -660,4 +675,5 @@ diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes
 pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
 files: {"version":1,"type":"files","id":"notes","title":"Research notes","files":[{"name":"notes.md","content":"# Notes"}]}. Use for actual text, Markdown, CSV, TSV, JSON, YAML, TOML or notebook output; no paths or external URLs. A user can preview or download individual files or a ZIP. Do not claim files have already been downloaded.
 memory-game: {"version":1,"type":"memory-game","id":"pairs","title":"Find the pairs","pairs":[{"first":"2 + 2","second":"4"},{"first":"3 + 3","second":"6"}]}. Use 2–12 distinct pairs of short labels. Labels may match within one pair, and cannot be reused across different pairs.
+speech: {"version":1,"type":"speech","id":"narration","title":"Narration","script":"Welcome to the lesson."}. Use for spoken output when requested. Audio is generated only when the user clicks Generate audio, and depends on their account allowance. Do not claim an audio file already exists.
 IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations, diagrams and pattern previews work locally; they do not execute external actions, grant access, or prove success.`;

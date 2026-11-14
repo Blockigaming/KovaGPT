@@ -89,6 +89,7 @@ export type MemoryGameBlock = StudyDeck & {
   type: "memory-game";
   pairs: { first: string; second: string }[];
 };
+export type SpeechBlock = StudyDeck & { type: "speech"; script: string };
 export type InteractiveBlock =
   | InteractiveForm
   | InteractiveTable
@@ -97,7 +98,8 @@ export type InteractiveBlock =
   | DiagramBlock
   | PatternBlock
   | FileBundleBlock
-  | MemoryGameBlock;
+  | MemoryGameBlock
+  | SpeechBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };

@@ -36,6 +36,7 @@ function fixture(onSubmit, block = nextSteps) {
         "./ResponseDiagram": { ResponseDiagram: () => null },
         "./ResponsePattern": { ResponsePattern: () => null },
         "./ResponseFiles": { ResponseFiles: () => null },
+        "./ResponseSpeech": { ResponseSpeech: () => null },
         "./ResponseMemoryGame": { ResponseMemoryGame: () => null },
         "./ResponseSimulation": { ResponseSimulation: () => null },
         "lucide-react": { Check: "check-icon" },

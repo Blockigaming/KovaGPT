@@ -213,3 +213,11 @@ test("file bundles preserve the payload and reject unsafe, duplicate or nested n
     null,
   );
 });
+
+test("speech blocks carry only a bounded transcript and no provider instructions", () => {
+  const speech = { version: 1, type: "speech", id: "speech", title: "Narration", script: "Hello." };
+  assert.equal(validateInteractiveBlock(speech)?.script, "Hello.");
+  assert.equal(validateInteractiveBlock({ ...speech, voiceId: "unapproved" }), null);
+  assert.equal(validateInteractiveBlock({ ...speech, url: "https://example.com/audio.mp3" }), null);
+  assert.equal(validateInteractiveBlock({ ...speech, script: "x".repeat(5001) }), null);
+});
