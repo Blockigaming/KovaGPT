@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 
-const source = readFileSync("src/routes/pricing.tsx", "utf8");
+const source = readFileSync("src/components/public/PricingPlans.tsx", "utf8");
 const css = readFileSync("src/components/account-surfaces.css", "utf8");
 const compiled = ts.transpileModule(source.slice(source.indexOf("function PlanCard(")), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },

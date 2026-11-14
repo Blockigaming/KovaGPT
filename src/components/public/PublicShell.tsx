@@ -4,7 +4,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { PublicFooter } from "@/components/PublicFooter";
+import { MarketingHeader, MarketingFooter } from "./MarketingChrome";
 import { Button } from "@/components/ui/button";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
@@ -275,14 +275,15 @@ export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <div
       ref={shellRef}
+      id="kx"
       data-public-shell
       data-ui-reference="grok-public-shell"
       data-ui="modern"
-      className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
+      className="marketing-interior flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
     >
-      <PublicHeader />
+      <MarketingHeader />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
-      <PublicFooter />
+      <MarketingFooter />
     </div>
   );
 }

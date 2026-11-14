@@ -130,6 +130,10 @@ function fixture(pathname = "/features") {
           return focus.requestDrawerNavigationFocus(request);
         },
       },
+      "./MarketingChrome": {
+        MarketingHeader: "MarketingHeader",
+        MarketingFooter: "MarketingFooter",
+      },
       "./public-foundation.css": {},
       "./spec400-public.css": {},
     },

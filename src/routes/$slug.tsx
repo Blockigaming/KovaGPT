@@ -1,3 +1,8 @@
+import {
+  MarketingLanding,
+  MARKETING_LANDINGS,
+  type MarketingLandingKey,
+} from "@/components/public/MarketingLanding";
 import { createFileRoute, notFound, Link, redirect } from "@tanstack/react-router";
 import { PUBLICATIONS, PUBLICATION_SECTIONS } from "@/lib/publications";
 import { PublicPageView, PublicSite } from "@/components/public/PublicSite";
@@ -260,6 +265,10 @@ const label = (value: string) =>
     .join(" ");
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
+    const marketingSlug =
+      params.slug === "products" ? "features" : params.slug === "articles" ? "news" : params.slug;
+    if (Object.hasOwn(MARKETING_LANDINGS, marketingSlug))
+      return { kind: "marketing" as const, slug: marketingSlug as MarketingLandingKey };
     const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${params.slug}`);
     if (websitePage) return { kind: "website" as const, item: websitePage };
     if (["review", "bot", "legal"].includes(params.slug))
@@ -304,6 +313,16 @@ export const Route = createFileRoute("/$slug")({
   },
   head: ({ loaderData: data }) => {
     if (!data) return {};
+    if (data.kind === "marketing") {
+      const item = MARKETING_LANDINGS[data.slug];
+      return {
+        meta: [
+          { title: `${item.label} | KovaGPT` },
+          { name: "description", content: item.description },
+        ],
+        links: [{ rel: "canonical", href: `https://kovagpt.com/${data.slug}` }],
+      };
+    }
     if (data.kind === "website") return websitePageHead(data.item);
     if (data.kind === "review" || data.kind === "review-directory")
       return {
@@ -365,6 +384,7 @@ export const Route = createFileRoute("/$slug")({
 });
 function Page() {
   const data = Route.useLoaderData();
+  if (data.kind === "marketing") return <MarketingLanding page={data.slug} />;
   if (data.kind === "website") return <PublicWebsiteArticle item={data.item} />;
   if (data.kind === "review") return <ReviewWorkspace key={data.item.slug} page={data.item} />;
   if (data.kind === "review-directory")
@@ -412,10 +432,14 @@ function Page() {
       title={item.title}
       summary={item.summary}
       review={item.review}
+      showcase={item.slug === "features" || item.slug === "business"}
       {...actions}
     >
       {item.sections.map((section: { title: string; body: string }) => (
-        <article key={section.title} className="rounded-2xl border border-border bg-background p-6">
+        <article
+          key={section.title}
+          className={`rounded-2xl border border-border bg-background p-6 ${item.slug === "features" || item.slug === "business" ? "kova-showcase-enter" : ""}`}
+        >
           <h2 className="text-xl font-semibold">{section.title}</h2>
           <p className="mt-3 leading-7 text-muted-foreground">{section.body}</p>
         </article>

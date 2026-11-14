@@ -31,6 +31,10 @@ function fixture(initialPath = "/features") {
     {
       ...dependencies,
       "@/components/PublicFooter": { PublicFooter },
+      "./MarketingChrome": {
+        MarketingHeader: "MarketingHeader",
+        MarketingFooter: "MarketingFooter",
+      },
       "./public-foundation.css": {},
       "./spec400-public.css": {},
     },

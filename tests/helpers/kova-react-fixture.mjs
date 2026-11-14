@@ -117,6 +117,7 @@ export function reactFixture(path, select, options = {}) {
     __env: {},
     ...options.globals,
     require: (name) => {
+      if (name.endsWith(".css")) return {};
       assert.ok(Object.hasOwn(modules, name), `Unexpected import ${name}`);
       return modules[name];
     },

@@ -52,7 +52,7 @@ test("interactive Voice uses the scoped dialog without browser speech APIs, prov
   const capabilityRegistry = read("src/lib/capability-registry.ts");
   const chat = read("src/components/ChatInput.tsx");
   const message = read("src/components/ChatMessage.tsx");
-  const pricing = read("src/routes/pricing.tsx");
+  const pricing = read("src/components/public/PricingPlans.tsx");
   const start = read("src/start.ts");
   const server = read("src/server.ts");
 
