@@ -75,7 +75,13 @@ export type FileBundleBlock = StudyDeck & {
   files: { name: string; content: string }[];
 };
 export type InteractiveBlock =
-  InteractiveForm | InteractiveTable | StudyBlock | SimulationBlock | DiagramBlock | PatternBlock;
+  | InteractiveForm
+  | InteractiveTable
+  | StudyBlock
+  | SimulationBlock
+  | DiagramBlock
+  | PatternBlock
+  | FileBundleBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };
