@@ -23,10 +23,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-chart-utils";
+import "./chat-chart.css";
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
@@ -44,30 +44,14 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   );
   const [type, setType] = useState<ChartType>(spec.type);
   const [table, setTable] = useState(false);
-  const [chartWidth, setChartWidth] = useState(0);
   const chartTypeId = useId();
   const colors = spec.colors?.length ? spec.colors : DEFAULT_COLORS;
-  const legendBeside =
-    chartWidth >= 600 && (type === "pie" || type === "donut" ? spec.data.length : keys.length) <= 8;
-  const legendLabel = (value: string) => (
-    <span style={{ color: "var(--foreground)", overflowWrap: "anywhere" }}>{value}</span>
-  );
-  const legend = legendBeside ? (
-    <Legend
-      layout="vertical"
-      align="right"
-      verticalAlign="middle"
-      width={120}
-      formatter={legendLabel}
-    />
-  ) : (
-    <Legend
-      layout="horizontal"
-      verticalAlign="bottom"
-      formatter={legendLabel}
-      wrapperStyle={{ maxHeight: 72, overflowY: "auto", overflowWrap: "anywhere" }}
-    />
-  );
+  const circular = type === "pie" || type === "donut";
+  const legendLabels = circular
+    ? spec.data.map((row, index) => String(row[xKey] ?? `Item ${index + 1}`))
+    : type === "scatter"
+      ? keys.slice(0, 1)
+      : keys;
   const save = (content: string, mime: string, extension: string) => {
     let url: string | null = null;
     let anchor: HTMLAnchorElement | null = null;
@@ -107,7 +91,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
 
   return (
     <figure
-      className="my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
+      className="kova-chart my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
       aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -165,79 +149,91 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         </div>
       ) : (
         <div
-          className="h-56 w-full sm:h-72"
-          role="img"
-          aria-label={`${type} chart with ${spec.data.length} data points`}
+          className="kova-chart-layout"
+          data-compact-legend={legendLabels.length > 8 ? "true" : undefined}
         >
-          <ResponsiveContainer width="100%" height="100%" onResize={setChartWidth}>
-            {type === "pie" || type === "donut" ? (
-              <PieChart>
-                {tooltip}
-                {legend}
-                <Pie
-                  isAnimationActive={false}
-                  data={spec.data}
-                  dataKey={keys[0]}
-                  nameKey={xKey}
-                  innerRadius={type === "donut" ? "45%" : 0}
-                  outerRadius="75%"
-                  label
-                >
-                  {spec.data.map((_, index) => (
-                    <Cell key={index} fill={colors[index % colors.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            ) : type === "bar" ? (
-              <BarChart data={spec.data}>
-                {axes}
-                {tooltip}
-                {legend}
-                {keys.map((key, index) => (
-                  <Bar
+          <div
+            className="h-56 w-full min-w-0 sm:h-72"
+            role="img"
+            aria-label={`${type} chart with ${spec.data.length} data points`}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              {circular ? (
+                <PieChart>
+                  {tooltip}
+                  <Pie
                     isAnimationActive={false}
-                    key={key}
-                    dataKey={key}
-                    fill={colors[index % colors.length]}
-                    radius={[4, 4, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            ) : type === "scatter" ? (
-              <ScatterChart>
-                {axes}
-                {tooltip}
-                {legend}
-                {keys.slice(0, 1).map((key, index) => (
-                  <Scatter
-                    isAnimationActive={false}
-                    key={key}
-                    name={key}
                     data={spec.data}
-                    dataKey={key}
-                    fill={colors[index]}
-                  />
-                ))}
-              </ScatterChart>
-            ) : (
-              <LineChart data={spec.data}>
-                {axes}
-                {tooltip}
-                {legend}
-                {keys.map((key, index) => (
-                  <Line
-                    isAnimationActive={false}
-                    key={key}
-                    type="monotone"
-                    dataKey={key}
-                    stroke={colors[index % colors.length]}
-                    strokeWidth={2}
-                    activeDot={{ r: 5 }}
-                  />
-                ))}
-              </LineChart>
-            )}
-          </ResponsiveContainer>
+                    dataKey={keys[0]}
+                    nameKey={xKey}
+                    innerRadius={type === "donut" ? "45%" : 0}
+                    outerRadius="75%"
+                    label
+                  >
+                    {spec.data.map((_, index) => (
+                      <Cell key={index} fill={colors[index % colors.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              ) : type === "bar" ? (
+                <BarChart data={spec.data}>
+                  {axes}
+                  {tooltip}
+                  {keys.map((key, index) => (
+                    <Bar
+                      isAnimationActive={false}
+                      key={key}
+                      dataKey={key}
+                      fill={colors[index % colors.length]}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              ) : type === "scatter" ? (
+                <ScatterChart>
+                  {axes}
+                  {tooltip}
+                  {keys.slice(0, 1).map((key, index) => (
+                    <Scatter
+                      isAnimationActive={false}
+                      key={key}
+                      name={key}
+                      data={spec.data}
+                      dataKey={key}
+                      fill={colors[index]}
+                    />
+                  ))}
+                </ScatterChart>
+              ) : (
+                <LineChart data={spec.data}>
+                  {axes}
+                  {tooltip}
+                  {keys.map((key, index) => (
+                    <Line
+                      isAnimationActive={false}
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      stroke={colors[index % colors.length]}
+                      strokeWidth={2}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+          <ul className="kova-chart-legend" aria-label="Chart legend">
+            {legendLabels.map((label, index) => (
+              <li key={`${index}:${label}`}>
+                <span
+                  aria-hidden="true"
+                  style={{ backgroundColor: colors[index % colors.length] }}
+                />
+                {label}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {(table || keys.length === 0) && (
