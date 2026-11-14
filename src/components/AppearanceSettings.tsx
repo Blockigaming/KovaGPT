@@ -79,6 +79,15 @@ export function AppearanceSettings({
         ["reduced", "Reduced"],
       ],
     },
+    {
+      key: "contrast",
+      label: "Contrast",
+      hint: "Increase the contrast of controls and borders.",
+      options: [
+        ["system", "System"],
+        ["high", "Increased"],
+      ],
+    },
   ] as const;
   return (
     <div className="kova-appearance-settings" data-ui-reference="chatgpt.settings.appearance">

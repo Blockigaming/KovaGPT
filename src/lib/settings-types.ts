@@ -24,6 +24,7 @@ export type Settings = {
   readingWidth: 680 | 760 | 900;
   density: "comfortable" | "compact";
   motion: "full" | "reduced";
+  contrast?: "system" | "high";
   rememberAcross: boolean;
   automaticMemory?: boolean;
   webSearch: boolean;

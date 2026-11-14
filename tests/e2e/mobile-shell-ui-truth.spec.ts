@@ -1,7 +1,79 @@
 import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { functionNames } from "./actual-app-fixture";
+import { fixture, functionNames, owner } from "./actual-app-fixture";
+
+test("mobile chat restores the reading position after switching conversations", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 1024, "compact shell");
+  await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
+  await page.addInitScript((userId) => {
+    const now = Date.now();
+    const chats = [
+      {
+        id: "reading-position",
+        title: "Reading position",
+        messages: [
+          { id: "prompt", role: "user", content: "Read these passages." },
+          ...Array.from({ length: 18 }, (_, index) => ({
+            id: `passage-${index}`,
+            role: "assistant",
+            content: `Passage ${index + 1}. ${"The previous page should stay available. ".repeat(4)}`,
+            timestamp: now,
+          })),
+        ],
+      },
+      {
+        id: "different-chat",
+        title: "Different chat",
+        messages: [
+          { id: "different-message", role: "assistant", content: "A separate conversation." },
+        ],
+      },
+    ].map((chat) => ({ ...chat, mode: "instant", createdAt: now, updatedAt: now }));
+    localStorage.setItem(`nova-gpt-conversations-v3:user:${userId}`, JSON.stringify(chats));
+    localStorage.setItem(
+      `nova-gpt-settings-v1:${userId}`,
+      JSON.stringify({ interfaceAccent: "#12abcd", contrast: "high" }),
+    );
+  }, owner);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  const openChat = async (title: string) => {
+    await page.getByRole("button", { name: "Open menu" }).tap();
+    await drawer.getByRole("button", { name: `Open chat ${title}` }).tap();
+    await expect(drawer).toBeHidden();
+  };
+  await openChat("Reading position");
+  const transcript = page.locator("[data-chat-transcript]");
+  const bubble = transcript.getByLabel("Sent prompt");
+  await expect(bubble).toHaveCSS("background-color", "rgb(18, 171, 205)");
+  await expect(bubble).toHaveCSS("color", "rgb(0, 0, 0)");
+  const passage = transcript.locator('[data-message-id="passage-5"]');
+  await expect(passage).toBeAttached();
+  await expect.poll(() => transcript.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await passage.evaluate((element) =>
+    element.scrollIntoView({ block: "start", behavior: "instant" }),
+  );
+  await expect(passage).toBeInViewport();
+  const passageOffset = () =>
+    passage.evaluate((element) => {
+      const viewport = element.closest("[data-chat-transcript]")!;
+      return element.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+    });
+  const originalOffset = await passageOffset();
+  await openChat("Different chat");
+  await expect(transcript.getByText("A separate conversation.")).toBeVisible();
+  await openChat("Reading position");
+  await expect(passage).toBeInViewport();
+  await expect.poll(passageOffset).toBeCloseTo(originalOffset, 0);
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).not.toBeFocused();
+  await expect(page.locator("html")).toHaveAttribute("data-kova-contrast", "high");
+});
 
 test.describe("mobile shell UI truth", () => {
   test.beforeEach(async ({ page }) => {

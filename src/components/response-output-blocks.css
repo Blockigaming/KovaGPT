@@ -134,6 +134,22 @@
   max-width: 100%;
   overscroll-behavior-x: contain;
 }
+.kova-response-math {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  padding-block: 0.25em;
+}
+.kova-response-math > .katex {
+  display: inline-block;
+  min-width: max-content;
+}
+.kova-response-math:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
 .kova-response-image {
   display: block;
   max-width: 100%;

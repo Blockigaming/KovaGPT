@@ -275,6 +275,27 @@ test("every transition frame and breakpoint resize preserves the cached text anc
   assert.equal(f.element.style.overflowAnchor, "auto");
 });
 
+test("reopening a chat restores its reading line after pending scroll and remount", () => {
+  const original = fixture();
+  const options = { isCurrent: () => true, isFollowingBottom: () => false };
+  const first = controller(original.element, options);
+  original.readInside(12, 3, 5);
+  original.emit("scroll");
+  const saved = first.snapshot();
+  first.dispose();
+  assert.equal(saved.messageId, "message-12");
+  assert.equal(saved.text.node, undefined);
+
+  const reopened = fixture();
+  reopened.element.clientWidth = 590;
+  const second = controller(reopened.element, { ...options, initialAnchor: saved });
+  const restored = capture(reopened.element);
+  assert.equal(restored.messageId, saved.messageId);
+  assert.equal(restored.text.viewportOffset, saved.text.viewportOffset);
+  assert.equal(second.snapshot().text.signature, saved.text.signature);
+  second.dispose();
+});
+
 test("a browser clamp scroll before ResizeObserver does not replace the pre-reflow passage", () => {
   const f = fixture();
   f.readInside();

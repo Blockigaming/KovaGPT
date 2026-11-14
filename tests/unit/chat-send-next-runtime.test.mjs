@@ -1267,7 +1267,11 @@ test("no rejected or queued draft leaves the ordinary streaming composer hint av
   const nextPanel = React.createElement("section", null, "Queued next message");
   f.context.nextPromptPanel = nextPanel;
   assert.equal(f.context.readComposerPromptPanel(), nextPanel);
-  assert.equal((source.match(/nextPromptPanel=\{composerPromptPanel\}/g) ?? []).length, 2);
+  assert.match(
+    source,
+    /const composer = \(\s*<ChatInput[\s\S]*?nextPromptPanel=\{composerPromptPanel\}/,
+  );
+  assert.equal((source.match(/\{composer\}/g) ?? []).length, 2);
 });
 
 test("kept-version previews are bounded while Restore retains exact full text and all attachment references", async () => {

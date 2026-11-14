@@ -240,3 +240,21 @@
   --shadow-composer: none;
   --modern-shadow: none;
 }
+
+:root[data-kova-contrast="high"] {
+  --ring: var(--foreground);
+  --border-subtle: color-mix(in srgb, var(--foreground) 55%, var(--background));
+  --border-strong: var(--foreground);
+  --text-secondary: var(--foreground);
+  --text-disabled: var(--muted-foreground);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ring: var(--foreground);
+    --border-subtle: color-mix(in srgb, var(--foreground) 55%, var(--background));
+    --border-strong: var(--foreground);
+    --text-secondary: var(--foreground);
+    --text-disabled: var(--muted-foreground);
+  }
+}

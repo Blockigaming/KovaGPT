@@ -35,6 +35,7 @@ for (const [width, height] of viewports) {
       const content = [
         "## Responsive report",
         "AnUnbrokenToken".repeat(30),
+        "The prices are $10 and $25. Inline math: $$x^2$$.",
         "",
         "| Category | Measurement |",
         "| --- | --- |",
@@ -45,6 +46,10 @@ for (const [width, height] of viewports) {
         "```text",
         "long_code_".repeat(40),
         "```",
+        "",
+        "$$",
+        "a + " + "\\frac{x^2 + y^2}{x + y} + ".repeat(16) + "z",
+        "$$",
         "",
         "```kova-chart",
         JSON.stringify({
@@ -118,19 +123,35 @@ for (const [width, height] of viewports) {
         releaseReply();
       }
       await expect(page.getByRole("heading", { name: "Responsive report" })).toBeAttached();
+      await expect(page.getByText("The prices are $10 and $25.", { exact: false })).toBeAttached();
+      const equation = page.getByRole("group", { name: "Equation" });
+      await expect(equation.locator("math")).toBeAttached();
+      const overflow = await equation.evaluate((element) => ({
+        scroll: element.scrollWidth - element.clientWidth,
+        mode: getComputedStyle(element).overflowX,
+      }));
+      expect(overflow.scroll).toBeGreaterThan(0);
+      expect(overflow.mode).toBe("auto");
       const transcript = page.locator("[data-chat-transcript]");
       await expect
         .poll(() => transcript.evaluate((el) => el.scrollHeight - el.clientHeight))
         .toBeGreaterThan(0);
 
-      const header = page.locator(".kova-topbar:visible").first();
-      const headerHeight = (await header.boundingBox())!.height;
-      await html.evaluate((element) => element.classList.toggle("dark"));
-      await expect.poll(async () => (await header.boundingBox())?.height).toBe(headerHeight);
-      await html.evaluate(
-        (element, mode) => element.classList.toggle("dark", mode === "dark"),
-        theme,
+      const header = page.locator(
+        width < 1024
+          ? ".kova-chat-main > .kova-topbar:not(.kova-desktop-topbar)"
+          : ".kova-desktop-topbar",
       );
+      const heights = await header.evaluate((element) => {
+        const root = element.ownerDocument.documentElement;
+        const before = element.getBoundingClientRect().height;
+        root.classList.toggle("dark");
+        const after = element.getBoundingClientRect().height;
+        root.classList.toggle("dark");
+        return { before, after };
+      });
+      expect(heights.before).toBeGreaterThan(0);
+      expect(heights.after).toBe(heights.before);
 
       const chart = page.getByRole("figure", { name: "Interactive chart: Measurements" });
       await chart.getByRole("button", { name: "Table", exact: true }).click();

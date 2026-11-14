@@ -103,7 +103,7 @@ function fixture({ unmountOnNavigate = false, createLocalBranch = false } = {}) 
       },
     },
     "@/lib/chat-reading-anchor": {
-      createTranscriptReadingAnchorController: () => ({ dispose() {} }),
+      createTranscriptReadingAnchorController: () => ({ snapshot: () => null, dispose() {} }),
     },
   });
   const scope = JSON.stringify(["owner-a", active.id, true]);
@@ -142,6 +142,7 @@ function fixture({ unmountOnNavigate = false, createLocalBranch = false } = {}) 
     openChatWorkspace() {},
     scrollRef,
     nearBottomRef: { current: true },
+    readingPositionsRef: { current: new Map() },
     readingAnchorControllerRef: { current: null },
     transcriptScope: scope,
     transcriptScopeRef,

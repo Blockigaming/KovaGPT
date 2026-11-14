@@ -128,7 +128,8 @@
   border-radius: var(--kova-radius-message);
   max-width: 100%;
   border: 0;
-  background: var(--surface-secondary);
+  background: var(--kova-message-accent, var(--surface-secondary));
+  color: var(--kova-message-accent-text, var(--foreground));
   font-family: var(--font-ui);
   line-height: 1.5;
 }
