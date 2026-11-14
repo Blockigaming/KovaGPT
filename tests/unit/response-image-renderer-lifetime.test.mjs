@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { observeTableOverflow } from "../../src/lib/table-overflow.ts";
 import {
   createHookHarness,
@@ -58,6 +60,9 @@ function fixture(initial = {}) {
     react,
     "react-markdown": { __esModule: true, default: ReactMarkdown, defaultUrlTransform },
     "remark-gfm": { __esModule: true, default: remarkGfm },
+    "remark-math": { __esModule: true, default: remarkMath },
+    "rehype-katex": { __esModule: true, default: rehypeKatex },
+    "katex/dist/katex.min.css": {},
     "./ResponseImage": image,
     "lucide-react": icons,
     "./response-output-blocks.css": {},
