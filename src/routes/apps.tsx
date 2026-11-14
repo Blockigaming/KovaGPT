@@ -1405,7 +1405,8 @@ function AppsPage() {
         : githubLoadError ||
             otherConnections.error ||
             [...WORKING_IDS]
-              .filter((id) => !CONNECTION_FLOWS[id] || configuredOf(id))
+              // Plaid status is owned by the dedicated Finances view.
+              .filter((id) => id !== "plaid" && (!CONNECTION_FLOWS[id] || configuredOf(id)))
               .some((id) => stateOf(id) === "temporarily_unavailable")
           ? "unavailable"
           : !visibleGoogleStatus || !visibleGithubData
