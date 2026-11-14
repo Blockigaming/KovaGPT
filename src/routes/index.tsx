@@ -3209,6 +3209,16 @@ function KovaGPT() {
       </Suspense>
     ) : null;
 
+  const composerContext = tempChat
+    ? {}
+    : {
+        projectContext,
+        pluginContext,
+        onProjectContext: (value: typeof projectContext) =>
+          setProjectSelection(value && { owner: userKey, chat: activeId, value }),
+        onPluginContext: (value: typeof pluginContext) =>
+          setPluginSelection(value && { owner: userKey, chat: activeId, value }),
+      };
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
       <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
@@ -3516,24 +3526,7 @@ function KovaGPT() {
                     userTier={tier}
                     canChangeAgent={!active?.kova}
                     showModelStatus
-                    projectContext={tempChat ? null : projectContext}
-                    onProjectContext={
-                      tempChat
-                        ? undefined
-                        : (value) =>
-                            setProjectSelection(
-                              value ? { owner: userKey, chat: activeId, value } : null,
-                            )
-                    }
-                    pluginContext={tempChat ? null : pluginContext}
-                    onPluginContext={
-                      tempChat
-                        ? undefined
-                        : (value) =>
-                            setPluginSelection(
-                              value ? { owner: userKey, chat: activeId, value } : null,
-                            )
-                    }
+                    {...composerContext}
                     showChooseProject
                     showResources={!chatStarted}
                     savedConversations={userKey && principalReady ? conversations : []}
@@ -3670,24 +3663,7 @@ function KovaGPT() {
                     userTier={tier}
                     canChangeAgent={!active?.kova}
                     showModelStatus
-                    projectContext={tempChat ? null : projectContext}
-                    onProjectContext={
-                      tempChat
-                        ? undefined
-                        : (value) =>
-                            setProjectSelection(
-                              value ? { owner: userKey, chat: activeId, value } : null,
-                            )
-                    }
-                    pluginContext={tempChat ? null : pluginContext}
-                    onPluginContext={
-                      tempChat
-                        ? undefined
-                        : (value) =>
-                            setPluginSelection(
-                              value ? { owner: userKey, chat: activeId, value } : null,
-                            )
-                    }
+                    {...composerContext}
                     showChooseProject
                     showResources={!chatStarted}
                     savedConversations={userKey && principalReady ? conversations : []}
