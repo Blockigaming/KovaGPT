@@ -3623,4 +3623,6 @@
   }
 }
 
-#kx .api-scroll[data-paused="true"] { animation-play-state: paused !important; }
+#kx .api-scroll[data-paused="true"] {
+  animation-play-state: paused !important;
+}
