@@ -54,7 +54,7 @@ import {
   imageSheetKind,
   type ImageSheetKind,
 } from "@/lib/ai/image-prompt-policy.mjs";
-import { createToolActivityEvent } from "@/lib/ai/activity.server";
+import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
 import { normalizeSourceRetrievedAt } from "@/lib/response-source-time.mjs";
 
@@ -410,7 +410,19 @@ async function handleImageRequest(
       // Do not return this promise from start: stream cancellation must remain
       // available while the provider is still producing the image.
       const generate = async () => {
+        const activity = createToolActivityEvent(
+          "image_generation",
+          sheet === "animation"
+            ? "Creating animation frames"
+            : sheet === "stickers"
+              ? "Creating sticker sheet"
+              : "Creating image",
+          "running",
+        );
+        const sendActivity = (status: "running" | "complete" | "failed", label = activity.label) =>
+          send(sseEvent(activityToSseDelta({ ...activity, status, label })));
         send(sseEvent({ kind: "image_pending" }));
+        sendActivity("running");
         try {
           const upstream = await imageGenerations(
             { model: imageModel(), prompt, size: "1024x1024", quality: "low", n: 1 },
@@ -434,6 +446,7 @@ async function handleImageRequest(
                 : status === 402
                   ? "Image provider quota exhausted."
                   : "Image generation failed. Please try a different prompt or try again later.";
+            sendActivity("failed", "Image creation failed");
             send(sseChunk("Sorry - " + err));
             return;
           }
@@ -458,6 +471,10 @@ async function handleImageRequest(
               : sheet === "stickers"
                 ? "\n\nOpen **GIF or sticker pack** to download the individual PNG stickers as a ZIP."
                 : "";
+          sendActivity(
+            imageUrl ? "complete" : "failed",
+            imageUrl ? (sheet ? "Created sprite sheet" : "Created image") : "Image creation failed",
+          );
           send(
             sseChunk(
               imageUrl
@@ -472,6 +489,7 @@ async function handleImageRequest(
               category: "provider",
               code: "image_provider_network_error",
             });
+            sendActivity("failed", "Image creation failed");
             send(sseChunk("Sorry  -  image generation failed. Please try again."));
           }
         } finally {

@@ -26,6 +26,19 @@ function fixture() {
       calls.push({ body, init });
       return response;
     },
+    createToolActivityEvent: (type, label, status) => ({
+      id: "fixture-image",
+      type,
+      label,
+      status,
+    }),
+    activityToSseDelta: (event) => ({
+      kind: "activity",
+      activity_id: event.id,
+      tool: event.type,
+      status: event.status,
+      label: event.label,
+    }),
     imageModel: () => "synthetic-retained-image-model",
     MAX_IMAGE_PROVIDER_RESPONSE_BYTES: 1024,
     readProviderJsonObject: (upstream) => upstream.json(),
@@ -119,6 +132,20 @@ test("animation requests return a true sprite-sheet label and the conversion act
   f.release(image());
   const body = await response.text();
   assert.match(body, /Animation sprite sheet/);
+  assert.match(body, /Creating animation frames/);
+  assert.match(body, /Created sprite sheet/);
+  const frames = body
+    .split("\n")
+    .filter((line) => line.startsWith("data: {"))
+    .map((line) => JSON.parse(line.slice(6)))
+    .filter((event) => event.kind === "activity");
+  assert.deepEqual(
+    frames.map(({ activity_id, status }) => [activity_id, status]),
+    [
+      ["fixture-image", "running"],
+      ["fixture-image", "complete"],
+    ],
+  );
   assert.match(body, /GIF or sticker pack/);
   assert.equal(f.calls.length, 1);
 });
