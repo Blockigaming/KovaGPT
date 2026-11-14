@@ -173,3 +173,65 @@ for (const role of ["user", "assistant"] as const) {
     expect(sends).toBe(0);
   });
 }
+
+test("an assistant sprite sheet exports a GIF and a ZIP of separately cropped PNGs", async ({
+  page,
+}) => {
+  await fixture(page, "dark", true, true, "free", { preserveStorageOnReload: true });
+  await page.addInitScript(
+    ({ owner, chatA }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 32;
+      canvas.height = 16;
+      const draw = canvas.getContext("2d")!;
+      draw.fillStyle = "#ed2224";
+      draw.fillRect(0, 0, 16, 16);
+      draw.fillStyle = "#1257ae";
+      draw.fillRect(16, 0, 16, 16);
+      const key = `nova-gpt-conversations-v3:user:${owner}`;
+      const chats = JSON.parse(localStorage.getItem(key)!);
+      chats.find((chat: { id: string }) => chat.id === chatA).messages = [
+        {
+          id: "sprite-sheet",
+          role: "assistant",
+          content: `![Test sprite sheet](${canvas.toDataURL("image/png")})`,
+        },
+      ];
+      localStorage.setItem(key, JSON.stringify(chats));
+    },
+    { owner, chatA },
+  );
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page.getByRole("button", { name: "GIF or sticker pack", exact: true }).click();
+  const modal = page.getByRole("dialog", { name: "GIF or sticker pack" });
+  await modal.getByRole("spinbutton", { name: "Columns" }).fill("2");
+  await modal.getByRole("spinbutton", { name: "Rows" }).fill("1");
+  await modal.getByRole("button", { name: "Create GIF", exact: true }).click();
+  await expect(
+    modal.getByRole("img", { name: "Animated preview of Test sprite sheet" }),
+  ).toBeVisible();
+  const gif = page.waitForEvent("download");
+  await modal.getByRole("link", { name: "Download GIF" }).click();
+  const gifBytes = await readFile((await (await gif).path())!);
+  expect(gifBytes.toString("ascii", 0, 6)).toBe("GIF89a");
+  const pngZip = page.waitForEvent("download");
+  await modal.getByRole("button", { name: "Download sticker ZIP" }).click();
+  const zipBytes = await readFile((await (await pngZip).path())!);
+  const { unzipSync } = await import("fflate");
+  const files = unzipSync(zipBytes);
+  expect(Object.keys(files)).toEqual(["sticker-01.png", "sticker-02.png"]);
+  expect(Buffer.from(files["sticker-01.png"])).not.toEqual(Buffer.from(files["sticker-02.png"]));
+  for (const file of Object.values(files)) {
+    expect([...file.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  }
+  await modal.getByRole("button", { name: "Create video", exact: true }).click();
+  const video = modal.locator("video");
+  await expect(video).toBeVisible();
+  await expect.poll(() => video.evaluate((element) => element.readyState)).toBeGreaterThan(0);
+  const videoDownload = page.waitForEvent("download");
+  await modal.getByRole("link", { name: "Download video" }).click();
+  const clip = await videoDownload;
+  expect(clip.suggestedFilename()).toMatch(/\.(webm|mp4)$/);
+  expect((await readFile((await clip.path())!)).byteLength).toBeGreaterThan(100);
+});

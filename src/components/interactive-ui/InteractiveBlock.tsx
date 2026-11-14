@@ -1,4 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { StudyCards } from "./StudyCards";
+import { ResponseSpeech } from "./ResponseSpeech";
+import { ResponseMemoryGame } from "./ResponseMemoryGame";
+import { ResponseFiles } from "./ResponseFiles";
+import { ResponsePattern } from "./ResponsePattern";
+import { ResponseDiagram } from "./ResponseDiagram";
+import { ResponseSimulation } from "./ResponseSimulation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +63,7 @@ function preserveActionFocus(event: React.PointerEvent<HTMLButtonElement>) {
 }
 
 export type InteractiveBlockProps = {
+  ownerId?: string;
   block: Block;
   /** Stable per-response key; state and submissions persist under it. */
   storageKey: string | null;
@@ -70,6 +78,7 @@ export function InteractiveBlock({
   storageKey,
   onSubmit,
   disabledReason,
+  ownerId,
 }: InteractiveBlockProps) {
   const [stored, setStored] = useState<Stored>({});
   const [hydrated, setHydrated] = useState(false);
@@ -113,6 +122,22 @@ export function InteractiveBlock({
     if (submitError) setSubmitError(false);
   };
   const headingId = useId();
+
+  if (block.type === "quiz" || block.type === "flashcards")
+    return <StudyCards key={JSON.stringify(block)} block={block} />;
+
+  if (block.type === "simulation")
+    return <ResponseSimulation key={JSON.stringify(block)} block={block} />;
+  if (block.type === "memory-game")
+    return <ResponseMemoryGame key={JSON.stringify(block)} block={block} />;
+  if (block.type === "speech")
+    return (
+      <ResponseSpeech key={JSON.stringify([ownerId, block])} block={block} ownerId={ownerId} />
+    );
+  if (block.type === "files") return <ResponseFiles key={JSON.stringify(block)} block={block} />;
+  if (block.type === "diagram") return <ResponseDiagram block={block} />;
+  if (block.type === "pattern")
+    return <ResponsePattern key={JSON.stringify(block)} block={block} />;
 
   return (
     <section
@@ -318,8 +343,11 @@ function FieldControl({
       );
       break;
     case "text":
+    case "search":
     case "number":
     case "date":
+    case "time":
+    case "color":
       control = (
         <Input
           {...common}
@@ -329,7 +357,7 @@ function FieldControl({
           min={field.min as string | number | undefined}
           max={field.max as string | number | undefined}
           step={field.step}
-          maxLength={field.kind === "text" ? 4000 : undefined}
+          maxLength={field.kind === "text" || field.kind === "search" ? 4000 : undefined}
           placeholder={field.placeholder}
           className="min-h-11 min-w-0 max-w-full sm:min-h-9"
           onChange={(e) => onChange(e.target.value)}

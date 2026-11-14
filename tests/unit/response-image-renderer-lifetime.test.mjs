@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { observeTableOverflow } from "../../src/lib/table-overflow.ts";
 import {
   createHookHarness,
@@ -50,6 +52,7 @@ function fixture(initial = {}) {
       "./ui/ExpandViewIcon": { ExpandViewIcon: "ExpandViewIcon" },
       "./ui/dialog": { Dialog: "dialog", DialogContent: "dialog-content", DialogTitle: "title" },
       "./ChatImage": { ChatImage: "chat-image" },
+      "./ResponseSpriteExport": { ResponseSpriteExport: "response-sprite-export" },
       "@/lib/chat-image-actions": { downloadChatImage: async () => {} },
     },
     { Error },
@@ -58,6 +61,9 @@ function fixture(initial = {}) {
     react,
     "react-markdown": { __esModule: true, default: ReactMarkdown, defaultUrlTransform },
     "remark-gfm": { __esModule: true, default: remarkGfm },
+    "remark-math": { __esModule: true, default: remarkMath },
+    "rehype-katex": { __esModule: true, default: rehypeKatex },
+    "katex/dist/katex.min.css": {},
     "./ResponseImage": image,
     "lucide-react": icons,
     "./response-output-blocks.css": {},
@@ -318,4 +324,14 @@ test("true long visible prose keeps its exact Copy source without absorbing stan
     assert.equal(elements(boxes[0], (node) => node.type === view.components.img).length, 0);
   }
   assert.equal(proseBoxes(fixture({ children: prose, boxLongProse: false })).length, 0);
+});
+
+test("chat renders accessible equations while leaving dollar prices as prose", () => {
+  const view = fixture({
+    children:
+      "A sandwich costs $5 and a drink costs $2. The area is $$x^2$$.\n\n$$\n\\frac{1}{2}\n$$",
+  });
+  assert.match(text(view.parsed), /costs \$5 and a drink costs \$2/);
+  const math = elements(view.parsed, (node) => node.type === "math");
+  assert.equal(math.length, 2);
 });

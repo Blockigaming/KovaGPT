@@ -1,6 +1,17 @@
 export type InteractiveOption = { value: string; label: string };
 export type InteractiveFieldKind =
-  "text" | "textarea" | "number" | "radio" | "checkbox" | "select" | "slider" | "date" | "toggle";
+  | "text"
+  | "search"
+  | "time"
+  | "color"
+  | "textarea"
+  | "number"
+  | "radio"
+  | "checkbox"
+  | "select"
+  | "slider"
+  | "date"
+  | "toggle";
 export type InteractiveField = {
   id: string;
   label: string;
@@ -36,7 +47,77 @@ export type InteractiveTable = {
   selection: "none" | "single" | "multiple";
   submitLabel?: string;
 };
-export type InteractiveBlock = InteractiveForm | InteractiveTable;
+export type Flashcard = { front: string; back: string };
+export type QuizCard = Flashcard & { hint?: string } & (
+    | { kind: "choice"; options: InteractiveOption[]; answer: string }
+    | { kind: "multiple" | "ordering"; options: InteractiveOption[]; answer: string[] }
+    | {
+        kind: "matching";
+        items: InteractiveOption[];
+        options: InteractiveOption[];
+        answer: string[];
+      }
+    | { kind: "number"; answer: number; tolerance: number }
+    | { kind: "short"; answer: string[] }
+  );
+type StudyDeck = { version: 1; id: string; title: string; description?: string };
+export type StudyBlock =
+  | (StudyDeck & { type: "flashcards"; cards: Flashcard[]; adaptive?: boolean })
+  | (StudyDeck & {
+      type: "quiz";
+      cards: QuizCard[];
+      adaptive?: boolean;
+      secondsPerQuestion?: number;
+    });
+export type SimulationRange = { min: number; max: number; step: number; value: number };
+export type SimulationModel =
+  | "linear"
+  | "quadratic"
+  | "rectangle"
+  | "compound-interest"
+  | "constant-acceleration"
+  | "independent-events"
+  | "molarity";
+export type SimulationBlock = StudyDeck & {
+  type: "simulation";
+  model: SimulationModel;
+  inputs: Record<string, SimulationRange>;
+};
+export type DiagramBlock = StudyDeck & {
+  type: "diagram";
+  nodes: {
+    id: string;
+    label: string;
+    x: number;
+    y: number;
+    shape: "box" | "decision" | "terminal";
+  }[];
+  edges: { from: string; to: string; label?: string }[];
+};
+export type PatternBlock = StudyDeck & {
+  type: "pattern";
+  pattern: "stripes" | "dots" | "checks" | "gradient";
+  colors: [string, string];
+};
+export type FileBundleBlock = StudyDeck & {
+  type: "files";
+  files: { name: string; content: string }[];
+};
+export type MemoryGameBlock = StudyDeck & {
+  type: "memory-game";
+  pairs: { first: string; second: string }[];
+};
+export type SpeechBlock = StudyDeck & { type: "speech"; script: string };
+export type InteractiveBlock =
+  | InteractiveForm
+  | InteractiveTable
+  | StudyBlock
+  | SimulationBlock
+  | DiagramBlock
+  | PatternBlock
+  | FileBundleBlock
+  | MemoryGameBlock
+  | SpeechBlock;
 export type FormValue = string | number | boolean | string[];
 export type FormValues = Record<string, FormValue>;
 export type InteractiveSubmission = { values?: FormValues; action?: string; selected?: string[] };

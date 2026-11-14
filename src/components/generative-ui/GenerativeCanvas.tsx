@@ -1,8 +1,14 @@
+import { GeneratedPdfPreview } from "./GeneratedPdfPreview";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useId, useRef, useState } from "react";
-import { validateGenerativeWidget, type GenerativeWidget } from "@/lib/generative-ui.mjs";
+import {
+  validateGenerativeWidget,
+  type GenerativeWidget,
+  type TimelineWidget,
+} from "@/lib/generative-ui.mjs";
+import type { DocumentExportFormat } from "@/lib/writing-export/export";
 import { resultRevisionDiff } from "@/lib/result-revision-diff.mjs";
 import {
   Select,
@@ -12,6 +18,54 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import "./generative-canvas.css";
+
+const documentFormats = ["pdf", "docx", "xlsx", "pptx"] as const;
+
+function ScheduleBars({ items }: { items: TimelineWidget["items"] }) {
+  const day = 86_400_000;
+  const rows = items.map((item) => ({
+    ...item,
+    first: Date.parse(item.start + "T00:00:00Z") / day,
+    last: Date.parse(item.end + "T00:00:00Z") / day,
+  }));
+  const first = Math.min(...rows.map((row) => row.first));
+  const last = Math.max(...rows.map((row) => row.last));
+  const span = last - first + 1;
+  return (
+    <figure className="mb-3 grid min-w-0 gap-2">
+      <figcaption className="text-sm font-medium">Schedule chart</figcaption>
+      <div className="flex justify-between gap-2 text-xs text-muted-foreground">
+        <time dateTime={new Date(first * day).toISOString().slice(0, 10)}>
+          {new Date(first * day).toISOString().slice(0, 10)}
+        </time>
+        <time dateTime={new Date(last * day).toISOString().slice(0, 10)}>
+          {new Date(last * day).toISOString().slice(0, 10)}
+        </time>
+      </div>
+      <ul className="grid min-w-0 gap-2">
+        {rows.map((row) => (
+          <li key={row.id} className="grid gap-1 text-sm">
+            <span className="break-words">
+              {row.title}{" "}
+              <span className="sr-only">
+                ({row.start} to {row.end}, {row.status})
+              </span>
+            </span>
+            <div className="h-3 rounded-full bg-muted" aria-hidden="true">
+              <div
+                className={`h-full rounded-full ${row.status === "done" ? "bg-emerald-600 dark:bg-emerald-400" : row.status === "doing" ? "bg-primary" : "bg-muted-foreground"}`}
+                style={{
+                  marginInlineStart: `${(100 * (row.first - first)) / span}%`,
+                  width: `${(100 * (row.last - row.first + 1)) / span}%`,
+                }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </figure>
+  );
+}
 
 export type GenerativeCanvasProps = {
   widget: GenerativeWidget;
@@ -33,6 +87,10 @@ export function GenerativeCanvas({
   const [applied, setApplied] = useState<GenerativeWidget>(widget);
   const [comparing, setComparing] = useState(false);
   const [notice, setNotice] = useState("");
+  const [exportFormat, setExportFormat] = useState<DocumentExportFormat>("pdf");
+  const [exporting, setExporting] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState(false);
+  const exportInProgress = useRef(false);
   const original = useRef(widget);
   const sequence = useRef(0);
   const fieldId = useId();
@@ -48,6 +106,7 @@ export function GenerativeCanvas({
   const comparison = comparing ? resultRevisionDiff(originalText, currentText) : [];
   const update = (next: GenerativeWidget) => {
     setDraft(next);
+    setPdfPreview(false);
     setNotice("");
   };
   const apply = () => {
@@ -56,6 +115,22 @@ export function GenerativeCanvas({
     setApplied(validated);
     setNotice("Draft applied in this tab.");
     onDraftChange?.(validated);
+  };
+  const exportDocument = async () => {
+    if (draft.type !== "document" || !validated || exportInProgress.current) return;
+    exportInProgress.current = true;
+    setExporting(true);
+    setNotice("");
+    try {
+      const { downloadDocument } = await import("@/lib/writing-export/export");
+      await downloadDocument(exportFormat, draft.title, draft.content);
+      setNotice(`${exportFormat.toUpperCase()} download started.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not create the download.");
+    } finally {
+      exportInProgress.current = false;
+      setExporting(false);
+    }
   };
   const nextId = (prefix: string, used: string[]) => {
     let id;
@@ -144,6 +219,7 @@ export function GenerativeCanvas({
               {draft.items.filter((item) => item.status === "done").length} of {draft.items.length}{" "}
               milestones complete
             </p>
+            {validated?.type === "timeline" && <ScheduleBars items={validated.items} />}
             <ol>
               {draft.items.map((item, index) => (
                 <li key={item.id}>
@@ -412,6 +488,9 @@ export function GenerativeCanvas({
           </div>
         )}
 
+        {pdfPreview && draft.type === "document" && (
+          <GeneratedPdfPreview key={draft.content} title={draft.title} content={draft.content} />
+        )}
         {comparing && (
           <section className="kova-generative-comparison" aria-label="Changes from original">
             <h4>Changes from original</h4>
@@ -444,6 +523,47 @@ export function GenerativeCanvas({
       </div>
 
       <footer className="kova-generative-footer">
+        {draft.type === "document" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor={`${fieldId}-export`} className="text-sm">
+              Download format
+            </label>
+            <select
+              id={`${fieldId}-export`}
+              value={exportFormat}
+              disabled={exporting}
+              className="min-h-11 rounded-lg border border-border bg-background px-2 text-sm"
+              onChange={(event) =>
+                setExportFormat(event.currentTarget.value as DocumentExportFormat)
+              }
+            >
+              {documentFormats.map((format) => (
+                <option key={format} value={format}>
+                  {format.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={exporting || !validated}
+              onClick={() => void exportDocument()}
+            >
+              {exporting ? "Preparing download…" : "Download document"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={!validated}
+              aria-expanded={pdfPreview}
+              onClick={() => setPdfPreview((open) => !open)}
+            >
+              {pdfPreview ? "Close PDF preview" : "Preview PDF"}
+            </Button>
+          </div>
+        )}
         <div className="kova-generative-actions">
           <Button
             variant="ghost"
@@ -460,6 +580,7 @@ export function GenerativeCanvas({
             disabled={!changed}
             onClick={() => {
               setDraft(applied);
+              setPdfPreview(false);
               setNotice("Unapplied changes discarded.");
             }}
           >

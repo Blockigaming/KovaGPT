@@ -48,8 +48,13 @@ import {
   shouldRunWebSearch,
 } from "@/lib/ai/search.server";
 import { isExplicitWebSearchRequest } from "@/lib/ai/search-policy.mjs";
-import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
-import { createToolActivityEvent } from "@/lib/ai/activity.server";
+import {
+  boundedImageProviderPrompt,
+  imageSheetInstructions,
+  imageSheetKind,
+  type ImageSheetKind,
+} from "@/lib/ai/image-prompt-policy.mjs";
+import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
 import { normalizeSourceRetrievedAt } from "@/lib/response-source-time.mjs";
 
@@ -173,7 +178,9 @@ const ACCURACY_INSTRUCTION = "";
 const CHART_INSTRUCTION = "";
 const FINAL_CHART_INSTRUCTION = `
 
-When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
+Use double-dollar TeX for inline equations and put double-dollar delimiters on separate lines for display equations. Leave ordinary currency as plain text.
+
+When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, horizontal-bar, stacked-bar, line, step, area, stacked-area, pie, donut, scatter, radar, heatmap, histogram, percent-stacked-bar, funnel, candlestick, bubble, treemap, sankey, waterfall and range. Waterfall rows are signed changes in order; range rows need numeric low and high. Sankey uses data rows with source and target labels and positive numeric value, with no directed cycles. Bubble charts need a numeric xKey, one y series in keys, and a nonnegative sizeKey (default size). For treemaps, the first numeric series represents the size of each category. Use individual numeric observations for a histogram, nonnegative series for percentages and funnels, and named open/high/low/close values for each candle. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
 const CREATOR_INSTRUCTION = "";
 const MAX_IMAGE_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 const MAX_TOOL_HOP_RESPONSE_BYTES = 2 * 1024 * 1024;
@@ -211,13 +218,13 @@ function buildCurrentDateInstruction(timezone?: string, locale?: string): string
 }
 
 const IMAGE_INTENT =
-  /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
+  /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon|gif|sticker\s+(?:pack|sheet|set))\b/i;
 
 // Negation guard: user explicitly saying they DON'T want an image/action.
 // Prevents "don't generate an image", "no image please", "stop making pictures"
 // from triggering the image workflow.
 const NEGATION_GUARD =
-  /\b(do\s*n[o']?t|don't|dont|never|no|stop|please\s+don't|please\s+do\s+not|without|skip|avoid|instead\s+of)\b[^.?!]{0,60}\b(generate|make|create|draw|design|render|paint|produce|image|picture|photo|illustration|logo|drawing)\b/i;
+  /\b(do\s*n[o']?t|don't|dont|never|no|stop|please\s+don't|please\s+do\s+not|without|skip|avoid|instead\s+of)\b[^.?!]{0,60}\b(generate|make|create|draw|design|render|paint|produce|image|picture|photo|illustration|logo|drawing|gif|sticker\s+(?:pack|sheet|set))\b/i;
 
 function detectImageIntent(text: string): boolean {
   if (!IMAGE_INTENT.test(text)) return false;
@@ -370,6 +377,7 @@ async function handleImageRequest(
   prompt: string,
   logContext: SafeLogContext,
   signal: AbortSignal,
+  sheet?: ImageSheetKind,
 ): Promise<Response> {
   const cancellation = new AbortController();
   let closed = false;
@@ -402,7 +410,19 @@ async function handleImageRequest(
       // Do not return this promise from start: stream cancellation must remain
       // available while the provider is still producing the image.
       const generate = async () => {
+        const activity = createToolActivityEvent(
+          "image_generation",
+          sheet === "animation"
+            ? "Creating animation frames"
+            : sheet === "stickers"
+              ? "Creating sticker sheet"
+              : "Creating image",
+          "running",
+        );
+        const sendActivity = (status: "running" | "complete" | "failed", label = activity.label) =>
+          send(sseEvent(activityToSseDelta({ ...activity, status, label })));
         send(sseEvent({ kind: "image_pending" }));
+        sendActivity("running");
         try {
           const upstream = await imageGenerations(
             { model: imageModel(), prompt, size: "1024x1024", quality: "low", n: 1 },
@@ -426,6 +446,7 @@ async function handleImageRequest(
                 : status === 402
                   ? "Image provider quota exhausted."
                   : "Image generation failed. Please try a different prompt or try again later.";
+            sendActivity("failed", "Image creation failed");
             send(sseChunk("Sorry - " + err));
             return;
           }
@@ -438,10 +459,26 @@ async function handleImageRequest(
           const imageUrl = item?.b64_json
             ? "data:image/png;base64," + item.b64_json
             : (item?.url ?? null);
+          const alt =
+            sheet === "animation"
+              ? "Animation sprite sheet"
+              : sheet === "stickers"
+                ? "Sticker pack sprite sheet"
+                : "generated image";
+          const hint =
+            sheet === "animation"
+              ? "\n\nOpen **GIF or sticker pack** to preview and download the animation."
+              : sheet === "stickers"
+                ? "\n\nOpen **GIF or sticker pack** to download the individual PNG stickers as a ZIP."
+                : "";
+          sendActivity(
+            imageUrl ? "complete" : "failed",
+            imageUrl ? (sheet ? "Created sprite sheet" : "Created image") : "Image creation failed",
+          );
           send(
             sseChunk(
               imageUrl
-                ? "![generated image](" + imageUrl + ")"
+                ? "![" + alt + "](" + imageUrl + ")" + hint
                 : "Sorry  -  I couldn't generate that image. Try rephrasing the prompt.",
             ),
           );
@@ -452,6 +489,7 @@ async function handleImageRequest(
               category: "provider",
               code: "image_provider_network_error",
             });
+            sendActivity("failed", "Image creation failed");
             send(sseChunk("Sorry  -  image generation failed. Please try again."));
           }
         } finally {
@@ -950,7 +988,11 @@ export const Route = createFileRoute("/api/chat")({
               // Image generation has no system-message channel, so append the same resolved,
               // integrity-checked workflow block used by text chat. Bound the combined prompt
               // before feature/quota work so an oversized valid package cannot consume quota.
-              const imagePrompt = boundedImageProviderPrompt(lastText, workflowSkill?.block);
+              const sheet = imageSheetKind(lastText);
+              const imagePrompt = boundedImageProviderPrompt(
+                lastText + imageSheetInstructions(sheet),
+                workflowSkill?.block,
+              );
               if (imagePrompt === null)
                 return Response.json(
                   {
@@ -990,7 +1032,7 @@ export const Route = createFileRoute("/api/chat")({
               // Recheck after quota authorization too, so a concurrent uninstall or
               // version change cannot reach the provider after the quota boundary.
               await assertSelectedContextsCurrent(request.signal);
-              return handleImageRequest(imagePrompt, logContext, request.signal);
+              return handleImageRequest(imagePrompt, logContext, request.signal, sheet);
             }
 
             const missingProvider = capture ? null : missingAiProviderResponse();

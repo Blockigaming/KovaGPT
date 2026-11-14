@@ -3,6 +3,7 @@ import { Bookmark, Download, Check } from "lucide-react";
 import { ExpandViewIcon } from "./ui/ExpandViewIcon";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { ChatImage, type ChatImageActions } from "./ChatImage";
+import { ResponseSpriteExport } from "./ResponseSpriteExport";
 import { downloadChatImage } from "@/lib/chat-image-actions";
 
 export function ResponseImage({
@@ -17,11 +18,13 @@ export function ResponseImage({
   imageActions?: ChatImageActions;
 }) {
   const [full, setFull] = useState(false);
+  const [spriteOpen, setSpriteOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
+  const spriteButton = useRef<HTMLButtonElement>(null);
   const viewButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     alive.current = true;
@@ -91,11 +94,28 @@ export function ResponseImage({
           <ExpandViewIcon />
           View full size
         </button>
+        <button ref={spriteButton} type="button" onClick={() => setSpriteOpen(true)}>
+          GIF or sticker pack
+        </button>
       </span>
       {error && (
         <span role="alert" className="block text-sm text-destructive">
           {error}
         </span>
+      )}
+      {spriteOpen && (
+        <Dialog open onOpenChange={setSpriteOpen}>
+          <DialogContent
+            className="max-h-[85dvh] overflow-auto"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              spriteButton.current?.focus({ preventScroll: true });
+            }}
+          >
+            <DialogTitle>GIF or sticker pack</DialogTitle>
+            <ResponseSpriteExport key={src} src={src} title={alt} />
+          </DialogContent>
+        </Dialog>
       )}
       {full && (
         <Dialog open onOpenChange={setFull}>

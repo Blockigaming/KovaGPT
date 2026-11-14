@@ -1,3 +1,5 @@
+import { responseFences } from "./response-fences.mjs";
+
 // Model-generated interactive response components ("kova-interactive" fences).
 // A closed, strictly validated data schema: React renders every string as text,
 // nothing here can carry HTML, scripts, URLs to navigate, or event handlers.
@@ -9,6 +11,9 @@ export const INTELLIGENT_INTERFACE_NAME = "Intelligent Interface";
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 export const FIELD_KINDS = [
   "text",
+  "search",
+  "time",
+  "color",
   "textarea",
   "number",
   "radio",
@@ -33,6 +38,8 @@ const isDate = (v) => {
   const d = new Date(`${v}T00:00:00.000Z`);
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === v;
 };
+const isTime = (value) => typeof value === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+const isColor = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
 const uniq = (ids) => new Set(ids).size === ids.length;
 
 function validateOptions(options) {
@@ -75,12 +82,13 @@ function validateField(f) {
     if (!options) return null;
     field.options = options;
   } else if ("options" in f) return null;
-  const ranged = ["number", "slider", "date"].includes(f.kind);
+  const ranged = ["number", "slider", "date", "time"].includes(f.kind);
   if (!ranged && ("min" in f || "max" in f || "step" in f)) return null;
-  if (f.kind === "date") {
+  if (f.kind === "date" || f.kind === "time") {
     if ("step" in f) return null;
-    if ("min" in f && !isDate(f.min)) return null;
-    if ("max" in f && !isDate(f.max)) return null;
+    const valid = f.kind === "date" ? isDate : isTime;
+    if ("min" in f && !valid(f.min)) return null;
+    if ("max" in f && !valid(f.max)) return null;
     if (f.min && f.max && f.min > f.max) return null;
     if (f.min) field.min = f.min;
     if (f.max) field.max = f.max;
@@ -96,6 +104,7 @@ function validateField(f) {
     let ok = false;
     switch (f.kind) {
       case "text":
+      case "search":
       case "textarea":
         ok = str(d, 4000, true);
         break;
@@ -106,8 +115,15 @@ function validateField(f) {
           (field.min === undefined || d >= field.min) &&
           (field.max === undefined || d <= field.max);
         break;
+      case "color":
+        ok = isColor(d);
+        break;
       case "date":
-        ok = isDate(d) && (!field.min || d >= field.min) && (!field.max || d <= field.max);
+      case "time":
+        ok =
+          (f.kind === "date" ? isDate(d) : isTime(d)) &&
+          (!field.min || d >= field.min) &&
+          (!field.max || d <= field.max);
         break;
       case "toggle":
         ok = typeof d === "boolean";
@@ -236,6 +252,323 @@ function validateTable(v) {
   };
 }
 
+function validateStudyBlock(value) {
+  if (
+    !onlyKeys(value, [
+      "version",
+      "type",
+      "id",
+      "title",
+      "description",
+      "cards",
+      "adaptive",
+      "secondsPerQuestion",
+    ])
+  )
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Array.isArray(value.cards) || value.cards.length < 1 || value.cards.length > 30) return null;
+  const quiz = value.type === "quiz";
+  if ("adaptive" in value && typeof value.adaptive !== "boolean") return null;
+  if (
+    "secondsPerQuestion" in value &&
+    (!quiz ||
+      !Number.isInteger(value.secondsPerQuestion) ||
+      value.secondsPerQuestion < 5 ||
+      value.secondsPerQuestion > 600)
+  )
+    return null;
+  const cards = [];
+  for (const card of value.cards) {
+    if (!isPlain(card) || !str(card.front, 600) || !str(card.back, 1200)) return null;
+    if (!quiz) {
+      if (!onlyKeys(card, ["front", "back"])) return null;
+      cards.push({ front: card.front, back: card.back });
+      continue;
+    }
+    if (
+      !onlyKeys(card, ["front", "back", "kind", "options", "answer", "hint", "tolerance", "items"])
+    )
+      return null;
+    if ("hint" in card && !str(card.hint, 400)) return null;
+    const shared = { front: card.front, back: card.back, hint: card.hint };
+    const kind = card.kind ?? "choice";
+    if (kind !== "matching" && "items" in card) return null;
+    if (kind === "matching") {
+      if ("tolerance" in card) return null;
+      const options = validateOptions(card.options);
+      const items = validateOptions(card.items);
+      if (
+        !options ||
+        options.length < 2 ||
+        !items ||
+        items.length < 2 ||
+        !Array.isArray(card.answer) ||
+        card.answer.length !== items.length ||
+        !card.answer.every((answer) => options.some(({ value }) => value === answer))
+      )
+        return null;
+      cards.push({ ...shared, kind, options, items, answer: [...card.answer] });
+    } else if (kind === "choice" || kind === "multiple" || kind === "ordering") {
+      if ("tolerance" in card) return null;
+      const options = validateOptions(card.options);
+      const answers = kind === "choice" ? [card.answer] : card.answer;
+      if (
+        !options ||
+        options.length < 2 ||
+        !Array.isArray(answers) ||
+        !answers.length ||
+        !uniq(answers) ||
+        (kind === "ordering" && answers.length !== options.length) ||
+        !answers.every((answer) => options.some(({ value }) => value === answer))
+      )
+        return null;
+      cards.push({ ...shared, kind, options, answer: card.answer });
+    } else if (kind === "number") {
+      if (
+        "options" in card ||
+        !num(card.answer) ||
+        ("tolerance" in card && (!num(card.tolerance) || card.tolerance < 0))
+      )
+        return null;
+      cards.push({ ...shared, kind, answer: card.answer, tolerance: card.tolerance ?? 0 });
+    } else if (kind === "short") {
+      if (
+        "options" in card ||
+        "tolerance" in card ||
+        !Array.isArray(card.answer) ||
+        card.answer.length < 1 ||
+        card.answer.length > 12 ||
+        !card.answer.every((answer) => str(answer, 200))
+      )
+        return null;
+      cards.push({ ...shared, kind, answer: card.answer.map((answer) => answer.trim()) });
+    } else return null;
+  }
+  return {
+    version: 1,
+    type: value.type,
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    ...(value.adaptive ? { adaptive: true } : {}),
+    ...(value.secondsPerQuestion ? { secondsPerQuestion: value.secondsPerQuestion } : {}),
+    cards,
+  };
+}
+
+const simulationModels = {
+  linear: ["slope", "intercept", "x"],
+  quadratic: ["a", "b", "c", "x"],
+  rectangle: ["width", "height"],
+  "constant-acceleration": ["initialVelocity", "acceleration", "seconds"],
+  "independent-events": ["probability", "trials"],
+  molarity: ["moles", "liters"],
+  "compound-interest": ["principal", "rate", "years"],
+};
+
+function validateSimulation(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "model", "inputs"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Object.hasOwn(simulationModels, value.model) || !isPlain(value.inputs)) return null;
+  const keys = simulationModels[value.model];
+  if (!onlyKeys(value.inputs, keys)) return null;
+  const inputs = {};
+  for (const key of keys) {
+    const range = value.inputs[key];
+    if (!isPlain(range) || !onlyKeys(range, ["min", "max", "step", "value"])) return null;
+    const { min, max, step, value: initial } = range;
+    if (![min, max, step, initial].every(num) || min < -1e6 || max > 1e6) return null;
+    if (min >= max || step <= 0 || step > max - min || initial < min || initial > max) return null;
+    const offset = (initial - min) / step;
+    if ((max - min) / step > 1e5 || Math.abs(offset - Math.round(offset)) > 1e-7) return null;
+    if (["width", "height", "principal", "years", "seconds", "moles"].includes(key) && min < 0)
+      return null;
+    if (key === "liters" && min < 0.001) return null;
+    if (key === "probability" && (min < 0 || max > 100)) return null;
+    if (
+      key === "trials" &&
+      (min < 1 || max > 1000 || ![min, max, step, initial].every(Number.isInteger))
+    )
+      return null;
+    if (key === "rate" && (min <= -100 || max > 100)) return null;
+    if (key === "years" && (max > 100 || ![min, max, step, initial].every(Number.isInteger)))
+      return null;
+    inputs[key] = { min, max, step, value: initial };
+  }
+  return {
+    version: 1,
+    type: "simulation",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    model: value.model,
+    inputs,
+  };
+}
+
+function validateDiagram(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "nodes", "edges"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (
+    !Array.isArray(value.nodes) ||
+    value.nodes.length < 1 ||
+    value.nodes.length > 24 ||
+    !Array.isArray(value.edges) ||
+    value.edges.length > 60
+  )
+    return null;
+  const nodes = [];
+  for (const node of value.nodes) {
+    if (
+      !isPlain(node) ||
+      !onlyKeys(node, ["id", "label", "x", "y", "shape"]) ||
+      typeof node.id !== "string" ||
+      !ID.test(node.id) ||
+      !str(node.label, 26) ||
+      ![node.x, node.y].every((n) => num(n) && n >= 0 && n <= 100) ||
+      !["box", "decision", "terminal"].includes(node.shape ?? "box")
+    )
+      return null;
+    nodes.push({
+      id: node.id,
+      label: node.label.trim(),
+      x: node.x,
+      y: node.y,
+      shape: node.shape ?? "box",
+    });
+  }
+  if (!uniq(nodes.map(({ id }) => id))) return null;
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const edges = [];
+  for (const edge of value.edges) {
+    if (
+      !isPlain(edge) ||
+      !onlyKeys(edge, ["from", "to", "label"]) ||
+      !byId.has(edge.from) ||
+      !byId.has(edge.to) ||
+      edge.from === edge.to ||
+      ("label" in edge && !str(edge.label, 48))
+    )
+      return null;
+    const from = byId.get(edge.from);
+    const to = byId.get(edge.to);
+    if (from.x === to.x && from.y === to.y) return null;
+    edges.push({ from: edge.from, to: edge.to, label: edge.label });
+  }
+  if (!uniq(edges.map(({ from, to }) => from + ":" + to))) return null;
+  return {
+    version: 1,
+    type: "diagram",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    nodes,
+    edges,
+  };
+}
+
+function validatePattern(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "pattern", "colors"]))
+    return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (
+    !["stripes", "dots", "checks", "gradient"].includes(value.pattern) ||
+    !Array.isArray(value.colors) ||
+    value.colors.length !== 2 ||
+    !value.colors.every((color) => typeof color === "string" && /^#[a-f0-9]{6}$/i.test(color))
+  )
+    return null;
+  return {
+    version: 1,
+    type: "pattern",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    pattern: value.pattern,
+    colors: [...value.colors],
+  };
+}
+
+function validateFileBundle(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "files"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Array.isArray(value.files) || value.files.length < 1 || value.files.length > 12) return null;
+  const files = [];
+  for (const file of value.files) {
+    if (
+      !isPlain(file) ||
+      !onlyKeys(file, ["name", "content"]) ||
+      typeof file.name !== "string" ||
+      !/^[a-z0-9][a-z0-9 _.-]{0,79}\.(?:txt|md|csv|tsv|json|yaml|yml|toml|ipynb)$/i.test(
+        file.name,
+      ) ||
+      !str(file.content, 24_000, true)
+    )
+      return null;
+    if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:[. ]|$)/i.test(file.name)) return null;
+    files.push({ name: file.name, content: file.content });
+  }
+  if (!uniq(files.map((file) => file.name.toLowerCase()))) return null;
+  return {
+    version: 1,
+    type: "files",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    files,
+  };
+}
+
+function validateMemoryGame(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "pairs"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!Array.isArray(value.pairs) || value.pairs.length < 2 || value.pairs.length > 12) return null;
+  const pairs = [];
+  for (const pair of value.pairs) {
+    if (
+      !isPlain(pair) ||
+      !onlyKeys(pair, ["first", "second"]) ||
+      !str(pair.first, 48) ||
+      !str(pair.second, 48)
+    )
+      return null;
+    pairs.push({ first: pair.first.trim(), second: pair.second.trim() });
+  }
+  const identities = pairs.map(({ first, second }) =>
+    JSON.stringify([first.toLowerCase(), second.toLowerCase()].sort()),
+  );
+  if (!uniq(identities)) return null;
+  const labels = pairs.flatMap(({ first, second }) => [
+    ...new Set([first.toLowerCase(), second.toLowerCase()]),
+  ]);
+  if (!uniq(labels)) return null;
+  return {
+    version: 1,
+    type: "memory-game",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    pairs,
+  };
+}
+
+function validateSpeechBlock(value) {
+  if (!onlyKeys(value, ["version", "type", "id", "title", "description", "script"])) return null;
+  if ("description" in value && !str(value.description, 800)) return null;
+  if (!str(value.script, 5000)) return null;
+  return {
+    version: 1,
+    type: "speech",
+    id: value.id,
+    title: value.title.trim(),
+    description: value.description,
+    script: value.script.trim(),
+  };
+}
+
 /** Returns a normalized copy, or null when anything is outside the schema. */
 export function validateInteractiveBlock(value) {
   try {
@@ -243,6 +576,13 @@ export function validateInteractiveBlock(value) {
     if (typeof value.id !== "string" || !ID.test(value.id) || !str(value.title, 160)) return null;
     if (value.type === "form") return validateForm(value);
     if (value.type === "table") return validateTable(value);
+    if (value.type === "simulation") return validateSimulation(value);
+    if (value.type === "diagram") return validateDiagram(value);
+    if (value.type === "pattern") return validatePattern(value);
+    if (value.type === "files") return validateFileBundle(value);
+    if (value.type === "speech") return validateSpeechBlock(value);
+    if (value.type === "memory-game") return validateMemoryGame(value);
+    if (value.type === "quiz" || value.type === "flashcards") return validateStudyBlock(value);
     return null;
   } catch {
     return null;
@@ -256,6 +596,7 @@ export function initialFormValues(block) {
     if ("default" in f) values[f.id] = Array.isArray(f.default) ? [...f.default] : f.default;
     else if (f.kind === "checkbox") values[f.id] = [];
     else if (f.kind === "toggle") values[f.id] = false;
+    else if (f.kind === "color") values[f.id] = "#000000";
     else if (f.kind === "slider") values[f.id] = f.min;
     else values[f.id] = "";
   }
@@ -279,8 +620,11 @@ export function validateFormValues(block, values) {
         errors[f.id] = `${f.label} must be at least ${f.min}.`;
       else if (f.max !== undefined && n > f.max)
         errors[f.id] = `${f.label} must be at most ${f.max}.`;
-    } else if (f.kind === "date") {
-      if (!isDate(v)) errors[f.id] = `${f.label} must be a valid date.`;
+    } else if (f.kind === "color") {
+      if (!isColor(v)) errors[f.id] = `${f.label} must be a valid color.`;
+    } else if (f.kind === "date" || f.kind === "time") {
+      if (!(f.kind === "date" ? isDate(v) : isTime(v)))
+        errors[f.id] = `${f.label} must be a valid ${f.kind}.`;
       else if (f.min && v < f.min) errors[f.id] = `${f.label} must be on or after ${f.min}.`;
       else if (f.max && v > f.max) errors[f.id] = `${f.label} must be on or before ${f.max}.`;
     } else if (f.kind === "radio" || f.kind === "select") {
@@ -288,7 +632,7 @@ export function validateFormValues(block, values) {
     } else if (f.kind === "checkbox") {
       if (!Array.isArray(v) || !v.every((x) => f.options.some((o) => o.value === x)))
         errors[f.id] = `Choose valid ${f.label} options.`;
-    } else if (f.kind === "text" || f.kind === "textarea") {
+    } else if (f.kind === "text" || f.kind === "search" || f.kind === "textarea") {
       if (typeof v !== "string" || v.length > 4000) errors[f.id] = `${f.label} is too long.`;
     }
   }
@@ -313,7 +657,7 @@ export function formatSubmission(block, submission) {
       else shown = v === undefined || v === "" ? "" : String(labelOf(f, String(v)));
       if (shown) lines.push(`- ${f.label}: ${shown}`);
     }
-  } else {
+  } else if (block.type === "table") {
     const picked = block.rows.filter((r) => submission.selected?.includes(r.id));
     lines.push(picked.length ? "Selected:" : "Selected: none");
     for (const r of picked) lines.push(`- ${r.cells.join(" · ")}`);
@@ -327,14 +671,11 @@ export function splitInteractiveContent(value) {
   if (value.length > MAX_MESSAGE_CHARS || !value.includes("kova-interactive"))
     return [{ kind: "text", text: value }];
   const parts = [];
-  const re = /(^|\n) {0,3}(`{3,})kova-interactive[ \t]*\n([\s\S]*?)\n {0,3}\2[ \t]*(?=\n|$)/g;
   let last = 0;
   let count = 0;
-  let m;
-  while ((m = re.exec(value)) && count < MAX_BLOCKS) {
-    const start = m.index + m[1].length;
-    const body = m[3];
-    if (body.length > MAX_BLOCK_CHARS) continue;
+  for (const { info, start, body, end } of responseFences(value)) {
+    if (count === MAX_BLOCKS) break;
+    if (info !== "kova-interactive" || body.length > MAX_BLOCK_CHARS) continue;
     let block = null;
     try {
       block = validateInteractiveBlock(JSON.parse(body));
@@ -344,16 +685,24 @@ export function splitInteractiveContent(value) {
     if (!block) continue;
     if (start > last) parts.push({ kind: "text", text: value.slice(last, start) });
     parts.push({ kind: "interactive", block, index: count });
-    last = m.index + m[0].length;
+    last = end;
     count += 1;
   }
   if (last < value.length) parts.push({ kind: "text", text: value.slice(last) });
   return parts;
 }
 
-export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. When the user asks for a quiz or practice question, present the question with a required radio field and a “Check answer” submit button. Use neutral option IDs and grade the submitted answer in the next reply with a brief explanation. For a step-by-step quiz, offer one question at a time. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
+export const INTERACTIVE_UI_INSTRUCTIONS = `${INTELLIGENT_INTERFACE_NAME}: Answer first. When useful, offer 2-4 task-specific next-step buttons (one primary). Omit generic follow-ups and controls on complete simple answers. Use fields or selectable tables only for input needed to continue. Give blocks task-specific titles. Use quiz for objective practice with immediate local feedback and flashcards for recall practice. Use a form for open-ended answers that need a follow-up from Kova. For quiz cards, optional kind is choice (default, one option ID), multiple (option IDs array), number (numeric answer, optional numeric tolerance), or short (array of accepted strings). For ordering cards, include options in scrambled order and answer as an array of all option IDs in correct order. For matching or classification, include items and options (each an array of value/label pairs), and answer as an array containing the correct option ID for each item in order. Set deck-level adaptive to true to offer targeted review of missed items. Quizzes can include secondsPerQuestion (5–600) for timed practice that the learner starts explicitly. Use exactly two options for true/false or yes/no. Emit fenced \`\`\`kova-interactive JSON with exact version-1 shapes:
 next steps: {"version":1,"type":"form","id":"next","title":"Next step","actions":[{"id":"plan","label":"Build my plan","style":"primary"},{"id":"compare","label":"Compare options","style":"secondary"}]}
 form: {"version":1,"type":"form","id":"prefs","title":"Your preferences","fields":[{"id":"style","label":"Style","kind":"radio","required":true,"options":[{"value":"relax","label":"Relaxed"},{"value":"adventure","label":"Adventure"}]}],"submitLabel":"Build my plan"}
-field kinds: text, textarea, number, radio, checkbox, select, slider, date, toggle. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
+field kinds: text, search, textarea, number, radio, checkbox, select, slider, date, time, color, toggle. Use HH:MM for time and #RRGGBB for color. radio/checkbox/select require options (max 24); slider requires min/max. Optional: required, help, placeholder, default, min, max, step. Forms may contain only actions (max 6).
 table: {"version":1,"type":"table","id":"plans","title":"Compare plans","columns":[{"id":"name","label":"Plan"},{"id":"price","label":"Price","align":"end"}],"rows":[{"id":"basic","cells":["Basic","$10"]}],"selection":"single","submitLabel":"Choose"} (selection: none, single or multiple; cells are strings or numbers; max 8 columns, 50 rows).
-IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Clicks send the next user message; they do not execute external actions, grant access, or prove success.`;
+quiz: {"version":1,"type":"quiz","id":"practice","title":"Practice","cards":[{"front":"What is 2 + 2?","options":[{"value":"a","label":"3"},{"value":"b","label":"4"}],"answer":"b","back":"Adding two and two gives four.","hint":"Count two pairs."}]}
+flashcards: {"version":1,"type":"flashcards","id":"recall","title":"Recall","cards":[{"front":"What is the term for stored energy?","back":"Potential energy."}]}
+simulation: {"version":1,"type":"simulation","id":"area","title":"Explore rectangle area","model":"rectangle","inputs":{"width":{"min":1,"max":20,"step":1,"value":5},"height":{"min":1,"max":20,"step":1,"value":4}}}. Other models: linear (slope, intercept, x), quadratic (a, b, c, x), compound-interest (principal, rate as a percent, whole years), constant-acceleration (initialVelocity in m/s, acceleration in m/s², seconds), independent-events (probability in percent, whole trials), molarity (moles, liters). Include all required inputs. Use local simulations for these formulas only.
+diagram: {"version":1,"type":"diagram","id":"flow","title":"Process flow","nodes":[{"id":"start","label":"Start","x":20,"y":20,"shape":"terminal"},{"id":"check","label":"Review","x":65,"y":75,"shape":"decision"}],"edges":[{"from":"start","to":"check","label":"Next"}]}. Coordinates run 0–100; leave room around nodes and edge labels. Shape is box, decision or terminal. Use for flowcharts, trees, system diagrams and concept maps.
+pattern: {"version":1,"type":"pattern","id":"palette","title":"Pattern preview","pattern":"stripes","colors":["#2f61a8","#eff4ff"]}. Pattern is stripes, dots, checks or gradient.
+files: {"version":1,"type":"files","id":"notes","title":"Research notes","files":[{"name":"notes.md","content":"# Notes"}]}. Use for actual text, Markdown, CSV, TSV, JSON, YAML, TOML or notebook output; no paths or external URLs. A user can preview or download individual files or a ZIP. Do not claim files have already been downloaded.
+memory-game: {"version":1,"type":"memory-game","id":"pairs","title":"Find the pairs","pairs":[{"first":"2 + 2","second":"4"},{"first":"3 + 3","second":"6"}]}. Use 2–12 distinct pairs of short labels. Labels may match within one pair, and cannot be reused across different pairs.
+speech: {"version":1,"type":"speech","id":"narration","title":"Narration","script":"Welcome to the lesson."}. Use for spoken output when requested. Audio is generated only when the user clicks Generate audio, and depends on their account allowance. Do not claim an audio file already exists.
+IDs: letters/digits/hyphens/underscores. No HTML, markdown, URLs or code. Form and selectable-table submissions send the next user message; quizzes, flashcards, simulations, diagrams and pattern previews work locally; they do not execute external actions, grant access, or prove success.`;

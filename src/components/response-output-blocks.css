@@ -318,3 +318,10 @@ body .prose-chat .kova-table-scroll:focus-visible {
   visibility: hidden;
   pointer-events: none;
 }
+
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.2em;
+}

@@ -530,3 +530,107 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   expect(chatRequests).toBe(1);
   expect(titleRequests).toBe(1);
 });
+
+test("a streamed response composes interactive study, simulation, diagram, and chart blocks", async ({
+  page,
+}) => {
+  const fence = (language: string, value: object) =>
+    ["```" + language, JSON.stringify(value), "```"].join("\n");
+  const interactive = (value: object) => fence("kova-interactive", { version: 1, ...value });
+  const range = { min: 1, max: 10, step: 1, value: 5 };
+  const response = [
+    "Explore the examples below.",
+    interactive({
+      type: "simulation",
+      id: "area",
+      title: "Explore rectangle area",
+      model: "rectangle",
+      inputs: { width: range, height: range },
+    }),
+    interactive({
+      type: "quiz",
+      id: "math",
+      title: "Quick practice",
+      cards: [{ kind: "number", front: "What is two plus two?", answer: 4, back: "Four." }],
+    }),
+    fence("kova-chart", {
+      type: "heatmap",
+      title: "Sample scores",
+      xKey: "group",
+      keys: ["score"],
+      data: [{ group: "Sample A", score: 12 }],
+    }),
+    interactive({
+      type: "diagram",
+      id: "flow",
+      title: "Process flow",
+      nodes: [
+        { id: "start", label: "Start", x: 10, y: 10 },
+        { id: "finish", label: "Finish", x: 80, y: 70 },
+      ],
+      edges: [{ from: "start", to: "finish", label: "Next" }],
+    }),
+    interactive({
+      type: "files",
+      id: "notes",
+      title: "Example notes",
+      files: [{ name: "notes.txt", content: "Example file content." }],
+    }),
+    fence("kova-ui", {
+      version: 1,
+      type: "document",
+      title: "Example document",
+      content: "# Example\n\nA short draft.",
+    }),
+    "The examples use sample data.",
+  ].join("\n\n");
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `data: ${JSON.stringify({ choices: [{ delta: { content: response } }] })}\n\ndata: [DONE]\n\n`,
+    }),
+  );
+  await page.route("**/api/title", (route) =>
+    route.fulfill({ json: { title: "Interactive response examples" } }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Show interactive examples.");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  const conversation = page.locator("#conversation-pane");
+  await expect(page.getByRole("button", { name: "Close Canvas", exact: true })).toBeVisible();
+  const conversationTab = page.getByRole("tab", { name: "Conversation", exact: true });
+  if (await conversationTab.isVisible()) await conversationTab.click();
+
+  const simulation = conversation.getByRole("region", { name: "Explore rectangle area" });
+  await expect(simulation.getByText("Area = 25", { exact: true })).toBeVisible();
+  await simulation.getByRole("slider", { name: "Width" }).press("ArrowRight");
+  await expect(simulation.getByText("Area = 30", { exact: true })).toBeVisible();
+  await simulation.getByRole("button", { name: "Reset" }).click();
+  await expect(simulation.getByText("Area = 25", { exact: true })).toBeVisible();
+
+  const quiz = page.getByRole("region", { name: "Quick practice" });
+  await quiz.getByRole("spinbutton", { name: "Your answer" }).fill("4");
+  await quiz.getByRole("button", { name: "Check answer" }).click();
+  await expect(quiz.getByText("Correct", { exact: true })).toBeVisible();
+  await quiz.getByRole("button", { name: "See score" }).click();
+  await expect(quiz.getByText("1 of 1 correct", { exact: true })).toBeVisible();
+
+  await expect(page.getByRole("table", { name: "Sample scores heatmap" })).toBeVisible();
+  await page.getByText("Diagram text", { exact: true }).click();
+  await expect(page.getByText("Start → Finish (Next)", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Preview notes.txt" }).click();
+  await expect(page.getByText("Example file content.", { exact: true })).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download notes.txt" }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe("notes.txt");
+  expect(await download.failure()).toBeNull();
+  const draft = conversation.getByRole("region", { name: "Example document workspace" });
+  await draft.getByRole("button", { name: "Preview PDF", exact: true }).click();
+  await expect(draft.getByText("Page 1 of 1", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(draft.getByRole("img", { name: "Example document, page 1" })).toBeVisible();
+  await expect(page.getByText("The examples use sample data.", { exact: true })).toBeVisible();
+});

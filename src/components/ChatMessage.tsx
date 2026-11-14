@@ -525,6 +525,7 @@ function ChatMessageInner({
             <InteractiveBlock
               key={`i${i}:${part.block.id}`}
               block={part.block}
+              ownerId={isSignedIn && principalResolved ? (userKey ?? undefined) : undefined}
               storageKey={
                 temporary
                   ? null

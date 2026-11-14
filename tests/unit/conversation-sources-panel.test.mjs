@@ -6,6 +6,7 @@ import ts from "typescript";
 let inventory = { web: [], memory: [], attachments: [], browser: [] };
 const jsx = (type, props) => ({ type, props: props ?? {} });
 const modules = {
+  "./ResponseSourceIcon": { ResponseSourceIcon: "response-source-icon" },
   "@/lib/browser-activity-contract.mjs": browserActivity,
   "@/assets/plugins/github.svg": { default: "github.svg" },
   react: { useMemo: (fn) => fn(), useState: (value) => [value, () => {}] },
