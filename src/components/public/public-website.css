@@ -236,10 +236,6 @@
   align-items: stretch;
   flex-direction: column;
 }
-.public-plan-glyph {
-  margin-bottom: 24px;
-  color: #dedede;
-}
 .public-plan-card h3 {
   font-size: 34px;
   line-height: 1.15;

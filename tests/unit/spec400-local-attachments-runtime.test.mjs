@@ -116,6 +116,12 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "./AttachmentPreviewMobile": Object.fromEntries(
+      ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
+        (name) => [name, () => null],
+      ),
+    ),
+    "@/lib/chat-image-actions": {},
     "@/components/LinkPreviewChip": { LinkPreviewChip: "LinkPreviewChip" },
     "@/lib/link-preview.mjs": linkPreview,
     react,

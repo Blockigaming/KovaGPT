@@ -1,8 +1,10 @@
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
-import { useMemo, useRef, useState, type ReactNode } from "react";
-import { File, FileText, Image, Share, Download, List, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { NovaLogo } from "./NovaLogo";
+import { X, File, FileText, Image, Share, Download, List, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
@@ -20,7 +22,7 @@ import { MemorySourcesDialog } from "./MemorySourcesDialog";
 import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ConversationSourcesPanel, ConversationActivitySummary } from "./ConversationSourcesPanel";
+import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
 import "./conversation-header.css";
 
 function OutputsIcon() {
@@ -48,6 +50,8 @@ export function ConversationHeaderActions({
   signedIn,
   userTier = "free",
   compact = false,
+  sidebarOpen = true,
+  activityDock,
   navigationBlocked = false,
   isStreaming = false,
   onShare,
@@ -67,6 +71,8 @@ export function ConversationHeaderActions({
   signedIn: boolean;
   userTier?: "free" | "plus" | "pro";
   compact?: boolean;
+  sidebarOpen?: boolean;
+  activityDock?: HTMLDivElement | null;
   navigationBlocked?: boolean;
   isStreaming?: boolean;
   onShare: (trigger: HTMLButtonElement | null) => void;
@@ -87,6 +93,12 @@ export function ConversationHeaderActions({
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
   const [stepsCollapsed, setStepsCollapsed] = useState(false);
+  const inlineActivity = isDesktop && !compact && !sidebarOpen;
+  const [inlineOpen, setInlineOpen] = useState(true);
+  useEffect(() => {
+    if (!inlineActivity) setInlineOpen(true);
+    setOutputsOpen(false);
+  }, [inlineActivity]);
   const [dialog, setDialog] = useState<"share-restricted" | null>(null);
   const [selectedOutput, setSelectedOutput] = useState<ConversationOutput | null>(null);
   const outputsRef = useRef<HTMLButtonElement>(null);
@@ -246,7 +258,6 @@ export function ConversationHeaderActions({
       ) : null}
     </>
   );
-
   return (
     <>
       <div
@@ -270,7 +281,20 @@ export function ConversationHeaderActions({
           <Share aria-hidden="true" />
           <span>Share</span>
         </button>
-        {!isDesktop ? (
+        {inlineActivity ? (
+          <button
+            ref={outputsRef}
+            type="button"
+            className="kova-conversation-icon"
+            aria-label="Activity"
+            title="Activity"
+            aria-expanded={inlineOpen}
+            aria-controls={inlineOpen ? "chat-activity-panel" : undefined}
+            onClick={() => setInlineOpen((value) => !value)}
+          >
+            <OutputsIcon />
+          </button>
+        ) : !isDesktop ? (
           <>
             <button
               ref={outputsRef}
@@ -333,6 +357,34 @@ export function ConversationHeaderActions({
           </Popover>
         )}
       </div>
+      {inlineActivity &&
+        activityDock &&
+        inlineOpen &&
+        createPortal(
+          <aside
+            id="chat-activity-panel"
+            className="kova-conversation-outputs kova-inline-activity"
+            aria-label="Activity"
+          >
+            <header>
+              <NovaLogo decorative className="size-6" />
+              <h2>Activity</h2>
+              <button
+                type="button"
+                className="kova-conversation-icon"
+                aria-label="Close activity"
+                onClick={() => {
+                  setInlineOpen(false);
+                  outputsRef.current?.focus();
+                }}
+              >
+                <X aria-hidden="true" />
+              </button>
+            </header>
+            {activityContent}
+          </aside>,
+          activityDock,
+        )}
       <Dialog
         open={dialog === "share-restricted"}
         onOpenChange={(open) => {

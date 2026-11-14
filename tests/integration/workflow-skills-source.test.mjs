@@ -22,6 +22,7 @@ const [
   retryPolicy,
   home,
   mobileTopBar,
+  desktopToolbar,
   storage,
   exportServer,
   exportPolicy,
@@ -40,6 +41,7 @@ const [
   read("src/lib/workflow-skills-retry.mjs"),
   read("src/routes/index.tsx"),
   read("src/components/MobileTopBar.tsx"),
+  read("src/components/DesktopChatToolbar.tsx"),
   read("src/lib/principal-browser-storage.mjs"),
   read("src/lib/account-export.server.ts"),
   read("src/lib/account-export-policy.mjs"),
@@ -188,7 +190,7 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.match(clearSkill, /clearRetryTimer\(retryTimerRef\)/u);
   assert.match(clearSkill, /retryGenerationRef\.current \+= 1/u);
   assert.match(clearSkill, /retryActionEpochRef\.current\.set/u);
-  assert.match(home, /aria-label=\{`Clear workflow skill/u);
+  assert.match(desktopToolbar, /aria-label=\{`Clear workflow skill/u);
   assert.match(home, /skill=\{/u);
   assert.match(mobileTopBar, /aria-label=\{`Clear workflow skill/u);
   assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);

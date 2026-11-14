@@ -228,9 +228,31 @@ function menuFixture(mobile = false) {
       react: { ...hooks.react, useMemo: (factory) => factory() },
       "@/hooks/use-mobile": { useLayout: () => ({ isMobile: mobile }) },
       "lucide-react": Object.fromEntries(
-        ["Copy", "Download", "ExternalLink", "EyeOff", "ImagePlus"].map((name) => [name, name]),
+        [
+          "Copy",
+          "Download",
+          "ExternalLink",
+          "EyeOff",
+          "ImagePlus",
+          "Image",
+          "PanelRightOpen",
+          "Maximize2",
+        ].map((name) => [name, name]),
       ),
       sonner: { toast: { error: (value) => errors.push(value), success() {} } },
+      "./AttachmentPreviewMobile": {
+        AttachmentPreviewMobileHeader: "AttachmentPreviewMobileHeader",
+      },
+      "./ui/dialog": Object.fromEntries(
+        [
+          "Dialog",
+          "DialogClose",
+          "DialogContent",
+          "DialogDescription",
+          "DialogHeader",
+          "DialogTitle",
+        ].map((name) => [name, name]),
+      ),
       "./ui/context-menu": Object.fromEntries(
         [
           "ContextMenu",

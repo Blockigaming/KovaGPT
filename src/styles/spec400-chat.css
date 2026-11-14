@@ -1132,3 +1132,575 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     border-radius: 20px;
   }
 }
+
+.kova-attachment-preview-dock {
+  display: none;
+}
+
+[data-slot="dialog-content"][data-attachment-preview] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+[data-slot="dialog-content"][data-attachment-preview="full"] {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  translate: none;
+  border: 0;
+  border-radius: 0;
+  padding-block: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-bottom));
+}
+
+[data-attachment-preview="full"] [data-kova-dialog-close] {
+  top: max(12px, env(safe-area-inset-top));
+}
+
+[data-attachment-preview] :is(.kova-preview-action, .spec400-toolbar-button) {
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+}
+
+@media (min-width: 1024px) {
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"]) {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"])
+    > :is(.spec400-result-pane, .spec400-pane-divider, .spec400-result-tabs) {
+    display: none;
+  }
+
+  .kova-attachment-preview-dock:has(> [data-state="open"]) {
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  [data-slot="dialog-content"][data-attachment-preview="docked"] {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    flex: 1;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    translate: none;
+    animation: none;
+    border-radius: var(--kova-radius-panel);
+  }
+}
+
+[data-attachment-preview] .kova-preview-action:not(:disabled):hover {
+  background: var(--accent);
+}
+
+[data-attachment-preview] .kova-preview-action:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+[data-attachment-preview] .kova-preview-action:disabled {
+  opacity: 0.5;
+}
+
+.kova-preview-mobile-header,
+.kova-preview-file-info,
+.kova-preview-image-actions,
+.kova-preview-ask {
+  display: none;
+}
+
+[data-attachment-preview="full"]:is(.kova-preview-mobile-image, .kova-preview-mobile-file) {
+  gap: 0;
+  overflow: hidden;
+  padding: max(12px, env(safe-area-inset-top)) 0 max(16px, env(safe-area-inset-bottom));
+  transform: none;
+}
+
+[data-attachment-preview="full"]
+  :is(.kova-preview-mobile-header ~ [data-kova-dialog-close], .kova-preview-desktop-actions) {
+  display: none;
+}
+
+[data-attachment-preview="full"] .kova-preview-mobile-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+[data-attachment-preview="full"] .kova-preview-mobile-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+}
+
+.kova-preview-mobile-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--foreground);
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kova-preview-mobile-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kova-preview-circle,
+.kova-preview-share {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.kova-preview-circle > svg {
+  width: 22px;
+  height: 22px;
+}
+
+.kova-preview-share {
+  padding-inline: 16px;
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 600;
+}
+
+.kova-preview-more {
+  position: relative;
+}
+
+.kova-preview-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.kova-preview-more-actions {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-floating);
+}
+
+[data-attachment-preview="full"] :is(.kova-preview-file-stage, .kova-preview-image-stage) {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage img {
+  max-height: 100%;
+  object-fit: contain;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage[data-actual-size] {
+  display: block;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-stage[data-actual-size] img {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  margin-inline: auto;
+}
+
+[data-attachment-preview="full"] .kova-preview-image-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  gap: 8px;
+  padding: 12px 12px 4px;
+}
+
+.kova-preview-image-actions > button {
+  display: grid;
+  min-width: 64px;
+  justify-items: center;
+  gap: 5px;
+  color: var(--foreground);
+  font-size: 0.75rem;
+}
+
+[data-attachment-preview="full"] .kova-preview-file-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+[data-attachment-preview="full"] .kova-preview-file-info {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 8px;
+  margin: auto 0;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.kova-preview-file-icon {
+  display: grid;
+  width: 86px;
+  height: 112px;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+  background: var(--muted);
+  font-size: 0.75rem;
+}
+
+.kova-preview-file-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.kova-preview-file-info p {
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.kova-preview-file-info small {
+  color: var(--muted-foreground);
+}
+
+[data-attachment-preview="full"] .kova-preview-ask {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin: 8px max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
+  padding: 4px 5px 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-composer, 26px);
+  background: var(--muted);
+}
+
+.kova-preview-ask input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 16px;
+}
+
+.kova-preview-ask input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.kova-preview-ask button {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.kova-preview-ask button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.kova-preview-mobile-header :focus-visible,
+.kova-preview-image-actions :focus-visible,
+.kova-preview-ask :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kova-attachment-preview-divider,
+.kova-image-viewer-toolbar,
+.kova-preview-continuous-text {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"]) {
+    grid-template-columns:
+      minmax(0, var(--attachment-chat-width, 0.4fr))
+      10px
+      minmax(0, var(--attachment-preview-width, 0.6fr)) !important;
+    gap: 0;
+  }
+
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"])
+    > .kova-attachment-preview-divider {
+    display: block;
+  }
+
+  .spec400-chat-workspace:has(> .kova-attachment-preview-dock > [data-state="open"])
+    > #conversation-pane {
+    display: flex;
+  }
+
+  [data-attachment-preview="docked"].kova-preview-mobile-file {
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+    padding: 12px 16px;
+  }
+
+  [data-attachment-preview="docked"] .kova-preview-file-stage {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  [data-attachment-preview="docked"]
+    :is(.kova-preview-paginated-text, .spec400-preview-range, .spec400-preview-pages):has(
+      ~ .kova-preview-continuous-text
+    ),
+  [data-attachment-preview="docked"] .kova-preview-paginated-text {
+    display: none;
+  }
+
+  [data-attachment-preview="docked"] .kova-preview-continuous-text {
+    display: block;
+    max-height: none;
+    border: 0;
+    padding: 20px 8px;
+    font-family: inherit;
+    font-size: var(--kova-reading-size, 16px);
+    line-height: 1.7;
+  }
+
+  .kova-text-viewer-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  [data-attachment-preview="full"].kova-preview-mobile-image {
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    backdrop-filter: blur(18px);
+  }
+
+  [data-attachment-preview].kova-preview-mobile-image:has(.kova-image-viewer-toolbar)
+    .kova-preview-mobile-header,
+  [data-attachment-preview].kova-preview-mobile-image:has(.kova-image-viewer-toolbar)
+    > [data-kova-dialog-close] {
+    display: none;
+  }
+
+  [data-attachment-preview].kova-preview-mobile-image:has(.kova-image-viewer-toolbar)
+    .kova-preview-mobile-description {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .kova-image-viewer-toolbar,
+  .kova-image-viewer-tools,
+  [data-attachment-preview] .kova-image-viewer-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .kova-image-viewer-toolbar {
+    justify-content: space-between;
+    padding: 0 12px 8px;
+  }
+
+  [data-attachment-preview] .kova-image-viewer-footer {
+    justify-content: center;
+    order: 2;
+    padding-top: 10px;
+  }
+
+  .kova-image-viewer-toolbar .kova-preview-action,
+  .kova-image-viewer-footer .kova-preview-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  .kova-image-viewer-toolbar svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  [data-attachment-preview] .kova-preview-image-stage {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    align-items: safe center;
+    justify-content: safe center;
+  }
+
+  [data-attachment-preview] .kova-preview-image-stage img {
+    width: auto;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  [data-attachment-preview] .kova-preview-image-stage[data-zoomed] img {
+    max-width: none;
+    max-height: none;
+  }
+}
+
+#library-attachment-preview-dock {
+  display: none;
+}
+
+.kova-library-page:has(#library-attachment-preview-dock > [data-state="open"]) {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kova-library-page:has(#library-attachment-preview-dock > [data-state="open"])
+  > :not(#library-attachment-preview-dock) {
+  visibility: hidden;
+}
+
+#library-attachment-preview-dock:has(> [data-state="open"]) {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: block;
+}
+
+[data-slot="dialog-content"].kova-library-text-viewer {
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+[data-slot="dialog-content"][data-attachment-preview="library"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  transform: none;
+  translate: none;
+  animation: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.kova-library-text-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: max(12px, env(safe-area-inset-top)) 62px 8px 16px;
+}
+
+.kova-library-text-header h2 {
+  margin-right: auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.kova-library-text-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 18px 20px;
+}
+
+.kova-library-text-stage > * {
+  width: 100%;
+  max-width: var(--kova-reading-width, 760px);
+  margin-inline: auto;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.kova-library-text-stage > pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.kova-library-markdown :is(p, table, ul, ol, pre, blockquote, h1, h2, h3) {
+  margin-block: 0 1em;
+}
+
+.kova-library-markdown :is(td, th) {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+}
+
+.kova-library-markdown :is(ul, ol) {
+  padding-inline-start: 1.5em;
+  list-style: revert;
+}
+
+[data-attachment-preview].kova-library-text-viewer .kova-preview-ask {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  width: min(620px, calc(100% - 32px));
+  margin: 4px 0 max(12px, env(safe-area-inset-bottom));
+  padding: 4px 5px 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-composer, 26px);
+  background: var(--muted);
+}
+
+.kova-route-loading {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: var(--background);
+  color: var(--foreground);
+}

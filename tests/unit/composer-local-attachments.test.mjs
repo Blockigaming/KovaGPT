@@ -56,3 +56,14 @@ test("removed local paste has an intentional keyboard continuation", async () =>
     /Pasted text attachment restored locally\."\);\s*window.requestAnimationFrame\(\(\) => ref.current\?\.focus\(\)\)/,
   );
 });
+
+test("long-paste labels use the content and stay within four words", () => {
+  const notes =
+    "# Chemical Bonding Quiz Review Extra\r\n\r\n" + "Ionic bonds transfer electrons. ".repeat(400);
+  const prepared = prepareLocalPaste(notes);
+  assert.equal(prepared.summary, "Chemical Bonding Quiz Review");
+  assert.equal(prepared.text, notes);
+  const untitled = "Hi. " + "Ionic bonds transfer electrons. ".repeat(400);
+  assert.equal(prepareLocalPaste(untitled).summary, "Ionic bonds transfer electrons");
+  assert.equal(prepareLocalPaste("123 !!").summary, "Pasted text");
+});

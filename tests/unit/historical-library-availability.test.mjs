@@ -349,6 +349,9 @@ test("attachment rendering preserves the original name for all states and create
     retries = 0;
   const { HistoricalLibraryAttachment } = load("components/HistoricalLibraryAttachment.tsx", {
     "react/jsx-runtime": { jsx, jsxs: jsx },
+    react: { useState: (initial) => [initial, () => {}], useRef: () => ({ current: null }) },
+    "./AttachmentPreviewMobile": {},
+    "./ui/dialog": {},
     "lucide-react": { FileText: "file-icon", Loader2: "loading-icon" },
     "@/hooks/use-historical-library-availability": {
       useHistoricalLibraryAvailability: () => ({ elementRef: {}, status, retry: () => retries++ }),
@@ -380,13 +383,16 @@ test("attachment rendering preserves the original name for all states and create
     assert.equal(tree.props["data-library-availability"], state);
     assert.ok(!nodes.some((node) => node?.props?.href || node?.type === "a"));
     assert.doesNotMatch(text, /deleted|removed|generation/i);
-    if (state === "unknown") nodes.find((node) => node?.type === "button").props.onClick();
+    if (state === "unknown")
+      nodes
+        .find((node) => node?.props?.["aria-label"] === `Check availability of ${attachment.name}`)
+        .props.onClick();
   }
   assert.equal(retries, 1);
   status = "unknown";
   assert.ok(
     !flatten(HistoricalLibraryAttachment({ attachment, ownerId: null })).some(
-      (node) => node?.type === "button",
+      (node) => node?.props?.["aria-label"] === `Check availability of ${attachment.name}`,
     ),
   );
 });

@@ -24,6 +24,55 @@ export function utf8TextBytes(text) {
   return bytes;
 }
 
+const summaryStopWords = new Set(
+  "a an and are as at be but by for from had has have he her i if in is it its me my of on or our she so than that the their them then there these they this to up us was we were what when where which who will with would you your".split(
+    " ",
+  ),
+);
+
+/** Pick a short topic label locally from a heading or recurring words. */
+export function summarizeLocalPaste(text) {
+  const cleaned = text.replace(/https?:\/\/\S+/gi, " ");
+  const words = (value) => value.match(/\p{L}[\p{L}\p{M}\p{N}'’]{0,47}/gu) ?? [];
+  const heading = cleaned.trimStart().match(/^#{1,6}[^\S\r\n]+([^\r\n]+)/)?.[1];
+  if (heading) {
+    const title = words(heading).slice(0, 4).join(" ");
+    if (title) return title;
+  }
+
+  const tokens = words(cleaned);
+  const counts = new Map();
+  for (const word of tokens) {
+    const key = word.toLowerCase();
+    if (summaryStopWords.has(key)) continue;
+    const entry = counts.get(key);
+    if (entry) entry.count++;
+    else counts.set(key, { word, count: 1 });
+  }
+
+  let best = [];
+  let bestScore = 0;
+  for (let start = 0; start < tokens.length; start++) {
+    const phrase = [];
+    const seen = new Set();
+    let score = 0;
+    for (const word of tokens.slice(start, start + 4)) {
+      const key = word.toLowerCase();
+      const entry = counts.get(key);
+      if (!entry || seen.has(key)) break;
+      seen.add(key);
+      phrase.push(word);
+      score += Math.log2(1 + entry.count);
+      if (score > bestScore) {
+        best = [...phrase];
+        bestScore = score;
+      }
+    }
+  }
+  const label = best.join(" ") || tokens.slice(0, 4).join(" ");
+  return label ? label.replace(/^\p{L}/u, (letter) => letter.toUpperCase()) : "Pasted text";
+}
+
 /** Preserve the clipboard's exact plain text, including tabs, CRLF, and trailing whitespace. */
 export function prepareLocalPaste(text) {
   if (text.length > LOCAL_PASTE_MAX_CHARACTERS)
@@ -35,7 +84,7 @@ export function prepareLocalPaste(text) {
     throw new Error(
       "Paste supports up to 80,000 characters and 200 KB. Split the text; nothing has been truncated.",
     );
-  return { text, size };
+  return { text, size, summary: summarizeLocalPaste(text) };
 }
 
 /** A fixed-size, selectable preview. No normalization or permanent truncation. */

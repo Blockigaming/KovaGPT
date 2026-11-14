@@ -16,10 +16,11 @@ function roleDialogSizeRules(styles) {
 }
 
 test("Temporary Chat is reachable and truthfully selected from the mobile top bar", async () => {
-  const [topBar, route, temporaryControls] = await Promise.all([
+  const [topBar, route, temporaryControls, desktopToolbar] = await Promise.all([
     read("src/components/MobileTopBar.tsx"),
     read("src/routes/index.tsx"),
     read("src/components/TemporaryChatStartDialog.tsx"),
+    read("src/components/DesktopChatToolbar.tsx"),
   ]);
 
   assert.match(topBar, /MessageCircleOff/);
@@ -34,10 +35,10 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
     route,
     /onTemporaryChatChange=\{\(enabled, trigger\) => \{\s+temporaryTriggerRef.current = trigger;\s+temporaryReturnUrlRef.current = window.location.href;\s+setTemporaryChatEnabled\(enabled\);/,
   );
-  assert.match(route, /isLoaded && isSignedIn && !chatStarted/);
+  assert.match(desktopToolbar, /isLoaded && isSignedIn && !chatStarted/);
   assert.match(
     route,
-    /onToggle=\{\(trigger\) => \{\s+temporaryTriggerRef.current = trigger;\s+temporaryReturnUrlRef.current = window.location.href;\s+setTemporaryChatEnabled\(!tempChat\);/,
+    /onToggleTemporaryChat=\{\(trigger\) => \{\s+temporaryTriggerRef.current = trigger;\s+temporaryReturnUrlRef.current = window.location.href;\s+setTemporaryChatEnabled\(!tempChat\);/,
   );
   assert.match(route, /if \(chatStarted \|\| enabled === tempChat\) return/);
   assert.match(temporaryControls, /onClick=\{\(event\) => onToggle\(event.currentTarget\)\}/);
@@ -75,7 +76,10 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
     read("src/components/CommandPalette.tsx"),
   ]);
 
-  assert.match(dialog, /data-kova-dialog-surface=\{constrainToViewport \? "" : undefined\}/);
+  assert.match(
+    dialog,
+    /data-kova-dialog-surface=\{constrainToViewport && !attachmentPreview \? "" : undefined\}/,
+  );
   assert.match(alertDialog, /data-kova-dialog-surface=""/);
   assert.doesNotMatch(sheet, /data-kova-dialog-surface/);
   assert.match(images, /constrainToViewport=\{false\}/);

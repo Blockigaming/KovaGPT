@@ -133,12 +133,15 @@ function fixture(overrides = {}, desktop = true) {
           },
         ];
       },
+      useEffect() {},
       useRef(initial) {
         const i = cursor++;
         states[i] ??= { current: initial };
         return states[i];
       },
     },
+    "react-dom": { createPortal: (node) => node },
+    "./NovaLogo": { NovaLogo: "NovaLogo" },
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "lucide-react": primitives([
       "ArrowLeft",
@@ -483,8 +486,9 @@ test("outputs open real attachment content and report missing originals truthful
 test("temporary settings are gated on both headers and callback, and top avatar is removed", () => {
   const home = readFileSync("src/routes/index.tsx", "utf8");
   const mobile = readFileSync("src/components/MobileTopBar.tsx", "utf8");
+  const desktop = readFileSync("src/components/DesktopChatToolbar.tsx", "utf8");
   assert.match(home, /const chatStarted = Boolean\(active\?\.messages.length\)/);
-  assert.match(home, /isLoaded && isSignedIn && !chatStarted/);
+  assert.match(desktop, /isLoaded && isSignedIn && !chatStarted/);
   assert.match(home, /if \(chatStarted \|\| enabled === tempChat\) return/);
   assert.match(mobile, /isSignedIn && !chatStarted && onTemporaryChatChange/);
   assert.doesNotMatch(home, /<UserButton/);
