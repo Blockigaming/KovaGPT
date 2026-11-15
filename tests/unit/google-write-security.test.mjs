@@ -296,7 +296,7 @@ test("calendar rename accepts a single event and ignores untrusted version and p
   );
 });
 
-test("calendar rename stages the provider version and only patches on current owner confirmation", async () => {
+test("calendar changes stage the provider version and only patch on owner confirmation", async () => {
   const owner = "owner";
   const connection = {
     id: "google-account",
@@ -307,6 +307,15 @@ test("calendar rename stages the provider version and only patches on current ow
   };
   let row;
   let status = 200;
+  const event = {
+    id: "event123",
+    summary: "Original",
+    etag: '"provider-version"',
+    organizer: { self: true },
+    start: { dateTime: "2026-12-04T10:00:00-05:00" },
+    end: { dateTime: "2026-12-04T10:30:00-05:00" },
+    attendees: [],
+  };
   const requests = [];
   const db = {
     from(table) {
@@ -379,7 +388,7 @@ test("calendar rename stages the provider version and only patches on current ow
       assert.equal(url, "https://www.googleapis.com/calendar/v3/calendars/primary/events/event123");
       requests.push(init);
       if (init.method === "PATCH") return new Response(null, { status });
-      return Response.json({ id: "event123", summary: "Original", etag: '"provider-version"' });
+      return Response.json(event);
     },
     { ...console, error: () => {} },
   );
@@ -415,4 +424,37 @@ test("calendar rename stages the provider version and only patches on current ow
   assert.equal(result.ok, false);
   assert.match(result.error, /changed after review/);
   assert.equal(row.status, "failed");
+
+  status = 200;
+  const start = "2026-12-04T11:00:00-05:00";
+  const end = "2026-12-04T11:30:00-05:00";
+  const stageTime = () =>
+    exports.stagePendingAction(owner, "calendar_reschedule_event", {
+      event_id: event.id,
+      start,
+      end,
+    });
+  assert.throws(
+    () =>
+      validateSupportedGoogleWrite("calendar_reschedule_event", {
+        event_id: event.id,
+        start: end,
+        end: start,
+      }),
+    /start and end times are invalid/,
+  );
+  event.attendees = [{ email: "guest@example.com" }];
+  await assert.rejects(stageTime(), /without guests/);
+  assert.equal(row.status, "failed");
+  event.attendees = [];
+  const reschedule = await stageTime();
+  assert.match(reschedule.summary, /10:00:00.*10:30:00/);
+  assert.equal(reschedule.args_preview.start, "2026-12-04T16:00:00.000Z");
+  assert.equal(requests.at(-1).method, undefined);
+  assert.equal((await exports.executePendingAction(owner, reschedule.id)).ok, true);
+  assert.equal(requests.at(-1).headers["If-Match"], '"provider-version"');
+  assert.deepEqual(JSON.parse(requests.at(-1).body), {
+    start: { dateTime: "2026-12-04T16:00:00.000Z" },
+    end: { dateTime: "2026-12-04T16:30:00.000Z" },
+  });
 });
