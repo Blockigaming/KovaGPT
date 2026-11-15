@@ -2252,7 +2252,6 @@ export function SettingsDialog({
 
               {/* NOTIFICATIONS */}
               <TabsContent aria-labelledby={currentSectionHeadingId} value="notifications">
-                {!page ? <h3 className="text-sm font-semibold">Notifications</h3> : null}
                 <PwaSettings ownerId={isLoaded ? userKey : null} />
                 <AccountEmailPreferences ownerId={isLoaded ? userKey : null} />
               </TabsContent>
