@@ -229,7 +229,7 @@ test("chat merges GitHub repository tools and dispatches through its pinned cont
   const context = await f.getConnectedToolContext("owner-a");
   assert.deepEqual(
     context.tools.map((tool) => tool.function.name),
-    ["outlook_search", "github_read"],
+    ["outlook_read_message", "outlook_search", "github_read"],
   );
   const args = { repository: "owner/repo", operation: "readme" };
   const result = await f.runConnectedTool("owner-a", "github_read", args, context);
@@ -255,7 +255,7 @@ test("unavailable GitHub context preserves other provider tools and cannot be in
   const context = await f.getConnectedToolContext("owner-a");
   assert.deepEqual(
     context.tools.map((tool) => tool.function.name),
-    ["outlook_search"],
+    ["outlook_read_message", "outlook_search"],
   );
   await assert.rejects(
     f.runConnectedTool("owner-a", "github_read", {}, context),
@@ -269,7 +269,7 @@ test("tool planning offers only actually granted service reads and pins account 
   const context = await f.getConnectedToolContext("owner-a");
   assert.deepEqual(
     context.tools.map((tool) => tool.function.name),
-    ["outlook_search"],
+    ["outlook_read_message", "outlook_search"],
   );
   assert.deepEqual(context.tools[0].function.parameters.properties.account_id.enum, [
     f.state.row.id,
