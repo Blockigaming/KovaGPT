@@ -434,7 +434,7 @@ test("streaming status reports only real activity instead of invented progressio
   assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
   assert.match(status, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
   assert.match(status, /return \(\) => window\.clearInterval\(timer\)/);
-  assert.match(status, /Working for \{seconds\}s/);
+  assert.match(status, /Working for \{formatResponseTime\(seconds\)\}/);
   assert.doesNotMatch(status, />\s*Skip\s*</);
   assert.doesNotMatch(status, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(status, /kova-thinking-indicator/);
