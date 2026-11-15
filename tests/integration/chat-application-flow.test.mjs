@@ -880,7 +880,6 @@ test("actual application guard clamps final output and permits only one quoted O
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": "new-attempt-123",
-        "X-Kova-Response-Followups": "1",
         "x-kova-acceptance-operation": a.plan.operationId,
         "X-Kova-Response-Followups": "1",
       },

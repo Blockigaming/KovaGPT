@@ -130,7 +130,6 @@ function chatFixture(storage = new Map()) {
     `${detailSource.slice(detailSource.indexOf("function isAbortError"))}\nreturn ProjectChatPage;`,
     {
       ...b.dependencies,
-      extractResponseFollowups,
       Route: { useParams: () => params },
       useBlocker: (options) => {
         blockOptions = options;
