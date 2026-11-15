@@ -32,6 +32,12 @@ const mocks = {
   ],
   "@/lib/account-identity.server.mjs": ["readAccountIdentity"],
   "@/integrations/connected-tools.server": ["getConnectedToolContext", "runConnectedTool"],
+  "@/integrations/sensitive-chat-reads.server": [
+    "readSensitiveChatSnapshot",
+    "sensitiveChatConfigured",
+    "sensitiveChatProvider",
+    "sensitiveChatTool",
+  ],
   "@/lib/google-tools.server": [
     "getGoogleToolContext",
     "TOOL_ACTIVITY",
@@ -160,6 +166,16 @@ function fixture({
       enforceQuota: noop,
     },
     "@/lib/account-identity.server.mjs": { readAccountIdentity: async () => null },
+    "@/integrations/sensitive-chat-reads.server": {
+      sensitiveChatProvider: () => undefined,
+      sensitiveChatConfigured: () => false,
+      sensitiveChatTool: () => {
+        throw Error("Unexpected sensitive connector tool");
+      },
+      readSensitiveChatSnapshot: () => {
+        throw Error("Unexpected sensitive connector read");
+      },
+    },
     "@/integrations/connected-tools.server": {
       getConnectedToolContext: noop,
       runConnectedTool: () => {
