@@ -144,7 +144,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/responsive.spec.ts", 2, 2],
     ["tests/e2e/secondary-screens.spec.ts", 3, 3],
     ["tests/e2e/seo-indexing.spec.ts", 3, 2],
-    ["tests/e2e/ui-quality.spec.ts", 6, 8, 6],
+    ["tests/e2e/ui-quality.spec.ts", 7, 9, 7],
   ];
   const paths = contracts.map(([path]) => path);
   const [helper, guardSpec, home, ...specs] = await Promise.all([

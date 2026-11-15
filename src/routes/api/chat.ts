@@ -1567,9 +1567,8 @@ export const Route = createFileRoute("/api/chat")({
                     ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
                     : "";
 
-            // Keep basic reply and connector requests affordable near the Free quota boundary.
+            // Include the expanded schemas only for turns that request rich output.
             const useRichResponseCatalog =
-              callerTier !== "free" ||
               clientTool === "study" ||
               clientTool === "data_analysis" ||
               clientTool === "file_analysis" ||
