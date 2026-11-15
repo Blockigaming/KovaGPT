@@ -114,7 +114,7 @@ export function googleToolCapability(name) {
   if (name === "gmail_create_draft") return "gmail.draft";
   if (name === "gmail_send") return "gmail.write";
   if (name.startsWith("gmail_")) return "gmail.read";
-  if (name === "calendar_create_event") return "calendar.write";
+  if (name === "calendar_create_event" || name === "calendar_rename_event") return "calendar.write";
   if (name.startsWith("calendar_")) return "calendar.read";
   if (name.startsWith("drive_")) return "drive.read";
   throw new Error("google_unknown_tool");
