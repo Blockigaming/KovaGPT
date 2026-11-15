@@ -1,3 +1,4 @@
+import { usesCompactSettings } from "./settings-layout-fixture";
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
@@ -21,6 +22,9 @@ test("logged-out homepage loads its restored image with a device-specific crop",
   });
   expect(rendered.source).toMatch(/classroom-hero-restored(?:-768)?\.webp$/);
   expect(rendered.width).toBeGreaterThan(0);
-  expect(rendered.aspect).toBe(page.viewportSize()!.width <= 1023 ? "4 / 3" : "4 / 5");
+  const compact = await usesCompactSettings(page);
+  expect(rendered.aspect).toBe(
+    compact ? "2.1 / 1" : page.viewportSize()!.width <= 1023 ? "4 / 3" : "4 / 5",
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

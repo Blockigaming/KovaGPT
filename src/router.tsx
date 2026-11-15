@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
+import { RouteLoading } from "./components/RouteLoading";
 import { routeTree } from "./routeTree.gen";
 
 const getNonce = createIsomorphicFn().server(() => getRequestHeader("x-kova-csp-nonce"));
@@ -23,6 +24,9 @@ export const getRouter = () => {
 
   const router = createRouter({
     routeTree,
+    defaultPendingComponent: RouteLoading,
+    defaultPendingMs: 0,
+    defaultPendingMinMs: 0,
     ssr: { nonce: getNonce() },
     context: { queryClient },
     scrollRestoration: true,

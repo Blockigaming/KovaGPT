@@ -1,3 +1,5 @@
+import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
+import type { CSSProperties } from "react";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
@@ -55,19 +57,14 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { PanelLeft, Sparkles, X } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
 import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
-import {
-  ChatInput,
-  type ComposerToolId,
-  type PendingAttachment,
-  type RecentLibraryFile,
-} from "@/components/ChatInput";
+import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
@@ -94,11 +91,12 @@ const QuotaRejectedDraftPreview = lazy(() =>
     default: module.QuotaRejectedDraftPreview,
   })),
 );
-const WorkspaceResultDivider = lazy(() =>
-  import("@/components/WorkspaceResultContent").then((module) => ({
-    default: module.WorkspaceResultDivider,
-  })),
+const WorkspacePaneDivider = lazy(() =>
+  import("@/components/WorkspacePaneDivider").then((m) => ({ default: m.WorkspacePaneDivider })),
 );
+const DesktopChatToolbar = lazy(() => import("@/components/DesktopChatToolbar"));
+const NextChatPromptPanel = lazy(() => import("@/components/NextChatPromptPanel"));
+const ChatRequestStatus = lazy(() => import("@/components/ChatRequestStatus"));
 const WorkspaceResultContent = lazy(() =>
   import("@/components/WorkspaceResultContent").then((module) => ({
     default: module.WorkspaceResultContent,
@@ -140,11 +138,7 @@ const TemporaryChatStartDialog = lazy(() =>
     default: m.TemporaryChatStartDialog,
   })),
 );
-const TemporaryChatToggle = lazy(() =>
-  loadTemporaryChatControls().then((m) => ({
-    default: m.TemporaryChatToggle,
-  })),
-);
+
 const TemporaryChatBanner = lazy(() =>
   loadTemporaryChatControls().then((m) => ({
     default: m.TemporaryChatBanner,
@@ -170,13 +164,7 @@ import {
 
 import { getUsage } from "@/lib/limits";
 
-import {
-  useUser,
-  useClerkSafe,
-  SignInButton,
-  SignUpButton,
-  clerkEnabled,
-} from "@/components/auth/ClerkSafe";
+import { useUser, useClerkSafe, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
@@ -369,9 +357,6 @@ function KovaGPT() {
   }, []);
   const [pendingWorkflowSkill, setPendingWorkflowSkill] =
     useState<ConversationWorkflowSkill | null>(null);
-  const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
-  const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
-  const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatEditDraft | null>(null);
   useEffect(() => {
     if (
@@ -383,6 +368,7 @@ function KovaGPT() {
   }, [activeId, storagePrincipal, editingMessage]);
 
   const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
+  const [activityDock, setActivityDock] = useState<HTMLDivElement | null>(null);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -390,35 +376,21 @@ function KovaGPT() {
     if (!sidebarOpen || !trigger) return;
     return focusReopenedSidebar(trigger);
   }, [sidebarOpen]);
-  const loadRecentLibraryFiles = useCallback(async () => {
-    if (!isLoaded) return;
-    const generation = storageGenerationRef.current;
-    const requestPrincipal = storagePrincipal;
-    const isCurrent = () =>
-      generation === storageGenerationRef.current &&
-      requestPrincipal === storagePrincipalRef.current;
-    setRecentLibraryLoading(true);
-    setRecentLibraryError(null);
-    try {
-      const files = isSignedIn
-        ? await (
-            await import("@/lib/recent-library-files.mjs")
-          ).loadRecentLibraryFileOptions("Saved from chat")
-        : [];
-      if (!isCurrent()) return;
-      setRecentLibraryFiles(files);
-    } catch (error) {
-      if (!isCurrent()) return;
-      console.warn("[recentLibraryFiles]", error);
-      setRecentLibraryError("Recent Library files are unavailable.");
-    } finally {
-      if (isCurrent()) setRecentLibraryLoading(false);
-    }
-  }, [isLoaded, isSignedIn, storagePrincipal]);
-
-  useEffect(() => {
-    void loadRecentLibraryFiles();
-  }, [loadRecentLibraryFiles]);
+  const {
+    recentLibraryFiles,
+    recentLibraryLoading,
+    recentLibraryError,
+    loadRecentLibraryFiles,
+    resetRecentLibrary,
+  } = useRecentChatLibrary(
+    isLoaded,
+    isSignedIn,
+    storagePrincipal,
+    storagePrincipalRef,
+    storageGenerationRef,
+    "Saved from chat",
+    "Recent Library files are unavailable.",
+  );
 
   // Draft persistence: keep an unsent message per conversation so users don't
   // lose typing when switching chats.
@@ -764,6 +736,12 @@ function KovaGPT() {
   };
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
   const [paneRatio, setPaneRatio] = useState(0.45);
+  const openAttachmentSidebar = () => {
+    if (window.matchMedia("(min-width: 1024px)").matches) setSidebarOpen(true);
+  };
+  const [attachmentPaneRatio, setAttachmentPaneRatio] = useState(0.4);
+  const resizeAttachmentPane = (next: number) =>
+    setAttachmentPaneRatio(Math.max(0.3, Math.min(0.7, next)));
   const wideResult = workspaceWidth >= 1000;
   const setLayoutRatio = (next: number) => {
     const usableWidth = Math.max(workspaceWidth - 12, 840);
@@ -953,9 +931,7 @@ function KovaGPT() {
     setEditingMessage(null);
     setShareChatId(null);
     setSettingsOpen(false);
-    setRecentLibraryFiles([]);
-    setRecentLibraryLoading(false);
-    setRecentLibraryError(null);
+    resetRecentLibrary();
     lastLoadedDraftRef.current = null;
     pendingDraftLoadRef.current = null;
     attachmentDraftsRef.current.clear();
@@ -1103,9 +1079,7 @@ function KovaGPT() {
       setTempChatContext("clean");
       setTempChatStartOpen(false);
       setTempChatConfirmed(false);
-      setRecentLibraryFiles([]);
-      setRecentLibraryLoading(false);
-      setRecentLibraryError(null);
+      resetRecentLibrary();
       configureMemoryWrites({ principal: null, enabled: false });
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
@@ -2762,50 +2736,21 @@ function KovaGPT() {
 
   const requestStatusPanel = (hasPendingMessage: boolean) =>
     visibleRequestNotice ? (
-      <section
-        className="mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm"
-        role="status"
-        data-testid="chat-request-status"
-      >
-        <>
-          <p>
-            {visibleRequestNotice.signedIn
-              ? "Your session could not be verified. Sign in again to continue."
-              : "Sign in is required for this request."}{" "}
-            Signing in does not resend a message. It may change the current account.
-          </p>
-          {(hasPendingMessage || Boolean(nextPromptRef.current)) && (
-            <p>
-              Save or copy your current message and attachments, then clear them before signing in.
-              Cancel or save any next message too. Drafts are not transferred between accounts.
-            </p>
-          )}
-          <SignInButton mode="modal">
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={hasPendingMessage || Boolean(nextPromptRef.current)}
-              onClick={(event) => {
-                if (
-                  !nextPromptMountedRef.current ||
-                  requestNoticeRef.current !== visibleRequestNotice ||
-                  hasPendingMessage ||
-                  Boolean(
-                    composerDraftRef.current.text.length ||
-                    composerDraftRef.current.attachments.length,
-                  ) ||
-                  Boolean(nextPromptRef.current) ||
-                  !sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current)
-                )
-                  event.preventDefault();
-              }}
-            >
-              Sign in
-            </Button>
-          </SignInButton>
-        </>
-      </section>
+      <Suspense fallback={null}>
+        <ChatRequestStatus
+          signedIn={visibleRequestNotice.signedIn}
+          blocked={hasPendingMessage || Boolean(nextPromptRef.current)}
+          canSignIn={() =>
+            nextPromptMountedRef.current &&
+            requestNoticeRef.current === visibleRequestNotice &&
+            !hasPendingMessage &&
+            !composerDraftRef.current.text &&
+            !composerDraftRef.current.attachments.length &&
+            !nextPromptRef.current &&
+            sameNextPromptScope(visibleRequestNotice.scope, nextPromptScopeRef.current)
+          }
+        />
+      </Suspense>
     ) : null;
   const visibleNextPrompt =
     principalReady && nextPrompt?.scope.principal === storagePrincipal ? nextPrompt : null;
@@ -2820,94 +2765,42 @@ function KovaGPT() {
       matchesNextPromptDraft(visibleNextPrompt, composerDraftRef.current)),
   );
   const nextPromptPanel = visibleNextPrompt ? (
-    <section
-      aria-label="Next message"
-      className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
-      data-testid="next-prompt-panel"
-    >
-      <p role="status" className="font-medium">
-        {visibleNextPrompt.status === "held"
-          ? "Next message kept, not queued"
-          : "Next message queued"}
-      </p>
-      <p className="whitespace-pre-wrap break-words max-h-32 overflow-auto">
-        {visibleNextPrompt.text || "Attached material"}
-      </p>
-      {visibleNextPrompt.attachments.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {visibleNextPrompt.attachments.map((file) => file.name).join(", ")}
-        </p>
-      )}
-      {visibleNextPrompt.tool && (
-        <p className="text-xs text-muted-foreground">Tool: {visibleNextPrompt.tool}</p>
-      )}
-      <p className="text-xs text-muted-foreground">
-        {visibleNextPrompt.reason ??
-          "Only this version will be sent after the current response finishes. Later edits stay in your draft. Kept in this tab only."}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          data-next-prompt-cancel
-          onClick={(event) => {
-            if (
-              nextPromptRef.current === visibleNextPrompt &&
-              storagePrincipalRef.current === visibleNextPrompt.scope.principal
-            ) {
-              updateNextPrompt(null);
-              scheduleNextPromptFocus(event?.currentTarget, "composer", null);
-            }
-          }}
-        >
-          Cancel next message
-        </Button>
-        {nextPromptInCurrentChat ? (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            disabled={!canEditNextPrompt}
-            onClick={() => {
-              if (
-                !canEditNextPrompt ||
-                nextPromptRef.current !== visibleNextPrompt ||
-                !sameNextPromptContext(visibleNextPrompt.scope, nextPromptScopeRef.current)
-              )
-                return;
-              setInput(visibleNextPrompt.text);
-              setAttachments(visibleNextPrompt.attachments.map((file) => ({ ...file })));
-              setSelectedTool(visibleNextPrompt.tool);
-              updateNextPrompt(null);
-            }}
-          >
-            Edit next message
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={() => {
-              if (
-                storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
-                visibleNextPrompt.scope.conversationId &&
-                conversations.some((chat) => chat.id === visibleNextPrompt.scope.conversationId)
-              )
-                setActiveId(visibleNextPrompt.scope.conversationId);
-            }}
-          >
-            Open original chat
-          </Button>
-        )}
-      </div>
-      {nextPromptInCurrentChat && !canEditNextPrompt && (
-        <p className="text-xs text-muted-foreground">
-          Keep or clear your newer draft before editing this saved version.
-        </p>
-      )}
-    </section>
+    <Suspense fallback={null}>
+      <NextChatPromptPanel
+        visibleNextPrompt={visibleNextPrompt}
+        nextPromptInCurrentChat={nextPromptInCurrentChat}
+        canEditNextPrompt={canEditNextPrompt}
+        onCancel={(event) => {
+          if (
+            nextPromptRef.current === visibleNextPrompt &&
+            storagePrincipalRef.current === visibleNextPrompt.scope.principal
+          ) {
+            updateNextPrompt(null);
+            scheduleNextPromptFocus(event?.currentTarget, "composer", null);
+          }
+        }}
+        onEdit={() => {
+          if (
+            !canEditNextPrompt ||
+            nextPromptRef.current !== visibleNextPrompt ||
+            !sameNextPromptContext(visibleNextPrompt.scope, nextPromptScopeRef.current)
+          )
+            return;
+          setInput(visibleNextPrompt.text);
+          setAttachments(visibleNextPrompt.attachments.map((file) => ({ ...file })));
+          setSelectedTool(visibleNextPrompt.tool);
+          updateNextPrompt(null);
+        }}
+        onOpenOriginal={() => {
+          if (
+            storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
+            visibleNextPrompt.scope.conversationId &&
+            conversations.some((chat) => chat.id === visibleNextPrompt.scope.conversationId)
+          )
+            setActiveId(visibleNextPrompt.scope.conversationId);
+        }}
+      />
+    </Suspense>
   ) : undefined;
 
   const visibleQuotaRejectedDrafts = principalReady
@@ -2988,6 +2881,27 @@ function KovaGPT() {
   );
 
   // Image generation removed; can be reintroduced when user explicitly asks.
+
+  const canAskAboutAttachment =
+    !isStreaming && isSignedIn && principalReady && historyReady && !editingMessage;
+  const askAboutAttachment = (prompt: string, attachment: PendingAttachment) => {
+    if (inFlightRef.current || !canAskAboutAttachment) return false;
+    void send(
+      prompt,
+      [attachment],
+      undefined,
+      0,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      { preserveDraft: true },
+    );
+    return inFlightRef.current;
+  };
 
   const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
     if (!active) return null;
@@ -3076,6 +2990,13 @@ function KovaGPT() {
             }),
           );
         }}
+        onOpenAttachmentPane={openAttachmentSidebar}
+        onAskAttachment={
+          canAskAboutAttachment
+            ? (prompt, attachment) =>
+                askAboutAttachment(prompt, pendingMessageAttachments([attachment])[0])
+            : undefined
+        }
         onDraftPrompt={isLastAssistant && !isStreaming ? prepareResponseDraft : undefined}
         onFollowUp={
           isLastAssistant && !isStreaming && isSignedIn && principalReady && historyReady
@@ -3184,6 +3105,8 @@ function KovaGPT() {
           signedIn={Boolean(isLoaded && isSignedIn)}
           userTier={tier}
           compact={compact}
+          sidebarOpen={sidebarOpen}
+          activityDock={activityDock}
           isStreaming={isStreaming}
           navigationBlocked={Boolean(input || attachments.length || isStreaming)}
           onShare={(trigger) => {
@@ -3217,78 +3140,32 @@ function KovaGPT() {
 
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
-      <header className="kova-topbar kova-desktop-topbar relative hidden h-[56px] items-center gap-1 px-4 lg:flex">
-        <div
-          hidden={sidebarOpen || Boolean(isSignedIn)}
-          className="flex items-center gap-1 mr-2 shrink-0"
-        >
-          <button
-            onClick={(event) => {
-              readingAnchorControllerRef.current?.capture();
-              sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
-              setSidebarOpen(true);
-            }}
-            className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
-            aria-label="Open sidebar"
-            title="Open sidebar"
-          >
-            <PanelLeft className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex items-center min-w-0 flex-1 relative">
-          <div className="spec400-chat-title">
-            {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "KovaGPT"}
-          </div>
-          {selectedWorkflowSkill ? (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={clearWorkflowSkill}
-              disabled={isStreaming}
-              className="ml-2 max-w-56 text-muted-foreground"
-              aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
-              title="Clear skill"
-            >
-              <span className="truncate">{selectedWorkflowSkill.name}</span>
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-            </Button>
-          ) : null}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2 shrink-0">
-          {freeOfferButton}
-          {conversationActions()}
-          {isLoaded && isSignedIn && !chatStarted && (
-            <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
-              <TemporaryChatToggle
-                enabled={tempChat}
-                confirmed={tempChatConfirmed}
-                onToggle={(trigger) => {
-                  temporaryTriggerRef.current = trigger;
-                  temporaryReturnUrlRef.current = window.location.href;
-                  setTemporaryChatEnabled(!tempChat);
-                }}
-              />
-            </Suspense>
-          )}
-          {isLoaded && !isSignedIn && !chatStarted ? (
-            <>
-              <SignInButton mode="modal">
-                <button className="kova-auth-primary h-10 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90 active:scale-[0.98] transition">
-                  Log in
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="kova-auth-sign-up h-10 whitespace-nowrap rounded-full px-4 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition">
-                  Sign up for free
-                </button>
-              </SignUpButton>
-            </>
-          ) : null}
-        </div>
-      </header>
+      <Suspense fallback={null}>
+        <DesktopChatToolbar
+          sidebarOpen={sidebarOpen}
+          isSignedIn={isSignedIn}
+          isLoaded={isLoaded}
+          chatStarted={chatStarted}
+          chatTitle={active?.title}
+          selectedWorkflowSkill={selectedWorkflowSkill ?? null}
+          isStreaming={isStreaming}
+          clearWorkflowSkill={clearWorkflowSkill}
+          freeOfferButton={freeOfferButton}
+          actions={conversationActions()}
+          tempChat={tempChat}
+          tempChatConfirmed={tempChatConfirmed}
+          onOpenSidebar={(event) => {
+            readingAnchorControllerRef.current?.capture();
+            sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
+            setSidebarOpen(true);
+          }}
+          onToggleTemporaryChat={(trigger) => {
+            temporaryTriggerRef.current = trigger;
+            temporaryReturnUrlRef.current = window.location.href;
+            setTemporaryChatEnabled(!tempChat);
+          }}
+        />
+      </Suspense>
     ) : null;
 
   return (
@@ -3354,6 +3231,7 @@ function KovaGPT() {
         data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
+        <div id="chat-activity-dock" ref={setActivityDock} />
         <MobileTopBar
           onOpenSidebar={() => {
             readingAnchorControllerRef.current?.capture();
@@ -3427,11 +3305,15 @@ function KovaGPT() {
           className={`spec400-chat-workspace${result ? " has-result" : ""}`}
           data-split={Boolean(result && wideResult)}
           style={
-            result && wideResult
-              ? {
-                  gridTemplateColumns: `minmax(420px, ${paneRatio}fr) 12px minmax(420px, ${1 - paneRatio}fr)`,
-                }
-              : undefined
+            {
+              "--attachment-chat-width": `${attachmentPaneRatio}fr`,
+              "--attachment-preview-width": `${1 - attachmentPaneRatio}fr`,
+              ...(result && wideResult
+                ? {
+                    gridTemplateColumns: `minmax(420px, ${paneRatio}fr) 12px minmax(420px, ${1 - paneRatio}fr)`,
+                  }
+                : {}),
+            } as CSSProperties
           }
         >
           {result && !wideResult && (
@@ -3486,6 +3368,7 @@ function KovaGPT() {
                     value={principalReady ? input : ""}
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}
+                    onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
@@ -3624,6 +3507,7 @@ function KovaGPT() {
                     value={principalReady ? input : ""}
                     onChange={setInput}
                     onSubmit={(tool) => send(input, attachments, tool)}
+                    onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
                     onStop={stop}
                     onSendNext={queueNextPrompt}
                     sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
@@ -3686,7 +3570,8 @@ function KovaGPT() {
           </div>
           {result && wideResult && (
             <Suspense fallback={<div className="spec400-pane-divider" aria-hidden="true" />}>
-              <WorkspaceResultDivider
+              <WorkspacePaneDivider
+                label="Resize conversation and result"
                 workspaceRef={workspaceRef}
                 paneRatio={paneRatio}
                 setLayoutRatio={setLayoutRatio}
@@ -3724,6 +3609,19 @@ function KovaGPT() {
               </Suspense>
             </section>
           )}
+          <Suspense fallback={null}>
+            <WorkspacePaneDivider
+              label="Resize conversation and attachment preview"
+              className="spec400-pane-divider kova-attachment-preview-divider"
+              workspaceRef={workspaceRef}
+              paneRatio={attachmentPaneRatio}
+              minimum={30}
+              maximum={70}
+              setLayoutRatio={resizeAttachmentPane}
+              setPaneRatio={setAttachmentPaneRatio}
+            />
+          </Suspense>
+          <div id="chat-attachment-preview-dock" className="kova-attachment-preview-dock" />
         </div>
       </main>
 

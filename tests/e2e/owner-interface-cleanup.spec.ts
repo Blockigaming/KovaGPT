@@ -1,3 +1,4 @@
+import { revealSidebar } from "./current-ui";
 import { test, expect, type Page } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { functionNames } from "./actual-app-fixture";
@@ -162,12 +163,15 @@ test("Team purchase offers the exact annual and monthly prices with a concrete t
 
 test("sidebar deletion from Library permanently removes a chat without Trash", async ({ page }) => {
   await visit(page, "/library");
-  const open = page.getByRole("button", { name: "Open menu", exact: true });
-  if (await open.isVisible()) await open.click();
-  const expand = page.getByRole("button", { name: "Expand sidebar", exact: true });
-  if (await expand.isVisible()) await expand.click();
-  await page.getByRole("button", { name: "Open chat Composer review chat", exact: true }).hover();
-  await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
+  const sidebar = await revealSidebar(page);
+  const chat = sidebar.getByRole("button", { name: "Open chat Composer review chat", exact: true });
+  await expect(chat).toBeVisible();
+  if (await page.evaluate(() => matchMedia("(hover: hover) and (pointer: fine)").matches)) {
+    await chat.hover();
+  }
+  await sidebar
+    .getByRole("button", { name: "Options for Composer review chat", exact: true })
+    .click();
   const deleteAction = page.getByRole("menuitem", { name: "Delete", exact: true });
   // A chat cannot be removed until the ownership lock and local snapshot are ready.
   await expect(deleteAction).toBeEnabled({ timeout: 15000 });
