@@ -7,7 +7,7 @@
   opacity: 0;
   transition: opacity 160ms ease;
 }
-.kova-user-message-group:hover .kova-prompt-actions,
+.kova-message:hover .kova-prompt-actions,
 .kova-user-message-group:focus-within .kova-prompt-actions {
   opacity: 1;
 }
@@ -47,7 +47,7 @@
   pointer-events: none;
   transition: opacity 120ms ease;
 }
-.kova-user-message-group:hover .kova-prompt-actions,
+.kova-message:hover .kova-prompt-actions,
 .kova-user-message-group:focus-within .kova-prompt-actions,
 .kova-user-message-group[data-menu-open="true"] .kova-prompt-actions {
   opacity: 1;

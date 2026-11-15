@@ -52,7 +52,11 @@ for (const width of [680, 760, 900]) {
     assert.equal(properties.get("--kova-reading-width"), `${width}px`);
     assert.equal(properties.has("--chat-content-width"), false);
     assert.equal(properties.get("--kova-reading-size"), "20px");
-    assert.deepEqual(root.dataset, { kovaDensity: "compact", kovaMotion: "reduced" });
+    assert.deepEqual(root.dataset, {
+      kovaDensity: "compact",
+      kovaMotion: "reduced",
+      kovaContrast: "system",
+    });
   });
 }
 
@@ -122,6 +126,7 @@ test("appearance rows invoke every real preference and preview the reading value
     ["readingWidth", "680"],
     ["density", "comfortable"],
     ["motion", "full"],
+    ["contrast", "high"],
   ]) {
     appearanceSelect(f, key).props.onValueChange(value);
     await f.flush();

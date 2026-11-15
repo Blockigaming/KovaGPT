@@ -8,7 +8,7 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 let mobile = false;
 const { Toaster } = loadUiModule("src/components/ui/sonner.tsx", {
   sonner: { Toaster: "Sonner" },
-  "@/hooks/use-mobile": { useIsMobile: () => mobile },
+  "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: !mobile }) },
 });
 const styles = postcss.parse(read("src/styles/visual-tokens.css"));
 const native = read("node_modules/sonner/dist/styles.css");
@@ -56,9 +56,12 @@ test("mobile toasts move above the composer while desktop keeps its corner", () 
   try {
     const { props } = Toaster({});
     assert.equal(props.position, "top-center");
-    assert.equal(props.mobileOffset.top, "calc(72px + env(safe-area-inset-top))");
-    assert.equal(props.mobileOffset.left, 16);
-    assert.equal(props.mobileOffset.right, 16);
+    assert.equal(
+      props.mobileOffset.top,
+      "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))",
+    );
+    assert.equal(props.mobileOffset.left, "max(16px, env(safe-area-inset-left))");
+    assert.equal(props.mobileOffset.right, "max(16px, env(safe-area-inset-right))");
   } finally {
     mobile = false;
   }

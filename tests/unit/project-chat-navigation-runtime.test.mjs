@@ -130,7 +130,6 @@ function chatFixture(storage = new Map()) {
     `${detailSource.slice(detailSource.indexOf("function isAbortError"))}\nreturn ProjectChatPage;`,
     {
       ...b.dependencies,
-      extractResponseFollowups,
       Route: { useParams: () => params },
       useBlocker: (options) => {
         blockOptions = options;
@@ -149,6 +148,7 @@ function chatFixture(storage = new Map()) {
       getProject: b.request("project"),
       saveProjectChat: b.request("save"),
       deleteProjectChat: b.request("delete"),
+      extractResponseFollowups,
       authFetch: (url, args) => {
         assert.equal(url, "/api/chat");
         return fetchRequest(args);

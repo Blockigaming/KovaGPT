@@ -129,10 +129,17 @@ test("account, memory, and local-device deletion keep their storage scopes disti
   );
   assert.doesNotMatch(settings, /localStorage\.setItem\("kova-(?:workspace-defaults-v1|location)"/);
 
-  assert.match(
-    home,
-    /onClearAll=\{\(\) => \{[\s\S]{0,160}storageGenerationRef\.current \+= 1[\s\S]{0,700}setConversationState\(\{ principal: storagePrincipal, items: \[\] \}\);[\s\S]{0,300}setSettingsPrincipal\(storagePrincipal\)[\s\S]{0,320}setEditingMessage\(null\)/,
+  const clearChat = home.match(/onClearAll=\{\(\) => \{([\s\S]+?)\}\}\s+onOpenHelp=/)?.[1];
+  assert.ok(clearChat, "Settings must reset the active workspace after clearing local data");
+  const advanceGeneration = clearChat.indexOf("storageGenerationRef.current += 1");
+  const clearConversations = clearChat.indexOf(
+    "setConversationState({ principal: storagePrincipal, items: [] });",
   );
+  assert.ok(advanceGeneration >= 0 && clearConversations > advanceGeneration);
+  assert.match(clearChat, /readingPositionsRef\.current = new Map\(\)/);
+  assert.match(clearChat, /attachmentDraftsRef\.current\.clear\(\)/);
+  assert.match(clearChat, /setSettingsPrincipal\(storagePrincipal\)/);
+  assert.match(clearChat, /setEditingMessage\(null\)/);
   assert.match(images, /isPrincipalBrowserStorageClearedEvent\(event, userKey\)/);
   assert.doesNotMatch(images, /startsWith\("nova-gpt-conversations"\)/);
 });

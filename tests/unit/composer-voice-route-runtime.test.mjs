@@ -71,8 +71,8 @@ globalThis.setAttachments = ${arrow("setAttachments")};
 globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
-  helpers,
   extractResponseFollowups,
+  helpers,
   React,
   // This reused send fixture does not render controls; keep its transparent
   // shared Button dependency bound while exercising the actual chat callbacks.

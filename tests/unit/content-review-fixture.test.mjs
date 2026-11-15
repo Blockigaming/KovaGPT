@@ -21,7 +21,8 @@ function load(path, imports) {
   return module.exports;
 }
 const core = load("tests/e2e/core-app-fixture.ts", {
-  "./actual-app-fixture": { owner, functionNames, fixture: async () => {} },
+  "./actual-app-fixture": { owner, fixture: async () => {} },
+  "./server-function-fixture": { resolveFixtureFunctionName: (id) => functionNames.get(id) },
 });
 const fixture = load("tests/e2e/recovery-crud-fixture.ts", {
   seroval,

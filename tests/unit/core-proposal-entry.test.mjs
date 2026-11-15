@@ -38,6 +38,9 @@ test("all proposed core interfaces compile together without entering production 
   });
   assert.ok(result.outputFiles.some((file) => file.path.endsWith(".js") && file.text.length > 0));
   assert.ok(result.outputFiles.some((file) => file.path.endsWith(".css") && file.text.length > 0));
+  assert.ok(
+    result.outputFiles.some((file) => file.path.endsWith(".woff2") && file.contents.length),
+  );
 });
 
 test("Library modal can recover failure without closing and losing its draft", () => {

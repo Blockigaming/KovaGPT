@@ -1,3 +1,4 @@
+import { Heart } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -13,7 +14,7 @@ import { HealthDashboardPreview } from "@/components/HealthDashboardPreview";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
-import { HEALTH_PROVIDERS, type HealthProviderId } from "@/health/providers.mjs";
+import { HEALTH_PROVIDERS } from "@/health/providers.mjs";
 import type { HealthSummary } from "@/health/health-read.server.mjs";
 import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
@@ -56,7 +57,7 @@ export function HealthConnectionsPanel({
       },
       45_000,
     );
-  const connect = async (provider: HealthProviderId) => {
+  const connect = async (provider: "oura") => {
     if (running.current || !ownerId) return;
     setBusy(true);
     setMessage("");
@@ -127,24 +128,30 @@ export function HealthConnectionsPanel({
     }
   };
   return (
-    <section className="mt-8 space-y-5" aria-labelledby="health-connections-title">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="health-connections-title" className="text-xl font-semibold tracking-tight">
+    <section
+      className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-8 py-8 sm:py-14"
+      aria-labelledby="health-connections-title"
+    >
+      <header className="flex flex-col items-center gap-4 text-center">
+        <Heart aria-hidden="true" className="size-6 text-rose-500" />
+        <h2
+          id="health-connections-title"
+          className="text-xl font-semibold tracking-tight sm:text-2xl"
+        >
           Health accounts
         </h2>
         {data &&
           !loading &&
           !error &&
-          !data.configuredProviders.some(({ id }) => Object.hasOwn(HEALTH_PROVIDERS, id)) && (
+          !data.configuredProviders.some(({ id }) => id === "oura") && (
             <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
               Coming soon
             </span>
           )}
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Choose a provider and review its permissions. Summaries are fetched only when you click Read
-        summaries. They are not added to chat or saved to your search index.
-      </p>
+        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
+          Connect Oura to see your sleep, recovery, and activity summaries.
+        </p>
+      </header>
       {!result && <HealthDashboardPreview />}
       {!ownerId ? (
         <p>Sign in to manage health connections.</p>
@@ -152,21 +159,14 @@ export function HealthConnectionsPanel({
         <>
           {loading && <p role="status">Checking health accounts…</p>}
           {error && <p role="status">Health account status is unavailable.</p>}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(
-              Object.entries(HEALTH_PROVIDERS) as [
-                HealthProviderId,
-                (typeof HEALTH_PROVIDERS)[HealthProviderId],
-              ][]
-            ).map(([id, provider]) => {
+          <div className="grid gap-3">
+            {(["oura"] as const).map((id) => {
+              const provider = HEALTH_PROVIDERS[id];
               const configured =
                 data?.configuredProviders.some((entry) => entry.id === id) === true;
               const accounts = data?.accounts.filter((account) => account.provider_id === id) ?? [];
               return (
-                <div
-                  key={id}
-                  className="space-y-3 rounded-2xl border border-border bg-card/40 p-4 transition-colors hover:border-foreground/20"
-                >
+                <div key={id} className="space-y-3 rounded-3xl bg-muted/30 p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="font-semibold tracking-tight">{provider.label}</h3>
@@ -223,11 +223,21 @@ export function HealthConnectionsPanel({
               );
             })}
           </div>
-          <Button variant="outline" disabled={busy || loading} onClick={() => void reload()}>
-            Refresh health status
-          </Button>
         </>
       )}
+      <section
+        className="!mt-3 rounded-3xl bg-muted/30 p-4 sm:p-5"
+        aria-labelledby="apple-health-title"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="apple-health-title" className="font-medium">
+            Apple Health
+          </h3>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
+            Coming soon
+          </span>
+        </div>
+      </section>
       {message && <p role="status">{message}</p>}
       {busy && <p role="status">Working…</p>}
       {result && (
@@ -246,12 +256,7 @@ export function HealthConnectionsPanel({
             {[
               ["Sleep score", "sleep", "score", "#8b5cf6"],
               ["Recovery score", "recovery", "score", "#0891b2"],
-              [
-                result.provider === "whoop" ? "Strain" : "Activity score",
-                "activity",
-                "score",
-                "#b45309",
-              ],
+              ["Activity score", "activity", "score", "#b45309"],
               ["Steps", "activity", "steps", "#059669"],
               ["Resting heart rate", "recovery", "restingHeartRate", "#db2777"],
             ].map(([label, metric, field, color]) => {
@@ -262,7 +267,7 @@ export function HealthConnectionsPanel({
                 .sort((a, b) => a.date.localeCompare(b.date));
               if (!points.length) return null;
               return (
-                <section key={label} className="min-w-0 rounded-2xl border border-border p-4">
+                <section key={label} className="min-w-0 rounded-3xl bg-muted/30 p-4">
                   <h3 className="mb-2 font-medium">{label}</h3>
                   <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
@@ -278,7 +283,7 @@ export function HealthConnectionsPanel({
                           fontSize={11}
                         />
                         <YAxis width={42} fontSize={11} />
-                        <Tooltip />
+                        <Tooltip contentStyle={{ borderRadius: 16 }} />
                         <Line
                           name={label}
                           dataKey="value"
@@ -293,11 +298,9 @@ export function HealthConnectionsPanel({
               );
             })}
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-3xl bg-muted/30 p-4">
             <table className="w-full text-left text-sm">
-              <caption className="text-left font-medium mb-2">
-                Recent {result.provider === "oura" ? "Oura" : "WHOOP"} summaries
-              </caption>
+              <caption className="text-left font-medium mb-2">Recent Oura summaries</caption>
               <thead>
                 <tr>
                   <th className="p-2">Date</th>
@@ -326,13 +329,6 @@ export function HealthConnectionsPanel({
           {!result.summaries.length && <p>No summaries are available for the last seven days.</p>}
         </div>
       )}
-      <p className="text-sm text-muted-foreground">
-        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">
-          Coming soon
-        </span>{" "}
-        Apple Health and Android Health Connect require a mobile app. Other wearables and
-        medical-record services are not connected here.
-      </p>
       <ConfirmActionDialog
         open={disconnect !== null}
         onOpenChange={(open) => !busy && !open && setDisconnect(null)}

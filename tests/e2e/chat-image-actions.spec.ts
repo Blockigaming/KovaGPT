@@ -73,6 +73,11 @@ for (const role of ["user", "assistant"] as const) {
     });
     await page.goto("/");
     await waitForKovaHydration(page);
+    // The saved-chat fixture shows this banner when history finishes loading.
+    // Its arrival resizes the transcript, especially on landscape phones.
+    await expect(
+      page.getByRole("button", { name: "Save existing chats to my account", exact: true }),
+    ).toBeVisible();
     const message = page.locator(`[data-message-id="image-${role}"]`);
     const image = message.locator("[data-chat-image] > img");
     await expect(image).toBeVisible();
@@ -88,11 +93,30 @@ for (const role of ["user", "assistant"] as const) {
     const open = async () => {
       await image.scrollIntoViewIfNeeded();
       if (page.viewportSize()!.width < 1024) {
-        const box = (await image.boundingBox())!;
+        // An assistant image can be taller than the transcript. Press the
+        // visible intersection instead of the center of its full layout box.
+        const point = await image.evaluate(
+          (node) =>
+            new Promise<{ x: number; y: number } | null>((resolve) => {
+              const observer = new IntersectionObserver(([entry]) => {
+                observer.disconnect();
+                const rect = entry.intersectionRect;
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                resolve(
+                  rect.width && rect.height && document.elementFromPoint(x, y) === node
+                    ? { x, y }
+                    : null,
+                );
+              });
+              observer.observe(node);
+            }),
+        );
+        expect(point, "The press must hit the visible image").not.toBeNull();
         const touch = await page.context().newCDPSession(page);
         await touch.send("Input.dispatchTouchEvent", {
           type: "touchStart",
-          touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }],
+          touchPoints: [point!],
         });
         try {
           await expect(menu).toBeVisible();
