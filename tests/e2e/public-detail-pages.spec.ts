@@ -76,8 +76,9 @@ const responsiveRoutes = [
   "/global-affairs/the-washington-post-partners-with-openai",
 ] as const;
 
-const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>
-  allDetailRoutes.filter((_, routeIndex) => routeIndex % 5 === groupIndex),
+const detailGroupCount = 10;
+const detailRouteGroups = Array.from({ length: detailGroupCount }, (_, groupIndex) =>
+  allDetailRoutes.filter((_, routeIndex) => routeIndex % detailGroupCount === groupIndex),
 );
 
 test.describe.parallel("complete public detail content", () => {

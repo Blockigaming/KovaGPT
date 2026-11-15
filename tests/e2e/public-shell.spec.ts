@@ -121,6 +121,11 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(menu).toBeHidden();
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Public navigation" })
+      .getByRole("link", { name: "KovaGPT", exact: true }),
+  ).toHaveAttribute("href", "/");
 
   const targets = page.locator("header a, header button, footer a");
   const count = await targets.count();
