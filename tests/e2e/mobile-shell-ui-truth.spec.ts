@@ -68,7 +68,7 @@ test("mobile chat restores the reading position after switching conversations", 
   await expect(bubble).toHaveCSS("background-color", "rgb(18, 171, 205)");
   await expect(bubble).toHaveCSS("color", "rgb(0, 0, 0)");
   const images = transcript.getByRole("group", { name: "Attached images" });
-  await expect(images.getByRole("img")).toHaveCount(4);
+  await expect(images.getByRole("button", { name: /^Attached image \d of 4$/ })).toHaveCount(4);
   const thumbnails = await images.evaluate((element) => ({
     overflow: element.scrollWidth - element.clientWidth,
     mode: getComputedStyle(element).overflowX,

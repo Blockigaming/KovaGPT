@@ -156,6 +156,7 @@ export function ResponseImage({
                 src={src}
                 alt={alt}
                 actions={imageActions}
+                enablePreview={false}
                 imageClassName="max-h-[70dvh] w-auto max-w-full object-contain"
                 onHide={() => {
                   setZoomed(false);

@@ -184,12 +184,18 @@ for (const [width, height] of viewports) {
       const hoverDetail = preview.locator(".kova-image-hover-detail");
       await expect(hoverDetail).toBeHidden();
       if (width === 1440) {
-        await preview.getByRole("img", { name: "Responsive preview" }).hover();
+        await preview.getByRole("button", { name: "Responsive preview", exact: true }).hover();
         await expect(hoverDetail).toBeVisible();
       }
       await openImage.click();
       const imageView = page.getByRole("dialog", { name: "Responsive preview" });
-      await expect(imageView.getByRole("img", { name: "Responsive preview" })).toBeVisible();
+      const fullImage = imageView.getByRole("img", { name: "Responsive preview" });
+      await expect(fullImage).toBeVisible();
+      if (width === 1440) {
+        await fullImage.click();
+        await fullImage.press("Enter");
+        await expect(page.getByRole("dialog")).toHaveCount(1);
+      }
       const zoom = imageView.getByRole("button", { name: "Zoom image" });
       await zoom.click();
       await expect(zoom).toHaveAttribute("aria-pressed", "true");
