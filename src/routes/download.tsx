@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   canPromptInstall,
@@ -23,10 +24,20 @@ function DownloadPage() {
           Install the KovaGPT web app for a dedicated window and a shortcut on your home screen.
         </p>
         {available && (
-          <Button className="mt-6" onClick={() => void promptPwaInstall()}>
+          <Button
+            className="mt-6"
+            onClick={() =>
+              void promptPwaInstall().catch(() =>
+                toast.error("Use your browser’s install command to install KovaGPT."),
+              )
+            }
+          >
             Install KovaGPT
           </Button>
         )}
+        <Button asChild variant="outline" className="ml-2 mt-6">
+          <a href="kovagpt://open">Open installed native app</a>
+        </Button>
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
           <section className="rounded-2xl border border-border p-6">
             <h2 className="font-semibold">Mac and Windows</h2>

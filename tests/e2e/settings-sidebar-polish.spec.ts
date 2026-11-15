@@ -9,6 +9,11 @@ test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ pag
   await page.goto("/");
   await waitForKovaHydration(page);
   const sidebar = page.getByRole("navigation", { name: "Primary navigation", exact: true });
+  await expect(sidebar).toHaveCSS("background-color", "rgb(41, 41, 41)");
+  await expect(sidebar.locator(".kova-sidebar-header")).toHaveCSS(
+    "background-color",
+    "rgb(41, 41, 41)",
+  );
   const chat = page.getByRole("button", { name: "Open chat Composer review chat", exact: true });
   const row = sidebar.locator(".kova-chat-row").filter({ has: chat });
   const pin = row.getByRole("button", { name: "Pin Composer review chat", exact: true });
@@ -43,6 +48,7 @@ test("collapsed sidebar and menus stay rounded, clean, and usable", async ({ pag
 
   await sidebar.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
   const rail = page.getByRole("navigation", { name: "Collapsed navigation", exact: true });
+  await expect(rail).toHaveCSS("background-color", "rgb(41, 41, 41)");
   await expect(rail).toHaveCSS("border-top-left-radius", "0px");
   await expect(rail).toHaveCSS("border-bottom-left-radius", "0px");
   await expect(rail).toHaveCSS("border-top-right-radius", "20px");

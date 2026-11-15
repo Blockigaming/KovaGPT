@@ -11,6 +11,7 @@ export function createVoiceHandler(dependencies: {
     increment: number,
     signal?: AbortSignal,
   ) => Promise<Response | null>;
+  limitRealtime?: (auth: HttpAuthedCaller) => Promise<Response | null>;
   getCallerTier: (auth: HttpAuthedCaller) => Promise<"free" | "plus" | "pro">;
   env: (name: string) => string | undefined;
   execute?: typeof executeVoice;

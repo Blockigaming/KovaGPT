@@ -3,7 +3,7 @@ import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
-import { StreamingStatus } from "./StreamingStatus";
+import { formatResponseTime, StreamingStatus } from "./StreamingStatus";
 import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
@@ -823,6 +823,7 @@ function ChatMessageInner({
       data-message-id={message.id}
       data-message-role={message.role}
       data-ui-reference="chatgpt-message"
+      data-streaming={streaming || undefined}
       className="kova-message group w-full px-4 py-3 text-base leading-[26px] sm:px-6 lg:px-8"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
@@ -891,12 +892,19 @@ function ChatMessageInner({
       ) : (
         <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
           <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
+            {streaming && !waitingForFirstToken ? (
+              <StreamingStatus startedAt={resolvedStreamingStartedAt} />
+            ) : !streaming && typeof message.workedMs === "number" ? (
+              <p className="kova-response-work-time">
+                Worked for {formatResponseTime(message.workedMs / 1000)}
+              </p>
+            ) : null}
             {message.activities
               ?.filter((activity) => activity.tool === "scheduled_task")
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            <MessageActivityList activities={message.activities} />
+            {!streaming && <MessageActivityList activities={message.activities} />}
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}
@@ -904,7 +912,11 @@ function ChatMessageInner({
                 onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
               />
             ))}
-            <div ref={bodyRef} className="prose-chat">
+            <div
+              ref={bodyRef}
+              className="prose-chat"
+              data-waiting-for-response={waitingForFirstToken || undefined}
+            >
               {message.pendingImage && !message.content ? (
                 <div
                   role="status"
@@ -1029,7 +1041,6 @@ function ChatMessageInner({
                   !principalResolved ||
                   !userKey ||
                   !chatId ||
-                  temporary ||
                   !!message.generationStatus ||
                   !!message.pendingImage
                 }

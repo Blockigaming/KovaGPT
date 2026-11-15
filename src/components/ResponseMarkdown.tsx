@@ -454,7 +454,7 @@ const markdownComponents: Components = {
     ),
   table: ({ children }) => <ResponseTable>{children}</ResponseTable>,
   strong: ({ children }) => (
-    <strong className="font-semibold text-blue-600 dark:text-blue-400">{children}</strong>
+    <strong className="kova-response-emphasis font-semibold">{children}</strong>
   ),
   a: MarkdownLink,
   img: MarkdownImage,

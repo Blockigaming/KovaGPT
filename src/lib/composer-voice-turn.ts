@@ -10,7 +10,11 @@ export type ComposerVoiceTurn = {
   voiceModelReceipt: string;
 };
 
-export type ComposerVoiceSubmit = (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
+export type ComposerVoiceSubmit = (
+  text: string,
+  signal: AbortSignal,
+  realtime?: boolean,
+) => Promise<ComposerVoiceTurn>;
 
 type PendingVoiceTurn = Omit<ComposerVoiceTurn, "contentSha256">;
 

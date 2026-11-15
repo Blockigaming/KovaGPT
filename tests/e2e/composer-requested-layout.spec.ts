@@ -113,12 +113,17 @@ test("opening Choose project uses the prefetched list", async ({ page }) => {
   await trigger.click();
   const picker = page.getByRole("dialog", { name: "Choose project", exact: true });
   await expect(
-    picker.getByRole("button", { name: "Open project Prefetched project" }),
+    picker.getByRole("button", { name: "Add project Prefetched project" }),
   ).toBeVisible();
   expect(requests).toBe(1);
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await expect.poll(() => requests).toBe(2);
+  await trigger.click();
+  await picker.getByRole("button", { name: "Add project Prefetched project" }).click();
+  await expect(
+    page.getByRole("button", { name: "Remove project Prefetched project" }),
+  ).toBeVisible();
 });
 
 test("requested: connected plugin rows come only from current account status", async ({ page }) => {
@@ -164,6 +169,8 @@ test("requested: connected plugin rows come only from current account status", a
   await expect(
     plugins.locator(".kova-composer-plugin").filter({ hasText: "Google Calendar" }),
   ).toHaveCount(0);
+  await plugins.getByRole("button", { name: "Gmail", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Remove plugin Gmail" })).toBeVisible();
 });
 
 test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attachment", async ({
@@ -233,22 +240,17 @@ test("requested: drawing supports pen, undo, redo, eraser, discard and PNG attac
   await expect(input).toBeFocused();
 });
 
-test("requested: desktop app control offers an installed-app link and honest installation fallback", async ({
+test("desktop app control opens installation options directly when browser installation is unavailable", async ({
   page,
 }) => {
   test.skip(page.viewportSize()!.width < 1024, "Desktop control");
   await start(page);
   await page.getByRole("button", { name: "Open desktop app", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "KovaGPT on your desktop", exact: true });
-  await expect(dialog.getByRole("link", { name: "Open installed desktop app" })).toHaveAttribute(
+  await expect(page).toHaveURL(/\/download$/);
+  await expect(page.getByRole("link", { name: "Open installed native app" })).toHaveAttribute(
     "href",
     "kovagpt://open",
   );
-  await expect(dialog.getByRole("link", { name: "See installation options" })).toHaveAttribute(
-    "href",
-    "/download",
-  );
-  await expect(dialog).toContainText("when released");
 });
 
 test("slash commands are selectable by keyboard and show the account model menu", async ({

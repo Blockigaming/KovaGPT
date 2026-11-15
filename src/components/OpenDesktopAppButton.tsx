@@ -1,15 +1,7 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { Monitor } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   canPromptInstall,
   noServerPrompt,
@@ -17,62 +9,37 @@ import {
   subscribeInstallPrompt,
 } from "@/lib/pwa/install";
 
+const subscribeDisplayMode = (listener: () => void) => {
+  const mode = window.matchMedia("(display-mode: standalone)");
+  mode.addEventListener("change", listener);
+  return () => mode.removeEventListener("change", listener);
+};
+const inDesktopApp = () =>
+  window.matchMedia("(display-mode: standalone)").matches ||
+  /KovaGPTDesktop\//.test(navigator.userAgent);
+
 export function OpenDesktopAppButton() {
-  const [native, setNative] = useState(false);
-  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const standalone = useSyncExternalStore(subscribeDisplayMode, inDesktopApp, noServerPrompt);
   const available = useSyncExternalStore(subscribeInstallPrompt, canPromptInstall, noServerPrompt);
-  useEffect(() => {
-    setNative(/KovaGPTDesktop\//.test(navigator.userAgent));
-  }, []);
-  if (native) return null;
+  if (standalone) return null;
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <button type="button" className="kova-composer-tray-action kova-open-desktop-app">
-          <Monitor aria-hidden="true" />
-          <span>Open desktop app</span>
-        </button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>KovaGPT on your desktop</DialogTitle>
-          <DialogDescription>
-            Use KovaGPT in its own window with the same interface and account.
-          </DialogDescription>
-        </DialogHeader>
-        <Button asChild>
-          <a href="kovagpt://open">Open installed desktop app</a>
-        </Button>
-        <p className="text-sm text-muted-foreground">
-          If you haven't installed it, you can install the web app now. Native installers will
-          appear on the download page when released.
-        </p>
-        {available ? (
-          <Button
-            variant="secondary"
-            onClick={async () => {
-              setError("");
-              try {
-                await promptPwaInstall();
-              } catch {
-                setError(
-                  "Installation could not start. Use your browser’s Install app command, or see installation options.",
-                );
-              }
-            }}
-          >
-            Install web app
-          </Button>
-        ) : null}
-        {error ? (
-          <p role="alert" className="text-sm">
-            {error}
-          </p>
-        ) : null}
-        <Link to="/download" className="text-sm underline">
-          See installation options
-        </Link>
-      </DialogContent>
-    </Dialog>
+    <button
+      type="button"
+      className="kova-composer-tray-action kova-open-desktop-app"
+      onClick={() => {
+        if (available) {
+          void promptPwaInstall().catch(() => {
+            toast.error("The browser could not start installation.");
+            void navigate({ to: "/download" });
+          });
+        } else {
+          void navigate({ to: "/download" });
+        }
+      }}
+    >
+      <Monitor aria-hidden="true" />
+      <span>Open desktop app</span>
+    </button>
   );
 }

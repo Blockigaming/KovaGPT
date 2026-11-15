@@ -6,7 +6,11 @@ export type SpeechInput = {
   contentSha256: string;
   /** Optional opaque server-catalog selection; never a provider voice ID. */
   voiceId?: string;
-};
+} & (
+  | { mode?: undefined }
+  | { mode: "read-aloud"; text: string }
+  | { mode: "live-reply"; text: string; voiceModelReceipt: string }
+);
 export function createBrowserSpeechSink(options: {
   signal: AbortSignal;
   onPlaying: () => void;

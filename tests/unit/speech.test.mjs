@@ -127,6 +127,42 @@ test("owned stored assistant text streams once with server-only key and fail-clo
   assert.doesNotMatch(JSON.stringify([...response.headers]), /mock-key/);
 });
 
+test("read aloud streams a response without chat history or Library lookup", async () => {
+  const f = fixture();
+  const content = "Long unsaved response. ".repeat(100);
+  const response = await f.handler(
+    request({
+      ...input,
+      mode: "read-aloud",
+      text: content,
+      contentSha256: digest(content),
+    }),
+  );
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+  assert.deepEqual(f.calls.filters, []);
+  assert.equal(f.calls.limits.length, 3);
+  assert.equal(JSON.parse(f.calls.provider[0][1].body).text, content);
+});
+
+test("live speech uses the signed reply before history sync and rejects a mismatched receipt", async () => {
+  const f = fixture();
+  const live = { ...input, mode: "live-reply", text, voiceModelReceipt: modelReceipt };
+  const response = await f.handler(request(live));
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+  assert.deepEqual(f.calls.filters, []);
+  assert.equal(JSON.parse(f.calls.provider[0][1].body).model_id, "eleven_flash_v2_5");
+
+  const invalid = fixture();
+  const altered = text + " Altered.";
+  const rejected = await invalid.handler(
+    request({ ...live, text: altered, contentSha256: digest(altered) }),
+  );
+  assert.equal(rejected.status, 403);
+  assert.deepEqual(invalid.calls.provider, []);
+});
+
 test("older saved replies without a model receipt use ElevenLabs", async () => {
   const f = fixture({ modelPolicy: () => ({ valid: false }) });
   delete f.row.payload.messages[0].voiceModelReceipt;

@@ -9,7 +9,7 @@ export function SettingsNavigationResize({
   width: number;
   onChange: (width: number) => void;
 }) {
-  const drag = useRef<{ x: number; width: number; value: number } | null>(null);
+  const drag = useRef<{ x: number; width: number; value: number; moved: boolean } | null>(null);
   const [draft, setDraft] = useState<number | null>(null);
   const restore = (element: HTMLElement) => {
     element.parentElement?.style.removeProperty("--kova-settings-navigation-width");
@@ -46,21 +46,26 @@ export function SettingsNavigationResize({
         if (event.button !== 0) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
-        drag.current = { x: event.clientX, width, value: width };
+        const visibleWidth =
+          event.currentTarget.previousElementSibling?.getBoundingClientRect().width;
+        const startWidth = Math.round(visibleWidth || width);
+        drag.current = { x: event.clientX, width: startWidth, value: width, moved: false };
         event.currentTarget.parentElement?.setAttribute("data-resizing", "");
       }}
       onPointerMove={(event) => {
         if (!drag.current) return;
         const parent = event.currentTarget.parentElement;
-        const max = Math.min(440, (parent?.clientWidth ?? 784) - 344);
+        const available = parent?.clientWidth ?? 840;
+        const max = Math.min(440, available - 400, available < 1024 ? 240 : 440);
         const value = clamp(Math.min(max, drag.current.width + event.clientX - drag.current.x));
         drag.current.value = value;
+        drag.current.moved = true;
         setDraft(value);
         parent?.style.setProperty("--kova-settings-navigation-width", `${value}px`);
       }}
       onPointerUp={(event) => {
         if (!drag.current) return;
-        onChange(drag.current.value);
+        if (drag.current.moved && drag.current.value !== width) onChange(drag.current.value);
         restore(event.currentTarget);
         event.currentTarget.releasePointerCapture(event.pointerId);
       }}

@@ -10,8 +10,8 @@ const errors: Record<string, string> = {
   speech_not_eligible: "Read aloud is unavailable for this reply. Try a newly generated reply.",
   speech_voice_plan_required: "This voice requires a different plan.",
   speech_forbidden: "Read aloud is not available for this account right now.",
-  speech_message_unavailable: "Save this response to your chat history before reading it aloud.",
-  speech_message_not_synced: "This response is still syncing. Try again once it is saved.",
+  speech_message_unavailable: "This response could not be read aloud.",
+  speech_message_not_synced: "This response could not be read aloud. Try again.",
   speech_text_too_long: "Read aloud supports responses up to 4,000 characters.",
   speech_limit_reached: "Read-aloud limit reached. Try again later.",
   speech_not_available: "Read aloud is not available right now.",
@@ -75,7 +75,14 @@ export function ResponseSpeechButton({
       const contentSha256 = Array.from(new Uint8Array(digest), (v) =>
         v.toString(16).padStart(2, "0"),
       ).join("");
-      void playback.current?.start({ ownerId, chatId, messageId, contentSha256 });
+      void playback.current?.start({
+        ownerId,
+        chatId,
+        messageId,
+        contentSha256,
+        mode: "read-aloud",
+        text: content,
+      });
     } catch {
       setState("error");
       setError("Read aloud is not supported in this browser.");

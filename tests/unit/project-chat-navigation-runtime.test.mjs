@@ -154,6 +154,7 @@ function chatFixture(storage = new Map()) {
         return fetchRequest(args);
       },
       consumeChatSse: (body, options) => consumeRequest(options),
+      extractResponseFollowups,
       chatResponseError: async () => new Error("request failed"),
       normalizeResponseSources: (value) => value,
       AbortController,

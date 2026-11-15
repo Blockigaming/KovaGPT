@@ -1,3 +1,5 @@
+import { READ_ONLY_PLUGIN_TOOLS } from "@/lib/composer-plugin-usage.mjs";
+import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { MEMORY_TIERS } from "@/lib/memory-tier-policy.mjs";
 import { enforceDailyMessageQuota } from "@/lib/message-quota.server";
 import { reserveUploads } from "@/lib/upload-quota.server.mjs";
@@ -677,6 +679,7 @@ export const Route = createFileRoute("/api/chat")({
               historyOffset,
               summaryProof,
               clientTool,
+              connectorId,
             } = ingress;
             // Lockdown Mode is a server-enforced account boundary. Explicit
             // network tools fail with a truthful policy response; implicit web
@@ -738,6 +741,10 @@ export const Route = createFileRoute("/api/chat")({
               temporary === true && temporaryContext === "personalized";
             const usesExistingContext = !temporary || temporaryUsesExistingContext;
             const personalContext = usesExistingContext ? user : undefined;
+            const voiceStyle =
+              auth && ingress.voice && !temporary
+                ? "\n\nThis reply will be spoken aloud. Answer directly in natural speech. Follow the user context responseLength preference: short is one to three sentences, medium gives a little explanation, and long gives a fuller spoken answer. Avoid tables, lists, headings, and Markdown formatting unless the user explicitly needs them."
+                : "";
             const personalityBlock =
               usesExistingContext && personality
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
@@ -1605,6 +1612,7 @@ export const Route = createFileRoute("/api/chat")({
                     ADAPTIVE_INSTRUCTION +
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
+                    "\nUse Markdown bold sparingly for important terms and key results in written answers.\n" +
                     (useRichResponseCatalog ? FINAL_CHART_INSTRUCTION : COMPACT_CHART_INSTRUCTION) +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
@@ -1618,6 +1626,7 @@ export const Route = createFileRoute("/api/chat")({
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
+                    voiceStyle +
                     memoryBlock +
                     (conversationSummary?.block ?? "") +
                     projectBlock +
@@ -1703,7 +1712,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              !selfContainedTurn
+              (connectorId || !selfContainedTurn)
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getGoogleToolContext(auth.userId),
@@ -1717,7 +1726,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              !selfContainedTurn
+              (connectorId || !selfContainedTurn)
                 ? ((await preflight.run(
                     "other_connector_tools",
                     () => getConnectedToolContext(auth.userId),
@@ -1728,14 +1737,23 @@ export const Route = createFileRoute("/api/chat")({
               ...(googleContext?.tools ?? []),
               ...(connectedContext?.tools ?? []),
             ];
-            const availableTools = customKova
+            const permittedTools = customKova
               ? customKova.filterTools(connectionTools)
               : connectionTools;
+            const availableTools = connectorId
+              ? permittedTools.filter(
+                  ({ function: { name } }) =>
+                    READ_ONLY_PLUGIN_TOOLS[name] === connectorId ||
+                    CONNECTION_FLOWS[connectorId]?.tool === name,
+                )
+              : permittedTools;
             const googleBinding = googleContext?.binding ?? undefined;
             let enableTools = availableTools.length > 0;
 
             const freeConnectorRequest = enableTools && callerTier === "free";
             let finalMessages = body.messages as unknown as ChatMsg[];
+            if (connectorId && !enableTools)
+              finalMessages = connectedToolsUnavailableMessages(finalMessages);
             // A selected workflow resource may have influenced any earlier
             // assistant response (and therefore a durable conversation summary).
             // Tool planning gets a fresh, provenance-isolated transcript: only
@@ -2484,7 +2502,7 @@ export const Route = createFileRoute("/api/chat")({
               // planning is finished. Tool results remain, but untrusted resource
               // bodies never participate in deciding which connector reads to run.
               messages:
-                workflowSkill || freeConnectorBudget
+                workflowSkill || freeConnectorBudget || (connectorId && !enableTools)
                   ? [...finalMessages, ...finalToolMessages]
                   : workingMessages,
               stream: true,
