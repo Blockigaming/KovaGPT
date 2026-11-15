@@ -206,7 +206,7 @@ test("localized phone landing pages keep the app action and language picker with
 }) => {
   test.skip(page.viewportSize()!.width >= 768 && page.viewportSize()!.height > 500);
   for (const [path, direction] of [
-    ["/fr", "ltr"],
+    ["/fr-FR", "ltr"],
     ["/ar/home", "rtl"],
   ]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
