@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import ts from "typescript";
+import * as googlePolicy from "../../src/lib/google-account-policy.mjs";
+import * as googleValidation from "../../src/lib/google-write-validation.server.mjs";
 
 import { BoundedJsonError, readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 import {
@@ -290,4 +294,119 @@ test("calendar rename accepts a single event and ignores untrusted version and p
       }),
     /Event ID is invalid/,
   );
+});
+
+test("calendar rename stages the provider version and only patches on current owner confirmation", async () => {
+  const owner = "owner";
+  const connection = {
+    id: "google-account",
+    grant_id: "grant",
+    google_sub: "subject",
+    email: "owner@example.com",
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
+  };
+  let row;
+  let status = 200;
+  const requests = [];
+  const db = {
+    from(table) {
+      assert.equal(table, "pending_tool_actions");
+      const filters = [];
+      let update;
+      const query = {
+        select: () => query,
+        eq(key, value) {
+          filters.push([key, value]);
+          return query;
+        },
+        insert(values) {
+          row = {
+            ...values,
+            id: "pending-action",
+            status: "pending",
+            expires_at: new Date(Date.now() + 60_000).toISOString(),
+          };
+          return query;
+        },
+        single: async () => ({ data: { id: row.id } }),
+        update(values) {
+          update = values;
+          return query;
+        },
+        async maybeSingle() {
+          if (!row || !filters.every(([key, value]) => row[key] === value)) return { data: null };
+          if (update) Object.assign(row, update);
+          return { data: { ...row } };
+        },
+      };
+      return query;
+    },
+  };
+  const modules = {
+    "@supabase/supabase-js": { createClient: () => db },
+    "@/lib/google-oauth.server": {
+      getGoogleConnection: async () => connection,
+      getValidGoogleAccessToken: async (userId, binding) => {
+        assert.equal(userId, owner);
+        assert.deepEqual(binding, {
+          connectionId: connection.id,
+          grantId: connection.grant_id,
+          expectedGoogleSub: connection.google_sub,
+          capability: "calendar.write",
+        });
+        return "fixture-token";
+      },
+      logAudit: async () => {},
+    },
+    "@/lib/google-write-validation.server.mjs": googleValidation,
+    "@/lib/google-account-policy.mjs": googlePolicy,
+    "@/lib/connectors.server": {},
+    "@/lib/lockdown-policy.mjs": { assertLockdownAllows: async () => {} },
+    "@/lib/billing-entitlement.server": {},
+  };
+  const exports = {};
+  const source = readFileSync(
+    new URL("../../src/lib/google-tools.server.ts", import.meta.url),
+    "utf8",
+  );
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  new Function("exports", "require", "fetch", "console", compiled)(
+    exports,
+    (path) => modules[path],
+    async (url, init) => {
+      assert.equal(url, "https://www.googleapis.com/calendar/v3/calendars/primary/events/event123");
+      requests.push(init);
+      if (init.method === "PATCH") return new Response(null, { status });
+      return Response.json({ id: "event123", summary: "Original", etag: '"provider-version"' });
+    },
+    { ...console, error: () => {} },
+  );
+
+  const stage = () =>
+    exports.stagePendingAction(owner, "calendar_rename_event", {
+      event_id: "event123",
+      summary: "New title",
+      etag: '"model-version"',
+    });
+  const action = await stage();
+  assert.match(action.summary, /Original.*New title/);
+  assert.equal(requests.length, 1);
+  assert.equal((await exports.executePendingAction("another-user", action.id)).ok, false);
+  assert.equal(requests.length, 1);
+
+  assert.equal((await exports.executePendingAction(owner, action.id)).ok, true);
+  assert.equal(requests[1].method, "PATCH");
+  assert.equal(requests[1].headers["If-Match"], '"provider-version"');
+  assert.deepEqual(JSON.parse(requests[1].body), { summary: "New title" });
+  assert.equal((await exports.executePendingAction(owner, action.id)).ok, true);
+  assert.equal(requests.length, 2);
+
+  const stale = await stage();
+  status = 412;
+  const result = await exports.executePendingAction(owner, stale.id);
+  assert.equal(result.ok, false);
+  assert.match(result.error, /changed after review/);
+  assert.equal(row.status, "failed");
 });
