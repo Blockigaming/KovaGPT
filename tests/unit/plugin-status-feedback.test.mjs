@@ -433,6 +433,15 @@ test("All retains its catalog result count while Connected is unverified", () =>
   assert.match(textOf(f.summary()), /2 connections/);
 });
 
+test("the separate bank adapter cannot mark verified directory status unavailable", () => {
+  const f = countFixture({
+    WORKING_IDS: new Set(["google", "gmail", "google-drive", "google-calendar", "github", "plaid"]),
+  });
+  assert.equal(f.connectionCountState, "ready");
+  assert.equal(f.connectedCount, 0);
+  assert.equal(f.connectedStatusUnverified, false);
+});
+
 test("verified connected providers report their real total without planned plugins affecting availability", () => {
   const f = countFixture({
     visibleGoogleStatus: {
