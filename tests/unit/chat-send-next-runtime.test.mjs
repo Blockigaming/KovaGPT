@@ -1,5 +1,6 @@
+import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
-import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
@@ -269,8 +270,10 @@ function fixture() {
     chatResponseError: async (response) => response.error,
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
+      completedChatReply,
+      chatRequestHeaders,
       createChatHistoryPayload: async (messages) => ({ messages }),
-      chatRequestProfile: () => ({}),
+      chatRequestUser: () => ({}),
       fetchForPrincipal: (principal, url, args) => {
         const d = deferred();
         requests.push({ ...d, principal, url, args });

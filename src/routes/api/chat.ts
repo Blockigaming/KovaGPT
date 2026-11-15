@@ -695,6 +695,10 @@ export const Route = createFileRoute("/api/chat")({
               temporary === true && temporaryContext === "personalized";
             const usesExistingContext = !temporary || temporaryUsesExistingContext;
             const personalContext = usesExistingContext ? user : undefined;
+            const voiceStyle =
+              auth && ingress.voice && !temporary
+                ? "\n\nThis reply will be spoken aloud. Answer directly in natural speech. Follow the user context responseLength preference: short is one to three sentences, medium gives a little explanation, and long gives a fuller spoken answer. Avoid tables, lists, headings, and Markdown formatting unless the user explicitly needs them."
+                : "";
             const personalityBlock =
               usesExistingContext && personality
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
@@ -1563,6 +1567,7 @@ export const Route = createFileRoute("/api/chat")({
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
+                    voiceStyle +
                     memoryBlock +
                     (conversationSummary?.block ?? "") +
                     projectBlock +

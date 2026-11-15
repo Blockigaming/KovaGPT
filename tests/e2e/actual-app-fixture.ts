@@ -19,6 +19,7 @@ export function planUsageFixture(tier: "free" | "plus" | "pro"): PlanUsageDto {
     tier,
     windows: chatUsageWindows(tier).map((window) => ({
       ...window,
+      costPercentUsed: null,
       regularUsed: 0,
       thinkingUsed: 0,
       costPercentUsed: 0,

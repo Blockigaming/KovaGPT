@@ -32,3 +32,12 @@ export function extractResponseFollowups(content) {
   }
   return { content, followups: [] };
 }
+
+export function completedChatReply(content, voice) {
+  const reply = voice ? { content, followups: [] } : extractResponseFollowups(content);
+  return {
+    content: reply.content,
+    ...(reply.followups.length ? { followups: reply.followups } : {}),
+    createdAt: Date.now(),
+  };
+}
