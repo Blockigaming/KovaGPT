@@ -7,6 +7,7 @@ import type { PendingConfirm } from "@/lib/chat-store";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 
 const TOOL_LABEL: Record<string, { label: string; Icon: typeof Mail }> = {
+  gmail_set_read_status: { label: "Change read status", Icon: Mail },
   gmail_send: { label: "Send email", Icon: Mail },
   gmail_create_draft: { label: "Save draft", Icon: FileEdit },
   calendar_reschedule_event: { label: "Reschedule event", Icon: Calendar },
