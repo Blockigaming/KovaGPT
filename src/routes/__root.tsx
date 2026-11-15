@@ -1,6 +1,8 @@
+import { RouteLoading } from "@/components/RouteLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
+  useRouterState,
   Link,
   createRootRouteWithContext,
   useRouter,
@@ -343,6 +345,23 @@ function RootThemeManager() {
   return null;
 }
 
+function DestinationOutlet() {
+  const changingPage = useRouterState({
+    select: (state) =>
+      state.status === "pending" &&
+      Boolean(
+        state.resolvedLocation && state.location.pathname !== state.resolvedLocation.pathname,
+      ),
+  });
+  return changingPage ? (
+    <RouteLoading />
+  ) : (
+    <AppAccountGate>
+      <Outlet />
+    </AppAccountGate>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -358,9 +377,7 @@ function RootComponent() {
         <RootInputModality />
         <RootThemeManager />
         <PlatformRuntime />
-        <AppAccountGate>
-          <Outlet />
-        </AppAccountGate>
+        <DestinationOutlet />
         <Toaster />
       </QueryClientProvider>
     </ClerkProvider>

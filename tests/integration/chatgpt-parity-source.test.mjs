@@ -102,7 +102,7 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
-test("empty chat removes prompt examples and scopes recent work to signed-in history", () => {
+test("empty chat removes prompt examples and scopes recent work to signed-in history", async () => {
   assert.doesNotMatch(route, /kova-greeting-mark/);
   assert.doesNotMatch(route, /Think through a question, shape an idea/);
   assert.doesNotMatch(homeView, /<HomeChatStarters|EMPTY_STATE_STARTERS/);
@@ -112,7 +112,10 @@ test("empty chat removes prompt examples and scopes recent work to signed-in his
   assert.match(route, /conversations=\{isLoaded && isSignedIn \? historyConversations : \[\]\}/);
   assert.match(homeView, /Continue working/);
   assert.doesNotMatch(route, /Sign in to save chats and attach files/);
-  assert.match(route, /<SignInButton mode="modal">/);
+  assert.match(
+    await readFile("src/components/DesktopChatToolbar.tsx", "utf8"),
+    /<SignInButton mode="modal">/,
+  );
 });
 
 test("signed-in onboarding hands real choices to the authenticated composer", () => {

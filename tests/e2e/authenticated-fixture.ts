@@ -100,7 +100,7 @@ export async function installAuthenticatedFixture(
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
     const name = functionNames.get(id);
-    if (name?.startsWith("listProjects_")) {
+    if (name?.startsWith("listMyLibrary_") || name?.startsWith("listProjects_")) {
       return route.fulfill({ json: { result: [], context: {} } });
     }
     if (!name?.startsWith("getMyPlanTier_")) return route.fallback();

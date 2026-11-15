@@ -1,3 +1,4 @@
+import { usesCompactSettings } from "./settings-layout-fixture";
 import { expect, test } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
@@ -9,7 +10,7 @@ for (const theme of ["dark", "light"] as const) {
     await coreFixture(page, theme, "pro");
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const phone = page.viewportSize()!.width < 768;
+    const phone = await usesCompactSettings(page);
     const navigation = page.getByRole("complementary", { name: "Settings navigation" });
     const content = page.locator(".kova-settings-content");
     if (phone) {

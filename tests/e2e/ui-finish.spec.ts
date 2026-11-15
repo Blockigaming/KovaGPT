@@ -95,9 +95,9 @@ for (const tier of ["free", "plus", "pro"] as const)
     await fixture(page, "dark", true, false, tier);
     const windows = chatUsageWindows(tier).map((window) => ({
       ...window,
-      costPercentUsed: null,
       regularUsed: Math.floor(window.regularLimit / 2),
       thinkingUsed: Math.floor(window.thinkingLimit / 5),
+      costPercentUsed: 0,
     }));
     const usage = { tier, windows, images: 2, uploads: 1 };
     await page.route("**/_serverFn/**", (route) => {
@@ -120,7 +120,7 @@ for (const tier of ["free", "plus", "pro"] as const)
           String(Math.round((regularUsed / regularLimit) * 100)),
         );
       }
-      await expect(page.locator(".kova-plan-usage")).toContainText(/Today’s images \d+% used/);
+      await expect(page.locator(".kova-plan-usage")).not.toContainText(/Today’s images \d+% used/);
       await expect(page.locator(".kova-plan-usage")).not.toContainText(/\d+\s*\/\s*\d+\s+images/);
     }
     await page.screenshot({

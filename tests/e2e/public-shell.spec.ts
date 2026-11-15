@@ -46,8 +46,8 @@ test("public routes share one landmark and a working skip target", async ({ page
     ).toHaveCount(1);
     if (route === "/pricing") {
       await expect(page.locator("[data-billing-page]")).toHaveCount(1);
-      await expect(page.getByRole("link", { name: "KovaGPT", exact: true }).first()).toBeVisible();
-    } else await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
+    }
+    await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
 
     const viewport = await page.evaluate(() => ({
@@ -120,7 +120,12 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   await menu.getByRole("link", { name: "Pricing" }).click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(menu).toBeHidden();
-  await expect(page.getByRole("link", { name: "KovaGPT", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Public navigation" })
+      .getByRole("link", { name: "KovaGPT", exact: true }),
+  ).toHaveAttribute("href", "/");
 
   const targets = page.locator("header a, header button, footer a");
   const count = await targets.count();

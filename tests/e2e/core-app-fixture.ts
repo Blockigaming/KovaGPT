@@ -46,7 +46,7 @@ export async function coreFixture(
   page: Page,
   theme: "light" | "dark" = "light",
   tier: "free" | "plus" | "pro" = "free",
-  options: { preserveStorageOnReload?: boolean } = {},
+  options: NonNullable<Parameters<typeof fixture>[5]> = {},
 ) {
   await fixture(page, theme, true, true, tier, options);
   // Use a defined returning-user sidebar preference before hydration.
