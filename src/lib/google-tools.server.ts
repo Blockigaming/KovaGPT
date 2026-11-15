@@ -53,6 +53,10 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
   gmail_send: { running: "Preparing email for review…", done: "Email ready for review" },
+  calendar_rename_event: {
+    running: "Preparing event rename…",
+    done: "Event rename ready for review",
+  },
   calendar_create_event: {
     running: "Preparing calendar event…",
     done: "Prepared calendar event",
@@ -66,6 +70,7 @@ export const WRITE_TOOL_NAMES = new Set<string>([
   "gmail_create_draft",
   "gmail_send",
   "calendar_create_event",
+  "calendar_rename_event",
 ]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
@@ -275,12 +280,30 @@ export const WRITE_TOOLS: ToolDef[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "calendar_rename_event",
+      description:
+        "Rename one existing event on the user's primary Google Calendar. Only use when the user explicitly requests a rename. Find the exact event ID using calendar_list_events and ask the user to disambiguate matches. The user must confirm the old and new title before the change.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          event_id: { type: "string", description: "Exact event ID from Google Calendar." },
+          summary: { type: "string", description: "New event title." },
+        },
+        required: ["event_id", "summary"],
+      },
+    },
+  },
 ];
 
 const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_create_draft",
   "gmail_send",
   "calendar_create_event",
+  "calendar_rename_event",
 ]);
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
@@ -795,7 +818,44 @@ export async function stagePendingAction(
   ) {
     throw new Error("Reconnect Google before preparing this action.");
   }
-  const summarized = summarizeWriteTool(tool, validated);
+  let summarized = summarizeWriteTool(tool, validated);
+  if (tool === "calendar_rename_event") {
+    const token = await getValidGoogleAccessToken(userId, {
+      connectionId: connection.id,
+      grantId: connection.grant_id,
+      expectedGoogleSub: stagedGoogleSub,
+      capability: "calendar.write",
+    });
+    const response = await fetch(
+      `${CAL}/calendars/primary/events/${encodeURIComponent(String(validated.event_id))}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+      },
+    );
+    if (!response.ok) throw new Error("calendar_event_lookup_failed");
+    const event = (await response.json()) as {
+      id?: string;
+      summary?: string;
+      etag?: string;
+      status?: string;
+      start?: { date?: string; dateTime?: string };
+    };
+    if (
+      event.id !== validated.event_id ||
+      event.status === "cancelled" ||
+      typeof event.etag !== "string" ||
+      !/^"[^"\r\n]{1,200}"$/.test(event.etag)
+    ) {
+      throw new Error("calendar_event_unavailable");
+    }
+    validated.etag = event.etag;
+    const original = typeof event.summary === "string" ? event.summary : "(untitled)";
+    summarized = {
+      summary: `Rename calendar event “${original}” to “${String(validated.summary)}”`,
+      preview: { start: event.start?.dateTime ?? event.start?.date },
+    };
+  }
   const summary = `${summarized.summary} · Google account: ${connection.email ?? "Selected account"}`;
   const preview = {
     ...summarized.preview,
@@ -1118,6 +1178,29 @@ export async function executePendingAction(
         provider: "gmail",
         action: sending ? "send" : "draft",
         summary: sending ? `Sent email to ${to}: ${subject}` : `Drafted email to ${to}: ${subject}`,
+      });
+    } else if (claimedTool === "calendar_rename_event") {
+      const etag = (claimedAction.args as WriteArgs).etag;
+      if (typeof etag !== "string" || !/^"[^"\r\n]{1,200}"$/.test(etag)) {
+        throw new Error("calendar_event_unavailable");
+      }
+      const response = await fetch(
+        `${CAL}/calendars/primary/events/${encodeURIComponent(String(a.event_id))}`,
+        {
+          method: "PATCH",
+          headers: { ...H, "If-Match": etag },
+          body: JSON.stringify({ summary: a.summary }),
+          signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+        },
+      );
+      if (!response.ok) throw new Error("calendar_rename_failed");
+      resultText = "Event renamed.";
+      await logAudit({
+        userId,
+        provider: "calendar",
+        action: "update",
+        resourceId: String(a.event_id),
+        summary: "Renamed calendar event",
       });
     } else if (claimedTool === "calendar_create_event") {
       const timezone = a.timezone ? String(a.timezone) : undefined;
