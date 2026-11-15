@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Folder, LibraryBig, MessageSquare, Plug } from "lucide-react";
+import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
 const destinations = [
   { to: "/", label: "Chat", icon: MessageSquare },
@@ -20,6 +21,22 @@ export function PhoneNavigation({ pathname, inactive }: { pathname: string; inac
             to={to}
             data-current={inSection}
             aria-current={current ? "page" : undefined}
+            onClick={(event) => {
+              if (
+                current ||
+                event.defaultPrevented ||
+                event.detail !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
+              requestDrawerNavigationFocus({
+                destination: to,
+                source: event.currentTarget.closest("nav"),
+              });
+            }}
           >
             <span className="kova-phone-navigation-icon" aria-hidden="true">
               <Icon size={19} strokeWidth={1.8} />

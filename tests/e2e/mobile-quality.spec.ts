@@ -9,6 +9,7 @@ const mobileProjects = new Set([
   "phone-375x812",
   "phone-390x844",
   "phone-412x915",
+  "phone-430x932",
   "phone-landscape-844x390",
   "tablet-768x1024",
 ]);
@@ -75,6 +76,7 @@ test("phone workspace tabs sit below the composer and navigate between pages", a
   expect(composerBox!.y).toBeGreaterThan(viewport.height / 2);
   expect(composerBox!.y + composerBox!.height).toBeLessThanOrEqual(tabBox!.y);
   expect(tabBox!.y + tabBox!.height).toBeCloseTo(viewport.height, 0);
+  await composer.fill("Keep this draft while I change pages");
 
   for (const name of ["Projects", "Library", "Connections"]) {
     const destination = tabs.getByRole("link", { name, exact: true });
@@ -85,6 +87,17 @@ test("phone workspace tabs sit below the composer and navigate between pages", a
     await expect(page.getByRole("main")).toBeVisible();
     await expectNoPageOverflow(page);
   }
+
+  const libraryTab = tabs.getByRole("link", { name: "Library", exact: true });
+  await libraryTab.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .getByRole("heading", { name: "Library", exact: true, level: 1 })
+      .and(page.locator(":focus")),
+  ).toBeVisible();
+  await tabs.getByRole("link", { name: "Chat", exact: true }).tap();
+  await expect(composer).toHaveValue("Keep this draft while I change pages");
 });
 
 test("mobile public header exposes the app and opens its menu without moving the article", async ({
@@ -107,6 +120,32 @@ test("mobile public header exposes the app and opens its menu without moving the
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
   await expect(navigation.getByRole("button", { name: "Open navigation" })).toBeFocused();
+  await navigation.getByRole("button", { name: "Open navigation" }).tap();
+  await expect(menu).toBeVisible();
+  await page.locator("main").dispatchEvent("pointerdown", { pointerType: "touch", bubbles: true });
+  await expect(menu).toBeHidden();
+});
+
+test("phone footer groups reveal their links without taking over the page", async ({ page }) => {
+  test.skip(page.viewportSize()!.width >= 768, "phone layout");
+  await page.goto("/privacy", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const footer = page.getByRole("navigation", { name: "Footer navigation" });
+  const groups = footer.getByRole("button");
+  await expect(groups.first()).toBeVisible();
+  await expect(footer.getByRole("link")).toHaveCount(0);
+  for (const group of [groups.first(), groups.last()]) {
+    await group.focus();
+    await page.keyboard.press("Enter");
+    await expect(group).toHaveAttribute("aria-expanded", "true");
+    await expect(footer.locator('[aria-expanded="true"]')).toHaveCount(1);
+    await expect(footer.getByRole("link").first()).toBeVisible();
+    await expect(group).toBeFocused();
+  }
+  await page.keyboard.press("Enter");
+  await expect(footer.getByRole("link")).toHaveCount(0);
+  await expectNoPageOverflow(page);
 });
 
 for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
@@ -117,6 +156,28 @@ for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/res
     await expectNoPageOverflow(page);
   });
 }
+
+test("secondary workspaces stay usable on narrow and landscape phones", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width !== 320 && viewport.height > 500, "smallest and shortest phone views");
+  test.setTimeout(90_000);
+  for (const route of [
+    "/images",
+    "/work",
+    "/files",
+    "/finances",
+    "/notifications",
+    "/settings/general",
+  ]) {
+    await test.step(route, async () => {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.ok()).toBe(true);
+      await waitForKovaHydration(page);
+      await expect(page.getByRole("main").first()).toBeVisible();
+      await expectNoPageOverflow(page);
+    });
+  }
+});
 
 test("mobile settings never overflow", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });

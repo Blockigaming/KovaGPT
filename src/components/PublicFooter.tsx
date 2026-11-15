@@ -1,6 +1,7 @@
 import "./public/public-website.css";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PUBLIC_WEBSITE_FOOTER, PUBLIC_WEBSITE_PAGES } from "@/lib/public-website-catalog.mjs";
 import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
@@ -9,6 +10,8 @@ import { requiresAppAccount } from "@/lib/app-access-policy.mjs";
 export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [query, setQuery] = useState("");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const groupId = useId();
   const directory = useMemo(() => {
     const entries = new Map(
       PUBLIC_SITEMAP_ENTRIES.filter(({ path }) => path === "/" || !requiresAppAccount(path)).map(
@@ -49,27 +52,40 @@ export function PublicFooter() {
             </Link>
           </div>
           <nav aria-label="Footer navigation" className="kova-footer-nav">
-            {PUBLIC_WEBSITE_FOOTER.map((group) => (
-              <div key={group.label}>
-                <h2>{group.label}</h2>
-                <ul>
-                  {group.links.map((item) => {
-                    const currentPage = pathname === item.to;
-                    return (
+            {PUBLIC_WEBSITE_FOOTER.map((group, index) => {
+              const expanded = expandedGroup === group.label;
+              const linksId = `${groupId}-${index}`;
+              return (
+                <div key={group.label} data-expanded={expanded}>
+                  <h2>
+                    <span className="kova-footer-group-title">{group.label}</span>
+                    <button
+                      className="kova-footer-group-toggle"
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={linksId}
+                      onClick={() => setExpandedGroup(expanded ? null : group.label)}
+                    >
+                      {group.label}
+                      <ChevronDown size={16} aria-hidden="true" />
+                    </button>
+                  </h2>
+                  <ul id={linksId}>
+                    {group.links.map((item) => (
                       <li key={item.to}>
                         <Link
                           to={item.to as never}
-                          aria-current={currentPage ? "page" : undefined}
+                          aria-current={pathname === item.to ? "page" : undefined}
                           className="min-h-11"
                         >
                           {item.label}
                         </Link>
                       </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </nav>
         </div>
         <details className="kova-footer-directory">
