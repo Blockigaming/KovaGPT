@@ -865,3 +865,31 @@ test("forced Notion renewal cannot access another owner, workspace or deleted ac
     assert.equal(f.state.refreshCalls ?? 0, 0);
   }
 });
+
+test("Notion page reads reuse the selected account binding and discard data after revocation", async () => {
+  const f = notionFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  const tool = context.tools.find(
+    ({ function: definition }) => definition.name === "notion_read_page",
+  );
+  assert.deepEqual(tool.function.parameters.properties.account_id.enum, [f.state.row.id]);
+  const page_id = "12345678-1234-4321-9876-1234567890ab";
+  await assert.rejects(
+    f.runConnectedTool("owner-a", "notion_read_page", { account_id: "other", page_id }, context),
+    /connection_account_not_allowed/,
+  );
+  assert.equal(f.state.reads, 0);
+  f.state.onRead = () => {
+    f.state.row.status = "revoked";
+  };
+  await assert.rejects(
+    f.runConnectedTool(
+      "owner-a",
+      "notion_read_page",
+      { account_id: f.state.row.id, page_id },
+      context,
+    ),
+    /connection_changed_or_expired/,
+  );
+  assert.equal(f.state.reads, 1);
+});
