@@ -734,7 +734,6 @@ function composer(f) {
     consumeChatSse,
     chatResponseError,
     withResponsePresentation,
-    extractResponseFollowups,
     AbortController,
     DOMException,
     Error,
