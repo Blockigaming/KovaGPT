@@ -1,7 +1,9 @@
 /** Load attachment suggestions only for a signed-in Library, outside initial chat code. */
 export async function loadRecentLibraryFileOptions(savedChatLabel) {
   const { listMyLibrary } = await import("./library.functions");
-  return (await listMyLibrary())
+  const items = await listMyLibrary();
+  if (!Array.isArray(items)) throw new Error("Library returned an invalid item list");
+  return items
     .filter((item) => item.file_name || item.content_text || item.file_type)
     .slice(0, 12)
     .map((item) => ({

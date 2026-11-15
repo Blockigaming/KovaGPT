@@ -31,10 +31,13 @@ function dialogContents(source) {
         (attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === "className",
       )?.initializer;
       assert.ok(
-        className && ts.isStringLiteral(className),
+        className && (ts.isStringLiteral(className) || ts.isJsxExpression(className)),
         "Preview surface has explicit geometry",
       );
-      contents.push({ className: className.text, source: node.getText(ast) });
+      contents.push({
+        className: ts.isStringLiteral(className) ? className.text : className.getText(ast),
+        source: node.getText(ast),
+      });
     }
     ts.forEachChild(node, visit);
   }
@@ -134,10 +137,12 @@ test("Library shared preview and item/version inspectors keep bounded, padded sc
   assert.match(shared.source, /min-h-0 min-w-0 max-h-\[70dvh\][^"\n]*overflow-auto/);
   assert.match(shared.source, /pb-\[calc\(1rem\+env\(safe-area-inset-bottom\)\)\]/);
 
-  const item = libraryContents.find((surface) => surface.className === "spec400-library-inspector");
+  const item = libraryContents.find((surface) =>
+    surface.source.includes('"spec400-library-inspector"'),
+  );
   assert.ok(item, "Saved items use the approved viewport inspector");
+  assert.equal(versionContents[0].className, "spec400-library-inspector");
   for (const inspector of [item, versionContents[0]]) {
-    assert.equal(inspector.className, "spec400-library-inspector");
     assert.match(inspector.source, /className="spec400-inspector-body(?:[ "])/);
   }
   assert.match(library, /<LibraryVersionsDialog\s/);

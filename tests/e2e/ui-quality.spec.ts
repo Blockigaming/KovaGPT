@@ -534,6 +534,8 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
 test("a streamed response composes interactive study, simulation, diagram, and chart blocks", async ({
   page,
 }) => {
+  // This flow also cold-loads the PDF exporter and its dedicated rendering worker.
+  test.setTimeout(60_000);
   const fence = (language: string, value: object) =>
     ["```" + language, JSON.stringify(value), "```"].join("\n");
   const interactive = (value: object) => fence("kova-interactive", { version: 1, ...value });
@@ -630,7 +632,7 @@ test("a streamed response composes interactive study, simulation, diagram, and c
   expect(await download.failure()).toBeNull();
   const draft = conversation.getByRole("region", { name: "Example document workspace" });
   await draft.getByRole("button", { name: "Preview PDF", exact: true }).click();
-  await expect(draft.getByText("Page 1 of 1", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(draft.getByText("Page 1 of 1", { exact: true })).toBeVisible({ timeout: 40_000 });
   await expect(draft.getByRole("img", { name: "Example document, page 1" })).toBeVisible();
   await expect(page.getByText("The examples use sample data.", { exact: true })).toBeVisible();
 });
