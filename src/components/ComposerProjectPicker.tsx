@@ -24,6 +24,7 @@ export function ComposerProjectPicker({
   onOpenChange,
   navigationBlocked,
   navigationBlockedReason = "Send or clear your draft and attachments before opening a project.",
+  onSelectProject,
   anchorRef,
   startChat,
   side,
@@ -35,6 +36,7 @@ export function ComposerProjectPicker({
   /** Must include unsent text, attachments, streaming, and unresolved composer state. */
   navigationBlocked: boolean;
   navigationBlockedReason?: string;
+  onSelectProject?: (project: ProjectSummary) => void;
   anchorRef: RefObject<HTMLElement | null>;
   startChat: boolean;
   side: "top" | "bottom";
@@ -97,28 +99,26 @@ export function ComposerProjectPicker({
         active &&
         request === storageGeneration.current &&
         current.current.principalId === principalId;
-      const reportLoadError = () => {
-        if (!isCurrent()) return;
-        setSnapshot((previous) =>
-          previous?.principalId === principalId && previous.status === "ready"
-            ? previous
-            : { principalId, projects: [], status: "error" },
-        );
-      };
-      void getProjects().then((projects) => {
-        if (!isCurrent()) return;
-        if (!Array.isArray(projects)) {
-          reportLoadError();
-          return;
-        }
-        setSnapshot({
-          principalId,
-          projects: projects.filter(
-            (project) => !project.archived_at && !project.deletion_requested_at,
-          ),
-          status: "ready",
+      void getProjects()
+        .then((projects) => {
+          if (!isCurrent()) return;
+          if (!Array.isArray(projects)) throw new Error("Invalid project list");
+          setSnapshot({
+            principalId,
+            projects: projects.filter(
+              (project) => !project.archived_at && !project.deletion_requested_at,
+            ),
+            status: "ready",
+          });
+        })
+        .catch(() => {
+          if (!isCurrent()) return;
+          setSnapshot((previous) =>
+            previous?.principalId === principalId && previous.status === "ready"
+              ? previous
+              : { principalId, projects: [], status: "error" },
+          );
         });
-      }, reportLoadError);
     }
     return () => {
       active = false;
@@ -168,6 +168,12 @@ export function ComposerProjectPicker({
       )
     )
       return;
+    if (onSelectProject && !startChat) {
+      const project = visible.projects.find((item) => item.id === projectId);
+      if (project) onSelectProject(project);
+      onOpenChange(false);
+      return;
+    }
     navigationPending.current = true;
     setNavigating(projectId);
     setNavigationError("");
@@ -305,18 +311,22 @@ export function ComposerProjectPicker({
                     }
                     onClick={() => void chooseProject(project.id)}
                     className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl px-3 py-2 text-left"
-                    aria-label={`Open project ${project.name}`}
+                    aria-label={`${onSelectProject && !startChat ? "Add" : "Open"} project ${project.name}`}
                   >
-                    <span className="flex min-w-0 items-center gap-2 [overflow-wrap:anywhere]">
-                      <Folder aria-hidden="true" />
-                      {project.name}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Folder aria-hidden="true" className="shrink-0" />
+                      <span className="min-w-0 truncate" title={project.name}>
+                        {project.name}
+                      </span>
                     </span>
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {navigating === project.id
                         ? "Opening…"
                         : project.role === "viewer"
                           ? "View only"
-                          : "Open"}
+                          : onSelectProject && !startChat
+                            ? "Add"
+                            : "Open"}
                     </span>
                   </Button>
                 </li>

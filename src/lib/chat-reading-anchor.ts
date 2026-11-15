@@ -1,5 +1,5 @@
 type TextReadingAnchor = {
-  node: Text;
+  node?: Text;
   offset: number;
   signature: string;
   viewportOffset: number;
@@ -133,6 +133,7 @@ export function captureTranscriptReadingAnchor(
 
 function currentTextRect(message: HTMLElement, anchor: TextReadingAnchor) {
   if (
+    anchor.node &&
     message.contains(anchor.node) &&
     anchor.node.data.slice(anchor.offset, anchor.offset + anchor.signature.length) ===
       anchor.signature
@@ -194,11 +195,17 @@ export function restoreTranscriptReadingAnchor(
 
 export function createTranscriptReadingAnchorController(
   element: HTMLElement,
-  options: { isCurrent: () => boolean; isFollowingBottom: () => boolean },
+  options: {
+    isCurrent: () => boolean;
+    isFollowingBottom: () => boolean;
+    initialAnchor?: TranscriptReadingAnchor;
+  },
 ) {
   const window = element.ownerDocument.defaultView;
   let disposed = false;
-  let anchor = captureTranscriptReadingAnchor(element, options.isFollowingBottom());
+  if (options.initialAnchor) restoreTranscriptReadingAnchor(element, options.initialAnchor);
+  let anchor =
+    options.initialAnchor ?? captureTranscriptReadingAnchor(element, options.isFollowingBottom());
   let captureFrame: number | null = null;
   let intentFrame: number | null = null;
   let knownTop = element.scrollTop;
@@ -362,6 +369,15 @@ export function createTranscriptReadingAnchorController(
         capture(options.isFollowingBottom());
     },
     followEnd: () => capture(true),
+    snapshot() {
+      const latest =
+        captureFrame !== null || Math.abs(element.scrollTop - knownTop) > EPSILON
+          ? (captureTranscriptReadingAnchor(element, options.isFollowingBottom()) ?? anchor)
+          : anchor;
+      if (latest?.kind !== "content" || !latest.text) return latest;
+      const { offset, signature, viewportOffset } = latest.text;
+      return { ...latest, text: { offset, signature, viewportOffset } };
+    },
     dispose() {
       if (disposed) return;
       disposed = true;

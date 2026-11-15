@@ -355,7 +355,7 @@
 .spec400-chat-input .spec400-composer {
   position: relative;
   z-index: 1;
-  border-radius: var(--kova-radius-composer);
+  border-radius: var(--chat-composer-corner, var(--kova-radius-composer));
   box-shadow: 0 3px 16px #00000008;
 }
 .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
@@ -396,7 +396,7 @@
   }
   .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     padding: 12px !important;
-    border-radius: var(--kova-radius-composer);
+    border-radius: var(--chat-composer-corner, var(--kova-radius-composer));
   }
 }
 @media (max-width: 380px) {
@@ -1364,4 +1364,21 @@
 /* Keep the thumb's drag target clear at the selected stop. */
 .kova-effort-stop[aria-pressed="true"] {
   pointer-events: none;
+}
+
+.spec400-chat-input {
+  --chat-composer-corner: 34px;
+}
+.kova-response-work-time {
+  margin: 0 0 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.prose-chat .kova-response-emphasis {
+  color: light-dark(#245eaf, #669cf0);
+}
+@media (max-width: 1023px), (max-height: 679px) {
+  .spec400-recent-work li:nth-child(n + 3) {
+    display: none;
+  }
 }

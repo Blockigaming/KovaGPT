@@ -67,8 +67,10 @@ export type NormalizedChatPayload = {
   personality?: string;
   projectId?: string;
   temporary?: boolean;
+  voice?: true;
   temporaryContext?: "clean" | "personalized";
   clientTool?: ChatClientTool;
+  connectorId?: string;
 };
 
 export class ChatIngressError extends Error {

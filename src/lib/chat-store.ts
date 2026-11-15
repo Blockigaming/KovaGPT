@@ -165,6 +165,7 @@ export type PendingConfirm = {
 export type Message = {
   /** Actual submission or first visible response time; absent on legacy messages. */
   createdAt?: number;
+  workedMs?: number;
   followups?: string[];
   id: string;
   role: Role;

@@ -90,6 +90,9 @@ param voiceEnabled bool = false
 @description('Explicit audio/STT/STS activation. Keep false until recording and provider acceptance checks are authorized.')
 param voiceAudioEnabled bool = false
 
+@description('Enable realtime Scribe after the server key and quota checks pass.')
+param voiceRealtimeEnabled bool = false
+
 @description('Owner-selected per-user UTC-day request cap, not a currency budget. Zero keeps voice unavailable.')
 @minValue(0)
 param voiceDailyRequestLimit int = 0
@@ -410,6 +413,10 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             {
               name: 'KOVA_VOICE_AUDIO_ENABLED'
               value: voiceAudioEnabled ? 'true' : 'false'
+            }
+            {
+              name: 'KOVA_VOICE_REALTIME_ENABLED'
+              value: voiceRealtimeEnabled ? 'true' : 'false'
             }
             {
               name: 'KOVA_VOICE_DAILY_REQUEST_LIMIT'

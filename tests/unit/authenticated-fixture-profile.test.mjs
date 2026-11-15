@@ -7,7 +7,7 @@ import vm from "node:vm";
 const source = stripTypeScriptTypes(readFileSync("tests/e2e/authenticated-fixture.ts", "utf8"), {
   mode: "transform",
 })
-  .replace('import { functionNames } from "./server-function-fixture";', "")
+  .replace('import { resolveFixtureFunctionName } from "./server-function-fixture";', "")
   .replace(
     "export async function installAuthenticatedFixture",
     "async function installAuthenticatedFixture",
@@ -18,7 +18,8 @@ function installer() {
   return vm.runInNewContext(`${source}\n({ installAuthenticatedFixture })`, {
     URL,
     crypto: { randomUUID: () => `fixture-${++sequence}` },
-    functionNames: new Map([["fixture-owned-plan", "getMyPlanTier_fixture"]]),
+    resolveFixtureFunctionName: (id) =>
+      id === "fixture-owned-plan" ? "getMyPlanTier_fixture" : undefined,
   }).installAuthenticatedFixture;
 }
 

@@ -8,8 +8,12 @@ const resetFormat = new Intl.DateTimeFormat(undefined, {
   timeZoneName: "short",
 });
 
-const boundedPercent = (used: number, limit: number) =>
-  limit > 0 ? Math.min(100, Math.max(0, Math.round((used / limit) * 100))) : 100;
+const boundedPercent = (used: number | null, limit: number) =>
+  typeof used === "number" && Number.isFinite(used) && Number.isFinite(limit)
+    ? limit > 0
+      ? Math.min(100, Math.max(0, Math.round((used / limit) * 100)))
+      : 100
+    : null;
 
 export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
   const { windows } = usage;
@@ -18,13 +22,9 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
     <div className="kova-plan-usage">
       {windows.map((window) => {
         const percentages = [
-          window.regularUsed === null
-            ? null
-            : boundedPercent(window.regularUsed, window.regularLimit),
-          window.thinkingUsed === null
-            ? null
-            : boundedPercent(window.thinkingUsed, window.thinkingLimit),
-          window.costPercentUsed,
+          boundedPercent(window.regularUsed, window.regularLimit),
+          boundedPercent(window.thinkingUsed, window.thinkingLimit),
+          boundedPercent(window.costPercentUsed, 100),
         ].filter((value): value is number => value !== null);
         const percent = percentages.length ? Math.max(...percentages) : null;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;

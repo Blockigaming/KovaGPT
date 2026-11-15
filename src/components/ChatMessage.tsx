@@ -3,7 +3,7 @@ import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
-import { StreamingStatus } from "./StreamingStatus";
+import { formatResponseTime, StreamingStatus } from "./StreamingStatus";
 import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
@@ -196,6 +196,12 @@ function ChatMessageInner({
     };
   }, [principal, message.id, message.content]);
   const isUser = message.role === "user";
+  const imageAttachments = isUser
+    ? message.attachments?.filter((attachment) => attachment.kind === "image")
+    : undefined;
+  const imageCount = imageAttachments?.length ?? 0;
+  const multipleImages = imageCount > 1;
+  const imageDescription = message.content.trim().slice(0, 120);
   const imageActions = useMemo<ChatImageActions | undefined>(
     () =>
       isSignedIn && principalResolved && userKey && principal && chatId
@@ -816,6 +822,7 @@ function ChatMessageInner({
       data-message-id={message.id}
       data-message-role={message.role}
       data-ui-reference="chatgpt-message"
+      data-streaming={streaming || undefined}
       className="kova-message group w-full px-4 py-3 text-base leading-[26px] sm:px-6 lg:px-8"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
@@ -823,25 +830,31 @@ function ChatMessageInner({
         <div className="mx-auto flex w-full kova-message-reading-column justify-end">
           <div className="kova-user-message-group flex min-w-0 flex-col items-end">
             {message.attachments && message.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                {message.attachments
-                  .filter(
-                    (attachment): attachment is Extract<typeof attachment, { kind: "image" }> =>
-                      attachment.kind === "image",
-                  )
-                  .map((attachment, index) => (
-                    <ChatImage
-                      key={index}
-                      src={attachment.dataUrl}
-                      alt={
-                        message.content?.trim()
-                          ? `User-uploaded image: ${message.content.slice(0, 120)}`
-                          : "User-uploaded image attached to message"
-                      }
-                      actions={imageActions}
-                      imageClassName="max-h-64 max-w-full rounded-2xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  ))}
+              <div className="flex max-w-full flex-wrap gap-2 mb-2 justify-end">
+                {imageAttachments?.length ? (
+                  <div
+                    className="kova-message-image-group"
+                    data-multiple={multipleImages ? "true" : undefined}
+                    role={multipleImages ? "group" : undefined}
+                    aria-label={multipleImages ? "Attached images" : undefined}
+                  >
+                    {imageAttachments.map((attachment, index) => (
+                      <ChatImage
+                        key={index}
+                        src={attachment.dataUrl}
+                        alt={
+                          multipleImages
+                            ? `Attached image ${index + 1} of ${imageCount}`
+                            : imageDescription
+                              ? `User-uploaded image: ${imageDescription}`
+                              : "User-uploaded image attached to message"
+                        }
+                        actions={imageActions}
+                        imageClassName="max-h-64 max-w-full rounded-2xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    ))}
+                  </div>
+                ) : null}
                 {message.attachments
                   .filter((attachment) => attachment.kind !== "image")
                   .map((attachment) =>
@@ -878,12 +891,19 @@ function ChatMessageInner({
       ) : (
         <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
           <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
+            {streaming && !waitingForFirstToken ? (
+              <StreamingStatus startedAt={resolvedStreamingStartedAt} />
+            ) : !streaming && typeof message.workedMs === "number" ? (
+              <p className="kova-response-work-time">
+                Worked for {formatResponseTime(message.workedMs / 1000)}
+              </p>
+            ) : null}
             {message.activities
               ?.filter((activity) => activity.tool === "scheduled_task")
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            <MessageActivityList activities={message.activities} />
+            {!streaming && <MessageActivityList activities={message.activities} />}
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}
@@ -891,7 +911,11 @@ function ChatMessageInner({
                 onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
               />
             ))}
-            <div ref={bodyRef} className="prose-chat">
+            <div
+              ref={bodyRef}
+              className="prose-chat"
+              data-waiting-for-response={waitingForFirstToken || undefined}
+            >
               {message.pendingImage && !message.content ? (
                 <div
                   role="status"
@@ -1016,7 +1040,6 @@ function ChatMessageInner({
                   !principalResolved ||
                   !userKey ||
                   !chatId ||
-                  temporary ||
                   !!message.generationStatus ||
                   !!message.pendingImage
                 }

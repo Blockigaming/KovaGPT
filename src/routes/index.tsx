@@ -7,9 +7,11 @@ import {
   createConsumerModelChoice,
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
-import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
+import type {
+  createTranscriptReadingAnchorController,
+  TranscriptReadingAnchor,
+} from "@/lib/chat-reading-anchor";
 import {
-  snapshotNextPrompt,
   sameNextPromptScope,
   sameNextPromptContext,
   advanceNextPromptScope,
@@ -20,7 +22,7 @@ import {
   type NextPromptScope,
 } from "@/lib/chat-send-next";
 import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversation.mjs";
-import { appendFollowupToDraft, extractResponseFollowups } from "@/lib/response-followups.mjs";
+import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
 import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
@@ -192,7 +194,6 @@ import {
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
-import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 import {
   consumePrincipalHandoff,
@@ -355,6 +356,24 @@ function KovaGPT() {
     composerDraftRef.current = { ...composerDraftRef.current, tool };
     setSelectedToolState(tool);
   }, []);
+  const [projectSelection, setProjectSelection] = useState<{
+    owner: string | null;
+    chat: string | null;
+    value: { id: string; name: string };
+  } | null>(null);
+  const [pluginSelection, setPluginSelection] = useState<{
+    owner: string | null;
+    chat: string | null;
+    value: { id: string; label: string };
+  } | null>(null);
+  const projectContext =
+    projectSelection?.owner === userKey && projectSelection.chat === activeId
+      ? projectSelection.value
+      : null;
+  const pluginContext =
+    pluginSelection?.owner === userKey && pluginSelection.chat === activeId
+      ? pluginSelection.value
+      : null;
   const [pendingWorkflowSkill, setPendingWorkflowSkill] =
     useState<ConversationWorkflowSkill | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatEditDraft | null>(null);
@@ -367,7 +386,7 @@ function KovaGPT() {
     }
   }, [activeId, storagePrincipal, editingMessage]);
 
-  const [sidebarOpen, setSidebarOpen] = useSidebarPreference();
+  const [sidebarOpen, setSidebarOpen, sidebarReady] = useSidebarPreference();
   const [activityDock, setActivityDock] = useState<HTMLDivElement | null>(null);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -543,18 +562,9 @@ function KovaGPT() {
       openSignUp();
       return;
     }
-    (async () => {
-      try {
-        const { acceptFamilyInvite } = await import("@/lib/family.functions");
-        await acceptFamilyInvite({ data: { token } });
-        toast.success("Joined family plan.");
-      } catch (e) {
-        toast.error((e as Error).message || "Could not accept invite.");
-      } finally {
-        url.searchParams.delete("family_invite");
-        window.history.replaceState({}, "", url.toString());
-      }
-    })();
+    void import("@/lib/family-invite-client")
+      .then(({ redeemFamilyInvite }) => redeemFamilyInvite(token, url))
+      .catch(() => toast.error("Could not load the family invitation. Reload to try again."));
   }, [isSignedIn, openSignUp]);
   const openHelp = useCallback(() => {
     navigate({ to: "/help" as never });
@@ -700,6 +710,7 @@ function KovaGPT() {
   const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
+  const readingPositionsRef = useRef(new Map<string, TranscriptReadingAnchor>());
   const [resultTab, setResultTab] = useState<"conversation" | "result">("conversation");
   const workspaceRef = useRef<HTMLDivElement>(null);
   const responseDraftUrl = typeof window === "undefined" ? undefined : window.location.href;
@@ -893,6 +904,7 @@ function KovaGPT() {
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
+    readingPositionsRef.current = new Map();
     if (!isLoaded) {
       storageGenerationRef.current += 1;
       updateNextPrompt(null);
@@ -1052,6 +1064,7 @@ function KovaGPT() {
     if (!isLoaded) return;
     const handlePrincipalReset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      readingPositionsRef.current = new Map();
       storageGenerationRef.current += 1;
       updateNextPrompt(null);
       abortRef.current?.abort();
@@ -1551,6 +1564,8 @@ function KovaGPT() {
     setAttachments([]);
     setEditingMessage(null);
     setPendingWorkflowSkill(null);
+    setProjectSelection(null);
+    setPluginSelection(null);
   }, [setConversations, setInput, setAttachments]);
 
   const startNewChat = useCallback(() => {
@@ -1883,6 +1898,10 @@ function KovaGPT() {
         nextPromptMountedRef.current &&
         isCurrentRequest() &&
         sameNextPromptScope(requestScope, nextPromptScopeRef.current);
+      if (projectContext && projectSelection)
+        setProjectSelection({ ...projectSelection, chat: nextConvId });
+      if (pluginContext && pluginSelection)
+        setPluginSelection({ ...pluginSelection, chat: nextConvId });
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
         : undefined;
@@ -1901,6 +1920,7 @@ function KovaGPT() {
         content: trimmed,
         attachments: storedMessageAttachments(atts),
       };
+      const responseStartedAt = Date.now();
       const assistantMsg: Message = {
         id: newId(),
         role: "assistant",
@@ -2039,7 +2059,7 @@ function KovaGPT() {
         controller,
         conversationId: nextConvId,
         assistantMessageId: assistantMsg.id,
-        startedAt: Date.now(),
+        startedAt: responseStartedAt,
         flushPendingContent: () => {
           if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
           flushAssistant();
@@ -2106,8 +2126,9 @@ function KovaGPT() {
         const {
           createChatHistoryPayload,
           fetchForPrincipal,
-          chatRequestProfile,
-          withResponsePresentation,
+          chatRequestUser,
+          completedChatReply,
+          chatRequestHeaders,
         } = await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
@@ -2125,12 +2146,7 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(!voiceRequest ? { "X-Kova-Response-Followups": "1" } : {}),
-            "Idempotency-Key": userMsg.id,
-            "X-Kova-Assistant-Message-Id": assistantMsg.id,
-          },
+          headers: chatRequestHeaders(userMsg.id, assistantMsg.id, voiceRequest),
           body: JSON.stringify({
             ...historyPayload,
             kova: existingConversation?.kova,
@@ -2143,31 +2159,21 @@ function KovaGPT() {
             mode: requestMode,
             hostedModel: requestHostedModel,
             clientTool: activeTool,
+            projectId: tempChat ? undefined : projectContext?.id,
+            connectorId: tempChat ? undefined : pluginContext?.id,
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
-            user:
-              tempChat && tempChatContext === "clean"
-                ? requestWebSearch === undefined
-                  ? undefined
-                  : { webSearch: requestWebSearch }
-                : withResponsePresentation(
-                    chatRequestProfile({
-                      ...settings,
-                      ...(requestWebSearch === undefined ? {} : { webSearch: requestWebSearch }),
-                    }),
-                    settings,
-                  ),
+            ...(await chatRequestUser(
+              settings,
+              tempChat && tempChatContext === "clean",
+              requestWebSearch,
+              isLoaded ? userKey : undefined,
+              tier,
+              Boolean(voiceRequest),
+            )),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: safeLocale(),
-            personality:
-              tempChat && tempChatContext === "clean"
-                ? undefined
-                : personalityToInstruction(
-                    loadPersonality(isLoaded ? userKey : undefined),
-                    isLoaded ? userKey : undefined,
-                    tier,
-                  ) || undefined,
           }),
           signal: controller.signal,
         });
@@ -2271,14 +2277,10 @@ function KovaGPT() {
           });
         requestSucceeded = !controller.signal.aborted && !waitingForConfirmation;
         if (requestSucceeded) {
-          const { content, followups } = extractResponseFollowups(assembledReply);
-          assembledReply = content;
-          updateAssistantMessage((message) => ({
-            ...message,
-            content,
-            ...(followups.length ? { followups } : {}),
-            createdAt: Date.now(),
-          }));
+          const reply = completedChatReply(assembledReply, Boolean(voiceRequest));
+          assembledReply = reply.content;
+          const workedMs = Math.max(0, Date.now() - responseStartedAt);
+          updateAssistantMessage((message) => ({ ...message, ...reply, workedMs }));
         }
         if (activeIdRef.current === nextConvId) {
           if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
@@ -2522,6 +2524,10 @@ function KovaGPT() {
       openSignIn,
       userKey,
       pendingWorkflowSkill,
+      projectContext,
+      pluginContext,
+      projectSelection,
+      pluginSelection,
       updateNextPrompt,
       updateRequestNotice,
       updateQuotaRejectedDrafts,
@@ -2585,41 +2591,6 @@ function KovaGPT() {
     [],
   );
 
-  const queueNextPrompt = (
-    tool?: ComposerToolId | null,
-    trigger?: HTMLButtonElement | null,
-  ): boolean => {
-    const target = inFlightTargetRef.current;
-    if (
-      !principalReady ||
-      !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current) ||
-      !nextPromptMountedRef.current ||
-      !target ||
-      !inFlightRef.current ||
-      target.conversationId !== activeId ||
-      target.controller.signal.aborted ||
-      editingMessage ||
-      nextPromptRef.current ||
-      (!input.trim() && !attachments.length) ||
-      hasPendingChatAttachments(attachments) ||
-      attachments.some((file) => file.status === "failed") ||
-      (!isSignedIn && (attachments.length > 0 || tool === "image"))
-    )
-      return false;
-    const next = snapshotNextPrompt({
-      id: newId(),
-      scope: nextPromptScopeRef.current,
-      waitingFor: target.assistantMessageId,
-      text: input,
-      attachments,
-      tool: tool ?? null,
-      mode,
-      hostedModel: active?.kova ? undefined : hostedModel,
-    });
-    updateNextPrompt(next);
-    scheduleNextPromptFocus(trigger, "queued", next);
-    return true;
-  };
   useEffect(() => {
     const next = nextPromptRef.current;
     if (!next || next.status !== "ready" || isStreaming || inFlightRef.current) return;
@@ -2692,6 +2663,7 @@ function KovaGPT() {
   const submitComposerVoiceTurn = async (
     text: string,
     signal: AbortSignal,
+    realtime?: boolean,
   ): Promise<ComposerVoiceTurn> => {
     const session = composerVoiceSessionRef.current;
     let requestEpoch: number | null = null;
@@ -2715,6 +2687,14 @@ function KovaGPT() {
     const turn = await pending;
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     if (!turn) throw new Error("voice_chat_failed");
+    if (realtime) {
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(turn.content));
+      if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
+      const contentSha256 = Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("");
+      return { ...turn, contentSha256 };
+    }
     const { awaitSavedComposerVoiceTurn } = await import("@/lib/composer-voice-turn");
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     return awaitSavedComposerVoiceTurn({
@@ -3131,6 +3111,77 @@ function KovaGPT() {
     ) : null;
 
   const showEmptyChat = !active || (active.messages.length === 0 && composerVoiceMode !== "voice");
+  const composerContext = tempChat
+    ? {}
+    : {
+        projectContext,
+        pluginContext,
+        onProjectContext: (value: typeof projectContext) =>
+          setProjectSelection(value && { owner: userKey, chat: activeId, value }),
+        onPluginContext: (value: typeof pluginContext) =>
+          setPluginSelection(value && { owner: userKey, chat: activeId, value }),
+      };
+  const composer = (
+    <ChatInput
+      value={principalReady ? input : ""}
+      onChange={setInput}
+      onSubmit={(tool) => send(input, attachments, tool)}
+      onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
+      onStop={stop}
+
+      nextPromptPanel={composerPromptPanel}
+      requestStatusPanel={requestStatusPanel}
+      isStreaming={isStreaming}
+      voiceMode={composerVoiceMode}
+      onVoiceModeChange={changeComposerVoiceMode}
+      onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
+      latestAssistantText={
+        active?.messages
+          .filter(
+            (message) =>
+              message.role === "assistant" && !message.generationStatus && !message.pendingImage,
+          )
+          .at(-1)?.content
+      }
+      latestAssistantReply={latestAssistantReply}
+      disabled={!principalReady}
+      sendDisabled={!historyReady}
+      saveAttachmentsToLibrary={principalReady && !tempChat}
+      attachments={principalReady ? attachments : []}
+      onAttachmentsChange={setAttachments}
+      attachmentContext={JSON.stringify([
+        storagePrincipal,
+        activeId,
+        editingMessage?.messageId ?? null,
+      ])}
+      hostedModel={active?.kova ? undefined : hostedModel}
+      onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
+      mode={mode}
+      onModeChange={active?.kova ? undefined : setMode}
+      userTier={tier}
+      canChangeAgent={!active?.kova}
+      showModelStatus
+      {...composerContext}
+      showChooseProject
+      showResources={!chatStarted}
+      savedConversations={userKey && principalReady ? conversations : []}
+      onOpenChatContext={active ? openChatWorkspace : undefined}
+      chatRulesActive={chatRulesActive}
+      onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
+      placeholder="Work with KovaGPT"
+      responseSettings={settings}
+      onResponseSettingsChange={(change) => setSettings((previous) => ({ ...previous, ...change }))}
+      onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+      selectedTool={selectedTool}
+      onToolSelect={setSelectedTool}
+      recentLibraryFiles={recentLibraryFiles}
+      recentLibraryLoading={recentLibraryLoading}
+      recentLibraryError={recentLibraryError}
+      onRecentLibraryRetry={loadRecentLibraryFiles}
+      viewportManaged
+      surface={showEmptyChat ? "empty" : "conversation"}
+    />
+  );
   const freeOfferButton =
     isLoaded && isSignedIn && tier === "free" ? (
       <Suspense fallback={null}>
@@ -3170,9 +3221,9 @@ function KovaGPT() {
 
   return (
     <div
+      data-sidebar-ready={sidebarReady && isLoaded}
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
-      style={{ height: "100dvh" }}
     >
       <p className="sr-only" aria-live="polite">
         {streamAnnouncement}
@@ -3364,68 +3415,7 @@ function KovaGPT() {
                   conversations={isLoaded && isSignedIn ? historyConversations : []}
                   onSelect={setActiveId}
                 >
-                  <ChatInput
-                    value={principalReady ? input : ""}
-                    onChange={setInput}
-                    onSubmit={(tool) => send(input, attachments, tool)}
-                    onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
-                    onStop={stop}
-                    onSendNext={queueNextPrompt}
-                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
-                    nextPromptPanel={composerPromptPanel}
-                    requestStatusPanel={requestStatusPanel}
-                    isStreaming={isStreaming}
-                    voiceMode={composerVoiceMode}
-                    onVoiceModeChange={changeComposerVoiceMode}
-                    onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
-                    latestAssistantText={
-                      active?.messages
-                        .filter(
-                          (message) =>
-                            message.role === "assistant" &&
-                            !message.generationStatus &&
-                            !message.pendingImage,
-                        )
-                        .at(-1)?.content
-                    }
-                    latestAssistantReply={latestAssistantReply}
-                    disabled={!principalReady}
-                    sendDisabled={!historyReady}
-                    saveAttachmentsToLibrary={principalReady && !tempChat}
-                    attachments={principalReady ? attachments : []}
-                    onAttachmentsChange={setAttachments}
-                    attachmentContext={JSON.stringify([
-                      storagePrincipal,
-                      activeId,
-                      editingMessage?.messageId ?? null,
-                    ])}
-                    hostedModel={active?.kova ? undefined : hostedModel}
-                    onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
-                    mode={mode}
-                    onModeChange={active?.kova ? undefined : setMode}
-                    userTier={tier}
-                    canChangeAgent={!active?.kova}
-                    showModelStatus
-                    showChooseProject
-                    showResources={!chatStarted}
-                    savedConversations={userKey && principalReady ? conversations : []}
-                    onOpenChatContext={active ? openChatWorkspace : undefined}
-                    chatRulesActive={chatRulesActive}
-                    onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Work with KovaGPT"
-                    responseSettings={settings}
-                    onResponseSettingsChange={(change) =>
-                      setSettings((previous) => ({ ...previous, ...change }))
-                    }
-                    onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
-                    selectedTool={selectedTool}
-                    onToolSelect={setSelectedTool}
-                    recentLibraryFiles={recentLibraryFiles}
-                    recentLibraryLoading={recentLibraryLoading}
-                    recentLibraryError={recentLibraryError}
-                    onRecentLibraryRetry={loadRecentLibraryFiles}
-                    surface="empty"
-                  />
+                  {composer}
                 </HomeWelcome>
               </Suspense>
             ) : (
@@ -3463,6 +3453,7 @@ function KovaGPT() {
                     openChatWorkspace={openChatWorkspace}
                     scrollRef={scrollRef}
                     nearBottomRef={nearBottomRef}
+                    readingPositionsRef={readingPositionsRef}
                     readingAnchorControllerRef={readingAnchorControllerRef}
                     transcriptScope={transcriptScope}
                     transcriptScopeRef={transcriptScopeRef}
@@ -3503,67 +3494,7 @@ function KovaGPT() {
                       </Button>
                     </div>
                   )}
-                  <ChatInput
-                    value={principalReady ? input : ""}
-                    onChange={setInput}
-                    onSubmit={(tool) => send(input, attachments, tool)}
-                    onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
-                    onStop={stop}
-                    onSendNext={queueNextPrompt}
-                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
-                    nextPromptPanel={composerPromptPanel}
-                    requestStatusPanel={requestStatusPanel}
-                    isStreaming={isStreaming}
-                    voiceMode={composerVoiceMode}
-                    onVoiceModeChange={changeComposerVoiceMode}
-                    onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
-                    latestAssistantText={
-                      active?.messages
-                        .filter(
-                          (message) =>
-                            message.role === "assistant" &&
-                            !message.generationStatus &&
-                            !message.pendingImage,
-                        )
-                        .at(-1)?.content
-                    }
-                    latestAssistantReply={latestAssistantReply}
-                    disabled={!principalReady}
-                    sendDisabled={!historyReady}
-                    saveAttachmentsToLibrary={principalReady && !tempChat}
-                    attachments={principalReady ? attachments : []}
-                    onAttachmentsChange={setAttachments}
-                    attachmentContext={JSON.stringify([
-                      storagePrincipal,
-                      activeId,
-                      editingMessage?.messageId ?? null,
-                    ])}
-                    hostedModel={active?.kova ? undefined : hostedModel}
-                    onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
-                    mode={mode}
-                    onModeChange={active?.kova ? undefined : setMode}
-                    userTier={tier}
-                    canChangeAgent={!active?.kova}
-                    showModelStatus
-                    showChooseProject
-                    showResources={!chatStarted}
-                    savedConversations={userKey && principalReady ? conversations : []}
-                    onOpenChatContext={active ? openChatWorkspace : undefined}
-                    chatRulesActive={chatRulesActive}
-                    onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                    placeholder="Work with KovaGPT"
-                    responseSettings={settings}
-                    onResponseSettingsChange={(change) =>
-                      setSettings((previous) => ({ ...previous, ...change }))
-                    }
-                    onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
-                    selectedTool={selectedTool}
-                    onToolSelect={setSelectedTool}
-                    recentLibraryFiles={recentLibraryFiles}
-                    recentLibraryLoading={recentLibraryLoading}
-                    recentLibraryError={recentLibraryError}
-                    onRecentLibraryRetry={loadRecentLibraryFiles}
-                  />
+                  {composer}
                 </div>
               </>
             )}
@@ -3633,6 +3564,7 @@ function KovaGPT() {
             settings={settings}
             onChange={setSettings}
             onClearAll={() => {
+              readingPositionsRef.current = new Map();
               attachmentDraftsRef.current.clear();
               pendingDraftLoadRef.current = null;
               storageGenerationRef.current += 1;

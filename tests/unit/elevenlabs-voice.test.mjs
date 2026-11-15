@@ -455,3 +455,58 @@ test("all configured REST speech models use server-only selection; invalid model
     /voice_not_configured/,
   );
 });
+
+test("Live Voice mints only a scoped token and reserves daily usage for Free and Plus", async () => {
+  const catalog = Array.from({ length: 7 }, (_, index) => ({
+    id: `choice-${index}`,
+    label: `Voice ${index}`,
+    providerVoiceId: `fixture-${index}`,
+    allowedPlans: ["pro"],
+  }));
+  const flags = {
+    ...env,
+    KOVA_VOICE_REALTIME_ENABLED: "true",
+    KOVA_VOICE_CATALOG: JSON.stringify(catalog),
+  };
+  for (const [tier, count] of [
+    ["free", 3],
+    ["plus", 7],
+    ["pro", 7],
+  ]) {
+    const calls = [];
+    const getEnv = (key) => flags[key];
+    const handler = createVoiceHandler({
+      requireUser: async () => ({ userId: "owner", emailVerified: true }),
+      assertNotBanned: async () => null,
+      assertFeatureEnabled: async () => null,
+      getCallerTier: async () => tier,
+      limitRealtime: async () => {
+        calls.push("rate");
+      },
+      enforceQuota: async () => {
+        calls.push("quota");
+      },
+      env: getEnv,
+      execute: (input, settings) =>
+        executeVoice(input, settings, {
+          fetchImpl: async (url, init) => {
+            calls.push("provider");
+            assert.equal(url, "https://api.elevenlabs.io/v1/single-use-token/realtime_scribe");
+            assert.equal(init.method, "POST");
+            assert.equal(init.headers["xi-api-key"], env.ELEVENLABS_API_KEY);
+            return Response.json({ token: "scoped-token", extra: "omit" });
+          },
+        }),
+    });
+    const config = publicVoiceConfiguration(voiceConfiguration(getEnv, tier));
+    assert.equal(config.realtime, true);
+    assert.equal(config.voices.filter((voice) => voice.available).length, count);
+    const request = json({ action: "realtime" });
+    request.headers.set("Origin", "https://kova.invalid");
+    request.headers.set("X-Kova-Voice-Owner", "owner");
+    const response = await handler(request);
+    assert.equal(response.headers.get("Cache-Control"), "no-store");
+    assert.deepEqual(await response.json(), { token: "scoped-token" });
+    assert.deepEqual(calls, tier === "pro" ? ["rate", "provider"] : ["rate", "quota", "provider"]);
+  }
+});

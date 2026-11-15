@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { fixture, functionNames, owner, planUsageFixture } from "./actual-app-fixture";
+import { fixture, owner, planUsageFixture } from "./actual-app-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { revealSidebar } from "./current-ui";
 
@@ -8,7 +9,7 @@ async function prepare(page: import("@playwright/test").Page) {
   await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
   await page.route("**/_serverFn/**", async (route) => {
     const name =
-      functionNames.get(new URL(route.request().url()).pathname.split("/").at(-1)!) ?? "";
+      resolveFixtureFunctionName(new URL(route.request().url()).pathname.split("/").at(-1)!) ?? "";
     const result = name.startsWith("getMyPlanTier_")
       ? { ownerId: owner, tier: "free" }
       : name.startsWith("getMyPlanUsage_")

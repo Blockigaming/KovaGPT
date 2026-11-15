@@ -109,7 +109,8 @@ test("real browser: Read aloud, streamed playback, Stop, errors, principal switc
       await page.getByRole("status").filter({ hasText: "Reading aloud" }).waitFor();
       assert.equal(lastInput.ownerId, "owner-a");
       assert.equal(lastInput.contentSha256.length, 64);
-      assert.equal(lastInput.text, undefined);
+      assert.equal(lastInput.mode, "read-aloud");
+      assert.equal(lastInput.text, "Completed response.");
       await page.getByRole("button", { name: "Stop reading aloud" }).click();
       await page.getByRole("button", { name: "Read aloud", exact: true }).waitFor();
     });

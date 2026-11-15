@@ -73,6 +73,13 @@ test("sidebar search and all main destinations keep honest service states", asyn
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await coreFixture(page, "light", "plus");
+  // This case exercises Gmail. Give the separate bank status read its normal
+  // empty response so its error toast does not cover the Gmail button on phones.
+  await page.route("**/api/finances/manage", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({ json: { connections: [], configured: false, planEligible: true } })
+      : route.fallback(),
+  );
   await page.goto("/");
   await waitForKovaHydration(page);
   await openResponseOptions(page);

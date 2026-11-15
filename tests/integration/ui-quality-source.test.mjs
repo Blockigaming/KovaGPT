@@ -102,7 +102,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(popover, /overflow-y-auto overflow-x-hidden overscroll-contain/);
   const scrim = declarations(sidebarStyles, "button.kova-sidebar-scrim");
   assert.equal(scrim["border-radius"], "0");
-  assert.equal(scrim.background, "#0008");
+  assert.equal(scrim.background, "rgb(0 0 0 / 45%)");
   assert.equal(scrim["backdrop-filter"], undefined);
   assert.match(
     coreStyles,
@@ -298,7 +298,7 @@ test("canonical reference styles own shell and composer contracts without retire
     "(any-pointer: coarse), (max-width: 1023px)",
   );
   for (const key of ["width", "height", "min-width", "min-height"]) {
-    assert.equal(compactAction[key], "32px");
+    assert.equal(compactAction[key], "28px");
     assert.equal(touchAction[key], "44px");
   }
   assert.equal(declarations(responseStyles, ".kova-message-actions")["flex-wrap"], "wrap");
@@ -368,7 +368,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(stopButton, /type="button"/);
   assert.match(stopButton, /onClick=\{onStop\}/);
   assert.doesNotMatch(stopButton, /disabled=|aria-disabled=/);
-  assert.match(home, /surface="empty"/);
+  assert.match(home, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
   assert.match(starters, /<div className="kova-empty-composer">\s*\{children\}/);
@@ -422,8 +422,6 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
 
 test("streaming status reports only real activity instead of invented progression", () => {
   const status = streamingStatus;
-  assert.match(status, /CONTINUED_WAIT_MS = 8_000/);
-  assert.match(status, /EXTENDED_WAIT_MS = 30_000/);
   assert.match(status, /Date\.now\(\) - startedAt/);
   assert.match(status, /activity\.status === "running"/);
   assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
@@ -432,11 +430,9 @@ test("streaming status reports only real activity instead of invented progressio
   assert.match(home, /startedAt: Date\.now\(\)/);
   assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
   assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
-  assert.match(status, /"Still working"/);
-  assert.match(status, /"Taking a little longer"/);
   assert.match(status, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
   assert.match(status, /return \(\) => window\.clearInterval\(timer\)/);
-  assert.match(status, /Working for \{elapsedSeconds\}s/);
+  assert.match(status, /Working for \{seconds\}s/);
   assert.doesNotMatch(status, />\s*Skip\s*</);
   assert.doesNotMatch(status, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(status, /kova-thinking-indicator/);

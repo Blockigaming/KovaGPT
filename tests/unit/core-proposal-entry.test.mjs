@@ -33,11 +33,14 @@ test("all proposed core interfaces compile together without entering production 
     format: "esm",
     platform: "browser",
     jsx: "automatic",
-    loader: { ".svg": "dataurl" },
+    loader: { ".svg": "dataurl", ".woff2": "file", ".woff": "file", ".ttf": "file" },
     logLevel: "silent",
   });
   assert.ok(result.outputFiles.some((file) => file.path.endsWith(".js") && file.text.length > 0));
   assert.ok(result.outputFiles.some((file) => file.path.endsWith(".css") && file.text.length > 0));
+  assert.ok(
+    result.outputFiles.some((file) => file.path.endsWith(".woff2") && file.contents.length),
+  );
 });
 
 test("Library modal can recover failure without closing and losing its draft", () => {

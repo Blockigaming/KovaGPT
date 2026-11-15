@@ -10,9 +10,10 @@ export type VoiceConfiguration = {
   tts: boolean;
   sts: boolean;
   conversation: boolean;
+  realtime: boolean;
 };
 export type VoiceInput = (
-  { action: "tts"; text: string } | { action: "stt" | "sts"; audio: Blob }
+  { action: "realtime" } | { action: "tts"; text: string } | { action: "stt" | "sts"; audio: Blob }
 ) & { voiceId?: string };
 export const MAX_AUDIO_BYTES: number;
 export const MAX_TEXT_CHARACTERS: number;
@@ -32,6 +33,7 @@ export function publicVoiceConfiguration(config: VoiceConfiguration): {
   tts: boolean;
   sts: boolean;
   conversation: boolean;
+  realtime?: true;
 };
 export function voiceErrorResponse(error: unknown): Response;
 export function parseVoiceRequest(request: Request): Promise<VoiceInput>;

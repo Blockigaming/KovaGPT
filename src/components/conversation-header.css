@@ -579,10 +579,18 @@
 }
 .kova-mobile-conversation-tools {
   min-width: 0;
-  padding: 0 8px 4px;
+}
+.kova-mobile-conversation-tools .kova-conversation-actions {
+  gap: 2px;
 }
 .kova-mobile-conversation-tools .kova-free-offer {
   margin-right: auto;
+}
+
+@media (width >= 600px) {
+  .kova-mobile-conversation-tools {
+    padding: 0 8px 4px;
+  }
 }
 
 .kova-activity-section-toggle {
@@ -617,23 +625,6 @@
   outline-offset: 2px;
   border-radius: 6px;
 }
-.kova-conversation-outputs-touch {
-  width: 100%;
-  max-width: none;
-  max-height: none;
-  overflow: visible;
-  border: 0;
-  box-shadow: none;
-  padding: 0 12px 12px;
-}
-.kova-mobile-conversation-tools {
-  min-width: 0;
-  padding: 0 8px 4px;
-}
-.kova-mobile-conversation-tools .kova-free-offer {
-  margin-right: auto;
-}
-
 @media (min-width: 1024px) {
   .kova-chat-main:has(#chat-activity-panel) {
     --activity-width: clamp(264px, 26vw, 352px);
