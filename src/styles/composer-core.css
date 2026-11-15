@@ -58,10 +58,8 @@
   outline: 2px solid var(--foreground);
   outline-offset: -2px;
 }
-.kova-composer-plugins {
-  border-top: 1px solid var(--border);
+.kova-composer-menu-group .kova-composer-plugins {
   margin-top: 0.375rem;
-  padding-top: 0.5rem;
 }
 .kova-composer-plugins h3 {
   margin: 0.25rem 0.75rem 0.375rem;
@@ -402,4 +400,12 @@
   .kova-composer-full-menu .kova-composer-plugin small {
     font-size: 0.75rem;
   }
+}
+
+.kova-composer-menu-search input {
+  min-width: 0;
+  min-height: 36px;
+  font-size: 16px;
+  line-height: 24px;
+  caret-color: var(--foreground);
 }

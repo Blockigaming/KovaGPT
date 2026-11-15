@@ -1,7 +1,9 @@
 /* Settings has one shared control system. Page and dialog sizing live in
    settings-page-layout.css; phone navigation is intentionally a separate view. */
 .kova-settings-reference {
-  --settings-space: 20px;
+  --settings-space: 16px;
+  --settings-inset: 28px;
+  --settings-card-padding: 16px 20px;
   --settings-control-width: 208px;
   --settings-card: color-mix(in srgb, var(--foreground) 2%, var(--background));
   font-family: var(--font-ui);
@@ -186,7 +188,7 @@
   gap: 16px;
   min-height: 80px;
   margin: 0;
-  padding: 20px 28px 16px;
+  padding: 20px var(--settings-inset) 16px;
 }
 .kova-settings-reference .kova-settings-section-copy {
   flex: 1;
@@ -215,10 +217,9 @@
   gap: 5px;
   font-size: 12px;
   color: var(--muted-foreground);
-  opacity: 0;
 }
-.kova-settings-reference .kova-settings-saved.visible {
-  opacity: 1;
+.kova-settings-reference .kova-settings-saved:empty {
+  position: absolute;
 }
 .kova-settings-reference .kova-settings-saved svg {
   width: 14px;
@@ -232,7 +233,8 @@
   min-width: 0;
   width: 100%;
   margin: 0;
-  padding: 0 28px 32px;
+  padding: 0 var(--settings-inset) 32px;
+  overflow-wrap: anywhere;
   overflow: visible;
   line-height: 1.5;
 }
@@ -247,7 +249,7 @@
 .kova-settings-reference .kova-profile-settings > section {
   min-width: 0;
   margin: 0;
-  padding: 18px 20px;
+  padding: var(--settings-card-padding);
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--settings-card);
@@ -278,14 +280,23 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px 20px;
+  gap: 8px 16px;
   min-width: 0;
-  min-height: 60px;
+  min-height: 52px;
   margin: 0;
-  padding: 16px 0;
+  padding: 12px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+.kova-settings-reference
+  :is(.kova-settings-row, .kova-settings-reference-row)
+  > button:not([role="switch"]) {
+  max-width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  height: auto;
+  white-space: normal;
 }
 .kova-settings-reference .kova-settings-reference-group > * + * {
   border-top: 1px solid var(--border);
@@ -302,6 +313,9 @@
   font-size: 13px;
   line-height: 20px;
   color: var(--muted-foreground);
+}
+.kova-settings-reference .kova-settings-form-row {
+  align-items: end;
 }
 .kova-settings-reference .kova-settings-reference-select {
   width: var(--settings-control-width);
@@ -437,7 +451,8 @@
 }
 @media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
   .kova-settings-reference {
-    --settings-space: 20px;
+    --settings-inset: 16px;
+    --settings-card-padding: 14px;
   }
   [role="dialog"].kova-settings-dialog,
   [role="dialog"].kova-settings-dialog.is-authenticated {
@@ -578,6 +593,9 @@
     font-size: 24px;
     color: var(--muted-foreground);
   }
+  .kova-settings-reference [data-orientation="vertical"]:has(> .kova-settings-content) {
+    flex-direction: column;
+  }
   .kova-settings-reference .kova-settings-content-header {
     position: sticky;
     top: 0;
@@ -629,8 +647,7 @@
   }
   .kova-settings-reference .kova-settings-content > [role="tabpanel"] > section,
   .kova-settings-reference .kova-profile-settings > section {
-    padding: 16px;
-    border-radius: 14px;
+    border-radius: 12px;
   }
   .kova-settings-reference .kova-settings-reference-row {
     grid-template-columns: minmax(0, 1fr);
@@ -643,8 +660,8 @@
     font-size: 16px;
   }
   .kova-settings-reference .kova-settings-row {
-    grid-template-columns: minmax(0, 1fr) 48px;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
   }
   .kova-settings-reference .kova-settings-row > :first-child {
     font-size: 15px;
@@ -764,9 +781,6 @@
 @media (min-width: 768px) and (min-height: 501px),
   (min-width: 768px) and (pointer: fine),
   (min-width: 1024px) {
-  .kova-settings-reference {
-    --settings-space: 16px;
-  }
   [role="dialog"].kova-settings-dialog.is-authenticated {
     width: min(820px, calc(100vw - 48px));
     height: min(640px, calc(100dvh - 48px));

@@ -152,6 +152,7 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
   const enabled = (input) =>
     vm.runInNewContext(`${greeting} Boolean(${expression})`, {
       selectedHostedTool: null,
+      connectorId: undefined,
       auth: { userId: "owner" },
       usesExistingContext: true,
       customKova: null,

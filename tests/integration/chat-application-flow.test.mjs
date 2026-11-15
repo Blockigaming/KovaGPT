@@ -681,6 +681,8 @@ function composer(f) {
     conversations: [],
     editingMessage: null,
     pendingWorkflowSkill: null,
+    projectContext: null,
+    pluginContext: null,
     mode: "instant",
     // This suite exercises the legacy OpenAI Responses transport explicitly.
     // Hosted aliases have separate request/routing qualification; never label

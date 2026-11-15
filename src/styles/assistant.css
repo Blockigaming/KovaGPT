@@ -28,7 +28,7 @@
   --chat-composer-height: 52px;
 
   --chat-input-line: 26px;
-  --chat-message-action: 32px;
+  --chat-message-action: 28px;
 }
 @container chat-canvas (min-width: 856px) {
 }
@@ -72,17 +72,6 @@
 .kova-assistant .kova-chat-main {
   container: chat-canvas / inline-size;
   background: var(--assistant-canvas);
-}
-
-.kova-assistant
-  :is(
-    .kova-sidebar,
-    .kova-sidebar-inner,
-    .kova-sidebar-rail,
-    .kova-sidebar-footer,
-    .kova-sidebar-header
-  ) {
-  background: var(--assistant-panel);
 }
 
 .kova-assistant .kova-sidebar {
@@ -446,7 +435,7 @@
 }
 
 .kova-assistant .kova-assistant-message .prose-chat {
-  font-size: 1rem;
+  font-size: var(--kova-reading-size, 1rem);
   line-height: 1.625;
 }
 
@@ -783,4 +772,9 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+html[data-kova-hydration="pending"] :is(main, [role="main"], #main-content):focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
