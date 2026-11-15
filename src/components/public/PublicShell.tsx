@@ -65,6 +65,7 @@ function PublicNavigationLink({
 export function PublicHeader() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   const closeAfterMobileNavigation = (
@@ -104,13 +105,22 @@ export function PublicHeader() {
       setOpen(false);
       requestAnimationFrame(() => menuButtonRef.current?.focus());
     };
+    const handleOutsidePointer = (event: PointerEvent) => {
+      const header = headerRef.current;
+      if (header && event.target instanceof Node && !header.contains(event.target)) setOpen(false);
+    };
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+    };
   }, [open]);
 
   return (
     <header
+      ref={headerRef}
       data-ui-reference="grok-public-navigation"
       className="kova-public-header sticky top-0 z-40 flex max-h-screen min-w-0 flex-col border-b border-border bg-background pt-[env(safe-area-inset-top)] [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh"
     >
@@ -134,9 +144,12 @@ export function PublicHeader() {
 
         <Button
           asChild
-          className="ml-1 hidden h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center lg:inline-flex"
+          className="kova-public-launch ml-1 hidden h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center lg:inline-flex"
         >
-          <Link to="/">Open KovaGPT</Link>
+          <Link to="/">
+            <span className="kova-public-launch-desktop">Open KovaGPT</span>
+            <span className="kova-public-launch-phone">Open app</span>
+          </Link>
         </Button>
 
         <Button

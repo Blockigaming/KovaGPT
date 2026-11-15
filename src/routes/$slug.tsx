@@ -456,7 +456,7 @@ function SourceLocaleHome({
         id="main-content"
         lang={routeLocale}
         dir={direction}
-        className="mx-auto flex min-h-[70vh] max-w-7xl flex-col justify-center px-4 py-16 sm:px-6"
+        className="public-localized-home mx-auto flex min-h-[70vh] max-w-7xl flex-col justify-center px-4 py-16 sm:px-6"
         tabIndex={-1}
       >
         <p className="font-semibold text-muted-foreground">{copy.product}</p>

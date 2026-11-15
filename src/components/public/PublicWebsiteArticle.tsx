@@ -1,5 +1,6 @@
 import "./public-website.css";
 import { Link } from "@tanstack/react-router";
+import { PhonePageOutline } from "./PhonePageOutline";
 import { PublicShell } from "./PublicShell";
 import type { WebsitePage } from "@/lib/public-website-catalog.mjs";
 
@@ -54,10 +55,11 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
         <p className="public-article-lede">{item.description}</p>
         {item.availability && <p className="public-availability">{item.availability}</p>}
         {item.review && <p className="public-availability">{item.review}</p>}
+        <PhonePageOutline sections={item.sections} />
         <div className="public-article-body">
           <div>
             {item.sections.map((section, index) => (
-              <section key={section.title} id={`section-${index + 1}`}>
+              <section key={section.title} id={`section-${index + 1}`} tabIndex={-1}>
                 <h2>{section.title}</h2>
                 <p>{section.body}</p>
                 {section.points.length > 0 && (

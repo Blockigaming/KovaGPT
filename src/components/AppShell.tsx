@@ -19,6 +19,7 @@ import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -68,6 +69,9 @@ export function AppShell({
         library: "Library",
         projects: "Projects",
         work: "Work",
+        write: "Writing editor",
+        kovas: "Custom Kovas",
+        "audit-log": "Activity",
         "scheduled-tasks": "Scheduled tasks",
         apps: "Connections",
         finances: "Finances",
@@ -288,7 +292,7 @@ export function AppShell({
 
   return (
     <div
-      className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="kova-app-shell kova-phone-workspace relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
     >
       <Sidebar
@@ -352,6 +356,7 @@ export function AppShell({
           <AppErrorBoundary>{children}</AppErrorBoundary>
         </WorkspacePageUtilities.Provider>
       </div>
+      <PhoneNavigation pathname={pathname} inactive={sidebarOpen || settingsOpen} />
 
       <Suspense fallback={null}>
         {shareChatId !== null && (

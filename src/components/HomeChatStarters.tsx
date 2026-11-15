@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
+
 export function ContinueWorking({
   conversations,
   onSelect,
@@ -56,9 +57,12 @@ export function HomeWelcome({
     if (!owner) return;
     const section = homeScrollRef.current;
     if (!section) return;
+    const phoneLayout = window.matchMedia(
+      "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+    );
     let following = true;
     const followLatest = () => {
-      if (following) section.scrollTop = section.scrollHeight;
+      if (following && !phoneLayout.matches) section.scrollTop = section.scrollHeight;
     };
     const stopFollowing = () => {
       following = false;

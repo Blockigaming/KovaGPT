@@ -43,11 +43,13 @@ function AuditLogPage() {
 
   return (
     <AppShell>
-      <div
+      <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="chatgpt.workspace.activity"
-        className={"kova-tool-page " + "mx-auto w-full max-w-3xl px-4 py-8"}
+        className="kova-tool-page mx-auto w-full max-w-3xl px-4 py-8"
       >
-        <div className="mb-6 flex items-center justify-between">
+        <header className="kova-page-header mb-6 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Activity</h1>
             <p className="text-sm text-muted-foreground">
@@ -64,7 +66,7 @@ function AuditLogPage() {
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden /> Refresh
           </Button>
-        </div>
+        </header>
 
         {loading ? (
           <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
@@ -109,7 +111,7 @@ function AuditLogPage() {
             ))}
           </ul>
         )}
-      </div>
+      </main>
     </AppShell>
   );
 }
@@ -118,9 +120,11 @@ function AuditLogErrorComponent({ reset }: { error: unknown; reset: () => void }
   const router = useRouter();
   return (
     <AppShell>
-      <div
+      <main
+        id="main-content"
+        tabIndex={-1}
         data-ui-reference="chatgpt.workspace.activity"
-        className={"kova-tool-page " + "mx-auto max-w-md p-8"}
+        className="kova-tool-page mx-auto max-w-md p-8"
       >
         <OperationalState
           state="unavailable"
@@ -131,7 +135,7 @@ function AuditLogErrorComponent({ reset }: { error: unknown; reset: () => void }
             reset();
           }}
         />
-      </div>
+      </main>
     </AppShell>
   );
 }
