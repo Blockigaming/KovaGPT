@@ -9,6 +9,7 @@ import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 const TOOL_LABEL: Record<string, { label: string; Icon: typeof Mail }> = {
   gmail_send: { label: "Send email", Icon: Mail },
   gmail_create_draft: { label: "Save draft", Icon: FileEdit },
+  calendar_rename_event: { label: "Rename event", Icon: Calendar },
   calendar_create_event: { label: "Create event", Icon: Calendar },
   calendar_delete_event: { label: "Delete event", Icon: Calendar },
 };
