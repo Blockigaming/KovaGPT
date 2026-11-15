@@ -52,6 +52,10 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   drive_search: { running: "Searching Google Drive…", done: "Searched Drive" },
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
+  gmail_set_read_status: {
+    running: "Preparing read status change…",
+    done: "Read status change ready for review",
+  },
   gmail_send: { running: "Preparing email for review…", done: "Email ready for review" },
   calendar_reschedule_event: {
     running: "Preparing time change…",
@@ -73,6 +77,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 export const WRITE_TOOL_NAMES = new Set<string>([
   "gmail_create_draft",
   "gmail_send",
+  "gmail_set_read_status",
   "calendar_create_event",
   "calendar_rename_event",
   "calendar_reschedule_event",
@@ -320,11 +325,29 @@ export const WRITE_TOOLS: ToolDef[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "gmail_set_read_status",
+      description:
+        "Mark a single Gmail message read or unread after confirmation. Only use when explicitly requested. Find the exact message ID with gmail_search and ask the user to disambiguate if needed.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          message_id: { type: "string", description: "Exact Gmail message ID." },
+          read: { type: "boolean", description: "True to mark read, false to mark unread." },
+        },
+        required: ["message_id", "read"],
+      },
+    },
+  },
 ];
 
 const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_create_draft",
   "gmail_send",
+  "gmail_set_read_status",
   "calendar_create_event",
   "calendar_rename_event",
   "calendar_reschedule_event",
@@ -843,6 +866,34 @@ export async function stagePendingAction(
     throw new Error("Reconnect Google before preparing this action.");
   }
   let summarized = summarizeWriteTool(tool, validated);
+  if (tool === "gmail_set_read_status") {
+    const token = await getValidGoogleAccessToken(userId, {
+      connectionId: connection.id,
+      grantId: connection.grant_id,
+      expectedGoogleSub: stagedGoogleSub,
+      capability: "gmail.modify",
+    });
+    const response = await fetch(
+      `${GMAIL}/users/me/messages/${encodeURIComponent(String(validated.message_id))}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+      },
+    );
+    if (!response.ok) throw new Error("gmail_message_lookup_failed");
+    const message = (await response.json()) as {
+      id?: string;
+      payload?: { headers?: { name: string; value: string }[] };
+    };
+    if (message.id !== validated.message_id) throw new Error("gmail_message_unavailable");
+    const headers = message.payload?.headers;
+    const subject = truncate(headerValue(headers, "subject"), 300) || "(no subject)";
+    const sender = truncate(headerValue(headers, "from"), 320) || "(unknown sender)";
+    summarized = {
+      summary: `Mark “${subject}” from ${sender} as ${validated.read ? "read" : "unread"}`,
+      preview: {},
+    };
+  }
   if (tool === "calendar_rename_event" || tool === "calendar_reschedule_event") {
     const token = await getValidGoogleAccessToken(userId, {
       connectionId: connection.id,
@@ -1193,7 +1244,28 @@ export async function executePendingAction(
 
   try {
     let resultText = "";
-    if (claimedTool === "gmail_create_draft" || claimedTool === "gmail_send") {
+    if (claimedTool === "gmail_set_read_status") {
+      const response = await fetch(
+        `${GMAIL}/users/me/messages/${encodeURIComponent(String(a.message_id))}/modify`,
+        {
+          method: "POST",
+          headers: H,
+          body: JSON.stringify(
+            a.read ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] },
+          ),
+          signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+        },
+      );
+      if (!response.ok) throw new Error("gmail_modify_failed");
+      resultText = a.read ? "Message marked read." : "Message marked unread.";
+      await logAudit({
+        userId,
+        provider: "gmail",
+        action: "update",
+        resourceId: String(a.message_id),
+        summary: "Changed Gmail read status",
+      });
+    } else if (claimedTool === "gmail_create_draft" || claimedTool === "gmail_send") {
       const to = String(a.to);
       const subject = String(a.subject);
       const body = String(a.body);
