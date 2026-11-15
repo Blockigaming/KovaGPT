@@ -151,6 +151,7 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
   );
   const enabled = (input) =>
     vm.runInNewContext(`${greeting} Boolean(${expression})`, {
+      sensitiveTool: null,
       selectedHostedTool: null,
       auth: { userId: "owner" },
       usesExistingContext: true,
@@ -161,6 +162,7 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
       ...input,
     });
   assert.equal(enabled({}), true);
+  assert.equal(enabled({ sensitiveTool: { function: { name: "oura_read_snapshot" } } }), false);
   assert.equal(enabled({ lastText: "Hi, find my latest email" }), true);
   for (const lastText of [
     "What is my bank balance?",
