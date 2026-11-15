@@ -470,9 +470,8 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
       },
     });
   });
-  const copyPrompt = userMessage.getByRole("button", { name: "Copy prompt", exact: true });
-  await copyPrompt.focus();
-  await copyPrompt.click();
+  await userMessage.locator(".kova-user-message-group").hover();
+  await userMessage.getByRole("button", { name: "Copy prompt", exact: true }).click();
   await expect(
     userMessage.getByRole("button", { name: "Copied prompt", exact: true }),
   ).toBeVisible();

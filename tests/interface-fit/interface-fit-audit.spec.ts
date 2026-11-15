@@ -328,9 +328,10 @@ if (scope === "public") {
       name: "Settings sidebar width",
       exact: true,
     });
+    // The settings rail is also hidden on touch phones in landscape.
     const phone = await page.evaluate(
       () =>
-        matchMedia(
+        window.matchMedia(
           "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
         ).matches,
     );

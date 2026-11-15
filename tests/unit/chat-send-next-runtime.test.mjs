@@ -1,5 +1,5 @@
 import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
-import { completedChatReply } from "../../src/lib/response-followups.mjs";
+import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -142,6 +142,7 @@ function fixture() {
   let sequence = 0;
   const context = {
     ...helpers,
+    extractResponseFollowups,
     React,
     Button,
     Suspense: React.Suspense,
