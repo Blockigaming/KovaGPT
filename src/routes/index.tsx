@@ -1920,6 +1920,7 @@ function KovaGPT() {
         content: trimmed,
         attachments: storedMessageAttachments(atts),
       };
+      const responseStartedAt = Date.now();
       const assistantMsg: Message = {
         id: newId(),
         role: "assistant",
@@ -2058,7 +2059,7 @@ function KovaGPT() {
         controller,
         conversationId: nextConvId,
         assistantMessageId: assistantMsg.id,
-        startedAt: Date.now(),
+        startedAt: responseStartedAt,
         flushPendingContent: () => {
           if (assistantFrame !== null) cancelAnimationFrame(assistantFrame);
           flushAssistant();
@@ -2278,7 +2279,8 @@ function KovaGPT() {
         if (requestSucceeded) {
           const reply = completedChatReply(assembledReply, Boolean(voiceRequest));
           assembledReply = reply.content;
-          updateAssistantMessage((message) => ({ ...message, ...reply }));
+          const workedMs = Math.max(0, Date.now() - responseStartedAt);
+          updateAssistantMessage((message) => ({ ...message, ...reply, workedMs }));
         }
         if (activeIdRef.current === nextConvId) {
           if (assembledReply) setStreamAnnouncement("KovaGPT response complete");
@@ -2661,6 +2663,7 @@ function KovaGPT() {
   const submitComposerVoiceTurn = async (
     text: string,
     signal: AbortSignal,
+    realtime?: boolean,
   ): Promise<ComposerVoiceTurn> => {
     const session = composerVoiceSessionRef.current;
     let requestEpoch: number | null = null;
@@ -2684,6 +2687,14 @@ function KovaGPT() {
     const turn = await pending;
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     if (!turn) throw new Error("voice_chat_failed");
+    if (realtime) {
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(turn.content));
+      if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
+      const contentSha256 = Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("");
+      return { ...turn, contentSha256 };
+    }
     const { awaitSavedComposerVoiceTurn } = await import("@/lib/composer-voice-turn");
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     return awaitSavedComposerVoiceTurn({

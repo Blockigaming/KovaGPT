@@ -5,6 +5,15 @@ import { READ_ONLY_PLUGIN_TOOLS } from "@/lib/composer-plugin-usage.mjs";
 import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 
+export function formatResponseTime(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  return [hours ? `${hours}h` : "", hours || minutes ? `${minutes}m` : "", `${total % 60}s`]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function StreamingStatus({
   activities,
   startedAt,
@@ -42,7 +51,7 @@ export function StreamingStatus({
       className="kova-thinking-indicator flex min-h-8 flex-col items-start gap-1 py-1 text-sm text-muted-foreground"
       data-wait-stage={waitStage}
     >
-      <span>Working for {seconds}s</span>
+      <span>Working for {formatResponseTime(seconds)}</span>
       <div role="status" aria-atomic="true" className="flex items-center gap-2">
         {label && (
           <>

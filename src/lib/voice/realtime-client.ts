@@ -27,9 +27,10 @@ export async function listenForVoiceTurn({
     context = new AudioContext({ sampleRate: 16000 });
     const audio = context;
     if (audio.sampleRate !== 16000) throw new Error("This browser could not start live audio.");
-    await audio.audioWorklet.addModule("/worklets/voice-pcm.js");
-    signal.throwIfAborted();
-    const token = await getToken();
+    const [, token] = await Promise.all([
+      audio.audioWorklet.addModule("/worklets/voice-pcm.js"),
+      getToken(),
+    ]);
     signal.throwIfAborted();
 
     const url = new URL(REALTIME_URL);

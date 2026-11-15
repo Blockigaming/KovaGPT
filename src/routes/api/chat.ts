@@ -1556,6 +1556,7 @@ export const Route = createFileRoute("/api/chat")({
                     ADAPTIVE_INSTRUCTION +
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
+                    "\nUse Markdown bold sparingly for important terms and key results in written answers.\n" +
                     FINAL_CHART_INSTRUCTION +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
