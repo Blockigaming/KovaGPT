@@ -46,7 +46,7 @@ function fixture() {
   const db = {
     from(table) {
       const filters = [];
-      let operation, payload;
+      let operation, payload, columns;
       const finish = async () => {
         state.calls.push({ table, filters: [...filters], operation });
         if (state.dbError) return { data: null, error: { code: "backend_unavailable" } };
@@ -60,10 +60,11 @@ function fixture() {
         const row = table === "financial_connections" ? state.finance : state.health;
         const data = row && filters.every(([key, value]) => row[key] === value) ? { ...row } : null;
         if (operation === "delete" && data) state.finance = null;
-        return { data, error: null };
+        return { data: columns === "id" ? (data ? [{ id: data.id }] : []) : data, error: null };
       };
       const chain = {
-        select() {
+        select(value) {
+          columns = value;
           return chain;
         },
         eq(key, value) {
@@ -153,15 +154,23 @@ function fixture() {
     },
   };
   modules["./credential-vault.server"] = modules["@/integrations/credential-vault.server"];
+  const env = {
+    ...process.env,
+    CONNECTOR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32).toString("base64"),
+  };
   function load(path) {
     const exported = {};
     const source = ts.transpileModule(readFileSync(path, "utf8"), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
     }).outputText;
-    new Function("exports", "require", source)(exported, (id) => {
-      assert.ok(Object.hasOwn(modules, id), id);
-      return modules[id];
-    });
+    new Function("exports", "require", "process", source)(
+      exported,
+      (id) => {
+        assert.ok(Object.hasOwn(modules, id), id);
+        return modules[id];
+      },
+      { env },
+    );
     return exported;
   }
   const caller = (userId = owner) => ({
@@ -169,12 +178,19 @@ function fixture() {
     supabaseAdmin: db,
     revalidateSession: async () => state.session,
   });
+  const financeModule = load("src/finances/plaid.server.ts");
+  const healthModule = load("src/health/health-accounts.server.ts");
+  modules["./oauth-providers.server"] = modules["@/integrations/oauth-providers.server"];
+  modules["@/finances/plaid.server"] = financeModule;
+  modules["@/health/health-accounts.server"] = healthModule;
   return {
     state,
     caller,
     db,
-    finance: load("src/finances/plaid.server.ts"),
-    health: load("src/health/health-accounts.server.ts"),
+    finance: financeModule,
+    health: healthModule,
+    env,
+    chat: load("src/integrations/sensitive-chat-reads.server.ts"),
   };
 }
 
@@ -298,5 +314,38 @@ test("unknown or removed Plaid Items never fetch financial data", async () => {
   await assert.rejects(
     () => f.finance.persistFinanceWebhook(f.db, { itemId: "unknown" }),
     /finance_webhook_store_unavailable/,
+  );
+});
+
+test("temporary chat snapshots use an explicit provider command and refuse disabled or unrelated accounts", async () => {
+  const { caller, chat, env, state } = fixture();
+  assert.equal(chat.sensitiveChatProvider("Could you mention /oura sleep?"), undefined);
+  assert.equal(chat.sensitiveChatProvider("/oura Compare my sleep"), "oura");
+  assert.equal(chat.sensitiveChatProvider("/finances How much did I spend?"), "finances");
+  env.KOVA_OURA_CHAT_READ_ENABLED = "false";
+  await assert.rejects(
+    chat.readSensitiveChatSnapshot(caller(), "oura"),
+    /connector_chat_unavailable/,
+  );
+  env.KOVA_OURA_CHAT_READ_ENABLED = "true";
+  env.KOVA_PLAID_CHAT_READ_ENABLED = "true";
+  for (const provider of ["oura", "finances"]) {
+    const result = await chat.readSensitiveChatSnapshot(caller(stranger), provider);
+    assert.equal(result.error, "connector_not_linked");
+  }
+  assert.equal(state.network.length, 0);
+
+  const health = await chat.readSensitiveChatSnapshot(caller(), "oura");
+  assert.equal(health.provider, "oura");
+  assert.ok(health.summaries.length > 0);
+
+  const finance = await chat.readSensitiveChatSnapshot(caller(), "finances");
+  assert.equal(finance.accounts[0].current, 100);
+  assert.ok(!JSON.stringify(finance).includes("Checking"));
+  assert.ok(!Object.hasOwn(finance.accounts[0], "id"));
+  state.session = false;
+  await assert.rejects(
+    chat.readSensitiveChatSnapshot(caller(), "finances"),
+    /finance_session_expired/,
   );
 });
