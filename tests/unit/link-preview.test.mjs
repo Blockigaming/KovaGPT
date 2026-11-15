@@ -146,3 +146,53 @@ test("unmodified nonlink drafts never get an atomic marker", () => {
   assert.equal(firstLinkPreviewToken("ordinary text"), null);
   assert.equal(toComposerLinkDisplay("ordinary text", ""), "ordinary text");
 });
+
+test("a typed bare domain becomes a preview as soon as whitespace follows it", () => {
+  const options = { requireBareDelimiter: true };
+  assert.equal(firstLinkPreviewToken("youtube.com", options), null);
+  assert.deepEqual(firstLinkPreviewToken("youtube.com ", options), {
+    raw: "youtube.com",
+    url: "https://youtube.com/",
+    start: 0,
+    end: "youtube.com".length,
+  });
+  assert.equal(
+    firstLinkPreviewUrl("youtube.com/watch?v=zkMitXDo5es"),
+    "https://youtube.com/watch?v=zkMitXDo5es",
+  );
+  assert.equal(isOnlyLink("youtube.com ", "https://youtube.com/"), true);
+  assert.equal(fallbackLinkTitle("https://youtube.com/"), "YouTube");
+});
+
+test("bare-domain detection skips emails, unsupported schemes, and invalid destinations", () => {
+  for (const text of [
+    "contact@youtube.com ",
+    "http://youtube.com ",
+    "ftp://youtube.com ",
+    "youtube.com:8443 ",
+    "service.internal ",
+  ]) {
+    assert.equal(firstLinkPreviewToken(text), null, text);
+  }
+});
+
+test("YouTube homepage previews read page metadata directly", async () => {
+  const url = "https://youtube.com/";
+  const read = async (request) => {
+    assert.equal(request.url, url);
+    return {
+      status: 200,
+      headers: { "content-type": "text/html" },
+      bodyBase64: Buffer.from("<title>YouTube</title>").toString("base64"),
+    };
+  };
+  assert.equal((await resolveLinkPreview(url, undefined, read))?.title, "YouTube");
+});
+
+test("the composer marker replaces the link and leaves email addresses intact", () => {
+  const text = "contact@youtube.com and youtube.com ";
+  assert.equal(
+    toComposerLinkDisplay(text, "youtube.com"),
+    "contact@youtube.com and " + COMPOSER_LINK_MARKER + " ",
+  );
+});

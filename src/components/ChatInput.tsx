@@ -349,7 +349,8 @@ export function ChatInput({
   const [atomicLinkRaw, setAtomicLinkRaw] = useState<string | null>(null);
   // Only the rendered composer collapses the URL. State, history and model
   // requests retain the exact original characters.
-  const activeAtomicLink = atomicLinkRaw && value.includes(atomicLinkRaw) ? atomicLinkRaw : null;
+  const draftLinkToken = firstLinkPreviewToken(value);
+  const activeAtomicLink = draftLinkToken?.raw === atomicLinkRaw ? atomicLinkRaw : null;
   const visibleComposerValue = activeAtomicLink
     ? toComposerLinkDisplay(value, activeAtomicLink)
     : value;
@@ -863,7 +864,7 @@ export function ChatInput({
     }
   };
 
-  const updateComposerText = (visible: string) => {
+  const updateComposerText = (visible: string, caret: number) => {
     if (activeAtomicLink) {
       const kept = visible.includes(COMPOSER_LINK_MARKER);
       onChange(kept ? fromComposerLinkDisplay(visible, activeAtomicLink) : visible);
@@ -873,9 +874,13 @@ export function ChatInput({
     onChange(visible);
     // Typing an URL must not collapse it mid-word. Complete typed links when
     // whitespace is entered; pasted links collapse immediately.
-    if (/\s$/u.test(visible)) {
-      const token = firstLinkPreviewToken(visible);
-      if (token) setAtomicLinkRaw(token.raw);
+    if (!composingRef.current && caret > 0 && /\s/u.test(visible[caret - 1])) {
+      const token = firstLinkPreviewToken(visible, { requireBareDelimiter: true });
+      if (token && token.end <= caret - 1) {
+        setAtomicLinkRaw(token.raw);
+        const position = caret - token.raw.length + 1;
+        window.requestAnimationFrame(() => ref.current?.setSelectionRange(position, position));
+      }
     }
   };
 
@@ -917,7 +922,7 @@ export function ChatInput({
       (e.key === "Backspace" || e.key === "Delete") &&
       !(e.nativeEvent as KeyboardEvent).isComposing
     ) {
-      const token = firstLinkPreviewToken(value);
+      const token = firstLinkPreviewToken(value, { requireBareDelimiter: true });
       if (token) {
         const start = e.currentTarget.selectionStart;
         const end = e.currentTarget.selectionEnd;
@@ -1339,9 +1344,12 @@ export function ChatInput({
         const start = field.selectionStart;
         const end = field.selectionEnd;
         const canonical = value.slice(0, start) + plain + value.slice(end);
-        setAtomicLinkRaw(pastedToken.raw);
+        const token = firstLinkPreviewToken(canonical);
+        const caret = start + plain.length;
+        const collapses = token && token.end <= caret;
+        setAtomicLinkRaw(collapses ? token.raw : null);
         onChange(canonical);
-        const position = start + plain.length - pastedToken.raw.length + 1;
+        const position = collapses ? caret - token.raw.length + 1 : caret;
         window.requestAnimationFrame(() => {
           if (ref.current) ref.current.setSelectionRange(position, position);
         });
@@ -1857,7 +1865,9 @@ export function ChatInput({
     setPreviewOffset(0);
   };
   const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
-  const linkPreviewToken = firstLinkPreviewToken(value);
+  const linkPreviewToken = activeAtomicLink
+    ? draftLinkToken
+    : firstLinkPreviewToken(value, { requireBareDelimiter: true });
   const linkPreviewUrl = linkPreviewToken?.url ?? null;
   const removeLinkPreview = () => {
     if (!linkPreviewToken || disabled) return;
@@ -1993,7 +2003,12 @@ export function ChatInput({
           </ul>
         )}
         {linkPreviewUrl && (
-          <LinkPreviewChip url={linkPreviewUrl} placement="composer" onRemove={removeLinkPreview} />
+          <LinkPreviewChip
+            key={linkPreviewUrl}
+            url={linkPreviewUrl}
+            placement="composer"
+            onRemove={removeLinkPreview}
+          />
         )}
         <div className="spec400-input-region">
           <textarea
@@ -2003,7 +2018,7 @@ export function ChatInput({
               setSlashDismissed(false);
               setSlashModels(false);
               setSlashIndex(0);
-              updateComposerText(event.target.value);
+              updateComposerText(event.target.value, event.target.selectionStart);
             }}
             onKeyDown={handleKey}
             disabled={disabled}
