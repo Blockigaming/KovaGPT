@@ -10,9 +10,19 @@ export const Route = createFileRoute("/api/google/auth")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const connector = new URL(request.url).searchParams.get("connector") ?? "gmail";
+        const params = new URL(request.url).searchParams;
+        const connector = params.get("connector") ?? "gmail";
+        const connectionId = params.get("connectionId") ?? undefined;
+        const readStatusParameter = params.get("manageReadStatus");
+        const manageReadStatus = readStatusParameter === "1";
+        if (readStatusParameter !== null && (!manageReadStatus || !connectionId)) {
+          return Response.json(
+            { error: "Select a Gmail account before requesting read-status access" },
+            { status: 400 },
+          );
+        }
         try {
-          googleConnectorScopes(connector);
+          googleConnectorScopes(connector, manageReadStatus);
         } catch {
           return Response.json({ error: "Invalid Google connector" }, { status: 400 });
         }
@@ -69,11 +79,11 @@ export const Route = createFileRoute("/api/google/auth")({
             .replace(/\+/g, "-")
             .replace(/\//g, "_")
             .replace(/=+$/, "");
-          const connectionId = new URL(request.url).searchParams.get("connectionId") ?? undefined;
           const attempt = await beginGoogleOAuth(auth.userId, nonce, connectionId);
           const url = buildGoogleAuthUrl({
             request,
             connector,
+            manageReadStatus,
             state,
             codeChallenge,
             loginHint: attempt.loginHint ?? undefined,
