@@ -14,7 +14,11 @@ export function readConnection(
   query: string,
   token: string,
   fetchImpl?: typeof fetch,
-  options?: { recordType?: "accounts" | "contacts" | "opportunities"; notionPage?: boolean },
+  options?: {
+    recordType?: "accounts" | "contacts" | "opportunities";
+    notionPage?: boolean;
+    ensureCurrent?: () => Promise<void>;
+  },
 ): Promise<
   | ConnectionReadResult
   | { service: string; page_id: string; blocks: { type: string; text: string }[]; limited: boolean }
