@@ -1,6 +1,7 @@
 const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_create_draft",
   "gmail_send",
+  "gmail_set_read_status",
   "calendar_create_event",
   "calendar_rename_event",
   "calendar_reschedule_event",
@@ -247,6 +248,13 @@ export function validateSupportedGoogleWrite(tool, input) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
+  if (tool === "gmail_set_read_status") {
+    const id = requiredString(args, "message_id", "Message ID", 128);
+    if (!/^[a-zA-Z0-9_-]+$/.test(id) || typeof args.read !== "boolean") {
+      throw new GoogleWriteValidationError("A valid message ID and read status are required.");
+    }
+    return { message_id: id, read: args.read };
+  }
   if (tool === "calendar_rename_event" || tool === "calendar_reschedule_event") {
     const eventId = requiredString(args, "event_id", "Event ID", 1024);
     if (!/^[a-zA-Z0-9_-]+$/.test(eventId)) {
