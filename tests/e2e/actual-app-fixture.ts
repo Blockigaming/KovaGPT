@@ -2,8 +2,9 @@ import type { Message } from "../../src/lib/chat-store";
 import type { Page } from "@playwright/test";
 import { chatUsageWindows } from "../../src/lib/plan-usage-policy.mjs";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
-import { functionNames } from "./server-function-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { loopbackPreviewHeaders } from "../helpers/loopback-preview-headers.mjs";
+import type { PlanUsageDto } from "../../src/utils/usage.functions";
 export { functionNames } from "./server-function-fixture";
 
 const applicationUrl = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4189");
@@ -13,7 +14,7 @@ export const origin = applicationUrl.origin;
 export const owner = "22222222-2222-4222-8222-222222222222";
 export const chatA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 export const chatB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-export function planUsageFixture(tier: "free" | "plus" | "pro") {
+export function planUsageFixture(tier: "free" | "plus" | "pro"): PlanUsageDto {
   return {
     tier,
     windows: chatUsageWindows(tier).map((window) => ({
@@ -106,7 +107,7 @@ export async function fixture(
   );
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-    const name = functionNames.get(id) ?? "";
+    const name = resolveFixtureFunctionName(id) ?? "";
     const result = name.startsWith("getMyPlanTier_")
       ? { ownerId: owner, tier }
       : name.startsWith("listProjects_")

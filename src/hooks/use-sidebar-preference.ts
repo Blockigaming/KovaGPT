@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState, type SetStateAction } from "react";
 
 type SidebarPreference = {
-  key: "kova-mobile-sidebar-open" | "kova-sidebar-open";
+  pinned: boolean;
   open: boolean;
 };
 
@@ -11,15 +11,17 @@ export function useSidebarPreference() {
   useLayoutEffect(() => {
     const mobile = window.matchMedia("(max-width: 1023px)");
     const restore = () => {
-      const key = mobile.matches ? "kova-mobile-sidebar-open" : "kova-sidebar-open";
-      let open = !mobile.matches;
-      try {
-        const saved = window.localStorage.getItem(key);
-        if (saved !== null) open = saved === "1";
-      } catch {
-        // Keep the viewport default when storage is unavailable.
+      const pinned = !mobile.matches;
+      let open = pinned;
+      if (pinned) {
+        try {
+          const saved = window.localStorage.getItem("kova-sidebar-open");
+          if (saved !== null) open = saved === "1";
+        } catch {
+          // Keep the viewport default when storage is unavailable.
+        }
       }
-      setPreference({ key, open });
+      setPreference({ pinned, open });
     };
     restore();
     mobile.addEventListener("change", restore);
@@ -39,9 +41,9 @@ export function useSidebarPreference() {
 
   useEffect(() => {
     // The SSR placeholder must never overwrite a saved open preference.
-    if (!preference) return;
+    if (!preference?.pinned) return;
     try {
-      window.localStorage.setItem(preference.key, preference.open ? "1" : "0");
+      window.localStorage.setItem("kova-sidebar-open", preference.open ? "1" : "0");
     } catch {
       // The sidebar remains interactive when storage is unavailable.
     }

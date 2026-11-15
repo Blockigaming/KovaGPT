@@ -76,8 +76,10 @@ const responsiveRoutes = [
   "/global-affairs/the-washington-post-partners-with-openai",
 ] as const;
 
-const detailRouteGroups = Array.from({ length: 5 }, (_, groupIndex) =>
-  allDetailRoutes.filter((_, routeIndex) => routeIndex % 5 === groupIndex),
+// Limit each parallel case even as the public catalog grows.
+const detailGroupCount = Math.ceil(allDetailRoutes.length / 16);
+const detailRouteGroups = Array.from({ length: detailGroupCount }, (_, groupIndex) =>
+  allDetailRoutes.filter((_, routeIndex) => routeIndex % detailGroupCount === groupIndex),
 );
 
 test.describe.parallel("complete public detail content", () => {
@@ -86,38 +88,48 @@ test.describe.parallel("complete public detail content", () => {
       page,
     }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop-1440x900");
-      test.setTimeout(420_000);
+      test.setTimeout(180_000);
 
       for (const route of routes) {
-        const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-        expect(response?.status(), route).toBe(200);
-        await waitForKovaHydration(page);
+        await test.step(route, async () => {
+          const response = await page.goto(route, {
+            waitUntil: "domcontentloaded",
+            timeout: 15_000,
+          });
+          expect(response?.status(), route).toBe(200);
+          await waitForKovaHydration(page);
 
-        await expect(page.locator("main#main-content"), route).toHaveCount(1);
-        await expect(page.getByRole("heading", { level: 1 }), route).toHaveCount(1);
-        await expect(page.getByRole("navigation", { name: "Breadcrumb" }), route).toBeVisible();
-        if (await page.locator("main.public-website-article").count()) {
-          await expect(page.getByRole("complementary", { name: "On this page" })).toBeVisible();
-          await expect(page.locator(".public-article-body section")).toHaveCount(2);
-        } else {
-          await expect(page.getByRole("region", { name: "Page highlights" }), route).toBeVisible();
-          await expect(page.locator("main article"), route).toHaveCount(2);
-        }
-        const primaryAction = page.locator("[data-public-primary]");
-        await expect(primaryAction, route).toHaveCount(1);
-        if (route === "/plans/free") await expect(primaryAction).toHaveAttribute("href", "/");
-        if (["/plans/plus", "/plans/pro", "/plans/go", "/plans/k12-teachers"].includes(route)) {
-          await expect(primaryAction).toHaveAttribute("href", "/pricing");
-        }
-        const description = await page.locator('meta[name="description"]').getAttribute("content");
-        expect(description?.trim().length, `${route} description length`).toBeGreaterThanOrEqual(
-          30,
-        );
-        await expect(page.locator('link[rel="canonical"]'), route).toHaveAttribute(
-          "href",
-          `https://kovagpt.com${route}`,
-        );
-        await expect(page.getByRole("contentinfo"), route).toBeVisible();
+          await expect(page.locator("main#main-content"), route).toHaveCount(1);
+          await expect(page.getByRole("heading", { level: 1 }), route).toHaveCount(1);
+          await expect(page.getByRole("navigation", { name: "Breadcrumb" }), route).toBeVisible();
+          if (await page.locator("main.public-website-article").count()) {
+            await expect(page.getByRole("complementary", { name: "On this page" })).toBeVisible();
+            await expect(page.locator(".public-article-body section")).toHaveCount(2);
+          } else {
+            await expect(
+              page.getByRole("region", { name: "Page highlights" }),
+              route,
+            ).toBeVisible();
+            await expect(page.locator("main article"), route).toHaveCount(2);
+          }
+          const primaryAction = page.locator("[data-public-primary]");
+          await expect(primaryAction, route).toHaveCount(1);
+          if (route === "/plans/free") await expect(primaryAction).toHaveAttribute("href", "/");
+          if (["/plans/plus", "/plans/pro", "/plans/go", "/plans/k12-teachers"].includes(route)) {
+            await expect(primaryAction).toHaveAttribute("href", "/pricing");
+          }
+          const description = await page
+            .locator('meta[name="description"]')
+            .getAttribute("content");
+          expect(description?.trim().length, `${route} description length`).toBeGreaterThanOrEqual(
+            30,
+          );
+          await expect(page.locator('link[rel="canonical"]'), route).toHaveAttribute(
+            "href",
+            `https://kovagpt.com${route}`,
+          );
+          await expect(page.getByRole("contentinfo"), route).toBeVisible();
+        });
       }
     });
   });

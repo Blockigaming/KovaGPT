@@ -614,7 +614,7 @@ function ImagesPage() {
   const scrollPresets = (direction: 1 | -1) => {
     const el = presetsRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction * Math.max(320, el.clientWidth * 0.8), behavior: "smooth" });
+    el.scrollBy({ left: direction * el.clientWidth * 0.8 });
   };
   const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -1119,7 +1119,7 @@ function ImagesPage() {
               </div>
               <div
                 ref={presetsRef}
-                className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scroll-smooth scrollbar-none"
+                className="kova-image-presets-scroll -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scroll-smooth scrollbar-none"
               >
                 <div className="flex gap-3 pb-2 min-w-max">
                   {PRESETS.map((p) => (
@@ -1130,9 +1130,9 @@ function ImagesPage() {
                       type="button"
                       onClick={() => applyPreset(p)}
                       aria-label={`Use ${p.label} style`}
-                      className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
+                      className="group flex flex-col items-start w-[160px] shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
-                      <div className="relative w-[160px] h-[160px] rounded-xl overflow-hidden ring-1 ring-border/60 bg-muted">
+                      <div className="relative w-full aspect-square rounded-xl overflow-hidden ring-1 ring-border/60 bg-muted">
                         <img
                           src={p.image}
                           alt=""

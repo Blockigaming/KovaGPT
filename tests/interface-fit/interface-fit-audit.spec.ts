@@ -328,20 +328,19 @@ if (scope === "public") {
       name: "Settings sidebar width",
       exact: true,
     });
-    // The settings rail is also hidden on touch phones in landscape.
-    const phone = await page.evaluate(
+    const compactSettings = await page.evaluate(
       () =>
-        window.matchMedia(
+        matchMedia(
           "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
         ).matches,
     );
-    const controls = phone
+    const controls = compactSettings
       ? ([[size, "85", "125"]] as const)
       : ([
           [size, "85", "125"],
           [navigation, "200", "440"],
         ] as const);
-    if (phone) await expect(navigation).toBeHidden();
+    if (compactSettings) await expect(navigation).toBeHidden();
     for (const [slider, min, max] of controls) {
       await slider.scrollIntoViewIfNeeded();
       await slider.press("Home");
@@ -359,7 +358,7 @@ if (scope === "public") {
       .scrollIntoViewIfNeeded();
     await page.getByRole("button", { name: "Reset appearance", exact: true }).click();
     await expect(size).toHaveAttribute("aria-valuenow", "100");
-    if (!phone) await expect(navigation).toHaveAttribute("aria-valuenow", "280");
+    if (!compactSettings) await expect(navigation).toHaveAttribute("aria-valuenow", "280");
     await page.screenshot({ path: info.outputPath("appearance-reset.png") });
   });
 }
