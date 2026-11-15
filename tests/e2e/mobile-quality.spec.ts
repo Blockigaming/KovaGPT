@@ -58,6 +58,57 @@ test("composer and attachment menu stay reachable on narrow screens", async ({ p
   await expect(sheet).toBeHidden();
 });
 
+test("phone workspace tabs sit below the composer and navigate between pages", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 768 || viewport.height <= 500, "portrait phone layout");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const tabs = page.getByRole("navigation", { name: "Mobile workspace" });
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(composer).toBeInViewport({ ratio: 1 });
+  await expect(tabs.getByRole("link", { name: "Chat", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  const [composerBox, tabBox] = await Promise.all([composer.boundingBox(), tabs.boundingBox()]);
+  expect(composerBox!.y).toBeGreaterThan(viewport.height / 2);
+  expect(composerBox!.y + composerBox!.height).toBeLessThanOrEqual(tabBox!.y);
+  expect(tabBox!.y + tabBox!.height).toBeCloseTo(viewport.height, 0);
+
+  for (const name of ["Projects", "Library", "Connections"]) {
+    const destination = tabs.getByRole("link", { name, exact: true });
+    const hitTarget = await destination.boundingBox();
+    expect(Math.min(hitTarget!.width, hitTarget!.height)).toBeGreaterThanOrEqual(44);
+    await destination.tap();
+    await expect(destination).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("main")).toBeVisible();
+    await expectNoPageOverflow(page);
+  }
+});
+
+test("mobile public header exposes the app and opens its menu without moving the article", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 768, "phone layout");
+  await page.goto("/pricing", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const navigation = page.getByRole("navigation", { name: "Public navigation", exact: true });
+  await expect(navigation.getByRole("link", { name: "Open app" })).toBeInViewport();
+  const main = page.getByRole("main");
+  const initialY = (await main.boundingBox())!.y;
+  await navigation.getByRole("button", { name: "Open navigation" }).tap();
+  const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
+  await expect(menu.getByRole("link", { name: "Pricing", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect((await main.boundingBox())!.y).toBeCloseTo(initialY, 0);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(navigation.getByRole("button", { name: "Open navigation" })).toBeFocused();
+});
+
 for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
   test(`mobile workspace ${route} never overflows`, async ({ page }) => {
     await page.goto(route, { waitUntil: "domcontentloaded" });

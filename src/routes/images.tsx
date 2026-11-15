@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { Sidebar } from "@/components/Sidebar";
+import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -952,7 +953,7 @@ function ImagesPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="kova-images-content max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
             <h1
               id="images-title"
@@ -1344,6 +1345,7 @@ function ImagesPage() {
             </section>
           </div>
         </div>
+        <PhoneNavigation pathname="/images" inactive={sidebarOpen || settingsOpen} />
       </main>
 
       <SettingsDialog

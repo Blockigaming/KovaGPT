@@ -134,9 +134,12 @@ export function PublicHeader() {
 
         <Button
           asChild
-          className="ml-1 hidden h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center lg:inline-flex"
+          className="kova-public-launch ml-1 hidden h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center lg:inline-flex"
         >
-          <Link to="/">Open KovaGPT</Link>
+          <Link to="/">
+            <span className="kova-public-launch-desktop">Open KovaGPT</span>
+            <span className="kova-public-launch-phone">Open app</span>
+          </Link>
         </Button>
 
         <Button
