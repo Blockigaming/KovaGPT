@@ -99,26 +99,31 @@ export function ComposerProjectPicker({
         active &&
         request === storageGeneration.current &&
         current.current.principalId === principalId;
-      void getProjects().then(
-        (projects) => {
-          if (!isCurrent()) return;
-          setSnapshot({
-            principalId,
-            projects: projects.filter(
-              (project) => !project.archived_at && !project.deletion_requested_at,
-            ),
-            status: "ready",
-          });
-        },
-        () => {
-          if (!isCurrent()) return;
-          setSnapshot((previous) =>
-            previous?.principalId === principalId && previous.status === "ready"
-              ? previous
-              : { principalId, projects: [], status: "error" },
-          );
-        },
-      );
+      void getProjects()
+        .then((projects) => {
+          if (!Array.isArray(projects)) throw new Error("Invalid project list");
+          return projects;
+        })
+        .then(
+          (projects) => {
+            if (!isCurrent()) return;
+            setSnapshot({
+              principalId,
+              projects: projects.filter(
+                (project) => !project.archived_at && !project.deletion_requested_at,
+              ),
+              status: "ready",
+            });
+          },
+          () => {
+            if (!isCurrent()) return;
+            setSnapshot((previous) =>
+              previous?.principalId === principalId && previous.status === "ready"
+                ? previous
+                : { principalId, projects: [], status: "error" },
+            );
+          },
+        );
     }
     return () => {
       active = false;
