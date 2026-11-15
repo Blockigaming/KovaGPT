@@ -31,6 +31,12 @@ const seams = {
     "stagePendingAction",
   ],
   "@/integrations/connected-tools.server": ["getConnectedToolContext", "runConnectedTool"],
+  "@/integrations/sensitive-chat-reads.server": [
+    "readSensitiveChatSnapshot",
+    "sensitiveChatConfigured",
+    "sensitiveChatProvider",
+    "sensitiveChatTool",
+  ],
   "@/lib/ai/accounting.server": [
     "acquireGeneration",
     "finalizeGeneration",
@@ -310,6 +316,12 @@ function fixture(options = {}) {
           }
         : denied,
       stagePendingAction: denied,
+    },
+    "@/integrations/sensitive-chat-reads.server": {
+      readSensitiveChatSnapshot: denied,
+      sensitiveChatConfigured: () => false,
+      sensitiveChatProvider: () => undefined,
+      sensitiveChatTool: denied,
     },
     "@/integrations/connected-tools.server": {
       getConnectedToolContext: async () =>
