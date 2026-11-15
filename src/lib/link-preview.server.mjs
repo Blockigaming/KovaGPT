@@ -62,7 +62,7 @@ export async function resolveLinkPreview(raw, signal, read = publicRead) {
     iconUrl: null,
   };
 
-  if (siteName === "YouTube") {
+  if (siteName === "YouTube" && new URL(url).pathname !== "/") {
     try {
       const oembed = new URL("https://www.youtube.com/oembed");
       oembed.searchParams.set("format", "json");
