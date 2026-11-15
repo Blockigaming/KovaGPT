@@ -38,7 +38,6 @@ const retained = [
   ["slack", "Slack"],
   ["plaid", "Plaid"],
   ["oura", "Oura"],
-  ["whoop", "WHOOP"],
   ["apple-health", "Apple Health"],
   ["android-health-connect", "Android Health Connect"],
 ];

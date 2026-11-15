@@ -1,5 +1,6 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { BarChart3, Copy, Download, Table2 } from "lucide-react";
+import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
   Select,
@@ -22,13 +23,15 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-chart-utils";
+import "./chat-chart.css";
 const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
+  const { isMobile, interaction } = useLayout();
+  const tooltipTrigger = interaction === "touch" ? "click" : "hover";
   const xKey = spec.xKey ?? "name";
   const keys = useMemo(
     () =>
@@ -41,9 +44,14 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   );
   const [type, setType] = useState<ChartType>(spec.type);
   const [table, setTable] = useState(false);
-  const figureRef = useRef<HTMLElement>(null);
   const chartTypeId = useId();
   const colors = spec.colors?.length ? spec.colors : DEFAULT_COLORS;
+  const circular = type === "pie" || type === "donut";
+  const legendLabels = circular
+    ? spec.data.map((row, index) => String(row[xKey] ?? `Item ${index + 1}`))
+    : type === "scatter"
+      ? keys.slice(0, 1)
+      : keys;
   const save = (content: string, mime: string, extension: string) => {
     let url: string | null = null;
     let anchor: HTMLAnchorElement | null = null;
@@ -64,24 +72,32 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
       anchor?.remove();
     }
   };
-  const axes = (
-    <>
-      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-      <XAxis dataKey={xKey} stroke="var(--muted-foreground)" fontSize={12} />
-      <YAxis stroke="var(--muted-foreground)" fontSize={12} />
-      <Tooltip />
-      <Legend />
-    </>
-  );
+  const axes = [
+    <CartesianGrid key="grid" strokeDasharray="3 3" stroke="var(--border)" />,
+    <XAxis
+      key="x"
+      dataKey={xKey}
+      stroke="var(--muted-foreground)"
+      fontSize={isMobile ? 11 : 12}
+      minTickGap={isMobile ? 16 : 5}
+      tickFormatter={(value) => {
+        const label = String(value);
+        return isMobile && label.length > 12 ? `${label.slice(0, 11)}…` : label;
+      }}
+    />,
+    <YAxis key="y" stroke="var(--muted-foreground)" fontSize={12} />,
+  ];
+  const tooltip = <Tooltip trigger={tooltipTrigger} isAnimationActive={false} />;
 
   return (
     <figure
-      ref={figureRef}
-      className="my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
+      className="kova-chart my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4"
       aria-label={spec.title ? `Interactive chart: ${spec.title}` : "Interactive chart"}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <figcaption className="mr-auto text-sm font-semibold">{spec.title ?? "Chart"}</figcaption>
+        <figcaption className="mr-auto basis-full break-words text-sm font-semibold sm:basis-auto">
+          {spec.title ?? "Chart"}
+        </figcaption>
         <label className="sr-only" htmlFor={chartTypeId}>
           Chart type
         </label>
@@ -133,69 +149,91 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         </div>
       ) : (
         <div
-          className="h-56 w-full sm:h-72"
-          role="img"
-          aria-label={`${type} chart with ${spec.data.length} data points`}
+          className="kova-chart-layout"
+          data-compact-legend={legendLabels.length > 8 ? "true" : undefined}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            {type === "pie" || type === "donut" ? (
-              <PieChart>
-                <Tooltip />
-                <Legend />
-                <Pie
-                  data={spec.data}
-                  dataKey={keys[0]}
-                  nameKey={xKey}
-                  innerRadius={type === "donut" ? "45%" : 0}
-                  outerRadius="75%"
-                  label
-                >
-                  {spec.data.map((_, index) => (
-                    <Cell key={index} fill={colors[index % colors.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            ) : type === "bar" ? (
-              <BarChart data={spec.data}>
-                {axes}
-                {keys.map((key, index) => (
-                  <Bar
-                    key={key}
-                    dataKey={key}
-                    fill={colors[index % colors.length]}
-                    radius={[4, 4, 0, 0]}
-                  />
-                ))}
-              </BarChart>
-            ) : type === "scatter" ? (
-              <ScatterChart>
-                {axes}
-                {keys.slice(0, 1).map((key, index) => (
-                  <Scatter
-                    key={key}
-                    name={key}
+          <div
+            className="h-56 w-full min-w-0 sm:h-72"
+            role="img"
+            aria-label={`${type} chart with ${spec.data.length} data points`}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              {circular ? (
+                <PieChart>
+                  {tooltip}
+                  <Pie
+                    isAnimationActive={false}
                     data={spec.data}
-                    dataKey={key}
-                    fill={colors[index]}
-                  />
-                ))}
-              </ScatterChart>
-            ) : (
-              <LineChart data={spec.data}>
-                {axes}
-                {keys.map((key, index) => (
-                  <Line
-                    key={key}
-                    type="monotone"
-                    dataKey={key}
-                    stroke={colors[index % colors.length]}
-                    strokeWidth={2}
-                    activeDot={{ r: 5 }}
-                  />
-                ))}
-              </LineChart>
-            )}
-          </ResponsiveContainer>
+                    dataKey={keys[0]}
+                    nameKey={xKey}
+                    innerRadius={type === "donut" ? "45%" : 0}
+                    outerRadius="75%"
+                    label
+                  >
+                    {spec.data.map((_, index) => (
+                      <Cell key={index} fill={colors[index % colors.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              ) : type === "bar" ? (
+                <BarChart data={spec.data}>
+                  {axes}
+                  {tooltip}
+                  {keys.map((key, index) => (
+                    <Bar
+                      isAnimationActive={false}
+                      key={key}
+                      dataKey={key}
+                      fill={colors[index % colors.length]}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              ) : type === "scatter" ? (
+                <ScatterChart>
+                  {axes}
+                  {tooltip}
+                  {keys.slice(0, 1).map((key, index) => (
+                    <Scatter
+                      isAnimationActive={false}
+                      key={key}
+                      name={key}
+                      data={spec.data}
+                      dataKey={key}
+                      fill={colors[index]}
+                    />
+                  ))}
+                </ScatterChart>
+              ) : (
+                <LineChart data={spec.data}>
+                  {axes}
+                  {tooltip}
+                  {keys.map((key, index) => (
+                    <Line
+                      isAnimationActive={false}
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      stroke={colors[index % colors.length]}
+                      strokeWidth={2}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+          <ul className="kova-chart-legend" aria-label="Chart legend">
+            {legendLabels.map((label, index) => (
+              <li key={`${index}:${label}`}>
+                <span
+                  aria-hidden="true"
+                  style={{ backgroundColor: colors[index % colors.length] }}
+                />
+                {label}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {(table || keys.length === 0) && (

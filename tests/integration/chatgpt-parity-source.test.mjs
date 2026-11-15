@@ -44,6 +44,7 @@ const [
 
 const homeView = await readFile("src/components/HomeChatStarters.tsx", "utf8");
 const sidebarCatalog = await readFile("src/lib/sidebar-layout.mjs", "utf8");
+const composer = route.match(/const composer = \(\s*(<ChatInput[\s\S]*?\/>)\s*\);/)?.[1];
 test("chat remains primary and Work is accessible only through direct route, not sidebar", () => {
   assert.doesNotMatch(appShell, /WorkspaceModeSwitch/);
   assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
@@ -82,7 +83,8 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
-  assert.equal((route.match(/canChangeAgent=\{!active\?\.kova\}/g) ?? []).length, 2);
+  assert.ok(composer, "Chat uses the shared composer");
+  assert.match(composer, /canChangeAgent=\{!active\?\.kova\}/);
   assert.doesNotMatch(route, /<ResponsiveModelSelector/);
   assert.doesNotMatch(mobileTopBar, /<ResponsiveModelSelector/);
   assert.match(
@@ -202,7 +204,12 @@ test("compact composer groups actions and preserves message editing and markdown
   assert.match(chatInput, /OpenDesktopAppButton/);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
-  assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
+  assert.ok(composer, "Chat uses the shared composer");
+  assert.match(composer, /selectedTool=\{selectedTool\}/);
+  assert.match(composer, /onToolSelect=\{setSelectedTool\}/);
+  assert.match(composer, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
+  assert.match(route, /\{composer\}\s*<\/HomeWelcome>/);
+  assert.match(route, /className="spec400-composer-dock[^"]*">[\s\S]*?\{composer\}\s*<\/div>/);
   assert.match(chatInput, /disabled=\{!canSubmit\}\s+onClick=\{triggerSubmit\}/);
   assert.match(chatInput, /aria-label="Send message"/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);

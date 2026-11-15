@@ -129,7 +129,7 @@
   --kova-radius-output: 16px;
   --kova-sidebar-width: 260px;
   --kova-sidebar-rail-width: 60px;
-  --kova-sidebar-drawer-width: min(320px, calc(100vw - 32px));
+  --kova-sidebar-drawer-width: min(86vw, 320px);
   --kova-reading-width: 768px;
   --kova-composer-width: 768px;
   --composer-background: #ffffff;
@@ -239,4 +239,22 @@
   --dialog-shadow: 0 16px 48px #0000004d;
   --shadow-composer: none;
   --modern-shadow: none;
+}
+
+:root[data-kova-contrast="high"] {
+  --ring: var(--foreground);
+  --border-subtle: color-mix(in srgb, var(--foreground) 55%, var(--background));
+  --border-strong: var(--foreground);
+  --text-secondary: var(--foreground);
+  --text-disabled: var(--muted-foreground);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ring: var(--foreground);
+    --border-subtle: color-mix(in srgb, var(--foreground) 55%, var(--background));
+    --border-strong: var(--foreground);
+    --text-secondary: var(--foreground);
+    --text-disabled: var(--muted-foreground);
+  }
 }

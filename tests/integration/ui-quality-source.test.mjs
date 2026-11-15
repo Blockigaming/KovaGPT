@@ -102,7 +102,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(popover, /overflow-y-auto overflow-x-hidden overscroll-contain/);
   const scrim = declarations(sidebarStyles, "button.kova-sidebar-scrim");
   assert.equal(scrim["border-radius"], "0");
-  assert.equal(scrim.background, "#0008");
+  assert.equal(scrim.background, "rgb(0 0 0 / 45%)");
   assert.equal(scrim["backdrop-filter"], undefined);
   assert.match(
     coreStyles,
@@ -368,7 +368,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(stopButton, /type="button"/);
   assert.match(stopButton, /onClick=\{onStop\}/);
   assert.doesNotMatch(stopButton, /disabled=|aria-disabled=/);
-  assert.match(home, /surface="empty"/);
+  assert.match(home, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
   assert.match(starters, /<div className="kova-empty-composer">\s*\{children\}/);

@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
-import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { fixture } from "./actual-app-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 test.beforeEach(async ({ page }) => {
-  await installAuthenticatedFixture(page);
+  await fixture(page, "dark");
 });
 
 import { waitForKovaHydration } from "./hydration";
@@ -33,7 +34,7 @@ async function noHorizontalOverflow(page: Page) {
 test.describe("KovaGPT responsive shell", () => {
   test("home renders and has no horizontal overflow", async ({ page }, testInfo) => {
     const errors: string[] = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (e) => errors.push(e.stack ?? e.message));
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
@@ -58,6 +59,25 @@ test.describe("KovaGPT responsive shell", () => {
       (e) => !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
     );
     expect(filtered, `unexpected client errors: ${filtered.join("\n")}`).toEqual([]);
+  });
+
+  test("an invalid project list shows a retry instead of throwing on the home screen", async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.route("**/_serverFn/**", (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+      if (!resolveFixtureFunctionName(id)?.startsWith("listProjects_")) return route.fallback();
+      return route.fulfill({ json: { result: {}, context: {} } });
+    });
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    await page.getByRole("button", { name: "Choose project", exact: true }).click();
+    const picker = page.getByRole("dialog", { name: "Choose project", exact: true });
+    await expect(picker.getByRole("alert")).toHaveText("Your projects could not be loaded.");
+    await expect(picker.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
+    expect(errors).toEqual([]);
   });
 
   test("mobile-only chrome follows the shared desktop breakpoint", async ({ page }, testInfo) => {

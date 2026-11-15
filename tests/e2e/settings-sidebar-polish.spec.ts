@@ -91,6 +91,8 @@ test("sidebar keeps separate desktop and phone preferences across Library and re
   await expect(rail).toBeVisible();
   await expect(page.getByRole("main")).not.toHaveAttribute("inert", "");
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(drawer).toBeHidden();
+  await revealSidebar(page);
   await expect(drawer).toBeVisible();
   await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(drawer).toBeHidden();

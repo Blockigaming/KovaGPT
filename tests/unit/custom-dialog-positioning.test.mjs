@@ -7,9 +7,12 @@ const read = (path) => readFileSync(path, "utf8");
 const declarations = (path, selector, media = null) => {
   const matches = [];
   postcss.parse(read(path)).walkRules((rule) => {
+    const query = rule.parent.type === "atrule" ? rule.parent.params : null;
     if (
       rule.selectors.includes(selector) &&
-      (rule.parent.type === "atrule" ? rule.parent.params : null) === media
+      (media === null
+        ? query === null
+        : query?.split(",").some((branch) => branch.trim() === media))
     )
       matches.push(rule);
   });
@@ -33,16 +36,17 @@ test("full-screen phone Settings cancels both transform systems for guests and s
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ]) {
-    const css = declarations(
-      path,
-      selector,
-      "(max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
-    );
-    assert.equal(css.inset, "0");
-    assert.equal(css.width, "100%");
-    assert.equal(css.height, "100dvh");
-    assert.equal(css.transform, "none");
-    assert.equal(css.translate, "none");
+    for (const media of [
+      "(max-width: 767px)",
+      "(max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
+    ]) {
+      const css = declarations(path, selector, media);
+      assert.equal(css.inset, "0");
+      assert.equal(css.width, "100%");
+      assert.equal(css.height, "100dvh");
+      assert.equal(css.transform, "none");
+      assert.equal(css.translate, "none");
+    }
   }
 });
 

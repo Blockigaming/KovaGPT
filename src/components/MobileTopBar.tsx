@@ -57,7 +57,7 @@ export function MobileTopBar({
   return (
     <header
       data-ui-reference="chatgpt-mobile-topbar"
-      className="kova-topbar sticky top-0 z-30 lg:hidden"
+      className="kova-topbar sticky top-0 z-30 shrink-0 lg:hidden"
     >
       <div className="kova-topbar-inner grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-1 px-2 pb-1">
         <Button
@@ -94,7 +94,6 @@ export function MobileTopBar({
             </Button>
           ) : null}
         </div>
-        {chatStarted && newChatButton}
         {showAuth && !chatStarted ? (
           <div className="flex items-center justify-end gap-1">
             <SignInButton mode="modal">
@@ -120,7 +119,7 @@ export function MobileTopBar({
           <div
             className={
               chatStarted
-                ? "kova-mobile-conversation-tools col-span-3 flex items-center justify-end gap-2"
+                ? "kova-mobile-conversation-tools flex items-center justify-end"
                 : "flex items-center justify-end gap-0.5"
             }
           >
@@ -160,7 +159,7 @@ export function MobileTopBar({
               </Button>
             ) : null}
 
-            {!chatStarted && newChatButton}
+            {newChatButton}
           </div>
         )}
       </div>

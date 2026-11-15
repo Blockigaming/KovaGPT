@@ -513,7 +513,7 @@
 .spec400-plugin-tabs[role="tablist"] {
   flex-wrap: wrap;
 }
-.spec400-connection-group > section {
+.spec400-connection-group > section:not(.kova-health-dashboard) {
   margin-top: 20px;
   padding: clamp(18px, 3vw, 28px);
   border: 1px solid var(--border);
@@ -527,9 +527,6 @@
 }
 .spec400-connection-group button {
   border-radius: 999px;
-}
-.spec400-connection-group [aria-labelledby="health-connections-title"] > div > div {
-  border-radius: 20px;
 }
 .spec400-plugin-logo img {
   filter: none;

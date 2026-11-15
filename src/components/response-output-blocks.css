@@ -108,7 +108,9 @@
   outline-offset: 2px;
 }
 .kova-response-copy-panel button:disabled {
-  opacity: 0.6;
+  color: var(--muted-foreground);
+  background: var(--surface-secondary);
+  cursor: not-allowed;
 }
 .kova-copy-mobile-label {
   display: none;
@@ -129,14 +131,77 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+@media (pointer: coarse) {
+  .kova-image-actions button[aria-busy="true"] .kova-image-busy-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .prose-chat a {
+    text-underline-offset: 0.2em;
+  }
+
+  .prose-chat :is(a, .kova-citation-link) + :is(a, .kova-citation-link) {
+    margin-inline-start: 8px;
+  }
+
+  .prose-chat .kova-citation-link {
+    min-height: 24px;
+    padding-inline: 4px;
+  }
+}
 .kova-table-scroll {
   overflow-x: auto;
   max-width: 100%;
   overscroll-behavior-x: contain;
 }
+.kova-response-math {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  padding-block: 0.25em;
+}
+.kova-response-math > .katex {
+  display: inline-block;
+  min-width: max-content;
+}
+.kova-response-math:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
 .kova-response-image {
+  position: relative;
   display: block;
   max-width: 100%;
+}
+.kova-image-hover-detail {
+  display: none;
+}
+@media (width >= 1024px) and (hover: hover) and (pointer: fine) {
+  .kova-response-image > img:is(:hover, :focus-visible) + .kova-image-hover-detail {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-start: 8px;
+    display: block;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--kova-radius-compact);
+    background: var(--surface-secondary);
+    color: var(--foreground);
+    padding: 4px 8px;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+  }
 }
 .kova-response-image img {
   display: block;
@@ -160,6 +225,9 @@
   height: 16px;
 }
 @media (max-width: 767px) {
+  .kova-response-output[data-output-kind="text"] .kova-response-output-content {
+    padding-inline: 12px;
+  }
   .kova-response-output {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "header" "body" "actions" "error";
@@ -207,7 +275,9 @@
   height: 20px;
 }
 .kova-image-actions button:disabled {
-  opacity: 0.6;
+  color: var(--muted-foreground);
+  background: var(--surface-secondary);
+  cursor: not-allowed;
 }
 
 /* ChatGPT inline code uses a quiet neutral chip, separate from fenced output. */
@@ -317,4 +387,76 @@ body .prose-chat .kova-table-scroll:focus-visible {
 .kova-copy-label-reserve {
   visibility: hidden;
   pointer-events: none;
+}
+
+.kova-image-zoom {
+  align-self: flex-start;
+  min-height: 44px;
+  min-width: 44px;
+  padding-inline: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--kova-radius-button);
+}
+
+.kova-image-zoom[aria-pressed="true"] {
+  background: var(--accent);
+}
+
+.kova-image-zoom:focus-visible,
+.kova-image-view-scroll:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.kova-image-view-scroll {
+  min-width: 0;
+  max-height: 65dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  flex-shrink: 0;
+}
+
+.kova-image-view-scroll[data-zoomed="true"] > [data-chat-image] {
+  width: 200%;
+  max-width: none;
+}
+
+[data-kova-response-image-view] .kova-image-view-scroll[data-zoomed="true"] img {
+  width: 100%;
+  max-height: none;
+}
+
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  .kova-response-image img {
+    width: 100%;
+  }
+
+  [data-kova-response-image-view] {
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    translate: none;
+    border: 0;
+    border-radius: 0;
+    padding: max(16px, var(--safe-top)) max(16px, var(--safe-right)) max(16px, var(--safe-bottom))
+      max(16px, var(--safe-left));
+  }
+
+  [data-kova-response-image-view] [data-kova-dialog-close] {
+    inset-block-start: max(8px, var(--safe-top));
+    inset-inline-end: max(8px, var(--safe-right));
+    width: 44px;
+    height: 44px;
+  }
+
+  [data-kova-response-image-view] h2 {
+    padding-inline-end: 44px;
+  }
+
+  [data-kova-response-image-view] img {
+    margin-inline: auto;
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 80px);
+  }
 }
