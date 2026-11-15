@@ -427,12 +427,15 @@ test("streaming status reports only real activity instead of invented progressio
   assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
   assert.match(message, /if \(!streaming\) localStreamingStartedAtRef\.current = null/);
   assert.match(message, /streamingStartedAt \?\? localStreamingStartedAtRef\.current/);
-  assert.match(home, /startedAt: Date\.now\(\)/);
+  assert.match(home, /const responseStartedAt = Date\.now\(\)/);
+  assert.match(home, /startedAt: responseStartedAt/);
+  assert.match(home, /const workedMs = Math\.max\(0, Date\.now\(\) - responseStartedAt\)/);
   assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
   assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
   assert.match(status, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
   assert.match(status, /return \(\) => window\.clearInterval\(timer\)/);
-  assert.match(status, /Working for \{seconds\}s/);
+  assert.match(status, /Working for \{formatResponseTime\(seconds\)\}/);
+  assert.match(message, /Worked for \{formatResponseTime\(message\.workedMs \/ 1000\)\}/);
   assert.doesNotMatch(status, />\s*Skip\s*</);
   assert.doesNotMatch(status, /IDLE_STATUSES|Planning response|Finishing response/);
   assert.match(status, /kova-thinking-indicator/);
