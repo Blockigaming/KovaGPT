@@ -46,9 +46,19 @@ export function connectionReadRequest(id, query, token, options = {}) {
   } else if (id === "ms-teams") {
     url = new URL("https://graph.microsoft.com/v1.0/me/joinedTeams");
   } else if (id === "notion") {
-    url = new URL("https://api.notion.com/v1/search");
     headers["Notion-Version"] = "2022-06-28";
-    body = JSON.stringify({ query, page_size: 10, filter: { property: "object", value: "page" } });
+    if (options.notionPage) {
+      if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(query))
+        throw new Error("invalid_notion_page_id");
+      url = new URL(`https://api.notion.com/v1/blocks/${query}/children?page_size=20`);
+    } else {
+      url = new URL("https://api.notion.com/v1/search");
+      body = JSON.stringify({
+        query,
+        page_size: 10,
+        filter: { property: "object", value: "page" },
+      });
+    }
   } else if (id === "linear") {
     url = new URL("https://api.linear.app/graphql");
     body = JSON.stringify({
@@ -91,6 +101,33 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   }
   const data = await readProviderJsonObject(response, 512_000);
   if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
+  if (id === "notion" && options.notionPage) {
+    if (!Array.isArray(data.results)) throw new Error("invalid_connection_response");
+    const blocks = [];
+    let limited = data.has_more === true || data.results.length > 20;
+    const encoder = new TextEncoder();
+    for (const row of data.results.slice(0, 20)) {
+      if (row?.object !== "block" || typeof row.type !== "string") {
+        limited = true;
+        continue;
+      }
+      if (row.has_children === true) limited = true;
+      const richText = row[row.type]?.rich_text;
+      if (!Array.isArray(richText)) {
+        limited = true;
+        continue;
+      }
+      const text = richText.map((item) => str(item?.plain_text, 2000)).join("");
+      if (text.length > 1500) limited = true;
+      const block = { type: str(row.type, 40), text: text.slice(0, 1500) };
+      if (encoder.encode(JSON.stringify([...blocks, block])).byteLength > 20_000) {
+        limited = true;
+        break;
+      }
+      blocks.push(block);
+    }
+    return { service: "Notion", page_id: query.trim(), blocks, limited };
+  }
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows =
