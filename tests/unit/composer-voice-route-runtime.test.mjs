@@ -74,6 +74,7 @@ globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
   completedChatReply,
+  extractResponseFollowups,
   chatRequestHeaders,
   React,
   // This reused send fixture does not render controls; keep its transparent
