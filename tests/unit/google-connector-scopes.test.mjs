@@ -125,6 +125,27 @@ test("actual auth endpoint validates connector before starting an OAuth attempt"
   const gmailRequest = new Request("https://kova.test/api/google/auth?connector=gmail");
   assert.equal((await handler({ request: gmailRequest })).status, 403);
   assert.equal(calls.length, 0);
+  const account = "00000000-0000-4000-8000-000000000001";
+  const access = (connector, connectionId = account) =>
+    new Request(
+      `https://kova.test/api/google/auth?connector=${connector}&manageReadStatus=1&connectionId=${connectionId}`,
+    );
+  assert.equal((await handler({ request: access("gmail") })).status, 403);
+  assert.equal((await handler({ request: access("google-drive") })).status, 400);
+  assert.equal((await handler({ request: access("gmail", "") })).status, 400);
+  assert.equal(calls.length, 0);
+
+  paid = true;
+  const readStatus = await handler({ request: access("gmail") });
+  assert.equal(readStatus.status, 200);
+  assert.equal(calls[0][2], account);
+  const granted = new URL((await readStatus.json()).url).searchParams.get("scope");
+  assert.equal(policy.hasGoogleCapability(granted, "gmail.modify"), true);
+  assert.equal(
+    policy.hasGoogleCapability(policy.googleConnectorScopes("gmail"), "gmail.modify"),
+    false,
+  );
+
   for (const connector of ["google-calendar", "google-drive", "gmail"]) {
     paid = connector === "gmail";
     const result = await handler({
