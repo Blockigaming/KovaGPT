@@ -1,4 +1,4 @@
-import { CHAT_USAGE_WINDOWS, DAILY_PLAN_ALLOWANCES } from "@/lib/plan-usage-policy.mjs";
+import { CHAT_USAGE_WINDOWS } from "@/lib/plan-usage-policy.mjs";
 import type { PlanUsageDto } from "@/utils/usage.functions";
 
 const resetFormat = new Intl.DateTimeFormat(undefined, {
@@ -16,11 +16,7 @@ const boundedPercent = (used: number | null, limit: number) =>
     : null;
 
 export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
-  const { tier, windows, images, uploads } = usage;
-  const base = DAILY_PLAN_ALLOWANCES[tier];
-  const multiplier = usage.usageMultiplier ?? 1;
-  const imagePercent = boundedPercent(images, base.images * multiplier);
-  const uploadPercent = boundedPercent(uploads, base.uploads * multiplier);
+  const { windows } = usage;
 
   return (
     <div className="kova-plan-usage">
@@ -33,7 +29,11 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
         const percent = percentages.length ? Math.max(...percentages) : null;
         const label = `${CHAT_USAGE_WINDOWS[window.id]} chat usage`;
         const resetLabel =
-          window.id === "five_hour" ? "Rolling activity · Next hourly refresh" : "Weekly reset";
+          window.id === "five_hour"
+            ? window.fixedWindow
+              ? "Resets"
+              : "Next hourly refresh"
+            : "Weekly reset";
         return (
           <div key={window.id} className="kova-plan-usage-row">
             <div>
@@ -58,19 +58,6 @@ export function PlanUsageBars({ usage }: { usage: PlanUsageDto }) {
           </div>
         );
       })}
-      <p className="text-xs leading-5 text-muted-foreground">
-        {imagePercent === null || uploadPercent === null
-          ? "Today’s image and upload usage is temporarily unavailable."
-          : `Today’s images ${imagePercent}% used · uploads ${uploadPercent}% used. These reset daily.`}
-      </p>
-      {windows.some((window) => window.regularUsed === null || window.costPercentUsed === null) && (
-        <p className="text-xs leading-5 text-muted-foreground">
-          Some chat usage data is temporarily unavailable. Meters show the data we could load.
-        </p>
-      )}
-      <p className="text-xs leading-5 text-muted-foreground">
-        Usage percentages are estimates. Additional safety and plan protections may apply.
-      </p>
     </div>
   );
 }

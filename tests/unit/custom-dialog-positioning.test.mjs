@@ -36,12 +36,17 @@ test("full-screen phone Settings cancels both transform systems for guests and s
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',
   ]) {
-    const css = declarations(path, selector, "(max-width: 767px)");
-    assert.equal(css.inset, "0");
-    assert.equal(css.width, "100%");
-    assert.equal(css.height, "100dvh");
-    assert.equal(css.transform, "none");
-    assert.equal(css.translate, "none");
+    for (const media of [
+      "(max-width: 767px)",
+      "(max-width: 1023px) and (max-height: 500px) and (pointer: coarse)",
+    ]) {
+      const css = declarations(path, selector, media);
+      assert.equal(css.inset, "0");
+      assert.equal(css.width, "100%");
+      assert.equal(css.height, "100dvh");
+      assert.equal(css.transform, "none");
+      assert.equal(css.translate, "none");
+    }
   }
 });
 

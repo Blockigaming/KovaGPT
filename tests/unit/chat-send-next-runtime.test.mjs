@@ -142,6 +142,7 @@ function fixture() {
   const context = {
     extractResponseFollowups,
     ...helpers,
+    extractResponseFollowups,
     React,
     Button,
     Suspense: React.Suspense,

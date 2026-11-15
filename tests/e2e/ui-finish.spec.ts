@@ -98,7 +98,9 @@ for (const tier of ["free", "plus", "pro"] as const)
       ...window,
       regularUsed: Math.floor(window.regularLimit / 2),
       thinkingUsed: Math.floor(window.thinkingLimit / 5),
-      costPercentUsed: 10,
+      ...(tier === "free" && window.id === "five_hour"
+        ? { fixedWindow: true as const, costPercentUsed: null }
+        : { costPercentUsed: 10 }),
     }));
     const usage = { tier, windows, images: 2, uploads: 1 };
     await page.route("**/_serverFn/**", (route) => {
@@ -110,7 +112,7 @@ for (const tier of ["free", "plus", "pro"] as const)
       await page.goto(`/settings/${section}`);
       await waitForKovaHydration(page);
       await expect(page.getByRole("progressbar")).toHaveCount(windows.length);
-      for (const { id, regularUsed, regularLimit } of windows) {
+      for (const { id, regularUsed, regularLimit, fixedWindow } of windows) {
         const bar = page.getByRole("progressbar", {
           name: `${CHAT_USAGE_WINDOWS[id]} chat usage`,
           exact: true,
@@ -120,9 +122,16 @@ for (const tier of ["free", "plus", "pro"] as const)
           "aria-valuenow",
           String(Math.round((regularUsed / regularLimit) * 100)),
         );
+        if (id === "five_hour") {
+          const row = page.locator(".kova-plan-usage-row").filter({ has: bar });
+          await expect(
+            row.getByText(fixedWindow ? /^Resets / : /^Next hourly refresh /),
+          ).toBeVisible();
+        }
       }
-      await expect(page.locator(".kova-plan-usage")).toContainText(/Today’s images \d+% used/);
-      await expect(page.locator(".kova-plan-usage")).not.toContainText(/\d+\s*\/\s*\d+\s+images/);
+      await expect(page.locator(".kova-plan-usage")).not.toContainText(
+        /Today’s images|Some chat usage data|Usage percentages are estimates/,
+      );
     }
     await page.screenshot({
       path: `artifacts/ui-finish-${test.info().project.name}-${tier}-usage.png`,

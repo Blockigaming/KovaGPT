@@ -130,6 +130,7 @@ function chatFixture(storage = new Map()) {
     `${detailSource.slice(detailSource.indexOf("function isAbortError"))}\nreturn ProjectChatPage;`,
     {
       ...b.dependencies,
+      extractResponseFollowups,
       Route: { useParams: () => params },
       useBlocker: (options) => {
         blockOptions = options;
@@ -516,6 +517,7 @@ function moveFixture() {
   );
   const component = compile(`${source}\nreturn ChatsTab;`, {
     ...b.dependencies,
+    extractResponseFollowups,
     createProjectChat: b.request("create"),
     deleteProjectChat: b.request("delete"),
     listProjects: b.request("list"),

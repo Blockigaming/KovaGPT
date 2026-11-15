@@ -1405,7 +1405,8 @@ function AppsPage() {
         : githubLoadError ||
             otherConnections.error ||
             [...WORKING_IDS]
-              // Count providers owned by this tab. Plaid is managed by the Finances tab.
+              // Bank status belongs to the separate Finances panel, not this
+              // directory's Google/GitHub/provider-account status sources.
               .filter(
                 (id) =>
                   isGoogleId(id) || id === "github" || (CONNECTION_FLOWS[id] && configuredOf(id)),
