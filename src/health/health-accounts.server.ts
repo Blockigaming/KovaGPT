@@ -82,7 +82,7 @@ export async function readHealthAccount(caller: AuthedCaller, accountId: string)
     provider_id: binding.provider_id,
     event_type: "health_summary_read",
     result: "success",
-    safe_summary: "Read health summaries on request; no chat context or search index created.",
+    safe_summary: "Read selected health summaries on request.",
   });
   if (audit.error) throw new Error("health_audit_unavailable");
   await ensureCurrent();
