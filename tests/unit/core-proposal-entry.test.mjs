@@ -33,7 +33,7 @@ test("all proposed core interfaces compile together without entering production 
     format: "esm",
     platform: "browser",
     jsx: "automatic",
-    loader: { ".svg": "dataurl" },
+    loader: { ".svg": "dataurl", ".woff2": "file", ".woff": "file", ".ttf": "file" },
     logLevel: "silent",
   });
   assert.ok(result.outputFiles.some((file) => file.path.endsWith(".js") && file.text.length > 0));

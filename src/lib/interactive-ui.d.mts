@@ -141,5 +141,6 @@ export function formatSubmission(
   submission: InteractiveSubmission,
 ): string;
 export function splitInteractiveContent(value: string): InteractivePart[];
+export const COMPACT_INTERACTIVE_UI_INSTRUCTIONS: string;
 export const INTERACTIVE_UI_INSTRUCTIONS: string;
 export const INTELLIGENT_INTERFACE_NAME: "Intelligent Interface";

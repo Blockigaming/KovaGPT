@@ -683,6 +683,18 @@ const oversizedCatalog = [
     function: { ...tool.function, description: "Permitted connector schema. ".repeat(15000) },
   },
 ];
+test("Free requests for rich output receive the expanded response instructions", async () => {
+  const f = fixture({
+    noTools: true,
+    prompt: "Make a diagram and flashcards about photosynthesis.",
+  });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, text);
+  const prompt = f.providers[0].messages.find((message) => message.role === "system").content;
+  assert.ok(prompt.includes('diagram: {"version":1'));
+  assert.ok(prompt.includes('flashcards: {"version":1'));
+});
+
 const ordinaryFollowUp = [
   { role: "user", content: "Hi" },
   { role: "assistant", content: "Hi! How can I help?" },
@@ -712,6 +724,7 @@ test("ordinary Free follow-ups survive an oversized optional connector catalog w
   const sent = JSON.stringify(f.providers[0].messages);
   for (const message of ordinaryFollowUp) assert.ok(sent.includes(message.content));
   assert.ok(sent.includes("FINAL_CONTEXT_FIXTURE"));
+  assert.equal(sent.includes("secondsPerQuestion"), false);
   assert.ok(sent.includes("Connected tools were not run"));
   assert.ok(sent.includes("Never invent retrieved data or claim an action succeeded"));
   assert.equal(f.settlements.length, 1);

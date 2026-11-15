@@ -14,7 +14,10 @@ import {
 } from "@/lib/modes";
 import { GENERATIVE_UI_INSTRUCTIONS } from "@/lib/generative-ui.mjs";
 import { RESPONSE_FOLLOWUP_INSTRUCTIONS } from "@/lib/response-followups.mjs";
-import { INTERACTIVE_UI_INSTRUCTIONS } from "@/lib/interactive-ui.mjs";
+import {
+  COMPACT_INTERACTIVE_UI_INSTRUCTIONS,
+  INTERACTIVE_UI_INSTRUCTIONS,
+} from "@/lib/interactive-ui.mjs";
 import {
   assertFeatureEnabled,
   assertNotBanned,
@@ -176,11 +179,16 @@ const ADAPTIVE_INSTRUCTION = "";
 const UNRESTRICTED_INSTRUCTION = "";
 const ACCURACY_INSTRUCTION = "";
 const CHART_INSTRUCTION = "";
+const COMPACT_CHART_INSTRUCTION = `
+
+When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, line, pie, donut and scatter. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
 const FINAL_CHART_INSTRUCTION = `
 
 Use double-dollar TeX for inline equations and put double-dollar delimiters on separate lines for display equations. Leave ordinary currency as plain text.
 
 When a chart would help, emit a complete fenced kova-chart JSON block using this shape: {"type":"bar","title":"Example","xKey":"category","keys":["value"],"data":[{"category":"A","value":3},{"category":"B","value":5}]}. Supported types are bar, horizontal-bar, stacked-bar, line, step, area, stacked-area, pie, donut, scatter, radar, heatmap, histogram, percent-stacked-bar, funnel, candlestick, bubble, treemap, sankey, waterfall and range. Waterfall rows are signed changes in order; range rows need numeric low and high. Sankey uses data rows with source and target labels and positive numeric value, with no directed cycles. Bubble charts need a numeric xKey, one y series in keys, and a nonnegative sizeKey (default size). For treemaps, the first numeric series represents the size of each category. Use individual numeric observations for a histogram, nonnegative series for percentages and funnels, and named open/high/low/close values for each candle. Use numeric values for the plotted series and numeric x values for scatter. Use only supplied or verified data, or clearly label illustrative data. Explain units and relevant sources in surrounding text. A response can combine charts, kova-ui widgets and kova-interactive controls when each helps the user.`;
+const RICH_RESPONSE_REQUEST =
+  /\b(?:charts?|plots?|graphs?|heatmaps?|radar|candlesticks?|sankey|waterfalls?|treemaps?|histograms?|diagrams?|flowcharts?|maps?|quizz(?:es)?|quiz|flashcards?|simulations?|memory game|sticker packs?|patterns?|narration|read aloud|interactive|file bundle|zip archive|latex|equations?)\b/i;
 const CREATOR_INSTRUCTION = "";
 const MAX_IMAGE_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 const MAX_TOOL_HOP_RESPONSE_BYTES = 2 * 1024 * 1024;
@@ -1559,6 +1567,13 @@ export const Route = createFileRoute("/api/chat")({
                     ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
                     : "";
 
+            // Keep basic reply and connector requests affordable near the Free quota boundary.
+            const useRichResponseCatalog =
+              callerTier !== "free" ||
+              clientTool === "study" ||
+              clientTool === "data_analysis" ||
+              clientTool === "file_analysis" ||
+              RICH_RESPONSE_REQUEST.test(lastText);
             const body: Record<string, unknown> = {
               model,
               stream: true,
@@ -1591,10 +1606,12 @@ export const Route = createFileRoute("/api/chat")({
                     ADAPTIVE_INSTRUCTION +
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
-                    FINAL_CHART_INSTRUCTION +
+                    (useRichResponseCatalog ? FINAL_CHART_INSTRUCTION : COMPACT_CHART_INSTRUCTION) +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
-                    INTERACTIVE_UI_INSTRUCTIONS +
+                    (useRichResponseCatalog
+                      ? INTERACTIVE_UI_INSTRUCTIONS
+                      : COMPACT_INTERACTIVE_UI_INSTRUCTIONS) +
                     (request.headers.get("X-Kova-Response-Followups") === "1"
                       ? RESPONSE_FOLLOWUP_INSTRUCTIONS
                       : "") +
