@@ -271,3 +271,23 @@ test("calendar validation requires real RFC 3339 instants with explicit timezone
     "2026-08-02T17:00:00.000Z",
   );
 });
+
+test("calendar rename accepts a single event and ignores untrusted version and patch fields", () => {
+  assert.deepEqual(
+    validateSupportedGoogleWrite("calendar_rename_event", {
+      event_id: "recurring_20261202T190000Z",
+      summary: "  Updated title  ",
+      etag: '"untrusted"',
+      attendees: ["unexpected@example.com"],
+    }),
+    { event_id: "recurring_20261202T190000Z", summary: "Updated title" },
+  );
+  assert.throws(
+    () =>
+      validateSupportedGoogleWrite("calendar_rename_event", {
+        event_id: "../another",
+        summary: "Title",
+      }),
+    /Event ID is invalid/,
+  );
+});
