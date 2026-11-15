@@ -1,7 +1,8 @@
+import { usesCompactSettings } from "./settings-layout-fixture";
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { closeCurrentSettings, openResponseOptions, usesCompactSettings } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: Settings has full-height navigation and one visible title`, async ({

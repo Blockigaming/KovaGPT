@@ -1,5 +1,23 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Copy, Download, ExternalLink, EyeOff, ImagePlus } from "lucide-react";
+import {
+  Copy,
+  Download,
+  ExternalLink,
+  EyeOff,
+  ImagePlus,
+  Image,
+  PanelRightOpen,
+  Maximize2,
+} from "lucide-react";
+import { AttachmentPreviewMobileHeader } from "./AttachmentPreviewMobile";
+import {
+  DialogClose,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
@@ -14,6 +32,7 @@ import {
   copyChatImage,
   downloadChatImage,
   openChatImage,
+  shareChatImage,
   type ChatImageAttachmentHandler,
 } from "@/lib/chat-image-actions";
 import {
@@ -71,6 +90,12 @@ export function ChatImage({
       : null;
   const [visibility, setVisibility] = useState({ marker, hidden: false });
   const [busy, setBusy] = useState(false);
+  const [previewMarker, setPreviewMarker] = useState<string | null>(null);
+  const previewOpenRef = useRef(false);
+  const [sidePanel, setSidePanel] = useState(false);
+  const [zoom, setZoom] = useState<number | null>(null);
+  const [actualSize, setActualSize] = useState(false);
+  previewOpenRef.current = previewMarker === marker;
   const { isMobile } = useLayout();
   const [touchMenu, setTouchMenu] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -213,6 +238,26 @@ export function ChatImage({
       if (allowed()) setBusy(false);
     }
   };
+  const copyImage = () =>
+    void run(async (allowed) => {
+      await copyChatImage(src, allowed);
+      if (allowed()) toast.success("Image copied");
+    });
+  const downloadImage = () => void run((allowed) => downloadChatImage(src, allowed));
+  const addToChat = () =>
+    void run(async (allowed) => {
+      if (!actions || !allowed()) return;
+      const add = actions.prepareAdd();
+      const file = await chatImageFile(src, allowed);
+      if (!allowed()) return;
+      await add(file, allowed);
+      if (allowed()) setPreviewMarker(null);
+    });
+  const shareImage = () =>
+    void run(async (allowed) => {
+      if ((await shareChatImage(src, allowed)) === "copied" && allowed())
+        toast.success("Image copied for sharing");
+    });
   if (visibility.marker === marker && visibility.hidden)
     return (
       <span className="my-2 inline-flex max-w-full items-center gap-3 rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -243,10 +288,15 @@ export function ChatImage({
             decoding="async"
             referrerPolicy="no-referrer"
             tabIndex={0}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
+            data-attachment-preview-trigger=""
+            role="button"
             draggable={false}
             style={{ WebkitTouchCallout: "none", touchAction: "manipulation" }}
-            className={imageClassName}
+            className={`cursor-zoom-in ${imageClassName ?? ""}`}
+            onClick={() => {
+              if (!menuOpenRef.current) setPreviewMarker(marker);
+            }}
             onPointerDown={startPointerHold}
             onPointerMove={movePointerHold}
             onPointerUp={cancelTouchHold}
@@ -256,6 +306,11 @@ export function ChatImage({
             onTouchEnd={cancelTouchHold}
             onTouchCancel={cancelTouchHold}
             onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setPreviewMarker(marker);
+                return;
+              }
               if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
               event.preventDefault();
               const box = event.currentTarget.getBoundingClientRect();
@@ -272,6 +327,144 @@ export function ChatImage({
         </ContextMenuTrigger>
         {children}
       </span>
+      <Dialog
+        attachmentPreview={sidePanel ? true : "fullscreen"}
+        open={previewMarker === marker}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewMarker(null);
+            setActualSize(false);
+            setSidePanel(false);
+            setZoom(null);
+          }
+        }}
+      >
+        <DialogContent
+          attachmentPreview={sidePanel ? true : "fullscreen"}
+          className="spec400-attachment-preview kova-preview-mobile-image"
+          closeLabel="Close image preview"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (!previewOpenRef.current) imageRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <DialogHeader className="kova-preview-mobile-description">
+            <DialogTitle>Image preview</DialogTitle>
+            <DialogDescription>{alt}</DialogDescription>
+          </DialogHeader>
+          <AttachmentPreviewMobileHeader
+            busy={busy}
+            onDownload={downloadImage}
+            onShare={shareImage}
+            actions={
+              <button
+                type="button"
+                className="kova-preview-action"
+                disabled={busy}
+                onClick={copyImage}
+              >
+                Copy image
+              </button>
+            }
+          />
+          <div className="kova-image-viewer-toolbar">
+            <span className="kova-preview-action kova-image-viewer-badge">
+              <Image aria-hidden="true" /> Image
+            </span>
+            <div className="kova-image-viewer-tools">
+              <select
+                className="kova-preview-action"
+                aria-label="Image zoom"
+                value={zoom ?? "fit"}
+                onChange={(event) =>
+                  setZoom(event.target.value === "fit" ? null : Number(event.target.value))
+                }
+              >
+                <option value="fit">Fit</option>
+                {[25, 50, 75, 100, 150, 200].map((value) => (
+                  <option key={value} value={value}>
+                    {value}%
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="kova-preview-action"
+                aria-label="Download image"
+                disabled={busy}
+                onClick={downloadImage}
+              >
+                <Download aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="kova-preview-action"
+                onClick={() => setSidePanel((value) => !value)}
+              >
+                <PanelRightOpen aria-hidden="true" />
+                {sidePanel ? "Full screen" : "Open in side panel"}
+              </button>
+              <DialogClose className="kova-preview-action" aria-label="Close image preview">
+                ✕
+              </DialogClose>
+            </div>
+          </div>
+          <div className="kova-preview-desktop-actions kova-image-viewer-footer">
+            <button
+              type="button"
+              className="kova-preview-action"
+              disabled={busy}
+              onClick={copyImage}
+            >
+              Copy image
+            </button>
+          </div>
+          <div
+            className="kova-preview-image-stage"
+            data-actual-size={actualSize || undefined}
+            data-zoomed={zoom !== null || undefined}
+          >
+            <img
+              src={src}
+              alt={alt}
+              referrerPolicy="no-referrer"
+              style={zoom === null ? undefined : { zoom: zoom / 100 }}
+              className="max-w-full self-center object-contain"
+            />
+          </div>
+          <div className="kova-preview-image-actions">
+            {actions && (
+              <button type="button" onClick={addToChat} disabled={busy}>
+                <span className="kova-preview-circle">
+                  <ImagePlus aria-hidden="true" />
+                </span>
+                Add to chat
+              </button>
+            )}
+            <button type="button" onClick={() => setActualSize((value) => !value)}>
+              <span className="kova-preview-circle">
+                {actualSize ? <Maximize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              </span>
+              {actualSize ? "Fit to screen" : "Actual size"}
+            </button>
+            {actions && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewMarker(null);
+                  setActualSize(false);
+                  hide(true);
+                }}
+              >
+                <span className="kova-preview-circle">
+                  <EyeOff aria-hidden="true" />
+                </span>
+                Hide
+              </button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       <ContextMenuContent className="w-60" aria-label="Image actions">
         {!copyOnly ? (
           <>

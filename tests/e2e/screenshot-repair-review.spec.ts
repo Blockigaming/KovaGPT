@@ -1,7 +1,7 @@
+import { usesCompactSettings } from "./settings-layout-fixture";
 import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { usesCompactSettings } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: review home, navigation and routable Appearance`, async ({ page }, info) => {

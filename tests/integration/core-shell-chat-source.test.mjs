@@ -6,6 +6,7 @@ import postcss from "postcss";
 
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const topbar = await readFile("src/components/MobileTopBar.tsx", "utf8");
+const desktopToolbar = await readFile("src/components/DesktopChatToolbar.tsx", "utf8");
 const input = await readFile("src/components/ChatInput.tsx", "utf8");
 const index = await readFile("src/routes/index.tsx", "utf8");
 const transcript = await readFile("src/components/ActiveChatTranscript.tsx", "utf8");
@@ -213,10 +214,10 @@ test("temporary chat changes create a clean privacy boundary", () => {
     index,
     /onTemporaryChatChange=\{\(enabled, trigger\) => \{\s*temporaryTriggerRef\.current = trigger;\s*temporaryReturnUrlRef\.current = window\.location\.href;\s*setTemporaryChatEnabled\(enabled\);/,
   );
-  assert.match(index, /<TemporaryChatToggle[\s\S]*?enabled=\{tempChat\}/);
+  assert.match(desktopToolbar, /<TemporaryChatToggle[\s\S]*?enabled=\{tempChat\}/);
   assert.match(
     index,
-    /onToggle=\{\(trigger\) => \{\s*temporaryTriggerRef\.current = trigger;\s*temporaryReturnUrlRef\.current = window\.location\.href;\s*setTemporaryChatEnabled\(!tempChat\);/,
+    /onToggleTemporaryChat=\{\(trigger\) => \{\s*temporaryTriggerRef\.current = trigger;\s*temporaryReturnUrlRef\.current = window\.location\.href;\s*setTemporaryChatEnabled\(!tempChat\);/,
   );
   assert.match(temporaryControls, /onClick=\{\(event\) => onToggle\(event\.currentTarget\)\}/);
   assert.match(temporaryControls, /aria-pressed=\{enabled\}/);

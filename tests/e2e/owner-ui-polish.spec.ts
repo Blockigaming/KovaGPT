@@ -1,7 +1,7 @@
+import { usesCompactSettings } from "./settings-layout-fixture";
 import { test, expect } from "@playwright/test";
 import { fixture, owner, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { usesCompactSettings } from "./current-ui";
 
 async function setup(page: import("@playwright/test").Page, saved = false) {
   await fixture(page, "dark", true, saved);
