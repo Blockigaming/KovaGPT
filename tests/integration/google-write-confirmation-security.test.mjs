@@ -60,8 +60,16 @@ test("claimed legacy arguments are revalidated immediately before Google access"
   const token = executor.indexOf("getValidGoogleAccessToken(userId, {", revalidate);
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
-  assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
-  assert.match(executor, /"gmail_create_draft",\s*"gmail_send",\s*"calendar_create_event"/);
+  const supported = executor.match(/const SUPPORTED_WRITE_TOOLS = new Set\(\[([\s\S]*?)\]\)/)?.[1];
+  assert.ok(supported);
+  assert.deepEqual(Array.from(supported.matchAll(/"([a-z_]+)"/g), ([, name]) => name).sort(), [
+    "calendar_create_event",
+    "calendar_rename_event",
+    "calendar_reschedule_event",
+    "gmail_create_draft",
+    "gmail_send",
+    "gmail_set_read_status",
+  ]);
   assert.match(executor, /This action is no longer valid\. Prepare it again\./);
   assert.doesNotMatch(executor, /calendar_delete_event|drive_upload_text_file|drive_create_doc/);
 });

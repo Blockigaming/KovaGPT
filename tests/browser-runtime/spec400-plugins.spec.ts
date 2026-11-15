@@ -479,3 +479,14 @@ test("opening a configured provider never starts OAuth until Connect is clicked"
   expect(body.provider).toBe("microsoft");
   expect(body.optionalScopes).toEqual(["Mail.Read"]);
 });
+
+test("Gmail read-status access starts only from its explicit account action", async ({ page }) => {
+  await boot(page, healthyGoogle, undefined, undefined, "plus");
+  await page.getByRole("button", { name: "Manage Gmail", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+  await dialog.getByRole("button", { name: "Enable marking mail read or unread" }).click();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([
+    ["google-connect", "account-1", "test-owner", "gmail", true],
+  ]);
+});

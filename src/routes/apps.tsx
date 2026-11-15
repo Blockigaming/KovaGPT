@@ -1121,7 +1121,11 @@ function AppsPage() {
     void refreshGoogle();
   };
 
-  const connectGoogle = async (connectionId?: string, itemId = "gmail") => {
+  const connectGoogle = async (
+    connectionId?: string,
+    itemId = "gmail",
+    manageReadStatus = false,
+  ) => {
     if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
@@ -1136,7 +1140,9 @@ function AppsPage() {
       return next;
     });
     try {
-      await startGoogleConnect(connectionId, userKey, itemId === "google" ? "gmail" : itemId);
+      const connector = itemId === "google" ? "gmail" : itemId;
+      if (manageReadStatus) await startGoogleConnect(connectionId, userKey, connector, true);
+      else await startGoogleConnect(connectionId, userKey, connector);
     } catch (error) {
       if (isCurrent()) {
         setFailed((current) => ({ ...current, [itemId]: true }));
@@ -1662,6 +1668,21 @@ function AppsPage() {
                               >
                                 Reconnect
                               </Button>
+                              {visibleSelectedApp.id === "gmail" &&
+                                account.connected &&
+                                !account.scopes?.includes(
+                                  "https://www.googleapis.com/auth/gmail.modify",
+                                ) &&
+                                tierStatus === "ready" &&
+                                tier !== "free" && (
+                                  <Button
+                                    variant="outline"
+                                    disabled={googleBusy || visibleGoogleLoading}
+                                    onClick={() => void connectGoogle(account.id, "gmail", true)}
+                                  >
+                                    Enable marking mail read or unread
+                                  </Button>
+                                )}
                               <Button
                                 variant="ghost"
                                 disabled={googleBusy || visibleGoogleLoading}

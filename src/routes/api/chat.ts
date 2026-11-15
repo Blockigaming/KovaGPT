@@ -33,6 +33,12 @@ import {
 } from "@/lib/google-tools.server";
 import { getConnectedToolContext, runConnectedTool } from "@/integrations/connected-tools.server";
 import {
+  readSensitiveChatSnapshot,
+  sensitiveChatConfigured,
+  sensitiveChatProvider,
+  sensitiveChatTool,
+} from "@/integrations/sensitive-chat-reads.server";
+import {
   chatCompletions,
   getAiProviderConfig,
   imageGenerations,
@@ -1647,7 +1653,27 @@ export const Route = createFileRoute("/api/chat")({
                 lastText.trim(),
               );
             const selectedHostedTool = explicitHostedTool ? clientTool : null;
+            const sensitiveProvider = sensitiveChatProvider(lastText);
+            if (
+              sensitiveProvider &&
+              (!auth ||
+                !temporary ||
+                customKova ||
+                selectedHostedTool ||
+                hasAttachments ||
+                !sensitiveChatConfigured(sensitiveProvider))
+            ) {
+              return Response.json(
+                {
+                  error:
+                    "Linked data access requires an enabled connector in a signed-in Temporary Chat without attachments.",
+                },
+                { status: 403, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+            const sensitiveTool = sensitiveProvider ? sensitiveChatTool(sensitiveProvider) : null;
             const googleContext =
+              !sensitiveTool &&
               !selectedHostedTool &&
               auth &&
               usesExistingContext &&
@@ -1662,6 +1688,7 @@ export const Route = createFileRoute("/api/chat")({
                   )) ?? null)
                 : null;
             const connectedContext =
+              !sensitiveTool &&
               !selectedHostedTool &&
               auth &&
               usesExistingContext &&
@@ -1676,6 +1703,7 @@ export const Route = createFileRoute("/api/chat")({
                   )) ?? null)
                 : null;
             const connectionTools = [
+              ...(sensitiveTool ? [sensitiveTool] : []),
               ...(googleContext?.tools ?? []),
               ...(connectedContext?.tools ?? []),
             ];
@@ -2002,6 +2030,7 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
+            let sensitiveRead: ReturnType<typeof readSensitiveChatSnapshot> | undefined;
             const workingMessages: ChatMsg[] = [...toolPlanningMessages];
             const finalToolMessages: ChatMsg[] = [];
             const appendToolMessage = (message: ChatMsg) => {
@@ -2386,21 +2415,27 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = connectedContext?.tools.some(
-                        (tool) => tool.function.name === tc.function.name,
-                      )
-                        ? await runConnectedTool(
-                            auth!.userId,
-                            tc.function.name,
-                            parsedArgs,
-                            connectedContext,
-                          )
-                        : await runGoogleTool(
-                            auth!.userId,
-                            tc.function.name,
-                            parsedArgs,
-                            googleBinding,
-                          );
+                      const out =
+                        sensitiveProvider && sensitiveTool?.function.name === tc.function.name
+                          ? await (sensitiveRead ??= readSensitiveChatSnapshot(
+                              auth!,
+                              sensitiveProvider,
+                            ))
+                          : connectedContext?.tools.some(
+                                (tool) => tool.function.name === tc.function.name,
+                              )
+                            ? await runConnectedTool(
+                                auth!.userId,
+                                tc.function.name,
+                                parsedArgs,
+                                connectedContext,
+                              )
+                            : await runGoogleTool(
+                                auth!.userId,
+                                tc.function.name,
+                                parsedArgs,
+                                googleBinding,
+                              );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };

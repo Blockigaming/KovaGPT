@@ -52,7 +52,19 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   drive_search: { running: "Searching Google Drive…", done: "Searched Drive" },
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
+  gmail_set_read_status: {
+    running: "Preparing read status change…",
+    done: "Read status change ready for review",
+  },
   gmail_send: { running: "Preparing email for review…", done: "Email ready for review" },
+  calendar_reschedule_event: {
+    running: "Preparing time change…",
+    done: "Time change ready for review",
+  },
+  calendar_rename_event: {
+    running: "Preparing event rename…",
+    done: "Event rename ready for review",
+  },
   calendar_create_event: {
     running: "Preparing calendar event…",
     done: "Prepared calendar event",
@@ -65,7 +77,10 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 export const WRITE_TOOL_NAMES = new Set<string>([
   "gmail_create_draft",
   "gmail_send",
+  "gmail_set_read_status",
   "calendar_create_event",
+  "calendar_rename_event",
+  "calendar_reschedule_event",
 ]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
@@ -275,12 +290,67 @@ export const WRITE_TOOLS: ToolDef[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "calendar_rename_event",
+      description:
+        "Rename one existing event on the user's primary Google Calendar. Only use when the user explicitly requests a rename. Find the exact event ID using calendar_list_events and ask the user to disambiguate matches. The user must confirm the old and new title before the change.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          event_id: { type: "string", description: "Exact event ID from Google Calendar." },
+          summary: { type: "string", description: "New event title." },
+        },
+        required: ["event_id", "summary"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "calendar_reschedule_event",
+      description:
+        "Reschedule a single timed personal event with no guests on the user's primary Google Calendar. Only use when the user explicitly requests a time change. Find its exact ID with calendar_list_events. Preserve the duration unless the user asks to change it. Both times require explicit timezones and user confirmation.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          event_id: { type: "string", description: "Exact Google Calendar event ID." },
+          start: { type: "string", description: "New RFC 3339 start time with explicit timezone." },
+          end: { type: "string", description: "New RFC 3339 end time with explicit timezone." },
+        },
+        required: ["event_id", "start", "end"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gmail_set_read_status",
+      description:
+        "Mark a single Gmail message read or unread after confirmation. Only use when explicitly requested. Find the exact message ID with gmail_search and ask the user to disambiguate if needed.",
+      parameters: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          message_id: { type: "string", description: "Exact Gmail message ID." },
+          read: { type: "boolean", description: "True to mark read, false to mark unread." },
+        },
+        required: ["message_id", "read"],
+      },
+    },
+  },
 ];
 
 const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_create_draft",
   "gmail_send",
+  "gmail_set_read_status",
   "calendar_create_event",
+  "calendar_rename_event",
+  "calendar_reschedule_event",
 ]);
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
@@ -795,7 +865,100 @@ export async function stagePendingAction(
   ) {
     throw new Error("Reconnect Google before preparing this action.");
   }
-  const summarized = summarizeWriteTool(tool, validated);
+  let summarized = summarizeWriteTool(tool, validated);
+  if (tool === "gmail_set_read_status") {
+    const token = await getValidGoogleAccessToken(userId, {
+      connectionId: connection.id,
+      grantId: connection.grant_id,
+      expectedGoogleSub: stagedGoogleSub,
+      capability: "gmail.modify",
+    });
+    const response = await fetch(
+      `${GMAIL}/users/me/messages/${encodeURIComponent(String(validated.message_id))}?format=metadata&metadataHeaders=Subject&metadataHeaders=From`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+      },
+    );
+    if (!response.ok) throw new Error("gmail_message_lookup_failed");
+    const message = (await response.json()) as {
+      id?: string;
+      payload?: { headers?: { name: string; value: string }[] };
+    };
+    if (message.id !== validated.message_id) throw new Error("gmail_message_unavailable");
+    const headers = message.payload?.headers;
+    const subject = truncate(headerValue(headers, "subject"), 300) || "(no subject)";
+    const sender = truncate(headerValue(headers, "from"), 320) || "(unknown sender)";
+    summarized = {
+      summary: `Mark “${subject}” from ${sender} as ${validated.read ? "read" : "unread"}`,
+      preview: {},
+    };
+  }
+  if (tool === "calendar_rename_event" || tool === "calendar_reschedule_event") {
+    const token = await getValidGoogleAccessToken(userId, {
+      connectionId: connection.id,
+      grantId: connection.grant_id,
+      expectedGoogleSub: stagedGoogleSub,
+      capability: "calendar.write",
+    });
+    const response = await fetch(
+      `${CAL}/calendars/primary/events/${encodeURIComponent(String(validated.event_id))}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+      },
+    );
+    if (!response.ok) throw new Error("calendar_event_lookup_failed");
+    const event = (await response.json()) as {
+      id?: string;
+      summary?: string;
+      etag?: string;
+      status?: string;
+      eventType?: string;
+      organizer?: { self?: boolean };
+      recurrence?: string[];
+      recurringEventId?: string;
+      attendees?: unknown[];
+      attendeesOmitted?: boolean;
+      end?: { dateTime?: string };
+      start?: { date?: string; dateTime?: string };
+    };
+    if (
+      event.id !== validated.event_id ||
+      event.status === "cancelled" ||
+      typeof event.etag !== "string" ||
+      !/^"[^"\r\n]{1,200}"$/.test(event.etag)
+    ) {
+      throw new Error("calendar_event_unavailable");
+    }
+    validated.etag = event.etag;
+    const original = typeof event.summary === "string" ? event.summary : "(untitled)";
+    if (tool === "calendar_reschedule_event") {
+      if (
+        !event.start?.dateTime ||
+        !event.end?.dateTime ||
+        event.organizer?.self !== true ||
+        (event.eventType && event.eventType !== "default") ||
+        event.recurrence?.length ||
+        event.recurringEventId ||
+        event.attendees?.length ||
+        event.attendeesOmitted
+      ) {
+        throw new Error(
+          "Only nonrecurring personal timed events without guests can be rescheduled.",
+        );
+      }
+      summarized = {
+        summary: `Reschedule “${original}” (currently ${event.start.dateTime} to ${event.end.dateTime})`,
+        preview: { start: validated.start, end: validated.end },
+      };
+    } else {
+      summarized = {
+        summary: `Rename calendar event “${original}” to “${String(validated.summary)}”`,
+        preview: { start: event.start?.dateTime ?? event.start?.date },
+      };
+    }
+  }
   const summary = `${summarized.summary} · Google account: ${connection.email ?? "Selected account"}`;
   const preview = {
     ...summarized.preview,
@@ -1081,7 +1244,28 @@ export async function executePendingAction(
 
   try {
     let resultText = "";
-    if (claimedTool === "gmail_create_draft" || claimedTool === "gmail_send") {
+    if (claimedTool === "gmail_set_read_status") {
+      const response = await fetch(
+        `${GMAIL}/users/me/messages/${encodeURIComponent(String(a.message_id))}/modify`,
+        {
+          method: "POST",
+          headers: H,
+          body: JSON.stringify(
+            a.read ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] },
+          ),
+          signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+        },
+      );
+      if (!response.ok) throw new Error("gmail_modify_failed");
+      resultText = a.read ? "Message marked read." : "Message marked unread.";
+      await logAudit({
+        userId,
+        provider: "gmail",
+        action: "update",
+        resourceId: String(a.message_id),
+        summary: "Changed Gmail read status",
+      });
+    } else if (claimedTool === "gmail_create_draft" || claimedTool === "gmail_send") {
       const to = String(a.to);
       const subject = String(a.subject);
       const body = String(a.body);
@@ -1118,6 +1302,38 @@ export async function executePendingAction(
         provider: "gmail",
         action: sending ? "send" : "draft",
         summary: sending ? `Sent email to ${to}: ${subject}` : `Drafted email to ${to}: ${subject}`,
+      });
+    } else if (
+      claimedTool === "calendar_rename_event" ||
+      claimedTool === "calendar_reschedule_event"
+    ) {
+      const rescheduling = claimedTool === "calendar_reschedule_event";
+      const etag = (claimedAction.args as WriteArgs).etag;
+      if (typeof etag !== "string" || !/^"[^"\r\n]{1,200}"$/.test(etag)) {
+        throw new Error("calendar_event_unavailable");
+      }
+      const response = await fetch(
+        `${CAL}/calendars/primary/events/${encodeURIComponent(String(a.event_id))}`,
+        {
+          method: "PATCH",
+          headers: { ...H, "If-Match": etag },
+          body: JSON.stringify(
+            rescheduling
+              ? { start: { dateTime: a.start }, end: { dateTime: a.end } }
+              : { summary: a.summary },
+          ),
+          signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
+        },
+      );
+      if (response.status === 412) throw new Error("calendar_event_changed");
+      if (!response.ok) throw new Error("calendar_update_failed");
+      resultText = rescheduling ? "Event rescheduled." : "Event renamed.";
+      await logAudit({
+        userId,
+        provider: "calendar",
+        action: "update",
+        resourceId: String(a.event_id),
+        summary: rescheduling ? "Rescheduled calendar event" : "Renamed calendar event",
       });
     } else if (claimedTool === "calendar_create_event") {
       const timezone = a.timezone ? String(a.timezone) : undefined;
@@ -1173,13 +1389,17 @@ export async function executePendingAction(
       };
     }
     return { ok: true, result_text: resultText };
-  } catch {
+  } catch (error) {
+    const eventChanged = error instanceof Error && error.message === "calendar_event_changed";
     console.error("[executePendingAction] provider action failed");
     const { data: failurePersisted, error: failurePersistError } = await (
       db as unknown as SupabaseQueryLike
     )
       .from("pending_tool_actions")
-      .update({ status: "failed", result: { error: "google_action_failed" } })
+      .update({
+        status: "failed",
+        result: { error: eventChanged ? "calendar_event_changed" : "google_action_failed" },
+      })
       .eq("id", actionId)
       .eq("user_id", userId)
       .eq("status", "processing")
@@ -1201,8 +1421,9 @@ export async function executePendingAction(
     }).catch(() => undefined);
     return {
       ok: false,
-      error:
-        "Google could not confirm whether the action completed. Check Google before trying again.",
+      error: eventChanged
+        ? "This event changed after review. Ask Kova to prepare the change again."
+        : "Google could not confirm whether the action completed. Check Google before trying again.",
     };
   }
 }

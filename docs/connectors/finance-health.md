@@ -60,3 +60,21 @@ For each enabled provider, verify real owner consent, a successful read through 
 - [WHOOP API v2](https://developer.whoop.com/api/)
 - [HealthKit authorization](https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data)
 - [Health Connect setup](https://developer.android.com/health-and-fitness/guides/health-connect/develop/get-started)
+
+## Reading linked data in Temporary Chat
+
+Oura and Plaid chat reads are independently disabled by default. Set
+`KOVA_OURA_CHAT_READ_ENABLED=true` or `KOVA_PLAID_CHAT_READ_ENABLED=true`
+only for environments where the applicable provider terms, model processing,
+and user disclosures cover this use.
+
+In a signed-in Temporary Chat, start a turn with one of these commands:
+
+- `/oura Compare my sleep and recovery over the past week.`
+- `/finances What did I spend in the last 30 days?`
+
+The command opts that turn into sharing the requested snapshot with Kova's
+chat model. Each command requires a single linked account for its provider.
+The finance snapshot omits account identifiers, account names, masks, and
+transaction descriptions. Both commands use the existing provider readers and
+their owner, scope, and session checks. The tools only read from providers.

@@ -31,6 +31,12 @@ const seams = {
     "stagePendingAction",
   ],
   "@/integrations/connected-tools.server": ["getConnectedToolContext", "runConnectedTool"],
+  "@/integrations/sensitive-chat-reads.server": [
+    "readSensitiveChatSnapshot",
+    "sensitiveChatConfigured",
+    "sensitiveChatProvider",
+    "sensitiveChatTool",
+  ],
   "@/lib/ai/accounting.server": [
     "acquireGeneration",
     "finalizeGeneration",
@@ -167,7 +173,15 @@ const connectedAst = ts.createSourceFile(
 const contextBuilder = connectedAst.statements.find(
   (node) => ts.isFunctionDeclaration(node) && node.name?.text === "getConnectedToolContext",
 );
+const detailReadDeclaration = connectedAst.statements.find(
+  (node) =>
+    ts.isVariableStatement(node) &&
+    node.declarationList.declarations.some(
+      ({ name }) => name.getText(connectedAst) === "detailReads",
+    ),
+);
 assert.ok(contextBuilder);
+assert.ok(detailReadDeclaration);
 const connectedExports = {};
 const linkedAccount = {
   id: "linear-fixture",
@@ -185,9 +199,12 @@ const accountQuery = {
   limit: async () => ({ data: [linkedAccount], error: null }),
 };
 vm.runInNewContext(
-  ts.transpileModule(contextBuilder.getText(connectedAst), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText,
+  ts.transpileModule(
+    detailReadDeclaration.getText(connectedAst) + "\n" + contextBuilder.getText(connectedAst),
+    {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    },
+  ).outputText,
   {
     exports: connectedExports,
     supabaseAdmin: {},
@@ -310,6 +327,12 @@ function fixture(options = {}) {
           }
         : denied,
       stagePendingAction: denied,
+    },
+    "@/integrations/sensitive-chat-reads.server": {
+      readSensitiveChatSnapshot: denied,
+      sensitiveChatConfigured: () => false,
+      sensitiveChatProvider: () => undefined,
+      sensitiveChatTool: denied,
     },
     "@/integrations/connected-tools.server": {
       getConnectedToolContext: async () =>

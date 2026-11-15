@@ -7,12 +7,34 @@ export function connectionReadRequest(
   id: string,
   query: string,
   token: string,
-  options?: { recordType?: "accounts" | "contacts" | "opportunities" },
+  options?: {
+    recordType?: "accounts" | "contacts" | "opportunities";
+    notionPage?: boolean;
+    outlookMessage?: boolean;
+  },
 ): { url: string; init: RequestInit };
 export function readConnection(
   id: string,
   query: string,
   token: string,
   fetchImpl?: typeof fetch,
-  options?: { recordType?: "accounts" | "contacts" | "opportunities" },
-): Promise<ConnectionReadResult>;
+  options?: {
+    recordType?: "accounts" | "contacts" | "opportunities";
+    notionPage?: boolean;
+    outlookMessage?: boolean;
+    ensureCurrent?: () => Promise<void>;
+  },
+): Promise<
+  | ConnectionReadResult
+  | {
+      service: string;
+      id: string;
+      title: string;
+      from: string;
+      received_at: string;
+      url: string | null;
+      text: string;
+      limited: boolean;
+    }
+  | { service: string; page_id: string; blocks: { type: string; text: string }[]; limited: boolean }
+>;

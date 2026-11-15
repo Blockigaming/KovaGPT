@@ -8,13 +8,21 @@ export const GOOGLE_CONNECTOR_SCOPES = Object.freeze({
   "google-calendar": ["https://www.googleapis.com/auth/calendar.events"],
   "google-drive": ["https://www.googleapis.com/auth/drive.readonly"],
 });
-export function googleConnectorScopes(connector = "gmail") {
+export function googleConnectorScopes(connector = "gmail", manageReadStatus = false) {
   if (!Object.hasOwn(GOOGLE_CONNECTOR_SCOPES, connector))
     throw new Error("google_invalid_connector");
-  return ["openid", "email", "profile", ...GOOGLE_CONNECTOR_SCOPES[connector]].join(" ");
+  if (manageReadStatus && connector !== "gmail") throw new Error("google_invalid_connector");
+  return [
+    "openid",
+    "email",
+    "profile",
+    ...GOOGLE_CONNECTOR_SCOPES[connector],
+    ...(manageReadStatus ? GOOGLE_CAPABILITY_SCOPES["gmail.modify"] : []),
+  ].join(" ");
 }
 
 export const GOOGLE_CAPABILITY_SCOPES = {
+  "gmail.modify": ["https://www.googleapis.com/auth/gmail.modify"],
   "gmail.read": [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",
@@ -112,9 +120,15 @@ export function googleConnectionHealth(connection, now = Date.now()) {
 }
 export function googleToolCapability(name) {
   if (name === "gmail_create_draft") return "gmail.draft";
+  if (name === "gmail_set_read_status") return "gmail.modify";
   if (name === "gmail_send") return "gmail.write";
   if (name.startsWith("gmail_")) return "gmail.read";
-  if (name === "calendar_create_event") return "calendar.write";
+  if (
+    name === "calendar_create_event" ||
+    name === "calendar_rename_event" ||
+    name === "calendar_reschedule_event"
+  )
+    return "calendar.write";
   if (name.startsWith("calendar_")) return "calendar.read";
   if (name.startsWith("drive_")) return "drive.read";
   throw new Error("google_unknown_tool");

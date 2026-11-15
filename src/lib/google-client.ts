@@ -145,10 +145,15 @@ export async function startGoogleConnect(
   id: string | undefined,
   expectedUserId: string,
   connector = "gmail",
+  manageReadStatus = false,
 ): Promise<void> {
   if (!["gmail", "google-calendar", "google-drive"].includes(connector))
     throw new Error("Invalid Google connector.");
   const params = new URLSearchParams({ connector });
+  if (manageReadStatus) {
+    if (connector !== "gmail" || !id) throw new Error("Select a Gmail account first.");
+    params.set("manageReadStatus", "1");
+  }
   if (id) params.set("connectionId", connectionId(id));
   const suffix = `?${params}`;
   const { response, body } = await accountRequest(`/api/google/auth${suffix}`, {}, expectedUserId);

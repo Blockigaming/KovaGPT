@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import ts from "typescript";
+import * as googlePolicy from "../../src/lib/google-account-policy.mjs";
+import * as googleValidation from "../../src/lib/google-write-validation.server.mjs";
 
 import { BoundedJsonError, readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 import {
@@ -270,4 +274,224 @@ test("calendar validation requires real RFC 3339 instants with explicit timezone
     }).start,
     "2026-08-02T17:00:00.000Z",
   );
+});
+
+test("calendar rename accepts a single event and ignores untrusted version and patch fields", () => {
+  assert.deepEqual(
+    validateSupportedGoogleWrite("calendar_rename_event", {
+      event_id: "recurring_20261202T190000Z",
+      summary: "  Updated title  ",
+      etag: '"untrusted"',
+      attendees: ["unexpected@example.com"],
+    }),
+    { event_id: "recurring_20261202T190000Z", summary: "Updated title" },
+  );
+  assert.throws(
+    () =>
+      validateSupportedGoogleWrite("calendar_rename_event", {
+        event_id: "../another",
+        summary: "Title",
+      }),
+    /Event ID is invalid/,
+  );
+});
+
+test("Google writes enforce scopes and only mutate on owner confirmation", async () => {
+  const owner = "owner";
+  const connection = {
+    id: "google-account",
+    grant_id: "grant",
+    google_sub: "subject",
+    email: "owner@example.com",
+    scopes: ["https://www.googleapis.com/auth/calendar.events"],
+  };
+  let row;
+  let status = 200;
+  const event = {
+    id: "event123",
+    summary: "Original",
+    etag: '"provider-version"',
+    organizer: { self: true },
+    start: { dateTime: "2026-12-04T10:00:00-05:00" },
+    end: { dateTime: "2026-12-04T10:30:00-05:00" },
+    attendees: [],
+  };
+  const requests = [];
+  const db = {
+    from(table) {
+      assert.equal(table, "pending_tool_actions");
+      const filters = [];
+      let update;
+      const query = {
+        select: () => query,
+        eq(key, value) {
+          filters.push([key, value]);
+          return query;
+        },
+        insert(values) {
+          row = {
+            ...values,
+            id: "pending-action",
+            status: "pending",
+            expires_at: new Date(Date.now() + 60_000).toISOString(),
+          };
+          return query;
+        },
+        single: async () => ({ data: { id: row.id } }),
+        update(values) {
+          update = values;
+          return query;
+        },
+        async maybeSingle() {
+          if (!row || !filters.every(([key, value]) => row[key] === value)) return { data: null };
+          if (update) Object.assign(row, update);
+          return { data: { ...row } };
+        },
+      };
+      return query;
+    },
+  };
+  const modules = {
+    "@supabase/supabase-js": { createClient: () => db },
+    "@/lib/google-oauth.server": {
+      getGoogleConnection: async () => connection,
+      getValidGoogleAccessToken: async (userId, binding) => {
+        assert.equal(userId, owner);
+        assert.deepEqual(binding, {
+          connectionId: connection.id,
+          grantId: connection.grant_id,
+          expectedGoogleSub: connection.google_sub,
+          capability: connection.scopes[0].endsWith("gmail.modify")
+            ? "gmail.modify"
+            : "calendar.write",
+        });
+        return "fixture-token";
+      },
+      logAudit: async () => {},
+    },
+    "@/lib/google-write-validation.server.mjs": googleValidation,
+    "@/lib/google-account-policy.mjs": googlePolicy,
+    "@/lib/connectors.server": {},
+    "@/lib/lockdown-policy.mjs": { assertLockdownAllows: async () => {} },
+    "@/lib/billing-entitlement.server": { resolveEffectiveBillingTier: async () => "plus" },
+  };
+  const exports = {};
+  const source = readFileSync(
+    new URL("../../src/lib/google-tools.server.ts", import.meta.url),
+    "utf8",
+  );
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  new Function("exports", "require", "fetch", "console", compiled)(
+    exports,
+    (path) => modules[path],
+    async (url, init) => {
+      if (url.startsWith("https://gmail.googleapis.com/")) {
+        requests.push(init);
+        const base = "https://gmail.googleapis.com/gmail/v1/users/me/messages/mail123";
+        if (init.method === "POST") {
+          assert.equal(url, base + "/modify");
+          return Response.json({ id: "mail123" });
+        }
+        assert.equal(url, base + "?format=metadata&metadataHeaders=Subject&metadataHeaders=From");
+        return Response.json({
+          id: "mail123",
+          payload: {
+            headers: [
+              { name: "Subject", value: "Test message" },
+              { name: "From", value: "sender@example.com" },
+            ],
+          },
+        });
+      }
+      assert.equal(url, "https://www.googleapis.com/calendar/v3/calendars/primary/events/event123");
+      requests.push(init);
+      if (init.method === "PATCH") return new Response(null, { status });
+      return Response.json(event);
+    },
+    { ...console, error: () => {} },
+  );
+
+  const stage = () =>
+    exports.stagePendingAction(owner, "calendar_rename_event", {
+      event_id: "event123",
+      summary: "New title",
+      etag: '"model-version"',
+    });
+  const [writeScope] = connection.scopes;
+  connection.scopes = ["https://www.googleapis.com/auth/calendar.events.readonly"];
+  await assert.rejects(stage(), /Reconnect Google/);
+  assert.equal(requests.length, 0);
+  connection.scopes = [writeScope];
+
+  const action = await stage();
+  assert.match(action.summary, /Original.*New title/);
+  assert.equal(requests.length, 1);
+  assert.equal((await exports.executePendingAction("another-user", action.id)).ok, false);
+  assert.equal(requests.length, 1);
+
+  assert.equal((await exports.executePendingAction(owner, action.id)).ok, true);
+  assert.equal(requests[1].method, "PATCH");
+  assert.equal(requests[1].headers["If-Match"], '"provider-version"');
+  assert.deepEqual(JSON.parse(requests[1].body), { summary: "New title" });
+  assert.equal((await exports.executePendingAction(owner, action.id)).ok, true);
+  assert.equal(requests.length, 2);
+
+  const stale = await stage();
+  status = 412;
+  const result = await exports.executePendingAction(owner, stale.id);
+  assert.equal(result.ok, false);
+  assert.match(result.error, /changed after review/);
+  assert.equal(row.status, "failed");
+
+  status = 200;
+  const start = "2026-12-04T11:00:00-05:00";
+  const end = "2026-12-04T11:30:00-05:00";
+  const stageTime = () =>
+    exports.stagePendingAction(owner, "calendar_reschedule_event", {
+      event_id: event.id,
+      start,
+      end,
+    });
+  assert.throws(
+    () =>
+      validateSupportedGoogleWrite("calendar_reschedule_event", {
+        event_id: event.id,
+        start: end,
+        end: start,
+      }),
+    /start and end times are invalid/,
+  );
+  event.attendees = [{ email: "guest@example.com" }];
+  await assert.rejects(stageTime(), /without guests/);
+  assert.equal(row.status, "failed");
+  event.attendees = [];
+  const reschedule = await stageTime();
+  assert.match(reschedule.summary, /10:00:00.*10:30:00/);
+  assert.equal(reschedule.args_preview.start, "2026-12-04T16:00:00.000Z");
+  assert.equal(requests.at(-1).method, undefined);
+  assert.equal((await exports.executePendingAction(owner, reschedule.id)).ok, true);
+  assert.equal(requests.at(-1).headers["If-Match"], '"provider-version"');
+  assert.deepEqual(JSON.parse(requests.at(-1).body), {
+    start: { dateTime: "2026-12-04T16:00:00.000Z" },
+    end: { dateTime: "2026-12-04T16:30:00.000Z" },
+  });
+
+  const stageRead = () =>
+    exports.stagePendingAction(owner, "gmail_set_read_status", {
+      message_id: "mail123",
+      read: false,
+    });
+  connection.scopes = ["https://www.googleapis.com/auth/gmail.compose"];
+  const requestCount = requests.length;
+  await assert.rejects(stageRead(), /Reconnect Google/);
+  assert.equal(requests.length, requestCount);
+
+  connection.scopes = ["https://www.googleapis.com/auth/gmail.modify"];
+  const readChange = await stageRead();
+  assert.match(readChange.summary, /Test message.*sender@example.com.*unread/);
+  assert.equal(requests.at(-1).method, undefined);
+  assert.equal((await exports.executePendingAction(owner, readChange.id)).ok, true);
+  assert.deepEqual(JSON.parse(requests.at(-1).body), { addLabelIds: ["UNREAD"] });
 });

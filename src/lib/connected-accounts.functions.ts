@@ -26,7 +26,7 @@ export const searchConnectedAccount = createServerFn({ method: "POST" })
       return { error: "Choose the Salesforce record type to search." };
     try {
       const binding = await getConnectedToolContext(context.userId);
-      return await runConnectionAccountSearch(
+      const result = await runConnectionAccountSearch(
         context.userId,
         flow.tool,
         {
@@ -36,6 +36,8 @@ export const searchConnectedAccount = createServerFn({ method: "POST" })
         },
         binding,
       );
+      if (!("results" in result)) throw new Error("invalid_connection_search_result");
+      return result;
     } catch {
       return {
         error: "This account could not be read. Refresh its status or reconnect and try again.",

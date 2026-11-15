@@ -1,8 +1,14 @@
 export type GoogleConnector = "gmail" | "google-calendar" | "google-drive";
 export const GOOGLE_CONNECTOR_SCOPES: Readonly<Record<GoogleConnector, string[]>>;
-export function googleConnectorScopes(connector?: string): string;
+export function googleConnectorScopes(connector?: string, manageReadStatus?: boolean): string;
 export type GoogleCapability =
-  "gmail.read" | "gmail.write" | "gmail.draft" | "calendar.read" | "calendar.write" | "drive.read";
+  | "gmail.read"
+  | "gmail.modify"
+  | "gmail.write"
+  | "gmail.draft"
+  | "calendar.read"
+  | "calendar.write"
+  | "drive.read";
 export type GoogleAccountBinding = {
   connectionId?: string;
   grantId?: string;
