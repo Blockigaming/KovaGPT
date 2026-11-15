@@ -249,6 +249,18 @@ test("secondary workspaces stay usable on narrow and landscape phones", async ({
   }
 });
 
+test("secondary phone workspaces provide a working skip target", async ({ page }) => {
+  for (const path of ["/audit-log", "/kovas", "/write"]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const main = page.getByRole("main", { exact: true });
+    await expect(main).toHaveAttribute("id", "main-content");
+    await page.getByRole("link", { name: "Skip to content", exact: true }).press("Enter");
+    await expect(main).toBeFocused();
+    await expectNoPageOverflow(page);
+  }
+});
+
 test("mobile settings never overflow", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);

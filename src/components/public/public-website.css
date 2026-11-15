@@ -939,7 +939,7 @@
   [data-public-shell] .public-article-body section {
     margin-block-end: 12px;
     padding: 16px;
-    border-radius: 16px;
+    border-radius: var(--kova-radius-card);
   }
 
   [data-public-shell] .public-article-body section h2 {

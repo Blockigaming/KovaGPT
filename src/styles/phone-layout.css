@@ -166,7 +166,7 @@
 
   .kova-phone-workspace .kova-tool-page .kova-tool-panel {
     padding: 14px;
-    border-radius: 16px;
+    border-radius: var(--kova-radius-card);
   }
 
   .kova-phone-workspace[data-ui="modern"] .kova-page-actions {

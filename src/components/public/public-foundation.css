@@ -478,7 +478,7 @@
   [data-public-shell] .public-editorial-intro h1 {
     margin-block-start: 8px;
     font-size: clamp(1.875rem, 8.4vi, 2.55rem);
-    font-weight: 560;
+    font-weight: 600;
     line-height: 1.12;
     text-wrap: pretty;
   }
@@ -513,7 +513,7 @@
   [data-public-shell]
     :is(.public-editorial-notes > article, .public-editorial-panels > div > section) {
     padding: 16px;
-    border-radius: 16px;
+    border-radius: var(--kova-radius-card);
   }
 
   [data-public-shell] .public-editorial-notes :is(.public-note-number, ul:empty) {
@@ -537,7 +537,7 @@
     min-width: 0;
     margin: 16px max(16px, var(--safe-right)) 0 max(16px, var(--safe-left));
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: var(--kova-radius-card);
     background: var(--card);
   }
 
@@ -548,7 +548,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 8px 14px;
-    border-radius: 15px;
+    border-radius: calc(var(--kova-radius-card) - 1px);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
@@ -594,7 +594,7 @@
   [data-public-shell] .public-localized-home h1 {
     margin-block-start: 8px;
     font-size: clamp(1.875rem, 8.4vi, 2.55rem);
-    font-weight: 560;
+    font-weight: 600;
     line-height: 1.15;
   }
 
@@ -639,7 +639,7 @@
   [data-public-shell] .public-phone-plan-row {
     padding: 12px;
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: var(--kova-radius-card);
     background: var(--card);
   }
 
@@ -654,7 +654,7 @@
 
   [data-public-shell] .public-phone-plan-row dl > div {
     padding: 8px;
-    border-radius: 10px;
+    border-radius: var(--kova-radius-compact);
     background: var(--muted);
     overflow-wrap: anywhere;
   }

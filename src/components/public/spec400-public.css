@@ -290,7 +290,7 @@
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
   [data-public-shell] .spec400-review .spec400-review-card {
     padding: 16px;
-    border-radius: 16px;
+    border-radius: var(--kova-radius-card);
     margin-block-end: 10px;
   }
 
