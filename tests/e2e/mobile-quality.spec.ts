@@ -201,6 +201,32 @@ for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/res
   });
 }
 
+test("localized phone landing pages keep the app action and language picker within reach", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 768 && page.viewportSize()!.height > 500);
+  for (const [path, direction] of [
+    ["/fr", "ltr"],
+    ["/ar/home", "rtl"],
+  ]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const main = page.locator("main#main-content");
+    await expect(main).toHaveAttribute("dir", direction);
+    const action = main.getByRole("link");
+    const picker = main.getByRole(direction === "rtl" ? "button" : "combobox", {
+      name: "Language",
+    });
+    await expect(action).toBeInViewport({ ratio: 1 });
+    await expect(picker).toBeInViewport({ ratio: 1 });
+    const actionBox = (await action.boundingBox())!;
+    const mainBox = (await main.boundingBox())!;
+    expect(actionBox.width).toBeGreaterThanOrEqual(mainBox.width - 40);
+    expect(actionBox.height).toBeGreaterThanOrEqual(44);
+    await expectNoPageOverflow(page);
+  }
+});
+
 test("secondary workspaces stay usable on narrow and landscape phones", async ({ page }) => {
   const viewport = page.viewportSize()!;
   test.skip(viewport.width !== 320 && viewport.height > 500, "smallest and shortest phone views");

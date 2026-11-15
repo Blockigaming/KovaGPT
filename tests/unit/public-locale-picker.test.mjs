@@ -180,6 +180,7 @@ test("both shared prose eyebrows retain authored casing and colors without force
     {
       "@tanstack/react-router": { Link: "Link" },
       "lucide-react": primitives(["ArrowRight", "CheckCircle2"]),
+      "@/components/public/PhonePageOutline": { PhonePageOutline: "PhonePageOutline" },
       "@/components/public/PublicFaq": { PublicFaq: "PublicFaq" },
       "@/components/public/PublicShell": { PublicShell: "PublicShell" },
     },

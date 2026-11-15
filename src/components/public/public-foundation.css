@@ -582,6 +582,43 @@
     overflow-wrap: anywhere;
   }
 
+  [data-public-shell] .public-localized-home {
+    min-height: 0;
+    justify-content: flex-start;
+    padding-block: 28px 36px;
+    padding-left: max(16px, var(--safe-left));
+    padding-right: max(16px, var(--safe-right));
+    overflow-wrap: anywhere;
+  }
+
+  [data-public-shell] .public-localized-home h1 {
+    margin-block-start: 8px;
+    font-size: clamp(1.875rem, 8.4vi, 2.55rem);
+    font-weight: 560;
+    line-height: 1.15;
+  }
+
+  [data-public-shell] .public-localized-home h1 + p {
+    margin-block-start: 14px;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  [data-public-shell] .public-localized-home > a {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+    margin-block-start: 20px;
+  }
+
+  [data-public-shell] .public-localized-home > label {
+    margin-block-start: 20px;
+  }
+
+  [data-public-shell] .public-localized-home > label button {
+    min-height: 44px;
+  }
+
   [data-public-shell][data-ui="modern"] .legal-hero {
     padding-block-start: 28px;
   }
