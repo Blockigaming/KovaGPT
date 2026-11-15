@@ -370,3 +370,53 @@ test("multibyte provider text stays within the UTF8 tool budget with complete JS
   assert.ok(result.results.length > 0 && result.results.length < 10);
   assert.ok(result.results.every((row) => row.id && row.title && row.snippet));
 });
+
+test("Notion chat reads shared page text through bounded, read-only block lookup", async () => {
+  const pageId = "12345678-1234-4321-9876-1234567890ab";
+  const result = await readConnection(
+    "notion",
+    pageId,
+    "token",
+    async (url, init) => {
+      assert.equal(url, `https://api.notion.com/v1/blocks/${pageId}/children?page_size=20`);
+      assert.equal(init.method, "GET");
+      assert.equal(init.redirect, "error");
+      assert.equal(init.headers.Authorization, "Bearer token");
+      return Response.json({
+        has_more: false,
+        results: [
+          {
+            object: "block",
+            type: "paragraph",
+            has_children: true,
+            paragraph: { rich_text: [{ plain_text: "Shared text" }] },
+          },
+          {
+            object: "block",
+            type: "file",
+            file: { file: { url: "https://example.test/private-signed-url" } },
+          },
+        ],
+      });
+    },
+    { notionPage: true },
+  );
+  assert.deepEqual(result, {
+    service: "Notion",
+    page_id: pageId,
+    blocks: [{ type: "paragraph", text: "Shared text" }],
+    limited: true,
+  });
+  await assert.rejects(
+    readConnection("notion", "../../users", "token", async () => assert.fail("unsafe request"), {
+      notionPage: true,
+    }),
+    /invalid_notion_page_id/,
+  );
+  await assert.rejects(
+    readConnection("notion", pageId, "token", async () => new Response(null, { status: 403 }), {
+      notionPage: true,
+    }),
+    /connection_permission_required/,
+  );
+});
