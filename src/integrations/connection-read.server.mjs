@@ -23,7 +23,12 @@ export function connectionReadRequest(id, query, token, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
   let url;
   let body;
-  if (id === "outlook") {
+  if (id === "outlook" && options.outlookMessage) {
+    if (!/^[a-zA-Z0-9_+=/-]+$/.test(query)) throw new Error("invalid_outlook_message_id");
+    url = new URL(`https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(query)}`);
+    url.searchParams.set("$select", "id,subject,from,receivedDateTime,body,bodyPreview,webLink");
+    headers.Prefer = 'outlook.body-content-type="text"';
+  } else if (id === "outlook") {
     url = new URL("https://graph.microsoft.com/v1.0/me/messages");
     url.searchParams.set("$search", JSON.stringify(query));
     url.searchParams.set("$select", "id,subject,from,receivedDateTime,bodyPreview,webLink");
@@ -178,6 +183,34 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
   if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
   if (id === "notion" && options.notionPage)
     return readNotionText(data, query, token, fetchImpl, options, request.init.signal);
+  if (id === "outlook" && options.outlookMessage) {
+    if (data.id !== query.trim()) throw new Error("invalid_connection_response");
+    const plainText =
+      str(data.body?.contentType, 12).toLowerCase() === "text" &&
+      typeof data.body.content === "string"
+        ? data.body.content
+        : null;
+    const text = plainText ?? str(data.bodyPreview, 2000);
+    const result = {
+      service: "Outlook",
+      id: data.id,
+      title: str(data.subject, 300),
+      from: str(data.from?.emailAddress?.address, 320),
+      received_at: str(data.receivedDateTime, 60),
+      url:
+        typeof data.webLink === "string" && data.webLink.length <= 2048
+          ? safeConnectionLink(data.webLink)
+          : null,
+      text: text.slice(0, 10_000),
+      limited: plainText === null || text.length > 10_000,
+    };
+    const encoder = new TextEncoder();
+    while (encoder.encode(JSON.stringify(result)).byteLength > 20_000) {
+      result.text = result.text.slice(0, Math.floor(result.text.length / 2));
+      result.limited = true;
+    }
+    return result;
+  }
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows =
