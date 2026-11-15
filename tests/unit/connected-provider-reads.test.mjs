@@ -420,3 +420,70 @@ test("Notion chat reads shared page text through bounded, read-only block lookup
     /connection_permission_required/,
   );
 });
+
+test("Notion reads nested text with the original deadline and rechecks access before each nested request", async () => {
+  const ids = [
+    "12345678-1234-4321-9876-1234567890ab",
+    "12345678-1234-4321-9876-1234567890ac",
+    "12345678-1234-4321-9876-1234567890ad",
+  ];
+  const block = (id, text, has_children, type = "paragraph") => ({
+    object: "block",
+    id,
+    type,
+    has_children,
+    [type]: { rich_text: [{ plain_text: text }] },
+  });
+  const bodies = [
+    [block(ids[1], "parent", true), block(ids[2], "synced", true, "synced_block")],
+    [block(ids[2], "nested", false)],
+  ];
+  let calls = 0;
+  let checks = 0;
+  let firstSignal;
+  const result = await readConnection(
+    "notion",
+    ids[0],
+    "token",
+    async (url, init) => {
+      if (calls === 0) firstSignal = init.signal;
+      assert.equal(init.signal, firstSignal);
+      assert.equal(url, `https://api.notion.com/v1/blocks/${ids[calls]}/children?page_size=20`);
+      return Response.json({ results: bodies[calls++] });
+    },
+    {
+      notionPage: true,
+      ensureCurrent: async () => {
+        checks++;
+      },
+    },
+  );
+  assert.equal(calls, 2);
+  assert.equal(checks, 1);
+  assert.deepEqual(
+    result.blocks.map(({ text }) => text),
+    ["parent", "nested", "synced"],
+  );
+  assert.equal(result.limited, true);
+
+  calls = 0;
+  await assert.rejects(
+    readConnection(
+      "notion",
+      ids[0],
+      "token",
+      async () => {
+        calls++;
+        return Response.json({ results: bodies[0] });
+      },
+      {
+        notionPage: true,
+        ensureCurrent: async () => {
+          throw new Error("binding revoked");
+        },
+      },
+    ),
+    /binding revoked/,
+  );
+  assert.equal(calls, 1);
+});
