@@ -390,6 +390,12 @@ test("calendar rename stages the provider version and only patches on current ow
       summary: "New title",
       etag: '"model-version"',
     });
+  const [writeScope] = connection.scopes;
+  connection.scopes = ["https://www.googleapis.com/auth/calendar.events.readonly"];
+  await assert.rejects(stage(), /Reconnect Google/);
+  assert.equal(requests.length, 0);
+  connection.scopes = [writeScope];
+
   const action = await stage();
   assert.match(action.summary, /Original.*New title/);
   assert.equal(requests.length, 1);
