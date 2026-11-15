@@ -7,6 +7,9 @@
   overflow: hidden;
 }
 .kova-link-preview-composer {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
   margin-inline: 8px;
   width: min(calc(100% - 16px), 370px);
 }
@@ -76,11 +79,8 @@
   color: var(--muted-foreground);
 }
 @media (max-width: 600px) {
-  .kova-link-preview {
+  .kova-link-preview-message {
     width: 100%;
-  }
-  .kova-link-preview-composer {
-    width: calc(100% - 16px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -90,19 +90,15 @@
 }
 
 /* The entire URL is a single, removable object in the composer, including on touch. */
-.kova-link-preview-composer {
-  display: flex;
-  align-items: center;
-}
 .kova-link-preview-composer .kova-link-preview-open {
-  flex: 1 1 auto;
+  flex: 1 1 0;
 }
 .kova-link-preview-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 40px;
+  width: 44px;
   height: 44px;
   border: 0;
   border-radius: 10px;

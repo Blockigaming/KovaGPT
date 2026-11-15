@@ -1,6 +1,7 @@
 // Shared, side-effect-free URL parsing for composer and message link chips.
 // Never treat arbitrary user strings as image URLs, markup, or executable links.
-const LINK_PATTERN = /https:\/\/[^\s<>"'\u0000-\u001f]+/giu;
+const LINK_PATTERN =
+  /https:\/\/[^\s<>"'\u0000-\u001f]+|(?<![\p{L}\p{N}_.@:/\\%+-])(?:[a-z0-9-]+\.)+[a-z]{2,}(?=$|[\s<>"'/\u0000-\u001f.,!?;:)\]}#])[^\s<>"'\u0000-\u001f]*/giu;
 const BLOCKED_SUFFIX = /\.(?:local|localhost|internal|invalid|test|example)$/iu;
 
 export function normalizeLinkPreviewUrl(raw) {
@@ -33,11 +34,14 @@ export function normalizeLinkPreviewUrl(raw) {
 // page chip is displayed. The canonical draft still stores the original link.
 export const COMPOSER_LINK_MARKER = "\u2063";
 
-export function firstLinkPreviewToken(text) {
+export function firstLinkPreviewToken(text, { requireBareDelimiter = false } = {}) {
   if (typeof text !== "string") return null;
   for (const match of text.slice(0, 20_000).matchAll(LINK_PATTERN)) {
     const raw = match[0].replace(/[.,!?;:)\]}]+$/u, "");
-    const url = normalizeLinkPreviewUrl(raw);
+    const hasScheme = /^https:\/\//iu.test(raw);
+    const end = match.index + raw.length;
+    if (!hasScheme && requireBareDelimiter && end === text.length) continue;
+    const url = normalizeLinkPreviewUrl(hasScheme ? raw : `https://${raw}`);
     if (url) return { raw, url, start: match.index, end: match.index + raw.length };
   }
   return null;
@@ -49,9 +53,9 @@ export function firstLinkPreviewUrl(text) {
 
 export function toComposerLinkDisplay(text, rawLink) {
   if (typeof text !== "string" || typeof rawLink !== "string" || !rawLink) return text;
-  const start = text.indexOf(rawLink);
-  if (start < 0) return text;
-  return text.slice(0, start) + COMPOSER_LINK_MARKER + text.slice(start + rawLink.length);
+  const token = firstLinkPreviewToken(text);
+  if (token?.raw !== rawLink) return text;
+  return text.slice(0, token.start) + COMPOSER_LINK_MARKER + text.slice(token.end);
 }
 
 export function fromComposerLinkDisplay(display, rawLink) {
@@ -60,7 +64,10 @@ export function fromComposerLinkDisplay(display, rawLink) {
 }
 
 export function isOnlyLink(text, url) {
-  return typeof text === "string" && normalizeLinkPreviewUrl(text.trim()) === url;
+  if (typeof text !== "string") return false;
+  const trimmed = text.trim();
+  const token = firstLinkPreviewToken(trimmed);
+  return token?.start === 0 && token.end === trimmed.length && token.url === url;
 }
 
 export function siteNameForLink(url) {
@@ -77,7 +84,7 @@ export function siteNameForLink(url) {
 export function fallbackLinkTitle(url) {
   const parsed = new URL(url);
   const site = siteNameForLink(url);
-  if (site === "YouTube") return "YouTube video";
+  if (site === "YouTube" && parsed.pathname !== "/") return "YouTube video";
   if (site === "GitHub") {
     const parts = parsed.pathname.split("/").filter(Boolean);
     if (parts.length >= 2) return parts.slice(0, 2).join("/");
