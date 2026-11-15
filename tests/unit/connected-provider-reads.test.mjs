@@ -487,3 +487,38 @@ test("Notion reads nested text with the original deadline and rechecks access be
   );
   assert.equal(calls, 1);
 });
+
+test("Outlook requests selected message text and falls back to a bounded preview", async () => {
+  const messageId = "test+safe/message=";
+  const options = { outlookMessage: true };
+  const provider = (contentType) => async (url, init) => {
+    const request = new URL(url);
+    assert.equal(request.origin, "https://graph.microsoft.com");
+    assert.equal(request.pathname, "/v1.0/me/messages/test%2Bsafe%2Fmessage%3D");
+    assert.equal(init.method, "GET");
+    assert.equal(init.headers.Prefer, 'outlook.body-content-type="text"');
+    assert.equal(init.redirect, "error");
+    return Response.json({
+      id: messageId,
+      subject: "Test",
+      body: { contentType, content: "Full body" },
+      bodyPreview: "Provider preview",
+    });
+  };
+  const full = await readConnection("outlook", messageId, "token", provider("text"), options);
+  assert.equal(full.text, "Full body");
+  assert.equal(full.limited, false);
+  const preview = await readConnection("outlook", messageId, "token", provider("html"), options);
+  assert.equal(preview.text, "Provider preview");
+  assert.equal(preview.limited, true);
+  await assert.rejects(
+    readConnection(
+      "outlook",
+      "../invalid",
+      "token",
+      async () => assert.fail("invalid ID fetched"),
+      options,
+    ),
+    /invalid_outlook_message_id/,
+  );
+});
