@@ -296,7 +296,7 @@ test("calendar rename accepts a single event and ignores untrusted version and p
   );
 });
 
-test("calendar changes stage the provider version and only patch on owner confirmation", async () => {
+test("Google writes enforce scopes and only mutate on owner confirmation", async () => {
   const owner = "owner";
   const connection = {
     id: "google-account",
@@ -361,7 +361,9 @@ test("calendar changes stage the provider version and only patch on owner confir
           connectionId: connection.id,
           grantId: connection.grant_id,
           expectedGoogleSub: connection.google_sub,
-          capability: "calendar.write",
+          capability: connection.scopes[0].endsWith("gmail.modify")
+            ? "gmail.modify"
+            : "calendar.write",
         });
         return "fixture-token";
       },
@@ -371,7 +373,7 @@ test("calendar changes stage the provider version and only patch on owner confir
     "@/lib/google-account-policy.mjs": googlePolicy,
     "@/lib/connectors.server": {},
     "@/lib/lockdown-policy.mjs": { assertLockdownAllows: async () => {} },
-    "@/lib/billing-entitlement.server": {},
+    "@/lib/billing-entitlement.server": { resolveEffectiveBillingTier: async () => "plus" },
   };
   const exports = {};
   const source = readFileSync(
@@ -385,6 +387,24 @@ test("calendar changes stage the provider version and only patch on owner confir
     exports,
     (path) => modules[path],
     async (url, init) => {
+      if (url.startsWith("https://gmail.googleapis.com/")) {
+        requests.push(init);
+        const base = "https://gmail.googleapis.com/gmail/v1/users/me/messages/mail123";
+        if (init.method === "POST") {
+          assert.equal(url, base + "/modify");
+          return Response.json({ id: "mail123" });
+        }
+        assert.equal(url, base + "?format=metadata&metadataHeaders=Subject&metadataHeaders=From");
+        return Response.json({
+          id: "mail123",
+          payload: {
+            headers: [
+              { name: "Subject", value: "Test message" },
+              { name: "From", value: "sender@example.com" },
+            ],
+          },
+        });
+      }
       assert.equal(url, "https://www.googleapis.com/calendar/v3/calendars/primary/events/event123");
       requests.push(init);
       if (init.method === "PATCH") return new Response(null, { status });
@@ -457,4 +477,21 @@ test("calendar changes stage the provider version and only patch on owner confir
     start: { dateTime: "2026-12-04T16:00:00.000Z" },
     end: { dateTime: "2026-12-04T16:30:00.000Z" },
   });
+
+  const stageRead = () =>
+    exports.stagePendingAction(owner, "gmail_set_read_status", {
+      message_id: "mail123",
+      read: false,
+    });
+  connection.scopes = ["https://www.googleapis.com/auth/gmail.compose"];
+  const requestCount = requests.length;
+  await assert.rejects(stageRead(), /Reconnect Google/);
+  assert.equal(requests.length, requestCount);
+
+  connection.scopes = ["https://www.googleapis.com/auth/gmail.modify"];
+  const readChange = await stageRead();
+  assert.match(readChange.summary, /Test message.*sender@example.com.*unread/);
+  assert.equal(requests.at(-1).method, undefined);
+  assert.equal((await exports.executePendingAction(owner, readChange.id)).ok, true);
+  assert.deepEqual(JSON.parse(requests.at(-1).body), { addLabelIds: ["UNREAD"] });
 });
