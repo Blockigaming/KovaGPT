@@ -15,6 +15,7 @@ export function googleConnectorScopes(connector = "gmail") {
 }
 
 export const GOOGLE_CAPABILITY_SCOPES = {
+  "gmail.modify": ["https://www.googleapis.com/auth/gmail.modify"],
   "gmail.read": [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",
@@ -112,6 +113,7 @@ export function googleConnectionHealth(connection, now = Date.now()) {
 }
 export function googleToolCapability(name) {
   if (name === "gmail_create_draft") return "gmail.draft";
+  if (name === "gmail_set_read_status") return "gmail.modify";
   if (name === "gmail_send") return "gmail.write";
   if (name.startsWith("gmail_")) return "gmail.read";
   if (
