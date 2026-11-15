@@ -54,7 +54,7 @@ export function ConsumerModelSelector({
               onChange(model.id);
               close();
             }}
-            className="flex min-h-11 w-full min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-accent sm:max-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-h-11 w-full min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{model.label}</span>
@@ -91,7 +91,7 @@ export function ConsumerModelSelector({
       aria-expanded={open && !locked}
       data-testid="consumer-model-trigger"
       onClick={sheet ? () => setOpen(true) : undefined}
-      className="inline-flex min-h-11 min-w-0 max-w-[5.5rem] items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+      className="inline-flex min-h-11 min-w-0 max-w-[5.5rem] items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-accent sm:max-w-36 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
     >
       <span className="truncate">{current?.label ?? "Model unavailable"}</span>
       <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
