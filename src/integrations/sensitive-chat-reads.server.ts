@@ -4,11 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ConnectionDomainDatabase } from "./connection-domain.types";
 import { configuredOAuthProviders } from "./oauth-providers.server";
 import { readHealthAccount } from "@/health/health-accounts.server";
-import {
-  financeConfigured,
-  listFinanceConnections,
-  readFinanceConnection,
-} from "@/finances/plaid.server";
+import { financeConfigured, readFinanceConnection } from "@/finances/plaid.server";
 
 export type SensitiveChatProvider = "oura" | "finances";
 
@@ -44,8 +40,8 @@ export async function readSensitiveChatSnapshot(
   provider: SensitiveChatProvider,
 ) {
   if (!sensitiveChatConfigured(provider)) throw new Error("connector_chat_unavailable");
+  const database = caller.supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
   if (provider === "oura") {
-    const database = caller.supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
     const { data, error } = await database
       .from("integration_linked_accounts")
       .select("id")
@@ -60,12 +56,17 @@ export async function readSensitiveChatSnapshot(
     return readHealthAccount(caller, data[0].id);
   }
 
-  const { connections } = await listFinanceConnections(caller);
-  const connected = connections.filter(({ status }) => status === "connected");
-  if (connected.length !== 1 || connections.length === 50) {
-    return accountSelectionRequired(connected.length > 0 || connections.length === 50 ? 2 : 0);
-  }
-  const snapshot = await readFinanceConnection(caller, connected[0].id);
+  const { data, error } = await database
+    .from("financial_connections")
+    .select("id")
+    .eq("owner_id", caller.userId)
+    .eq("provider", "plaid")
+    .eq("status", "connected")
+    .is("deleted_at", null)
+    .limit(2);
+  if (error) throw new Error("connector_chat_unavailable");
+  if (data.length !== 1) return accountSelectionRequired(data.length);
+  const snapshot = await readFinanceConnection(caller, data[0].id);
   return {
     startDate: snapshot.startDate,
     endDate: snapshot.endDate,
@@ -92,6 +93,7 @@ function accountSelectionRequired(count: number) {
     ? { error: "connector_not_linked", message: "Link an account in Connections first." }
     : {
         error: "connector_multiple_accounts",
-        message: "Multiple linked accounts require selection in Connections.",
+        message:
+          "This chat tool supports one linked account. View individual accounts in Connections.",
       };
 }
