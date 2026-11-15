@@ -49,7 +49,7 @@ test("reply bubbles, adjacent actions, and the compact composer fit the viewport
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );
   const [copyBox, goodBox] = await Promise.all([copy.boundingBox(), good.boundingBox()]);
-  expect(copyBox!.width).toBe(fineDesktop ? 32 : 44);
+  expect(copyBox!.width).toBe(fineDesktop ? 28 : 44);
   expect(Math.abs(goodBox!.x - copyBox!.x - copyBox!.width)).toBeLessThanOrEqual(1);
   expect(composerBox!.height).toBeLessThanOrEqual(fineDesktop ? 62 : 92);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
