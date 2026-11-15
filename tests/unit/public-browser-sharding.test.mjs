@@ -4,8 +4,9 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
-import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
+import * as seo from "../../src/lib/seo-policy.mjs";
 
+const { PUBLIC_REVIEW_PATHS } = seo;
 const read = (path) => readFileSync(path, "utf8");
 const publicFiles = [
   "public-surface-matrix.spec.ts",
@@ -112,6 +113,26 @@ test("the actual public matrix retains every route and theme in bounded groups",
   assert.match(source, /test\.step\(`\$\{colorScheme\} \$\{route\}`/);
   assert.match(source, /waitUntil: "domcontentloaded", timeout: 15_000/);
   assert.match(source, /expect\(runtimeErrors,.*\)\.toEqual\(\[\]\)/);
+});
+
+test("public detail cases preserve the full catalog in bounded batches", () => {
+  const register = () => {};
+  register.describe = { parallel: (_name, run) => run() };
+  const source = read("tests/e2e/public-detail-pages.spec.ts");
+  const { schedule } = evaluate(
+    `${source}\nexport const schedule = { allDetailRoutes, detailRouteGroups };`,
+    {},
+    {
+      "@playwright/test": { test: register },
+      "../../src/lib/seo-policy.mjs": seo,
+      "./hydration": {},
+    },
+  );
+  const routes = Array.from(schedule.allDetailRoutes);
+  const groups = Array.from(schedule.detailRouteGroups, (group) => Array.from(group));
+  assert.ok(routes.length > 0);
+  assert.deepEqual(groups.flat().sort(), routes.sort());
+  assert.ok(groups.every((group) => group.length > 0 && group.length <= 16));
 });
 
 test("public shards cover phone and tablet orientations and desktop, and feed required checks", () => {

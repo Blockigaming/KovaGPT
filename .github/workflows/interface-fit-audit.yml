@@ -9,6 +9,8 @@ on:
       - tests/interface-fit/**
       - tests/e2e/core-app-fixture.ts
       - tests/e2e/sidebar-touch-selection.spec.ts
+      - tests/e2e/mobile-spec-matrix.spec.ts
+      - tests/e2e/mobile-shell-ui-truth.spec.ts
       - tests/e2e/hydration.ts
       - tests/e2e/actual-app-fixture.ts
       - tests/helpers/loopback-preview-headers.mjs
@@ -85,6 +87,25 @@ jobs:
           npx --no-install playwright test --config=playwright.interface-fit.config.ts
           --project="${{ matrix.browser }}-390" --grep="dark workspace fits: /$"
           --output="test-results/interface-fit/smoke-${{ matrix.browser }}"
+      - name: Verify the exact mobile specification viewport matrix
+        if: matrix.browser == 'chromium'
+        env:
+          KOVA_BROWSER_PREVIEW: "node"
+          PLAYWRIGHT_PREBUILT: "1"
+        run: >-
+          npx --no-install playwright test tests/e2e/mobile-spec-matrix.spec.ts
+          --project=desktop-1440x900 --workers=2
+          --output=test-results/interface-fit/mobile-specification
+      - name: Verify the compact keyboard and conversation reading position
+        if: matrix.browser == 'chromium'
+        env:
+          KOVA_BROWSER_PREVIEW: "node"
+          PLAYWRIGHT_PREBUILT: "1"
+        run: >-
+          npx --no-install playwright test tests/e2e/mobile-shell-ui-truth.spec.ts
+          --project=phone-390x844 --project=phone-landscape-844x390
+          --grep="a reduced visual viewport|mobile chat restores the reading position" --workers=2
+          --output=test-results/interface-fit/mobile-keyboard
       - name: Verify requested Settings, loading and response controls
         if: matrix.browser == 'chromium'
         env:

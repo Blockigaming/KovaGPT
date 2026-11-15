@@ -73,6 +73,7 @@ export function ChatImage({
   imageClassName,
   children,
   onHide,
+  enablePreview = true,
 }: {
   src: string;
   alt: string;
@@ -81,6 +82,7 @@ export function ChatImage({
   imageClassName?: string;
   children?: ReactNode;
   onHide?: () => void;
+  enablePreview?: boolean;
 }) {
   const fingerprint = useMemo(() => chatImageFingerprint(src), [src]);
   const marker = `${chatImageFingerprint(JSON.stringify([actions?.ownerId, actions?.scope ?? "preview"]))}:${fingerprint}`;
@@ -288,14 +290,14 @@ export function ChatImage({
             decoding="async"
             referrerPolicy="no-referrer"
             tabIndex={0}
-            aria-haspopup="dialog"
-            data-attachment-preview-trigger=""
-            role="button"
+            aria-haspopup={enablePreview ? "dialog" : "menu"}
+            data-attachment-preview-trigger={enablePreview ? "" : undefined}
+            role={enablePreview ? "button" : undefined}
             draggable={false}
             style={{ WebkitTouchCallout: "none", touchAction: "manipulation" }}
-            className={`cursor-zoom-in ${imageClassName ?? ""}`}
+            className={enablePreview ? `cursor-zoom-in ${imageClassName ?? ""}` : imageClassName}
             onClick={() => {
-              if (!menuOpenRef.current) setPreviewMarker(marker);
+              if (enablePreview && !menuOpenRef.current) setPreviewMarker(marker);
             }}
             onPointerDown={startPointerHold}
             onPointerMove={movePointerHold}
@@ -306,7 +308,7 @@ export function ChatImage({
             onTouchEnd={cancelTouchHold}
             onTouchCancel={cancelTouchHold}
             onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
+              if (enablePreview && (event.key === "Enter" || event.key === " ")) {
                 event.preventDefault();
                 setPreviewMarker(marker);
                 return;
@@ -329,7 +331,7 @@ export function ChatImage({
       </span>
       <Dialog
         attachmentPreview={sidePanel ? true : "fullscreen"}
-        open={previewMarker === marker}
+        open={enablePreview && previewMarker === marker}
         onOpenChange={(open) => {
           if (!open) {
             setPreviewMarker(null);

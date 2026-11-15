@@ -24,3 +24,18 @@ if (functionNames.size === 0) {
     }
   }
 }
+
+export function resolveFixtureFunctionName(id: string): string | undefined {
+  const compiledName = functionNames.get(id);
+  if (compiledName) return compiledName;
+  // Vite's development server encodes the original handler in the RPC ID.
+  // Production preview uses the compiled registry above.
+  try {
+    const payload: unknown = JSON.parse(Buffer.from(id, "base64url").toString("utf8"));
+    if (!payload || typeof payload !== "object" || !("export" in payload)) return;
+    if (typeof payload.export === "string" && /^\w+_createServerFn_handler$/.test(payload.export))
+      return payload.export;
+  } catch {
+    return undefined;
+  }
+}

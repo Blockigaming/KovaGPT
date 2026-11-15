@@ -157,6 +157,18 @@ test("approved master directory supports primary and category filters", async ({
   await expect(
     page.getByRole("region", { name: "Fictional health dashboard example" }),
   ).toBeVisible();
+  for (const [label, score] of [
+    ["Sleep", 82],
+    ["Recovery", 74],
+    ["Activity", 91],
+  ] as const) {
+    const ring = page.getByRole("img", { name: `Fictional ${label} score ${score} out of 100` });
+    await expect(ring.locator("circle[stroke-linecap]")).toHaveAttribute("stroke-linecap", "round");
+    await expect(ring.locator("circle[stroke-dasharray]")).toHaveAttribute(
+      "stroke-dasharray",
+      `${score} 100`,
+    );
+  }
   await picker.getByRole("tab", { name: "All" }).click();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);

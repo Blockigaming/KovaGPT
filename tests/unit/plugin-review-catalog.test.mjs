@@ -61,12 +61,12 @@ test("launch review includes exactly 12 providers, preserving original catalog i
   assert.equal(original.getConnector("sharepoint").status, "setup_required");
 });
 
-test("master directory contains the 31 requested services and eight retained services exactly once", () => {
+test("master directory contains the 31 requested services and seven retained services exactly once", () => {
   assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 31);
-  assert.equal(master.MASTER_CONNECTORS.length, 39);
+  assert.equal(master.MASTER_CONNECTORS.length, 38);
   const ids = review.MASTER_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id);
   assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS].sort());
-  assert.equal(new Set(ids).size, 39);
+  assert.equal(new Set(ids).size, 38);
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     assert.equal(item.connector, original.getConnector(item.connector.id));
     if (!expected.includes(item.connector.id)) {

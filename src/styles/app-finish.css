@@ -355,7 +355,7 @@
 .spec400-chat-input .spec400-composer {
   position: relative;
   z-index: 1;
-  border-radius: var(--kova-radius-composer);
+  border-radius: var(--chat-composer-corner, var(--kova-radius-composer));
   box-shadow: 0 3px 16px #00000008;
 }
 .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
@@ -396,7 +396,7 @@
   }
   .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
     padding: 12px !important;
-    border-radius: var(--kova-radius-composer);
+    border-radius: var(--chat-composer-corner, var(--kova-radius-composer));
   }
 }
 @media (max-width: 380px) {

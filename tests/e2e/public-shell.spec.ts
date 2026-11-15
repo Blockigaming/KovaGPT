@@ -26,38 +26,60 @@ async function waitForHydration(page: import("@playwright/test").Page) {
   });
 }
 
-test("public routes share one landmark and a working skip target", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1440x900");
-  test.setTimeout(90_000);
+const routesPerBatch = 4;
+for (let offset = 0; offset < publicRoutes.length; offset += routesPerBatch) {
+  const routes = publicRoutes.slice(offset, offset + routesPerBatch);
+  test(`public landmark and skip target from ${routes[0]} to ${routes.at(-1)}`, async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1440x900");
+    test.setTimeout(60_000);
+    for (const route of routes) {
+      await test.step(route, async () => {
+        const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 15_000 });
+        expect(response?.status(), route).toBeLessThan(400);
+        await waitForHydration(page);
 
-  for (const route of publicRoutes) {
-    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), route).toBeLessThan(400);
-    await waitForHydration(page);
+        await expect(page.locator("main"), `${route} should render one main landmark`).toHaveCount(
+          1,
+        );
+        await expect(
+          page.locator("main#main-content"),
+          `${route} should expose the skip target`,
+        ).toHaveCount(1);
+        await expect(
+          page.getByRole("link", { name: "Skip to content" }),
+          `${route} should expose one root-level skip link`,
+        ).toHaveCount(1);
+        await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
+        if (route === "/pricing") {
+          await expect(page.locator("[data-billing-page]")).toHaveCount(1);
+          await expect(
+            page
+              .getByRole("navigation", { name: "Public navigation" })
+              .getByRole("link", { name: "Open KovaGPT", exact: true }),
+          ).toHaveAttribute("href", "/");
+        }
+        await expect(page.getByRole("contentinfo")).toBeVisible();
 
-    await expect(page.locator("main"), `${route} should render one main landmark`).toHaveCount(1);
-    await expect(
-      page.locator("main#main-content"),
-      `${route} should expose the skip target`,
-    ).toHaveCount(1);
-    await expect(
-      page.getByRole("link", { name: "Skip to content" }),
-      `${route} should expose one root-level skip link`,
-    ).toHaveCount(1);
-    if (route === "/pricing") {
-      await expect(page.locator("[data-billing-page]")).toHaveCount(1);
+        const viewport = await page.evaluate(() => ({
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+        }));
+        expect(
+          viewport.scrollWidth,
+          `${route} should not overflow horizontally`,
+        ).toBeLessThanOrEqual(viewport.clientWidth + 1);
+      });
     }
-    await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
-    await expect(page.getByRole("contentinfo")).toBeVisible();
+  });
+}
 
-    const viewport = await page.evaluate(() => ({
-      clientWidth: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(viewport.scrollWidth, `${route} should not overflow horizontally`).toBeLessThanOrEqual(
-      viewport.clientWidth + 1,
-    );
-  }
+test("public footer links and the missing guide reach the correct destinations", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1440x900");
+  test.setTimeout(60_000);
 
   await page.goto("/features");
   await waitForHydration(page);
@@ -84,7 +106,12 @@ test("public routes share one landmark and a working skip target", async ({ page
     page.getByRole("heading", { name: "This page isn’t available", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Go to chat", exact: true })).toBeVisible();
+});
 
+test("the public skip link moves keyboard focus to the main landmark", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-1440x900");
   await page.goto("/privacy");
   await waitForHydration(page);
   await page.keyboard.press("Tab");
@@ -120,12 +147,14 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   await menu.getByRole("link", { name: "Pricing" }).click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(menu).toBeHidden();
-  await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
-  await expect(
-    page
-      .getByRole("navigation", { name: "Public navigation" })
-      .getByRole("link", { name: "KovaGPT", exact: true }),
-  ).toHaveAttribute("href", "/");
+  const pricingToggle = page.getByRole("button", { name: "Open navigation" });
+  await expect(pricingToggle).toHaveAttribute("aria-expanded", "false");
+  await pricingToggle.click();
+  await expect(menu.getByRole("link", { name: "Pricing", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(menu.getByRole("link", { name: "Open KovaGPT" })).toBeVisible();
 
   const targets = page.locator("header a, header button, footer a");
   const count = await targets.count();

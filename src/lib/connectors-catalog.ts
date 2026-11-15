@@ -162,15 +162,6 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     domain: "ouraring.com",
   },
   {
-    id: "whoop",
-    label: "WHOOP",
-    description:
-      "Health integration code exists. Developer eligibility and production credentials are required.",
-    category: "Productivity",
-    status: "setup_required",
-    domain: "whoop.com",
-  },
-  {
     id: "apple-health",
     label: "Apple Health",
     description: "Requires native iOS HealthKit implementation and on-device permission.",

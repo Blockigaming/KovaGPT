@@ -11,6 +11,7 @@ export const APPEARANCE_DEFAULTS = Object.freeze({
   readingWidth: 760,
   density: "comfortable",
   motion: "full",
+  contrast: "system",
 });
 
 export function resetAppearance(settings) {
@@ -52,6 +53,7 @@ export function appearanceValues(settings) {
     readingWidth: [680, 760, 900].includes(settings.readingWidth) ? settings.readingWidth : 760,
     density: settings.density === "compact" ? "compact" : "comfortable",
     motion: settings.motion === "reduced" ? "reduced" : "full",
+    contrast: settings.contrast === "high" ? "high" : "system",
   };
 }
 
@@ -130,9 +132,17 @@ export function applyReadingPreferences(root, settings) {
   }
   root.style.fontSize = `${(16 * values.interfaceSize) / 100}px`;
   root.style.setProperty("--kova-settings-navigation-width", `${values.settingsNavigationWidth}px`);
-  for (const token of ["--primary", "--ring"]) {
+  for (const token of ["--primary", "--ring", "--kova-message-accent"]) {
     if (values.interfaceAccent) root.style.setProperty(token, values.interfaceAccent);
     else root.style.removeProperty(token);
+  }
+  if (values.interfaceAccent) {
+    root.style.setProperty(
+      "--kova-message-accent-text",
+      readableTextColor(values.interfaceAccent, "#ffffff"),
+    );
+  } else {
+    root.style.removeProperty("--kova-message-accent-text");
   }
   applyReadableColors(root, values);
   root.style.setProperty("--kova-reading-size", `${values.readingSize}px`);
@@ -140,4 +150,5 @@ export function applyReadingPreferences(root, settings) {
   root.style.setProperty("--kova-reading-width", `${values.readingWidth}px`);
   root.dataset.kovaDensity = values.density;
   root.dataset.kovaMotion = values.motion;
+  root.dataset.kovaContrast = values.contrast;
 }
