@@ -11,8 +11,10 @@ export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [query, setQuery] = useState("");
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const groupId = useId();
   const directory = useMemo(() => {
+    if (!directoryOpen) return [];
     const entries = new Map(
       PUBLIC_SITEMAP_ENTRIES.filter(({ path }) => path === "/" || !requiresAppAccount(path)).map(
         ({ path }) => [
@@ -37,7 +39,7 @@ export function PublicFooter() {
     for (const group of PUBLIC_WEBSITE_FOOTER)
       for (const link of group.links) entries.set(link.to, link);
     return [...entries.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, []);
+  }, [directoryOpen]);
   const matching = directory.filter((entry) =>
     `${entry.label} ${entry.to}`.toLowerCase().includes(query.trim().toLowerCase()),
   );
@@ -88,28 +90,35 @@ export function PublicFooter() {
             })}
           </nav>
         </div>
-        <details className="kova-footer-directory">
+        <details
+          className="kova-footer-directory"
+          onToggle={(event) => setDirectoryOpen(event.currentTarget.open)}
+        >
           <summary>Explore all pages</summary>
-          <label>
-            <span className="sr-only">Search the page directory</span>
-            <input
-              type="search"
-              aria-label="Search the page directory"
-              placeholder="Find a page..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <nav aria-label="All public pages">
-            <ul>
-              {matching.map((entry) => (
-                <li key={entry.to}>
-                  <Link to={entry.to as never}>{entry.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          {matching.length === 0 ? <p role="status">No matching pages.</p> : null}
+          {directoryOpen ? (
+            <>
+              <label>
+                <span className="sr-only">Search the page directory</span>
+                <input
+                  type="search"
+                  aria-label="Search the page directory"
+                  placeholder="Find a page..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+              <nav aria-label="All public pages">
+                <ul>
+                  {matching.map((entry) => (
+                    <li key={entry.to}>
+                      <Link to={entry.to as never}>{entry.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              {matching.length === 0 ? <p role="status">No matching pages.</p> : null}
+            </>
+          ) : null}
         </details>
         <p className="kova-footer-copyright">
           © {new Date().getFullYear()} KovaGPT is independently developed. AI can make mistakes, and

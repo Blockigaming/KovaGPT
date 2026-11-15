@@ -146,6 +146,15 @@ test("phone footer groups reveal their links without taking over the page", asyn
   await page.keyboard.press("Enter");
   await expect(footer.getByRole("link")).toHaveCount(0);
   await expectNoPageOverflow(page);
+
+  const directory = page.locator(".kova-footer-directory");
+  await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
+  await directory.locator("summary").tap();
+  const search = directory.getByRole("searchbox", { name: "Search the page directory" });
+  await search.fill("privacy");
+  await expect(directory.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
+  await directory.locator("summary").tap();
+  await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
 });
 
 for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
