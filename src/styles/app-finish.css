@@ -1365,3 +1365,20 @@
 .kova-effort-stop[aria-pressed="true"] {
   pointer-events: none;
 }
+
+.spec400-chat-input {
+  --chat-composer-corner: 34px;
+}
+.kova-response-work-time {
+  margin: 0 0 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.prose-chat .kova-response-emphasis {
+  color: light-dark(#245eaf, #669cf0);
+}
+@media (max-width: 1023px), (max-height: 679px) {
+  .spec400-recent-work li:nth-child(n + 3) {
+    display: none;
+  }
+}

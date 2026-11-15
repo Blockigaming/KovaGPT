@@ -136,20 +136,25 @@ export function createSpeechHandler({
       if (!request.headers.get("content-type")?.startsWith("application/json"))
         throw fail("speech_invalid_request", 400);
       let input;
+      let requestSize = 0;
       try {
         const bytes = await readResponseBytesBounded(
           new Response(request.body, { headers: request.headers }),
-          1024,
+          SPEECH_LIMITS.textChars * 6 + 4096,
           {
             signal: deadline.signal,
             timeoutMs: SPEECH_LIMITS.timeoutMs,
           },
         );
+        requestSize = bytes.byteLength;
         input = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
       } catch (error) {
         if (deadline.signal.aborted) throw error;
         throw fail("speech_invalid_request", error?.status === 413 ? 413 : 400);
       }
+      const direct = input?.mode === "read-aloud" || input?.mode === "live-reply";
+      const liveReply = input?.mode === "live-reply";
+      if (!direct && requestSize > 1024) throw fail("speech_invalid_request", 413);
       if (
         !input ||
         typeof input !== "object" ||
@@ -157,7 +162,12 @@ export function createSpeechHandler({
         Object.keys(input)
           .filter((key) => key !== "voiceId")
           .sort()
-          .join(",") !== "chatId,contentSha256,messageId,ownerId" ||
+          .join(",") !==
+          (liveReply
+            ? "chatId,contentSha256,messageId,mode,ownerId,text,voiceModelReceipt"
+            : direct
+              ? "chatId,contentSha256,messageId,mode,ownerId,text"
+              : "chatId,contentSha256,messageId,ownerId") ||
         typeof input.chatId !== "string" ||
         !ID.test(input.chatId) ||
         typeof input.messageId !== "string" ||
@@ -174,7 +184,9 @@ export function createSpeechHandler({
       const settings = await wait(config(auth, input));
       // Preserve the legacy handler configuration while allowing only the
       // existing server-owned catalog models for an explicit selection.
-      const modelId = settings.modelId ?? "eleven_multilingual_v2";
+      const modelId = liveReply
+        ? "eleven_flash_v2_5"
+        : (settings.modelId ?? "eleven_multilingual_v2");
       if (
         settings.enabled !== true ||
         !settings.apiKey ||
@@ -182,11 +194,17 @@ export function createSpeechHandler({
         !TTS_MODEL_IDS.includes(modelId)
       )
         throw fail("speech_not_configured", 503);
-      const saved = await wait(loadMessage(auth, input, deadline.signal));
+      const saved = direct
+        ? { text: input.text, voiceModelReceipt: liveReply ? input.voiceModelReceipt : undefined }
+        : await wait(loadMessage(auth, input, deadline.signal));
       const text = saved?.text;
       // Keep caps here too: a different release's loader cannot bypass them.
       if (typeof text !== "string" || !text.trim()) throw fail("speech_message_unavailable", 404);
       if (text.length > SPEECH_LIMITS.textChars) throw fail("speech_text_too_long", 413);
+      if (direct && createHash("sha256").update(text).digest("hex") !== input.contentSha256)
+        throw fail("speech_invalid_request", 400);
+      if (liveReply && (typeof saved.voiceModelReceipt !== "string" || !saved.voiceModelReceipt))
+        throw fail("speech_model_not_eligible", 403);
       const policy = modelPolicy?.();
       // Older saved replies predate model receipts. Ownership, exact saved text,
       // session revalidation, and paid-provider rate limits apply to every reply.
@@ -251,7 +269,7 @@ export function createSpeechHandler({
           admissionTimer = setTimeout(abort, remaining);
         }
       }
-      // No automatic retries, caller-selected endpoint/voice/text, or provider-body logging.
+      // Use the configured provider endpoint and server-owned voice catalog.
       const upstream = await wait(
         fetchImpl(
           `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(settings.voiceId)}/stream?output_format=mp3_44100_128`,

@@ -3,7 +3,7 @@ import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
-import { StreamingStatus } from "./StreamingStatus";
+import { formatResponseTime, StreamingStatus } from "./StreamingStatus";
 import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
@@ -891,6 +891,13 @@ function ChatMessageInner({
       ) : (
         <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
           <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
+            {streaming && !waitingForFirstToken ? (
+              <StreamingStatus startedAt={resolvedStreamingStartedAt} />
+            ) : !streaming && typeof message.workedMs === "number" ? (
+              <p className="kova-response-work-time">
+                Worked for {formatResponseTime(message.workedMs / 1000)}
+              </p>
+            ) : null}
             {message.activities
               ?.filter((activity) => activity.tool === "scheduled_task")
               .map((activity, index) => (
@@ -1033,7 +1040,6 @@ function ChatMessageInner({
                   !principalResolved ||
                   !userKey ||
                   !chatId ||
-                  temporary ||
                   !!message.generationStatus ||
                   !!message.pendingImage
                 }

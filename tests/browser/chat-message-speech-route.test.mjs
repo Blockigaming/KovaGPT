@@ -47,35 +47,17 @@ test("full ChatMessage control → actual speech route → ownership → playbac
       mp3,
     ]);
     const audio = readFileSync(mp3);
-    const saved = {
-      owner_id: ownerId,
-      id: chatId,
-      deleted_at: null,
-      payload: {
-        id: chatId,
-        messages: [{ id: "msg-a", role: "assistant", content: "Saved assistant response." }],
-      },
-    };
-    const query = {
-      select: () => query,
-      eq: () => query,
-      is: () => query,
-      abortSignal: () => query,
-      maybeSingle: async () => ({ data: saved, error: null }),
-    };
     const dependencies = {
       "@tanstack/react-router": { createFileRoute: () => (value) => value },
       "@/lib/api-auth.server": {
+        getCallerTier: async () => "free",
         requireVerifiedUser: async () =>
           state.deny
             ? Response.json({ error: "unauthorized" }, { status: 401 })
             : {
                 userId: ownerId,
                 supabaseUser: {
-                  from: (table) => {
-                    assert.equal(table, "chat_history_records");
-                    return query;
-                  },
+                  from: () => assert.fail("Read Aloud should not query saved history"),
                 },
               },
       },
@@ -92,12 +74,16 @@ test("full ChatMessage control → actual speech route → ownership → playbac
           })[name],
       },
       "@/lib/speech.server.mjs": speech,
+      "@/lib/voice/openai-model-eligibility.server.mjs": {
+        voiceModelPolicy: () => ({ valid: false }),
+      },
       "@/lib/generation-acceptance-runtime.server": { generationAcceptance: acceptance.build() },
       "@/lib/multimodal/image-source.server.mjs": { assertImagePrincipal: async () => {} },
     };
     // The existing handler takes an injectable provider fetch; use a wrapper
     // solely at the server route's imported factory, preserving its real wiring.
     dependencies["@/lib/speech.server.mjs"] = {
+      ...speech,
       createSpeechHandler: (options) =>
         speech.createSpeechHandler({
           ...options,
@@ -136,11 +122,15 @@ test("full ChatMessage control → actual speech route → ownership → playbac
     const post = wiredModule.exports.Route.server.handlers.POST;
     const stubs = {
       "@/lib/auth-fetch":
-        'export const authFetch=(url,init)=>fetch(url,{...init,headers:{...init.headers,...(window.fixtureOperationId?{"x-kova-acceptance-operation":window.fixtureOperationId}:{})}});',
+        'export const fetchWithTimeoutAuthenticated=(...args)=>fetch(...args); export const authFetch=(url,init)=>fetch(url,{...init,headers:{...init.headers,...(window.fixtureOperationId?{"x-kova-acceptance-operation":window.fixtureOperationId}:{})}});',
       "@/components/auth/ClerkSafe":
         "export const useUser=()=>({isSignedIn:window.fixtureSignedIn!==false});",
       "@tanstack/react-start": "export const useServerFn=(fn)=>fn;",
-      "@/lib/library.functions": "export const saveToLibrary=async()=>({});",
+      "@/lib/library.functions":
+        "export const saveToLibrary=async()=>({}); export const deleteLibraryItem=async()=>({}); export const findResponseBookmark=async()=>null;",
+      "@/lib/library-images.functions": "export const saveImageToLibrary=async()=>({});",
+      "@/lib/chat-image-actions":
+        "export const prepareChatImageAttachment=async()=>({}); export const downloadChatImage=async()=>({});",
       "@/lib/feedback.functions":
         "export const getResponseFeedbackBatch=async()=>({ratings:{}}); export const submitResponseFeedback=async()=>({});",
       "@/hooks/use-mobile": "export const useLayout=()=>({isMobile:false});",
@@ -153,6 +143,11 @@ test("full ChatMessage control → actual speech route → ownership → playbac
           "MessageVersionHistoryDialog",
           "ToolConfirmCard",
           "InfoChip",
+          "ChatStudyControl",
+          "SafeResponseAdvertisement",
+          "HistoricalLibraryAttachment",
+          "ChatImage",
+          "ChatTextAttachment",
         ].map((name) => ["./" + name, `export const ${name}=()=>null;`]),
       ),
     };
@@ -176,6 +171,7 @@ test("full ChatMessage control → actual speech route → ownership → playbac
       format: "esm",
       jsx: "automatic",
       define: { "process.env.NODE_ENV": '"test"' },
+      loader: { ".css": "empty", ".svg": "dataurl" },
       plugins: [
         {
           name: "unrelated-authority-fixtures",
@@ -239,6 +235,7 @@ test("full ChatMessage control → actual speech route → ownership → playbac
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    page.setDefaultTimeout(7500);
     await page.addInitScript(() => {
       window.fixtureAudios = [];
       const NativeAudio = window.Audio;
@@ -252,10 +249,9 @@ test("full ChatMessage control → actual speech route → ownership → playbac
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.getByRole("button", { name: "Read aloud", exact: true }).waitFor();
-    await t.test("eligible full response shows control; ineligible responses hide it", async () => {
+    await t.test("only eligible full responses expose an enabled Read Aloud control", async () => {
       for (const options of [
         { streaming: true },
-        { temporary: true },
         { principalResolved: false },
         { userKey: null },
         { signedIn: false },
@@ -288,7 +284,7 @@ test("full ChatMessage control → actual speech route → ownership → playbac
         await page.evaluate((options) => window.showMessage(options), options);
         await page.waitForTimeout(30);
         assert.equal(
-          await page.getByRole("button", { name: "Read aloud", exact: true }).count(),
+          await page.locator('button[aria-label="Read aloud"]:enabled').count(),
           0,
           JSON.stringify(options),
         );
@@ -298,7 +294,7 @@ test("full ChatMessage control → actual speech route → ownership → playbac
       assert.equal(state.calls, 0);
     });
     await t.test(
-      "full response reaches real route, loads saved text, plays and cancels",
+      "full response reaches the real route, plays and cancels without a saved chat",
       async () => {
         await page.getByRole("button", { name: "Read aloud", exact: true }).click();
         await page.waitForFunction(() =>

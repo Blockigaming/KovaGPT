@@ -59,7 +59,7 @@ import { ComposerUploadAllowance } from "@/components/ComposerUploadAllowance";
 import { ComposerContextPanel } from "@/components/ComposerContextPanel";
 import { ComposerModelStatus } from "@/components/ComposerModelStatus";
 import { ComposerVoiceDialog } from "@/components/ComposerVoiceDialog";
-import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import type { ComposerVoiceSubmit, ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
 import { useLayout } from "@/hooks/use-mobile";
@@ -315,7 +315,7 @@ export function ChatInput({
   voiceMode?: "dictate" | "voice" | null;
   onVoiceModeChange?: (mode: "dictate" | "voice" | null) => void;
   /** Uses the existing chat/history path and returns only a confirmed saved reply. */
-  onVoiceSubmit?: (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
+  onVoiceSubmit?: ComposerVoiceSubmit;
   responseSettings?: Pick<Settings, "responseLength" | "responseFormat" | "responseTone">;
   onResponseSettingsChange?: (
     change: Partial<Pick<Settings, "responseLength" | "responseFormat" | "responseTone">>,
@@ -572,6 +572,7 @@ export function ChatInput({
   const submitVoiceTranscript = async (
     text: string,
     signal: AbortSignal,
+    realtime?: boolean,
   ): Promise<ComposerVoiceTurn> => {
     const latest = voiceCallbacksRef.current;
     if (
@@ -588,7 +589,7 @@ export function ChatInput({
       !text.trim()
     )
       throw new Error("voice_turn_cancelled");
-    const reply = await latest.onVoiceSubmit(text.trim(), signal);
+    const reply = await latest.onVoiceSubmit(text.trim(), signal, realtime);
     if (
       !voiceMountedRef.current ||
       voiceIdentityRef.current !== voiceScope ||

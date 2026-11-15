@@ -175,6 +175,11 @@ export function normalizeChatHistory(value, ownerId) {
         if (!time(message.createdAt)) throw new Error("chat_history_invalid");
         item.createdAt = message.createdAt;
       }
+      if (message.workedMs !== undefined) {
+        if (message.role !== "assistant" || !time(message.workedMs))
+          throw new Error("chat_history_invalid");
+        item.workedMs = message.workedMs;
+      }
       if (message.voiceModelReceipt !== undefined) {
         if (
           message.role !== "assistant" ||

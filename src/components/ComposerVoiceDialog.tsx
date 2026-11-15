@@ -1,6 +1,6 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
-import { AudioLines, X, ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
+import { AudioLines, ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { DialogContent } from "@/components/ui/dialog";
@@ -36,7 +36,7 @@ import {
   createSpeechPlayback,
   stopActiveSpeechPlayback,
 } from "@/lib/speech-playback.mjs";
-import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import type { ComposerVoiceSubmit, ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 
 // Leave room for codec finalization beneath the server's hard 60-second limit.
 const MAX_RECORDING_MS = 59_000;
@@ -88,7 +88,7 @@ export interface ComposerVoiceDialogProps {
   mode?: "dictate" | "voice";
   inlineDictation?: boolean;
   autoStartVoice?: boolean;
-  onVoiceSubmit?: (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
+  onVoiceSubmit?: ComposerVoiceSubmit;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
@@ -526,7 +526,7 @@ export function ComposerVoiceDialog({
     requestDeadline.current = null;
   };
 
-  const submitVoiceTurn = async (scope: OperationScope, text: string) => {
+  const submitVoiceTurn = async (scope: OperationScope, text: string, realtime = false) => {
     const submit = current.current.onVoiceSubmit;
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
     updatePhase("chat");
@@ -538,7 +538,7 @@ export function ComposerVoiceDialog({
         controller.signal.addEventListener("abort", abortListener, { once: true });
         if (controller.signal.aborted) abortListener();
       });
-      const reply = await Promise.race([submit(text, controller.signal), aborted]);
+      const reply = await Promise.race([submit(text, controller.signal, realtime), aborted]);
       if (!isCurrent(scope) || controller.signal.aborted || !voiceSessionActive.current) return;
       if (
         !reply ||
@@ -616,13 +616,23 @@ export function ComposerVoiceDialog({
         },
       });
       voicePlayback.current = playback;
-      await playback.start({
+      const speechInput = {
         ownerId: reply.ownerId,
         chatId: reply.chatId,
         messageId: reply.messageId,
         contentSha256: reply.contentSha256,
         ...(scope.voiceId ? { voiceId: scope.voiceId } : {}),
-      });
+      };
+      await playback.start(
+        realtime
+          ? {
+              ...speechInput,
+              mode: "live-reply",
+              text: reply.content,
+              voiceModelReceipt: reply.voiceModelReceipt,
+            }
+          : speechInput,
+      );
     } catch (cause) {
       if (!isCurrent(scope)) return;
       const code = cause instanceof Error ? cause.message : "";
@@ -806,7 +816,7 @@ export function ComposerVoiceDialog({
           },
         });
         finishRequest(controller);
-        if (isCurrent(scope)) await submitVoiceTurn(scope, text);
+        if (isCurrent(scope)) await submitVoiceTurn(scope, text, true);
       } catch (cause) {
         if (isCurrent(scope) && !controller.signal.aborted) {
           failOperation(
@@ -1196,12 +1206,15 @@ export function ComposerVoiceDialog({
             <AudioLines aria-hidden="true" />
           </button>
         ) : (
-          <span className="kova-live-voice-mark" aria-hidden="true">
-            <AudioLines />
+          <span className="kova-live-voice-wave" aria-hidden="true">
+            {Array.from({ length: 52 }, (_, index) => (
+              <i key={index} style={{ "--voice-bar": index } as CSSProperties} />
+            ))}
           </span>
         )}
+        <Mic className="kova-live-voice-mic" aria-hidden="true" />
         <button type="button" onClick={() => closeDialog(false)} aria-label="End Voice">
-          <X aria-hidden="true" />
+          <span className="kova-live-voice-stop" aria-hidden="true" />
         </button>
       </section>
     );
