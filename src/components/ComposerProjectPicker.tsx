@@ -97,9 +97,10 @@ export function ComposerProjectPicker({
         active &&
         request === storageGeneration.current &&
         current.current.principalId === principalId;
-      void getProjects().then(
-        (projects) => {
+      void getProjects()
+        .then((projects) => {
           if (!isCurrent()) return;
+          if (!Array.isArray(projects)) throw new TypeError("Invalid project list response");
           setSnapshot({
             principalId,
             projects: projects.filter(
@@ -107,16 +108,15 @@ export function ComposerProjectPicker({
             ),
             status: "ready",
           });
-        },
-        () => {
+        })
+        .catch(() => {
           if (!isCurrent()) return;
           setSnapshot((previous) =>
             previous?.principalId === principalId && previous.status === "ready"
               ? previous
               : { principalId, projects: [], status: "error" },
           );
-        },
-      );
+        });
     }
     return () => {
       active = false;
