@@ -1,3 +1,4 @@
+import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import { readFileSync } from "node:fs";
@@ -145,6 +146,7 @@ function fixture() {
   const context = {
     extractResponseFollowups,
     ...helpers,
+    extractResponseFollowups,
     React,
     Button,
     Suspense: React.Suspense,
