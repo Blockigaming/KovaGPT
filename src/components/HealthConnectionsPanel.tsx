@@ -133,9 +133,7 @@ export function HealthConnectionsPanel({
       aria-labelledby="health-connections-title"
     >
       <header className="flex flex-col items-center gap-4 text-center">
-        <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
-          <Heart aria-hidden="true" className="size-6 text-rose-500" />
-        </span>
+        <Heart aria-hidden="true" className="size-6 text-rose-500" />
         <h2
           id="health-connections-title"
           className="text-xl font-semibold tracking-tight sm:text-2xl"
@@ -225,11 +223,21 @@ export function HealthConnectionsPanel({
               );
             })}
           </div>
-          <Button variant="outline" disabled={busy || loading} onClick={() => void reload()}>
-            Refresh health status
-          </Button>
         </>
       )}
+      <section
+        className="!mt-3 rounded-3xl bg-muted/30 p-4 sm:p-5"
+        aria-labelledby="apple-health-title"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="apple-health-title" className="font-medium">
+            Apple Health
+          </h3>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
+            Coming soon
+          </span>
+        </div>
+      </section>
       {message && <p role="status">{message}</p>}
       {busy && <p role="status">Working…</p>}
       {result && (
@@ -321,16 +329,6 @@ export function HealthConnectionsPanel({
           {!result.summaries.length && <p>No summaries are available for the last seven days.</p>}
         </div>
       )}
-      <section className="rounded-3xl bg-muted/30 p-4 sm:p-5" aria-labelledby="apple-health-title">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="apple-health-title" className="font-medium">
-            Apple Health
-          </h3>
-          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
-            Coming soon
-          </span>
-        </div>
-      </section>
       <ConfirmActionDialog
         open={disconnect !== null}
         onOpenChange={(open) => !busy && !open && setDisconnect(null)}
