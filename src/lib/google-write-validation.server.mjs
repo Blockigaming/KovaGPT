@@ -2,6 +2,7 @@ const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_create_draft",
   "gmail_send",
   "calendar_create_event",
+  "calendar_rename_event",
 ]);
 const HEADER_BREAK = /[\r\n]/;
 const EMAIL =
@@ -245,6 +246,16 @@ export function validateSupportedGoogleWrite(tool, input) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
+  if (tool === "calendar_rename_event") {
+    const eventId = requiredString(args, "event_id", "Event ID", 1024);
+    if (!/^[a-zA-Z0-9_-]+$/.test(eventId)) {
+      throw new GoogleWriteValidationError("Event ID is invalid.");
+    }
+    return {
+      event_id: eventId,
+      summary: requiredString(args, "summary", "Event title", 300, { trim: true }),
+    };
+  }
   return tool === "calendar_create_event"
     ? validateCalendarEvent(args)
     : validateEmailEnvelope(args);
