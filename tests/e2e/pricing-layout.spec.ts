@@ -44,8 +44,15 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   await expect(main).not.toContainText(
     /50 regular|250 regular|1,750|26,250|5,250|image generations per day|file uploads per day|500 MB|25 GB/,
   );
-  await expect(page.getByRole("table")).toContainText("100× Free (20× Plus)");
-  await expect(page.getByRole("table")).toContainText("Unlimited with Argon Lite");
+  const comparison = page.getByRole("region", { name: "Plan comparison", exact: true });
+  await expect(comparison).toBeVisible();
+  await expect(comparison).toContainText("100× Free (20× Plus)");
+  await expect(comparison).toContainText("Unlimited with Argon Lite");
+  if (testInfo.project.name === "desktop-1440x900") {
+    await expect(
+      comparison.getByRole("table", { name: "KovaGPT Free, Plus, and Pro plan comparison" }),
+    ).toBeVisible();
+  }
   // Deliberately do not activate a paid CTA: this browser check must not create a checkout session.
   await expect(page.getByRole("dialog", { name: "Secure checkout" })).toHaveCount(0);
 
@@ -82,7 +89,5 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   await expect(page.getByRole("heading", { name: "Premium seat" })).toBeVisible();
   await expect(page.locator("[data-pricing-plan]")).toHaveCount(0);
   await page.getByRole("button", { name: "Individual" }).click();
-  await expect(
-    page.getByRole("table", { name: "KovaGPT Free, Plus, and Pro plan comparison" }),
-  ).toBeVisible();
+  await expect(comparison).toBeVisible();
 });

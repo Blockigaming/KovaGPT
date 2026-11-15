@@ -448,6 +448,210 @@
   }
 }
 
+.public-phone-outline,
+.public-phone-plan-comparison {
+  display: none;
+}
+
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  [data-public-shell][data-ui="modern"] {
+    --public-section-space: clamp(26px, 8vi, 46px);
+  }
+
+  [data-public-shell]
+    .public-editorial-page
+    > .public-editorial-intro
+    > .public-editorial-intro-inner {
+    padding-block: 22px 30px;
+  }
+
+  [data-public-shell] .public-editorial-intro [aria-label="Breadcrumb"] {
+    margin-block-end: 16px;
+  }
+
+  [data-public-shell] .public-editorial-intro .public-editorial-eyebrow {
+    margin-block: 0;
+    color: var(--muted-foreground);
+    font-size: 0.875rem;
+  }
+
+  [data-public-shell] .public-editorial-intro h1 {
+    margin-block-start: 8px;
+    font-size: clamp(1.875rem, 8.4vi, 2.55rem);
+    font-weight: 560;
+    line-height: 1.12;
+    text-wrap: pretty;
+  }
+
+  [data-public-shell] .public-editorial-intro .public-editorial-summary {
+    margin-block-start: 12px;
+    line-height: 1.55;
+  }
+
+  [data-public-shell] .public-editorial-intro .public-editorial-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin-block-start: 20px;
+  }
+
+  [data-public-shell] .public-editorial-actions > a {
+    min-height: 48px;
+    white-space: normal;
+  }
+
+  [data-public-shell] .public-editorial-page .public-highlights-grid > div {
+    min-height: 52px;
+    padding-block: 10px;
+  }
+
+  [data-public-shell] .public-editorial-page .public-editorial-notes {
+    gap: 12px;
+    padding-block: 16px 28px;
+  }
+
+  [data-public-shell]
+    :is(.public-editorial-notes > article, .public-editorial-panels > div > section) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  [data-public-shell] .public-editorial-notes :is(.public-note-number, ul:empty) {
+    display: none;
+  }
+
+  [data-public-shell] .public-editorial-notes :is(h2, p, ul) {
+    margin-block-start: 10px;
+  }
+
+  [data-public-shell] .public-editorial-notes h2 {
+    margin-block-start: 0;
+  }
+
+  [data-public-shell] :is(.public-editorial-notes > article, .public-article-body section)[id] {
+    scroll-margin-block-start: calc(var(--kova-public-header-height, 56px) + 12px);
+  }
+
+  [data-public-shell] .public-phone-outline {
+    display: block;
+    min-width: 0;
+    margin: 16px max(16px, var(--safe-right)) 0 max(16px, var(--safe-left));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+  }
+
+  [data-public-shell] .public-phone-outline summary {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 15px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  [data-public-shell] .public-phone-outline summary::-webkit-details-marker {
+    display: none;
+  }
+
+  [data-public-shell] .public-phone-outline[open] summary svg {
+    rotate: 180deg;
+  }
+
+  [data-public-shell] .public-phone-outline nav {
+    max-height: min(48dvh, 20rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 8px 6px;
+  }
+
+  [data-public-shell] .public-phone-outline a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px;
+    border-top: 1px solid var(--border);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  [data-public-shell][data-ui="modern"] .legal-hero {
+    padding-block-start: 28px;
+  }
+
+  [data-public-shell][data-ui="modern"] .legal-doc {
+    margin-block-start: 24px;
+  }
+
+  [data-public-shell] .public-plan-comparison > .public-table-scroll {
+    display: none;
+  }
+
+  [data-public-shell] .public-phone-plan-comparison {
+    display: grid;
+    gap: 10px;
+  }
+
+  [data-public-shell] .public-phone-plan-row {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+  }
+
+  [data-public-shell] .public-phone-plan-row dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-block-start: 8px;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  [data-public-shell] .public-phone-plan-row dl > div {
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--muted);
+    overflow-wrap: anywhere;
+  }
+
+  [data-public-shell] .public-phone-plan-row dt {
+    font-weight: 600;
+  }
+
+  [data-public-shell] .public-phone-plan-row dd {
+    margin: 3px 0 0;
+    color: var(--muted-foreground);
+  }
+
+  [data-billing-page] > section[aria-labelledby="pricing-title"] {
+    text-align: start;
+  }
+
+  [data-billing-page] [aria-label="Plan types"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    width: 100%;
+    margin-block-start: 18px;
+  }
+
+  [data-billing-page] [aria-label="Plan types"] > button {
+    padding-inline: 8px;
+  }
+
+  [data-billing-page] > section[aria-label="KovaGPT plans"] {
+    margin-block-start: 24px;
+    gap: 12px;
+  }
+}
+
 /* Legal document register — OpenAI legal-page composition (contract 2026-09-19).
    Quiet oversized hero, sticky numbered TOC, anchored monochrome sections. */
 [data-public-shell] .legal-hero {

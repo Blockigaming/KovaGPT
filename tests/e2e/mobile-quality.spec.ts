@@ -157,6 +157,41 @@ test("phone footer groups reveal their links without taking over the page", asyn
   await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
 });
 
+test("phone article outlines jump to readable sections below the header", async ({ page }) => {
+  const { width, height } = page.viewportSize()!;
+  test.skip(width >= 768 && height > 500, "phone layouts only");
+  for (const route of ["/academy/ai-fundamentals", "/developers/responses"]) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const outline = page.locator(".public-phone-outline");
+    await outline.getByText("On this page", { exact: true }).tap();
+    const sectionLink = outline.getByRole("link").first();
+    await expect(sectionLink).toBeVisible();
+    await sectionLink.tap();
+    await expect(page).toHaveURL(/#section-1$/);
+    const content = page.locator("#section-1").getByRole("heading", { level: 2 });
+    await expect(content).toBeInViewport();
+    const headingBox = await content.boundingBox();
+    const headerBox = await page.locator(".kova-public-header").boundingBox();
+    expect(headingBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    await expectNoPageOverflow(page);
+  }
+});
+
+test("phone pricing compares all tiers within the screen", async ({ page }) => {
+  const { width, height } = page.viewportSize()!;
+  test.skip(width >= 768 && height > 500, "phone layouts only");
+  await page.goto("/pricing", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const comparison = page.getByRole("region", { name: "Plan comparison" });
+  await expect(comparison.getByRole("heading", { name: "Chat modes" })).toBeVisible();
+  await expect(comparison.getByRole("table")).toHaveCount(0);
+  const row = comparison.locator(".public-phone-plan-row").first();
+  await expect(row.locator("dt")).toHaveText(["Free", "Plus", "Pro"]);
+  expect(await comparison.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(width);
+  await expectNoPageOverflow(page);
+});
+
 for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
   test(`mobile workspace ${route} never overflows`, async ({ page }) => {
     await page.goto(route, { waitUntil: "domcontentloaded" });

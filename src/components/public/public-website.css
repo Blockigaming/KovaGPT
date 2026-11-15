@@ -903,3 +903,46 @@
     margin-bottom: 24px;
   }
 }
+
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  [data-public-shell] .public-website-article {
+    padding-block: 20px 40px;
+    padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right));
+  }
+
+  [data-public-shell] .public-website-article .public-website-breadcrumb {
+    display: none;
+  }
+
+  [data-public-shell] .public-website-article .public-article-label {
+    margin-block: 0 8px;
+    font-size: 0.875rem;
+  }
+
+  [data-public-shell] .public-website-article .public-article-lede {
+    margin-block-start: 12px;
+    line-height: 1.55;
+  }
+
+  [data-public-shell] .public-website-article .public-phone-outline {
+    margin-inline: 0;
+  }
+
+  [data-public-shell] .public-article-body {
+    margin-block-start: 20px;
+  }
+
+  [data-public-shell] .public-article-body aside {
+    display: none;
+  }
+
+  [data-public-shell] .public-article-body section {
+    margin-block-end: 12px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  [data-public-shell] .public-article-body section h2 {
+    margin-block-end: 8px;
+  }
+}

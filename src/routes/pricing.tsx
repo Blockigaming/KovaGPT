@@ -323,7 +323,7 @@ function PlanCard({
         type="button"
         onClick={onCta}
         disabled={ctaDisabled}
-        className={`inline-flex h-11 w-full items-center justify-center rounded-full border px-4 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+        className={`inline-flex min-h-[45px] w-full items-center justify-center rounded-full border px-4 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
           highlight
             ? "border-foreground bg-foreground text-background hover:opacity-90"
             : enterprise

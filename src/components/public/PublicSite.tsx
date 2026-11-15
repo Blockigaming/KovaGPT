@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { type ReactNode } from "react";
 import { PublicFaq } from "@/components/public/PublicFaq";
+import { PhonePageOutline } from "@/components/public/PhonePageOutline";
 import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
 
@@ -46,18 +47,20 @@ export function PublicPageView({
         data-ui-reference={reference}
         id="main-content"
         tabIndex={-1}
-        className="min-w-0 [overflow-wrap:anywhere]"
+        className="public-editorial-page min-w-0 [overflow-wrap:anywhere]"
       >
-        <section className="relative overflow-hidden border-b border-border/70">
-          <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
-            <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>
+        <section className="public-editorial-intro relative overflow-hidden border-b border-border/70">
+          <div className="public-editorial-intro-inner relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
+            <p className="public-editorial-eyebrow text-sm font-semibold text-muted-foreground">
+              {eyebrow}
+            </p>
             <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-.04em] text-balance sm:text-6xl">
               {title}
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground text-pretty">
+            <p className="public-editorial-summary mt-6 max-w-2xl text-lg leading-8 text-muted-foreground text-pretty">
               {summary}
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <div className="public-editorial-actions mt-8 flex flex-wrap items-center gap-3">
               <Link
                 to={primaryAction.to as never}
                 data-public-primary
@@ -83,7 +86,7 @@ export function PublicPageView({
             ) : null}
           </div>
         </section>
-        <section className="bg-muted/25">
+        <section className="public-editorial-panels bg-muted/25">
           <div className="mx-auto grid max-w-7xl gap-5 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-2">
             {children}
           </div>
@@ -110,10 +113,10 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         data-ui-reference="grok-editorial-page"
         id="main-content"
         tabIndex={-1}
-        className="min-w-0 [overflow-wrap:anywhere]"
+        className="public-editorial-page min-w-0 [overflow-wrap:anywhere]"
       >
-        <section className="relative overflow-hidden border-b border-border/70">
-          <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
+        <section className="public-editorial-intro relative overflow-hidden border-b border-border/70">
+          <div className="public-editorial-intro-inner relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
             <nav
               aria-label="Breadcrumb"
               className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
@@ -139,14 +142,16 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               </span>
             </nav>
 
-            <p className="mt-12 text-sm font-semibold text-muted-foreground">{item.eyebrow}</p>
+            <p className="public-editorial-eyebrow mt-12 text-sm font-semibold text-muted-foreground">
+              {item.eyebrow}
+            </p>
             <h1 className="mt-4 max-w-5xl text-4xl font-semibold tracking-[-.045em] text-balance sm:text-6xl lg:text-7xl">
               {item.title}
             </h1>
-            <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground text-pretty sm:text-xl">
+            <p className="public-editorial-summary mt-6 max-w-3xl text-lg leading-8 text-muted-foreground text-pretty sm:text-xl">
               {item.summary}
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div className="public-editorial-actions mt-9 flex flex-wrap gap-3">
               <Link
                 to={item.primaryAction.to as never}
                 data-public-primary
@@ -184,13 +189,17 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           </div>
         </section>
 
-        <section className="mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2">
+        <PhonePageOutline sections={item.sections} />
+
+        <section className="public-editorial-notes mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2">
           {item.sections.map((section, index) => (
             <article
               key={section.title}
+              id={`section-${index + 1}`}
+              tabIndex={-1}
               className="min-w-0 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="public-note-number text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {String(index + 1).padStart(2, "0")}
               </p>
               <h2 className="mt-4 text-2xl font-semibold tracking-[-.025em]">{section.title}</h2>

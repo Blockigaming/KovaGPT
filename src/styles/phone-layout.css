@@ -42,10 +42,10 @@
   }
 
   .kova-auth-page[data-ui-reference="chatgpt-auth-form"] > main {
-    width: min(100%, 30rem);
-    max-width: none;
-    padding: 20px max(var(--phone-gutter), var(--safe-right)) max(24px, var(--safe-bottom))
-      max(var(--phone-gutter), var(--safe-left));
+    --auth-gutter: max(16px, var(--phone-gutter), var(--safe-right), var(--safe-left));
+    width: calc(100% - 2 * var(--auth-gutter));
+    max-width: 30rem;
+    padding: 20px 0 max(24px, var(--safe-bottom));
   }
 
   .kova-auth-page[data-ui-reference="chatgpt-auth-form"] > main > div:first-child {
@@ -138,7 +138,7 @@
     min-height: 36px;
   }
 
-  .kova-phone-workspace[data-ui="modern"] .kova-app-content main.kova-page {
+  .kova-phone-workspace[data-ui="modern"] .kova-app-content main:is(.kova-page, .kova-tool-page) {
     width: 100%;
     min-width: 0;
     padding-inline: max(var(--phone-gutter), var(--safe-left))
@@ -152,6 +152,21 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
     align-items: start;
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header {
+    margin-block-end: 16px;
+    padding-block-end: 16px;
+    border-block-end: 1px solid var(--border);
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header .kova-page-description {
+    margin-block-start: 6px;
+  }
+
+  .kova-phone-workspace .kova-tool-page .kova-tool-panel {
+    padding: 14px;
+    border-radius: 16px;
   }
 
   .kova-phone-workspace[data-ui="modern"] .kova-page-actions {
@@ -286,6 +301,10 @@
 
 /* Reserve a row for the tab bar so it never overlays scrollable content. */
 @media (width < 768px) and (height > 500px) {
+  :root:not([data-kova-keyboard]):has(.kova-phone-navigation, .kova-images-workspace) {
+    --phone-toast-clearance: 64px;
+  }
+
   .kova-phone-workspace {
     display: grid;
     grid-template: minmax(0, 1fr) auto / minmax(0, 1fr);
