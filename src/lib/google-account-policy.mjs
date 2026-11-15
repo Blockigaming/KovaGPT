@@ -8,10 +8,17 @@ export const GOOGLE_CONNECTOR_SCOPES = Object.freeze({
   "google-calendar": ["https://www.googleapis.com/auth/calendar.events"],
   "google-drive": ["https://www.googleapis.com/auth/drive.readonly"],
 });
-export function googleConnectorScopes(connector = "gmail") {
+export function googleConnectorScopes(connector = "gmail", manageReadStatus = false) {
   if (!Object.hasOwn(GOOGLE_CONNECTOR_SCOPES, connector))
     throw new Error("google_invalid_connector");
-  return ["openid", "email", "profile", ...GOOGLE_CONNECTOR_SCOPES[connector]].join(" ");
+  if (manageReadStatus && connector !== "gmail") throw new Error("google_invalid_connector");
+  return [
+    "openid",
+    "email",
+    "profile",
+    ...GOOGLE_CONNECTOR_SCOPES[connector],
+    ...(manageReadStatus ? GOOGLE_CAPABILITY_SCOPES["gmail.modify"] : []),
+  ].join(" ");
 }
 
 export const GOOGLE_CAPABILITY_SCOPES = {
