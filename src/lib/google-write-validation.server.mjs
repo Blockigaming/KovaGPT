@@ -3,6 +3,7 @@ const SUPPORTED_WRITE_TOOLS = new Set([
   "gmail_send",
   "calendar_create_event",
   "calendar_rename_event",
+  "calendar_reschedule_event",
 ]);
 const HEADER_BREAK = /[\r\n]/;
 const EMAIL =
@@ -246,10 +247,17 @@ export function validateSupportedGoogleWrite(tool, input) {
     throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
-  if (tool === "calendar_rename_event") {
+  if (tool === "calendar_rename_event" || tool === "calendar_reschedule_event") {
     const eventId = requiredString(args, "event_id", "Event ID", 1024);
     if (!/^[a-zA-Z0-9_-]+$/.test(eventId)) {
       throw new GoogleWriteValidationError("Event ID is invalid.");
+    }
+    if (tool === "calendar_reschedule_event") {
+      const start = rfc3339Date(requiredString(args, "start", "Event start", 40), "Event start");
+      const end = rfc3339Date(requiredString(args, "end", "Event end", 40), "Event end");
+      if (end <= start)
+        throw new GoogleWriteValidationError("Event start and end times are invalid.");
+      return { event_id: eventId, start: start.toISOString(), end: end.toISOString() };
     }
     return {
       event_id: eventId,
