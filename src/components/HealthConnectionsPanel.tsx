@@ -13,7 +13,7 @@ import { HealthDashboardPreview } from "@/components/HealthDashboardPreview";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
-import { HEALTH_PROVIDERS, type HealthProviderId } from "@/health/providers.mjs";
+import { HEALTH_PROVIDERS } from "@/health/providers.mjs";
 import type { HealthSummary } from "@/health/health-read.server.mjs";
 import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
@@ -56,7 +56,7 @@ export function HealthConnectionsPanel({
       },
       45_000,
     );
-  const connect = async (provider: HealthProviderId) => {
+  const connect = async (provider: "oura") => {
     if (running.current || !ownerId) return;
     setBusy(true);
     setMessage("");
@@ -135,7 +135,7 @@ export function HealthConnectionsPanel({
         {data &&
           !loading &&
           !error &&
-          !data.configuredProviders.some(({ id }) => Object.hasOwn(HEALTH_PROVIDERS, id)) && (
+          !data.configuredProviders.some(({ id }) => id === "oura") && (
             <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
               Coming soon
             </span>
@@ -153,12 +153,8 @@ export function HealthConnectionsPanel({
           {loading && <p role="status">Checking health accounts…</p>}
           {error && <p role="status">Health account status is unavailable.</p>}
           <div className="grid gap-3 sm:grid-cols-2">
-            {(
-              Object.entries(HEALTH_PROVIDERS) as [
-                HealthProviderId,
-                (typeof HEALTH_PROVIDERS)[HealthProviderId],
-              ][]
-            ).map(([id, provider]) => {
+            {(["oura"] as const).map((id) => {
+              const provider = HEALTH_PROVIDERS[id];
               const configured =
                 data?.configuredProviders.some((entry) => entry.id === id) === true;
               const accounts = data?.accounts.filter((account) => account.provider_id === id) ?? [];
@@ -246,12 +242,7 @@ export function HealthConnectionsPanel({
             {[
               ["Sleep score", "sleep", "score", "#8b5cf6"],
               ["Recovery score", "recovery", "score", "#0891b2"],
-              [
-                result.provider === "whoop" ? "Strain" : "Activity score",
-                "activity",
-                "score",
-                "#b45309",
-              ],
+              ["Activity score", "activity", "score", "#b45309"],
               ["Steps", "activity", "steps", "#059669"],
               ["Resting heart rate", "recovery", "restingHeartRate", "#db2777"],
             ].map(([label, metric, field, color]) => {
@@ -295,9 +286,7 @@ export function HealthConnectionsPanel({
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <caption className="text-left font-medium mb-2">
-                Recent {result.provider === "oura" ? "Oura" : "WHOOP"} summaries
-              </caption>
+              <caption className="text-left font-medium mb-2">Recent Oura summaries</caption>
               <thead>
                 <tr>
                   <th className="p-2">Date</th>
@@ -326,13 +315,16 @@ export function HealthConnectionsPanel({
           {!result.summaries.length && <p>No summaries are available for the last seven days.</p>}
         </div>
       )}
-      <p className="text-sm text-muted-foreground">
-        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">
-          Coming soon
-        </span>{" "}
-        Apple Health and Android Health Connect require a mobile app. Other wearables and
-        medical-record services are not connected here.
-      </p>
+      <section className="rounded-xl border border-border p-4" aria-labelledby="apple-health-title">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="apple-health-title" className="font-medium">
+            Apple Health
+          </h3>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
+            Coming soon
+          </span>
+        </div>
+      </section>
       <ConfirmActionDialog
         open={disconnect !== null}
         onOpenChange={(open) => !busy && !open && setDisconnect(null)}
