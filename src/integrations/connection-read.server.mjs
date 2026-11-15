@@ -2,6 +2,7 @@ import { readProviderJsonObject } from "../lib/provider-response.server.mjs";
 import { CONNECTION_FLOWS, safeConnectionLink } from "./connection-flows.mjs";
 import { salesforceReadRequest, salesforceReadResult } from "./salesforce-read.server.mjs";
 
+const notionBlockId = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
 const title = (page) => {
   const property = Object.values(page.properties ?? {}).find((value) => value?.type === "title");
@@ -48,8 +49,7 @@ export function connectionReadRequest(id, query, token, options = {}) {
   } else if (id === "notion") {
     headers["Notion-Version"] = "2022-06-28";
     if (options.notionPage) {
-      if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(query))
-        throw new Error("invalid_notion_page_id");
+      if (!notionBlockId.test(query)) throw new Error("invalid_notion_page_id");
       url = new URL(`https://api.notion.com/v1/blocks/${query}/children?page_size=20`);
     } else {
       url = new URL("https://api.notion.com/v1/search");
@@ -84,8 +84,7 @@ export function connectionReadRequest(id, query, token, options = {}) {
   };
 }
 
-export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
-  const request = connectionReadRequest(id, query, token, options);
+async function readConnectionJson(request, fetchImpl) {
   const response = await fetchImpl(request.url, request.init);
   if (!response.ok) {
     await response.body?.cancel();
@@ -99,35 +98,86 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
             : "connection_read_failed",
     );
   }
-  const data = await readProviderJsonObject(response, 512_000);
-  if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
-  if (id === "notion" && options.notionPage) {
+  return readProviderJsonObject(response, 512_000);
+}
+
+async function readNotionText(root, query, token, fetchImpl, options, signal) {
+  const blocks = [];
+  let limited = false;
+  let remainingRequests = 3;
+  let remainingBlocks = 40;
+  let remainingBytes = 20_000;
+  const encoder = new TextEncoder();
+  const seen = new Set([query.trim().toLowerCase()]);
+
+  async function visit(data, depth) {
     if (!Array.isArray(data.results)) throw new Error("invalid_connection_response");
-    const blocks = [];
-    let limited = data.has_more === true || data.results.length > 20;
-    const encoder = new TextEncoder();
+    if (data.has_more === true || data.results.length > 20) limited = true;
     for (const row of data.results.slice(0, 20)) {
+      if (remainingBlocks === 0 || remainingBytes === 0) {
+        limited = true;
+        break;
+      }
+      remainingBlocks -= 1;
       if (row?.object !== "block" || typeof row.type !== "string") {
         limited = true;
         continue;
       }
-      if (row.has_children === true) limited = true;
       const richText = row[row.type]?.rich_text;
-      if (!Array.isArray(richText)) {
+      if (Array.isArray(richText)) {
+        const text = richText.map((item) => str(item?.plain_text, 2000)).join("");
+        if (text.length > 1500) limited = true;
+        const block = { type: str(row.type, 40), text: text.slice(0, 1500) };
+        const bytes = encoder.encode(JSON.stringify(block)).byteLength + 1;
+        if (bytes > remainingBytes) {
+          remainingBytes = 0;
+          limited = true;
+          break;
+        }
+        remainingBytes -= bytes;
+        blocks.push(block);
+      } else {
+        limited = true;
+      }
+
+      if (row.has_children !== true) continue;
+      const childId = typeof row.id === "string" ? row.id.toLowerCase() : "";
+      // Keep a page read within a small request budget. Linked pages and
+      // synced blocks can point at content outside the requested page.
+      if (
+        depth === 2 ||
+        remainingRequests === 0 ||
+        remainingBlocks === 0 ||
+        remainingBytes === 0 ||
+        !notionBlockId.test(childId) ||
+        seen.has(childId) ||
+        ["child_page", "child_database", "link_to_page", "synced_block"].includes(row.type)
+      ) {
         limited = true;
         continue;
       }
-      const text = richText.map((item) => str(item?.plain_text, 2000)).join("");
-      if (text.length > 1500) limited = true;
-      const block = { type: str(row.type, 40), text: text.slice(0, 1500) };
-      if (encoder.encode(JSON.stringify([...blocks, block])).byteLength > 20_000) {
-        limited = true;
-        break;
-      }
-      blocks.push(block);
+      seen.add(childId);
+      remainingRequests -= 1;
+      await options.ensureCurrent?.();
+      const childRequest = connectionReadRequest("notion", childId, token, options);
+      const children = await readConnectionJson(
+        { ...childRequest, init: { ...childRequest.init, signal } },
+        fetchImpl,
+      );
+      await visit(children, depth + 1);
     }
-    return { service: "Notion", page_id: query.trim(), blocks, limited };
   }
+
+  await visit(root, 0);
+  return { service: "Notion", page_id: query.trim(), blocks, limited };
+}
+
+export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
+  const request = connectionReadRequest(id, query, token, options);
+  const data = await readConnectionJson(request, fetchImpl);
+  if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
+  if (id === "notion" && options.notionPage)
+    return readNotionText(data, query, token, fetchImpl, options, request.init.signal);
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows =
