@@ -254,7 +254,10 @@ for (const theme of ["dark", "light"] as const) {
       if (initiallyOpen) {
         await result.click();
         await expect(page).toHaveURL(/\/$/);
-        await expect(page.locator("[data-chat-transcript]")).toBeVisible();
+        // The transcript is loaded separately from the chat route and its skeleton.
+        await expect(
+          page.locator("[data-chat-transcript]").getByRole("article", { name: "KovaGPT response" }),
+        ).toContainText("A practical release checklist:", { timeout: 20_000 });
         await expect(page.locator(".kova-sidebar[data-kova-core-sidebar]")).toHaveAttribute(
           "data-state",
           viewport.width < 1024 ? "closed" : "open",
