@@ -636,6 +636,7 @@ function composer(f) {
   const ref = (current) => ({ current });
   const no = () => {};
   const context = {
+    extractResponseFollowups,
     principalReady: true,
     userKey: ownerId,
     isSignedIn: true,
