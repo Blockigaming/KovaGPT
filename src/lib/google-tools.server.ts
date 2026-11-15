@@ -1193,6 +1193,7 @@ export async function executePendingAction(
           signal: AbortSignal.timeout(GOOGLE_WRITE_TIMEOUT_MS),
         },
       );
+      if (response.status === 412) throw new Error("calendar_event_changed");
       if (!response.ok) throw new Error("calendar_rename_failed");
       resultText = "Event renamed.";
       await logAudit({
@@ -1256,13 +1257,17 @@ export async function executePendingAction(
       };
     }
     return { ok: true, result_text: resultText };
-  } catch {
+  } catch (error) {
+    const eventChanged = error instanceof Error && error.message === "calendar_event_changed";
     console.error("[executePendingAction] provider action failed");
     const { data: failurePersisted, error: failurePersistError } = await (
       db as unknown as SupabaseQueryLike
     )
       .from("pending_tool_actions")
-      .update({ status: "failed", result: { error: "google_action_failed" } })
+      .update({
+        status: "failed",
+        result: { error: eventChanged ? "calendar_event_changed" : "google_action_failed" },
+      })
       .eq("id", actionId)
       .eq("user_id", userId)
       .eq("status", "processing")
@@ -1284,8 +1289,9 @@ export async function executePendingAction(
     }).catch(() => undefined);
     return {
       ok: false,
-      error:
-        "Google could not confirm whether the action completed. Check Google before trying again.",
+      error: eventChanged
+        ? "This event changed after review. Ask Kova to prepare the rename again."
+        : "Google could not confirm whether the action completed. Check Google before trying again.",
     };
   }
 }
