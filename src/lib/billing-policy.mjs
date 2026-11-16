@@ -68,17 +68,14 @@ export function validateMonthlyIntroCoupon(coupon, couponId, environment, option
   const amountOff = coupon?.amount_off;
   const percentOff = coupon?.percent_off;
   const amountValid =
-    Number.isSafeInteger(amountOff) &&
-    amountOff > 0 &&
-    coupon?.currency === price?.currency;
-  const percentValid =
-    typeof percentOff === "number" && percentOff > 0 && percentOff <= 100;
-  const validProducts = appliesTo.length === 0 ||
+    Number.isSafeInteger(amountOff) && amountOff > 0 && coupon?.currency === price?.currency;
+  const percentValid = typeof percentOff === "number" && percentOff > 0 && percentOff <= 100;
+  const validProducts =
+    appliesTo.length === 0 ||
     (price?.product && appliesTo.length === 1 && appliesTo[0] === price.product);
   const currencyOptions = coupon?.currency_options ?? {};
   const validCurrencyOptions =
-    Object.keys(currencyOptions).length === 0 ||
-    Object.hasOwn(currencyOptions, price?.currency);
+    Object.keys(currencyOptions).length === 0 || Object.hasOwn(currencyOptions, price?.currency);
   if (
     !object(coupon) ||
     coupon.id !== couponId ||
@@ -265,7 +262,9 @@ async function reconcilePlanSelection(options, priceId, couponId, returnUrl) {
   }
   let session = await retrieveVerifiedSession(options, claim, claim.sessionId);
   if (
-    (claim.priceId !== priceId || claim.couponId !== couponId || !["hosted", "hosted_page"].includes(session.ui_mode)) &&
+    (claim.priceId !== priceId ||
+      claim.couponId !== couponId ||
+      !["hosted", "hosted_page"].includes(session.ui_mode)) &&
     session.status === "open"
   ) {
     if (session.payment_status !== "unpaid" || session.subscription != null)
