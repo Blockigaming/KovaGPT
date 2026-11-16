@@ -296,7 +296,9 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await expect(palette).toBeHidden();
 
   await expect(textbox).toBeFocused();
-  await page.locator(".kova-greeting h1").click();
+  await page.getByRole("region", { name: "Conversation", exact: true }).click({
+    position: { x: 4, y: 4 },
+  });
   await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
   await expect(textbox).not.toBeFocused();
   await expect(textbox).toHaveValue("Keep this draft");

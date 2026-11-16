@@ -159,58 +159,87 @@ for (const width of [320, 390, 768, 1440]) {
         theme,
       );
       const region = page.getByRole("region", { name: "Plan comparison" });
-      await expect(region.getByRole("columnheader")).toHaveText([
-        "Included",
-        "Free",
-        "Plus",
-        "Pro",
-      ]);
-      await expect(region.getByRole("rowheader")).toHaveText([
-        "Chat modes",
-        "Usage",
-        "Basic chat",
-        "Advanced chat",
-        "Images and files",
-        "Cloud storage",
-      ]);
-      await expect(
-        region
-          .getByRole("row")
-          .filter({ has: page.getByRole("rowheader", { name: "Usage", exact: true }) })
-          .getByRole("cell"),
-      ).toHaveText(["Very limited", "5× Free", "100× Free (20× Plus)"]);
-      await expect(
-        region
-          .getByRole("row")
-          .filter({ has: page.getByRole("rowheader", { name: "Basic chat", exact: true }) })
-          .getByRole("cell"),
-      ).toHaveText(["Limited", "Limited", "Unlimited with Argon Lite"]);
-      const included = region.getByRole("columnheader", { name: "Included", exact: true });
-      await expect
-        .poll(async () => {
-          const [regionBox, includedBox] = await Promise.all([
-            region.boundingBox(),
-            included.boundingBox(),
-          ]);
-          if (!regionBox || !includedBox) return false;
-          return (
-            includedBox.x >= regionBox.x &&
-            includedBox.x + includedBox.width <= regionBox.x + regionBox.width
-          );
-        })
-        .toBe(true);
-      expect(await region.evaluate((el) => el.scrollLeft)).toBe(0);
-      await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
+      if (width < 768) {
+        await expect(region.getByRole("heading", { level: 3 })).toHaveText([
+          "Chat modes",
+          "Usage",
+          "Basic chat",
+          "Advanced chat",
+          "Images and files",
+          "Cloud storage",
+        ]);
+        const usage = region
+          .locator("section")
+          .filter({ has: page.getByRole("heading", { name: "Usage", exact: true }) });
+        await expect(usage.locator("dt")).toHaveText(["Free", "Plus", "Pro"]);
+        await expect(usage.locator("dd")).toHaveText([
+          "Very limited",
+          "5× Free",
+          "100× Free (20× Plus)",
+        ]);
+        const basic = region
+          .locator("section")
+          .filter({ has: page.getByRole("heading", { name: "Basic chat", exact: true }) });
+        await expect(basic.locator("dd")).toHaveText([
+          "Limited",
+          "Limited",
+          "Unlimited with Argon Lite",
+        ]);
+        await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
+      } else {
+        await expect(region.getByRole("columnheader")).toHaveText([
+          "Included",
+          "Free",
+          "Plus",
+          "Pro",
+        ]);
+        await expect(region.getByRole("rowheader")).toHaveText([
+          "Chat modes",
+          "Usage",
+          "Basic chat",
+          "Advanced chat",
+          "Images and files",
+          "Cloud storage",
+        ]);
+        await expect(
+          region
+            .getByRole("row")
+            .filter({ has: page.getByRole("rowheader", { name: "Usage", exact: true }) })
+            .getByRole("cell"),
+        ).toHaveText(["Very limited", "5× Free", "100× Free (20× Plus)"]);
+        await expect(
+          region
+            .getByRole("row")
+            .filter({ has: page.getByRole("rowheader", { name: "Basic chat", exact: true }) })
+            .getByRole("cell"),
+        ).toHaveText(["Limited", "Limited", "Unlimited with Argon Lite"]);
+        const included = region.getByRole("columnheader", { name: "Included", exact: true });
+        await expect
+          .poll(async () => {
+            const [regionBox, includedBox] = await Promise.all([
+              region.boundingBox(),
+              included.boundingBox(),
+            ]);
+            if (!regionBox || !includedBox) return false;
+            return (
+              includedBox.x >= regionBox.x &&
+              includedBox.x + includedBox.width <= regionBox.x + regionBox.width
+            );
+          })
+          .toBe(true);
+        expect(await region.evaluate((el) => el.scrollLeft)).toBe(0);
+        await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
 
-      await region.focus();
-      await expect(region).toBeFocused();
-      if (width < 672) {
-        await page.keyboard.press("ArrowRight");
-        await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-        await page.screenshot({
-          path: info.outputPath("comparison-scrolled.png"),
-          fullPage: true,
-        });
+        await region.focus();
+        await expect(region).toBeFocused();
+        if (width < 672) {
+          await page.keyboard.press("ArrowRight");
+          await expect.poll(() => region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+          await page.screenshot({
+            path: info.outputPath("comparison-scrolled.png"),
+            fullPage: true,
+          });
+        }
       }
       expect(
         await page.evaluate(
