@@ -389,6 +389,13 @@ body .prose-chat .kova-table-scroll:focus-visible {
   pointer-events: none;
 }
 
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.2em;
+}
+
 .kova-image-zoom {
   align-self: flex-start;
   min-height: 44px;

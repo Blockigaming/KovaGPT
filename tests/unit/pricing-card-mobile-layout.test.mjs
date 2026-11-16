@@ -60,7 +60,7 @@ test("plain plan cards retain the plan name, price, features and CTA behavior", 
   assert.equal(button.props.onClick, onCta);
   assert.equal(button.props.disabled, true);
   assert.equal(contents(button), "Get started");
-  assert.ok(classes(button).includes("h-11"));
+  assert.ok(classes(button).includes("min-h-[45px]"));
   assert.deepEqual(descendants.filter((child) => child.type === "li").map(contents), [
     "Feature one",
     "Feature two",

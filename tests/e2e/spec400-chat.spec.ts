@@ -8,15 +8,22 @@ async function expectRestingComposer(page: Page) {
   const compactDesktop = await page.evaluate(
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );
-  await expect(composer).toHaveCSS("border-radius", "34px");
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
+  const compactEmpty =
+    !conversation &&
+    (await page.evaluate(
+      () =>
+        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches,
+    ));
+  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "21px" : "34px");
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
-  else await height.toBeGreaterThanOrEqual(128);
+  else await height.toBeGreaterThanOrEqual(compactEmpty ? 92 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
   if (singleRow) return compactDesktop;

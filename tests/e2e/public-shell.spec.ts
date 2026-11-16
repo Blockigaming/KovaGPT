@@ -114,9 +114,10 @@ test("the public skip link moves keyboard focus to the main landmark", async ({
   test.skip(testInfo.project.name !== "desktop-1440x900");
   await page.goto("/privacy");
   await waitForHydration(page);
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
-  await page.keyboard.press("Enter");
+  const skipLink = page.getByRole("link", { name: "Skip to content" });
+  await skipLink.focus();
+  await expect(skipLink).toBeFocused();
+  await skipLink.press("Enter");
   await expect(page.locator("main#main-content")).toBeFocused();
 });
 

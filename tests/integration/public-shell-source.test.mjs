@@ -37,7 +37,7 @@ test("public navigation exposes mobile and current-page semantics", async () => 
   assert.match(shell, /Open KovaGPT/);
   assert.match(shell, /safe-area-inset-top/);
   assert.match(shell, /min-h-11/);
-  assert.match(footer, /aria-current=\{currentPage \? "page" : undefined\}/);
+  assert.match(footer, /aria-current=\{pathname === item\.to \? "page" : undefined\}/);
   assert.match(footer, /min-h-11/);
   assert.match(footer, /independently developed/i);
   assert.match(footer, /features can depend\s+on plan\s+eligibility and external providers/i);

@@ -108,7 +108,10 @@ test("workflow skills remain usable across durable chat, image requests, and ava
     chat.indexOf("if (isImageRequest && auth)"),
     chat.indexOf("if (auth && !isOwner)"),
   );
-  assert.match(imageBranch, /handleImageRequest\(imagePrompt, logContext, request\.signal\)/u);
+  assert.match(
+    imageBranch,
+    /handleImageRequest\(imagePrompt, logContext, request\.signal, sheet\)/u,
+  );
   assert.ok(
     imageBranch.indexOf("boundedImageProviderPrompt") < imageBranch.indexOf("enforceQuota"),
   );

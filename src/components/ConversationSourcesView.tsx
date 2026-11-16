@@ -1,3 +1,4 @@
+import { ResponseSourceIcon } from "./ResponseSourceIcon";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import type { ReactNode } from "react";
 import {
@@ -133,7 +134,13 @@ export function ConversationSourcesView({
             {inventory.web.map(({ id, source }) => (
               <li key={id}>
                 <a href={source.url} target="_blank" rel="noopener noreferrer">
-                  <span>{source.title}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ResponseSourceIcon
+                      hostname={source.domain}
+                      className="block h-4 w-4 shrink-0"
+                    />
+                    <span>{source.title}</span>
+                  </span>
                   <small>{source.domain}</small>
                   <span className="sr-only">Opens in a new tab</span>
                 </a>

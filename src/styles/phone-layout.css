@@ -66,6 +66,10 @@
     padding-block: clamp(18px, 5dvh, 44px) 0 !important;
   }
 
+  .kova-assistant[data-keyboard-open="true"] section.kova-empty-chat > .kova-empty-chat-content {
+    padding-block-start: 8px !important;
+  }
+
   .kova-assistant .kova-empty-chat .kova-greeting {
     align-items: flex-start;
     margin-block-end: clamp(16px, 4dvh, 32px);
@@ -131,7 +135,8 @@
     min-height: 0;
     padding: 8px;
     gap: 3px;
-    border-radius: 21px;
+    --chat-composer-corner: 21px;
+    border-radius: var(--chat-composer-corner);
   }
 
   .kova-assistant .kova-empty-composer .spec400-input-region {

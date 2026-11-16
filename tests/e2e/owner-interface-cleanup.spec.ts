@@ -107,16 +107,26 @@ test("Pricing offers direct Team entry and left-aligned seat prices", async ({ p
   ).toBe("left");
   await contained(page);
 });
-test("Home shows two spaced recommendations and no Images sidebar shortcut", async ({ page }) => {
+test("Home distinguishes two recommendations and has no Images sidebar shortcut", async ({
+  page,
+}) => {
   await visit(page, "/");
   await page.getByRole("button", { name: "New chat", exact: true }).first().click();
   const recommendations = page.locator(".spec400-recent-work li");
   await expect(recommendations).toHaveCount(2);
-  expect(
-    await page
+  const compact = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  if (compact) {
+    await expect(recommendations.nth(1)).toHaveCSS("border-block-start-width", "1px");
+  } else {
+    const gap = await page
       .locator(".spec400-recent-work ul")
-      .evaluate((el) => parseFloat(getComputedStyle(el).gap)),
-  ).toBeGreaterThanOrEqual(16);
+      .evaluate((list) => parseFloat(getComputedStyle(list).gap));
+    expect(gap).toBeGreaterThanOrEqual(16);
+  }
   await expect(page.locator('aside a[href="/images"]')).toHaveCount(0);
   await contained(page);
 });

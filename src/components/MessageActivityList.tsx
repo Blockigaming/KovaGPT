@@ -1,5 +1,5 @@
 import { CalendarDays, FileText, Globe, Loader2, Mail } from "lucide-react";
-import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
+import { ResponseSourceIcon } from "./ResponseSourceIcon";
 import type { Activity } from "@/lib/chat-store";
 
 export function MessageActivityList({ activities }: { activities?: Activity[] }) {
@@ -22,17 +22,6 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
               : tool.includes("drive") || tool.includes("file") || tool.includes("document")
                 ? FileText
                 : Globe;
-        const hostname = activity.browser?.hostname?.toLowerCase();
-        const domain = hostname?.replace(/\.$/, "");
-        const siteBrand = ["github", "notion", "linear"].find(
-          (id) => domain === `${id}.com` || domain?.endsWith(`.${id}.com`),
-        );
-        const brand = hostname
-          ? siteBrand
-          : Object.keys(PLUGIN_BRAND_ASSET_URLS).find(
-              (id) => tool.includes(id.replaceAll("-", "_")) || tool.includes(id),
-            );
-        const logo = brand ? PLUGIN_BRAND_ASSET_URLS[brand] : undefined;
         const status =
           activity.status === "running"
             ? "In progress"
@@ -47,9 +36,12 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
             className="kova-activity-row"
             data-status={activity.status}
           >
-            <span className="kova-activity-logo" aria-hidden="true">
-              {logo ? <img src={logo} alt="" /> : <Icon className="kova-activity-icon" />}
-            </span>
+            <ResponseSourceIcon
+              className="kova-activity-logo"
+              hostname={activity.browser?.hostname}
+              tool={tool}
+              fallback={Icon}
+            />
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
               <span>{activity.label}</span>

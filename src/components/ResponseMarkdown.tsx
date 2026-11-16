@@ -487,7 +487,7 @@ export const ResponseMarkdown = memo(function ResponseMarkdown({
         remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
         rehypePlugins={[
           [separateTextOutputs, { boxLongProse }],
-          [rehypeKatex, { trust: false, maxExpand: 500, maxSize: 20 }],
+          [rehypeKatex, { trust: false, maxExpand: 300, maxSize: 20, strict: "ignore" }],
         ]}
         components={markdownComponents}
       >

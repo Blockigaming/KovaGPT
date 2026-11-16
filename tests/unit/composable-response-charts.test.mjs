@@ -17,3 +17,137 @@ test("invalid chart cells and color metadata fall back to text", () => {
   assert.equal(parseChartSpec('{"type":"bar","data":[{"x":{"nested":1}}]}'), null);
   assert.equal(parseChartSpec('{"type":"bar","colors":"red","data":[{"x":1}]}'), null);
 });
+
+test("heatmaps and radar charts use the same bounded data contract", () => {
+  for (const type of ["heatmap", "radar"]) {
+    assert.equal(
+      parseChartSpec(
+        JSON.stringify({
+          type,
+          xKey: "name",
+          keys: ["score"],
+          data: [{ name: "A", score: 4 }],
+        }),
+      )?.type,
+      type,
+    );
+  }
+  assert.equal(
+    parseChartSpec('{"type":"heatmap","keys":["score","score"],"data":[{"score":4}]}'),
+    null,
+  );
+  assert.equal(parseChartSpec('{"type":"radar","colors":["#12345"],"data":[{"score":4}]}'), null);
+});
+
+test("nested chart and study examples remain literal while top-level fences compose", async () => {
+  const { splitInteractiveContent } = await import("../../src/lib/interactive-ui.mjs");
+  const fence = "`".repeat(3);
+  const outer = fence + "`";
+  const chart = fence + 'kova-chart\n{"type":"bar","data":[{"score":4}]}\n' + fence;
+  const quiz =
+    fence +
+    'kova-interactive\n{"version":1,"type":"flashcards","id":"test","title":"Study","cards":[{"front":"A","back":"B"}]}\n' +
+    fence;
+  const sample = [outer + "md", chart, quiz, outer].join("\n") + "\n";
+  assert.deepEqual(extractCharts(sample), [{ kind: "text", value: sample }]);
+  assert.deepEqual(splitInteractiveContent(sample), [{ kind: "text", text: sample }]);
+  assert.equal(extractCharts(sample + chart)[1].kind, "chart");
+  assert.equal(splitInteractiveContent(sample + quiz)[1].kind, "interactive");
+});
+
+test("candlesticks preserve valid ranges and reject inconsistent OHLC", () => {
+  const candle = {
+    type: "candlestick",
+    data: [{ name: "Monday", open: 3, close: 1, high: 4, low: 0 }],
+  };
+  assert.equal(parseChartSpec(JSON.stringify(candle))?.type, "candlestick");
+  assert.equal(
+    parseChartSpec(JSON.stringify({ ...candle, data: [{ ...candle.data[0], high: 2 }] })),
+    null,
+  );
+  assert.equal(
+    parseChartSpec(JSON.stringify({ ...candle, data: [{ ...candle.data[0], low: 2 }] })),
+    null,
+  );
+});
+
+test("histogram assigns the final edge and repeated measurements to exactly one bin", async () => {
+  const { histogramRows } = await import("../../src/components/chat-chart-utils.ts");
+  const spec = { type: "histogram", data: [0, 1, 2, 3].map((value) => ({ value })) };
+  assert.deepEqual(
+    histogramRows(spec, "value").map((bin) => bin.count),
+    [2, 2],
+  );
+  assert.deepEqual(histogramRows({ ...spec, data: [{ value: 7 }, { value: 7 }] }, "value"), [
+    { range: "Bin 1", lower: 7, upper: 7, count: 2 },
+  ]);
+  assert.deepEqual(histogramRows(spec, "absent"), []);
+});
+
+test("bubble and treemap specs preserve their size data and reject invalid metadata", () => {
+  const points = {
+    type: "bubble",
+    xKey: "x",
+    keys: ["y"],
+    sizeKey: "volume",
+    data: [{ x: 2, y: 3, volume: 5 }],
+  };
+  assert.deepEqual(parseChartSpec(JSON.stringify(points)), points);
+  assert.equal(parseChartSpec(JSON.stringify({ ...points, sizeKey: " " })), null);
+  assert.equal(
+    parseChartSpec('{"type":"treemap","data":[{"name":"A","value":9}]}')?.type,
+    "treemap",
+  );
+});
+
+test("Sankey data preserves weighted links and rejects disconnected cycles", async () => {
+  const { sankeyData } = await import("../../src/components/chat-chart-utils.ts");
+  const spec = {
+    type: "sankey",
+    data: [
+      { source: "A", target: "B", value: 3 },
+      { source: "B", target: "C", value: 2 },
+    ],
+  };
+  assert.deepEqual(sankeyData(spec), {
+    nodes: [{ name: "A" }, { name: "B" }, { name: "C" }],
+    links: [
+      { source: 0, target: 1, value: 3 },
+      { source: 1, target: 2, value: 2 },
+    ],
+  });
+  assert.equal(
+    parseChartSpec(
+      JSON.stringify({
+        ...spec,
+        data: [
+          ...spec.data,
+          { source: "X", target: "Y", value: 1 },
+          { source: "Y", target: "X", value: 1 },
+        ],
+      }),
+    ),
+    null,
+  );
+  assert.equal(
+    parseChartSpec(JSON.stringify({ ...spec, data: [...spec.data, spec.data[0]] })),
+    null,
+  );
+});
+
+test("waterfalls preserve signed changes and range charts require ordered bounds", async () => {
+  const { rangeChartRows } = await import("../../src/components/chat-chart-utils.ts");
+  const spec = {
+    type: "waterfall",
+    data: [
+      { name: "Start", value: 8 },
+      { name: "Drop", value: -11 },
+    ],
+  };
+  assert.deepEqual(rangeChartRows(spec), [
+    { label: "Start", interval: [0, 8], detail: 8 },
+    { label: "Drop", interval: [-3, 8], detail: -11 },
+  ]);
+  assert.equal(parseChartSpec('{"type":"range","data":[{"low":5,"high":4}]}'), null);
+  assert.equal(parseChartSpec('{"type":"range","data":[{"low":4,"high":5}]}')?.type, "range");
+});

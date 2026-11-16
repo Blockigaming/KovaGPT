@@ -86,10 +86,14 @@ for (const width of widths)
               await expect(summary.locator("..")).not.toHaveAttribute("open", "");
               await expect(summary).toBeFocused();
             }
-            const footerLink = page
-              .getByRole("navigation", { name: "Footer navigation" })
-              .getByRole("link")
-              .first();
+            const footer = page.getByRole("navigation", { name: "Footer navigation" });
+            if (width < 768) {
+              const group = footer.getByRole("button").first();
+              await expect(group).toHaveAttribute("aria-expanded", "false");
+              await group.press("Enter");
+              await expect(group).toHaveAttribute("aria-expanded", "true");
+            }
+            const footerLink = footer.getByRole("link").first();
             await footerLink.focus();
             await expect(footerLink).toBeFocused();
             expect((await footerLink.boundingBox())!.height).toBeGreaterThanOrEqual(44);
