@@ -133,7 +133,11 @@ function FinanceSpendingPreview({
           <p className="font-semibold tabular-nums">{exampleCurrency.format(exampleTotal / 100)}</p>
         </div>
         <TooltipProvider delayDuration={150}>
-          <div aria-label="Sample spending breakdown" role="group" className="my-4 flex h-10 gap-0.5">
+          <div
+            aria-label="Sample spending breakdown"
+            role="group"
+            className="my-4 flex h-10 gap-0.5"
+          >
             {exampleSpending.map((category) => (
               <Tooltip key={category.label}>
                 <TooltipTrigger asChild>
