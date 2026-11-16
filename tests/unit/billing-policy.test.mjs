@@ -229,7 +229,7 @@ test("both monthly paid tiers retain their Price and use 50%-once, never new tri
 });
 
 test("renewal is a once-duration Stripe contract, not a local price rewrite or subscription update", () => {
-  assert.equal(validateMonthlyIntroCoupon(coupon, coupon.id, "live", now).duration, "once");
+  assert.equal(validateMonthlyIntroCoupon(coupon, coupon.id, "live", { now, price }).duration, "once");
   assert.equal(validateMonthlyIntroPrice(price, plan, "live").unit_amount, 2000);
   for (const invalid of [
     { duration: "forever" },
@@ -242,7 +242,7 @@ test("renewal is a once-duration Stripe contract, not a local price rewrite or s
     { max_redemptions: 999, times_redeemed: 1 },
   ]) {
     assert.throws(
-      () => validateMonthlyIntroCoupon({ ...coupon, ...invalid }, coupon.id, "live", now),
+      () => validateMonthlyIntroCoupon({ ...coupon, ...invalid }, coupon.id, "live", { now, price }),
       /coupon_invalid/u,
     );
   }
