@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { createClientOnlyFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { FinanceActivityDashboard } from "@/components/FinanceActivityDashboard";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
@@ -30,15 +31,67 @@ const getPlaidSdk = createClientOnlyFn(async () => {
   return loadPlaidLink();
 });
 const exampleSpending = [
-  { label: "Rent and utilities", cents: 468942, icon: Building2, color: "#08b94d" },
-  { label: "Groceries", cents: 214367, icon: Boxes, color: "#10913e" },
-  { label: "Subscriptions", cents: 108924, icon: CreditCard, color: "#147235" },
-  { label: "Dining", cents: 132158, icon: CalendarDays, color: "#078af3" },
-  { label: "Travel and transport", cents: 174683, icon: Globe2, color: "#116bc0" },
-  { label: "Shopping and other", cents: 149318, icon: PackageOpen, color: "#155595" },
+  {
+    label: "Rent and utilities",
+    cents: 468942,
+    icon: Building2,
+    color: "#08b94d",
+    examples: "Rent, electricity, and internet",
+  },
+  {
+    label: "Groceries",
+    cents: 214367,
+    icon: Boxes,
+    color: "#10913e",
+    examples: "Supermarkets, farmers markets, and pantry staples",
+  },
+  {
+    label: "Subscriptions",
+    cents: 108924,
+    icon: CreditCard,
+    color: "#147235",
+    examples: "Streaming, cloud storage, and software plans",
+  },
+  {
+    label: "Dining",
+    cents: 132158,
+    icon: CalendarDays,
+    color: "#078af3",
+    examples: "Coffee shops, takeout, and restaurants",
+  },
+  {
+    label: "Travel and transport",
+    cents: 174683,
+    icon: Globe2,
+    color: "#116bc0",
+    examples: "Transit passes, rideshares, and flights",
+  },
+  {
+    label: "Shopping and other",
+    cents: 149318,
+    icon: PackageOpen,
+    color: "#155595",
+    examples: "Clothing, household goods, and gifts",
+  },
 ];
 const exampleTotal = exampleSpending.reduce((total, category) => total + category.cents, 0);
 const exampleCurrency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+function FinanceExampleDetails({ category }: { category: (typeof exampleSpending)[number] }) {
+  const share = Math.round((category.cents / exampleTotal) * 100);
+  return (
+    <TooltipContent sideOffset={8} className="max-w-[260px] rounded-xl px-3.5 py-3">
+      <p className="text-xs text-muted-foreground">Sample spending</p>
+      <p className="mt-1 font-semibold">{category.label}</p>
+      <p className="tabular-nums">
+        {exampleCurrency.format(category.cents / 100)} · {share}% of total
+      </p>
+      <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
+        {category.examples}
+      </p>
+    </TooltipContent>
+  );
+}
 
 function FinanceSpendingPreview({
   action,
@@ -79,30 +132,52 @@ function FinanceSpendingPreview({
           </div>
           <p className="font-semibold tabular-nums">{exampleCurrency.format(exampleTotal / 100)}</p>
         </div>
-        <div aria-hidden="true" className="my-4 flex h-10 gap-0.5">
-          {exampleSpending.map(({ label, cents, color }) => (
-            <span key={label} className="rounded" style={{ backgroundColor: color, flex: cents }} />
-          ))}
-        </div>
-        <ul
-          className="space-y-3"
-          style={{ maskImage: "linear-gradient(to bottom, black 10%, transparent 118%)" }}
-        >
-          {exampleSpending.map(({ label, cents, icon: Icon }) => (
-            <li
-              key={label}
-              className="flex items-center justify-between gap-3 text-sm sm:text-base"
-            >
-              <span className="flex min-w-0 items-center gap-3">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <Icon aria-hidden="true" className="size-4" />
-                </span>
-                <span>{label}</span>
-              </span>
-              <span className="shrink-0 tabular-nums">{exampleCurrency.format(cents / 100)}</span>
-            </li>
-          ))}
-        </ul>
+        <TooltipProvider delayDuration={150}>
+          <div aria-label="Sample spending breakdown" role="group" className="my-4 flex h-10 gap-0.5">
+            {exampleSpending.map((category) => (
+              <Tooltip key={category.label}>
+                <TooltipTrigger asChild>
+                  <span
+                    aria-label={category.label}
+                    role="img"
+                    tabIndex={0}
+                    className="min-w-0 rounded transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    style={{ backgroundColor: category.color, flex: category.cents }}
+                  />
+                </TooltipTrigger>
+                <FinanceExampleDetails category={category} />
+              </Tooltip>
+            ))}
+          </div>
+          <ul className="space-y-1">
+            {exampleSpending.map((category) => {
+              const { label, cents, icon: Icon } = category;
+              return (
+                <li key={label}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        tabIndex={0}
+                        className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 text-sm transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring sm:text-base"
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                            <Icon aria-hidden="true" className="size-4" />
+                          </span>
+                          <span>{label}</span>
+                        </span>
+                        <span className="shrink-0 tabular-nums">
+                          {exampleCurrency.format(cents / 100)}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <FinanceExampleDetails category={category} />
+                  </Tooltip>
+                </li>
+              );
+            })}
+          </ul>
+        </TooltipProvider>
       </section>
     </div>
   );
