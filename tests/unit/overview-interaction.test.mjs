@@ -72,6 +72,11 @@ test("comparison keeps each tier's mode and allowance data in the correct column
     ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],
     ["Limited", "Expanded", "Highest allowance"],
     ["Included", "Included", "Included"],
+    [
+      "Up to 1 hour per week. Free requests wait when capacity is reserved for Plus and Pro.",
+      "Priority access ahead of Free, behind Pro.",
+      "Highest priority when browser capacity is limited.",
+    ],
   ];
   const [phone, table] = elements(tree, (node) => node.props.role === "region");
   const rows = elements(table, (node) => node.type === "tbody")[0].props.children.flat();
