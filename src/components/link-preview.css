@@ -10,8 +10,8 @@
   display: flex;
   align-items: center;
   align-self: flex-start;
-  margin-inline: 8px;
-  width: min(calc(100% - 16px), 370px);
+  margin-inline: var(--composer-text-inset);
+  width: min(calc(100% - 2 * var(--composer-text-inset)), 370px);
 }
 .kova-link-preview-message {
   margin-bottom: 7px;

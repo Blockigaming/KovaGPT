@@ -226,3 +226,23 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
     }, original);
   }
 });
+
+test("a composer link preview aligns with the first letter of the draft", async ({ page }) => {
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  const preview = page.locator(".kova-link-preview-composer");
+
+  await input.fill("go to youtube.com");
+  await expect(preview).toBeHidden();
+  await input.press("End");
+  await input.press("Space");
+  await expect(preview).toBeVisible();
+
+  const textStart = await input.evaluate(
+    (element) =>
+      element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
+  );
+  expect((await preview.boundingBox())!.x).toBeCloseTo(textStart, 0);
+});
