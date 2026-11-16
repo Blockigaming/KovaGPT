@@ -25,66 +25,99 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   expect(chatRequests).toBe(0);
 });
 
-test("Plus model selector exposes Lite through Max", async ({ page }) => {
+test("Plus picker exposes Lite through Max and supports touch dragging", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
-  const useSheet = await page.evaluate(
-    () => window.innerWidth < 1024 || window.matchMedia("(pointer: coarse)").matches,
-  );
-  await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
-  const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
+  const trigger = page.getByTestId("model-selector-trigger");
   await expect(trigger).toBeVisible();
+  await expect(page.getByTestId("consumer-model-trigger")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
-  const optionRoot = useSheet
-    ? page.locator('[data-testid="mobile-bottom-sheet"]')
-    : page.getByRole("dialog", { name: "Choose response effort" });
-  await expect(optionRoot).toBeVisible({ timeout: 3000 });
-  await expect(optionRoot.getByTestId("model-option-instant")).toBeVisible();
-  await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Lite");
-  await expect(optionRoot.getByTestId("model-option-high")).toContainText("High");
-  for (const id of ["instant", "thinking", "high", "extra_high", "max"]) {
-    await expect(optionRoot.getByTestId(`model-option-${id}`)).toBeVisible();
-  }
-  await expect(optionRoot.getByTestId("model-option-ultra")).toHaveCount(0);
+  const picker = page.getByRole("dialog", { name: "Select model", exact: true });
+  const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
+  await expect(picker).toBeVisible();
+  await expect(picker.getByTestId("consumer-model-kova-xenon-5")).toBeVisible();
+  await expect(slider).toHaveAttribute("max", "4");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
 
-  await optionRoot.getByTestId("model-option-thinking").click();
-  await expect(optionRoot).toHaveCount(0);
-  await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: Medium");
-  await expect(trigger).toContainText("Medium");
-  await trigger.click();
-  await expect(optionRoot.getByTestId("model-option-thinking")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  const isTouchPhone = await page.evaluate(() =>
+    matchMedia("(max-width: 767px) and (pointer: coarse)").matches,
   );
-  await page.keyboard.press("Escape");
-  await expect(optionRoot).toHaveCount(0);
-  if (!useSheet) {
-    await expect(trigger).toHaveAttribute("aria-expanded", "false");
-    await expect(trigger).toBeFocused();
+  if (isTouchPhone) {
+    await expect(picker).toHaveCSS("width", "250px");
+    await expect(picker).toBeInViewport({ ratio: 1 });
+    const bounds = (await picker.boundingBox())!;
+    expect(bounds.height).toBeLessThanOrEqual(292);
+    expect(bounds.height).toBeGreaterThan(150);
+    const rail = (await slider.boundingBox())!;
+    const touch = await page.context().newCDPSession(page);
+    const y = Math.round(rail.y + rail.height / 2);
+    await touch.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: Math.round(rail.x + 11), y }],
+    });
+    for (const fraction of [0.25, 0.5, 0.75, 0.95]) {
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x: Math.round(rail.x + rail.width * fraction), y }],
+      });
+    }
+    await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await touch.detach();
+    await expect(slider).toHaveAttribute("aria-valuetext", "Max");
   }
+
+  await slider.press("Home");
+  await slider.press("ArrowRight");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Medium");
+  await expect(trigger).toContainText("Medium");
+  await slider.press("End");
+  await slider.press("ArrowRight");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Max");
+  await slider.press("Escape");
+  await expect(picker).toBeHidden();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
 });
 
-test("Pro picker keeps all six modes and the High label", async ({ page }) => {
+test("Pro picker combines all models, Ultra and the recommended default", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "pro" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
-  const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
-  await expect(trigger).toBeVisible();
+
+  const trigger = page.getByTestId("model-selector-trigger");
+  const picker = page.getByRole("dialog", { name: "Select model", exact: true });
+  const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
+  const recommended = picker.getByRole("button", { name: /^Default Recommended/ });
   await trigger.click();
-  const options = page.locator('[data-testid^="model-option-"]:visible');
-  await expect(options).toHaveCount(6);
-  for (const id of ["instant", "thinking", "high", "extra_high", "max", "ultra"]) {
-    await expect(page.getByTestId(`model-option-${id}`)).toBeVisible();
-  }
-  await expect(page.getByTestId("model-option-high")).toHaveText("High");
-  await page.getByTestId("model-option-high").click();
-  await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: High");
-  await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
+  await expect(picker.getByRole("button").first()).toHaveAccessibleName(/^Default Recommended/);
+  await expect(recommended).toHaveAttribute("aria-pressed", "true");
+  await expect(picker.locator('[data-testid^="consumer-model-kova-"]')).toHaveCount(7);
+  await slider.press("ArrowRight");
+  await slider.press("ArrowRight");
+  await expect(slider).toHaveAttribute("aria-valuetext", "High");
+  await slider.press("End");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
+
+  const xenon = picker.getByTestId("consumer-model-kova-xenon-5");
+  await xenon.click();
+  await expect(picker).toBeHidden();
+  await expect(trigger).toHaveAttribute(
+    "aria-label",
+    "Choose model and effort, Kova Xenon 5 Ultra",
+  );
+  await trigger.click();
+  await expect(xenon).toHaveAttribute("aria-pressed", "true");
+  await recommended.click();
+  await expect(recommended).toHaveAttribute("aria-pressed", "true");
+  await expect(xenon).toHaveAttribute("aria-pressed", "false");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
+  await expect(trigger).toHaveAttribute("aria-label", "Choose model and effort, Default Lite");
 });
 
 test("signed-out visitors must log in before chat or model access", async ({ page }) => {
@@ -108,22 +141,20 @@ test.describe("short desktop model picker", () => {
     await installAuthenticatedFixture(page, { tier: "pro" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const trigger = page.getByTestId("model-selector-trigger").filter({ visible: true });
-    await trigger.click();
-    const picker = page.getByRole("dialog", { name: "Choose response effort", exact: true });
+    const trigger = page.getByTestId("model-selector-trigger");
+    const picker = page.getByRole("dialog", { name: "Select model", exact: true });
+    const recommended = picker.getByRole("button", { name: /^Default Recommended/ });
+    const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
+    await trigger.press("Space");
     await expect(picker).toBeVisible();
-    expect(
-      await picker.evaluate((element) =>
-        Boolean(element.closest('[role="dialog"][aria-label="Response options"]')),
-      ),
-    ).toBe(false);
-    const slider = picker.getByRole("slider", { name: "Response effort" });
-    const lastOption = picker.getByTestId("model-option-ultra");
-    await expect(lastOption).toBeInViewport({ ratio: 1 });
+    await expect(picker).toHaveCSS("width", "282px");
+    await expect(picker).toBeInViewport({ ratio: 1 });
+    await expect(recommended).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(slider).toBeFocused();
+
     const rail = (await slider.boundingBox())!;
-    // Hit the upper portion of the range so the centered preset buttons
-    // cannot intercept this track click as the popover finishes animating.
-    await slider.click({ position: { x: rail.width - 3, y: rail.height / 5 } });
+    await slider.click({ position: { x: rail.width - 3, y: rail.height / 2 } });
     await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
     const fill = picker.locator('[data-slot="effort-fill"]');
     const fillStyle = await fill.evaluate((element) => {
@@ -133,35 +164,13 @@ test.describe("short desktop model picker", () => {
     expect(fillStyle.width).toBeGreaterThan(rail.width / 2);
     expect(fillStyle.color).toBe("rgb(124, 196, 255)");
 
-    await picker.getByRole("button", { name: "Reset response effort to Lite" }).click();
-    await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
-    await slider.press("ArrowRight");
-    await expect(slider).toHaveAttribute("aria-valuetext", "Medium");
-    await slider.press("Home");
-
-    await expect
-      .poll(async () => {
-        const bounds = await picker.boundingBox();
-        return bounds ? bounds.y + bounds.height : Number.POSITIVE_INFINITY;
-      })
-      .toBeLessThanOrEqual(520);
-    const bounds = (await picker.boundingBox())!;
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.y).toBeGreaterThanOrEqual(0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
-    expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
-
     await page.keyboard.press("Escape");
-    await expect(picker).toHaveCount(0);
+    await expect(picker).toBeHidden();
     await expect(trigger).toBeFocused();
     await trigger.press("Space");
     await expect(picker).toBeVisible();
-    await expect(picker.getByTestId("model-option-instant")).toBeFocused();
-    await page.keyboard.press("Tab");
-    await expect(picker.getByTestId("model-option-thinking")).toBeFocused();
+    await expect(recommended).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(picker).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveAttribute("aria-label", "Choose response effort: Medium");
+    await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
   });
 });

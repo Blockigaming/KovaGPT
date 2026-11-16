@@ -227,20 +227,19 @@ test("Share copies a real link and reports clipboard errors without false succes
   expect(creates).toBe(1);
 });
 
-for (const [tier, modes] of [
-  ["plus", ["instant", "thinking", "high", "extra_high", "max"]],
-  ["pro", ["instant", "thinking", "high", "extra_high", "max", "ultra"]],
+for (const [tier, maxIndex, highest] of [
+  ["plus", 4, "Max"],
+  ["pro", 5, "Ultra"],
 ] as const)
   test(`${tier} exposes exactly its additional model levels`, async ({ page }) => {
     await fixture(page, "dark", true, false, tier);
     await page.goto("/");
     await waitForKovaHydration(page);
     await page.getByTestId("model-selector-trigger").click();
-    const options = page.locator('[data-testid^="model-option-"]');
-    await expect(options).toHaveCount(modes.length);
-    expect(
-      await options.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-testid"))),
-    ).toEqual(modes.map((mode) => `model-option-${mode}`));
+    const slider = page.getByRole("slider", { name: "Response effort", exact: true });
+    await expect(slider).toHaveAttribute("max", String(maxIndex));
+    await slider.press("End");
+    await expect(slider).toHaveAttribute("aria-valuetext", highest);
     await expect(page.getByTestId("thinking-toggle")).toHaveCount(0);
   });
 test("appearance changes save and survive a reload", async ({ page }) => {
