@@ -12,13 +12,13 @@ test("returns a frozen allowlisted Checkout request", () => {
     return_url: "https://evil.example",
   });
 
-  assert.deepEqual({ ...parsed }, { priceId: "plus_monthly", quantity: 1 });
+  assert.deepEqual({ ...parsed }, { priceId: "plus_monthly", quantity: 1, couponId: "intro50" });
   assert.equal(Object.getPrototypeOf(parsed), null);
   assert.equal(Object.isFrozen(parsed), true);
   assert.equal("environment" in parsed, false);
   assert.equal("returnUrl" in parsed, false);
   assert.equal("redirect_url" in parsed, false);
-  assert.equal("return_url" in parsed, false);
+  assert.equal("return_url" in parsed, false);\n  assert.equal(parsed.couponId, "intro50");
   assert.throws(() => {
     parsed.return_url = "https://evil.example";
   }, TypeError);
@@ -40,7 +40,7 @@ test("accepts omitted quantity and rejects malformed Checkout requests", () => {
     { priceId: "" },
     { priceId: "plus_monthly", quantity: 0 },
     { priceId: "plus_monthly", quantity: 2 },
-    { priceId: "plus_monthly", quantity: "1" },
+    { priceId: "plus_monthly", quantity: "1" },\n    { priceId: "plus_monthly", couponId: "bad id" },\n    { priceId: "plus_monthly", couponId: 100 },
   ]) {
     assert.throws(() => parseCheckoutRequest(value), {
       name: "TypeError",
