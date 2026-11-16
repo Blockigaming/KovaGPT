@@ -1097,8 +1097,11 @@
 }
 
 /* Use the same left inset for the prompt and the attachment control. */
+.spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+  --composer-text-inset: 0px;
+}
 .spec400-chat-input[data-composer-surface="empty"] .spec400-input-region {
-  padding-inline: 0;
+  padding-inline: var(--composer-text-inset);
   align-items: flex-start;
 }
 .kova-open-desktop-app {
