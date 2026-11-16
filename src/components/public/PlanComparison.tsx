@@ -4,6 +4,12 @@ import { PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
 const tiers = ["free", "plus", "pro"] as const;
 const rows = [
   {
+    label: "Chat modes",
+    values: tiers.map((tier) =>
+      CAPABILITY_REGISTRY.modesByTier[tier].map((mode) => mode.label).join(", "),
+    ),
+  },
+  {
     label: "Usage",
     values: [
       "Very limited",
@@ -29,6 +35,21 @@ export function PlanComparison() {
       <p className="mb-6 mt-3 text-sm leading-6 text-muted-foreground">
         Model access and relative usage for each individual plan.
       </p>
+      <div className="public-phone-plan-comparison" role="region" aria-label="Plan comparison">
+        {rows.map(({ label, values }) => (
+          <section key={label} className="public-phone-plan-row">
+            <h3>{label}</h3>
+            <dl>
+              {tiers.map((tier, index) => (
+                <div key={tier}>
+                  <dt>{CAPABILITY_REGISTRY.plans[tier].name}</dt>
+                  <dd>{values[index]}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
       <div
         className="public-table-scroll overflow-x-auto rounded-2xl border border-border"
         role="region"
@@ -50,14 +71,6 @@ export function PlanComparison() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <th scope="row">Chat modes</th>
-              {tiers.map((tier) => (
-                <td key={tier}>
-                  {CAPABILITY_REGISTRY.modesByTier[tier].map((mode) => mode.label).join(", ")}
-                </td>
-              ))}
-            </tr>
             {rows.map((row) => (
               <tr key={row.label}>
                 <th scope="row">{row.label}</th>

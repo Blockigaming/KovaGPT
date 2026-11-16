@@ -9,6 +9,7 @@ const mobileProjects = new Set([
   "phone-375x812",
   "phone-390x844",
   "phone-412x915",
+  "phone-430x932",
   "phone-landscape-844x390",
   "tablet-768x1024",
 ]);
@@ -58,6 +59,139 @@ test("composer and attachment menu stay reachable on narrow screens", async ({ p
   await expect(sheet).toBeHidden();
 });
 
+test("phone workspace tabs sit below the composer and navigate between pages", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width >= 768 || viewport.height <= 500, "portrait phone layout");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const tabs = page.getByRole("navigation", { name: "Mobile workspace" });
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(composer).toBeInViewport({ ratio: 1 });
+  await expect(tabs.getByRole("link", { name: "Chat", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  const [composerBox, tabBox] = await Promise.all([composer.boundingBox(), tabs.boundingBox()]);
+  expect(composerBox!.y).toBeGreaterThan(viewport.height / 2);
+  expect(composerBox!.y + composerBox!.height).toBeLessThanOrEqual(tabBox!.y);
+  expect(tabBox!.y + tabBox!.height).toBeCloseTo(viewport.height, 0);
+  await composer.fill("Keep this draft while I change pages");
+
+  for (const name of ["Projects", "Library", "Connections"]) {
+    const destination = tabs.getByRole("link", { name, exact: true });
+    const hitTarget = await destination.boundingBox();
+    expect(Math.min(hitTarget!.width, hitTarget!.height)).toBeGreaterThanOrEqual(44);
+    await destination.tap();
+    await expect(destination).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("main")).toBeVisible();
+    await expectNoPageOverflow(page);
+  }
+
+  const libraryTab = tabs.getByRole("link", { name: "Library", exact: true });
+  await libraryTab.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .getByRole("heading", { name: "Library", exact: true, level: 1 })
+      .and(page.locator(":focus")),
+  ).toBeVisible();
+  await tabs.getByRole("link", { name: "Chat", exact: true }).tap();
+  await expect(composer).toHaveValue("Keep this draft while I change pages");
+});
+
+test("mobile public header exposes the app and opens its menu without moving the article", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 768, "phone layout");
+  await page.goto("/pricing", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const navigation = page.getByRole("navigation", { name: "Public navigation", exact: true });
+  await expect(navigation.getByRole("link", { name: "Open app" })).toBeInViewport();
+  const main = page.getByRole("main");
+  const initialY = (await main.boundingBox())!.y;
+  await navigation.getByRole("button", { name: "Open navigation" }).tap();
+  const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
+  await expect(menu.getByRole("link", { name: "Pricing", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect((await main.boundingBox())!.y).toBeCloseTo(initialY, 0);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(navigation.getByRole("button", { name: "Open navigation" })).toBeFocused();
+  await navigation.getByRole("button", { name: "Open navigation" }).tap();
+  await expect(menu).toBeVisible();
+  await page.locator("main").dispatchEvent("pointerdown", { pointerType: "touch", bubbles: true });
+  await expect(menu).toBeHidden();
+});
+
+test("phone footer groups reveal their links without taking over the page", async ({ page }) => {
+  test.skip(page.viewportSize()!.width >= 768, "phone layout");
+  await page.goto("/privacy", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const footer = page.getByRole("navigation", { name: "Footer navigation" });
+  const groups = footer.getByRole("button");
+  await expect(groups.first()).toBeVisible();
+  await expect(footer.getByRole("link")).toHaveCount(0);
+  for (const group of [groups.first(), groups.last()]) {
+    await group.focus();
+    await page.keyboard.press("Enter");
+    await expect(group).toHaveAttribute("aria-expanded", "true");
+    await expect(footer.locator('[aria-expanded="true"]')).toHaveCount(1);
+    await expect(footer.getByRole("link").first()).toBeVisible();
+    await expect(group).toBeFocused();
+  }
+  await page.keyboard.press("Enter");
+  await expect(footer.getByRole("link")).toHaveCount(0);
+  await expectNoPageOverflow(page);
+
+  const directory = page.locator(".kova-footer-directory");
+  await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
+  await directory.locator("summary").tap();
+  const search = directory.getByRole("searchbox", { name: "Search the page directory" });
+  await search.fill("privacy");
+  await expect(directory.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
+  await directory.locator("summary").tap();
+  await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
+});
+
+test("phone article outlines jump to readable sections below the header", async ({ page }) => {
+  const { width, height } = page.viewportSize()!;
+  test.skip(width >= 768 && height > 500, "phone layouts only");
+  for (const route of ["/academy/ai-fundamentals", "/developers/responses"]) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const outline = page.locator(".public-phone-outline");
+    await outline.getByText("On this page", { exact: true }).tap();
+    const sectionLink = outline.getByRole("link").first();
+    await expect(sectionLink).toBeVisible();
+    await sectionLink.tap();
+    await expect(page).toHaveURL(/#section-1$/);
+    const content = page.locator("#section-1").getByRole("heading", { level: 2 });
+    await expect(content).toBeInViewport();
+    const headingBox = await content.boundingBox();
+    const headerBox = await page.locator(".kova-public-header").boundingBox();
+    expect(headingBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    await expectNoPageOverflow(page);
+  }
+});
+
+test("phone pricing compares all tiers within the screen", async ({ page }) => {
+  const { width, height } = page.viewportSize()!;
+  test.skip(width >= 768 && height > 500, "phone layouts only");
+  await page.goto("/pricing", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const comparison = page.getByRole("region", { name: "Plan comparison" });
+  await expect(comparison.getByRole("heading", { name: "Chat modes" })).toBeVisible();
+  await expect(comparison.getByRole("table")).toHaveCount(0);
+  const row = comparison.locator(".public-phone-plan-row").first();
+  await expect(row.locator("dt")).toHaveText(["Free", "Plus", "Pro"]);
+  expect(await comparison.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(width);
+  await expectNoPageOverflow(page);
+});
+
 for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
   test(`mobile workspace ${route} never overflows`, async ({ page }) => {
     await page.goto(route, { waitUntil: "domcontentloaded" });
@@ -66,6 +200,66 @@ for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/res
     await expectNoPageOverflow(page);
   });
 }
+
+test("localized phone landing pages keep the app action and language picker within reach", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width >= 768 && page.viewportSize()!.height > 500);
+  for (const [path, direction] of [
+    ["/fr-FR", "ltr"],
+    ["/ar/home", "rtl"],
+  ]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const main = page.locator("main#main-content");
+    await expect(main).toHaveAttribute("dir", direction);
+    const action = main.getByRole("link");
+    const picker = main.getByRole(direction === "rtl" ? "button" : "combobox", {
+      name: "Language",
+    });
+    await expect(action).toBeInViewport({ ratio: 1 });
+    await expect(picker).toBeInViewport({ ratio: 1 });
+    const actionBox = (await action.boundingBox())!;
+    const mainBox = (await main.boundingBox())!;
+    expect(actionBox.width).toBeGreaterThanOrEqual(mainBox.width - 40);
+    expect(actionBox.height).toBeGreaterThanOrEqual(44);
+    await expectNoPageOverflow(page);
+  }
+});
+
+test("secondary workspaces stay usable on narrow and landscape phones", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  test.skip(viewport.width !== 320 && viewport.height > 500, "smallest and shortest phone views");
+  test.setTimeout(90_000);
+  for (const route of [
+    "/images",
+    "/work",
+    "/files",
+    "/finances",
+    "/notifications",
+    "/settings/general",
+  ]) {
+    await test.step(route, async () => {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.ok()).toBe(true);
+      await waitForKovaHydration(page);
+      await expect(page.getByRole("main").first()).toBeVisible();
+      await expectNoPageOverflow(page);
+    });
+  }
+});
+
+test("secondary phone workspaces provide a working skip target", async ({ page }) => {
+  for (const path of ["/audit-log", "/kovas", "/write"]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const main = page.getByRole("main", { exact: true });
+    await expect(main).toHaveAttribute("id", "main-content");
+    await page.getByRole("link", { name: "Skip to content", exact: true }).press("Enter");
+    await expect(main).toBeFocused();
+    await expectNoPageOverflow(page);
+  }
+});
 
 test("mobile settings never overflow", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });

@@ -1,6 +1,7 @@
 import "./public/public-website.css";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PUBLIC_WEBSITE_FOOTER, PUBLIC_WEBSITE_PAGES } from "@/lib/public-website-catalog.mjs";
 import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
@@ -9,7 +10,11 @@ import { requiresAppAccount } from "@/lib/app-access-policy.mjs";
 export function PublicFooter() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [query, setQuery] = useState("");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const groupId = useId();
   const directory = useMemo(() => {
+    if (!directoryOpen) return [];
     const entries = new Map(
       PUBLIC_SITEMAP_ENTRIES.filter(({ path }) => path === "/" || !requiresAppAccount(path)).map(
         ({ path }) => [
@@ -34,7 +39,7 @@ export function PublicFooter() {
     for (const group of PUBLIC_WEBSITE_FOOTER)
       for (const link of group.links) entries.set(link.to, link);
     return [...entries.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, []);
+  }, [directoryOpen]);
   const matching = directory.filter((entry) =>
     `${entry.label} ${entry.to}`.toLowerCase().includes(query.trim().toLowerCase()),
   );
@@ -49,51 +54,71 @@ export function PublicFooter() {
             </Link>
           </div>
           <nav aria-label="Footer navigation" className="kova-footer-nav">
-            {PUBLIC_WEBSITE_FOOTER.map((group) => (
-              <div key={group.label}>
-                <h2>{group.label}</h2>
-                <ul>
-                  {group.links.map((item) => {
-                    const currentPage = pathname === item.to;
-                    return (
+            {PUBLIC_WEBSITE_FOOTER.map((group, index) => {
+              const expanded = expandedGroup === group.label;
+              const linksId = `${groupId}-${index}`;
+              return (
+                <div key={group.label} data-expanded={expanded}>
+                  <h2>
+                    <span className="kova-footer-group-title">{group.label}</span>
+                    <button
+                      className="kova-footer-group-toggle"
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={linksId}
+                      onClick={() => setExpandedGroup(expanded ? null : group.label)}
+                    >
+                      {group.label}
+                      <ChevronDown size={16} aria-hidden="true" />
+                    </button>
+                  </h2>
+                  <ul id={linksId}>
+                    {group.links.map((item) => (
                       <li key={item.to}>
                         <Link
                           to={item.to as never}
-                          aria-current={currentPage ? "page" : undefined}
+                          aria-current={pathname === item.to ? "page" : undefined}
                           className="min-h-11"
                         >
                           {item.label}
                         </Link>
                       </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </nav>
         </div>
-        <details className="kova-footer-directory">
+        <details
+          className="kova-footer-directory"
+          onToggle={(event) => setDirectoryOpen(event.currentTarget.open)}
+        >
           <summary>Explore all pages</summary>
-          <label>
-            <span className="sr-only">Search the page directory</span>
-            <input
-              type="search"
-              aria-label="Search the page directory"
-              placeholder="Find a page..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <nav aria-label="All public pages">
-            <ul>
-              {matching.map((entry) => (
-                <li key={entry.to}>
-                  <Link to={entry.to as never}>{entry.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          {matching.length === 0 ? <p role="status">No matching pages.</p> : null}
+          {directoryOpen ? (
+            <>
+              <label>
+                <span className="sr-only">Search the page directory</span>
+                <input
+                  type="search"
+                  aria-label="Search the page directory"
+                  placeholder="Find a page..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+              <nav aria-label="All public pages">
+                <ul>
+                  {matching.map((entry) => (
+                    <li key={entry.to}>
+                      <Link to={entry.to as never}>{entry.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              {matching.length === 0 ? <p role="status">No matching pages.</p> : null}
+            </>
+          ) : null}
         </details>
         <p className="kova-footer-copyright">
           © {new Date().getFullYear()} KovaGPT is independently developed. AI can make mistakes, and

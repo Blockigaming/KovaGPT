@@ -68,6 +68,7 @@ import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
 import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { PhoneNavigation } from "@/components/PhoneNavigation";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
@@ -3554,6 +3555,9 @@ function KovaGPT() {
           </Suspense>
           <div id="chat-attachment-preview-dock" className="kova-attachment-preview-dock" />
         </div>
+        {showEmptyChat && !tempChat && (
+          <PhoneNavigation pathname="/" inactive={sidebarOpen || settingsOpen} />
+        )}
       </main>
 
       <Suspense fallback={null}>

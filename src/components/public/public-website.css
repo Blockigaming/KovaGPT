@@ -533,6 +533,9 @@
   font: inherit;
   margin: 0 0 14px;
 }
+.kova-footer-group-toggle {
+  display: none;
+}
 .kova-footer-nav ul {
   margin: 0;
   padding: 0;
@@ -702,6 +705,50 @@
   }
 }
 @media (max-width: 767px), (max-width: 1023px) and (max-height: 500px) and (pointer: coarse) {
+  .kova-footer-inner {
+    padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right));
+  }
+  .kova-footer-content {
+    gap: 12px;
+  }
+  .kova-footer-nav {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    border-block-end: 1px solid #383838;
+  }
+  .kova-footer-nav > div {
+    border-block-start: 1px solid #383838;
+  }
+  .kova-footer-nav h2 {
+    margin: 0;
+  }
+  .kova-footer-group-title,
+  .kova-footer-nav > [data-expanded="false"] > ul {
+    display: none;
+  }
+  .kova-footer-group-toggle {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px;
+    text-align: start;
+  }
+  .kova-footer-group-toggle:focus-visible {
+    outline: 2px solid #ddd;
+    outline-offset: -2px;
+  }
+  .kova-footer-group-toggle svg {
+    flex: none;
+  }
+  .kova-footer-group-toggle[aria-expanded="true"] svg {
+    rotate: 180deg;
+  }
+  .kova-footer-nav > div > ul {
+    padding: 0 8px 8px;
+  }
   .public-website-header {
     padding-block: max(8px, var(--safe-top)) 8px;
     border-bottom: 1px solid #292929;
@@ -854,5 +901,48 @@
   .public-article-body section {
     padding: 20px;
     margin-bottom: 24px;
+  }
+}
+
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  [data-public-shell] .public-website-article {
+    padding-block: 20px 40px;
+    padding-inline: max(16px, var(--safe-left)) max(16px, var(--safe-right));
+  }
+
+  [data-public-shell] .public-website-article .public-website-breadcrumb {
+    display: none;
+  }
+
+  [data-public-shell] .public-website-article .public-article-label {
+    margin-block: 0 8px;
+    font-size: 0.875rem;
+  }
+
+  [data-public-shell] .public-website-article .public-article-lede {
+    margin-block-start: 12px;
+    line-height: 1.55;
+  }
+
+  [data-public-shell] .public-website-article .public-phone-outline {
+    margin-inline: 0;
+  }
+
+  [data-public-shell] .public-article-body {
+    margin-block-start: 20px;
+  }
+
+  [data-public-shell] .public-article-body aside {
+    display: none;
+  }
+
+  [data-public-shell] .public-article-body section {
+    margin-block-end: 12px;
+    padding: 16px;
+    border-radius: var(--kova-radius-card);
+  }
+
+  [data-public-shell] .public-article-body section h2 {
+    margin-block-end: 8px;
   }
 }

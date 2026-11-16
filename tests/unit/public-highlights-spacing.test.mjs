@@ -9,6 +9,7 @@ const { PublicDetailPageView, PublicPageView } = loadUiModule(
   {
     "@tanstack/react-router": { Link: "Link" },
     "lucide-react": { ArrowRight: "ArrowRight", CheckCircle2: "CheckCircle2" },
+    "@/components/public/PhonePageOutline": { PhonePageOutline: "PhonePageOutline" },
     "@/components/public/PublicFaq": { PublicFaq: "PublicFaq" },
     "@/components/public/PublicShell": { PublicShell: "PublicShell" },
   },

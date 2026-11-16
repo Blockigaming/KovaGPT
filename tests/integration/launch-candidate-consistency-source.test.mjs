@@ -31,7 +31,7 @@ test("toast presentation uses one mobile-safe launch candidate configuration", a
   assert.match(source, /closeButton/);
   assert.match(
     source,
-    /mobileOffset=\{\{\s*top: "calc\(64px \+ env\(safe-area-inset-top\) \+ var\(--kova-visible-top, 0px\)\)",\s*left: "max\(16px, env\(safe-area-inset-left\)\)"/,
+    /mobileOffset=\{\{\s*top: "calc\(64px \+ env\(safe-area-inset-top\) \+ var\(--kova-visible-top, 0px\)\)",\s*bottom: "calc\(max\(16px, env\(safe-area-inset-bottom\)\) \+ var\(--phone-toast-clearance, 0px\)\)",\s*left: "max\(16px, env\(safe-area-inset-left\)\)"/,
   );
   assert.match(source, /visibleToasts=\{4\}/);
 });

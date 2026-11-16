@@ -1,0 +1,376 @@
+.kova-phone-navigation,
+.kova-public-launch-phone {
+  display: none;
+}
+
+/* Phone-width pages and short touch viewports use the same reading layout. */
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  .kova-phone-workspace,
+  .kova-assistant[data-ui="modern"],
+  .kova-images-workspace,
+  .kova-auth-page,
+  [data-public-shell] {
+    --phone-gutter: clamp(12px, 4vw, 20px);
+  }
+
+  .kova-phone-workspace .kova-app-content {
+    min-height: 0;
+    overscroll-behavior-y: contain;
+  }
+
+  .kova-images-workspace .spec400-images > header {
+    box-sizing: content-box;
+    padding-block-start: var(--safe-top);
+    padding-inline: max(var(--phone-gutter), var(--safe-left))
+      max(var(--phone-gutter), var(--safe-right));
+  }
+
+  .kova-images-workspace .spec400-images .kova-images-content {
+    padding: 14px max(var(--phone-gutter), var(--safe-right)) max(24px, var(--safe-bottom))
+      max(var(--phone-gutter), var(--safe-left));
+  }
+
+  .kova-auth-page {
+    min-height: 100dvh;
+  }
+
+  .kova-auth-page > header {
+    box-sizing: content-box;
+    padding-block-start: var(--safe-top);
+    padding-inline: max(var(--phone-gutter), var(--safe-left))
+      max(var(--phone-gutter), var(--safe-right));
+  }
+
+  .kova-auth-page[data-ui-reference="chatgpt-auth-form"] > main {
+    --auth-gutter: max(16px, var(--phone-gutter), var(--safe-right), var(--safe-left));
+    width: calc(100% - 2 * var(--auth-gutter));
+    max-width: 30rem;
+    padding: 20px 0 max(24px, var(--safe-bottom));
+  }
+
+  .kova-auth-page[data-ui-reference="chatgpt-auth-form"] > main > div:first-child {
+    align-items: flex-start;
+    text-align: start;
+  }
+
+  .kova-assistant .kova-empty-chat {
+    padding: 0 max(var(--phone-gutter), var(--safe-right)) 0
+      max(var(--phone-gutter), var(--safe-left));
+  }
+
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+    flex: 1 0 auto;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 100%;
+    padding-block: clamp(18px, 5dvh, 44px) 0 !important;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting {
+    align-items: flex-start;
+    margin-block-end: clamp(16px, 4dvh, 32px);
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting h1 {
+    max-width: none;
+    font-family: var(--font-ui);
+    font-size: clamp(1.75rem, 7vw, 2.375rem);
+    font-weight: 600;
+    line-height: 1.1;
+    text-align: start;
+  }
+
+  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-greeting {
+    margin-block-start: auto;
+  }
+
+  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-empty-composer {
+    margin-block-start: 0;
+  }
+
+  .kova-assistant .kova-empty-chat .spec400-recent-work {
+    margin-block: 0 20px;
+  }
+
+  .kova-assistant .kova-empty-chat .spec400-recent-work ul {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-inline: 10px;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: var(--card);
+  }
+
+  .kova-assistant .kova-empty-chat .spec400-recent-work li + li {
+    border-block-start: 1px solid var(--border);
+  }
+
+  .kova-assistant .kova-empty-chat .spec400-recent-work li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .kova-assistant .kova-empty-chat .spec400-recent-work button {
+    min-height: 56px;
+    padding: 8px 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .kova-assistant .kova-empty-composer {
+    position: sticky;
+    z-index: 2;
+    inset-block-end: 0;
+    order: 1;
+    margin-block-start: auto;
+    padding-block: 8px max(8px, var(--safe-bottom));
+    background: var(--background);
+  }
+
+  .kova-assistant .kova-empty-composer .spec400-composer {
+    min-height: 0;
+    padding: 8px;
+    gap: 3px;
+    border-radius: 21px;
+  }
+
+  .kova-assistant .kova-empty-composer .spec400-input-region {
+    min-height: 36px;
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-app-content main:is(.kova-page, .kova-tool-page) {
+    width: 100%;
+    min-width: 0;
+    padding-inline: max(var(--phone-gutter), var(--safe-left))
+      max(var(--phone-gutter), var(--safe-right));
+    padding-block: 20px 28px;
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header,
+  .kova-phone-workspace .spec400-page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header {
+    margin-block-end: 16px;
+    padding-block-end: 16px;
+    border-block-end: 1px solid var(--border);
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header .kova-page-description {
+    margin-block-start: 6px;
+  }
+
+  .kova-phone-workspace .kova-tool-page .kova-tool-panel {
+    padding: 14px;
+    border-radius: var(--kova-radius-card);
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-actions {
+    justify-content: flex-start;
+    margin-inline: 0;
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header .kova-page-title {
+    font-size: clamp(1.625rem, 6vw, 2.125rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .kova-phone-workspace .kova-core-page.kova-file-directory .kova-file-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .kova-phone-workspace .kova-core-page.kova-file-directory .kova-file-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+  }
+
+  .kova-phone-workspace .kova-core-page.kova-file-directory .kova-file-filters button {
+    flex: 1 0 auto;
+    min-height: 44px;
+    border-radius: 12px;
+  }
+
+  .kova-phone-workspace .spec400-plugin-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .kova-phone-workspace .spec400-plugin-grid > .spec400-plugin-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 8px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .kova-phone-workspace .spec400-plugin-card > .spec400-plugin-purpose {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-block: 0;
+  }
+
+  .kova-phone-workspace .spec400-plugin-card > .spec400-plugin-card-footer {
+    display: contents;
+  }
+
+  .kova-phone-workspace .spec400-plugin-card-footer > :not(button) {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: start;
+  }
+
+  .kova-phone-workspace .spec400-plugin-card-footer > button {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 44px;
+  }
+
+  [data-public-shell] .kova-public-header > nav:first-child {
+    min-height: 56px;
+    gap: 4px;
+    padding-inline: max(var(--phone-gutter), var(--safe-left))
+      max(var(--phone-gutter), var(--safe-right));
+  }
+
+  [data-public-shell] .kova-public-header > nav:first-child > button {
+    margin-inline-start: 0;
+  }
+
+  .kova-public-header .kova-public-launch {
+    display: inline-flex;
+    min-height: 44px;
+    margin-inline-start: auto;
+    padding-inline: 12px;
+  }
+
+  .kova-public-launch-desktop {
+    display: none;
+  }
+
+  .kova-public-launch-phone {
+    display: inline;
+  }
+
+  .kova-public-header #public-mobile-navigation {
+    position: absolute;
+    inset: 100% 0 auto;
+    max-height: calc(100dvh - var(--kova-public-header-height, 56px));
+    border-block-end: 1px solid var(--border);
+    box-shadow: 0 14px 24px color-mix(in srgb, black 16%, transparent);
+  }
+
+  [data-public-shell] main :is(.public-directory-links, .public-highlights-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-public-shell] main .public-hero,
+  [data-public-shell] .public-overview .public-hero {
+    padding-block: clamp(28px, 9vw, 60px);
+    text-align: start;
+  }
+
+  [data-public-shell] main .public-hero .public-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  [data-public-shell] main .public-hero .public-actions > a {
+    min-height: 48px;
+  }
+
+  [data-public-shell] main .public-article-body {
+    font-size: 1rem;
+    line-height: 1.65;
+  }
+}
+
+/* Reserve a row for the tab bar so it never overlays scrollable content. */
+@media (width < 768px) and (height > 500px) {
+  :root:not([data-kova-keyboard]):has(.kova-phone-navigation, .kova-images-workspace) {
+    --phone-toast-clearance: 64px;
+  }
+
+  .kova-phone-workspace {
+    display: grid;
+    grid-template: minmax(0, 1fr) auto / minmax(0, 1fr);
+  }
+
+  .kova-phone-workspace > .kova-app-content {
+    grid-area: 1 / 1;
+    padding-block-end: 0;
+  }
+
+  .kova-phone-workspace > .kova-phone-navigation {
+    grid-area: 2 / 1;
+  }
+
+  .kova-phone-navigation {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex: none;
+    gap: 2px;
+    padding: 4px max(6px, var(--safe-right)) max(4px, var(--safe-bottom)) max(6px, var(--safe-left));
+    border-block-start: 1px solid var(--border);
+    background: var(--background);
+  }
+
+  .kova-phone-navigation > a {
+    display: flex;
+    min-height: 48px;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 1px;
+    border-radius: 12px;
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.15;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .kova-phone-navigation-icon {
+    display: grid;
+    width: 38px;
+    height: 25px;
+    place-items: center;
+    border-radius: 10px;
+  }
+
+  .kova-phone-navigation > a[data-current="true"] {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .kova-phone-navigation > a[data-current="true"] .kova-phone-navigation-icon {
+    background: var(--accent);
+  }
+
+  .kova-phone-navigation > a:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .kova-phone-navigation,
+  :root[data-kova-keyboard] .kova-phone-workspace > .kova-phone-navigation {
+    display: none;
+  }
+}

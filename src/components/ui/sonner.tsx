@@ -37,6 +37,7 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
       offset={{ top: "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))" }}
       mobileOffset={{
         top: "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))",
+        bottom: "calc(max(16px, env(safe-area-inset-bottom)) + var(--phone-toast-clearance, 0px))",
         left: "max(16px, env(safe-area-inset-left))",
         right: "max(16px, env(safe-area-inset-right))",
       }}

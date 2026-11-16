@@ -17,8 +17,8 @@ function WorkPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   return (
-    <AppShell>
-      <main id="main-content" className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+    <AppShell utilitiesInHeader>
+      <main id="main-content" className="kova-page mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
         <WorkspacePageHeader
           title="Work"
           titleId="work-title"

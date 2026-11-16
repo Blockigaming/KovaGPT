@@ -1299,9 +1299,13 @@ function ProjectsPage() {
                   </div>
                   <div className="kova-project-file-date">
                     <span className="kova-project-date-label">Modified </span>
-                    <time dateTime={p.updated_at} title={new Date(p.updated_at).toLocaleString()}>
-                      {new Date(p.updated_at).toLocaleDateString()}
-                    </time>
+                    {Number.isFinite(Date.parse(p.updated_at)) ? (
+                      <time dateTime={p.updated_at} title={new Date(p.updated_at).toLocaleString()}>
+                        {new Date(p.updated_at).toLocaleDateString()}
+                      </time>
+                    ) : (
+                      <span aria-label="Modified date unavailable">—</span>
+                    )}
                   </div>
                 </Link>
                 <div className="kova-project-file-menu absolute top-3 right-3">

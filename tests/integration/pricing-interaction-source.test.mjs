@@ -94,7 +94,7 @@ test("checkout uses an account-bound page with truthful loading and safe errors"
   );
 });
 
-test("plan cards expose aligned 44px actions and the flat ChatGPT pricing hierarchy", async () => {
+test("plan cards expose aligned 45px minimum actions and the flat ChatGPT pricing hierarchy", async () => {
   const [pricing, surfaces] = await Promise.all([
     read("src/routes/pricing.tsx"),
     read("src/components/account-surfaces.css"),
@@ -107,7 +107,7 @@ test("plan cards expose aligned 44px actions and the flat ChatGPT pricing hierar
   assert.match(pricing, /data-ui-reference="chatgpt-pricing-plan-card"/);
   assert.match(pricing, /md:row-span-6 md:h-full md:grid-rows-subgrid/);
   assert.match(pricing, /type="button"/);
-  assert.match(pricing, /inline-flex h-11 w-full/);
+  assert.match(pricing, /inline-flex min-h-\[45px\] w-full/);
   assert.match(
     surfaces,
     /\.kova-pricing-page \.kova-plan-card\s*\{[^}]*max-width: 384px;[^}]*row-gap: 20px;[^}]*box-shadow: none;/,

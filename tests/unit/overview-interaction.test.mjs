@@ -65,20 +65,28 @@ test("comparison keeps each tier's mode and allowance data in the correct column
     },
   });
   const tree = PlanComparison();
-  const rows = elements(tree, (node) => node.type === "tbody")[0].props.children.flat();
+  const expected = [
+    ["free-mode", "plus-mode", "pro-mode"],
+    ["Very limited", "5× Free", "100× Free (20× Plus)"],
+    ["Limited", "Limited", "Unlimited with Argon Lite"],
+    ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],
+    ["Limited", "Expanded", "Highest allowance"],
+    ["Included", "Included", "Included"],
+  ];
+  const [phone, table] = elements(tree, (node) => node.props.role === "region");
+  const rows = elements(table, (node) => node.type === "tbody")[0].props.children.flat();
   assert.deepEqual(
     Array.from(rows, (row) =>
       elements(row, (node) => node.type === "td").map((cell) => text(cell).replace(/\s+/g, " ")),
     ),
-    [
-      ["free-mode", "plus-mode", "pro-mode"],
-      ["Very limited", "5× Free", "100× Free (20× Plus)"],
-      ["Limited", "Limited", "Unlimited with Argon Lite"],
-      ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],
-      ["Limited", "Expanded", "Highest allowance"],
-      ["Included", "Included", "Included"],
-    ],
+    expected,
   );
-  assert.equal(elements(tree, (node) => node.props.role === "region")[0].props.tabIndex, 0);
+  const phoneRows = elements(phone, (node) => node.type === "section");
+  assert.equal(phoneRows.length, expected.length);
+  for (const [index, row] of phoneRows.entries()) {
+    assert.deepEqual(elements(row, (node) => node.type === "dt").map(text), tiers);
+    assert.deepEqual(elements(row, (node) => node.type === "dd").map(text), expected[index]);
+  }
+  assert.equal(table.props.tabIndex, 0);
   assert.equal(elements(tree, (node) => node.type === "button").length, 0);
 });
