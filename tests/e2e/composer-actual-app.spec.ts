@@ -577,10 +577,15 @@ for (const tier of ["plus", "pro"] as const) {
     const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
     await expect(picker).toBeVisible();
     await picker.click();
-    await expect(page.getByTestId("model-option-high")).toHaveText("High");
-    await expect(page.getByTestId("model-option-ultra")).toHaveCount(tier === "pro" ? 1 : 0);
-    await page.getByTestId("model-option-high").click();
-    await expect(picker).toHaveAttribute("aria-label", "Choose response effort: High");
+    const slider = page.getByRole("slider", { name: "Response effort", exact: true });
+    await expect(slider).toHaveAttribute("max", tier === "pro" ? "5" : "4");
+    await slider.press("ArrowRight");
+    await slider.press("ArrowRight");
+    await expect(slider).toHaveAttribute("aria-valuetext", "High");
+    await expect(picker).toHaveAttribute(
+      "aria-label",
+      "Choose model and effort, Kova Argon 4.6 High",
+    );
     await expect(picker).toContainText("High");
     await page.keyboard.press("Escape");
     await geometry(page);

@@ -15,6 +15,7 @@ export type ConsumerModel = Readonly<{
   vision: boolean;
   routingBinding?: ConsumerModelId;
 }>;
+export const DEFAULT_CONSUMER_MODEL: "kova-argon-4.6";
 export const CONSUMER_MODELS: readonly ConsumerModel[];
 export function consumerModel(value: unknown): ConsumerModel | null;
 

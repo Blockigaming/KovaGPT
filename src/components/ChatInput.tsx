@@ -2175,22 +2175,22 @@ export function ChatInput({
             )}
           </div>
           <div className="spec400-composer-trailing">
-            {userTier !== "free" && canChangeAgent && hostedModel && onHostedModelChange ? (
+            {userTier !== "free" &&
+            canChangeAgent &&
+            hostedModel &&
+            onHostedModelChange &&
+            mode &&
+            onModeChange ? (
               <ConsumerModelSelector
                 value={hostedModel}
                 onChange={onHostedModelChange}
+                mode={mode}
+                onModeChange={onModeChange}
                 tier={userTier}
                 disabled={disabled}
               />
-            ) : null}
-            {canChangeAgent && mode && onModeChange ? (
-              <ModelSelector
-                mode={mode}
-                onChange={onModeChange}
-                userTier={userTier}
-                modelLabel={CONSUMER_MODELS.find((model) => model.id === hostedModel)?.label}
-                compact
-              />
+            ) : canChangeAgent && mode && onModeChange ? (
+              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
             ) : (
               <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
             )}

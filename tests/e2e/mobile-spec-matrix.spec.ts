@@ -227,7 +227,7 @@ for (const [width, height] of viewports) {
     await waitForKovaHydration(page);
 
     const composer = page.locator(".spec400-composer");
-    const model = composer.getByTestId("consumer-model-trigger");
+    const model = composer.getByTestId("model-selector-trigger");
     await expect(model).toBeVisible();
     await composer.getByRole("textbox", { name: "Message KovaGPT" }).fill("Draft");
     await model.locator("span.truncate").evaluate((label) => {

@@ -5,9 +5,9 @@ import { waitForKovaHydration } from "./hydration";
 import { chooseSettingsSection } from "./current-ui";
 
 for (const [tier, choices] of [
-  ["free", ["instant", "thinking"]],
-  ["plus", ["instant", "thinking", "high", "extra_high", "max"]],
-  ["pro", ["instant", "thinking", "high", "extra_high", "max", "ultra"]],
+  ["free", ["Lite", "Medium"]],
+  ["plus", ["Lite", "Medium", "High", "Extra High", "Max"]],
+  ["pro", ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"]],
 ] as const) {
   test(`${tier} composer presents exactly its models and keeps the writing surface quiet`, async ({
     page,
@@ -47,30 +47,22 @@ for (const [tier, choices] of [
     } else {
       const picker = composer.getByTestId("model-selector-trigger");
       await expect(composer.getByTestId("thinking-toggle")).toHaveCount(0);
-      await expect(composer.getByTestId("consumer-model-trigger")).toBeVisible();
+      await expect(composer.getByTestId("consumer-model-trigger")).toHaveCount(0);
       await expect(picker).toContainText("Lite");
       await picker.click();
-      const menu = page.getByRole("dialog", {
-        name: /^(Choose response effort|Response effort)$/,
-        exact: true,
-      });
+      const menu = page.getByRole("dialog", { name: "Select model", exact: true });
       await expect(menu).toBeVisible();
-      await expect(menu.locator('[data-slot="model-selector-option"]')).toHaveCount(choices.length);
-      for (const id of choices) await expect(menu.getByTestId(`model-option-${id}`)).toBeVisible();
-      await menu.getByTestId("model-option-thinking").click();
-      await expect(menu).toBeHidden();
-      await expect(picker).toContainText("Medium");
-      await expect(picker.locator("svg")).toHaveCount(2);
-      for (const id of choices) {
-        await picker.click();
-        await expect(menu).toBeVisible();
-        await menu.getByTestId(`model-option-${id}`).click();
-        await expect(menu).toBeHidden();
-        await expect(picker).toBeFocused();
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-          true,
-        );
+      await expect(menu.locator('[data-testid^="consumer-model-kova-"]')).toHaveCount(7);
+      const slider = menu.getByRole("slider", { name: "Response effort", exact: true });
+      await expect(slider).toHaveAttribute("max", String(choices.length - 1));
+      for (const [index, label] of choices.entries()) {
+        if (index > 0) await slider.press("ArrowRight");
+        await expect(slider).toHaveAttribute("aria-valuetext", label);
+        await expect(picker).toContainText(label);
       }
+      await slider.press("Escape");
+      await expect(menu).toBeHidden();
+      await expect(picker).toBeFocused();
     }
     await input.fill("A local draft, never sent");
     await expect(composer.getByRole("button", { name: "Send message", exact: true })).toBeVisible();

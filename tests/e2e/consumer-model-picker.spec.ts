@@ -30,16 +30,19 @@ for (const [tier, selected, label, permitted] of [
     });
     await page.goto("/");
     await waitForKovaHydration(page);
-    const trigger = page.getByTestId("consumer-model-trigger");
+    const trigger = page.getByTestId("model-selector-trigger");
     if (tier === "free") {
       await expect(trigger).toHaveCount(0);
-      await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Thinking", exact: true })).toBeVisible();
     } else {
       await expect(trigger).toBeVisible();
       await trigger.click();
-      const picker = page.getByRole("dialog", { name: /^(Choose Kova model|Kova models)$/ });
+      const picker = page.getByRole("dialog", { name: "Select model", exact: true });
       await expect(picker).toBeVisible();
+      await expect(picker.getByRole("slider", { name: "Response effort" })).toHaveAttribute(
+        "aria-valuetext",
+        "Lite",
+      );
       for (const [index, id] of products.entries()) {
         const button = picker.getByTestId(`consumer-model-${id}`);
         await expect(button).toBeVisible();
@@ -48,11 +51,11 @@ for (const [tier, selected, label, permitted] of [
       }
       await picker.getByTestId(`consumer-model-${selected}`).click();
       await expect(picker).toHaveCount(0);
-      await expect(trigger).toHaveAttribute("aria-label", `Choose Kova model: ${label}`);
+      await expect(trigger).toHaveAttribute("aria-label", `Choose model and effort, ${label} Lite`);
       await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
     }
     expect(requests).toHaveLength(0);
-    // Effort is a separate choice and cannot change the selected foundation.
+    // Free uses its Thinking toggle for the next request.
     if (tier === "free") await page.getByRole("button", { name: "Thinking", exact: true }).click();
     await page
       .getByRole("textbox", { name: "Message KovaGPT", exact: true })
@@ -115,12 +118,11 @@ for (const [tier, selected, label, permitted] of [
       .click();
     await expect(page.getByText("Verified selected model request.", { exact: true })).toBeVisible();
     if (tier === "free") {
-      await expect(page.getByTestId("consumer-model-trigger")).toHaveCount(0);
       await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
     } else {
-      await expect(page.getByTestId("consumer-model-trigger")).toHaveAttribute(
+      await expect(page.getByTestId("model-selector-trigger")).toHaveAttribute(
         "aria-label",
-        `Choose Kova model: ${label}`,
+        `Choose model and effort, ${label} Lite`,
       );
     }
   });
@@ -139,10 +141,10 @@ test("keyboard model selection keeps the composer draft and makes no model reque
   await waitForKovaHydration(page);
   const composer = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await composer.fill("Keep this draft while choosing Xenon.");
-  const trigger = page.getByTestId("consumer-model-trigger");
+  const trigger = page.getByTestId("model-selector-trigger");
   await trigger.focus();
   await page.keyboard.press("Enter");
-  const picker = page.getByRole("dialog", { name: /^(Choose Kova model|Kova models)$/ });
+  const picker = page.getByRole("dialog", { name: "Select model", exact: true });
   await expect(picker).toBeVisible();
   await picker.getByTestId("consumer-model-kova-xenon-5").focus();
   await page.keyboard.press("Enter");
@@ -176,8 +178,8 @@ for (const [tier, count] of [
         : ["instant", "thinking", "high", "extra_high", "max"];
     const labels = ["Lite", "Medium", "High", "Extra High", "Max", "Ultra"];
     for (const model of products) {
-      await page.getByTestId("consumer-model-trigger").click();
-      const picker = page.getByRole("dialog", { name: /^(Choose Kova model|Kova models)$/ });
+      await page.getByTestId("model-selector-trigger").click();
+      const picker = page.getByRole("dialog", { name: "Select model", exact: true });
       await picker.getByTestId(`consumer-model-${model}`).click();
       await expect(picker).toBeHidden();
       for (const [index, mode] of efforts.entries()) {
@@ -212,6 +214,6 @@ test("Plus slider stops at Max and never offers Ultra", async ({ page }) => {
   await expect(slider).toHaveAttribute("max", "4");
   await slider.press("End");
   await expect(slider).toHaveAttribute("aria-valuetext", "Max");
-  for (const mode of ["ultra"])
-    await expect(page.getByTestId(`model-option-${mode}`)).toHaveCount(0);
+  await slider.press("ArrowRight");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Max");
 });

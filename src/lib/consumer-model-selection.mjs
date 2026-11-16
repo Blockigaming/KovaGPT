@@ -1,5 +1,7 @@
 import { KOVA_MODEL_LABELS } from "./kova-foundation-models.mjs";
 
+export const DEFAULT_CONSUMER_MODEL = "kova-argon-4.6";
+
 /** Closed product choices. Provider IDs and endpoints never come from the client. */
 export const CONSUMER_MODELS = Object.freeze([
   Object.freeze({
@@ -73,7 +75,7 @@ export function consumerModel(value) {
 export function resolveConsumerModelChoice(choice, principal, conversationId, savedModel) {
   return choice?.principal === principal && choice.conversationId === conversationId
     ? choice.id
-    : (savedModel ?? "kova-argon-4.6");
+    : (savedModel ?? DEFAULT_CONSUMER_MODEL);
 }
 export function createConsumerModelChoice(id, tier, available, principal, conversationId) {
   return available && consumerModel(id)?.tiers.includes(tier)
