@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fixture, functionNames, owner } from "./actual-app-fixture";
+import { fixture, owner } from "./actual-app-fixture";
+import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 const projectId = "33333333-3333-4333-8333-333333333333";
@@ -45,7 +46,7 @@ async function projectFixture(
   const mutations: string[] = [];
   await page.route("**/_serverFn/**", async (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
-    const name = functionNames.get(id) ?? "";
+    const name = resolveFixtureFunctionName(id) ?? "";
     if (
       /^(?:create|update|delete|move|pin|duplicate|accept|decline|invite|remove|revoke|setProjectArchived)/u.test(
         name,
@@ -138,7 +139,10 @@ for (const theme of ["light", "dark"] as const) {
       const search = await directory.locator(".kova-project-directory-search").boundingBox();
       expect(actions!.y - description!.y - description!.height).toBeGreaterThanOrEqual(8);
       expect(actions!.y - description!.y - description!.height).toBeLessThanOrEqual(24);
-      expect(search!.y - actions!.y - actions!.height).toBeLessThanOrEqual(24);
+      // The phone header ends with a divider and separate spacing before the search controls.
+      const searchGap = search!.y - actions!.y - actions!.height;
+      expect(searchGap).toBeGreaterThanOrEqual(8);
+      expect(searchGap).toBeLessThanOrEqual(40);
     }
     await expect(
       directory.getByRole("heading", { name: "Research notebook", exact: true }),
