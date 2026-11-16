@@ -60,19 +60,43 @@ export function validateMonthlyIntroPrice(price, plan, environment) {
 }
 
 /** The operator provisions a reusable, unrestricted 50%-once Coupon separately. No mutation here. */
-export function validateMonthlyIntroCoupon(coupon, couponId, environment) {
+export export function validateMonthlyIntroCoupon(coupon, couponId, environment, options = {}) {
+  if (!couponId) return null;
+  const now = options.now ?? Date.now();
+  const price = options.price;
+  const productId = price?.product;
+  const appliesTo = coupon?.applies_to?.products ?? [];
+  const currencyOptions = coupon?.currency_options ?? {};
+  const amountOff = coupon?.amount_off;
+  const percentOff = coupon?.percent_off;
+  const amountValid =
+    Number.isSafeInteger(amountOff) &&
+    amountOff > 0 &&
+    coupon?.currency === price?.currency;
+  const percentValid = typeof percentOff === "number" && percentOff > 0 && percentOff <= 100;
+  const appliesToValid =
+    appliesTo.length === 0 ||
+    (productId && appliesTo.length === 1 && appliesTo[0] === productId);
+  const currencyOptionsValid =
+    Object.keys(currencyOptions).length === 0 ||
+    Object.hasOwn(currencyOptions, price?.currency);
   if (
     !object(coupon) ||
     coupon.id !== couponId ||
     coupon.deleted === true ||
     coupon.valid !== true ||
     coupon.livemode !== (environment === "live") ||
-    coupon.percent_off !== 50 ||
-    coupon.amount_off != null ||
-    coupon.duration !== "once" ||
-    (coupon.applies_to?.products?.length ?? 0) !== 0 ||
-    coupon.redeem_by !== null ||
-    coupon.max_redemptions !== null
+    (!amountValid && !percentValid) ||
+    (amountOff != null && percentOff != null) ||
+    !["once", "repeating", "forever"].includes(coupon.duration) ||
+    (coupon.duration === "repeating" &&
+      (!Number.isSafeInteger(coupon.duration_in_months) || coupon.duration_in_months < 1)) ||
+    !appliesToValid ||
+    !currencyOptionsValid ||
+    (coupon.redeem_by != null && coupon.redeem_by <= Math.floor(now / 1000)) ||
+    (coupon.max_redemptions != null &&
+      (!Number.isSafeInteger(coupon.max_redemptions) ||
+        coupon.times_redeemed >= coupon.max_redemptions))
   ) {
     fail("billing_policy_coupon_invalid");
   }
@@ -293,7 +317,7 @@ export async function createMonthlyIntroCheckout(options) {
   }
   if (typeof couponId !== "string" || !/^[A-Za-z0-9_-]{1,200}$/u.test(couponId))
     fail("billing_policy_coupon_not_configured");
-  validateMonthlyIntroCoupon(await stripe.coupons.retrieve(couponId), couponId, environment);
+  if (couponId != null) {\n    validateMonthlyIntroCoupon(\n      await stripe.coupons.retrieve(couponId),\n      couponId,\n      environment,\n      { now, price },\n    );\n  }
   const bound = { stripe, supabase, userId, environment, customerId };
   await reconcilePlanSelection(bound, price.id, returnUrl);
   const claim = validateClaim(
