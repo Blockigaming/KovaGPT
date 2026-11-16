@@ -111,8 +111,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
     ["Library", "Library"],
     ["Projects", "Projects"],
   ]) {
-    await openSidebar(page);
-    await page.getByRole("link", { name, exact: true }).click();
+    const navigation = await openSidebar(page);
+    await navigation.getByRole("link", { name, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/${name.toLowerCase()}$`));
     await confirmSidebarState();
     await expect(
@@ -131,8 +131,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
       await expect(page.getByRole("button", { name: /^Release notes(?:\s|$)/ })).toBeFocused();
     }
   }
-  await openSidebar(page);
-  await page.getByRole("link", { name: "Scheduled tasks", exact: true }).click();
+  const tasksNavigation = await openSidebar(page);
+  await tasksNavigation.getByRole("link", { name: "Scheduled tasks", exact: true }).click();
   await expect(page).toHaveURL(/\/scheduled-tasks$/);
   await confirmSidebarState();
   await expect(page.getByRole("status", { name: "Scheduled Tasks Status" })).toContainText(
@@ -148,8 +148,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await expectReadableFilter(page.getByRole("tab", { name: /^paused\b/i }));
   await capture(page, info, "tasks");
 
-  await openSidebar(page);
-  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  const connectionsNavigation = await openSidebar(page);
+  await connectionsNavigation.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(page).toHaveURL(/\/apps$/);
   await confirmSidebarState();
   await expect(
@@ -175,6 +175,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   // Work remains a direct feature but is deliberately absent from sidebar and More.
   await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
   await page.goto("/work");
+  await waitForKovaHydration(page);
   await expect(page).toHaveURL(/\/work$/);
   await expect(
     page.getByRole("main").getByRole("heading", { name: "Work", exact: true }),

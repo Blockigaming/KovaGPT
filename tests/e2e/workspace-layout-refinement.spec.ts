@@ -8,6 +8,7 @@ for (const theme of ["light", "dark"] as const) {
   }, info) => {
     await coreFixture(page, theme);
     const width = page.viewportSize()!.width;
+    const phoneGutter = Math.min(20, Math.max(12, width * 0.04));
     // Projects fills the available workspace. The other directories retain their
     // readable width limits; each surface owns its responsive gutters.
     for (const route of [
@@ -48,6 +49,9 @@ for (const theme of ["light", "dark"] as const) {
         const style = getComputedStyle(element);
         const box = element.getBoundingClientRect();
         return {
+          phoneLayout: matchMedia(
+            "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+          ).matches,
           maximum: style.maxWidth,
           available:
             element.parentElement!.clientWidth -
@@ -67,9 +71,12 @@ for (const theme of ["light", "dark"] as const) {
         expect(parseFloat(geometry.maximum), route.path).toBe(route.maximum);
         expect(geometry.width, route.path).toBeLessThanOrEqual(route.maximum);
       }
-      expect(geometry.left, route.path).toBeCloseTo(route.gutter, 1);
-      expect(geometry.right, route.path).toBeCloseTo(route.gutter, 1);
-      expect(geometry.top, route.path).toBe(route.top);
+      // Projects retains its directory-specific spacing on the phone layout.
+      const usesSharedPhoneSpacing = geometry.phoneLayout && route.path !== "/projects";
+      const gutter = usesSharedPhoneSpacing ? phoneGutter : route.gutter;
+      expect(geometry.left, route.path).toBeCloseTo(gutter, 1);
+      expect(geometry.right, route.path).toBeCloseTo(gutter, 1);
+      expect(geometry.top, route.path).toBe(usesSharedPhoneSpacing ? 20 : route.top);
       expect(geometry.overflow, route.path).toBeLessThanOrEqual(1);
       await page.screenshot({
         path: info.outputPath(`${route.path.slice(1)}-layout-${theme}.png`),
