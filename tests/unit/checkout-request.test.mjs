@@ -42,7 +42,6 @@ test("accepts omitted quantity and rejects malformed Checkout requests", () => {
     { priceId: "plus_monthly", quantity: 0 },
     { priceId: "plus_monthly", quantity: 2 },
     { priceId: "plus_monthly", quantity: "1" },
-
   ]) {
     assert.throws(() => parseCheckoutRequest(value), {
       name: "TypeError",
