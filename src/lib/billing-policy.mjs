@@ -315,9 +315,16 @@ export async function createMonthlyIntroCheckout(options) {
     if (stripeSubscriptionBlocksCheckout(subscription, Math.floor(now / 1000)))
       fail("billing_policy_active_subscription_exists");
   }
-  if (typeof couponId !== "string" || !/^[A-Za-z0-9_-]{1,200}$/u.test(couponId))
-    fail("billing_policy_coupon_not_configured");
-  if (couponId != null) {\n    validateMonthlyIntroCoupon(\n      await stripe.coupons.retrieve(couponId),\n      couponId,\n      environment,\n      { now, price },\n    );\n  }
+  if (couponId != null) {
+    if (typeof couponId !== "string" || !/^[A-Za-z0-9_-]{1,200}$/u.test(couponId))
+      fail("billing_policy_coupon_invalid");
+    validateMonthlyIntroCoupon(
+      await stripe.coupons.retrieve(couponId),
+      couponId,
+      environment,
+      { now, price },
+    );
+  }
   const bound = { stripe, supabase, userId, environment, customerId };
   await reconcilePlanSelection(bound, price.id, returnUrl);
   const claim = validateClaim(
