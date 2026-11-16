@@ -25,9 +25,7 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   expect(chatRequests).toBe(0);
 });
 
-test("Plus picker exposes Lite through Max and supports touch dragging", async ({
-  page,
-}) => {
+test("Plus picker exposes Lite through Max and supports touch dragging", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -86,9 +84,7 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
   await expect(trigger).toBeFocused();
 });
 
-test("Pro picker combines all models, Ultra and the recommended default", async ({
-  page,
-}) => {
+test("Pro picker combines all models, Ultra and the recommended default", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "pro" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
