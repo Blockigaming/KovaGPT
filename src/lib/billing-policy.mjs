@@ -60,24 +60,23 @@ export function validateMonthlyIntroPrice(price, plan, environment) {
 }
 
 /** The operator provisions a reusable, unrestricted 50%-once Coupon separately. No mutation here. */
-export export function validateMonthlyIntroCoupon(coupon, couponId, environment, options = {}) {
+export function validateMonthlyIntroCoupon(coupon, couponId, environment, options = {}) {
   if (!couponId) return null;
   const now = options.now ?? Date.now();
   const price = options.price;
-  const productId = price?.product;
   const appliesTo = coupon?.applies_to?.products ?? [];
-  const currencyOptions = coupon?.currency_options ?? {};
   const amountOff = coupon?.amount_off;
   const percentOff = coupon?.percent_off;
   const amountValid =
     Number.isSafeInteger(amountOff) &&
     amountOff > 0 &&
     coupon?.currency === price?.currency;
-  const percentValid = typeof percentOff === "number" && percentOff > 0 && percentOff <= 100;
-  const appliesToValid =
-    appliesTo.length === 0 ||
-    (productId && appliesTo.length === 1 && appliesTo[0] === productId);
-  const currencyOptionsValid =
+  const percentValid =
+    typeof percentOff === "number" && percentOff > 0 && percentOff <= 100;
+  const validProducts = appliesTo.length === 0 ||
+    (price?.product && appliesTo.length === 1 && appliesTo[0] === price.product);
+  const currencyOptions = coupon?.currency_options ?? {};
+  const validCurrencyOptions =
     Object.keys(currencyOptions).length === 0 ||
     Object.hasOwn(currencyOptions, price?.currency);
   if (
@@ -91,8 +90,8 @@ export export function validateMonthlyIntroCoupon(coupon, couponId, environment,
     !["once", "repeating", "forever"].includes(coupon.duration) ||
     (coupon.duration === "repeating" &&
       (!Number.isSafeInteger(coupon.duration_in_months) || coupon.duration_in_months < 1)) ||
-    !appliesToValid ||
-    !currencyOptionsValid ||
+    !validProducts ||
+    !validCurrencyOptions ||
     (coupon.redeem_by != null && coupon.redeem_by <= Math.floor(now / 1000)) ||
     (coupon.max_redemptions != null &&
       (!Number.isSafeInteger(coupon.max_redemptions) ||
@@ -249,7 +248,7 @@ async function settleVerifiedSession(options, claim, session) {
 }
 
 /** A new plan selection may replace only this account's proved, unpaid checkout. */
-async function reconcilePlanSelection(options, priceId, returnUrl) {
+async function reconcilePlanSelection(options, priceId, couponId, returnUrl) {
   const pending = await rpc(
     options.supabase,
     "kova_policy_pending_checkout",
@@ -265,7 +264,7 @@ async function reconcilePlanSelection(options, priceId, returnUrl) {
   }
   let session = await retrieveVerifiedSession(options, claim, claim.sessionId);
   if (
-    (claim.priceId !== priceId || !["hosted", "hosted_page"].includes(session.ui_mode)) &&
+    (claim.priceId !== priceId || claim.couponId !== couponId || !["hosted", "hosted_page"].includes(session.ui_mode)) &&
     session.status === "open"
   ) {
     if (session.payment_status !== "unpaid" || session.subscription != null)
@@ -315,18 +314,11 @@ export async function createMonthlyIntroCheckout(options) {
     if (stripeSubscriptionBlocksCheckout(subscription, Math.floor(now / 1000)))
       fail("billing_policy_active_subscription_exists");
   }
-  if (couponId != null) {
-    if (typeof couponId !== "string" || !/^[A-Za-z0-9_-]{1,200}$/u.test(couponId))
-      fail("billing_policy_coupon_invalid");
-    validateMonthlyIntroCoupon(
-      await stripe.coupons.retrieve(couponId),
-      couponId,
-      environment,
-      { now, price },
-    );
-  }
+  if (typeof couponId !== "string" || !/^[A-Za-z0-9_-]{1,200}$/u.test(couponId))
+    fail("billing_policy_coupon_not_configured");
+  validateMonthlyIntroCoupon(await stripe.coupons.retrieve(couponId), couponId, environment);
   const bound = { stripe, supabase, userId, environment, customerId };
-  await reconcilePlanSelection(bound, price.id, returnUrl);
+  await reconcilePlanSelection(bound, price.id, couponId ?? null, returnUrl);
   const claim = validateClaim(
     await rpc(supabase, "kova_policy_claim_checkout", {
       p_user: userId,
