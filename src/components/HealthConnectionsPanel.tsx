@@ -133,7 +133,9 @@ export function HealthConnectionsPanel({
       aria-labelledby="health-connections-title"
     >
       <header className="flex flex-col items-center gap-4 text-center">
-        <Heart aria-hidden="true" className="size-6 text-rose-500" />
+        <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
+          <Heart aria-hidden="true" className="size-6 text-rose-500" />
+        </span>
         <h2
           id="health-connections-title"
           className="text-xl font-semibold tracking-tight sm:text-2xl"
