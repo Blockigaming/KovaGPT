@@ -70,7 +70,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         environment: BILLING_ENV,
         email: customerEmail,
         plan,
-        couponId: process.env.STRIPE_MONTHLY_INTRO_COUPON_ID,
+        couponId: Object.hasOwn(data, "couponId")
+          ? data.couponId
+          : process.env.STRIPE_MONTHLY_INTRO_COUPON_ID,
         returnUrl: billingReturnUrls(process.env.KOVA_BILLING_RETURN_ORIGIN).checkout,
       });
 
