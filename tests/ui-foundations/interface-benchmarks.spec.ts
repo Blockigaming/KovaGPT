@@ -167,6 +167,7 @@ for (const width of [320, 390, 768, 1440]) {
           "Advanced chat",
           "Images and files",
           "Cloud storage",
+          "Cloud Browser (coming soon)",
         ]);
         const usage = region
           .locator("section")
@@ -200,6 +201,7 @@ for (const width of [320, 390, 768, 1440]) {
           "Advanced chat",
           "Images and files",
           "Cloud storage",
+          "Cloud Browser (coming soon)",
         ]);
         await expect(
           region

@@ -24,6 +24,14 @@ const rows = [
   },
   { label: "Images and files", values: ["Limited", "Expanded", "Highest allowance"] },
   { label: "Cloud storage", values: ["Included", "Included", "Included"] },
+  {
+    label: "Cloud Browser (coming soon)",
+    values: [
+      "Up to 1 hour per week. Free requests wait when capacity is reserved for Plus and Pro.",
+      "Priority access ahead of Free, behind Pro.",
+      "Highest priority when browser capacity is limited.",
+    ],
+  },
 ] as const;
 
 export function PlanComparison() {
