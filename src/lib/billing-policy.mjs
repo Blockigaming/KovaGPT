@@ -259,7 +259,7 @@ async function reconcilePlanSelection(options, priceId, couponId, returnUrl) {
   const claim = validateClaim(pending, { ...options, priceId: pending.priceId, returnUrl });
   if (!claim.sessionId) {
     // A concurrent or ambiguous POST must finish its original identity recovery.
-    if (claim.priceId !== priceId) fail("billing_policy_checkout_reconciliation_pending");
+    if (claim.priceId !== priceId || claim.couponId !== couponId)\n      fail("billing_policy_checkout_reconciliation_pending");
     return;
   }
   let session = await retrieveVerifiedSession(options, claim, claim.sessionId);
