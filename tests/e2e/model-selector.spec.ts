@@ -39,8 +39,12 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
 
   const picker = page.getByRole("dialog", { name: "Select model", exact: true });
   const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
+  const thumb = picker.locator('[data-slot="effort-thumb"]');
+  const options = picker.getByRole("group", { name: "Available models" });
   await expect(picker).toBeVisible();
-  await expect(picker.getByTestId("consumer-model-kova-xenon-5")).toBeVisible();
+  await expect(options.getByRole("button").first()).toHaveAccessibleName(/^Default Recommended/);
+  await expect(options.getByRole("button")).toHaveCount(8);
+  await expect(picker.locator(".kova-effort-icon")).toHaveCount(0);
   await expect(slider).toHaveAttribute("max", "4");
   await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
 
@@ -60,6 +64,17 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
       type: "touchStart",
       touchPoints: [{ x: Math.round(rail.x + 14), y }],
     });
+    const betweenStops = Math.round(rail.x + rail.width * 0.37);
+    await touch.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: betweenStops, y }],
+    });
+    await expect
+      .poll(async () => {
+        const bounds = (await thumb.boundingBox())!;
+        return Math.abs(bounds.x + bounds.width / 2 - betweenStops);
+      })
+      .toBeLessThan(2);
     for (const fraction of [0.25, 0.5, 0.75, 0.95]) {
       await touch.send("Input.dispatchTouchEvent", {
         type: "touchMove",
@@ -138,6 +153,7 @@ test.describe("short desktop model picker", () => {
   test.use({ viewport: { width: 1440, height: 520 }, isMobile: false, hasTouch: false });
 
   test("paid model picker fits a short window and preserves keyboard focus", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     await installAuthenticatedFixture(page, { tier: "pro" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
@@ -145,13 +161,16 @@ test.describe("short desktop model picker", () => {
     const picker = page.getByRole("dialog", { name: "Select model", exact: true });
     const recommended = picker.getByRole("button", { name: /^Default Recommended/ });
     const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
+    const thumb = picker.locator('[data-slot="effort-thumb"]');
     await trigger.press("Space");
     await expect(picker).toBeVisible();
     await expect(picker).toHaveCSS("width", "282px");
     await expect(picker).toBeInViewport({ ratio: 1 });
     await expect(recommended).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(slider).toBeFocused();
+    await expect(picker.getByTestId("consumer-model-kova-argon-4.6")).toBeFocused();
+    await expect(thumb).toHaveCSS("transition-property", "left");
+    await expect(thumb).toHaveCSS("transition-duration", "0.18s");
 
     await expect(picker.locator('[data-slot="effort-track"]')).toHaveCSS("height", "24px");
     const ticks = picker.locator('[data-slot="effort-tick"]');
@@ -162,12 +181,12 @@ test.describe("short desktop model picker", () => {
     await slider.click({ position: { x: rail.width - 3, y: rail.height / 2 } });
     await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
     const fill = picker.locator('[data-slot="effort-fill"]');
-    const fillStyle = await fill.evaluate((element) => {
-      const style = getComputedStyle(element, "::before");
-      return { width: parseFloat(style.width), color: style.backgroundColor };
-    });
-    expect(fillStyle.width).toBeGreaterThan(rail.width / 2);
-    expect(fillStyle.color).toBe("rgb(77, 130, 238)");
+    await expect
+      .poll(() => fill.evaluate((el) => parseFloat(getComputedStyle(el, "::before").width)))
+      .toBeGreaterThan(rail.width / 2);
+    expect(await fill.evaluate((el) => getComputedStyle(el, "::before").backgroundColor)).toBe(
+      "rgb(77, 130, 238)",
+    );
     await expect(ticks.last()).toHaveAttribute("data-filled", "true");
     await picker.getByRole("button", { name: "Reset response effort to Lite" }).click();
     await expect(slider).toHaveAttribute("aria-valuetext", "Lite");

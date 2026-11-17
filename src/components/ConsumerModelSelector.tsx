@@ -1,5 +1,5 @@
-import { useEffect, useId, useState, type CSSProperties } from "react";
-import { Check, ChevronDown, LockKeyhole, RotateCcw, Zap } from "lucide-react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { Check, ChevronDown, RotateCcw } from "lucide-react";
 import {
   CONSUMER_MODELS,
   DEFAULT_CONSUMER_MODEL,
@@ -31,6 +31,9 @@ export function ConsumerModelSelector({
 }) {
   const { isLoaded, isSignedIn } = useUser();
   const [open, setOpen] = useState(false);
+  const [dragPosition, setDragPosition] = useState<number | null>(null);
+  const drag = useRef<{ pointerId: number; bounds: DOMRect } | null>(null);
+  const thumbRail = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const effortId = useId();
   const locked = disabled || !isLoaded || !isSignedIn || tier === "free";
@@ -52,9 +55,30 @@ export function ConsumerModelSelector({
   const isDefault = value === DEFAULT_CONSUMER_MODEL && effort.id === "instant";
   const modelLabel = isDefault ? "Default" : (consumerModel(value)?.label ?? "Model unavailable");
   const recommended = consumerModel(DEFAULT_CONSUMER_MODEL)?.label;
+  const lastEffortIndex = efforts.length - 1;
+
+  function slide(event: PointerEvent<HTMLInputElement>) {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    const { left, width } = drag.current.bounds;
+    const position = Math.min(1, Math.max(0, (event.clientX - left) / width));
+    setDragPosition(position);
+    const next = efforts[Math.round(position * lastEffortIndex)];
+    if (next.id !== effort.id) onModeChange(next.id);
+  }
+
+  function finishDrag() {
+    drag.current = null;
+    setDragPosition(null);
+  }
 
   return (
-    <Popover open={open && !locked} onOpenChange={setOpen}>
+    <Popover
+      open={open && !locked}
+      onOpenChange={(next) => {
+        if (!next) finishDrag();
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -78,68 +102,110 @@ export function ConsumerModelSelector({
         collisionPadding={12}
         className="kova-consumer-model-menu p-1.5"
       >
-        <h2 id={titleId} className="px-3 py-1 text-xs font-medium text-muted-foreground">
+        <h2 id={titleId} className="shrink-0 px-3 py-1 text-xs font-medium text-muted-foreground">
           Select model
         </h2>
-        <button
-          type="button"
-          className={optionClass}
-          aria-pressed={isDefault}
-          disabled={locked}
-          onClick={() => {
-            if (locked) return;
-            onChange(DEFAULT_CONSUMER_MODEL);
-            onModeChange("instant");
-          }}
-        >
-          <span className="min-w-0 flex-1">
-            <span className="block font-medium">Default</span>
-            <span className="block text-xs text-muted-foreground">Recommended · {recommended}</span>
-          </span>
-          {isDefault && <Check className="size-4 shrink-0" aria-hidden="true" />}
-        </button>
+        <div className="kova-consumer-model-options" role="group" aria-label="Available models">
+          <button
+            type="button"
+            className={optionClass}
+            aria-pressed={isDefault}
+            disabled={locked}
+            onClick={() => {
+              onChange(DEFAULT_CONSUMER_MODEL);
+              onModeChange("instant");
+            }}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">Default</span>
+              <span className="block text-xs text-muted-foreground">
+                Recommended · {recommended}
+              </span>
+            </span>
+            {isDefault && <Check className="size-4 shrink-0" aria-hidden="true" />}
+          </button>
+          {CONSUMER_MODELS.filter((model) => model.tiers.includes(tier)).map((model) => {
+            const selected = !isDefault && value === model.id;
+            return (
+              <button
+                key={model.id}
+                type="button"
+                aria-pressed={selected}
+                disabled={locked}
+                title={model.description}
+                data-testid={`consumer-model-${model.id}`}
+                className={optionClass}
+                onClick={() => {
+                  onChange(model.id);
+                  setOpen(false);
+                }}
+              >
+                <span className="min-w-0 flex-1">{model.label}</span>
+                {selected && <Check className="size-4 shrink-0" aria-hidden="true" />}
+              </button>
+            );
+          })}
+        </div>
         <div className="kova-effort-picker kova-consumer-effort relative">
-          <div className="kova-effort-header">
-            <Zap className="kova-effort-icon" aria-hidden="true" />
-            <div className="min-w-0 text-center">
-              <div className="kova-consumer-effort-value text-sm font-semibold leading-5">
-                {effort.label}
-              </div>
-              <div className="truncate text-xs text-muted-foreground">{modelLabel}</div>
+          <div className="px-7 text-center">
+            <div className="kova-consumer-effort-value text-sm font-semibold leading-5">
+              {effort.label}
             </div>
+            <div className="truncate text-xs text-muted-foreground">{modelLabel}</div>
           </div>
           <label htmlFor={effortId} className="sr-only">
             Response effort
           </label>
           <div
             className="kova-effort-control"
+            data-dragging={dragPosition !== null}
             style={
               {
-                "--effort-position": `${(effortIndex / (efforts.length - 1)) * 100}%`,
+                "--effort-position": `${(dragPosition ?? effortIndex / lastEffortIndex) * 100}%`,
               } as CSSProperties
             }
           >
             <div className="kova-effort-track" data-slot="effort-track" aria-hidden="true">
               <div className="kova-effort-fill" data-slot="effort-fill" />
             </div>
-            <div className="kova-effort-stops" aria-hidden="true">
+            <div ref={thumbRail} className="kova-effort-stops" aria-hidden="true">
               {efforts.map((level, index) => (
                 <span key={level.id} data-slot="effort-tick" data-filled={index <= effortIndex} />
               ))}
+              <span className="kova-consumer-effort-thumb" data-slot="effort-thumb" />
             </div>
             <input
               id={effortId}
               type="range"
               className="kova-effort-range"
               min={0}
-              max={efforts.length - 1}
+              max={lastEffortIndex}
               step={1}
               value={effortIndex}
               aria-valuetext={effort.label}
               disabled={locked}
+              onPointerDown={(event) => {
+                if (event.button !== 0 || !event.isPrimary || !thumbRail.current) return;
+                const bounds = thumbRail.current.getBoundingClientRect();
+                if (!bounds.width) return;
+                event.preventDefault();
+                event.currentTarget.focus({ preventScroll: true });
+                event.currentTarget.setPointerCapture(event.pointerId);
+                drag.current = { pointerId: event.pointerId, bounds };
+                slide(event);
+              }}
+              onPointerMove={slide}
+              onPointerUp={(event) => {
+                if (drag.current?.pointerId !== event.pointerId) return;
+                slide(event);
+                finishDrag();
+              }}
+              onLostPointerCapture={(event) => {
+                if (drag.current?.pointerId === event.pointerId) finishDrag();
+              }}
               onChange={(event) => {
                 const next = efforts[event.currentTarget.valueAsNumber];
-                if (!locked && next) onModeChange(next.id);
+                if (next) onModeChange(next.id);
               }}
             />
           </div>
@@ -156,33 +222,6 @@ export function ConsumerModelSelector({
             <RotateCcw className="size-3.5" aria-hidden="true" />
           </button>
         </div>
-        {CONSUMER_MODELS.map((model) => {
-          const entitled = model.tiers.includes(tier);
-          const selected = !isDefault && value === model.id;
-          return (
-            <button
-              key={model.id}
-              type="button"
-              aria-pressed={selected}
-              disabled={locked || !entitled}
-              title={model.description}
-              data-testid={`consumer-model-${model.id}`}
-              className={optionClass}
-              onClick={() => {
-                if (locked || !entitled) return;
-                onChange(model.id);
-                setOpen(false);
-              }}
-            >
-              <span className="min-w-0 flex-1">{model.label}</span>
-              {!entitled ? (
-                <LockKeyhole className="size-4 shrink-0" aria-hidden="true" />
-              ) : selected ? (
-                <Check className="size-4 shrink-0" aria-hidden="true" />
-              ) : null}
-            </button>
-          );
-        })}
       </PopoverContent>
     </Popover>
   );
