@@ -422,6 +422,15 @@ export function normalizeChatPayload(value) {
       invalid("invalid_connector", "Invalid chat connection.");
     payload.connectorId = value.connectorId;
   }
+  if (value.connectorIds !== undefined) {
+    if (
+      !Array.isArray(value.connectorIds) ||
+      value.connectorIds.length > CONNECTOR_IDS.size ||
+      value.connectorIds.some((id) => typeof id !== "string" || !CONNECTOR_IDS.has(id))
+    )
+      invalid("invalid_connector", "Invalid chat connection.");
+    payload.connectorIds = [...new Set(value.connectorIds)];
+  }
   return payload;
 }
 

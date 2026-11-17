@@ -58,6 +58,7 @@ export function ComposerPluginList({
   onSelect,
   onNavigate,
   conversations,
+  selectedPluginIds = [],
   onRequireSignIn,
   inline = false,
   navigationBlocked = false,
@@ -71,6 +72,8 @@ export function ComposerPluginList({
   onNavigate: () => void;
   /** Only the current, principal-ready account’s saved conversations. */
   conversations: readonly ComposerSavedConversation[];
+  /** Plugins currently attached to the draft as removable context tokens. */
+  selectedPluginIds?: readonly string[];
   onRequireSignIn?: () => void;
   inline?: boolean;
   navigationBlocked?: boolean;
@@ -130,6 +133,7 @@ export function ComposerPluginList({
         key={plugin.id}
         type="button"
         className="kova-composer-plugin w-full text-left"
+        aria-pressed={selectedPluginIds.includes(plugin.id)}
         onClick={() => onSelect({ id: plugin.id, label: plugin.label })}
       >
         {rowContent(plugin)}

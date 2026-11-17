@@ -680,7 +680,14 @@ export const Route = createFileRoute("/api/chat")({
               summaryProof,
               clientTool,
               connectorId,
+              connectorIds,
             } = ingress;
+            const selectedConnectorIds = [
+              ...new Set(
+                connectorIds?.length ? connectorIds : connectorId ? [connectorId] : [],
+              ),
+            ];
+            const hasSelectedConnectors = selectedConnectorIds.length > 0;
             // Lockdown Mode is a server-enforced account boundary. Explicit
             // network tools fail with a truthful policy response; implicit web
             // enrichment fails closed while ordinary local/model chat remains
@@ -1712,7 +1719,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              (connectorId || !selfContainedTurn)
+              (hasSelectedConnectors || !selfContainedTurn)
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getGoogleToolContext(auth.userId),
@@ -1726,7 +1733,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              (connectorId || !selfContainedTurn)
+              (hasSelectedConnectors || !selfContainedTurn)
                 ? ((await preflight.run(
                     "other_connector_tools",
                     () => getConnectedToolContext(auth.userId),
@@ -1740,11 +1747,13 @@ export const Route = createFileRoute("/api/chat")({
             const permittedTools = customKova
               ? customKova.filterTools(connectionTools)
               : connectionTools;
-            const availableTools = connectorId
+            const availableTools = hasSelectedConnectors
               ? permittedTools.filter(
                   ({ function: { name } }) =>
-                    READ_ONLY_PLUGIN_TOOLS[name] === connectorId ||
-                    CONNECTION_FLOWS[connectorId]?.tool === name,
+                    selectedConnectorIds.some(
+                      (id) =>
+                        READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
+                    ),
                 )
               : permittedTools;
             const googleBinding = googleContext?.binding ?? undefined;
@@ -1752,7 +1761,7 @@ export const Route = createFileRoute("/api/chat")({
 
             const freeConnectorRequest = enableTools && callerTier === "free";
             let finalMessages = body.messages as unknown as ChatMsg[];
-            if (connectorId && !enableTools)
+            if (hasSelectedConnectors && !enableTools)
               finalMessages = connectedToolsUnavailableMessages(finalMessages);
             // A selected workflow resource may have influenced any earlier
             // assistant response (and therefore a durable conversation summary).
@@ -2508,7 +2517,9 @@ export const Route = createFileRoute("/api/chat")({
               // planning is finished. Tool results remain, but untrusted resource
               // bodies never participate in deciding which connector reads to run.
               messages:
-                workflowSkill || freeConnectorBudget || (connectorId && !enableTools)
+                workflowSkill ||
+                freeConnectorBudget ||
+                (hasSelectedConnectors && !enableTools)
                   ? [...finalMessages, ...finalToolMessages]
                   : workingMessages,
               stream: true,
