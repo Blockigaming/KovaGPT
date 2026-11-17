@@ -246,7 +246,12 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   await expect(drawer).toBeVisible();
   await expect
     .poll(async () => (await drawer.boundingBox())?.width)
-    .toBeCloseTo(Math.min(viewport.width * 0.86, 320), 0);
+    .toBeCloseTo(
+      viewport.width < 768 || viewport.height <= 500
+        ? Math.min((280 * 13) / 17, viewport.width - 24)
+        : Math.min(viewport.width * 0.86, 320),
+      0,
+    );
   const mainBox = (await main.boundingBox())!;
   expect(mainBox.x).toBe(0);
   expect(mainBox.width).toBe(viewport.width);

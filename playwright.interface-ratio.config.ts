@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-// Measurements only: real routed UI with synthetic account/service data.
+// Rendered ratio contracts and frozen desktop geometry, using synthetic data.
 export default defineConfig({
   testDir: "./tests/interface-ratio",
   timeout: 60_000,
@@ -32,5 +32,10 @@ export default defineConfig({
       name: `phone-${viewport.width}`,
       use: { viewport, isMobile: true, hasTouch: true },
     })),
+    {
+      name: "landscape-844",
+      use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true },
+    },
+    { name: "tablet-768", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
   ],
 });

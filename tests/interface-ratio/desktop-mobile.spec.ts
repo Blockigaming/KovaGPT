@@ -1,7 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
+
+// Captured from the last unchanged product source on Ubuntu 24.04 / Chromium.
+// This is a frozen desktop contract, not a snapshot regenerated from this CSS.
+const baseline = JSON.parse(
+  readFileSync(new URL("./desktop-baseline.json", import.meta.url), "utf8"),
+);
 
 const states = [
   { name: "home", route: "/", saved: false },
@@ -114,5 +120,81 @@ for (const state of states) {
     );
     expect(errors, `${state.name}: client exceptions`).toEqual([]);
     expect(data.overflow, `${state.name}: page overflow`).toBeLessThanOrEqual(1);
+
+    const row = (selector: string, index = 0) => {
+      const result = data.rows.find((item) => item.selector === selector && item.index === index);
+      expect(result, `${state.name}: rendered ${selector}[${index}]`).toBeDefined();
+      return result!;
+    };
+    const desktop = (selector: string, index = 0) =>
+      baseline[state.name].find(
+        (item: { selector: string; index: number }) =>
+          item.selector === selector && item.index === index,
+      );
+    const unchanged = (selector: string, properties: string[], index = 0) => {
+      const actual = row(selector, index);
+      const previous = desktop(selector, index);
+      for (const property of properties) {
+        expect(
+          actual[property as keyof typeof actual],
+          `${state.name}: ${selector} ${property} ratio 1`,
+        ).toEqual(previous[property]);
+      }
+    };
+    if (info.project.name === "desktop-1440") {
+      for (const previous of baseline[state.name]) {
+        const actual = row(previous.selector, previous.index);
+        for (const [property, value] of Object.entries(previous)) {
+          const current = actual[property as keyof typeof actual];
+          if (typeof value === "number" && property !== "index") {
+            expect(
+              Math.abs(Number(current) - value),
+              `desktop freeze: ${state.name} ${previous.selector} ${property}`,
+            ).toBeLessThanOrEqual(1);
+          } else
+            expect(
+              current,
+              `desktop freeze: ${state.name} ${previous.selector} ${property}`,
+            ).toEqual(value);
+        }
+      }
+    }
+    const phone =
+      data.viewport.width < 768 ||
+      (data.viewport.width < 1024 && data.viewport.height <= 500 && data.viewport.coarse);
+    if (!phone) return;
+    if (state.name === "home") {
+      unchanged(".kova-greeting h1", ["font", "line", "family", "weight"]);
+      unchanged(".spec400-composer", ["padding", "radius", "gap"]);
+      unchanged(".spec400-composer-input", ["font", "line"]);
+      expect(
+        row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
+      ).toBeCloseTo(0.5, 2);
+      expect(
+        Math.abs(
+          row(".spec400-composer").height - (desktop(".spec400-composer").height * 101) / 127,
+        ),
+      ).toBeLessThanOrEqual(2);
+      expect(
+        Math.abs(row(".kova-topbar").height - desktop(".kova-topbar").height),
+      ).toBeLessThanOrEqual(1);
+      expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
+    }
+    if (state.name === "conversation") {
+      unchanged(".prose-chat", ["font", "line"], 1);
+      unchanged(".spec400-composer", ["radius"]);
+    }
+    if (state.name === "library") {
+      unchanged(".kova-file-filters", ["padding", "radius", "gap"]);
+      unchanged(".kova-file-filters button", ["font", "line", "padding", "radius"]);
+    }
+    if (state.name === "connections") {
+      unchanged(".spec400-plugin-card", ["padding", "radius", "gap", "display"]);
+      expect(row(".spec400-plugin-grid").columns.split(" ")).toHaveLength(1);
+    }
+    if (["library", "projects", "connections", "images"].includes(state.name)) {
+      unchanged(".kova-page-title", ["font", "line", "weight"]);
+      expect(row(".kova-page-title").height).toBeGreaterThan(20);
+    }
   });
 }

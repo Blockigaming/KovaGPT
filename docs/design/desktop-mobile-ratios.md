@@ -1,6 +1,6 @@
 # Desktop → mobile interface relationships
 
-Measured November 17, 2026. Status: reference audit in progress; Kova baseline 32/32 checks passed; no product styles changed by this audit.
+Measured November 17, 2026. Status: mobile equivalence implemented; rendered verification pending. The frozen desktop baseline passed 32/32 checks before these corrections.
 
 ## Owner direction
 
@@ -15,6 +15,41 @@ For a comparable scalar property:
 For structural changes, apply the behavior instead: fewer columns, a toolbar wrapping, a sidebar becoming an overlay, or a dialog filling the viewport. A width measured at one viewport is not a universal percentage.
 
 Example: the reference home heading is 24 px at both measured widths, so its font-size ratio is 1. If Kova's rendered desktop heading is 32 px, the equivalent narrow heading is 32 px. Copying the reference's absolute 24 px would change Kova's design. Keep accessibility constraints separate: a smaller reference control is not permission to reduce Kova's 44 px touch targets, and editable mobile fields must retain their legibility and keyboard behavior.
+
+## Implemented mobile transformations
+
+All product changes are scoped to phone widths below 768 px and short coarse-pointer viewports below 1024 px. Desktop remains the source of Kova's visual design. `phone-equivalence.css` resolves the later overrides that previously redesigned mobile components. The other interface behaviors already present—overlay navigation, reflowed toolbars, local scrolling, keyboard-aware composer, and fullscreen search—remain part of the verification suite.
+
+| Correspondence                  | Reference desktop → narrow                                        | Kova implementation                                                                                          |
+| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Home greeting                   | Type, weight, family and alignment retained                       | Keep Kova's 32/38.4 serif heading, weight 400, centered                                                      |
+| Stacked home / Work composer    | Text area 52 → 26; padding 15/18/16 and radius 28 unchanged       | Text area 68 → 34; Kova padding 16 and radius 34 retained                                                    |
+| Stacked composer total height   | 127 → 101 (0.795)                                                 | Approximately 165 → 132 (0.800); the 44 px phone control minimum accounts for the difference                 |
+| Conversation composer           | One row → two, readable type and corners retained                 | Existing two-row phone structure retained; no aggregate height multiplier                                    |
+| Header                          | 52 → 52                                                           | Kova 64 → 64, plus device safe area                                                                          |
+| Navigation                      | Docked 340 → overlay 260                                          | Multiply the configured Kova rail width by 13/17, clamp to viewport, retain 44 px targets                    |
+| Model menu                      | Intrinsic width and radius unchanged, collision-aware positioning | Kova 282 px / 18 px retained; viewport clamp and internal scrolling                                          |
+| Response text, lists and quotes | Same typography, spacing and indentation                          | Restore 16/28 body, desktop heading scale, list and quote indentation                                        |
+| Code horizontal inset           | 20 → 16 (0.8)                                                     | Kova 16 → 12.8; text size, vertical inset and local scrolling retained                                       |
+| Page headings                   | Type retained                                                     | Kova's 28/36 management, 30/37.5 catalog, 32/38 Images, 28/33.6 Settings headings                            |
+| Library                         | Toolbar reflows; tabs scroll; card grid loses columns             | Keep 14/20 tabs, 8 px gaps, 12 px tab insets, round pills, 32 px page gutters; remove extra phone-only frame |
+| Connections                     | Fewer columns, same card internals                                | One column; retain Kova padding 16, radius 22, gap 10 and footer controls                                    |
+
+### Matching the composer state
+
+The initial compact **Chat** reference (52 → 87 px) is not the corresponding state for Kova's stacked home composer. A subsequent signed-in **Work** measurement at the same desktop and narrow widths found:
+
+| Work property         | Desktop                     | Narrow    | Ratio                                   |
+| --------------------- | --------------------------- | --------- | --------------------------------------- |
+| Outer composer        | 768 × 127                   | 419 × 101 | Height 0.795                            |
+| Input wrapper         | 768 × 83                    | 419 × 57  | Height follows input plus fixed padding |
+| Editable text area    | 732 × 52                    | 383 × 26  | Height 0.5                              |
+| Input wrapper padding | 15 top, 18 sides, 16 bottom | Same      | 1                                       |
+| Outer radius          | 28                          | 28        | 1                                       |
+| Input text            | 16/26                       | 16/26     | 1                                       |
+| Heading               | 24/28.8                     | 24/28.8   | 1                                       |
+
+Only corresponding properties are multiplied. Available width, wrapped text height, and row counts are layout constraints. Kova's existing phone destinations are retained when there is no direct reference counterpart. Browser-zoom observations do not establish portrait-phone vertical placement or real keyboard acceptance.
 
 ## Evidence and limits
 
@@ -100,7 +135,7 @@ Values are CSS pixels unless otherwise stated. Ratios are narrow ÷ desktop. “
 
 ## Mapping to Kova's existing implementation
 
-These are audit findings and candidate mappings, not deployed changes. The desktop source and page sections remain untouched.
+The following records the pre-correction source audit. Implemented changes are listed above; this historical table is not the current acceptance result.
 
 | Kova component                  | Current source behavior                                                                                                                                                                         | Equivalent relationship / next check                                                                                                                                                                   |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -119,7 +154,7 @@ These are audit findings and candidate mappings, not deployed changes. The deskt
 | Phone navigation                | Four existing destinations and keyboard-aware behavior.                                                                                                                                         | No direct reference equivalent. Keep the section/destination inventory until a specific replacement is established.                                                                                    |
 | Public marketing/auth pages     | Separate page structure and typography.                                                                                                                                                         | Out of this interface-ratio implementation. The owner's existing sections/design are frozen.                                                                                                           |
 
-`src/styles/assistant.css` is not imported by the active stylesheet entry. Do not use its historical values as the desktop baseline. Relevant active layers include `spec400-chat.css`, `visual-tokens.css`, `workspace-layout.css`, `app-finish.css`, and finally `phone-layout.css`.
+`src/styles/assistant.css` is not imported by the active stylesheet entry. Do not use its historical values as the desktop baseline. Relevant active layers include `spec400-chat.css`, `visual-tokens.css`, `workspace-layout.css`, `app-finish.css`, `phone-layout.css`, and the mobile-only `phone-equivalence.css`.
 
 ## Rendered Kova baseline: 32/32 passed
 
@@ -181,7 +216,7 @@ A completion percentage requires a fixed inventory and evidence for each state; 
 
 ## Reproducible Kova measurement
 
-The audit opens eight real routed states with synthetic service/account data at desktop 1440 × 900 and touch viewports 320 × 700, 390 × 844, and 430 × 932. It waits for hydration and fonts, saves computed geometry and fixture screenshots, and fails on client exceptions or page overflow. It does not sign into production, invoke AI services, or alter styles.
+The suite opens eight real routed states with synthetic service/account data at desktop 1440 × 900, touch viewports 320 × 700, 390 × 844, 430 × 932, landscape 844 × 390 and tablet 768 × 1024. It checks desktop geometry against the saved pre-change measurements and checks the intended mobile relationships. Both themes also exercise rich text, code/table scrolling and model-menu geometry. Existing mobile suites cover navigation, focus restoration, draft preservation, reduced visual viewport and fullscreen overlays. Tests do not sign into production or invoke AI services.
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
@@ -190,4 +225,4 @@ bash scripts/ci/install-playwright-browsers.sh chromium
 npx playwright test --config=playwright.interface-ratio.config.ts
 ```
 
-Artifacts: `test-results/interface-ratio/**/geometry.json`, `layout.png`, and exact source `commit.txt`. These are baseline evidence, not assertions that reference matching has been implemented. Any later mobile-only correction must compare the desktop measurements before/after and confirm that the page sections and controls remain present.
+Artifacts: `test-results/interface-ratio/**/geometry.json`, `layout.png`, and exact source `commit.txt`. The baseline JSON is frozen from run 44191472210, not regenerated from the new CSS. Passing results must include the unchanged desktop contract and mobile assertions; overflow-only success is insufficient.
