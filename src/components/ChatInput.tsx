@@ -1,3 +1,6 @@
+import { ChatOutputTemplates } from "./ChatOutputTemplates";
+import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
+import { Grid2X2, List as ListIcon, Settings as SettingsIcon } from "lucide-react";
 import {
   AttachmentPreviewAsk,
   AttachmentPreviewFileInfo,
@@ -74,6 +77,8 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  useImperativeHandle,
+  type Ref,
 } from "react";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
@@ -199,7 +204,14 @@ const subscribeToOnlineStatus = (onStoreChange: () => void) => {
 const getOnlineStatusSnapshot = () => navigator.onLine !== false;
 const getServerOnlineStatusSnapshot = () => true;
 
+export type ChatActivityComposer = {
+  addFiles: (trigger: HTMLElement | null) => void;
+  openLibrary: (trigger: HTMLElement | null) => void;
+  openTemplates: (format: ChatOutputFormat) => void;
+};
+
 export function ChatInput({
+  activityComposerRef,
   value,
   onChange,
   onSubmit,
@@ -250,6 +262,7 @@ export function ChatInput({
   onVoiceModeChange,
   onVoiceSubmit,
 }: {
+  activityComposerRef?: Ref<ChatActivityComposer>;
   value: string;
   onChange: (v: string) => void;
   onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
@@ -428,6 +441,10 @@ export function ChatInput({
   );
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryGrid, setLibraryGrid] = useState(false);
+  const [librarySort, setLibrarySort] = useState<"recent" | "name">("recent");
+  const [templateFormat, setTemplateFormat] = useState<ChatOutputFormat | null>(null);
+  const libraryReturnFocus = useRef<HTMLElement | null>(null);
   const [contextOpen, setContextOpen] = useState(false);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const projectTriggerRef = useRef<HTMLElement | null>(null);
@@ -455,6 +472,7 @@ export function ChatInput({
     setPlusOpen(false);
     setUtilityMenu(null);
     setLibraryOpen(false);
+    setTemplateFormat(null);
     setDrawingOpen(false);
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
@@ -1460,19 +1478,81 @@ export function ChatInput({
     );
   });
 
-  const renderRecentLibraryFiles = () => (
+  const sortedPickerFiles =
+    librarySort === "name"
+      ? [...visibleRecentLibraryFiles].sort((first, second) =>
+          (first.fileName || first.title).localeCompare(second.fileName || second.title),
+        )
+      : visibleRecentLibraryFiles;
+  const renderRecentLibraryFiles = (picker = false) => (
     <div className="kova-composer-library" aria-label="Saved Library files">
       {recentLibraryFiles.length > 0 || !recentLibraryLoading ? (
-        <label className="kova-composer-menu-search">
-          <Search aria-hidden="true" />
-          <span className="sr-only">Search Library files</span>
-          <input
-            value={recentQuery}
-            onChange={(event) => setRecentQuery(event.target.value)}
-            placeholder="Search Library files..."
-            className="w-full bg-transparent text-sm"
-          />
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="kova-composer-menu-search flex-1">
+            <Search aria-hidden="true" />
+            <span className="sr-only">Search Library files</span>
+            <input
+              value={recentQuery}
+              onChange={(event) => setRecentQuery(event.target.value)}
+              placeholder={picker ? "Search Library" : "Search Library files..."}
+              className="w-full bg-transparent text-sm"
+            />
+          </label>
+          {picker && (
+            <>
+              <button
+                type="button"
+                className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-accent"
+                aria-label={libraryGrid ? "List view" : "Grid view"}
+                onClick={() => setLibraryGrid(!libraryGrid)}
+              >
+                {libraryGrid ? <ListIcon aria-hidden="true" /> : <Grid2X2 aria-hidden="true" />}
+              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Library options"
+                    className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-accent"
+                  >
+                    <SettingsIcon aria-hidden="true" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" aria-label="Library options" className="z-[110] w-52">
+                  <fieldset className="grid gap-2 text-sm">
+                    <legend className="mb-2 text-muted-foreground">Sort files</legend>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={librarySort === "recent"}
+                        onChange={() => setLibrarySort("recent")}
+                      />
+                      Most recent
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={librarySort === "name"}
+                        onChange={() => setLibrarySort("name")}
+                      />
+                      Name
+                    </label>
+                  </fieldset>
+                  {onRecentLibraryRetry && (
+                    <button
+                      type="button"
+                      className="kova-library-refresh mt-3"
+                      onClick={onRecentLibraryRetry}
+                      disabled={recentLibraryLoading}
+                    >
+                      Refresh Library
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+        </div>
       ) : null}
       {recentLibraryLoading ? (
         <div className="px-3 py-3 text-sm text-muted-foreground">Loading recent files…</div>
@@ -1494,8 +1574,14 @@ export function ChatInput({
           {recentQuery.trim() ? "No matching files." : "No saved files yet."}
         </div>
       ) : (
-        <div className="max-h-64 overflow-y-auto p-1">
-          {visibleRecentLibraryFiles.map((item) => {
+        <div
+          className={
+            picker
+              ? `max-h-[55dvh] overflow-y-auto p-1 ${libraryGrid ? "grid grid-cols-2 gap-2 sm:grid-cols-3" : "divide-y divide-border"}`
+              : "max-h-64 overflow-y-auto p-1"
+          }
+        >
+          {(picker ? sortedPickerFiles : visibleRecentLibraryFiles.slice(0, 12)).map((item) => {
             const name = item.fileName || item.title;
             return (
               <button
@@ -1565,6 +1651,7 @@ export function ChatInput({
     const openLibrary = () => {
       closeActions();
       if (!requireFileAccount(trigger)) return;
+      libraryReturnFocus.current = null;
       setLibraryOpen(true);
       onRecentLibraryRetry?.();
     };
@@ -1731,18 +1818,20 @@ export function ChatInput({
     );
   };
 
-  useEffect(() => {
-    const openFromHeader = (event: Event) => {
-      const detail = (event as CustomEvent<{ trigger?: HTMLElement }>).detail;
-      contextTriggerRef.current = detail?.trigger ?? null;
-      contextReturnToInputRef.current = false;
-      contextSwitchingDialogRef.current = false;
-      contextReturnUrlRef.current = window.location.href;
-      setContextOpen(true);
-    };
-    window.addEventListener("kova-open-message-context", openFromHeader);
-    return () => window.removeEventListener("kova-open-message-context", openFromHeader);
-  }, []);
+  useImperativeHandle(activityComposerRef, () => ({
+    addFiles(trigger) {
+      if (!disabled && !isStreaming && requireFileAccount(trigger)) fileRef.current?.click();
+    },
+    openLibrary(trigger) {
+      if (disabled || isStreaming || !requireFileAccount(trigger)) return;
+      libraryReturnFocus.current = trigger;
+      setLibraryOpen(true);
+      onRecentLibraryRetry?.();
+    },
+    openTemplates(format) {
+      if (!disabled && !isStreaming && !activeVoiceMode) setTemplateFormat(format);
+    },
+  }));
 
   const attachmentState = (attachment: PendingAttachment) =>
     attachment.status === "failed"
@@ -1878,6 +1967,23 @@ export function ChatInput({
         <p role="status" className="spec400-connection-status">
           Offline. Your draft is preserved. Reconnect to send.
         </p>
+      )}
+      {templateFormat && !isStreaming && !disabled && !activeVoiceMode && (
+        <ChatOutputTemplates
+          key={templateFormat}
+          format={templateFormat}
+          userKey={user?.id ?? null}
+          onClose={() => {
+            setTemplateFormat(null);
+            ref.current?.focus();
+          }}
+          onChoose={(template, instructions) => {
+            const prompt = chatOutputPrompt(templateFormat, template, instructions);
+            onChange(value.trim() ? `${value.trimEnd()}\n\n${prompt}` : prompt);
+            setTemplateFormat(null);
+            window.requestAnimationFrame(() => ref.current?.focus());
+          }}
+        />
       )}
       <div
         ref={composerAnchorRef}
@@ -2762,10 +2868,13 @@ export function ChatInput({
       </Dialog>
       <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>
         <DialogContent
-          className="sm:max-w-lg"
+          className="sm:max-w-2xl rounded-[24px]"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            ref.current?.focus();
+            const target = libraryReturnFocus.current;
+            libraryReturnFocus.current = null;
+            if (target?.isConnected) target.focus();
+            else ref.current?.focus();
           }}
         >
           <DialogHeader>
@@ -2779,18 +2888,8 @@ export function ChatInput({
           <p className="spec400-attachment-limits">
             <ComposerUploadAllowance ownerId={isLoaded ? (user?.id ?? null) : null} />
           </p>
-          {user && onRecentLibraryRetry ? (
-            <button
-              type="button"
-              className="kova-library-refresh"
-              onClick={onRecentLibraryRetry}
-              disabled={recentLibraryLoading}
-            >
-              Refresh Library
-            </button>
-          ) : null}
           {user ? (
-            renderRecentLibraryFiles()
+            renderRecentLibraryFiles(true)
           ) : (
             <SignInButton mode="modal">
               <button type="button" className="kova-library-sign-in">

@@ -256,12 +256,19 @@ function MarkdownPre({ node, children, ...props }: ComponentProps<"pre"> & Extra
     .map((child) => (child.type === "text" ? child.value : ""))
     .join("")
     .replace(/\n$/, "");
-  const writing = writingLanguages.has(language.toLowerCase());
+  const officeLabel = {
+    "kova-docx": "Document",
+    "kova-pptx": "Presentation",
+    "kova-xlsx": "Spreadsheet",
+  }[language];
+  const writing = Boolean(officeLabel) || writingLanguages.has(language.toLowerCase());
   return (
     <ResponseContentBox
       text={text}
       kind={writing ? "text" : "code"}
-      label={writing ? `${language[0].toUpperCase()}${language.slice(1)}` : language}
+      label={
+        officeLabel ?? (writing ? `${language[0].toUpperCase()}${language.slice(1)}` : language)
+      }
       filename={node?.data?.kovaCodeFilename}
     >
       {writing ? (

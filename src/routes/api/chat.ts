@@ -2080,7 +2080,7 @@ export const Route = createFileRoute("/api/chat")({
             const activityEvents: Array<{
               tool: string;
               label: string;
-              args?: unknown;
+              status?: "done" | "failed";
             }> = [];
             if (webSources.length) {
               const activity = createToolActivityEvent(
@@ -2291,7 +2291,7 @@ export const Route = createFileRoute("/api/chat")({
                                 kind: "activity",
                                 tool: a.tool,
                                 label: a.label,
-                                status: "done",
+                                status: a.status ?? "done",
                               }),
                             ),
                           );
@@ -2395,11 +2395,6 @@ export const Route = createFileRoute("/api/chat")({
                       /* keep empty */
                     }
                     const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? tc.function.name;
-                    activityEvents.push({
-                      tool: tc.function.name,
-                      label: activityLabel,
-                      args: parsedArgs,
-                    });
                     // Dedup identical (name+args) within this request.
                     const key = dedupKey(tc.function.name, parsedArgs);
                     const cached = dedupCache.get(key);
@@ -2459,10 +2454,21 @@ export const Route = createFileRoute("/api/chat")({
                             parsedArgs,
                             googleBinding,
                           );
+                      activityEvents.push({
+                        tool: tc.function.name,
+                        label: activityLabel,
+                        status:
+                          out && typeof out === "object" && "error" in out ? "failed" : "done",
+                      });
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
                     } catch {
+                      activityEvents.push({
+                        tool: tc.function.name,
+                        label: activityLabel,
+                        status: "failed",
+                      });
                       return {
                         role: "tool",
                         tool_call_id: tc.id,
@@ -2688,7 +2694,7 @@ export const Route = createFileRoute("/api/chat")({
                             kind: "activity",
                             tool: a.tool,
                             label: a.label,
-                            status: "done",
+                            status: a.status ?? "done",
                           }),
                         ),
                       );
@@ -2907,7 +2913,7 @@ export const Route = createFileRoute("/api/chat")({
                         kind: "activity",
                         tool: a.tool,
                         label: a.label,
-                        status: "done",
+                        status: a.status ?? "done",
                       }),
                     ),
                   );

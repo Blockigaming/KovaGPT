@@ -169,14 +169,13 @@ test("active chat shares scoped header actions and keeps secondary controls reac
   assert.match(headerActions, /<PopoverContent\s+align="end"/);
   assert.match(
     route,
-    /onOpenContext=\{\(trigger\) =>[\s\S]*?new CustomEvent\("kova-open-message-context", \{ detail: \{ trigger \} \}\)/,
+    /onOpenLibrary=\{\(trigger\) => activityComposerRef\.current\?\.openLibrary\(trigger\)\}/,
   );
-  assert.match(chatInput, /addEventListener\("kova-open-message-context", openFromHeader\)/);
+  assert.match(chatInput, /useImperativeHandle\(activityComposerRef/);
   assert.match(chatInput, /onOpenChatContext\(contextTriggerRef\.current\)/);
   assert.match(route, /const openChatWorkspace = [\s\S]{0,420}setWorkspaceOpen\(true\)/);
-  assert.match(headerActions, /Chat instructions and context/);
-  assert.match(headerActions, /activeBrowserOnly/);
-  assert.match(headerActions, /separateInputs/);
+  assert.doesNotMatch(headerActions, /Chat instructions and context/);
+  assert.match(headerActions, /hideSourcesHeading/);
   assert.match(
     route,
     /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,

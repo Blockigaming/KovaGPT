@@ -1,5 +1,5 @@
 import { useEffect, useState, type MouseEvent } from "react";
-import { ChevronRight, Plug, Search } from "lucide-react";
+import { ChevronRight, Plug, Plus, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -61,6 +61,8 @@ export function ComposerPluginList({
   onRequireSignIn,
   inline = false,
   navigationBlocked = false,
+  browseLabel = "Connect plugins",
+  showAvailable = false,
 }: {
   userId: string | null;
   authLoaded: boolean;
@@ -72,6 +74,8 @@ export function ComposerPluginList({
   onRequireSignIn?: () => void;
   inline?: boolean;
   navigationBlocked?: boolean;
+  browseLabel?: string;
+  showAvailable?: boolean;
 }) {
   const { accounts, snapshot } = connections;
   const [pluginQuery, setPluginQuery] = useState("");
@@ -179,6 +183,25 @@ export function ComposerPluginList({
           </p>
         ) : null}
         {connected.map(({ id }) => row(plugins.find((plugin) => plugin.id === id)!))}
+        {showAvailable &&
+          userId &&
+          plugins
+            .filter((plugin) => !connected.some(({ id }) => id === plugin.id))
+            .map((plugin) => (
+              <Link
+                key={plugin.id}
+                to="/apps"
+                search={{ plugin: plugin.id }}
+                preload={false}
+                className="kova-composer-plugin"
+                onClick={handleNavigate}
+                aria-disabled={navigationBlocked || undefined}
+                aria-label={`Connect ${plugin.label} in plugins`}
+              >
+                {rowContent(plugin)}
+                <Plus aria-hidden="true" className="ml-auto" />
+              </Link>
+            ))}
       </div>
       {userId ? (
         <Link
@@ -190,10 +213,10 @@ export function ComposerPluginList({
           title={navigationBlocked ? blockedNavigationTitle : undefined}
         >
           <Plug aria-hidden="true" />
-          <span>Connect plugins</span>
+          <span>{browseLabel}</span>
           <ChevronRight aria-hidden="true" className="ml-auto" />
         </Link>
-      ) : (
+      ) : onRequireSignIn ? (
         <button
           type="button"
           className="kova-composer-action"
@@ -202,7 +225,7 @@ export function ComposerPluginList({
         >
           <Plug aria-hidden="true" /> Connect plugins
         </button>
-      )}
+      ) : null}
     </section>
   );
 }

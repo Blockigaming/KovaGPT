@@ -50,6 +50,7 @@ export const PRINCIPAL_SESSION_STORAGE_BASES = Object.freeze([
   "kova-work-draft",
   "kova-scheduled-task-list",
   "kova-plugin-list",
+  "kova-chat-output-templates",
   "kova-project-list",
   "kova-account-export-request",
 ]);

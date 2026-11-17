@@ -66,7 +66,12 @@ import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
 import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
-import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
+import {
+  ChatInput,
+  type ChatActivityComposer,
+  type ComposerToolId,
+  type PendingAttachment,
+} from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { PhoneNavigation } from "@/components/PhoneNavigation";
 
@@ -388,7 +393,7 @@ function KovaGPT() {
   }, [activeId, storagePrincipal, editingMessage]);
 
   const [sidebarOpen, setSidebarOpen, sidebarReady] = useSidebarPreference();
-  const [activityDock, setActivityDock] = useState<HTMLDivElement | null>(null);
+  const activityComposerRef = useRef<ChatActivityComposer>(null);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -3086,8 +3091,6 @@ function KovaGPT() {
           signedIn={Boolean(isLoaded && isSignedIn)}
           userTier={tier}
           compact={compact}
-          sidebarOpen={sidebarOpen}
-          activityDock={activityDock}
           isStreaming={isStreaming}
           navigationBlocked={Boolean(input || attachments.length || isStreaming)}
           onShare={(trigger) => {
@@ -3095,18 +3098,14 @@ function KovaGPT() {
             shareReturnUrlRef.current = window.location.href;
             setShareChatId(active.id);
           }}
-          onRename={(title) => renameChat(active.id, title)}
-          onTogglePin={() => toggleChatPin(active.id)}
-          onDelete={() => deleteChat(active.id)}
-          onOpenContext={(trigger) =>
-            window.dispatchEvent(
-              new CustomEvent("kova-open-message-context", { detail: { trigger } }),
-            )
+          onCreateOutput={(format) => activityComposerRef.current?.openTemplates(format)}
+          onAddFiles={(trigger) => activityComposerRef.current?.addFiles(trigger)}
+          onOpenLibrary={(trigger) => activityComposerRef.current?.openLibrary(trigger)}
+          onSelectPlugin={
+            tempChat
+              ? undefined
+              : (value) => setPluginSelection({ owner: userKey, chat: activeId, value })
           }
-          onManagePlugins={(trigger) => {
-            openSettings("linked");
-            settingsReturnFocusRef.current = trigger;
-          }}
         />
       </Suspense>
     ) : null;
@@ -3124,6 +3123,7 @@ function KovaGPT() {
       };
   const composer = (
     <ChatInput
+      activityComposerRef={showEmptyChat ? undefined : activityComposerRef}
       value={principalReady ? input : ""}
       onChange={setInput}
       onSubmit={(tool) => send(input, attachments, tool)}
@@ -3184,7 +3184,7 @@ function KovaGPT() {
     />
   );
   const freeOfferButton =
-    isLoaded && isSignedIn && tier === "free" ? (
+    !chatStarted && isLoaded && isSignedIn && tier === "free" ? (
       <Suspense fallback={null}>
         <FreeOfferButton />
       </Suspense>
@@ -3283,7 +3283,6 @@ function KovaGPT() {
         data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
-        <div id="chat-activity-dock" ref={setActivityDock} />
         <MobileTopBar
           onOpenSidebar={() => {
             readingAnchorControllerRef.current?.capture();
@@ -3296,12 +3295,7 @@ function KovaGPT() {
           userTier={tier}
           temporaryChat={tempChat}
           chatStarted={chatStarted}
-          conversationActions={
-            <>
-              {freeOfferButton}
-              {conversationActions(true)}
-            </>
-          }
+          conversationActions={chatStarted ? conversationActions(true) : freeOfferButton}
           onTemporaryChatChange={(enabled, trigger) => {
             temporaryTriggerRef.current = trigger;
             temporaryReturnUrlRef.current = window.location.href;

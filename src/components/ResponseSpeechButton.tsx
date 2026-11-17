@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Square, Volume2 } from "lucide-react";
+import { Loader2, Volume2 } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
 import { createSpeechPlayback } from "@/lib/speech-playback.mjs";
 import { PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT } from "@/lib/principal-browser-storage.mjs";
@@ -104,7 +104,13 @@ export function ResponseSpeechButton({
         {state === "loading" ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : busy ? (
-          <Square className="h-4 w-4" />
+          <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+            <path
+              fill="currentColor"
+              fillRule="evenodd"
+              d="M10 1a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM8 7a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1Z"
+            />
+          </svg>
         ) : (
           <Volume2 className="h-4 w-4" />
         )}

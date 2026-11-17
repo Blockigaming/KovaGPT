@@ -1,8 +1,10 @@
+import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import { ResponseSourceIcon } from "./ResponseSourceIcon";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import type { ReactNode } from "react";
 import {
   BookOpen,
+  Plug,
   ChevronRight,
   File,
   Globe,
@@ -57,6 +59,7 @@ export function ConversationSourcesView({
   showActivity = true,
   activeBrowserOnly = false,
   separateInputs = false,
+  hideSourcesHeading = false,
 }: {
   inventory: ConversationSourceInventory;
   onOpenAttachment: (outputId: string) => void;
@@ -67,6 +70,7 @@ export function ConversationSourcesView({
   showActivity?: boolean;
   activeBrowserOnly?: boolean;
   separateInputs?: boolean;
+  hideSourcesHeading?: boolean;
 }) {
   const providers = inventory.providers ?? [];
   const latestBrowser = inventory.browser.at(-1);
@@ -84,11 +88,12 @@ export function ConversationSourcesView({
   if (!total) return null;
   return (
     <section className="kova-conversation-sources" aria-label="Conversation sources">
-      {providers.length +
-        inventory.web.length +
-        inventory.memory.length +
-        (!separateInputs ? inventory.attachments.length : 0) >
-        0 && <h2>Sources</h2>}
+      {!hideSourcesHeading &&
+        providers.length +
+          inventory.web.length +
+          inventory.memory.length +
+          (!separateInputs ? inventory.attachments.length : 0) >
+          0 && <h2>Sources</h2>}
       {providers.map((entry) => {
         const Icon = {
           github: GitBranch,
@@ -98,14 +103,21 @@ export function ConversationSourcesView({
           files: File,
           google: CloudSun,
           microsoft: CloudSun,
+          plugin: Plug,
         }[entry.provider];
+        const brand =
+          entry.provider === "github"
+            ? githubLogo
+            : entry.pluginId
+              ? PLUGIN_BRAND_ASSET_URLS[entry.pluginId]
+              : null;
         return (
           <div
             key={entry.id}
             className={`kova-source-provider kova-source-provider-${entry.provider}`}
           >
-            {entry.provider === "github" ? (
-              <img src={githubLogo} width={16} height={16} alt="" />
+            {brand ? (
+              <img src={brand} width={16} height={16} alt="" />
             ) : (
               <Icon aria-hidden="true" />
             )}

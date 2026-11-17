@@ -896,6 +896,15 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
+  useEffect(() => {
+    if (!activityReady || !isSignedIn) return;
+    const id = new URLSearchParams(searchString).get("plugin");
+    if (!id) return;
+    const item = MASTER_PLUGIN_REVIEW_CATALOG.find((entry) => entry.connector.id === id)?.connector;
+    if (!item) return;
+    detailsReturnRef.current = null;
+    setSelectedApp(item);
+  }, [activityReady, isSignedIn, searchString]);
   const googleStatusRef = useRef<HTMLElement>(null);
   const googleRefreshContext = `${principal}:${visibleSelectedApp?.id ?? "closed"}:${lifecycleVersion}`;
   const googleRefreshScopeRef = useRef({ context: googleRefreshContext, epoch: 0 });
@@ -1490,8 +1499,8 @@ function AppsPage() {
               const origin = detailsReturnRef.current;
               restoreDialogFocus(
                 origin?.trigger.isConnected ? origin.trigger : searchRef.current,
-                origin?.url,
-                origin?.principal !== principalRef.current,
+                origin?.url ?? window.location.href,
+                Boolean(origin && origin.principal !== principalRef.current),
               );
             }}
           >

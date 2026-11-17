@@ -1,10 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
-import { closeCurrentSettings, openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
-async function expectRestingComposer(page: Page) {
-  const composer = page.locator(".spec400-composer");
+async function expectRestingComposer(page: Page, composer = page.locator(".spec400-composer")) {
   const compactDesktop = await page.evaluate(
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );
@@ -136,18 +135,65 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await fixture(page, "dark", true, true);
   await page.goto("/");
   await waitForKovaHydration(page);
-  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  const sidebar = await revealSidebar(page);
+  await sidebar
+    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+    .press("Enter");
+  const dock = page.locator(".spec400-composer-dock");
+  const input = dock.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect(input).toBeEnabled();
-  const compactDesktop = await expectRestingComposer(page);
+  const compactDesktop = await expectRestingComposer(page, dock.locator(".spec400-composer"));
   await input.fill("First line");
   await input.press(compactDesktop ? "Shift+Enter" : "Enter");
   await expect(input).toHaveValue("First line\n");
-  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+  await expect(dock.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Activity", exact: true }).click();
-  await page.getByRole("button", { name: "Chat instructions and context", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Context", exact: true })).toBeVisible();
+  const panel = page.locator(".kova-conversation-outputs");
+  await expect(panel.getByText("Chat instructions and context", { exact: true })).toHaveCount(0);
+  const panelHeight = await panel.evaluate((node) => node.offsetHeight);
+  const addSource = panel.getByRole("button", { name: "Add source", exact: true });
+  await addSource.click();
+  const sourceMenu = page.locator('[aria-label="Add source options"]');
+  await sourceMenu.getByRole("button", { name: "Connect plugins", exact: true }).click();
+  const plugins = page.locator(".kova-activity-submenu[aria-label='Connect plugins']");
+  await expect(plugins.getByRole("searchbox", { name: "Search plugins" })).toBeVisible();
+  if (compactDesktop) {
+    await expect(sourceMenu).toHaveClass(/kova-activity-floating/);
+    await expect(plugins).toHaveClass(/kova-activity-floating/);
+    expect(await panel.evaluate((node) => node.offsetHeight)).toBe(panelHeight);
+    await page.keyboard.press("Escape");
+    await expect(plugins).toBeHidden();
+    await expect(sourceMenu).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sourceMenu).toBeHidden();
+    await expect(panel).toBeVisible();
+  } else {
+    await addSource.click();
+  }
+  await addSource.click();
+  await sourceMenu.getByRole("button", { name: "Add from Library", exact: true }).click();
+  const library = page.getByRole("dialog", { name: "Add from Library", exact: true });
+  await expect(library.getByPlaceholder("Search Library", { exact: true })).toBeVisible();
+  await library.getByRole("button", { name: "Library options", exact: true }).click();
+  const nameSort = page.getByRole("radio", { name: "Name", exact: true });
+  await nameSort.check();
+  await expect(nameSort).toBeChecked();
   await page.keyboard.press("Escape");
+  await expect(nameSort).toBeHidden();
+  await library.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(library).toBeHidden();
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  await panel.getByRole("button", { name: "Create an output", exact: true }).first().click();
+  const outputMenu = page.locator('[aria-label="Output types"]');
+  if (compactDesktop) await expect(outputMenu).toHaveClass(/kova-activity-floating/);
+  await expect(outputMenu.getByRole("button", { name: "Create site" })).toHaveCount(0);
+  await outputMenu.getByRole("button", { name: "Create document", exact: true }).click();
+  const templates = page.getByRole("region", { name: "document templates" });
+  await expect(templates).toBeVisible();
+  await expect(templates.locator(".kova-template-card")).toHaveCount(100);
   await expect(input).toHaveValue("First line\n");
+  await templates.getByRole("button", { name: "Design Report", exact: true }).click();
+  await expect(input).toHaveValue(/^First line\n\nCreate a document using the Design Report/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
     path: info.outputPath("conversation.png"),

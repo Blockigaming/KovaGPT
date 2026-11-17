@@ -2,14 +2,27 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { NovaLogo } from "./NovaLogo";
-import { X, File, FileText, Image, Share, Download, List, ChevronDown } from "lucide-react";
+import {
+  FileText,
+  Image,
+  Share,
+  Download,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Plug,
+  Paperclip,
+  LibraryBig,
+  PanelsTopLeft,
+  Table2,
+} from "lucide-react";
+import { chatOutputTypes, type ChatOutputFormat } from "@/lib/chat-output-templates";
+import { ChatActivityPlugins } from "./ChatActivityPlugins";
 import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -26,11 +39,29 @@ import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
 import "./conversation-header.css";
 
 function OutputsIcon() {
-  return <List aria-hidden="true" />;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.55"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="6" cy="7" r="2.8" />
+      <circle cx="6" cy="17" r="2.8" />
+      <path d="M13 7h7M13 17h7" />
+    </svg>
+  );
 }
 
 function downloadOutput(output: ConversationOutput) {
-  if (output.kind === "library" || (output.kind === "image" && !output.source)) return;
+  if (
+    output.kind === "office" ||
+    output.kind === "library" ||
+    (output.kind === "image" && !output.source)
+  )
+    return;
   const local = output.kind !== "image";
   const url = local
     ? URL.createObjectURL(new Blob([output.content], { type: "text/plain;charset=utf-8" }))
@@ -50,12 +81,13 @@ export function ConversationHeaderActions({
   signedIn,
   userTier = "free",
   compact = false,
-  sidebarOpen = true,
-  activityDock,
   navigationBlocked = false,
   isStreaming = false,
   onShare,
-  onOpenContext,
+  onCreateOutput,
+  onAddFiles,
+  onOpenLibrary,
+  onSelectPlugin,
   browserPresentation,
 }: {
   browserPresentation?: {
@@ -71,16 +103,13 @@ export function ConversationHeaderActions({
   signedIn: boolean;
   userTier?: "free" | "plus" | "pro";
   compact?: boolean;
-  sidebarOpen?: boolean;
-  activityDock?: HTMLDivElement | null;
   navigationBlocked?: boolean;
   isStreaming?: boolean;
   onShare: (trigger: HTMLButtonElement | null) => void;
-  onRename: (title: string) => void;
-  onTogglePin: () => void;
-  onDelete: () => void | Promise<void>;
-  onManagePlugins: (trigger: HTMLButtonElement | null) => void;
-  onOpenContext?: (trigger: HTMLButtonElement) => void;
+  onCreateOutput: (format: ChatOutputFormat) => void;
+  onAddFiles: (trigger: HTMLElement | null) => void;
+  onOpenLibrary: (trigger: HTMLElement | null) => void;
+  onSelectPlugin?: (plugin: { id: string; label: string }) => void;
 }) {
   const { user, isLoaded, isSignedIn } = useUser();
   const { isDesktop } = useLayout();
@@ -92,16 +121,24 @@ export function ConversationHeaderActions({
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
   const [outputsOpen, setOutputsOpen] = useState(false);
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
+  const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   const [stepsCollapsed, setStepsCollapsed] = useState(false);
-  const inlineActivity = isDesktop && !compact && !sidebarOpen;
-  const [inlineOpen, setInlineOpen] = useState(true);
+  const [menu, setMenu] = useState<"outputs" | "sources" | "plugins" | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   useEffect(() => {
-    if (!inlineActivity) setInlineOpen(true);
-    setOutputsOpen(false);
-  }, [inlineActivity]);
+    if (!outputsOpen) setMenu(null);
+  }, [outputsOpen]);
   const [dialog, setDialog] = useState<"share-restricted" | null>(null);
   const [selectedOutput, setSelectedOutput] = useState<ConversationOutput | null>(null);
+  useEffect(() => {
+    setDownloadError(false);
+    setDownloading(false);
+  }, [selectedOutput]);
   const outputsRef = useRef<HTMLButtonElement>(null);
+  const outputsButtonRef = useRef<HTMLButtonElement>(null);
+  const sourcesButtonRef = useRef<HTMLButtonElement>(null);
+  const pluginsButtonRef = useRef<HTMLButtonElement>(null);
   const shareRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const returnUrlRef = useRef<string | undefined>(undefined);
@@ -126,12 +163,288 @@ export function ConversationHeaderActions({
     restoreDialogFocus(returnFocusRef.current, returnUrlRef.current);
   };
   const restrictedTemporary = Boolean(conversation.temporary);
-  const steps = conversation.messages.flatMap((message) => message.activities ?? []);
+  const steps = conversation.messages
+    .flatMap((message) => message.activities ?? [])
+    .filter((step) => step.tool !== "scheduled_task" && step.tool !== "browser_interact");
+  const hasSources = Boolean(
+    sourceInventory.web.length ||
+    sourceInventory.memory.length ||
+    sourceInventory.attachments.length ||
+    sourceInventory.providers?.length,
+  );
+  const formatIcons = { docx: FileText, pptx: PanelsTopLeft, xlsx: Table2 };
+  const handOff = (action: () => void, opensDialog = false) => {
+    dialogOpeningRef.current = opensDialog;
+    setOutputsOpen(false);
+    action();
+  };
+  const renderMenu = ({
+    open,
+    label,
+    anchor,
+    children,
+    close,
+    side = "bottom",
+  }: {
+    open: boolean;
+    label: string;
+    anchor: ReactNode;
+    children: ReactNode;
+    close: () => void;
+    side?: "bottom" | "left";
+  }) => {
+    if (!isDesktop)
+      return (
+        <>
+          {anchor}
+          {open && (
+            <div className="kova-activity-submenu" aria-label={label}>
+              {children}
+            </div>
+          )}
+        </>
+      );
+    return (
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) close();
+        }}
+      >
+        <PopoverAnchor asChild>{anchor}</PopoverAnchor>
+        {open && (
+          <PopoverContent
+            aria-label={label}
+            className="kova-activity-submenu kova-activity-floating"
+            align={side === "left" ? "start" : "end"}
+            side={side}
+            sideOffset={6}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              if (!outputsOpen || dialogOpeningRef.current) return;
+              const trigger =
+                side === "left"
+                  ? pluginsButtonRef.current
+                  : label === "Output types"
+                    ? outputsButtonRef.current
+                    : sourcesButtonRef.current;
+              if (event.target && document.activeElement === document.body)
+                trigger?.focus({ preventScroll: true });
+            }}
+          >
+            {children}
+          </PopoverContent>
+        )}
+      </Popover>
+    );
+  };
   const activityContent = (
     <>
+      <section className="kova-activity-inventory" aria-label="Outputs">
+        {renderMenu({
+          open: menu === "outputs",
+          label: "Output types",
+          anchor: (
+            <div className="kova-activity-inventory-heading">
+              <button
+                type="button"
+                className="kova-activity-section-toggle"
+                aria-expanded={!outputsCollapsed}
+                onClick={() => {
+                  setOutputsCollapsed(!outputsCollapsed);
+                  setMenu(null);
+                }}
+              >
+                <span>Outputs</span>
+                <ChevronDown
+                  className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                type="button"
+                ref={outputsButtonRef}
+                className="kova-activity-add"
+                aria-label="Create an output"
+                title="Create an output"
+                aria-expanded={menu === "outputs"}
+                disabled={isStreaming}
+                onClick={() => setMenu(menu === "outputs" ? null : "outputs")}
+              >
+                <Plus aria-hidden="true" />
+              </button>
+            </div>
+          ),
+          close: () => setMenu(null),
+          children: (
+            <>
+              {(Object.keys(chatOutputTypes) as ChatOutputFormat[]).map((format) => {
+                const Icon = formatIcons[format];
+                return (
+                  <button
+                    key={format}
+                    type="button"
+                    disabled={isStreaming}
+                    onClick={() => handOff(() => onCreateOutput(format))}
+                  >
+                    <Icon aria-hidden="true" /> Create {chatOutputTypes[format].label}
+                  </button>
+                );
+              })}
+            </>
+          ),
+        })}
+        {!outputsCollapsed &&
+          (generatedOutputs.length ? (
+            <div className="kova-output-list">
+              {generatedOutputs.map((output) => (
+                <button
+                  key={output.id}
+                  type="button"
+                  className="kova-output-row"
+                  title={output.name}
+                  onClick={() => {
+                    rememberFocus(outputsRef.current);
+                    setSelectedOutput(output);
+                    setOutputsOpen(false);
+                  }}
+                >
+                  {output.kind === "image" ? (
+                    <Image aria-hidden="true" />
+                  ) : (
+                    <FileText aria-hidden="true" />
+                  )}
+                  <span className="kova-output-name">{output.name}</span>
+                  <span className="kova-output-label">{output.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="kova-activity-placeholder"
+              disabled={isStreaming}
+              onClick={() => setMenu(menu === "outputs" ? null : "outputs")}
+            >
+              Create an output
+            </button>
+          ))}
+      </section>
+      <section className="kova-activity-inventory" aria-label="Sources">
+        {renderMenu({
+          open: menu === "sources" || menu === "plugins",
+          label: "Add source options",
+          anchor: (
+            <div className="kova-activity-inventory-heading">
+              <button
+                type="button"
+                className="kova-activity-section-toggle"
+                aria-expanded={!sourcesCollapsed}
+                onClick={() => {
+                  setSourcesCollapsed(!sourcesCollapsed);
+                  setMenu(null);
+                }}
+              >
+                <span>Sources</span>
+                <ChevronDown
+                  className={`kova-activity-chevron${sourcesCollapsed ? " is-collapsed" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                type="button"
+                ref={sourcesButtonRef}
+                className="kova-activity-add"
+                aria-label="Add source"
+                title="Add source"
+                aria-expanded={menu === "sources" || menu === "plugins"}
+                disabled={isStreaming}
+                onClick={() => setMenu(menu === "sources" || menu === "plugins" ? null : "sources")}
+              >
+                <Plus aria-hidden="true" />
+              </button>
+            </div>
+          ),
+          close: () => setMenu(null),
+          children: (
+            <>
+              {renderMenu({
+                open: menu === "plugins",
+                label: "Connect plugins",
+                side: "left",
+                anchor: (
+                  <button
+                    type="button"
+                    ref={pluginsButtonRef}
+                    aria-expanded={menu === "plugins"}
+                    onClick={() => setMenu(menu === "plugins" ? "sources" : "plugins")}
+                  >
+                    <Plug aria-hidden="true" /> Connect plugins{" "}
+                    <ChevronRight className="ml-auto" aria-hidden="true" />
+                  </button>
+                ),
+                close: () => setMenu("sources"),
+                children: menu === "plugins" && (
+                  <ChatActivityPlugins
+                    conversation={conversation}
+                    navigationBlocked={navigationBlocked}
+                    onSelect={onSelectPlugin && ((plugin) => handOff(() => onSelectPlugin(plugin)))}
+                    onNavigate={() => setOutputsOpen(false)}
+                  />
+                ),
+              })}
+              <button
+                type="button"
+                disabled={isStreaming}
+                onClick={() => handOff(() => onAddFiles(outputsRef.current), !signedIn)}
+              >
+                <Paperclip aria-hidden="true" /> Add photos &amp; files
+              </button>
+              <button
+                type="button"
+                disabled={isStreaming}
+                onClick={() => handOff(() => onOpenLibrary(outputsRef.current), true)}
+              >
+                <LibraryBig aria-hidden="true" /> Add from Library
+              </button>
+            </>
+          ),
+        })}
+        {!sourcesCollapsed &&
+          (hasSources ? (
+            <ConversationSourcesPanel
+              hideBrowser
+              hideSourcesHeading
+              showActivity={false}
+              conversation={conversation}
+              onOpenBrowser={() => {}}
+              onOpenMemory={(sources) => {
+                rememberFocus(outputsRef.current);
+                setOutputsOpen(false);
+                setSelectedMemory(sources);
+              }}
+              onOpenAttachment={(outputId) => {
+                const output = outputs.find((item) => item.id === outputId);
+                if (!output) return;
+                rememberFocus(outputsRef.current);
+                setSelectedOutput(output);
+                setOutputsOpen(false);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className="kova-activity-placeholder"
+              disabled={isStreaming}
+              onClick={() => setMenu(menu === "sources" || menu === "plugins" ? null : "sources")}
+            >
+              Attach files or connect apps
+            </button>
+          ))}
+      </section>
       <ConversationSourcesPanel
         browserOnly
-        showActivity
+        showActivity={false}
         conversation={conversation}
         browserTabCount={
           signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
@@ -147,115 +460,23 @@ export function ConversationHeaderActions({
           setSelectedBrowser(activity);
         }}
       />
-      {steps.some((step) => step.tool !== "scheduled_task") && (
-        <section className="kova-activity-steps" aria-label="Steps">
+      {steps.length > 0 && (
+        <section className="kova-activity-inventory" aria-label="Steps">
           <button
             type="button"
             className="kova-activity-section-toggle"
             aria-expanded={!stepsCollapsed}
-            onClick={() => setStepsCollapsed((v) => !v)}
+            onClick={() => setStepsCollapsed(!stepsCollapsed)}
           >
-            <h2>Steps</h2>
+            <span>Steps</span>
             <ChevronDown
               className={`kova-activity-chevron${stepsCollapsed ? " is-collapsed" : ""}`}
               aria-hidden="true"
             />
           </button>
-          {!stepsCollapsed ? <MessageActivityList activities={steps} /> : null}
+          {!stepsCollapsed && <MessageActivityList activities={steps} />}
         </section>
       )}
-      <button
-        type="button"
-        className="kova-activity-section-toggle"
-        aria-expanded={!outputsCollapsed}
-        onClick={() => setOutputsCollapsed((v) => !v)}
-      >
-        <h2>Outputs</h2>
-        <ChevronDown
-          className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
-          aria-hidden="true"
-        />
-      </button>
-      {!outputsCollapsed && generatedOutputs.length === 0 ? (
-        <p className="kova-header-note">No outputs yet.</p>
-      ) : null}
-      {!outputsCollapsed && generatedOutputs.length > 0 && (
-        <>
-          <div className="kova-output-list">
-            {generatedOutputs.map((output) => (
-              <button
-                key={output.id}
-                type="button"
-                className="kova-output-row"
-                onClick={() => {
-                  rememberFocus(outputsRef.current);
-                  setSelectedOutput(output);
-                  setOutputsOpen(false);
-                }}
-                title={output.name}
-              >
-                {output.kind === "image" ? (
-                  <Image aria-hidden="true" />
-                ) : output.kind === "artifact" ? (
-                  <FileText aria-hidden="true" />
-                ) : (
-                  <File aria-hidden="true" />
-                )}
-                <span className="kova-output-name">{output.name}</span>
-                <span className="kova-output-label">{output.label}</span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-      <ConversationSourcesPanel
-        hideBrowser
-        showActivity={false}
-        browserTabCount={
-          signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
-        }
-        browserPreview={
-          signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
-        }
-        activeBrowserOnly
-        separateInputs
-        conversation={conversation}
-        onOpenBrowser={(activity) => {
-          rememberFocus(outputsRef.current);
-          setOutputsOpen(false);
-          setSelectedBrowser(activity);
-        }}
-        onOpenMemory={(sources) => {
-          rememberFocus(outputsRef.current);
-          setOutputsOpen(false);
-          setSelectedMemory(sources);
-        }}
-        onOpenAttachment={(outputId) => {
-          const output = outputs.find((item) => item.id === outputId);
-          if (!output) return;
-          rememberFocus(outputsRef.current);
-          setSelectedOutput(output);
-          setOutputsOpen(false);
-        }}
-      />
-      {onOpenContext ? (
-        <button
-          type="button"
-          className="kova-activity-context"
-          onClick={(event) => {
-            dialogOpeningRef.current = true;
-            setOutputsOpen(false);
-            onOpenContext(outputsRef.current ?? event.currentTarget);
-          }}
-        >
-          Chat instructions and context
-        </button>
-      ) : null}
-      {isStreaming ? (
-        <p className="kova-header-note">
-          A response is still being generated. Its output may change.
-        </p>
-      ) : null}
     </>
   );
   return (
@@ -279,22 +500,8 @@ export function ConversationHeaderActions({
           }}
         >
           <Share aria-hidden="true" />
-          <span>Share</span>
         </button>
-        {inlineActivity ? (
-          <button
-            ref={outputsRef}
-            type="button"
-            className="kova-conversation-icon"
-            aria-label="Activity"
-            title="Activity"
-            aria-expanded={inlineOpen}
-            aria-controls={inlineOpen ? "chat-activity-panel" : undefined}
-            onClick={() => setInlineOpen((value) => !value)}
-          >
-            <OutputsIcon />
-          </button>
-        ) : !isDesktop ? (
+        {!isDesktop ? (
           <>
             <button
               ref={outputsRef}
@@ -357,34 +564,6 @@ export function ConversationHeaderActions({
           </Popover>
         )}
       </div>
-      {inlineActivity &&
-        activityDock &&
-        inlineOpen &&
-        createPortal(
-          <aside
-            id="chat-activity-panel"
-            className="kova-conversation-outputs kova-inline-activity"
-            aria-label="Activity"
-          >
-            <header>
-              <NovaLogo decorative className="size-6" />
-              <h2>Activity</h2>
-              <button
-                type="button"
-                className="kova-conversation-icon"
-                aria-label="Close activity"
-                onClick={() => {
-                  setInlineOpen(false);
-                  outputsRef.current?.focus();
-                }}
-              >
-                <X aria-hidden="true" />
-              </button>
-            </header>
-            {activityContent}
-          </aside>,
-          activityDock,
-        )}
       <Dialog
         open={dialog === "share-restricted"}
         onOpenChange={(open) => {
@@ -416,7 +595,7 @@ export function ConversationHeaderActions({
               ? "This chat keeps a Library reference. Open Library to access the original file."
               : selectedOutput?.kind === "text" && selectedOutput.extracted
                 ? "Extracted text from the attachment. The original file is not stored in this chat."
-                : selectedOutput?.kind === "artifact"
+                : selectedOutput?.kind === "artifact" || selectedOutput?.kind === "office"
                   ? "Generated content from this conversation."
                   : "Attachment in this conversation."}
           </DialogDescription>
@@ -461,15 +640,41 @@ export function ConversationHeaderActions({
             <Button
               variant="outline"
               className="min-h-11"
-              disabled={selectedOutput.kind === "image" && !selectedOutput.source}
-              onClick={() => downloadOutput(selectedOutput)}
+              disabled={downloading || (selectedOutput.kind === "image" && !selectedOutput.source)}
+              onClick={async () => {
+                if (selectedOutput.kind !== "office") {
+                  downloadOutput(selectedOutput);
+                  return;
+                }
+                setDownloadError(false);
+                setDownloading(true);
+                try {
+                  const { downloadDocument } = await import("@/lib/writing-export/export");
+                  await downloadDocument(
+                    selectedOutput.format,
+                    selectedOutput.name,
+                    selectedOutput.content,
+                  );
+                } catch {
+                  setDownloadError(true);
+                } finally {
+                  setDownloading(false);
+                }
+              }}
             >
               <Download className="mr-2 h-4 w-4" />
-              {selectedOutput.kind === "text" && selectedOutput.extracted
-                ? "Download extracted text"
-                : "Download"}
+              {selectedOutput.kind === "office"
+                ? `Download ${selectedOutput.label}`
+                : selectedOutput.kind === "text" && selectedOutput.extracted
+                  ? "Download extracted text"
+                  : "Download"}
             </Button>
           ) : null}
+          {downloadError && (
+            <p role="alert" className="text-sm text-destructive">
+              Could not export this file. Try downloading again.
+            </p>
+          )}
         </DialogContent>
       </Dialog>
       {selectedBrowser &&
