@@ -250,6 +250,7 @@ export const Route = createFileRoute("/")({
 });
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
+const EMPTY_PLUGIN_CONTEXTS: { id: string; label: string }[] = [];
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -370,16 +371,17 @@ function KovaGPT() {
   const [pluginSelection, setPluginSelection] = useState<{
     owner: string | null;
     chat: string | null;
-    value: { id: string; label: string };
+    value: { id: string; label: string }[];
   } | null>(null);
   const projectContext =
     projectSelection?.owner === userKey && projectSelection.chat === activeId
       ? projectSelection.value
       : null;
-  const pluginContext =
+  const pluginContexts =
     pluginSelection?.owner === userKey && pluginSelection.chat === activeId
       ? pluginSelection.value
-      : null;
+      : EMPTY_PLUGIN_CONTEXTS;
+  const pluginContext = pluginContexts[0] ?? null;
   const [pendingWorkflowSkill, setPendingWorkflowSkill] =
     useState<ConversationWorkflowSkill | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatEditDraft | null>(null);
@@ -1832,6 +1834,14 @@ function KovaGPT() {
       requestWebSearch?: boolean,
       { preserveDraft = false } = {},
     ) => {
+      // Keep extracted send-route fixtures and older callers compatible while
+      // the live composer now supplies multiple selected connector contexts.
+      const activePluginContexts =
+        typeof pluginContexts === "undefined"
+          ? pluginContext
+            ? [pluginContext]
+            : []
+          : pluginContexts;
       if (voiceRequest?.signal.aborted) return;
       if (!isSignedIn) {
         if (isLoaded) openSignIn();
@@ -1906,7 +1916,7 @@ function KovaGPT() {
         sameNextPromptScope(requestScope, nextPromptScopeRef.current);
       if (projectContext && projectSelection)
         setProjectSelection({ ...projectSelection, chat: nextConvId });
-      if (pluginContext && pluginSelection)
+      if (activePluginContexts.length && pluginSelection)
         setPluginSelection({ ...pluginSelection, chat: nextConvId });
       const existingConversation = nextConvId
         ? conversations.find((conversation) => conversation.id === nextConvId)
@@ -2166,7 +2176,7 @@ function KovaGPT() {
             hostedModel: requestHostedModel,
             clientTool: activeTool,
             projectId: tempChat ? undefined : projectContext?.id,
-            connectorId: tempChat ? undefined : pluginContext?.id,
+            connectorIds: tempChat ? undefined : activePluginContexts.map((plugin) => plugin.id),
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
@@ -2531,6 +2541,7 @@ function KovaGPT() {
       userKey,
       pendingWorkflowSkill,
       projectContext,
+      pluginContexts,
       pluginContext,
       projectSelection,
       pluginSelection,
@@ -3104,7 +3115,18 @@ function KovaGPT() {
           onSelectPlugin={
             tempChat
               ? undefined
-              : (value) => setPluginSelection({ owner: userKey, chat: activeId, value })
+              : (plugin) =>
+                  setPluginSelection((previous) => {
+                    const selected =
+                      previous?.owner === userKey && previous.chat === activeId
+                        ? previous.value
+                        : [];
+                    return {
+                      owner: userKey,
+                      chat: activeId,
+                      value: [...selected.filter((item) => item.id !== plugin.id), plugin],
+                    };
+                  })
           }
         />
       </Suspense>
@@ -3115,11 +3137,11 @@ function KovaGPT() {
     ? {}
     : {
         projectContext,
-        pluginContext,
+        pluginContexts,
         onProjectContext: (value: typeof projectContext) =>
           setProjectSelection(value && { owner: userKey, chat: activeId, value }),
-        onPluginContext: (value: typeof pluginContext) =>
-          setPluginSelection(value && { owner: userKey, chat: activeId, value }),
+        onPluginContextsChange: (value: typeof pluginContexts) =>
+          setPluginSelection(value.length ? { owner: userKey, chat: activeId, value } : null),
       };
   const composer = (
     <ChatInput

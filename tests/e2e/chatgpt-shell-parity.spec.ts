@@ -185,7 +185,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
       0,
     );
     await page.getByRole("button", { name: "Activity", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Outputs", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Outputs", exact: true })).toBeVisible();
   });
 
   test("guest desktop entry does not expose chat actions or execute a request", async ({

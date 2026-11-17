@@ -99,6 +99,7 @@ import {
 import { OpenDesktopAppButton } from "@/components/OpenDesktopAppButton";
 import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
 import { ComposerPluginList, useComposerPluginConnections } from "@/components/ComposerPluginList";
+import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import { LinkPreviewChip } from "@/components/LinkPreviewChip";
 import {
   COMPOSER_LINK_MARKER,
@@ -249,8 +250,8 @@ export function ChatInput({
   showChooseProject = false,
   projectContext,
   onProjectContext,
-  pluginContext,
-  onPluginContext,
+  pluginContexts = [],
+  onPluginContextsChange,
   showResources = true,
   savedConversations = [],
   surface = "conversation",
@@ -310,8 +311,8 @@ export function ChatInput({
   showChooseProject?: boolean;
   projectContext?: { id: string; name: string } | null;
   onProjectContext?: (project: { id: string; name: string } | null) => void;
-  pluginContext?: { id: string; label: string } | null;
-  onPluginContext?: (plugin: { id: string; label: string } | null) => void;
+  pluginContexts?: readonly { id: string; label: string }[];
+  onPluginContextsChange?: (plugins: { id: string; label: string }[]) => void;
   /** The welcome tray disappears once a conversation has messages. */
   showResources?: boolean;
   savedConversations?: readonly Conversation[];
@@ -902,6 +903,21 @@ export function ChatInput({
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Selected plugins follow the draft as atomic context tokens. The first
+    // Backspace/Delete at the end removes a whole token instead of one letter.
+    if (
+      pluginContexts.length > 0 &&
+      onPluginContextsChange &&
+      !disabled &&
+      (e.key === "Backspace" || e.key === "Delete") &&
+      !(e.nativeEvent as KeyboardEvent).isComposing &&
+      e.currentTarget.selectionStart === e.currentTarget.selectionEnd &&
+      e.currentTarget.selectionStart === e.currentTarget.value.length
+    ) {
+      e.preventDefault();
+      onPluginContextsChange(pluginContexts.slice(0, -1));
+      return;
+    }
     // A link typed manually has the same one-keystroke removal behavior even
     // before its title chip has collapsed the editor text.
     if (
@@ -1662,12 +1678,19 @@ export function ChatInput({
           userId={isLoaded ? (user?.id ?? null) : null}
           authLoaded={isLoaded}
           conversations={user ? savedConversations : []}
+          selectedPluginIds={pluginContexts.map((plugin) => plugin.id)}
           navigationBlocked={Boolean(value.length || attachments.length || isStreaming || disabled)}
           onSelect={
-            onPluginContext
+            onPluginContextsChange
               ? (plugin) => {
-                  onPluginContext(plugin);
+                  const selected = pluginContexts.some((item) => item.id === plugin.id);
+                  onPluginContextsChange(
+                    selected
+                      ? pluginContexts.filter((item) => item.id !== plugin.id)
+                      : [...pluginContexts, plugin],
+                  );
                   closeActions();
+                  window.requestAnimationFrame(() => ref.current?.focus());
                 }
               : undefined
           }
@@ -2006,6 +2029,7 @@ export function ChatInput({
                 key={attachment.clientId ?? `${attachment.name}:${index}`}
                 className="spec400-attachment-chip"
                 data-status={attachment.status}
+                data-kind={attachment.kind}
               >
                 <button
                   type="button"
@@ -2021,16 +2045,40 @@ export function ChatInput({
                     setPreviewAttachment(attachment);
                   }}
                 >
-                  {attachment.status === "uploading" ? (
+                  {attachment.kind === "image" ? (
+                    <>
+                      <img
+                        className="spec400-attachment-thumb"
+                        src={attachment.dataUrl}
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      {attachment.status === "uploading" ? (
+                        <Loader2
+                          className="spec400-attachment-image-state animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : attachment.status === "failed" ? (
+                        <AlertCircle
+                          className="spec400-attachment-image-state"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                    </>
+                  ) : attachment.status === "uploading" ? (
                     <Loader2 className="animate-spin" aria-hidden="true" />
                   ) : attachment.status === "failed" ? (
                     <AlertCircle aria-hidden="true" />
-                  ) : attachment.kind === "image" ? (
-                    <ImageIcon aria-hidden="true" />
                   ) : (
                     <FileText aria-hidden="true" />
                   )}
-                  <span className="spec400-chip-name">
+                  <span
+                    className={
+                      attachment.kind === "image"
+                        ? "spec400-chip-name sr-only"
+                        : "spec400-chip-name"
+                    }
+                  >
                     {attachment.pasteSummary ?? attachment.name}
                   </span>
                   <span className="sr-only">{attachmentState(attachment)}</span>
@@ -2150,34 +2198,50 @@ export function ChatInput({
             <ExpandViewIcon />
           </button>
         </div>
-        {(projectContext || pluginContext) && (
+        {pluginContexts.length > 0 && (
+          <div className="spec400-plugin-tokens" role="group" aria-label="Selected plugins">
+            {pluginContexts.map((plugin) => {
+              const logo =
+                PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id];
+              return (
+                <button
+                  key={plugin.id}
+                  type="button"
+                  className="spec400-plugin-token"
+                  disabled={disabled || isStreaming}
+                  onClick={() => {
+                    onPluginContextsChange?.(
+                      pluginContexts.filter((item) => item.id !== plugin.id),
+                    );
+                    window.requestAnimationFrame(() => ref.current?.focus());
+                  }}
+                  aria-label={`Remove plugin ${plugin.label}`}
+                  title={`Remove ${plugin.label} · Backspace or Delete removes the last selected plugin`}
+                >
+                  {logo ? (
+                    <img src={logo} alt="" aria-hidden="true" />
+                  ) : (
+                    <Plug aria-hidden="true" />
+                  )}
+                  <span>{plugin.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {projectContext && !showResources && (
           <div className="flex min-w-0 flex-wrap gap-2 px-3">
-            {projectContext && (
-              <button
-                type="button"
-                className="spec400-selected-tool min-w-0"
-                disabled={isStreaming}
-                onClick={() => onProjectContext?.(null)}
-                aria-label={`Remove project ${projectContext.name}`}
-              >
-                <Folder aria-hidden="true" />
-                <span className="truncate">{projectContext.name}</span>
-                <X aria-hidden="true" />
-              </button>
-            )}
-            {pluginContext && (
-              <button
-                type="button"
-                className="spec400-selected-tool min-w-0"
-                disabled={isStreaming}
-                onClick={() => onPluginContext?.(null)}
-                aria-label={`Remove plugin ${pluginContext.label}`}
-              >
-                <Plug aria-hidden="true" />
-                <span className="truncate">{pluginContext.label}</span>
-                <X aria-hidden="true" />
-              </button>
-            )}
+            <button
+              type="button"
+              className="spec400-selected-tool min-w-0"
+              disabled={isStreaming}
+              onClick={() => onProjectContext?.(null)}
+              aria-label={`Remove project ${projectContext.name}`}
+            >
+              <Folder aria-hidden="true" />
+              <span className="truncate">{projectContext.name}</span>
+              <X aria-hidden="true" />
+            </button>
           </div>
         )}
         {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
@@ -2475,23 +2539,44 @@ export function ChatInput({
         aria-label="Chat resources"
       >
         {showChooseProject && showAddMenu ? (
-          <button
-            type="button"
-            className="kova-composer-tray-action"
-            aria-expanded={projectPickerOpen && !startProjectChat}
-            aria-haspopup="dialog"
-            disabled={!user || disabled || isStreaming}
-            onClick={(event) => {
-              projectTriggerRef.current = event.currentTarget;
-              projectAnchorRef.current = event.currentTarget;
-              setStartProjectChat(false);
-              projectReturnUrlRef.current = window.location.href;
-              setProjectPickerOpen(true);
-            }}
-          >
-            <Folder aria-hidden="true" />
-            <span>Choose project</span>
-          </button>
+          <>
+            <button
+              type="button"
+              className="kova-composer-tray-action"
+              aria-expanded={projectPickerOpen && !startProjectChat}
+              aria-haspopup="dialog"
+              aria-label={
+                projectContext ? `Selected project ${projectContext.name}` : "Choose project"
+              }
+              disabled={!user || disabled || isStreaming}
+              onClick={(event) => {
+                projectTriggerRef.current = event.currentTarget;
+                projectAnchorRef.current = event.currentTarget;
+                setStartProjectChat(false);
+                projectReturnUrlRef.current = window.location.href;
+                setProjectPickerOpen(true);
+              }}
+            >
+              {projectContext ? (
+                <Globe aria-hidden="true" className="spec400-selected-project-icon" />
+              ) : (
+                <Folder aria-hidden="true" />
+              )}
+              <span>{projectContext?.name ?? "Choose project"}</span>
+            </button>
+            {projectContext ? (
+              <button
+                type="button"
+                className="kova-composer-tray-remove"
+                disabled={isStreaming}
+                aria-label={`Remove project ${projectContext.name}`}
+                title={`Remove project ${projectContext.name}`}
+                onClick={() => onProjectContext?.(null)}
+              >
+                <X aria-hidden="true" />
+              </button>
+            ) : null}
+          </>
         ) : null}
         {showAddMenu
           ? (["files", "plugins"] as const).map((section) => (

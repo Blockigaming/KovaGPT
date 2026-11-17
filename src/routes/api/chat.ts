@@ -679,8 +679,15 @@ export const Route = createFileRoute("/api/chat")({
               historyOffset,
               summaryProof,
               clientTool,
-              connectorId,
+              connectorId: legacyConnectorId,
+              connectorIds,
             } = ingress;
+            const selectedConnectorIds = [
+              ...new Set(
+                connectorIds?.length ? connectorIds : legacyConnectorId ? [legacyConnectorId] : [],
+              ),
+            ];
+            const connectorId = selectedConnectorIds[0];
             // Lockdown Mode is a server-enforced account boundary. Explicit
             // network tools fail with a truthful policy response; implicit web
             // enrichment fails closed while ordinary local/model chat remains
@@ -1741,10 +1748,11 @@ export const Route = createFileRoute("/api/chat")({
               ? customKova.filterTools(connectionTools)
               : connectionTools;
             const availableTools = connectorId
-              ? permittedTools.filter(
-                  ({ function: { name } }) =>
-                    READ_ONLY_PLUGIN_TOOLS[name] === connectorId ||
-                    CONNECTION_FLOWS[connectorId]?.tool === name,
+              ? permittedTools.filter(({ function: { name } }) =>
+                  selectedConnectorIds.some(
+                    (id) =>
+                      READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
+                  ),
                 )
               : permittedTools;
             const googleBinding = googleContext?.binding ?? undefined;
