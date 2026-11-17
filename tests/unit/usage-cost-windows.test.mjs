@@ -20,6 +20,8 @@ async function fixture(privatePolicy) {
     );
     create function public.effective_user_usage_multiplier(uuid)
       returns integer language sql stable as $$select 1$$;
+    create function public.effective_user_plan_tier(uuid)
+      returns text language sql stable as $$select 'free'::text$$;
     create function public.try_consume_daily_message(uuid,boolean,integer,integer)
       returns boolean language plpgsql security definer set search_path=public as $$
       begin
@@ -248,6 +250,38 @@ test("private policy controls dynamic pacing, atomic monthly admission and custo
     );
     await db.exec("set role authenticated");
     await assert.rejects(db.query(costQuery, [owner]), /permission denied/);
+  } finally {
+    await db.close();
+  }
+});
+
+test("private cost budgeting replaces fixed message, token and premium counts", async () => {
+  const db = await fixture({ free: 2.13, plus: 19.73, pro: 93.71 });
+  try {
+    for (let i = 0; i < 3; i++) {
+      const count = await db.query("select public.try_consume_paid_message($1,false,1,1) outcome", [
+        owner,
+      ]);
+      assert.equal(count.rows[0].outcome, "allowed");
+    }
+    assert.equal((await db.query("select chats from public.daily_usage")).rows[0].chats, 3);
+    for (const plan of ["free", "plus", "pro"]) {
+      const id = crypto.randomUUID();
+      const result = await db.query(
+        `select * from public.acquire_ai_generation(
+          $1,$1,$2,null,null,'thinking',$3,true,'kova-argon-4.6',100,100,0.0001,false,
+          0,0,0,10,1000,1000,120,now()-interval '1 month',now()+interval '1 month'
+        )`,
+        [id, owner, plan],
+      );
+      assert.equal(result.rows[0].decision, "acquired");
+    }
+    assert.equal((await request(db, "free", 3)).decision, "monthly_cost");
+    await db.exec("set role authenticated");
+    await assert.rejects(
+      db.query("select public.try_consume_paid_message($1,false,1,1)", [owner]),
+      /permission denied/,
+    );
   } finally {
     await db.close();
   }

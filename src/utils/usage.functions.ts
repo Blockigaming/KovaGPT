@@ -129,7 +129,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       return allowance != null &&
         Number.isFinite(consumed) &&
         Number.isFinite(capacity) &&
-        capacity > 0
+        capacity >= 0
         ? consumed >= capacity
           ? 100
           : Math.max(0, Math.floor((100 * consumed) / capacity))
