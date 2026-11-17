@@ -108,6 +108,9 @@ test("empty workspace remains contained and composer focus is deliberate", async
         ),
         input: bounds(".spec400-composer-input"),
         coarse: matchMedia("(any-pointer: coarse)").matches,
+        phone: matchMedia(
+          "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+        ).matches,
         attach: bounds('[aria-label="Attach"]'),
         send: bounds('[aria-label="Send message"]'),
       };
@@ -115,9 +118,12 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.width).toBeLessThanOrEqual(metrics.composerWidth);
     if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.height).toBeGreaterThanOrEqual(
-      focused.radius === 21 ? 92 : coarseComposer ? 136 : 148,
-    );
+    if (metrics.phone) {
+      // The Work-style input halves (68 → 34) while padding, corners and
+      // readable type stay at Kova's desktop values; controls retain 44px.
+      expect(metrics.height).toBeCloseTo(132, 0);
+      expect(metrics.input!.height).toBeCloseTo(34, 0);
+    } else expect(metrics.height).toBeGreaterThanOrEqual(coarseComposer ? 136 : 148);
     expect(metrics.input!.height).toBeGreaterThanOrEqual(26);
     const control = coarseComposer ? 44 : 36;
     expect(metrics.attach!.width).toBe(control);
