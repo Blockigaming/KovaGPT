@@ -271,7 +271,7 @@ function handler(overrides = {}) {
     enforceQuota: async (_auth, kind, limit, increment) => {
       events.push("quota");
       assert.equal(kind, "voice");
-      assert.equal(limit, 3);
+      assert.equal(limit, 1);
       assert.equal(increment, 1);
       return null;
     },
@@ -468,10 +468,10 @@ test("Live Voice mints only a scoped token and reserves daily usage for Free and
     KOVA_VOICE_REALTIME_ENABLED: "true",
     KOVA_VOICE_CATALOG: JSON.stringify(catalog),
   };
-  for (const [tier, count] of [
-    ["free", 3],
-    ["plus", 7],
-    ["pro", 7],
+  for (const [tier, count, dailyLimit] of [
+    ["free", 3, 1],
+    ["plus", 7, 3],
+    ["pro", 7, 3],
   ]) {
     const calls = [];
     const getEnv = (key) => flags[key];
@@ -483,7 +483,8 @@ test("Live Voice mints only a scoped token and reserves daily usage for Free and
       limitRealtime: async () => {
         calls.push("rate");
       },
-      enforceQuota: async () => {
+      enforceQuota: async (_auth, _kind, limit) => {
+        assert.equal(limit, dailyLimit);
         calls.push("quota");
       },
       env: getEnv,

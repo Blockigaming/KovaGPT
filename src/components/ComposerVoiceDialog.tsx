@@ -1,6 +1,6 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
-import { AudioLines, ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
+import { ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { DialogContent } from "@/components/ui/dialog";
@@ -130,6 +130,10 @@ async function voiceError(response: Response, fallback: string): Promise<string>
     return "Your voice usage limit has been reached. Please try again later.";
   if (response.status === 503) return "Voice is temporarily unavailable. Please try again later.";
   return fallback;
+}
+
+function canListenInRealtime() {
+  return typeof AudioWorkletNode !== "undefined" && typeof AudioContext !== "undefined";
 }
 
 function stopTracks(stream: MediaStream | null) {
@@ -353,10 +357,19 @@ export function ComposerVoiceDialog({
       timeout = setTimeout(() => controller.abort(), 15_000);
       void (async () => {
         try {
-          const response = await authFetch("/api/voice", {
-            signal: controller.signal,
-            headers: { "X-Kova-Voice-Owner": scope.userId },
-          });
+          const requestCapabilities = () =>
+            authFetch("/api/voice", {
+              signal: controller.signal,
+              headers: { "X-Kova-Voice-Owner": scope.userId },
+            });
+          let response = await requestCapabilities();
+          if (!isCurrent(scope)) return;
+          // This read-only probe can retry a transient gateway failure within
+          // the same startup deadline without re-opening the screen.
+          if (mode === "voice" && (response.status === 502 || response.status === 504)) {
+            void response.body?.cancel().catch(() => undefined);
+            response = await requestCapabilities();
+          }
           if (!isCurrent(scope)) return;
           if (!response.ok)
             throw new Error(await voiceError(response, "Voice is unavailable right now."));
@@ -771,7 +784,8 @@ export function ComposerVoiceDialog({
       voiceId: selectedVoice.current,
     };
     if (!isCurrent(scope)) return;
-    const realtime = mode === "voice" && capabilities.realtime && !realtimeFailed;
+    const realtime =
+      mode === "voice" && capabilities.realtime && !realtimeFailed && canListenInRealtime();
     const canRecord =
       typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
     if (!realtime && !canRecord) {
@@ -793,7 +807,7 @@ export function ComposerVoiceDialog({
       const controller = new AbortController();
       request.current = controller;
       let startedListening = false;
-      let tokenRequestRejected = false;
+      let fallbackAllowed = true;
       try {
         const text = await listenForVoiceTurn({
           signal: controller.signal,
@@ -808,7 +822,9 @@ export function ComposerVoiceDialog({
               signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
             });
             if (!response.ok) {
-              tokenRequestRejected = response.status < 500;
+              // Preserve account, feature and quota denials. Only provider
+              // transport failures can fall back to recorded transcription.
+              fallbackAllowed = response.status === 502 || response.status === 504;
               throw new Error(await voiceError(response, "Live Voice could not connect."));
             }
             const { token } = await response.json();
@@ -818,7 +834,10 @@ export function ComposerVoiceDialog({
           },
           onListening: () => {
             startedListening = true;
-            if (isCurrent(scope)) updatePhase("recording");
+            if (isCurrent(scope)) {
+              setHandsFreeListening(true);
+              updatePhase("recording");
+            }
           },
         });
         finishRequest(controller);
@@ -826,8 +845,11 @@ export function ComposerVoiceDialog({
         return;
       } catch (cause) {
         if (!isCurrent(scope) || controller.signal.aborted) return;
-        const permissionDenied = cause instanceof Error && cause.name === "NotAllowedError";
-        const canUseRecordedVoice = canRecord && !permissionDenied && !tokenRequestRejected;
+        const mediaError = cause instanceof Error ? cause.name : "";
+        const permissionDenied = mediaError === "NotAllowedError" || mediaError === "SecurityError";
+        const canUseRecordedVoice =
+          canRecord && !permissionDenied && mediaError !== "NotFoundError" && fallbackAllowed;
+        setHandsFreeListening(false);
         if (canUseRecordedVoice) setRealtimeFailed(true);
         if (!canUseRecordedVoice || startedListening) {
           failOperation(
@@ -1185,65 +1207,26 @@ export function ComposerVoiceDialog({
   const VoiceView =
     inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
 
-  if (
+  const startingVoice =
     open &&
     mode === "voice" &&
-    !disabled &&
-    ((checking && autoStartVoice) ||
-      (capabilities?.realtime && !realtimeFailed && conversationReady))
-  ) {
-    const { colors } = preferredVoiceGlow(userId);
-    const glowStyle = colors.length
-      ? ({
-          "--voice-glow-a": colors[0],
-          "--voice-glow-b": colors[1],
-          "--voice-glow-c": colors[2],
-        } as CSSProperties)
-      : undefined;
-    const listening = phase === "recording";
-    const speaking = phase === "speaking";
-    return (
-      <section
-        className="kova-live-voice"
-        aria-label="Live Voice"
-        style={glowStyle}
-        data-phase={phase}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") closeDialog(false);
-        }}
-      >
-        <span className="sr-only" role="status">
-          {checking || phase === "requesting"
-            ? "Connecting to ElevenLabs Voice…"
-            : listening
-              ? "Listening"
-              : speaking
-                ? "Speaking"
-                : status}
-        </span>
-        {error && (
-          <p role="alert" className="kova-live-voice-error">
-            {error}
-          </p>
-        )}
-        {phase === "idle" && !checking ? (
-          <button type="button" onClick={() => void startRecording()} aria-label="Restart Voice">
-            <AudioLines aria-hidden="true" />
-          </button>
-        ) : (
-          <span className="kova-live-voice-wave" aria-hidden="true">
-            {Array.from({ length: 52 }, (_, index) => (
-              <i key={index} style={{ "--voice-bar": index } as CSSProperties} />
-            ))}
-          </span>
-        )}
-        <Mic className="kova-live-voice-mic" aria-hidden="true" />
-        <button type="button" onClick={() => closeDialog(false)} aria-label="End Voice">
-          <span className="kova-live-voice-stop" aria-hidden="true" />
-        </button>
-      </section>
-    );
-  }
+    !unavailable &&
+    !error &&
+    (checking || !capabilities || phase === "requesting");
+  const { colors } = mode === "voice" ? preferredVoiceGlow(userId) : { colors: [] };
+  const glowStyle = colors.length
+    ? ({
+        "--voice-glow-a": colors[0],
+        "--voice-glow-b": colors[1],
+        "--voice-glow-c": colors[2],
+      } as CSSProperties)
+    : undefined;
+  const realtimeListening =
+    phase === "recording" &&
+    mode === "voice" &&
+    capabilities?.realtime &&
+    !realtimeFailed &&
+    canListenInRealtime();
 
   return (
     <VoiceView
@@ -1251,9 +1234,12 @@ export function ComposerVoiceDialog({
       onOpenChange={closeDialog}
       onCloseAutoFocus={handleCloseAutoFocus}
       phase={phase}
+      startingVoice={startingVoice}
+      glowStyle={glowStyle}
       mode={mode}
       status={status}
       handsFreeListening={mode === "voice" && handsFreeListening}
+      canFinishVoiceTurn={!realtimeListening}
       availability={
         !userId
           ? "guest"
@@ -1269,7 +1255,7 @@ export function ComposerVoiceDialog({
                     : "unconfigured"
                   : "error"
       }
-      hasTranscript={hasTranscript}
+      hasTranscript={hasTranscript && !(mode === "voice" && autoStartVoice)}
       microphoneAvailable={capabilities?.stt ?? false}
       replyAvailable={mode === "voice" ? false : (capabilities?.tts ?? false)}
       error={error}
@@ -1329,7 +1315,7 @@ export function ComposerVoiceDialog({
         ) : undefined
       }
       recordingControl={
-        ready ? (
+        ready && !realtimeListening ? (
           phase === "recording" ? (
             <Button
               type="button"
@@ -1378,7 +1364,7 @@ export function ComposerVoiceDialog({
         ) : undefined
       }
       transcriptReview={
-        ready && hasTranscript ? (
+        ready && hasTranscript && !(mode === "voice" && autoStartVoice) ? (
           <>
             <label htmlFor={transcriptId}>
               {mode === "voice" ? "Transcript" : "Review transcript"}
@@ -1439,7 +1425,9 @@ export function ComposerVoiceDialog({
           </>
         ) : undefined
       }
-      voiceReply={mode === "voice" && lastVoiceReply ? lastVoiceReply : undefined}
+      voiceReply={
+        mode === "voice" && !autoStartVoice && lastVoiceReply ? lastVoiceReply : undefined
+      }
       audioPlayer={
         ready && audioUrl ? (
           <audio

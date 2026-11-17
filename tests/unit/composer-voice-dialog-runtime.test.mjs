@@ -384,7 +384,9 @@ function fixture(initial = {}, options = {}) {
         return fakeNow;
       }
     },
-    AudioContext: options.audioAnalysis ? FakeAudioContext : undefined,
+    AudioContext:
+      options.audioAnalysis || options.listenForVoiceTurn ? FakeAudioContext : undefined,
+    AudioWorkletNode: options.listenForVoiceTurn ? class {} : undefined,
     crypto: webcrypto,
     TextEncoder,
     console,
@@ -1438,14 +1440,29 @@ test("hands-free Voice never sends a billable empty recording after idle timeout
 test("empty-composer Voice begins exactly once after the authorized ElevenLabs capability check", async () => {
   const f = fixture({ mode: "voice", autoStartVoice: true });
   assert.equal(f.requests[0].url, "/api/voice");
+  assert.match(f.text(), /Starting Voice…/);
+  assert.doesNotMatch(f.text(), /Checking voice|Ready to talk|Latest saved reply/);
   assert.equal(f.microphoneRequests.length, 0, "No microphone access before server authorization");
   await f.ready();
   assert.equal(f.microphoneRequests.length, 1, "Approved Voice click starts recording");
+  assert.match(f.text(), /Starting Voice…/, "The same screen remains during microphone startup");
   await f.flush();
   assert.equal(f.microphoneRequests.length, 1, "Rerenders must not restart the microphone");
   const acquired = await f.acquire();
   await f.click("Finish turn");
   assert.ok(acquired.tracks.every((track) => track.stopped > 0));
+  f.unmount();
+});
+
+test("Voice keeps the startup screen during one transient capability retry", async () => {
+  const f = fixture({ mode: "voice", autoStartVoice: true });
+  f.requests[0].resolve(new Response(null, { status: 502 }));
+  const retry = await waitForRequest(f, 2);
+  assert.match(f.text(), /Starting Voice…/);
+  assert.equal(f.microphoneRequests.length, 0);
+  retry.resolve(Response.json(configured));
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1);
   f.unmount();
 });
 
@@ -1465,7 +1482,11 @@ test("the waveform starts recorded ElevenLabs Voice when realtime cannot connect
   realtime.resolve(Response.json({ token: "fixture-token" }));
   await f.flush();
   assert.equal(f.microphoneRequests.length, 1);
+  assert.match(f.text(), /Starting Voice…/);
+  assert.doesNotMatch(f.text(), /Realtime connection failed|Latest saved reply|Original/);
   await f.acquire();
+  assert.match(f.text(), /Recording/);
+  assert.doesNotMatch(f.text(), /Starting Voice…/);
   await f.click("Finish turn");
   const stt = await waitForRequest(f, 3);
   assert.equal(stt.url, "/api/voice");

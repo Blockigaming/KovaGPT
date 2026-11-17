@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 import { AudioLines, Info, Loader2, X } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -28,12 +28,15 @@ export interface ComposerVoiceDialogViewProps {
   onOpenChange: (open: boolean) => void;
   onCloseAutoFocus?: ComponentPropsWithoutRef<typeof DialogContent>["onCloseAutoFocus"];
   phase: ComposerVoicePhase;
+  startingVoice?: boolean;
+  glowStyle?: CSSProperties;
   mode?: "dictate" | "voice";
   voiceReply?: string;
   status: string;
   availability: ComposerVoiceAvailability;
   hasTranscript: boolean;
   handsFreeListening?: boolean;
+  canFinishVoiceTurn?: boolean;
   microphoneAvailable?: boolean;
   replyAvailable?: boolean;
   error?: string;
@@ -54,12 +57,15 @@ export function ComposerVoiceDialogView({
   onOpenChange,
   onCloseAutoFocus,
   phase,
+  startingVoice = false,
+  glowStyle,
   mode = "dictate",
   voiceReply,
   status,
   availability,
   hasTranscript,
   handsFreeListening = false,
+  canFinishVoiceTurn = true,
   microphoneAvailable = true,
   replyAvailable = true,
   error,
@@ -83,7 +89,8 @@ export function ComposerVoiceDialogView({
     Boolean(voiceReply) ||
     phase === "speaking" ||
     hasError;
-  const compact = !ready || (hasError && !hasTranscript && !audioPlayer && !voiceReply);
+  const compact =
+    !startingVoice && (!ready || (hasError && !hasTranscript && !audioPlayer && !voiceReply));
   const title = hasError
     ? "Voice needs attention"
     : availability === "checking"
@@ -152,7 +159,9 @@ export function ComposerVoiceDialogView({
                   : phase === "recording"
                     ? mode === "voice"
                       ? handsFreeListening
-                        ? "Listening live. Pause after speaking to send your turn automatically. Finish turn also works manually; Stop ends the conversation."
+                        ? canFinishVoiceTurn
+                          ? "Pause to send your turn, or press Finish turn."
+                          : "Pause after speaking to send your turn automatically."
                         : "Listening now. Press Finish turn when you finish speaking; Stop ends the conversation."
                       : "Stop when you’re ready to turn your recording into text."
                     : phase === "requesting"
@@ -180,6 +189,7 @@ export function ComposerVoiceDialogView({
         data-ui-reference="chatgpt-separate-voice"
         data-voice-availability={availability}
         data-voice-phase={phase}
+        data-voice-starting={startingVoice || undefined}
         data-voice-mode={mode}
         data-voice-review={hasTranscript || Boolean(audioPlayer) ? "true" : "false"}
         data-voice-content-first={contentFirst ? "true" : "false"}
@@ -191,29 +201,34 @@ export function ComposerVoiceDialogView({
           <DialogTitle className="kova-voice-title">
             <AudioLines aria-hidden="true" /> {mode === "voice" ? "Voice" : "Dictate"}
           </DialogTitle>
-          {voicePicker && <div className="kova-voice-picker">{voicePicker}</div>}
+          {!startingVoice && voicePicker && <div className="kova-voice-picker">{voicePicker}</div>}
         </div>
 
         <div className="kova-voice-body">
           <div className="kova-voice-canvas">
-            {ready && !contentFirst && (
+            {(startingVoice || (ready && !contentFirst)) && (
               <svg
                 className="kova-voice-mark"
+                style={glowStyle}
                 viewBox="0 0 200 200"
                 aria-hidden="true"
                 focusable="false"
               />
             )}
-            <h2 className="kova-voice-heading">{title}</h2>
+            <h2 className="kova-voice-heading">{startingVoice ? "Starting Voice…" : title}</h2>
             <DialogDescription
               className={
-                hasError ? "kova-voice-description kova-voice-error" : "kova-voice-description"
+                startingVoice
+                  ? "sr-only"
+                  : hasError
+                    ? "kova-voice-description kova-voice-error"
+                    : "kova-voice-description"
               }
               role={hasError ? "alert" : undefined}
             >
-              {description}
+              {startingVoice ? "Connecting Voice and preparing your microphone." : description}
             </DialogDescription>
-            {(ready || availability === "checking") && !hasError && (
+            {!startingVoice && (ready || availability === "checking") && !hasError && (
               <p
                 className={
                   phase === "idle" && ready ? "kova-voice-status sr-only" : "kova-voice-status"
@@ -232,13 +247,13 @@ export function ComposerVoiceDialogView({
             )}
           </div>
 
-          {ready && voiceReply && (
+          {ready && !startingVoice && voiceReply && (
             <div className="kova-voice-transcript">
               <h3>Latest saved reply</h3>
               <p className="whitespace-pre-wrap break-words">{voiceReply}</p>
             </div>
           )}
-          {ready && transcriptReview && (
+          {ready && !startingVoice && transcriptReview && (
             <div className="kova-voice-transcript">{transcriptReview}</div>
           )}
           {availabilityRetry && <div className="kova-voice-retry">{availabilityRetry}</div>}
@@ -257,11 +272,11 @@ export function ComposerVoiceDialogView({
             <div className="kova-voice-use-transcript">{useTranscriptControl}</div>
           )}
           <div className="kova-voice-dock">
-            {ready && recordingControl && (
+            {ready && !startingVoice && recordingControl && (
               <div className="kova-voice-record-control">{recordingControl}</div>
             )}
             <button type="button" className="kova-voice-close" onClick={() => onOpenChange(false)}>
-              {ready ? (
+              {ready || startingVoice ? (
                 <>
                   <X aria-hidden="true" />
                   <span className="sr-only">Close</span>
@@ -271,16 +286,16 @@ export function ComposerVoiceDialogView({
               )}
             </button>
           </div>
-          {ready && (
+          {ready && !startingVoice && (
             <p className="kova-voice-limit">
               {ready && microphoneAvailable
                 ? mode === "voice"
-                  ? "Live conversation · Automatic turn detection when supported · Stop ends Voice"
+                  ? "Live conversation · Stop ends Voice"
                   : "Up to 59 seconds · Stop to transcribe"
                 : "Your conversation is here when you’re ready"}
             </p>
           )}
-          {ready && (
+          {ready && !startingVoice && (
             <div className="kova-voice-footnote">
               <div
                 className="kova-voice-model-control"
@@ -297,7 +312,7 @@ export function ComposerVoiceDialogView({
                 )}
               </div>
               <div className="kova-voice-secondary-control">
-                {ready && (
+                {ready && !startingVoice && (
                   <Popover>
                     <PopoverTrigger asChild>
                       <button

@@ -3,7 +3,6 @@ import { Loader2, Volume2 } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
 import { createSpeechPlayback } from "@/lib/speech-playback.mjs";
 import { PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT } from "@/lib/principal-browser-storage.mjs";
-import { Button } from "@/components/ui/button";
 
 const errors: Record<string, string> = {
   speech_unauthorized: "Sign in with a verified account to read aloud.",
@@ -90,16 +89,14 @@ export function ResponseSpeechButton({
   };
   return (
     <span className="inline-flex max-w-full shrink-0 flex-wrap items-center gap-2">
-      <Button
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
         disabled={disabled}
         onClick={() => void click()}
         aria-label={busy ? "Stop reading aloud" : "Read aloud"}
         title={busy ? "Stop reading aloud" : "Read aloud"}
         aria-pressed={busy}
-        className="kova-message-icon-action text-muted-foreground"
+        className="kova-message-icon-action"
       >
         {state === "loading" ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -114,7 +111,7 @@ export function ResponseSpeechButton({
         ) : (
           <Volume2 className="h-4 w-4" />
         )}
-      </Button>
+      </button>
       <span
         role="status"
         className={error ? "min-w-0 max-w-full break-words text-xs text-destructive" : "sr-only"}

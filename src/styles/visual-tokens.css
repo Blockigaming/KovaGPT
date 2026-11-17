@@ -83,6 +83,7 @@
   --sidebar-foreground: var(--foreground);
   --sidebar-hover: #0000000a;
   --sidebar-active: #eaeaea;
+  --kova-signed-in-sidebar-active: var(--sidebar-active);
   --surface-app: var(--background);
   --surface-workspace: var(--background);
   --surface-raised: var(--card);
@@ -224,6 +225,7 @@
   --sidebar-foreground: var(--foreground);
   --sidebar-hover: #ffffff0d;
   --sidebar-active: #303030;
+  --kova-signed-in-sidebar-active: #3a3a3a;
   --surface-floating: var(--popover);
   --surface-secondary: var(--secondary);
   --surface-composer: #303030;

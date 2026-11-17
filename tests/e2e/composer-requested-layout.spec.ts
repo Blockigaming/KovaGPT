@@ -67,7 +67,14 @@ test("requested: empty project, plugin and file pickers contain no sample record
   const tray = page.locator(".kova-composer-tray");
   await tray.getByRole("button", { name: "Choose project", exact: true }).click();
   const projects = page.getByRole("dialog", { name: "Choose project", exact: true });
-  await expect(projects).toContainText("No active projects found.");
+  await expect(projects.getByRole("button", { name: "New project" })).toBeVisible();
+  await expect(projects.getByText("No active projects found.")).toHaveCount(0);
+  await expect(projects.getByRole("list")).toHaveCount(0);
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    const createProject = projects.getByRole("button", { name: "New project" });
+    await createProject.hover();
+    await expect(createProject).toHaveCSS("background-color", "rgb(58, 58, 58)");
+  }
   await expect(projects.getByRole("button", { name: "Review project", exact: true })).toHaveCount(
     0,
   );
@@ -272,4 +279,34 @@ test("slash commands are selectable by keyboard and show the account model menu"
   await input.press("Enter");
   await expect(input).toHaveValue("");
   await expect(page.getByRole("button", { name: /remove study/i })).toBeVisible();
+});
+
+test("empty chat opens the Voice screen directly while connecting", async ({ page }) => {
+  await start(page);
+  let release: () => void = () => {};
+  const connecting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/voice", async (route) => {
+    await connecting;
+    await route
+      .fulfill({
+        json: { configured: false, conversation: false, stt: false, voices: [] },
+      })
+      .catch(() => undefined);
+  });
+  try {
+    const button = page.getByTestId("voice-button");
+    await expect(button).toBeEnabled();
+    await button.click();
+    const voice = page.getByRole("dialog", { name: "Voice", exact: true });
+    await expect(voice.getByRole("heading", { name: "Starting Voice…" })).toBeVisible();
+    await expect(page.locator("[data-chat-transcript-loading]")).toHaveCount(0);
+    await expect(page.getByText("Original", { exact: true })).toHaveCount(0);
+    await voice.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(voice).toHaveCount(0);
+    await expect(button).toBeFocused();
+  } finally {
+    release();
+  }
 });

@@ -14,7 +14,7 @@ export class VoiceError extends Error {
   }
 }
 export function voiceConfiguration(env, tier = "free") {
-  const dailyLimit = Number(env("KOVA_VOICE_DAILY_REQUEST_LIMIT"));
+  const configuredLimit = Number(env("KOVA_VOICE_DAILY_REQUEST_LIMIT"));
   const apiKey = env("ELEVENLABS_API_KEY");
   const catalog = readVoiceCatalog(env, tier);
   const selectedVoice = catalog.entries.find((entry) => entry.id === catalog.defaultVoiceId);
@@ -30,8 +30,8 @@ export function voiceConfiguration(env, tier = "free") {
     catalog.valid &&
     env("KOVA_VOICE_ENABLED") === "true" &&
     Boolean(apiKey) &&
-    Number.isSafeInteger(dailyLimit) &&
-    dailyLimit > 0;
+    Number.isSafeInteger(configuredLimit) &&
+    configuredLimit > 0;
   const output =
     configured && typeof voiceId === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(voiceId);
   const audioEnabled = env("KOVA_VOICE_AUDIO_ENABLED") === "true";
@@ -42,7 +42,7 @@ export function voiceConfiguration(env, tier = "free") {
     voiceId,
     modelId: selectedVoice?.modelId ?? "eleven_multilingual_v2",
     catalog,
-    dailyLimit,
+    dailyLimit: tier === "free" ? Math.max(1, Math.floor(configuredLimit / 2)) : configuredLimit,
     configured,
     stt,
     tts: output,

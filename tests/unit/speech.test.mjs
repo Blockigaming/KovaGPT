@@ -143,6 +143,7 @@ test("read aloud streams a response without chat history or Library lookup", asy
   assert.deepEqual(f.calls.filters, []);
   assert.equal(f.calls.limits.length, 3);
   assert.equal(JSON.parse(f.calls.provider[0][1].body).text, content);
+  assert.equal(JSON.parse(f.calls.provider[0][1].body).model_id, "eleven_flash_v2_5");
 });
 
 test("live speech uses the signed reply before history sync and rejects a mismatched receipt", async () => {

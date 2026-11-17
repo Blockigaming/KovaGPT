@@ -221,7 +221,11 @@ export function ComposerProjectPicker({
         aria-label="Choose project"
         side={side}
         align="start"
-        className={startChat ? "kova-composer-menu kova-composer-full-menu" : "kova-composer-menu"}
+        className={
+          startChat
+            ? "kova-composer-menu kova-composer-full-menu kova-composer-projects"
+            : "kova-composer-menu kova-composer-projects"
+        }
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           restoreDialogFocus(returnFocusTarget, returnFocusUrl, navigationPending.current);
@@ -244,7 +248,7 @@ export function ComposerProjectPicker({
             <Button
               type="button"
               variant="secondary"
-              className="min-h-11 w-full justify-start rounded-xl"
+              className="kova-composer-project-action min-h-11 w-full justify-start rounded-xl"
               disabled={navigationBlocked || navigating !== null}
               onClick={async () => {
                 if (navigationPending.current || navigationBlocked) return;
@@ -286,11 +290,7 @@ export function ComposerProjectPicker({
               Try again
             </Button>
           </div>
-        ) : visible.projects.length === 0 ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            No active projects found.
-          </p>
-        ) : (
+        ) : visible.projects.length === 0 ? null : (
           <div className="space-y-3">
             {navigationBlocked && (
               <p role="status" className="text-sm text-muted-foreground">
@@ -310,7 +310,7 @@ export function ComposerProjectPicker({
                       (startChat && project.role === "viewer")
                     }
                     onClick={() => void chooseProject(project.id)}
-                    className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl px-3 py-2 text-left"
+                    className="kova-composer-project-action h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl px-3 py-2 text-left"
                     aria-label={`${onSelectProject && !startChat ? "Add" : "Open"} project ${project.name}`}
                   >
                     <span className="flex min-w-0 items-center gap-2">

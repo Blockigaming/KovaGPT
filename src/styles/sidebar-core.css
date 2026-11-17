@@ -16,7 +16,7 @@
 }
 .dark :is(.kova-sidebar, .kova-sidebar-rail)[data-kova-signed-in] {
   --sidebar: #292929;
-  --sidebar-active: #3a3a3a;
+  --sidebar-active: var(--kova-signed-in-sidebar-active);
 }
 .kova-sidebar[data-kova-core-sidebar] {
   position: relative;
