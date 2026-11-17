@@ -102,10 +102,8 @@ test("public footer links and the missing guide reach the correct destinations",
   });
   expect(missingDeveloperDoc?.status()).toBe(404);
   await waitForHydration(page);
-  await expect(
-    page.getByRole("heading", { name: "This page isn’t available", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Go to chat", exact: true })).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Sorry, this page doesn’t exist!", { exact: true })).toBeVisible();
 });
 
 test("the public skip link moves keyboard focus to the main landmark", async ({

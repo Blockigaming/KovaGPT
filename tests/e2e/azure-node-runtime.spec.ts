@@ -103,9 +103,8 @@ test("public website navigation leaves the legacy catalog unloaded and missing p
   const missing = await page.goto("/azure-missing-public-page", { waitUntil: "domcontentloaded" });
   expect(missing?.status()).toBe(404);
   await waitForKovaHydration(page);
-  await expect(
-    page.getByRole("heading", { name: "This page isn’t available", exact: true }),
-  ).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Sorry, this page doesn’t exist!", { exact: true })).toBeVisible();
 });
 
 test("hosted-auth integration opens and validates the existing password flow without sending credentials", async ({

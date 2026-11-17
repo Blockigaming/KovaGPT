@@ -36,18 +36,16 @@ test("private workspace pages are not indexable or followable", async ({ page })
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/u);
 });
 
-test("not-found responses remain noindex across SSR and hydration", async ({ page }) => {
+test("not-found SSR responses stay noindex before the browser returns home", async ({ page }) => {
   const hydrationErrors = watchForHydrationErrors(page);
   const response = await page.goto("/__kova_missing_page__", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
   expect(response?.status()).toBe(404);
   expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
-  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
-    "content",
-    /noindex,\s*nofollow/u,
-  );
-  await expect(page.getByRole("heading", { name: "This page isn’t available" })).toBeVisible();
+  expect(await response?.text()).toMatch(/name="robots" content="noindex, nofollow"/u);
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Sorry, this page doesn’t exist!", { exact: true })).toBeVisible();
   await expect(page.getByText(/Reference kova-/u)).toHaveCount(0);
   expect(hydrationErrors).toEqual([]);
 });

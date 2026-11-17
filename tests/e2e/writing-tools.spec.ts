@@ -177,11 +177,10 @@ test("truthful local-only tools never fabricate external analysis", async ({ pag
   );
 });
 
-test("unknown writing tool uses the real not-found screen without horizontal overflow", async ({
-  page,
-}) => {
+test("unknown writing tool returns to home without horizontal overflow", async ({ page }) => {
   await page.goto("/writing/not-a-real-tool");
-  await expect(page.getByRole("heading", { name: "This page isn’t available" })).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Sorry, this page doesn’t exist!", { exact: true })).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
