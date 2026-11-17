@@ -12,7 +12,7 @@ export async function probeBrowserbaseSession(apiKey, fetchImpl = fetch) {
     const signal = AbortSignal.timeout(10_000);
     try {
       const response = await fetchImpl(url, {
-        method: "POST",
+        method: body === undefined ? "GET" : "POST",
         headers: { "X-BB-API-Key": apiKey, "Content-Type": "application/json" },
         redirect: "error",
         cache: "no-store",
@@ -42,13 +42,21 @@ export async function probeBrowserbaseSession(apiKey, fetchImpl = fetch) {
   const createResponseMs = Math.round(performance.now() - start);
   if (typeof created?.id !== "string" || !sessionIdPattern.test(created.id))
     throw new Error("browserbase_probe_invalid_session");
-  const released = await request(
-    `${sessionsUrl}/${created.id}`,
-    { status: "REQUEST_RELEASE" },
-    "release",
-  );
-  if (released?.id !== created.id) throw new Error("browserbase_probe_release_unconfirmed");
-  return { createResponseMs, releaseAcknowledged: true };
+  const sessionUrl = `${sessionsUrl}/${created.id}`;
+  let liveViewResponseMs;
+  try {
+    const live = await request(`${sessionUrl}/debug`, undefined, "live_view");
+    if (
+      typeof live?.debuggerFullscreenUrl !== "string" ||
+      !live.debuggerFullscreenUrl.startsWith("https://")
+    )
+      throw new Error("browserbase_probe_live_view_unavailable");
+    liveViewResponseMs = Math.round(performance.now() - start);
+  } finally {
+    const released = await request(sessionUrl, { status: "REQUEST_RELEASE" }, "release");
+    if (released?.id !== created.id) throw new Error("browserbase_probe_release_unconfirmed");
+  }
+  return { createResponseMs, liveViewResponseMs, releaseAcknowledged: true };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
