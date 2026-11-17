@@ -940,3 +940,41 @@
 :root[data-kova-motion="reduced"] .kova-live-voice::before {
   opacity: var(--voice-glow-opacity);
 }
+
+[role="dialog"].kova-voice-dialog[data-voice-mode="voice"] {
+  height: auto;
+  max-height: min(540px, calc(100dvh - 24px)) !important;
+  border-radius: 28px;
+}
+
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-topbar {
+  min-height: 60px;
+  padding-block: 12px 4px;
+}
+
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-canvas {
+  min-height: 0;
+  padding-block: 12px;
+}
+
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-mark {
+  width: 88px;
+  height: 88px;
+  margin: 0 0 12px;
+}
+
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-dock {
+  min-height: 58px;
+}
+
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-record-control button,
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-close {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  border-radius: 50%;
+}
+
+.kova-voice-dialog[data-voice-mode="voice"] .kova-voice-limit {
+  margin-top: 6px;
+}

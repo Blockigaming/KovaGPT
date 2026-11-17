@@ -156,6 +156,7 @@ export function ComposerVoiceDialog({
   const transcriptId = useId();
   const voicePickerId = useId();
   const voiceHelpId = useId();
+  const [realtimeFailed, setRealtimeFailed] = useState(false);
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -325,6 +326,7 @@ export function ComposerVoiceDialog({
     closing.current = !open;
     releaseResources();
     setCapabilities(null);
+    setRealtimeFailed(false);
     voiceCatalog.current = [];
     selectedVoice.current = "";
     defaultVoice.current = "";
@@ -769,7 +771,7 @@ export function ComposerVoiceDialog({
       voiceId: selectedVoice.current,
     };
     if (!isCurrent(scope)) return;
-    const realtime = mode === "voice" && capabilities.realtime;
+    const realtime = mode === "voice" && capabilities.realtime && !realtimeFailed;
     if (
       !realtime &&
       (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia)
@@ -819,6 +821,12 @@ export function ComposerVoiceDialog({
         if (isCurrent(scope)) await submitVoiceTurn(scope, text, true);
       } catch (cause) {
         if (isCurrent(scope) && !controller.signal.aborted) {
+          if (
+            typeof MediaRecorder !== "undefined" &&
+            !(cause instanceof Error && cause.name === "NotAllowedError")
+          ) {
+            setRealtimeFailed(true);
+          }
           failOperation(
             cause instanceof Error && cause.name === "NotAllowedError"
               ? "Allow microphone access in your browser to use Voice."
@@ -1172,7 +1180,14 @@ export function ComposerVoiceDialog({
 
   if (open && mode === "voice" && checking && autoStartVoice) return null;
 
-  if (open && mode === "voice" && capabilities?.realtime && conversationReady && !disabled) {
+  if (
+    open &&
+    mode === "voice" &&
+    capabilities?.realtime &&
+    !realtimeFailed &&
+    conversationReady &&
+    !disabled
+  ) {
     const { colors } = preferredVoiceGlow(userId);
     const glowStyle = colors.length
       ? ({

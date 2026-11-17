@@ -1,3 +1,4 @@
+import { settingsSearchMatches } from "@/lib/settings-search.mjs";
 import { EmailChangeForm } from "@/components/EmailChangeForm";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
@@ -163,14 +164,21 @@ const SETTINGS_SEARCH_STOP_WORDS = new Set([
   "an",
   "can",
   "change",
+  "do",
   "find",
   "for",
+  "get",
   "how",
   "i",
   "is",
   "my",
+  "off",
+  "on",
+  "please",
   "the",
   "to",
+  "turn",
+  "want",
   "where",
 ]);
 
@@ -178,13 +186,13 @@ const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
   general:
     "language locale send enter input chat preferences model thinking response tools web search",
   appearance:
-    "dark light system theme color font text size layout contrast density animations reduced motion",
+    "dark light system theme color font text size layout contrast density animations reduced motion night mode",
   notifications: "alerts push reminders email desktop sound scheduled tasks",
   personalization: "profile name avatar photo picture display name",
   security: "password passkey two factor 2fa mfa recovery devices sessions sign in sign out",
   email: "email address verification change email account",
   parental: "parental controls parent teen child restrictions family safety",
-  voice: "dictation speech microphone transcription audio speaker",
+  voice: "dictation speech microphone transcription audio speaker elevenlabs read aloud talk",
   storage: "disk cache files attachments library device storage offline",
   data: "history delete clear chats archive download export privacy public shared links training",
   memory: "remember forget saved memories instructions preferences personalization context",
@@ -194,7 +202,8 @@ const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
   "cloud-browser": "browser website allow block approvals automation permissions",
   family: "family invite invitations members shared plan household",
   location: "location city timezone region",
-  billing: "upgrade downgrade cancel refund receipt credit card pricing plans free plus pro team",
+  billing:
+    "upgrade downgrade cancel refund receipt credit card pricing plans free plus pro team subscription membership stop paying",
   report: "bug broken error issue feedback",
   help: "support documentation faq contact question",
   about: "version credits legal terms privacy",
@@ -1171,18 +1180,14 @@ export function SettingsDialog({
   const activeTab = allTabs.find((item) => item.v === tab) ?? allTabs[0];
   const queryTerms = settingsQuery.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
   const normalizedQuery = queryTerms.join(" ");
-  const matchesSettingsQuery = (item: TabDef) => {
-    const text = [
-      item.label,
-      SETTINGS_DESCRIPTIONS[item.v] ?? "",
-      ...(item.keywords ?? []),
-      SETTINGS_SEARCH_TOPICS[item.v] ?? "",
-    ]
-      .join(" ")
-      .toLocaleLowerCase();
-    const meaningful = queryTerms.filter((term) => !SETTINGS_SEARCH_STOP_WORDS.has(term));
-    return (meaningful.length ? meaningful : queryTerms).every((term) => text.includes(term));
-  };
+  const meaningfulTerms = queryTerms.filter((term) => !SETTINGS_SEARCH_STOP_WORDS.has(term));
+  const searchQuery = (meaningfulTerms.length ? meaningfulTerms : queryTerms).join(" ");
+  const matchesSettingsQuery = (item: TabDef) =>
+    settingsSearchMatches(
+      item,
+      searchQuery,
+      `${SETTINGS_DESCRIPTIONS[item.v] ?? ""} ${SETTINGS_SEARCH_TOPICS[item.v] ?? ""}`,
+    );
   const filteredGroups = normalizedQuery
     ? groups
         .map((group) => ({

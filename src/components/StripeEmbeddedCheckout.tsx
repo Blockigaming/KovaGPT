@@ -12,6 +12,8 @@ const SAFE_CHECKOUT_ERRORS = new Set([
   "Billing status couldn't be verified. Try again.",
   "Checkout is being reconciled. Retry shortly or contact support; no second payment attempt was started.",
   "Checkout is unavailable right now. Try again.",
+  "Billing is awaiting its verified rollout. Contact support.",
+  "Your subscription is active. Open Manage subscription to continue.",
 ]);
 
 // Kept as an export for existing callers; payments now use Stripe's full-page hosted checkout.
@@ -55,7 +57,8 @@ export function StripeEmbeddedCheckout({
       if ("error" in result && result.error === ACTIVE_SUBSCRIPTION_ERROR_MESSAGE) {
         const portal = await createPortalSession({ data: { priceId } });
         if (!active()) return;
-        if ("error" in portal) throw new Error(CHECKOUT_ERROR_MESSAGE);
+        if ("error" in portal)
+          throw new Error("Your subscription is active. Open Manage subscription to continue.");
         const portalUrl = parseAllowedBillingPortalUrl(portal.url);
         if (!portalUrl) throw new Error(CHECKOUT_ERROR_MESSAGE);
         window.location.assign(portalUrl);

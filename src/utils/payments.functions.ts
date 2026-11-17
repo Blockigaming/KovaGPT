@@ -18,6 +18,9 @@ import {
   requireMonthlyIntroReadiness,
 } from "@/lib/billing-policy.mjs";
 
+const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =
+  "You already have an active subscription. Manage your plan from the billing portal before starting a new one.";
+
 type CheckoutSessionResult = { url: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
 // browser is never trusted to select Stripe credentials or subscription rows.
@@ -57,7 +60,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       // Keep ambiguous periods fail-closed; expired local status must reach the
       // authoritative Stripe scan instead of becoming a permanent stale block.
       if (hasStillActiveSubscription(subscriptionHistory ?? [])) {
-        return { error: "You already have an active subscription. Manage it from Billing." };
+        return { error: ACTIVE_SUBSCRIPTION_ERROR_MESSAGE };
       }
       if (!monthlyIntroBillingEnabled())
         return { error: "Billing is awaiting its verified rollout. Contact support." };
@@ -79,7 +82,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       return { url: session.url };
     } catch (error) {
       if (error instanceof BillingPolicyError && error.code.includes("active_subscription")) {
-        return { error: "You already have an open subscription. Manage it from Billing." };
+        return { error: ACTIVE_SUBSCRIPTION_ERROR_MESSAGE };
       }
       if (error instanceof BillingPolicyError && error.code.includes("reconciliation")) {
         return {
