@@ -2047,12 +2047,15 @@ export function ChatInput({
                 >
                   {attachment.kind === "image" ? (
                     <>
-                      <img
-                        className="spec400-attachment-thumb"
-                        src={attachment.dataUrl}
-                        alt=""
-                        aria-hidden="true"
-                      />
+                      {attachment.dataUrl && (
+                        <img
+                          className="spec400-attachment-thumb"
+                          src={attachment.dataUrl}
+                          alt=""
+                          decoding="async"
+                          aria-hidden="true"
+                        />
+                      )}
                       {attachment.status === "uploading" ? (
                         <Loader2
                           className="spec400-attachment-image-state animate-spin"

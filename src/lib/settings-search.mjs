@@ -1,3 +1,6 @@
+export const VOICE_SETTINGS_SEARCH_TERMS =
+  "dictation speech microphone transcription audio speaker elevenlabs read aloud talk";
+
 // Search by meaning, not just the exact navigation label. Keep the vocabulary
 // curated so a short query never silently navigates to an unrelated setting.
 const ALIASES = Object.freeze({

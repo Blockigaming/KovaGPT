@@ -93,6 +93,7 @@ function fixture(
     ...initial,
   };
   const react = {
+    useImperativeHandle() {},
     useRef(value) {
       const index = cursor++;
       hooks[index] ??= { current: value };
@@ -116,6 +117,9 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "./ChatOutputTemplates": { ChatOutputTemplates: "ChatOutputTemplates" },
+    "@/lib/chat-output-templates": {},
+    "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
     "./AttachmentPreviewMobile": Object.fromEntries(
       ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
         (name) => [name, () => null],
@@ -419,7 +423,7 @@ test("two attachment slots do not silently drop new pasted text", async () => {
   assert.ok(f.input().value.includes(exactText));
 });
 
-test("explicit file selection keeps its existing save flow; image chips never decode full thumbnails", async () => {
+test("explicit file selection preserves auto-save and images show a thumbnail before inspection", async () => {
   const f = fixture({}, signedIn);
   assert.equal(await f.drawing().onAttach([f.file()]), true);
   await f.flush();
@@ -437,10 +441,13 @@ test("explicit file selection keeps its existing save flow; image chips never de
     },
     signedIn,
   );
-  assert.equal(image.nodes().filter((node) => node.type === "img").length, 0);
+  const [thumbnail] = image.nodes().filter((node) => node.type === "img");
+  assert.equal(thumbnail.props.className, "spec400-attachment-thumb");
+  assert.equal(thumbnail.props.src, "data:image/png;base64,existing-payload");
+  assert.equal(thumbnail.props.decoding, "async");
   image.button("Inspect large-image.png").onClick({ currentTarget: {} });
   await image.flush();
-  assert.equal(image.nodes().filter((node) => node.type === "img").length, 1);
+  assert.equal(image.nodes().filter((node) => node.type === "img").length, 2);
 });
 
 test("ordinary short rich text remains native plain-text input and is not converted", async () => {

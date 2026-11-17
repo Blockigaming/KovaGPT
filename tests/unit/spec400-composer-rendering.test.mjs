@@ -32,6 +32,9 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "./ChatOutputTemplates": { ChatOutputTemplates: empty },
+  "@/lib/chat-output-templates": {},
+  "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
   "./AttachmentPreviewMobile": Object.fromEntries(
     ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
       (name) => [name, () => null],
@@ -332,4 +335,41 @@ test("request-status rendering receives the same nonempty-draft protection as co
     });
     assert.equal(pending, Boolean(props.value?.length || props.attachments?.length));
   }
+});
+
+test("Backspace and Delete remove one plugin token at the end without deleting draft text", () => {
+  const value = "Draft";
+  const plugins = [
+    { id: "lovable", label: "Lovable" },
+    { id: "stripe", label: "Stripe" },
+  ];
+  const updates = [];
+  const textEdits = [];
+  const html = render({
+    value,
+    pluginContexts: plugins,
+    onPluginContextsChange: (next) => updates.push(next.map(({ id }) => id).join(", ")),
+    onChange: (draft) => textEdits.push(draft),
+  });
+  assert.match(html, /aria-label="Remove plugin Lovable"/);
+  assert.match(html, /aria-label="Remove plugin Stripe"/);
+  let prevented = 0;
+  function press(key, start, end = start, isComposing = false) {
+    textareaProps.onKeyDown({
+      key,
+      nativeEvent: { isComposing },
+      currentTarget: { value, selectionStart: start, selectionEnd: end },
+      preventDefault: () => prevented++,
+    });
+  }
+  press("Backspace", value.length - 1);
+  press("Delete", 0, value.length);
+  press("Backspace", value.length, value.length, true);
+  assert.deepEqual(updates, []);
+  assert.equal(prevented, 0);
+  press("Backspace", value.length);
+  press("Delete", value.length);
+  assert.deepEqual(updates, ["lovable", "lovable"]);
+  assert.equal(prevented, 2);
+  assert.deepEqual(textEdits, []);
 });

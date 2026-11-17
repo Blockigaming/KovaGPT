@@ -57,6 +57,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     ...initial,
   };
   const react = {
+    useImperativeHandle() {},
     ...hooks.react,
     useLayoutEffect: hooks.react.useEffect,
     useSyncExternalStore: () => true,
@@ -110,6 +111,9 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     },
   };
   const modules = {
+    "./ChatOutputTemplates": { ChatOutputTemplates: "ChatOutputTemplates" },
+    "@/lib/chat-output-templates": {},
+    "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
     "./AttachmentPreviewMobile": Object.fromEntries(
       ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
         (name) => [name, () => null],

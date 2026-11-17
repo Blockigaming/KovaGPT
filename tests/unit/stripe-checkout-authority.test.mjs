@@ -139,7 +139,7 @@ test("authoritative active and unknown outcomes are handled without a second pay
   const active = await checkout({
     adapterError: new BillingPolicyError("billing_policy_active_subscription_exists"),
   });
-  assert.match(active.result.error, /open subscription/u);
+  assert.match(active.result.error, /already have an active subscription.*billing portal/u);
   const pending = await checkout({
     adapterError: new BillingPolicyError("billing_policy_checkout_reconciliation_pending"),
   });
