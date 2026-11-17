@@ -123,7 +123,9 @@ jobs:
         run: |
           set -u
           for attempt in 1 2 3; do
-            if timeout --signal=TERM --kill-after=10s 210s npm audit --audit-level=high --omit=dev; then
+            # npm audit remains authoritative except for the fingerprinted,
+            # regression-tested local Picomatch backport. All other high findings fail.
+            if timeout --signal=TERM --kill-after=10s 210s npm run audit:dependencies; then
               exit 0
             fi
             if [[ "$attempt" -eq 3 ]]; then
