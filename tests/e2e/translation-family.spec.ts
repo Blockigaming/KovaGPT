@@ -104,9 +104,10 @@ test("translation ignores stale responses and supports focus and RTL content", a
   await expect(page.getByRole("status")).toHaveText("Translation complete.");
 });
 
-test("unknown language pair uses the real not-found screen without overflow", async ({ page }) => {
+test("unknown language pair returns to home without overflow", async ({ page }) => {
   await page.goto("/translate/not-a-real-pair");
-  await expect(page.getByRole("heading", { name: "This page isn’t available" })).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Sorry, this page doesn’t exist!", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

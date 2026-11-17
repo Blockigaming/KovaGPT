@@ -14,6 +14,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
+import { CircleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useKeyboardViewport } from "@/hooks/use-keyboard-viewport";
 import { Toaster } from "@/components/ui/sonner";
@@ -22,7 +23,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
@@ -125,6 +126,24 @@ function getActiveSeoState(matches: readonly SeoMatch[]) {
 }
 
 function NotFoundComponent() {
+  const router = useRouter();
+  const returningHome = useRef(false);
+
+  useEffect(() => {
+    if (returningHome.current || router.state.location.pathname === "/") return;
+    returningHome.current = true;
+    void router
+      .navigate({
+        to: "/",
+        replace: true,
+        state: (previous) => ({ ...previous, kovaMissingPage: true }),
+      })
+      .catch(() => {
+        // Keep the manual link available if navigation fails.
+        returningHome.current = false;
+      });
+  }, [router]);
+
   return (
     <main
       id="main-content"
@@ -381,7 +400,26 @@ function RootComponent() {
         <PlatformRuntime />
         <DestinationOutlet />
         <Toaster />
+        <MissingPageNotice />
       </QueryClientProvider>
     </ClerkProvider>
   );
+}
+
+function MissingPageNotice() {
+  const { isLoaded } = useUser();
+  const pathname = useRouterState({ select: (state) => state.resolvedLocation?.pathname });
+
+  useEffect(() => {
+    if (!isLoaded || pathname !== "/" || window.history.state?.kovaMissingPage !== true) return;
+    window.history.replaceState({ ...window.history.state, kovaMissingPage: false }, "");
+    toast("Sorry, this page doesn’t exist!", {
+      id: "missing-page",
+      description: "You’re back on the KovaGPT home page.",
+      icon: <CircleAlert aria-hidden="true" />,
+      duration: 6_000,
+    });
+  }, [isLoaded, pathname]);
+
+  return null;
 }

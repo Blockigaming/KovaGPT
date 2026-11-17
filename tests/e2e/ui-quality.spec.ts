@@ -356,20 +356,21 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();
 });
 
-test("unknown routes retain the themed shell state and semantic landmarks", async ({ page }) => {
-  await page.goto("/definitely-not-a-real-kova-route", { waitUntil: "domcontentloaded" });
+test("unknown routes return home with a dismissible notice", async ({ page }) => {
+  const missing = await page.goto("/definitely-not-a-real-kova-route");
+  expect(missing?.status()).toBe(404);
   await waitForKovaHydration(page);
-  await expect(page.getByRole("main")).toHaveCount(1);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "This page isn’t available" }),
-  ).toBeVisible();
-  const home = page.getByRole("link", { name: "Go to chat", exact: true });
-  await expect(home).toBeVisible();
-  await expect.poll(async () => (await home.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-  await expect(home).toHaveAttribute("href", "/");
-  await home.click();
-  await waitForKovaHydration(page);
+  await expect(page).toHaveURL("/");
   await expectEmptyWorkspaceLandmarks(page);
+  const notice = page.locator("[data-sonner-toast]").filter({
+    hasText: "Sorry, this page doesn’t exist!",
+  });
+  await expect(notice).toBeVisible();
+  await notice.getByRole("button", { name: "Close toast" }).click();
+  await expect(notice).toBeHidden();
+  await page.reload();
+  await waitForKovaHydration(page);
+  await expect(notice).toHaveCount(0);
 });
 test("rich conversation rhythm and actions remain stable at every core viewport", async ({
   page,

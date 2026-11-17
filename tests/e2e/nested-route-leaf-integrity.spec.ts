@@ -25,17 +25,15 @@ test("nested project URLs keep their leaf content after hydration", async ({ pag
   }
 });
 
-test("nested assistant URLs keep their leaf not-found state after hydration", async ({ page }) => {
+test("unpublished assistant URLs return to home after a 404", async ({ page }) => {
   await installAuthenticatedFixture(page);
   const path = "/assistants/unpublished-assistant";
   const response = await page.goto(path, { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBe(404);
   await waitForKovaHydration(page);
 
-  await expect(page).toHaveURL(path);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "This page isn’t available", exact: true }),
-  ).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Sorry, this page doesn’t exist!", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "KovaGPT Assistants", exact: true }),
   ).toHaveCount(0);
