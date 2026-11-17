@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
   "count": 222,
-  "latest": "20261117174500_private_chat_budget_pacing.sql",
+  "latest": "20261117174500_kova_private_chat_budget_pacing.sql",
   "migrations": [
     {
       "order": 1,
@@ -4674,7 +4674,7 @@
     },
     {
       "order": 222,
-      "filename": "20261117174500_private_chat_budget_pacing.sql",
+      "filename": "20261117174500_kova_private_chat_budget_pacing.sql",
       "timestamp": "20261117174500",
       "sha256": "265ec07cca2fb7f9374ffea448e101a7a403800053f3b471129a7fea0256c673",
       "tables": ["kova_private"],
