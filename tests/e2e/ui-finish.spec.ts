@@ -92,14 +92,14 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   expect(b!.x + b!.width).toBeLessThanOrEqual(viewport.width + 1);
 });
 for (const tier of ["free", "plus", "pro"] as const)
-  test(`${tier} settings display percentages from actual mode-specific usage`, async ({ page }) => {
+  test(`${tier} settings display percentages from metered API cost`, async ({ page }) => {
     await fixture(page, "dark", true, false, tier);
     const windows = planUsageFixture(tier).windows.map((window) => ({
       ...window,
       regularUsed: Math.floor(window.regularLimit / 2),
       thinkingUsed: Math.floor(window.thinkingLimit / 5),
       ...(tier === "free" && window.id === "five_hour"
-        ? { fixedWindow: true as const, costPercentUsed: null }
+        ? { fixedWindow: true as const, costPercentUsed: 3 }
         : { costPercentUsed: 10 }),
     }));
     const usage = { tier, windows, images: 2, uploads: 1 };
@@ -112,16 +112,13 @@ for (const tier of ["free", "plus", "pro"] as const)
       await page.goto(`/settings/${section}`);
       await waitForKovaHydration(page);
       await expect(page.getByRole("progressbar")).toHaveCount(windows.length);
-      for (const { id, regularUsed, regularLimit, fixedWindow } of windows) {
+      for (const { id, costPercentUsed, fixedWindow } of windows) {
         const bar = page.getByRole("progressbar", {
           name: `${CHAT_USAGE_WINDOWS[id]} chat usage`,
           exact: true,
         });
         await expect(bar).toHaveAttribute("aria-valuemax", "100");
-        await expect(bar).toHaveAttribute(
-          "aria-valuenow",
-          String(Math.round((regularUsed / regularLimit) * 100)),
-        );
+        await expect(bar).toHaveAttribute("aria-valuenow", String(costPercentUsed));
         if (id === "five_hour") {
           const row = page.locator(".kova-plan-usage-row").filter({ has: bar });
           await expect(
