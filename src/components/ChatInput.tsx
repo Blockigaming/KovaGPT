@@ -1,6 +1,6 @@
 import { ChatOutputTemplates } from "./ChatOutputTemplates";
 import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
-import { Grid2X2, List as ListIcon } from "lucide-react";
+import { Grid2X2, List as ListIcon, Settings as SettingsIcon } from "lucide-react";
 import {
   AttachmentPreviewAsk,
   AttachmentPreviewFileInfo,
@@ -442,6 +442,7 @@ export function ChatInput({
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [libraryGrid, setLibraryGrid] = useState(false);
+  const [librarySort, setLibrarySort] = useState<"recent" | "name">("recent");
   const [templateFormat, setTemplateFormat] = useState<ChatOutputFormat | null>(null);
   const libraryReturnFocus = useRef<HTMLElement | null>(null);
   const [contextOpen, setContextOpen] = useState(false);
@@ -1477,6 +1478,12 @@ export function ChatInput({
     );
   });
 
+  const sortedPickerFiles =
+    librarySort === "name"
+      ? [...visibleRecentLibraryFiles].sort((first, second) =>
+          (first.fileName || first.title).localeCompare(second.fileName || second.title),
+        )
+      : visibleRecentLibraryFiles;
   const renderRecentLibraryFiles = (picker = false) => (
     <div className="kova-composer-library" aria-label="Saved Library files">
       {recentLibraryFiles.length > 0 || !recentLibraryLoading ? (
@@ -1492,14 +1499,58 @@ export function ChatInput({
             />
           </label>
           {picker && (
-            <button
-              type="button"
-              className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-accent"
-              aria-label={libraryGrid ? "List view" : "Grid view"}
-              onClick={() => setLibraryGrid(!libraryGrid)}
-            >
-              {libraryGrid ? <ListIcon aria-hidden="true" /> : <Grid2X2 aria-hidden="true" />}
-            </button>
+            <>
+              <button
+                type="button"
+                className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-accent"
+                aria-label={libraryGrid ? "List view" : "Grid view"}
+                onClick={() => setLibraryGrid(!libraryGrid)}
+              >
+                {libraryGrid ? <ListIcon aria-hidden="true" /> : <Grid2X2 aria-hidden="true" />}
+              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Library options"
+                    className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-accent"
+                  >
+                    <SettingsIcon aria-hidden="true" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" aria-label="Library options" className="z-[110] w-52">
+                  <fieldset className="grid gap-2 text-sm">
+                    <legend className="mb-2 text-muted-foreground">Sort files</legend>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={librarySort === "recent"}
+                        onChange={() => setLibrarySort("recent")}
+                      />
+                      Most recent
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        checked={librarySort === "name"}
+                        onChange={() => setLibrarySort("name")}
+                      />
+                      Name
+                    </label>
+                  </fieldset>
+                  {onRecentLibraryRetry && (
+                    <button
+                      type="button"
+                      className="kova-library-refresh mt-3"
+                      onClick={onRecentLibraryRetry}
+                      disabled={recentLibraryLoading}
+                    >
+                      Refresh Library
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </>
           )}
         </div>
       ) : null}
@@ -1530,39 +1581,37 @@ export function ChatInput({
               : "max-h-64 overflow-y-auto p-1"
           }
         >
-          {(picker ? visibleRecentLibraryFiles : visibleRecentLibraryFiles.slice(0, 12)).map(
-            (item) => {
-              const name = item.fileName || item.title;
-              return (
-                <button
-                  data-kova-button-shape="preserve"
-                  key={item.id}
-                  type="button"
-                  disabled={disabled || isStreaming}
-                  onClick={() => attachLibraryFile(item)}
-                  className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {item.fileType?.startsWith("image/") ? (
-                    <ImageIcon className="h-4 w-4 shrink-0 text-pink-400" />
-                  ) : (
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{name}</span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {[
-                        item.fileType || "Library file",
-                        item.projectName,
-                        item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
+          {(picker ? sortedPickerFiles : visibleRecentLibraryFiles.slice(0, 12)).map((item) => {
+            const name = item.fileName || item.title;
+            return (
+              <button
+                data-kova-button-shape="preserve"
+                key={item.id}
+                type="button"
+                disabled={disabled || isStreaming}
+                onClick={() => attachLibraryFile(item)}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {item.fileType?.startsWith("image/") ? (
+                  <ImageIcon className="h-4 w-4 shrink-0 text-pink-400" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{name}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {[
+                      item.fileType || "Library file",
+                      item.projectName,
+                      item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
-                </button>
-              );
-            },
-          )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -2839,16 +2888,6 @@ export function ChatInput({
           <p className="spec400-attachment-limits">
             <ComposerUploadAllowance ownerId={isLoaded ? (user?.id ?? null) : null} />
           </p>
-          {user && onRecentLibraryRetry ? (
-            <button
-              type="button"
-              className="kova-library-refresh"
-              onClick={onRecentLibraryRetry}
-              disabled={recentLibraryLoading}
-            >
-              Refresh Library
-            </button>
-          ) : null}
           {user ? (
             renderRecentLibraryFiles(true)
           ) : (

@@ -1,3 +1,5 @@
+import { CONNECTION_FLOWS } from "../integrations/connection-flows.mjs";
+import { READ_ONLY_PLUGIN_TOOLS } from "./composer-plugin-usage.mjs";
 import type { Activity, Attachment, Conversation } from "./chat-store";
 import { normalizeBrowserActivity } from "./browser-activity-contract.mjs";
 import {
@@ -57,7 +59,9 @@ export type ConversationBrowserSource = {
 export type ConversationProviderSource = {
   id: string;
   name: string;
-  provider: "github" | "supabase" | "firecrawl" | "library" | "files" | "google" | "microsoft";
+  provider:
+    "github" | "supabase" | "firecrawl" | "library" | "files" | "google" | "microsoft" | "plugin";
+  pluginId?: string;
   messageIds: string[];
   status: Activity["status"];
 };
@@ -74,6 +78,22 @@ const RECORDED_PROVIDERS: [RegExp, ConversationProviderSource["provider"], strin
   [/^(?:google_|gmail_|drive_)/u, "google", "Google"],
   [/^(?:microsoft_|outlook_|onedrive_)/u, "microsoft", "Microsoft"],
 ];
+const PLUGIN_LABELS: Record<string, string> = {
+  gmail: "Gmail",
+  "google-calendar": "Google Calendar",
+  "google-drive": "Google Drive",
+  github: "GitHub",
+};
+const PLUGINS_BY_TOOL = new Map(
+  Object.entries(CONNECTION_FLOWS).map(([id, flow]) => [flow.tool, id]),
+);
+function recordedPlugin(tool: string) {
+  const id =
+    PLUGINS_BY_TOOL.get(tool) ??
+    (Object.hasOwn(READ_ONLY_PLUGIN_TOOLS, tool) ? READ_ONLY_PLUGIN_TOOLS[tool] : null);
+  const name = id ? (CONNECTION_FLOWS[id]?.label ?? PLUGIN_LABELS[id]) : null;
+  return id && name ? { id, name } : null;
+}
 export type ConversationSourceInventory = {
   providers?: ConversationProviderSource[];
   web: ConversationWebSource[];
@@ -197,15 +217,19 @@ export function conversationSources(
       )
         continue;
       const match = RECORDED_PROVIDERS.find(([pattern]) => pattern.test(activity.tool));
-      if (!match) continue;
-      const [, provider, name] = match;
-      const existing = providers.get(provider);
+      const plugin = recordedPlugin(activity.tool);
+      if (!match && !plugin) continue;
+      const provider = plugin && plugin.id !== "github" ? "plugin" : (match?.[1] ?? "github");
+      const name = plugin?.name ?? match![2];
+      const key = provider === "plugin" ? plugin!.id : provider;
+      const existing = providers.get(key);
       if (existing) {
         includeMessage(existing, message.id);
         existing.status = activity.status;
       } else
-        providers.set(provider, {
-          id: `provider:${provider}`,
+        providers.set(key, {
+          id: `provider:${key}`,
+          ...(plugin ? { pluginId: plugin.id } : {}),
           name,
           provider,
           messageIds: [message.id],

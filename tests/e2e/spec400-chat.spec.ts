@@ -150,9 +150,44 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   const panel = page.locator(".kova-conversation-outputs");
   await expect(panel.getByText("Chat instructions and context", { exact: true })).toHaveCount(0);
+  const panelHeight = await panel.evaluate((node) => node.offsetHeight);
+  const addSource = panel.getByRole("button", { name: "Add source", exact: true });
+  await addSource.click();
+  const sourceMenu = page.locator('[aria-label="Add source options"]');
+  await sourceMenu.getByRole("button", { name: "Connect plugins", exact: true }).click();
+  const plugins = page.locator(".kova-activity-submenu[aria-label='Connect plugins']");
+  await expect(plugins.getByRole("searchbox", { name: "Search plugins" })).toBeVisible();
+  if (compactDesktop) {
+    await expect(sourceMenu).toHaveClass(/kova-activity-floating/);
+    await expect(plugins).toHaveClass(/kova-activity-floating/);
+    expect(await panel.evaluate((node) => node.offsetHeight)).toBe(panelHeight);
+    await page.keyboard.press("Escape");
+    await expect(plugins).toBeHidden();
+    await expect(sourceMenu).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sourceMenu).toBeHidden();
+    await expect(panel).toBeVisible();
+  } else {
+    await addSource.click();
+  }
+  await addSource.click();
+  await sourceMenu.getByRole("button", { name: "Add from Library", exact: true }).click();
+  const library = page.getByRole("dialog", { name: "Add from Library", exact: true });
+  await expect(library.getByPlaceholder("Search Library", { exact: true })).toBeVisible();
+  await library.getByRole("button", { name: "Library options", exact: true }).click();
+  const nameSort = page.getByRole("radio", { name: "Name", exact: true });
+  await nameSort.check();
+  await expect(nameSort).toBeChecked();
+  await page.keyboard.press("Escape");
+  await expect(nameSort).toBeHidden();
+  await library.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(library).toBeHidden();
+  await page.getByRole("button", { name: "Activity", exact: true }).click();
   await panel.getByRole("button", { name: "Create an output", exact: true }).first().click();
-  await expect(panel.getByRole("button", { name: "Create site" })).toHaveCount(0);
-  await panel.getByRole("button", { name: "Create document", exact: true }).click();
+  const outputMenu = page.locator('[aria-label="Output types"]');
+  if (compactDesktop) await expect(outputMenu).toHaveClass(/kova-activity-floating/);
+  await expect(outputMenu.getByRole("button", { name: "Create site" })).toHaveCount(0);
+  await outputMenu.getByRole("button", { name: "Create document", exact: true }).click();
   const templates = page.getByRole("region", { name: "document templates" });
   await expect(templates).toBeVisible();
   await expect(templates.locator(".kova-template-card")).toHaveCount(100);

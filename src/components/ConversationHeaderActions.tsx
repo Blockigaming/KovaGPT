@@ -22,7 +22,7 @@ import { Link } from "@tanstack/react-router";
 import { type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -136,6 +136,9 @@ export function ConversationHeaderActions({
     setDownloading(false);
   }, [selectedOutput]);
   const outputsRef = useRef<HTMLButtonElement>(null);
+  const outputsButtonRef = useRef<HTMLButtonElement>(null);
+  const sourcesButtonRef = useRef<HTMLButtonElement>(null);
+  const pluginsButtonRef = useRef<HTMLButtonElement>(null);
   const shareRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const returnUrlRef = useRef<string | undefined>(undefined);
@@ -175,54 +178,122 @@ export function ConversationHeaderActions({
     setOutputsOpen(false);
     action();
   };
+  const renderMenu = ({
+    open,
+    label,
+    anchor,
+    children,
+    close,
+    side = "bottom",
+  }: {
+    open: boolean;
+    label: string;
+    anchor: ReactNode;
+    children: ReactNode;
+    close: () => void;
+    side?: "bottom" | "left";
+  }) => {
+    if (!isDesktop)
+      return (
+        <>
+          {anchor}
+          {open && (
+            <div className="kova-activity-submenu" aria-label={label}>
+              {children}
+            </div>
+          )}
+        </>
+      );
+    return (
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) close();
+        }}
+      >
+        <PopoverAnchor asChild>{anchor}</PopoverAnchor>
+        {open && (
+          <PopoverContent
+            aria-label={label}
+            className="kova-activity-submenu kova-activity-floating"
+            align={side === "left" ? "start" : "end"}
+            side={side}
+            sideOffset={6}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              if (!outputsOpen || dialogOpeningRef.current) return;
+              const trigger =
+                side === "left"
+                  ? pluginsButtonRef.current
+                  : label === "Output types"
+                    ? outputsButtonRef.current
+                    : sourcesButtonRef.current;
+              if (event.target && document.activeElement === document.body)
+                trigger?.focus({ preventScroll: true });
+            }}
+          >
+            {children}
+          </PopoverContent>
+        )}
+      </Popover>
+    );
+  };
   const activityContent = (
     <>
       <section className="kova-activity-inventory" aria-label="Outputs">
-        <div className="kova-activity-inventory-heading">
-          <button
-            type="button"
-            className="kova-activity-section-toggle"
-            aria-expanded={!outputsCollapsed}
-            onClick={() => {
-              setOutputsCollapsed(!outputsCollapsed);
-              setMenu(null);
-            }}
-          >
-            <span>Outputs</span>
-            <ChevronDown
-              className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-          <button
-            type="button"
-            className="kova-activity-add"
-            aria-label="Create an output"
-            title="Create an output"
-            aria-expanded={menu === "outputs"}
-            disabled={isStreaming}
-            onClick={() => setMenu(menu === "outputs" ? null : "outputs")}
-          >
-            <Plus aria-hidden="true" />
-          </button>
-        </div>
-        {menu === "outputs" && (
-          <div className="kova-activity-submenu" aria-label="Output types">
-            {(Object.keys(chatOutputTypes) as ChatOutputFormat[]).map((format) => {
-              const Icon = formatIcons[format];
-              return (
-                <button
-                  key={format}
-                  type="button"
-                  disabled={isStreaming}
-                  onClick={() => handOff(() => onCreateOutput(format))}
-                >
-                  <Icon aria-hidden="true" /> Create {chatOutputTypes[format].label}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {renderMenu({
+          open: menu === "outputs",
+          label: "Output types",
+          anchor: (
+            <div className="kova-activity-inventory-heading">
+              <button
+                type="button"
+                className="kova-activity-section-toggle"
+                aria-expanded={!outputsCollapsed}
+                onClick={() => {
+                  setOutputsCollapsed(!outputsCollapsed);
+                  setMenu(null);
+                }}
+              >
+                <span>Outputs</span>
+                <ChevronDown
+                  className={`kova-activity-chevron${outputsCollapsed ? " is-collapsed" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                type="button"
+                ref={outputsButtonRef}
+                className="kova-activity-add"
+                aria-label="Create an output"
+                title="Create an output"
+                aria-expanded={menu === "outputs"}
+                disabled={isStreaming}
+                onClick={() => setMenu(menu === "outputs" ? null : "outputs")}
+              >
+                <Plus aria-hidden="true" />
+              </button>
+            </div>
+          ),
+          close: () => setMenu(null),
+          children: (
+            <>
+              {(Object.keys(chatOutputTypes) as ChatOutputFormat[]).map((format) => {
+                const Icon = formatIcons[format];
+                return (
+                  <button
+                    key={format}
+                    type="button"
+                    disabled={isStreaming}
+                    onClick={() => handOff(() => onCreateOutput(format))}
+                  >
+                    <Icon aria-hidden="true" /> Create {chatOutputTypes[format].label}
+                  </button>
+                );
+              })}
+            </>
+          ),
+        })}
         {!outputsCollapsed &&
           (generatedOutputs.length ? (
             <div className="kova-output-list">
@@ -260,68 +331,85 @@ export function ConversationHeaderActions({
           ))}
       </section>
       <section className="kova-activity-inventory" aria-label="Sources">
-        <div className="kova-activity-inventory-heading">
-          <button
-            type="button"
-            className="kova-activity-section-toggle"
-            aria-expanded={!sourcesCollapsed}
-            onClick={() => {
-              setSourcesCollapsed(!sourcesCollapsed);
-              setMenu(null);
-            }}
-          >
-            <span>Sources</span>
-            <ChevronDown
-              className={`kova-activity-chevron${sourcesCollapsed ? " is-collapsed" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-          <button
-            type="button"
-            className="kova-activity-add"
-            aria-label="Add source"
-            title="Add source"
-            aria-expanded={menu === "sources" || menu === "plugins"}
-            disabled={isStreaming}
-            onClick={() => setMenu(menu === "sources" || menu === "plugins" ? null : "sources")}
-          >
-            <Plus aria-hidden="true" />
-          </button>
-        </div>
-        {(menu === "sources" || menu === "plugins") && (
-          <div className="kova-activity-submenu" aria-label="Add source">
-            <button
-              type="button"
-              aria-expanded={menu === "plugins"}
-              onClick={() => setMenu(menu === "plugins" ? "sources" : "plugins")}
-            >
-              <Plug aria-hidden="true" /> Connect plugins{" "}
-              <ChevronRight className="ml-auto" aria-hidden="true" />
-            </button>
-            {menu === "plugins" && (
-              <ChatActivityPlugins
-                conversation={conversation}
-                navigationBlocked={navigationBlocked}
-                onSelect={onSelectPlugin && ((plugin) => handOff(() => onSelectPlugin(plugin)))}
-                onNavigate={() => setOutputsOpen(false)}
-              />
-            )}
-            <button
-              type="button"
-              disabled={isStreaming}
-              onClick={() => handOff(() => onAddFiles(outputsRef.current), !signedIn)}
-            >
-              <Paperclip aria-hidden="true" /> Add photos &amp; files
-            </button>
-            <button
-              type="button"
-              disabled={isStreaming}
-              onClick={() => handOff(() => onOpenLibrary(outputsRef.current), true)}
-            >
-              <LibraryBig aria-hidden="true" /> Add from Library
-            </button>
-          </div>
-        )}
+        {renderMenu({
+          open: menu === "sources" || menu === "plugins",
+          label: "Add source options",
+          anchor: (
+            <div className="kova-activity-inventory-heading">
+              <button
+                type="button"
+                className="kova-activity-section-toggle"
+                aria-expanded={!sourcesCollapsed}
+                onClick={() => {
+                  setSourcesCollapsed(!sourcesCollapsed);
+                  setMenu(null);
+                }}
+              >
+                <span>Sources</span>
+                <ChevronDown
+                  className={`kova-activity-chevron${sourcesCollapsed ? " is-collapsed" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                type="button"
+                ref={sourcesButtonRef}
+                className="kova-activity-add"
+                aria-label="Add source"
+                title="Add source"
+                aria-expanded={menu === "sources" || menu === "plugins"}
+                disabled={isStreaming}
+                onClick={() => setMenu(menu === "sources" || menu === "plugins" ? null : "sources")}
+              >
+                <Plus aria-hidden="true" />
+              </button>
+            </div>
+          ),
+          close: () => setMenu(null),
+          children: (
+            <>
+              {renderMenu({
+                open: menu === "plugins",
+                label: "Connect plugins",
+                side: "left",
+                anchor: (
+                  <button
+                    type="button"
+                    ref={pluginsButtonRef}
+                    aria-expanded={menu === "plugins"}
+                    onClick={() => setMenu(menu === "plugins" ? "sources" : "plugins")}
+                  >
+                    <Plug aria-hidden="true" /> Connect plugins{" "}
+                    <ChevronRight className="ml-auto" aria-hidden="true" />
+                  </button>
+                ),
+                close: () => setMenu("sources"),
+                children: menu === "plugins" && (
+                  <ChatActivityPlugins
+                    conversation={conversation}
+                    navigationBlocked={navigationBlocked}
+                    onSelect={onSelectPlugin && ((plugin) => handOff(() => onSelectPlugin(plugin)))}
+                    onNavigate={() => setOutputsOpen(false)}
+                  />
+                ),
+              })}
+              <button
+                type="button"
+                disabled={isStreaming}
+                onClick={() => handOff(() => onAddFiles(outputsRef.current), !signedIn)}
+              >
+                <Paperclip aria-hidden="true" /> Add photos &amp; files
+              </button>
+              <button
+                type="button"
+                disabled={isStreaming}
+                onClick={() => handOff(() => onOpenLibrary(outputsRef.current), true)}
+              >
+                <LibraryBig aria-hidden="true" /> Add from Library
+              </button>
+            </>
+          ),
+        })}
         {!sourcesCollapsed &&
           (hasSources ? (
             <ConversationSourcesPanel

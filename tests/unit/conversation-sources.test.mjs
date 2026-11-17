@@ -1,3 +1,5 @@
+import * as pluginUsage from "../../src/lib/composer-plugin-usage.mjs";
+import * as connectionFlows from "../../src/integrations/connection-flows.mjs";
 import * as browserActivity from "../../src/lib/browser-activity-contract.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -20,6 +22,8 @@ function load(path, modules = {}) {
 
 const { conversationSources } = load("src/lib/conversation-sources.ts", {
   "./browser-activity-contract.mjs": browserActivity,
+  "./composer-plugin-usage.mjs": pluginUsage,
+  "../integrations/connection-flows.mjs": connectionFlows,
   "./memory-sources.mjs": memorySources,
   "./response-sources": load("src/lib/response-sources.ts", {
     "./response-source-time.mjs": responseSourceTime,
@@ -269,5 +273,29 @@ test("explicit provider activity accumulates across turns and never comes from p
       messages: [assistant("text", { content: "I used GitHub, Supabase and Firecrawl." })],
     }).providers,
     undefined,
+  );
+});
+
+test("recorded plugin tools are attributed to individual connections", () => {
+  const { providers } = conversationSources({
+    ...chat,
+    messages: [
+      assistant("answer", {
+        activities: [
+          { tool: "notion_search", label: "Searched pages", status: "done" },
+          { tool: "gmail_search", label: "Searched email", status: "failed" },
+          { tool: "calendar_list_events", label: "Listed events", status: "done" },
+          { tool: "unknown_plugin_search", label: "Unverified", status: "done" },
+        ],
+      }),
+    ],
+  });
+  assert.deepEqual(
+    providers.map(({ name, status }) => [name, status]),
+    [
+      ["Notion", "done"],
+      ["Gmail", "failed"],
+      ["Google Calendar", "done"],
+    ],
   );
 });

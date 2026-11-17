@@ -723,3 +723,14 @@
     min-width: 44px;
   }
 }
+
+.kova-activity-submenu.kova-activity-floating {
+  width: max-content;
+  min-width: min(218px, calc(100vw - 24px));
+  max-width: min(320px, var(--radix-popover-content-available-width, 100vw));
+  margin: 0;
+  box-shadow: var(--shadow-floating);
+}
+.dark .kova-activity-submenu.kova-activity-floating {
+  background: #2c2c2c;
+}

@@ -203,7 +203,12 @@ function fixture(overrides = {}, desktop = true) {
       "DropdownMenuSubTrigger",
       "DropdownMenuTrigger",
     ]),
-    "@/components/ui/popover": primitives(["Popover", "PopoverContent", "PopoverTrigger"]),
+    "@/components/ui/popover": primitives([
+      "Popover",
+      "PopoverContent",
+      "PopoverTrigger",
+      "PopoverAnchor",
+    ]),
     "@/components/ui/dialog": primitives([
       "Dialog",
       "DialogContent",
@@ -662,5 +667,5 @@ test("touch Activity uses its own modal sheet while desktop keeps the anchored p
     nodes(touch.render()).find((node) => node.type === "MobileBottomSheet").props.open,
     false,
   );
-  assert.equal(nodes(fixture().render()).filter((node) => node.type === "Popover").length, 1);
+  assert.equal(nodes(fixture().render()).filter((node) => node.type === "Popover").length, 3);
 });
