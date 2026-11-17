@@ -3123,7 +3123,7 @@ function KovaGPT() {
       };
   const composer = (
     <ChatInput
-      activityComposerRef={activityComposerRef}
+      activityComposerRef={showEmptyChat ? undefined : activityComposerRef}
       value={principalReady ? input : ""}
       onChange={setInput}
       onSubmit={(tool) => send(input, attachments, tool)}
