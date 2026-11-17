@@ -150,12 +150,11 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
           : ledger.error
             ? { regularUsed: null, thinkingUsed: null }
             : total),
-        costPercentUsed:
-          !costState
-            ? null
-            : window.id === "five_hour"
-              ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
-              : asPercent(costState.weekly_used, costState.weekly_allowance),
+        costPercentUsed: !costState
+          ? null
+          : window.id === "five_hour"
+            ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
+            : asPercent(costState.weekly_used, costState.weekly_allowance),
       })),
       images: ledger.error ? null : (daily?.images ?? 0),
       uploads: ledger.error ? null : (daily?.uploads ?? 0),

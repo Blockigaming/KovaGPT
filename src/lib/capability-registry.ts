@@ -139,7 +139,7 @@ function planFeatures(tier: Tier): readonly string[] {
         : "All seven models: Lite, Medium, High, Extra High, Max, and Ultra",
     ...(tier === "pro"
       ? [`${proVsFree}× the usage of Free`, `${proVsPlus}× the usage of Plus`]
-      : []),
+      : ["Organize related chats in Projects", "Find saved files and images in Library"]),
     allowance.chat,
     tier === "pro" ? "Advanced model usage is limited" : "Usage limits apply to all chat models",
     allowance.image,

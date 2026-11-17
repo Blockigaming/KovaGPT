@@ -299,6 +299,19 @@
   margin-bottom: 15px;
   color: #aaa;
 }
+.public-plan-card .public-plan-benefits {
+  display: grid;
+  align-content: start;
+  flex: 1;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+}
+.public-plan-benefits li {
+  margin-bottom: 0;
+}
 .public-plan-card li svg {
   flex-shrink: 0;
   margin-top: 3px;

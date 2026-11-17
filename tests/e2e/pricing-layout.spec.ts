@@ -28,6 +28,16 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   const freePlan = page.locator('[data-pricing-plan="free"]');
   const plusPlan = page.locator('[data-pricing-plan="plus"]');
   const proPlan = page.locator('[data-pricing-plan="pro"]');
+  const benefitLists = [freePlan, plusPlan, proPlan].map((plan) => plan.getByRole("list"));
+  const benefitCounts = await Promise.all(
+    benefitLists.map((list) => list.getByRole("listitem").count()),
+  );
+  expect(benefitCounts[0]).toBeGreaterThan(0);
+  expect(new Set(benefitCounts).size).toBe(1);
+  for (const list of benefitLists) {
+    await expect(list).toHaveCSS("row-gap", "12px");
+    await expect(list).toHaveCSS("border-radius", "18px");
+  }
   await expect(freePlan.getByText("Very limited chat usage", { exact: true })).toBeVisible();
   await expect(plusPlan.getByText("5× the usage of Free", { exact: true })).toBeVisible();
   await expect(proPlan.getByText("100× the usage of Free", { exact: true })).toBeVisible();

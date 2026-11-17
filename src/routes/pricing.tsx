@@ -335,7 +335,7 @@ function PlanCard({
         {cta}
       </button>
       <div className="my-auto h-px bg-border" aria-hidden="true" />
-      <ul className="flex min-h-0 flex-col gap-3 text-sm md:justify-around md:pt-4">
+      <ul className="flex min-h-0 flex-col gap-3 rounded-[18px] border border-border bg-muted/25 p-4 text-sm">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
