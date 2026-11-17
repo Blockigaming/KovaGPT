@@ -1,4 +1,4 @@
-name: Release approved PR 716 once
+name: Build approved PR 716 once
 on:
   pull_request:
     paths:
@@ -80,13 +80,13 @@ jobs:
           test -n "$build_id"
           timeout --signal=TERM --kill-after=10s 1900s gh run watch "$build_id" --exit-status --interval 15
           gh run download "$build_id" --name ghcr-production-candidate --dir "$RUNNER_TEMP/pr716-candidate"
-      - name: Promote verified image with automatic traffic rollback on failure
-        run: node scripts/azure/release-pr716-once.mjs deploy
-      - name: Save public release receipt without private app configuration
+      # Production OIDC has Reader access. Promotion uses the owner's existing
+      # signed-in Azure session and the tested release script after this build.
+      - name: Save immutable candidate for the approved owner deployment
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: pr716-production-release
-          path: ${{ runner.temp }}/pr716-release-receipt.json
+          name: pr716-production-candidate
+          path: ${{ runner.temp }}/pr716-candidate/ghcr-candidate-image.txt
           retention-days: 30
       - name: Remove temporary private configuration
         if: always()

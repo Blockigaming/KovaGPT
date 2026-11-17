@@ -144,12 +144,15 @@ test("unqualified image and source cannot cause any Azure write", async () => {
   await assert.rejects(promote({ ...f.input, image: "mutable:latest" }));
   assert.equal(f.calls.length, 0);
 });
-test("one-time workflow is main-only, uses existing production authority and a pinned application tree", () => {
+test("one-time build is main-only, respects Reader authority and pins the reviewed application tree", () => {
   const workflow = readFileSync(".github/workflows/release-pr716-once.yml", "utf8");
   assert.match(workflow, /github.event_name == 'push'.*github.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /git diff --exit-code 1c8427e775290156fba3b9b8c6f7d5b4e1a92223 HEAD/);
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /source_sha="\$GITHUB_SHA"/);
+  assert.match(workflow, /release-pr716-once\.mjs preflight/);
+  assert.match(workflow, /pr716-production-candidate/);
+  assert.doesNotMatch(workflow, /release-pr716-once\.mjs deploy/);
   assert.doesNotMatch(
     workflow,
     /role assignment create|containerapp up|deployment group create|pull_request_target/,
