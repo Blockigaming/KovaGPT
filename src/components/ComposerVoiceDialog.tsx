@@ -772,10 +772,9 @@ export function ComposerVoiceDialog({
     };
     if (!isCurrent(scope)) return;
     const realtime = mode === "voice" && capabilities.realtime && !realtimeFailed;
-    if (
-      !realtime &&
-      (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia)
-    ) {
+    const canRecord =
+      typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+    if (!realtime && !canRecord) {
       setError(
         "This browser does not support microphone recording. Try a supported browser on a secure connection, or keep typing.",
       );
@@ -793,6 +792,8 @@ export function ComposerVoiceDialog({
     if (realtime) {
       const controller = new AbortController();
       request.current = controller;
+      let startedListening = false;
+      let tokenRequestRejected = false;
       try {
         const text = await listenForVoiceTurn({
           signal: controller.signal,
@@ -806,39 +807,45 @@ export function ComposerVoiceDialog({
               body: JSON.stringify({ action: "realtime" }),
               signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
             });
-            if (!response.ok)
+            if (!response.ok) {
+              tokenRequestRejected = response.status < 500;
               throw new Error(await voiceError(response, "Live Voice could not connect."));
+            }
             const { token } = await response.json();
             if (typeof token !== "string" || !token)
               throw new Error("Live Voice could not connect.");
             return token;
           },
           onListening: () => {
+            startedListening = true;
             if (isCurrent(scope)) updatePhase("recording");
           },
         });
         finishRequest(controller);
         if (isCurrent(scope)) await submitVoiceTurn(scope, text, true);
+        return;
       } catch (cause) {
-        if (isCurrent(scope) && !controller.signal.aborted) {
-          if (
-            typeof MediaRecorder !== "undefined" &&
-            !(cause instanceof Error && cause.name === "NotAllowedError")
-          ) {
-            setRealtimeFailed(true);
-          }
+        if (!isCurrent(scope) || controller.signal.aborted) return;
+        const permissionDenied = cause instanceof Error && cause.name === "NotAllowedError";
+        const canUseRecordedVoice = canRecord && !permissionDenied && !tokenRequestRejected;
+        if (canUseRecordedVoice) setRealtimeFailed(true);
+        if (!canUseRecordedVoice || startedListening) {
           failOperation(
-            cause instanceof Error && cause.name === "NotAllowedError"
+            permissionDenied
               ? "Allow microphone access in your browser to use Voice."
-              : cause instanceof Error && cause.name === "Error"
-                ? cause.message
-                : "Live Voice could not connect. Try again.",
+              : canUseRecordedVoice
+                ? "Live Voice disconnected. Start again to use recorded Voice."
+                : cause instanceof Error && cause.name === "Error"
+                  ? cause.message
+                  : "Live Voice could not connect. Try again.",
           );
+          return;
         }
+        // The waveform button starts both ElevenLabs modes. If realtime never
+        // began listening, continue the same requested turn with recorded STT.
       } finally {
         finishRequest(controller);
       }
-      return;
     }
     let acquired: MediaStream | null = null;
     try {
@@ -1178,15 +1185,12 @@ export function ComposerVoiceDialog({
   const VoiceView =
     inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
 
-  if (open && mode === "voice" && checking && autoStartVoice) return null;
-
   if (
     open &&
     mode === "voice" &&
-    capabilities?.realtime &&
-    !realtimeFailed &&
-    conversationReady &&
-    !disabled
+    !disabled &&
+    ((checking && autoStartVoice) ||
+      (capabilities?.realtime && !realtimeFailed && conversationReady))
   ) {
     const { colors } = preferredVoiceGlow(userId);
     const glowStyle = colors.length
@@ -1209,14 +1213,20 @@ export function ComposerVoiceDialog({
         }}
       >
         <span className="sr-only" role="status">
-          {listening ? "Listening" : speaking ? "Speaking" : status}
+          {checking || phase === "requesting"
+            ? "Connecting to ElevenLabs Voice…"
+            : listening
+              ? "Listening"
+              : speaking
+                ? "Speaking"
+                : status}
         </span>
         {error && (
           <p role="alert" className="kova-live-voice-error">
             {error}
           </p>
         )}
-        {phase === "idle" ? (
+        {phase === "idle" && !checking ? (
           <button type="button" onClick={() => void startRecording()} aria-label="Restart Voice">
             <AudioLines aria-hidden="true" />
           </button>

@@ -1371,17 +1371,27 @@
 
 .kova-consumer-model-menu {
   --kova-model-picker-height: 360px;
+  display: flex;
+  flex-direction: column;
   width: 282px;
   max-height: min(
     var(--kova-model-picker-height),
     var(--radix-popover-content-available-height, var(--kova-overlay-vh)),
     calc(var(--kova-overlay-vh) - 24px)
   );
+  overflow: hidden;
   border-radius: 18px;
+}
+
+.kova-consumer-model-options {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 
 .kova-consumer-effort {
+  flex-shrink: 0;
   padding-inline: 6px;
   border-radius: 16px;
   background: light-dark(#f7f7f7, #303030);
@@ -1412,8 +1422,38 @@
   background: #73a2ff;
 }
 
+.kova-consumer-effort-thumb {
+  position: absolute;
+  left: var(--effort-position);
+  width: var(--effort-thumb);
+  height: var(--effort-thumb);
+  transform: translateX(-50%);
+  border: 1px solid #9d9d9d;
+  border-radius: 50%;
+  background: white;
+}
+
 .kova-consumer-effort .kova-effort-range {
+  opacity: 0;
   touch-action: none;
+}
+
+.kova-consumer-effort
+  .kova-effort-control:has(.kova-effort-range:focus-visible)
+  .kova-consumer-effort-thumb {
+  box-shadow:
+    0 0 0 2px var(--popover),
+    0 0 0 4px var(--ring);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kova-consumer-effort .kova-effort-control[data-dragging="false"] .kova-effort-fill::before {
+    transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .kova-consumer-effort .kova-effort-control[data-dragging="false"] .kova-consumer-effort-thumb {
+    transition: left 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
 }
 
 .spec400-composer-trailing .kova-consumer-model-trigger {

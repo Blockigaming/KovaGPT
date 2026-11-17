@@ -373,6 +373,7 @@ function fixture(initial = {}, options = {}) {
       return modules[name];
     },
     AbortController,
+    AbortSignal,
     Event,
     Blob,
     File,
@@ -1445,6 +1446,48 @@ test("empty-composer Voice begins exactly once after the authorized ElevenLabs c
   const acquired = await f.acquire();
   await f.click("Finish turn");
   assert.ok(acquired.tracks.every((track) => track.stopped > 0));
+  f.unmount();
+});
+
+test("the waveform starts recorded ElevenLabs Voice when realtime cannot connect", async () => {
+  const f = fixture(
+    { mode: "voice", autoStartVoice: true },
+    {
+      async listenForVoiceTurn({ getToken }) {
+        assert.equal(await getToken(), "fixture-token");
+        throw new Error("The realtime connection dropped before listening");
+      },
+    },
+  );
+  await f.ready({ ...configured, realtime: true });
+  const realtime = await waitForRequest(f, 2);
+  assert.deepEqual(JSON.parse(realtime.init.body), { action: "realtime" });
+  realtime.resolve(Response.json({ token: "fixture-token" }));
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1);
+  await f.acquire();
+  await f.click("Finish turn");
+  const stt = await waitForRequest(f, 3);
+  assert.equal(stt.url, "/api/voice");
+  assert.equal(stt.init.body.get("action"), "stt");
+  stt.resolve(Response.json({ text: "A voice turn" }));
+  await f.flush();
+  assert.equal(f.voiceSubmissions[0].value, "A voice turn");
+  f.unmount();
+});
+
+test("the waveform does not retry recording after a realtime rate limit", async () => {
+  const f = fixture(
+    { mode: "voice", autoStartVoice: true },
+    { listenForVoiceTurn: async ({ getToken }) => getToken() },
+  );
+  await f.ready({ ...configured, realtime: true });
+  const realtime = await waitForRequest(f, 2);
+  realtime.resolve(Response.json({ error: "voice_provider_rate_limited" }, { status: 429 }));
+  await f.flush();
+  assert.equal(f.requests.length, 2);
+  assert.equal(f.microphoneRequests.length, 0);
+  assert.match(f.text(), /Voice is busy right now/);
   f.unmount();
 });
 
