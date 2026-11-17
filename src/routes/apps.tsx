@@ -1499,7 +1499,7 @@ function AppsPage() {
               const origin = detailsReturnRef.current;
               restoreDialogFocus(
                 origin?.trigger.isConnected ? origin.trigger : searchRef.current,
-                origin?.url,
+                origin?.url ?? window.location.href,
                 Boolean(origin && origin.principal !== principalRef.current),
               );
             }}

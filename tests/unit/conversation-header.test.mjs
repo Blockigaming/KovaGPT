@@ -368,6 +368,25 @@ test("each Office type has 100 distinct starters and a real export format", () =
   }
 });
 
+test("custom templates keep only supported formats and preserve their instructions", () => {
+  const { templates } = starterTemplates.parseCustomChatOutputTemplates(
+    JSON.stringify({
+      templates: [
+        { title: "  Weekly update ", format: "pptx", instructions: " Include blockers. " },
+        { title: "Site", format: "html", instructions: "Use a gallery." },
+        { title: "Empty", format: "docx", instructions: " " },
+      ],
+    }),
+  );
+  assert.deepEqual(templates, [
+    { title: "Weekly update", format: "pptx", instructions: "Include blockers." },
+  ]);
+  assert.match(
+    starterTemplates.chatOutputPrompt("pptx", templates[0].title, templates[0].instructions),
+    /Include blockers\./,
+  );
+});
+
 test("attachment preview returns focus to the visible Activity button", () => {
   const f = fixture({
     conversation: {

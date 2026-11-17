@@ -114,7 +114,46 @@ const featuredStructures = {
   ],
 } satisfies Record<ChatOutputFormat, string[]>;
 
-export function chatOutputPrompt(format: ChatOutputFormat, template?: string) {
+export type CustomChatOutputTemplate = {
+  title: string;
+  instructions: string;
+  format: ChatOutputFormat;
+};
+
+export function parseCustomChatOutputTemplates(raw: string | null): {
+  templates: CustomChatOutputTemplate[];
+} {
+  try {
+    const parsed = raw ? JSON.parse(raw)?.templates : null;
+    if (!Array.isArray(parsed)) return { templates: [] };
+    return {
+      templates: parsed
+        .filter(
+          (item): item is CustomChatOutputTemplate =>
+            item &&
+            typeof item.title === "string" &&
+            item.title.trim() &&
+            typeof item.instructions === "string" &&
+            item.instructions.trim() &&
+            Object.hasOwn(chatOutputTypes, item.format),
+        )
+        .slice(-30)
+        .map(({ title, instructions, format }) => ({
+          title: title.trim().slice(0, 80),
+          instructions: instructions.trim().slice(0, 1000),
+          format,
+        })),
+    };
+  } catch {
+    return { templates: [] };
+  }
+}
+
+export function chatOutputPrompt(
+  format: ChatOutputFormat,
+  template?: string,
+  customInstructions?: string,
+) {
   const { label, instruction } = chatOutputTypes[format];
   const index = template ? chatOutputTemplates[format].indexOf(template) : -1;
   const outline =
@@ -125,7 +164,11 @@ export function chatOutputPrompt(format: ChatOutputFormat, template?: string) {
     template
       ? `Create a ${label} using the ${template} starter template.`
       : `Create a custom ${label}.`,
-    outline ? `Suggested structure: ${outline}.` : null,
+    customInstructions
+      ? `Template instructions: ${customInstructions}`
+      : outline
+        ? `Suggested structure: ${outline}.`
+        : null,
     "If essential details are missing, ask me for them first. Mark any sample data clearly.",
     `Put the finished output in a fenced code block labeled kova-${format}. ${instruction}`,
   ]

@@ -1923,12 +1923,13 @@ export function ChatInput({
         <ChatOutputTemplates
           key={templateFormat}
           format={templateFormat}
+          userKey={user?.id ?? null}
           onClose={() => {
             setTemplateFormat(null);
             ref.current?.focus();
           }}
-          onChoose={(template) => {
-            const prompt = chatOutputPrompt(templateFormat, template);
+          onChoose={(template, instructions) => {
+            const prompt = chatOutputPrompt(templateFormat, template, instructions);
             onChange(value.trim() ? `${value.trimEnd()}\n\n${prompt}` : prompt);
             setTemplateFormat(null);
             window.requestAnimationFrame(() => ref.current?.focus());
