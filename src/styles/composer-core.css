@@ -329,6 +329,13 @@
   max-width: calc(100vw - 16px);
 }
 
+@media (hover: hover) {
+  .kova-composer-projects .kova-composer-project-action:not(:disabled):hover {
+    background: var(--kova-signed-in-sidebar-active);
+    color: var(--popover-foreground);
+  }
+}
+
 .kova-composer-menu-search {
   display: flex;
   align-items: center;

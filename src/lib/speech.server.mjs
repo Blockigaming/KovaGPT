@@ -184,9 +184,7 @@ export function createSpeechHandler({
       const settings = await wait(config(auth, input));
       // Preserve the legacy handler configuration while allowing only the
       // existing server-owned catalog models for an explicit selection.
-      const modelId = liveReply
-        ? "eleven_flash_v2_5"
-        : (settings.modelId ?? "eleven_multilingual_v2");
+      const modelId = direct ? "eleven_flash_v2_5" : (settings.modelId ?? "eleven_multilingual_v2");
       if (
         settings.enabled !== true ||
         !settings.apiKey ||
