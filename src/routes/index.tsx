@@ -250,6 +250,7 @@ export const Route = createFileRoute("/")({
 });
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
+const EMPTY_PLUGIN_CONTEXTS: { id: string; label: string }[] = [];
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -379,7 +380,7 @@ function KovaGPT() {
   const pluginContexts =
     pluginSelection?.owner === userKey && pluginSelection.chat === activeId
       ? pluginSelection.value
-      : [];
+      : EMPTY_PLUGIN_CONTEXTS;
   const pluginContext = pluginContexts[0] ?? null;
   const [pendingWorkflowSkill, setPendingWorkflowSkill] =
     useState<ConversationWorkflowSkill | null>(null);
@@ -2175,9 +2176,7 @@ function KovaGPT() {
             hostedModel: requestHostedModel,
             clientTool: activeTool,
             projectId: tempChat ? undefined : projectContext?.id,
-            connectorIds: tempChat
-              ? undefined
-              : activePluginContexts.map((plugin) => plugin.id),
+            connectorIds: tempChat ? undefined : activePluginContexts.map((plugin) => plugin.id),
             chatId: nextConvId,
             temporary: tempChat,
             temporaryContext: tempChat ? tempChatContext : undefined,
@@ -2543,6 +2542,7 @@ function KovaGPT() {
       pendingWorkflowSkill,
       projectContext,
       pluginContexts,
+      pluginContext,
       projectSelection,
       pluginSelection,
       updateNextPrompt,
@@ -3115,7 +3115,18 @@ function KovaGPT() {
           onSelectPlugin={
             tempChat
               ? undefined
-              : (value) => setPluginSelection({ owner: userKey, chat: activeId, value })
+              : (plugin) =>
+                  setPluginSelection((previous) => {
+                    const selected =
+                      previous?.owner === userKey && previous.chat === activeId
+                        ? previous.value
+                        : [];
+                    return {
+                      owner: userKey,
+                      chat: activeId,
+                      value: [...selected.filter((item) => item.id !== plugin.id), plugin],
+                    };
+                  })
           }
         />
       </Suspense>

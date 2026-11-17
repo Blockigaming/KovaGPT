@@ -683,9 +683,7 @@ export const Route = createFileRoute("/api/chat")({
               connectorIds,
             } = ingress;
             const selectedConnectorIds = [
-              ...new Set(
-                connectorIds?.length ? connectorIds : connectorId ? [connectorId] : [],
-              ),
+              ...new Set(connectorIds?.length ? connectorIds : connectorId ? [connectorId] : []),
             ];
             const hasSelectedConnectors = selectedConnectorIds.length > 0;
             // Lockdown Mode is a server-enforced account boundary. Explicit
@@ -1748,12 +1746,11 @@ export const Route = createFileRoute("/api/chat")({
               ? customKova.filterTools(connectionTools)
               : connectionTools;
             const availableTools = hasSelectedConnectors
-              ? permittedTools.filter(
-                  ({ function: { name } }) =>
-                    selectedConnectorIds.some(
-                      (id) =>
-                        READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
-                    ),
+              ? permittedTools.filter(({ function: { name } }) =>
+                  selectedConnectorIds.some(
+                    (id) =>
+                      READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
+                  ),
                 )
               : permittedTools;
             const googleBinding = googleContext?.binding ?? undefined;
@@ -2517,9 +2514,7 @@ export const Route = createFileRoute("/api/chat")({
               // planning is finished. Tool results remain, but untrusted resource
               // bodies never participate in deciding which connector reads to run.
               messages:
-                workflowSkill ||
-                freeConnectorBudget ||
-                (hasSelectedConnectors && !enableTools)
+                workflowSkill || freeConnectorBudget || (hasSelectedConnectors && !enableTools)
                   ? [...finalMessages, ...finalToolMessages]
                   : workingMessages,
               stream: true,

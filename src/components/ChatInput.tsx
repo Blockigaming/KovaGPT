@@ -2059,15 +2059,16 @@ export function ChatInput({
                           aria-hidden="true"
                         />
                       ) : attachment.status === "failed" ? (
-                        <AlertCircle className="spec400-attachment-image-state" aria-hidden="true" />
+                        <AlertCircle
+                          className="spec400-attachment-image-state"
+                          aria-hidden="true"
+                        />
                       ) : null}
                     </>
                   ) : attachment.status === "uploading" ? (
                     <Loader2 className="animate-spin" aria-hidden="true" />
                   ) : attachment.status === "failed" ? (
                     <AlertCircle aria-hidden="true" />
-                  ) : attachment.kind === "image" ? (
-                    <ImageIcon aria-hidden="true" />
                   ) : (
                     <FileText aria-hidden="true" />
                   )}
@@ -2201,9 +2202,7 @@ export function ChatInput({
           <div className="spec400-plugin-tokens" role="group" aria-label="Selected plugins">
             {pluginContexts.map((plugin) => {
               const logo =
-                PLUGIN_BRAND_ASSET_URLS[
-                  plugin.id === "outlook-calendar" ? "outlook" : plugin.id
-                ];
+                PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id];
               return (
                 <button
                   key={plugin.id}
