@@ -1,6 +1,6 @@
 # Desktop → mobile interface relationships
 
-Measured November 17, 2026. Status: mobile equivalence implemented; rendered verification pending. The frozen desktop baseline passed 32/32 checks before these corrections.
+Measured November 17, 2026. Status: mobile equivalence implemented. The corrected page geometry and mobile interactions have passed; exact revision checks are linked below and on PR #717. The frozen desktop baseline passed 32/32 checks before these corrections.
 
 ## Owner direction
 
@@ -192,6 +192,14 @@ The original audit attempt built successfully but could not install Playwright 1
 Phone-width sweep: the empty composer remained 156 px high with a 68 px text area at 320, 390, and 430 px. The greeting was 28 px at 320/390 and 30.1 px at 430, confirming viewport-dependent type scaling rather than a constant relationship.
 
 Visual inspection of the baseline desktop home, phone home, and phone Library captures confirms these are real rendered states. Library and Connections move their visible title into the phone top bar; their in-content H1 becomes a 1 × 1 screen-reader-only node. **Do not compare that hidden H1 with the desktop title as though it were visible.** Likewise, transcript `.prose-chat` index 0 is the user's bubble; index 1 is the assistant response. Settings heading measurements require a visibility-aware follow-up rather than trusting bounding rectangles alone.
+
+## Implemented geometry and interaction results
+
+[Verification run at bcb488b](https://github.com/Blockigaming/KovaGPT/actions/runs/44198868289): all 48 routed page measurements passed, including the unchanged desktop contract and phone/landscape proportional assertions. 83 existing mobile behavior checks passed; five viewport-inapplicable cases were skipped. The build, lint, TypeScript and 76 focused unit regressions also passed.
+
+The rich-output comparisons passed their typography, code inset and local-overflow assertions. Seven model-menu checks sampled an in-progress entrance scale (painted widths 278.6–281.3 versus the 282 target); the test now polls the unchanged 282 target before comparing bounds. The latest check on [PR #717](https://github.com/Blockigaming/KovaGPT/pull/717) records the final run for this correction. It does not relax the dimensions or remove the containment/focus assertions.
+
+Production is not changed by this branch. Full CI also reports a separate existing high-severity Picomatch dependency advisory, [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf). As checked November 17, the advisory covers published releases through 4.0.7 and lists no patched version; npm confirms 4.0.7 is current and 4.0.8 is not published. No audit threshold, dependency version or production setting was changed to suppress that failure.
 
 ## Remaining evidence needed before “every difference” is complete
 
