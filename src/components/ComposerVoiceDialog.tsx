@@ -156,6 +156,7 @@ export function ComposerVoiceDialog({
   const transcriptId = useId();
   const voicePickerId = useId();
   const voiceHelpId = useId();
+  const [realtimeFailed, setRealtimeFailed] = useState(false);
   const [capabilities, setCapabilities] = useState<VoiceCapabilities | null>(null);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -325,6 +326,7 @@ export function ComposerVoiceDialog({
     closing.current = !open;
     releaseResources();
     setCapabilities(null);
+    setRealtimeFailed(false);
     voiceCatalog.current = [];
     selectedVoice.current = "";
     defaultVoice.current = "";
@@ -752,11 +754,6 @@ export function ComposerVoiceDialog({
     stream.current = null;
   };
 
-  const [realtimeFailed, setRealtimeFailed] = useState(false);
-  useLayoutEffect(() => {
-    setRealtimeFailed(false);
-  }, [open, userId, contextKey]);
-
   const startRecording = async (continuing = false) => {
     if (!userId || !capabilities?.configured || !capabilities.stt || phaseRef.current !== "idle")
       return;
@@ -1183,7 +1180,14 @@ export function ComposerVoiceDialog({
 
   if (open && mode === "voice" && checking && autoStartVoice) return null;
 
-  if (open && mode === "voice" && capabilities?.realtime && !realtimeFailed && conversationReady && !disabled) {
+  if (
+    open &&
+    mode === "voice" &&
+    capabilities?.realtime &&
+    !realtimeFailed &&
+    conversationReady &&
+    !disabled
+  ) {
     const { colors } = preferredVoiceGlow(userId);
     const glowStyle = colors.length
       ? ({
