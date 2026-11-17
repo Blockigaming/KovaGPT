@@ -54,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(gh api repos/Blockigaming/KovaGPT/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
-          git diff --exit-code 9b8ca21d2cebabcc98f98c747f086863055c314a HEAD -- . \
+          git diff --exit-code 83122165b22d4c7075c4a4cfe559d8a5f4f98ef6 HEAD -- . \
             ':!.github/workflows/release-pr716-once.yml' \
             ':!scripts/azure/release-pr716-once.mjs' \
             ':!tests/unit/release-pr716-once.test.mjs'

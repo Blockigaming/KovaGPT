@@ -147,7 +147,7 @@ test("unqualified image and source cannot cause any Azure write", async () => {
 test("one-time build is main-only, respects Reader authority and pins the reviewed application tree", () => {
   const workflow = readFileSync(".github/workflows/release-pr716-once.yml", "utf8");
   assert.match(workflow, /github.event_name == 'push'.*github.ref == 'refs\/heads\/main'/);
-  assert.match(workflow, /git diff --exit-code 9b8ca21d2cebabcc98f98c747f086863055c314a HEAD/);
+  assert.match(workflow, /git diff --exit-code 83122165b22d4c7075c4a4cfe559d8a5f4f98ef6 HEAD/);
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /source_sha="\$GITHUB_SHA"/);
   assert.match(workflow, /release-pr716-once\.mjs preflight/);
