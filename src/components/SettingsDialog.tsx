@@ -165,9 +165,9 @@ const SETTINGS_SEARCH_STOP_WORDS = new Set([
   "can",
   "change",
   "do",
-  "get",
   "find",
   "for",
+  "get",
   "how",
   "i",
   "is",
@@ -175,10 +175,10 @@ const SETTINGS_SEARCH_STOP_WORDS = new Set([
   "off",
   "on",
   "please",
-  "turn",
-  "want",
   "the",
   "to",
+  "turn",
+  "want",
   "where",
 ]);
 
@@ -202,7 +202,8 @@ const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
   "cloud-browser": "browser website allow block approvals automation permissions",
   family: "family invite invitations members shared plan household",
   location: "location city timezone region",
-  billing: "upgrade downgrade cancel refund receipt credit card pricing plans free plus pro team subscription membership stop paying",
+  billing:
+    "upgrade downgrade cancel refund receipt credit card pricing plans free plus pro team subscription membership stop paying",
   report: "bug broken error issue feedback",
   help: "support documentation faq contact question",
   about: "version credits legal terms privacy",
