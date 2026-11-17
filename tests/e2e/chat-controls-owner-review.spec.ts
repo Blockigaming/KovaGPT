@@ -120,6 +120,8 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
   });
   await page.goto("/");
   await waitForKovaHydration(page);
+  const sidebar = await revealSidebar(page);
+  await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
   const offer = page
     .getByRole("button", { name: "Free offer: 50% off your first month", exact: true })
     .filter({ visible: true });
