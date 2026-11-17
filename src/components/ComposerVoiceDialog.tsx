@@ -752,6 +752,11 @@ export function ComposerVoiceDialog({
     stream.current = null;
   };
 
+  const [realtimeFailed, setRealtimeFailed] = useState(false);
+  useLayoutEffect(() => {
+    setRealtimeFailed(false);
+  }, [open, userId, contextKey]);
+
   const startRecording = async (continuing = false) => {
     if (!userId || !capabilities?.configured || !capabilities.stt || phaseRef.current !== "idle")
       return;
@@ -769,7 +774,7 @@ export function ComposerVoiceDialog({
       voiceId: selectedVoice.current,
     };
     if (!isCurrent(scope)) return;
-    const realtime = mode === "voice" && capabilities.realtime;
+    const realtime = mode === "voice" && capabilities.realtime && !realtimeFailed;
     if (
       !realtime &&
       (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia)
@@ -819,6 +824,12 @@ export function ComposerVoiceDialog({
         if (isCurrent(scope)) await submitVoiceTurn(scope, text, true);
       } catch (cause) {
         if (isCurrent(scope) && !controller.signal.aborted) {
+          if (
+            typeof MediaRecorder !== "undefined" &&
+            !(cause instanceof Error && cause.name === "NotAllowedError")
+          ) {
+            setRealtimeFailed(true);
+          }
           failOperation(
             cause instanceof Error && cause.name === "NotAllowedError"
               ? "Allow microphone access in your browser to use Voice."
@@ -1172,7 +1183,7 @@ export function ComposerVoiceDialog({
 
   if (open && mode === "voice" && checking && autoStartVoice) return null;
 
-  if (open && mode === "voice" && capabilities?.realtime && conversationReady && !disabled) {
+  if (open && mode === "voice" && capabilities?.realtime && !realtimeFailed && conversationReady && !disabled) {
     const { colors } = preferredVoiceGlow(userId);
     const glowStyle = colors.length
       ? ({
