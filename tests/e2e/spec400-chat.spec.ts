@@ -3,8 +3,7 @@ import { fixture } from "./actual-app-fixture";
 import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
-async function expectRestingComposer(page: Page) {
-  const composer = page.locator(".spec400-composer");
+async function expectRestingComposer(page: Page, composer = page.locator(".spec400-composer")) {
   const compactDesktop = await page.evaluate(
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
   );
@@ -140,13 +139,14 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await sidebar
     .getByRole("button", { name: "Open chat Composer review chat", exact: true })
     .press("Enter");
-  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  const dock = page.locator(".spec400-composer-dock");
+  const input = dock.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect(input).toBeEnabled();
-  const compactDesktop = await expectRestingComposer(page);
+  const compactDesktop = await expectRestingComposer(page, dock.locator(".spec400-composer"));
   await input.fill("First line");
   await input.press(compactDesktop ? "Shift+Enter" : "Enter");
   await expect(input).toHaveValue("First line\n");
-  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+  await expect(dock.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   const panel = page.locator(".kova-conversation-outputs");
   await expect(panel.getByText("Chat instructions and context", { exact: true })).toHaveCount(0);
