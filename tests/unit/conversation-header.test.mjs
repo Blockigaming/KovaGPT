@@ -18,6 +18,7 @@ function load(path, modules = {}) {
   });
   return exports;
 }
+const starterTemplates = load("src/lib/chat-output-templates.ts");
 const artifacts = load("src/components/artifact-utils.ts");
 const urls = load("src/lib/safe-url.ts");
 const imageUrls = load("src/lib/safe-image-url.ts", { "./safe-url.ts": urls });
@@ -140,8 +141,8 @@ function fixture(overrides = {}, desktop = true) {
         return states[i];
       },
     },
-    "react-dom": { createPortal: (node) => node },
-    "./NovaLogo": { NovaLogo: "NovaLogo" },
+    "./ChatActivityPlugins": { ChatActivityPlugins: "ChatActivityPlugins" },
+    "@/lib/chat-output-templates": starterTemplates,
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "lucide-react": primitives([
       "ArrowLeft",
@@ -174,7 +175,12 @@ function fixture(overrides = {}, desktop = true) {
       useUser: () => ({ user: { id: "owner" }, isLoaded: true, isSignedIn: true }),
     },
     "@/lib/conversation-sources": {
-      conversationSources: () => ({ web: [], memory: [], attachments: [], browser: [] }),
+      conversationSources: (conversation) => ({
+        web: [],
+        memory: overrides.sourceMemory ?? [],
+        attachments: conversation.messages.flatMap((message) => message.attachments ?? []),
+        browser: [],
+      }),
     },
     "@/hooks/use-mobile": { useLayout: () => ({ isDesktop: desktop }) },
     "./MobileBottomSheet": { MobileBottomSheet: "MobileBottomSheet" },
@@ -218,11 +224,9 @@ function fixture(overrides = {}, desktop = true) {
     signedIn: true,
     userTier: "plus",
     onShare: () => calls.push(["share"]),
-    onRename: (title) => calls.push(["rename", title]),
-    onTogglePin: () => calls.push(["pin"]),
-    onArchive: () => calls.push(["archive"]),
-    onDelete: () => calls.push(["delete"]),
-    onManagePlugins: () => calls.push(["plugins"]),
+    onCreateOutput: (format) => calls.push(["output", format]),
+    onAddFiles: (trigger) => calls.push(["files", trigger]),
+    onOpenLibrary: (trigger) => calls.push(["library", trigger]),
     ...overrides,
   };
   return {
@@ -245,12 +249,9 @@ test("desktop and compact headers contain Share and Activity only", () => {
     const f = fixture({ compact });
     const root = f.render();
     const actions = nodes(root).find((node) => node.props["aria-label"] === "Conversation actions");
-    assert.deepEqual(
-      nodes(actions.props.children)
-        .filter((node) => node.type === "button" && node.props["aria-label"])
-        .map((node) => node.props["aria-label"]),
-      ["Share chat", "Activity"],
-    );
+    const [share, activity] = actions.props.children;
+    assert.equal(share.props["aria-label"], "Share chat");
+    assert.equal(activity.props.children[0].props.children.props["aria-label"], "Activity");
     assert.equal(nodes(root).filter((node) => node.type === "DropdownMenuContent").length, 0);
     nodes(actions)
       .find((node) => node.props["aria-label"] === "Share chat")
@@ -259,22 +260,15 @@ test("desktop and compact headers contain Share and Activity only", () => {
   }
 });
 
-test("Activity uses current chat data, separates inputs, and hides inactive browser rows", () => {
+test("Activity shows Outputs and Sources before any content exists", () => {
   const empty = fixture();
   const root = empty.render();
   const activity = nodes(root).find((node) => node.type === "PopoverContent");
   assert.equal(activity.props["aria-label"], "Activity");
-  assert.match(text(activity), /No outputs yet/);
-  const sourcePanel = nodes(activity).find(
-    (node) => node.type === "ConversationSourcesPanel" && !node.props.browserOnly,
-  );
-  assert.equal(sourcePanel.props.conversation, chat);
-  assert.equal(sourcePanel.props.activeBrowserOnly, true);
-  assert.equal(sourcePanel.props.separateInputs, true);
+  assert.match(text(activity), /Outputs.*Create an output.*Sources.*Attach files or connect apps/);
   const browserPanel = nodes(activity).find(
     (node) => node.type === "ConversationSourcesPanel" && node.props.browserOnly,
   );
-  assert.equal(browserPanel.props.showActivity, true);
   assert.equal(browserPanel.props.conversation, chat);
   assert.equal(
     nodes(activity).filter((node) => node.props.className === "kova-output-row").length,
@@ -313,21 +307,31 @@ test("temporary and signed-out Share requests explain restrictions without publi
   }
 });
 
-test("context handoff closes Activity and preserves its visible return-focus target", () => {
-  const opened = [];
-  const f = fixture({ onOpenContext: (target) => opened.push(target) });
-  let root = f.render();
+test("Activity keeps a collapsed section discoverable and hands off Library and outputs", () => {
+  const f = fixture();
+  const getButton = (label) =>
+    nodes(f.render()).find(
+      (node) =>
+        node.type === "button" &&
+        (node.props["aria-label"] === label || text(node).trim() === label),
+    );
   const target = { id: "activity" };
-  nodes(root).find(
-    (node) => node.type === "button" && node.props["aria-label"] === "Activity",
-  ).props.ref.current = target;
-  nodes(root)
-    .find((node) => node.type === "button" && text(node) === "Chat instructions and context")
-    .props.onClick({ currentTarget: { id: "closing-row" } });
-  root = f.render();
-  assert.equal(nodes(root).find((node) => node.type === "Popover").props.open, false);
+  getButton("Activity").props.ref.current = target;
+  getButton("Outputs").props.onClick();
+  assert.equal(getButton("Outputs").props["aria-expanded"], false);
+  assert.equal(
+    getButton("Outputs").props.children[1].props.className,
+    "kova-activity-chevron is-collapsed",
+  );
+  getButton("Create an output").props.onClick();
+  assert.equal(getButton("Create site"), undefined);
+  getButton("Create spreadsheet").props.onClick();
+  assert.deepEqual(f.calls, [["output", "xlsx"]]);
+  getButton("Add source").props.onClick();
+  getButton("Add from Library").props.onClick();
+  assert.deepEqual(f.calls.at(-1), ["library", target]);
   let prevented = false;
-  nodes(root)
+  nodes(f.render())
     .find((node) => node.type === "PopoverContent")
     .props.onCloseAutoFocus({
       preventDefault() {
@@ -335,7 +339,33 @@ test("context handoff closes Activity and preserves its visible return-focus tar
       },
     });
   assert.equal(prevented, true);
-  assert.deepEqual(opened, [target]);
+});
+
+test("each Office type has 100 distinct starters and a real export format", () => {
+  for (const [format, titles] of Object.entries(starterTemplates.chatOutputTemplates)) {
+    assert.equal(titles.length, 100);
+    assert.equal(new Set(titles).size, 100);
+    assert.equal(
+      new Set(titles.map((title) => starterTemplates.chatOutputPrompt(format, title))).size,
+      100,
+    );
+    const content = `# Sample ${format}\n\nStarter content`;
+    const result = conversationOutputs({
+      ...chat,
+      messages: [
+        { id: "user", role: "user", content: "```kova-" + format + "\n" + content + "\n```" },
+        {
+          id: "answer",
+          role: "assistant",
+          content: "```kova-" + format + "\n" + content + "\n```",
+        },
+      ],
+    });
+    assert.equal(result.length, 1);
+    assert.equal(result[0].kind, "office");
+    assert.equal(result[0].format, format);
+    assert.equal(result[0].content, content);
+  }
 });
 
 test("attachment preview returns focus to the visible Activity button", () => {
@@ -498,7 +528,7 @@ test("temporary settings are gated on both headers and callback, and top avatar 
 });
 
 test("memory inspection closes the popover and restores the Activity trigger", () => {
-  const f = fixture();
+  const f = fixture({ sourceMemory: [{}] });
   let root = f.render();
   const target = { id: "outputs" };
   nodes(root).find(
@@ -525,7 +555,7 @@ test("unbound browser activity opens an honest detail dialog and restores Activi
     (n) => n.type === "button" && n.props["aria-label"] === "Activity",
   ).props.ref.current = target;
   nodes(root)
-    .find((n) => n.type === "ConversationSourcesPanel" && !n.props.browserOnly)
+    .find((n) => n.type === "ConversationSourcesPanel" && n.props.browserOnly)
     .props.onOpenBrowser({ id: "event", label: "Recorded sample" });
   root = f.render();
   assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
@@ -561,7 +591,7 @@ test("Free recorded browser history never grants sample takeover or claims a liv
   });
   let root = f.render();
   const sources = nodes(root).find(
-    (n) => n.type === "ConversationSourcesPanel" && !n.props.browserOnly,
+    (n) => n.type === "ConversationSourcesPanel" && n.props.browserOnly,
   );
   assert.equal(sources.props.browserPreview, undefined);
   sources.props.onOpenBrowser({ id: "sample", label: "Recorded event" });

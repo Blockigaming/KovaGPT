@@ -1,3 +1,6 @@
+import { ChatOutputTemplates } from "./ChatOutputTemplates";
+import { chatOutputPrompt, type ChatOutputFormat } from "@/lib/chat-output-templates";
+import { Grid2X2, List as ListIcon } from "lucide-react";
 import {
   AttachmentPreviewAsk,
   AttachmentPreviewFileInfo,
@@ -74,6 +77,8 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  useImperativeHandle,
+  type Ref,
 } from "react";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
@@ -199,7 +204,14 @@ const subscribeToOnlineStatus = (onStoreChange: () => void) => {
 const getOnlineStatusSnapshot = () => navigator.onLine !== false;
 const getServerOnlineStatusSnapshot = () => true;
 
+export type ChatActivityComposer = {
+  addFiles: (trigger: HTMLElement | null) => void;
+  openLibrary: (trigger: HTMLElement | null) => void;
+  openTemplates: (format: ChatOutputFormat) => void;
+};
+
 export function ChatInput({
+  activityComposerRef,
   value,
   onChange,
   onSubmit,
@@ -250,6 +262,7 @@ export function ChatInput({
   onVoiceModeChange,
   onVoiceSubmit,
 }: {
+  activityComposerRef?: Ref<ChatActivityComposer>;
   value: string;
   onChange: (v: string) => void;
   onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
@@ -428,6 +441,9 @@ export function ChatInput({
   );
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryGrid, setLibraryGrid] = useState(false);
+  const [templateFormat, setTemplateFormat] = useState<ChatOutputFormat | null>(null);
+  const libraryReturnFocus = useRef<HTMLElement | null>(null);
   const [contextOpen, setContextOpen] = useState(false);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const projectTriggerRef = useRef<HTMLElement | null>(null);
@@ -455,6 +471,7 @@ export function ChatInput({
     setPlusOpen(false);
     setUtilityMenu(null);
     setLibraryOpen(false);
+    setTemplateFormat(null);
     setDrawingOpen(false);
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
@@ -1460,19 +1477,31 @@ export function ChatInput({
     );
   });
 
-  const renderRecentLibraryFiles = () => (
+  const renderRecentLibraryFiles = (picker = false) => (
     <div className="kova-composer-library" aria-label="Saved Library files">
       {recentLibraryFiles.length > 0 || !recentLibraryLoading ? (
-        <label className="kova-composer-menu-search">
-          <Search aria-hidden="true" />
-          <span className="sr-only">Search Library files</span>
-          <input
-            value={recentQuery}
-            onChange={(event) => setRecentQuery(event.target.value)}
-            placeholder="Search Library files..."
-            className="w-full bg-transparent text-sm"
-          />
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="kova-composer-menu-search flex-1">
+            <Search aria-hidden="true" />
+            <span className="sr-only">Search Library files</span>
+            <input
+              value={recentQuery}
+              onChange={(event) => setRecentQuery(event.target.value)}
+              placeholder={picker ? "Search Library" : "Search Library files..."}
+              className="w-full bg-transparent text-sm"
+            />
+          </label>
+          {picker && (
+            <button
+              type="button"
+              className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-accent"
+              aria-label={libraryGrid ? "List view" : "Grid view"}
+              onClick={() => setLibraryGrid(!libraryGrid)}
+            >
+              {libraryGrid ? <ListIcon aria-hidden="true" /> : <Grid2X2 aria-hidden="true" />}
+            </button>
+          )}
+        </div>
       ) : null}
       {recentLibraryLoading ? (
         <div className="px-3 py-3 text-sm text-muted-foreground">Loading recent files…</div>
@@ -1494,38 +1523,46 @@ export function ChatInput({
           {recentQuery.trim() ? "No matching files." : "No saved files yet."}
         </div>
       ) : (
-        <div className="max-h-64 overflow-y-auto p-1">
-          {visibleRecentLibraryFiles.map((item) => {
-            const name = item.fileName || item.title;
-            return (
-              <button
-                data-kova-button-shape="preserve"
-                key={item.id}
-                type="button"
-                disabled={disabled || isStreaming}
-                onClick={() => attachLibraryFile(item)}
-                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {item.fileType?.startsWith("image/") ? (
-                  <ImageIcon className="h-4 w-4 shrink-0 text-pink-400" />
-                ) : (
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{name}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {[
-                      item.fileType || "Library file",
-                      item.projectName,
-                      item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+        <div
+          className={
+            picker
+              ? `max-h-[55dvh] overflow-y-auto p-1 ${libraryGrid ? "grid grid-cols-2 gap-2 sm:grid-cols-3" : "divide-y divide-border"}`
+              : "max-h-64 overflow-y-auto p-1"
+          }
+        >
+          {(picker ? visibleRecentLibraryFiles : visibleRecentLibraryFiles.slice(0, 12)).map(
+            (item) => {
+              const name = item.fileName || item.title;
+              return (
+                <button
+                  data-kova-button-shape="preserve"
+                  key={item.id}
+                  type="button"
+                  disabled={disabled || isStreaming}
+                  onClick={() => attachLibraryFile(item)}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {item.fileType?.startsWith("image/") ? (
+                    <ImageIcon className="h-4 w-4 shrink-0 text-pink-400" />
+                  ) : (
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{name}</span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {[
+                        item.fileType || "Library file",
+                        item.projectName,
+                        item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
                   </span>
-                </span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            },
+          )}
         </div>
       )}
     </div>
@@ -1565,6 +1602,7 @@ export function ChatInput({
     const openLibrary = () => {
       closeActions();
       if (!requireFileAccount(trigger)) return;
+      libraryReturnFocus.current = null;
       setLibraryOpen(true);
       onRecentLibraryRetry?.();
     };
@@ -1731,18 +1769,20 @@ export function ChatInput({
     );
   };
 
-  useEffect(() => {
-    const openFromHeader = (event: Event) => {
-      const detail = (event as CustomEvent<{ trigger?: HTMLElement }>).detail;
-      contextTriggerRef.current = detail?.trigger ?? null;
-      contextReturnToInputRef.current = false;
-      contextSwitchingDialogRef.current = false;
-      contextReturnUrlRef.current = window.location.href;
-      setContextOpen(true);
-    };
-    window.addEventListener("kova-open-message-context", openFromHeader);
-    return () => window.removeEventListener("kova-open-message-context", openFromHeader);
-  }, []);
+  useImperativeHandle(activityComposerRef, () => ({
+    addFiles(trigger) {
+      if (!disabled && !isStreaming && requireFileAccount(trigger)) fileRef.current?.click();
+    },
+    openLibrary(trigger) {
+      if (disabled || isStreaming || !requireFileAccount(trigger)) return;
+      libraryReturnFocus.current = trigger;
+      setLibraryOpen(true);
+      onRecentLibraryRetry?.();
+    },
+    openTemplates(format) {
+      if (!disabled && !isStreaming && !activeVoiceMode) setTemplateFormat(format);
+    },
+  }));
 
   const attachmentState = (attachment: PendingAttachment) =>
     attachment.status === "failed"
@@ -1878,6 +1918,22 @@ export function ChatInput({
         <p role="status" className="spec400-connection-status">
           Offline. Your draft is preserved. Reconnect to send.
         </p>
+      )}
+      {templateFormat && !isStreaming && !disabled && !activeVoiceMode && (
+        <ChatOutputTemplates
+          key={templateFormat}
+          format={templateFormat}
+          onClose={() => {
+            setTemplateFormat(null);
+            ref.current?.focus();
+          }}
+          onChoose={(template) => {
+            const prompt = chatOutputPrompt(templateFormat, template);
+            onChange(value.trim() ? `${value.trimEnd()}\n\n${prompt}` : prompt);
+            setTemplateFormat(null);
+            window.requestAnimationFrame(() => ref.current?.focus());
+          }}
+        />
       )}
       <div
         ref={composerAnchorRef}
@@ -2762,10 +2818,13 @@ export function ChatInput({
       </Dialog>
       <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>
         <DialogContent
-          className="sm:max-w-lg"
+          className="sm:max-w-2xl rounded-[24px]"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            ref.current?.focus();
+            const target = libraryReturnFocus.current;
+            libraryReturnFocus.current = null;
+            if (target?.isConnected) target.focus();
+            else ref.current?.focus();
           }}
         >
           <DialogHeader>
@@ -2790,7 +2849,7 @@ export function ChatInput({
             </button>
           ) : null}
           {user ? (
-            renderRecentLibraryFiles()
+            renderRecentLibraryFiles(true)
           ) : (
             <SignInButton mode="modal">
               <button type="button" className="kova-library-sign-in">

@@ -16,6 +16,7 @@ export function ConversationSourcesPanel({
   showActivity,
   activeBrowserOnly = false,
   separateInputs = false,
+  hideSourcesHeading = false,
   browserOnly = false,
   hideBrowser = false,
 }: {
@@ -24,6 +25,7 @@ export function ConversationSourcesPanel({
   hideBrowser?: boolean;
   activeBrowserOnly?: boolean;
   separateInputs?: boolean;
+  hideSourcesHeading?: boolean;
   browserPreview?: ReactNode;
   browserTabCount?: number;
   conversation: Conversation;
@@ -49,6 +51,7 @@ export function ConversationSourcesPanel({
         }
         activeBrowserOnly={activeBrowserOnly}
         separateInputs={separateInputs}
+        hideSourcesHeading={hideSourcesHeading}
         browserPreview={browserPreview}
         browserTabCount={browserTabCount}
         showActivity={showActivity}

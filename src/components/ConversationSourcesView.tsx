@@ -57,6 +57,7 @@ export function ConversationSourcesView({
   showActivity = true,
   activeBrowserOnly = false,
   separateInputs = false,
+  hideSourcesHeading = false,
 }: {
   inventory: ConversationSourceInventory;
   onOpenAttachment: (outputId: string) => void;
@@ -67,6 +68,7 @@ export function ConversationSourcesView({
   showActivity?: boolean;
   activeBrowserOnly?: boolean;
   separateInputs?: boolean;
+  hideSourcesHeading?: boolean;
 }) {
   const providers = inventory.providers ?? [];
   const latestBrowser = inventory.browser.at(-1);
@@ -84,11 +86,12 @@ export function ConversationSourcesView({
   if (!total) return null;
   return (
     <section className="kova-conversation-sources" aria-label="Conversation sources">
-      {providers.length +
-        inventory.web.length +
-        inventory.memory.length +
-        (!separateInputs ? inventory.attachments.length : 0) >
-        0 && <h2>Sources</h2>}
+      {!hideSourcesHeading &&
+        providers.length +
+          inventory.web.length +
+          inventory.memory.length +
+          (!separateInputs ? inventory.attachments.length : 0) >
+          0 && <h2>Sources</h2>}
       {providers.map((entry) => {
         const Icon = {
           github: GitBranch,

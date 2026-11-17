@@ -120,11 +120,6 @@ test("free gift offer opens a popup and selected Plus redirects directly to host
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  const sidebar = await revealSidebar(page);
-  await sidebar
-    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
-    .click();
-  await expect(page.getByRole("article", { name: "KovaGPT response", exact: true })).toBeVisible();
   const offer = page
     .getByRole("button", { name: "Free offer: 50% off your first month", exact: true })
     .filter({ visible: true });
@@ -220,9 +215,7 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
 });
 
-test("cloud browser and steps precede outputs in the borderless activity surface", async ({
-  page,
-}) => {
+test("activity shows default sections and adds recorded browser and steps", async ({ page }) => {
   await coreFixture(page, "dark", "free", {
     preserveStorageOnReload: true,
     savedMessages: [
@@ -246,28 +239,17 @@ test("cloud browser and steps precede outputs in the borderless activity surface
     .getByRole("button", { name: "Open chat Composer review chat", exact: true })
     .press("Enter");
   await expect(page.getByText("Here is the release checklist.", { exact: true })).toBeVisible();
-  if (desktop) {
-    await expect(page.locator("#chat-activity-panel")).toBeHidden();
-    await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
-  }
   const activity = page.getByRole("button", { name: "Activity", exact: true }).filter({
     visible: true,
   });
   const panel = page.locator(".kova-conversation-outputs");
-  if (desktop) {
-    await expect(activity).toHaveAttribute("aria-expanded", "true");
-    await expect(panel).toBeVisible();
-    const closeActivity = panel.getByRole("button", { name: "Close activity", exact: true });
-    await closeActivity.click();
-    await expect(panel).toBeHidden();
-    await expect(activity).toBeFocused();
-  }
+  await expect(panel).toBeHidden();
   await activity.click();
   await expect(panel).toHaveCSS("border-top-width", "0px");
-  const headings = await panel.getByRole("heading").allTextContents();
-  expect(headings.indexOf("Cloud browser")).toBeGreaterThanOrEqual(0);
-  expect(headings.indexOf("Steps")).toBeGreaterThan(headings.indexOf("Cloud browser"));
-  expect(headings.indexOf("Outputs")).toBeGreaterThan(headings.indexOf("Steps"));
+  await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Sources", exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Cloud browser", exact: true })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Steps", exact: true })).toBeVisible();
   await expect(panel.getByText("Read the supplied notes", { exact: true })).toBeVisible();
   if (!desktop) {
     const sheet = page.getByRole("dialog", { name: "Activity", exact: true });
@@ -298,10 +280,10 @@ test("cloud browser and steps precede outputs in the borderless activity surface
     const titleBox = (await title.boundingBox())!;
     const header = page.locator(".kova-topbar-inner:visible");
     const menuBox = (await header.getByRole("button", { name: "Open menu" }).boundingBox())!;
-    const offerBox = (await header.getByRole("button", { name: /Free offer/ }).boundingBox())!;
+    const shareBox = (await header.getByRole("button", { name: "Share chat" }).boundingBox())!;
     expect(titleBox.width).toBeGreaterThanOrEqual(64);
     expect(titleBox.x).toBeGreaterThanOrEqual(menuBox.x + menuBox.width);
-    expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(offerBox.x);
+    expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(shareBox.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       page.viewportSize()!.width + 1,
     );

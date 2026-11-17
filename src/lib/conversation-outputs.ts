@@ -1,3 +1,4 @@
+import { type ChatOutputFormat } from "./chat-output-templates";
 import type { Attachment, Conversation } from "./chat-store";
 import {
   detectArtifactKind,
@@ -15,6 +16,7 @@ export type ConversationOutput = {
   | { kind: "text"; content: string; downloadName: string; extracted: boolean }
   | { kind: "image"; source: string | null; downloadName: string }
   | { kind: "library"; libraryItemId: string }
+  | { kind: "office"; content: string; format: ChatOutputFormat }
   | { kind: "artifact"; content: string; artifactKind: ArtifactKind; downloadName: string }
 );
 
@@ -72,6 +74,28 @@ export function conversationOutputs(conversation: Conversation): ConversationOut
       outputs.push(attachmentOutput(attachment, message.id, index)),
     );
     if (message.role !== "assistant" || message.generationStatus || message.pendingImage) continue;
+    const officeOutputs = [
+      ...(message.content || "").matchAll(
+        /^ {0,3}(`{3,}|~{3,})kova-(docx|pptx|xlsx)[ \t]*\r?\n([\s\S]*?)^ {0,3}\1[ \t]*\r?$/gm,
+      ),
+    ].filter((match) => match[3].trim());
+    if (officeOutputs.length) {
+      officeOutputs.forEach(([, , extension, body], index) => {
+        const format = extension as ChatOutputFormat;
+        const content = body.trim();
+        const title = /^#{1,2}\s+(.+)$/m.exec(content)?.[1]?.slice(0, 120);
+        outputs.push({
+          id: `${message.id}:office:${index}`,
+          messageId: message.id,
+          kind: "office",
+          name: title || conversation.title || "Untitled output",
+          label: format.toUpperCase(),
+          content,
+          format,
+        });
+      });
+      continue;
+    }
     const kind = detectArtifactKind(message.content || "");
     if (!kind) continue;
     const blocks = kind === "writing" ? [] : extractCodeBlocks(message.content);

@@ -144,10 +144,17 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await expect(input).toHaveValue("First line\n");
   await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Activity", exact: true }).click();
-  await page.getByRole("button", { name: "Chat instructions and context", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Context", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
+  const panel = page.locator(".kova-conversation-outputs");
+  await expect(panel.getByText("Chat instructions and context", { exact: true })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Create an output", exact: true }).first().click();
+  await expect(panel.getByRole("button", { name: "Create site" })).toHaveCount(0);
+  await panel.getByRole("button", { name: "Create document", exact: true }).click();
+  const templates = page.getByRole("region", { name: "document templates" });
+  await expect(templates).toBeVisible();
+  await expect(templates.locator(".kova-template-card")).toHaveCount(100);
   await expect(input).toHaveValue("First line\n");
+  await templates.getByRole("button", { name: "Design Report", exact: true }).click();
+  await expect(input).toHaveValue(/^First line\n\nCreate a document using the Design Report/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
     path: info.outputPath("conversation.png"),

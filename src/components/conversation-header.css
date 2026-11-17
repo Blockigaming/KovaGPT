@@ -539,29 +539,13 @@
 .kova-conversation-outputs h2:first-child {
   margin-top: 0;
 }
-.kova-activity-context {
-  display: flex;
-  min-height: 44px;
-  margin-top: 16px;
-  font-size: 13px;
-  color: var(--muted-foreground);
-  text-align: left;
-}
 .kova-conversation-outputs .kova-browser-card {
   border-radius: 16px;
   overflow: hidden;
 }
 
-/* Activity is a single borderless surface; browser and steps lead the inventory. */
 .kova-conversation-outputs {
   border: 0;
-  padding: 16px;
-}
-.kova-activity-steps {
-  margin-block: 4px 16px;
-}
-.kova-activity-steps .kova-activity-list {
-  margin-block: 8px 0;
 }
 .kova-conversation-actions .kova-conversation-icon {
   border: 0;
@@ -625,41 +609,117 @@
   outline-offset: 2px;
   border-radius: 6px;
 }
-@media (min-width: 1024px) {
-  .kova-chat-main:has(#chat-activity-panel) {
-    --activity-width: clamp(264px, 26vw, 352px);
-    position: relative;
-    padding-inline-end: var(--activity-width);
+.kova-conversation-actions .kova-conversation-share {
+  border: 0;
+  min-width: 36px;
+  padding: 0;
+}
+.kova-conversation-actions .kova-conversation-icon {
+  border-radius: 12px;
+}
+.kova-conversation-outputs {
+  border-radius: 20px;
+  padding: 12px 20px;
+}
+.dark .kova-conversation-outputs:not(.kova-conversation-outputs-touch) {
+  background: #2f2f2f;
+}
+.kova-activity-inventory + .kova-activity-inventory,
+.kova-activity-inventory + .kova-conversation-sources,
+.kova-conversation-sources + .kova-activity-inventory {
+  border-top: 1px solid var(--border);
+  margin-top: 7px;
+  padding-top: 7px;
+}
+.kova-activity-inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kova-activity-inventory .kova-activity-section-toggle {
+  min-height: 36px;
+  justify-content: flex-start;
+  width: auto;
+  color: var(--foreground);
+  font-size: 15px;
+  gap: 6px;
+}
+.kova-activity-inventory .kova-activity-chevron {
+  opacity: 0;
+}
+.kova-activity-inventory .kova-activity-section-toggle:hover .kova-activity-chevron,
+.kova-activity-inventory .kova-activity-section-toggle:focus-visible .kova-activity-chevron,
+.kova-activity-inventory .kova-activity-chevron.is-collapsed {
+  opacity: 1;
+}
+@media (hover: none) {
+  .kova-activity-inventory .kova-activity-chevron {
+    opacity: 1;
   }
+}
+.kova-activity-add {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  color: var(--muted-foreground);
+}
+.kova-activity-add:hover,
+.kova-activity-add[aria-expanded="true"],
+.kova-activity-submenu > button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-activity-add:disabled,
+.kova-activity-submenu > button:disabled {
+  opacity: 0.5;
+}
+.kova-activity-add svg,
+.kova-activity-submenu > button svg {
+  width: 18px;
+  height: 18px;
+}
+.kova-activity-placeholder {
+  min-height: 40px;
+  text-align: left;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.kova-activity-placeholder:hover:not(:disabled) {
+  color: var(--foreground);
+}
+.kova-activity-submenu {
+  margin-block: 4px;
+  margin-inline-start: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--popover) 85%, var(--background));
+  padding: 6px;
+}
+.kova-activity-submenu > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px;
+  padding-inline: 10px;
+  text-align: left;
+  font-size: 14px;
+}
+.kova-activity-inventory .kova-conversation-sources {
+  border: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
 
-  #chat-activity-dock:has(#chat-activity-panel) {
-    position: absolute;
-    inset: 54px 0 0 auto;
-    width: var(--activity-width);
+@media (any-pointer: coarse) {
+  .kova-activity-add,
+  .kova-activity-inventory .kova-activity-section-toggle {
+    min-height: 44px;
   }
-
-  .kova-conversation-outputs.kova-inline-activity {
-    width: 100%;
-    height: 100%;
-    max-height: none;
-    max-width: none;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: var(--background);
-    color: var(--foreground);
-  }
-
-  .kova-inline-activity > header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .kova-inline-activity > header h2 {
-    flex: 1;
-    margin: 0;
-    color: inherit;
+  .kova-activity-add {
+    min-width: 44px;
   }
 }
