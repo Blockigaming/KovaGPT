@@ -33,6 +33,13 @@ for (const state of states) {
       else await expect(page.locator(".kova-greeting h1")).toBeVisible();
     } else await expect(page.locator("main#main-content")).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+    if (info.project.name === "desktop-1440" && state.name !== "settings") {
+      // Route entry can briefly scale the whole shell. Measure the settled
+      // frame, not an intermediate transform during the entrance animation.
+      await expect
+        .poll(async () => (await page.locator(".kova-sidebar").boundingBox())?.width)
+        .toBe(280);
+    }
     const data = await page.evaluate(() => {
       const selectors = [
         ".kova-greeting h1",
@@ -191,6 +198,17 @@ for (const state of states) {
     if (state.name === "connections") {
       unchanged(".spec400-plugin-card", ["padding", "radius", "gap", "display"]);
       expect(row(".spec400-plugin-grid").columns.split(" ")).toHaveLength(1);
+    }
+    if (state.name === "settings") {
+      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS("font-size", "28px");
+      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS(
+        "line-height",
+        "33.6px",
+      );
+    }
+    if (state.name === "tasks") {
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "28px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "36px");
     }
     if (["library", "projects", "connections", "images"].includes(state.name)) {
       unchanged(".kova-page-title", ["font", "line", "weight"]);

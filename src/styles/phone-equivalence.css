@@ -103,6 +103,10 @@
     padding-inline: calc(16px * 0.8);
   }
 
+  .kova-assistant .kova-response-output[data-output-kind="text"] .kova-response-output-content {
+    padding-inline: 16px;
+  }
+
   /* Page titles stay in the page, at their own desktop size. The compact
      navigation label remains a navigation control, not a replacement H1. */
   .kova-phone-workspace
@@ -118,23 +122,63 @@
     white-space: normal !important;
   }
 
+  .kova-phone-workspace .kova-directory {
+    --page-title-size: var(--layout-title-size);
+    --page-title-line: var(--layout-title-line);
+  }
+
+  .kova-phone-workspace .kova-core-page.kova-file-directory {
+    --page-title-size: 30px;
+    --page-title-line: 40px;
+  }
+
+  .kova-phone-workspace .kova-core-page.kova-file-directory.spec400-management {
+    --page-title-size: 28px;
+    --page-title-line: 36px;
+  }
+
   .kova-phone-workspace[data-ui="modern"] .kova-page-header .kova-page-title,
+  .kova-phone-workspace[data-ui="modern"] .kova-core-page .kova-page-header .kova-page-title {
+    font-size: var(--page-title-size, 30px);
+    line-height: var(--page-title-line, 1.25);
+  }
+
   .kova-phone-workspace main #scheduled-tasks-title {
     font-size: 28px;
     line-height: 36px;
   }
 
-  .kova-phone-workspace[data-ui="modern"] .kova-page-header #apps-title {
-    font-size: 30px;
-    line-height: 1.25;
+  .kova-phone-workspace[data-ui="modern"] .kova-page-header {
+    gap: 16px 24px;
+    margin-block-end: 8px;
+    padding-block-end: 0;
+    border-block-end: 0;
   }
 
-  .kova-images-workspace .spec400-images .kova-page-title {
+  .kova-phone-workspace[data-ui="modern"] .spec400-library > .kova-page-header {
+    gap: 20px;
+    margin-block-end: 0;
+  }
+
+  .kova-phone-workspace[data-ui="modern"] .spec400-projects > .kova-page-header {
+    margin-block-end: 0;
+  }
+
+  .kova-phone-workspace .spec400-page-header {
+    gap: 24px;
+    margin-block-end: 32px;
+  }
+
+  .kova-images-workspace [data-ui-reference="chatgpt.images.gallery"] #images-title {
     font-size: 32px;
     line-height: 38px;
   }
 
-  .kova-settings-route section.kova-settings-page .kova-settings-content-header h2 {
+  .kova-settings-route
+    section.kova-settings-page
+    .kova-settings-content
+    .kova-settings-content-header
+    h2 {
     font-size: 28px;
     line-height: 1.2;
   }
@@ -145,7 +189,7 @@
     padding-inline: max(32px, var(--safe-left)) max(32px, var(--safe-right));
   }
 
-  .kova-phone-workspace .kova-core-page.kova-file-directory .kova-file-filters {
+  .kova-phone-workspace .kova-core-page.kova-file-directory.spec400-management .kova-file-filters {
     flex-wrap: nowrap;
     gap: 8px;
     padding: 0;
@@ -155,7 +199,10 @@
     overflow-x: auto;
   }
 
-  .kova-phone-workspace .kova-core-page.kova-file-directory .kova-file-filters button {
+  .kova-phone-workspace
+    .kova-core-page.kova-file-directory.spec400-management
+    .kova-file-filters
+    button {
     flex: 0 0 auto;
     min-height: 44px;
     padding: 8px 12px;

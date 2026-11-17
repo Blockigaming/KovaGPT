@@ -24,9 +24,20 @@ async function openResponse(page: Page, theme: "light" | "dark") {
 
 async function typography(page: Page) {
   return page.locator(".kova-assistant-message .prose-chat").evaluate((root) => {
-    const selectors = ["p", "h1", "h2", "ul", "blockquote", "pre", "td", "th"];
+    // Kova deliberately renders a quoted output as its own Text content box.
+    const selectors = [
+      "p",
+      "h1",
+      "h2",
+      "ul",
+      '[data-output-kind="text"] .kova-response-output-content',
+      "pre",
+      "td",
+      "th",
+    ];
     return selectors.map((selector) => {
       const element = root.querySelector(selector)!;
+      if (!element) throw new Error(`Missing rendered rich content: ${selector}`);
       const style = getComputedStyle(element);
       return {
         selector,
