@@ -69,7 +69,9 @@ test("plain plan cards retain the plan name, price, features and CTA behavior", 
 
 test("shared desktop price rows top-align primary prices regardless of the tax notice", () => {
   const free = priceRow(PlanCard(props));
-  const paid = priceRow(PlanCard({ ...props, name: "Plus", price: "$16", taxNotice: true }));
+  const paid = priceRow(
+    PlanCard({ ...props, name: "Plus", price: "$16", taxNotice: "+ applicable tax" }),
+  );
   for (const row of [free, paid]) {
     assert.ok(classes(row).includes("justify-start"));
     assert.ok(!classes(row).includes("justify-end"));
