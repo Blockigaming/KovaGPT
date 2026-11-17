@@ -57,7 +57,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       // Keep ambiguous periods fail-closed; expired local status must reach the
       // authoritative Stripe scan instead of becoming a permanent stale block.
       if (hasStillActiveSubscription(subscriptionHistory ?? [])) {
-        return { error: "You already have an active subscription. Manage it from Billing." };
+        return { error: "You already have an active subscription. Manage your plan from the billing portal before starting a new one." };
       }
       if (!monthlyIntroBillingEnabled())
         return { error: "Billing is awaiting its verified rollout. Contact support." };
@@ -79,7 +79,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       return { url: session.url };
     } catch (error) {
       if (error instanceof BillingPolicyError && error.code.includes("active_subscription")) {
-        return { error: "You already have an open subscription. Manage it from Billing." };
+        return { error: "You already have an active subscription. Manage your plan from the billing portal before starting a new one." };
       }
       if (error instanceof BillingPolicyError && error.code.includes("reconciliation")) {
         return {
