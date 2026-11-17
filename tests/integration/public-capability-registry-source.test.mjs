@@ -34,9 +34,9 @@ test("Modes, Pricing, and Help consume one typed capability registry", () => {
   assert.match(registry, /satisfies CapabilityRegistry/);
   assert.match(registry, /MODES/);
   assert.match(registry, /modesForTier/);
-  assert.match(registry, /PLAN_USAGE_FACTOR/);
-  assert.match(registry, /PLAN_USAGE_FACTOR.pro \/ PLAN_USAGE_FACTOR.free/);
-  assert.match(registry, /Unlimited basic chat with Argon Lite/);
+  assert.match(registry, /Expanded dynamic chat usage/);
+  assert.match(registry, /Highest dynamic chat allowance/);
+  assert.doesNotMatch(registry, /unlimited basic chat|\d+× the usage/i);
   assert.match(registry, /const allowance = PLAN_ALLOWANCE_COPY\[tier\]/);
   assert.match(registry, /allowance\.storage/);
   assert.match(registry, /BILLING_PLANS\.plus_monthly\.trialPeriodDays/);

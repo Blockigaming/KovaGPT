@@ -170,7 +170,10 @@ test("guided diagnostics vary by actual setup without generating duplicate artic
   });
   assert.notDeepEqual(offline, online);
   assert.match(offline.join(" "), /Reconnect/);
-  assert.match(online.join(" "), /100× Free usage.*unlimited basic chat with Argon Lite/);
+  assert.match(
+    online.join(" "),
+    /highest dynamic chat allowance.*All chat models have usage limits/,
+  );
   assert.equal(diagnosticCoverage(100), 115200);
   assert.throws(() =>
     contextualHelp(faq, { environment: "fake", connection: "online", plan: "pro" }),

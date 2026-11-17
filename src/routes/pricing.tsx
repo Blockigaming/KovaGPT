@@ -230,9 +230,8 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
               <p className="leading-6 text-muted-foreground">
-                Free and Plus chat stops when your allowance is used. Pro includes unlimited basic
-                chat with Argon Lite; advanced model usage is limited. Wait for a reset or choose an
-                eligible plan for more usage.
+                Chat pauses when your plan allowance is used. Usage varies with the model and task.
+                Check Usage for your next refresh, or choose an eligible plan for more capacity.
               </p>
             </article>
             <article className="border-t border-border pt-5">
