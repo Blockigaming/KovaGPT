@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type CSSProperties } from "react";
-import { Check, ChevronDown, LockKeyhole } from "lucide-react";
+import { Check, ChevronDown, LockKeyhole, RotateCcw, Zap } from "lucide-react";
 import {
   CONSUMER_MODELS,
   DEFAULT_CONSUMER_MODEL,
@@ -98,13 +98,19 @@ export function ConsumerModelSelector({
           </span>
           {isDefault && <Check className="size-4 shrink-0" aria-hidden="true" />}
         </button>
-        <div className="mx-2 my-1 border-y border-border px-1 pt-2">
-          <div className="flex items-center justify-between gap-2 text-xs">
-            <label htmlFor={effortId} className="text-muted-foreground">
-              Response effort
-            </label>
-            <span className="font-medium">{effort.label}</span>
+        <div className="kova-effort-picker kova-consumer-effort relative">
+          <div className="kova-effort-header">
+            <Zap className="kova-effort-icon" aria-hidden="true" />
+            <div className="min-w-0 text-center">
+              <div className="kova-consumer-effort-value text-sm font-semibold leading-5">
+                {effort.label}
+              </div>
+              <div className="truncate text-xs text-muted-foreground">{modelLabel}</div>
+            </div>
           </div>
+          <label htmlFor={effortId} className="sr-only">
+            Response effort
+          </label>
           <div
             className="kova-effort-control"
             style={
@@ -113,8 +119,13 @@ export function ConsumerModelSelector({
               } as CSSProperties
             }
           >
-            <div className="kova-effort-track" aria-hidden="true">
+            <div className="kova-effort-track" data-slot="effort-track" aria-hidden="true">
               <div className="kova-effort-fill" data-slot="effort-fill" />
+            </div>
+            <div className="kova-effort-stops" aria-hidden="true">
+              {efforts.map((level, index) => (
+                <span key={level.id} data-slot="effort-tick" data-filled={index <= effortIndex} />
+              ))}
             </div>
             <input
               id={effortId}
@@ -132,6 +143,18 @@ export function ConsumerModelSelector({
               }}
             />
           </div>
+          <button
+            type="button"
+            className="kova-effort-reset absolute right-1.5 top-2 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Reset response effort to Lite"
+            title="Reset to Lite"
+            disabled={locked}
+            onClick={() => {
+              if (!locked) onModeChange("instant");
+            }}
+          >
+            <RotateCcw className="size-3.5" aria-hidden="true" />
+          </button>
         </div>
         {CONSUMER_MODELS.map((model) => {
           const entitled = model.tiers.includes(tier);

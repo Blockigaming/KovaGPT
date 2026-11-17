@@ -58,7 +58,7 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
     const y = Math.round(rail.y + rail.height / 2);
     await touch.send("Input.dispatchTouchEvent", {
       type: "touchStart",
-      touchPoints: [{ x: Math.round(rail.x + 11), y }],
+      touchPoints: [{ x: Math.round(rail.x + 14), y }],
     });
     for (const fraction of [0.25, 0.5, 0.75, 0.95]) {
       await touch.send("Input.dispatchTouchEvent", {
@@ -153,6 +153,11 @@ test.describe("short desktop model picker", () => {
     await page.keyboard.press("Tab");
     await expect(slider).toBeFocused();
 
+    await expect(picker.locator('[data-slot="effort-track"]')).toHaveCSS("height", "24px");
+    const ticks = picker.locator('[data-slot="effort-tick"]');
+    await expect(ticks).toHaveCount(6);
+    await expect(ticks.first()).toHaveCSS("width", "4px");
+
     const rail = (await slider.boundingBox())!;
     await slider.click({ position: { x: rail.width - 3, y: rail.height / 2 } });
     await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
@@ -162,7 +167,12 @@ test.describe("short desktop model picker", () => {
       return { width: parseFloat(style.width), color: style.backgroundColor };
     });
     expect(fillStyle.width).toBeGreaterThan(rail.width / 2);
-    expect(fillStyle.color).toBe("rgb(124, 196, 255)");
+    expect(fillStyle.color).toBe("rgb(77, 130, 238)");
+    await expect(ticks.last()).toHaveAttribute("data-filled", "true");
+    await picker.getByRole("button", { name: "Reset response effort to Lite" }).click();
+    await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
+    await expect(ticks.last()).toHaveAttribute("data-filled", "false");
+    await slider.press("End");
 
     await page.keyboard.press("Escape");
     await expect(picker).toBeHidden();

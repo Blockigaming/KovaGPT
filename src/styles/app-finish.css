@@ -1381,16 +1381,38 @@
   scrollbar-width: thin;
 }
 
-.kova-consumer-model-menu .kova-effort-control {
-  --effort-thumb: 22px;
-  --effort-half-thumb: calc(var(--effort-thumb) / 2);
+.kova-consumer-effort {
+  padding-inline: 6px;
+  border-radius: 16px;
+  background: light-dark(#f7f7f7, #303030);
 }
 
-.kova-consumer-model-menu .kova-effort-track {
-  inset-block: 17px;
+.kova-consumer-effort-value {
+  color: light-dark(#245caf, #86aaff);
 }
 
-.kova-consumer-model-menu .kova-effort-range {
+.kova-consumer-effort .kova-effort-track {
+  background: light-dark(#e3e3e3, #434343);
+  box-shadow: inset 0 0 0 1px light-dark(#d8d8d8, #4b4b4b);
+}
+
+.kova-consumer-effort .kova-effort-fill::before {
+  background: #4d82ee;
+}
+
+.kova-consumer-effort [data-slot="effort-tick"] {
+  width: 4px;
+  height: 4px;
+  margin-inline: -2px;
+  border-radius: 50%;
+  background: light-dark(#a3a3a3, #737373);
+}
+
+.kova-consumer-effort [data-slot="effort-tick"][data-filled="true"] {
+  background: #73a2ff;
+}
+
+.kova-consumer-effort .kova-effort-range {
   touch-action: none;
 }
 
