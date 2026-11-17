@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
-import { closeCurrentSettings, openResponseOptions } from "./current-ui";
+import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 async function expectRestingComposer(page: Page) {
@@ -136,6 +136,10 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await fixture(page, "dark", true, true);
   await page.goto("/");
   await waitForKovaHydration(page);
+  const sidebar = await revealSidebar(page);
+  await sidebar
+    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+    .press("Enter");
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect(input).toBeEnabled();
   const compactDesktop = await expectRestingComposer(page);
