@@ -684,11 +684,7 @@ export const Route = createFileRoute("/api/chat")({
             } = ingress;
             const selectedConnectorIds = [
               ...new Set(
-                connectorIds?.length
-                  ? connectorIds
-                  : legacyConnectorId
-                    ? [legacyConnectorId]
-                    : [],
+                connectorIds?.length ? connectorIds : legacyConnectorId ? [legacyConnectorId] : [],
               ),
             ];
             const connectorId = selectedConnectorIds[0];
@@ -1723,7 +1719,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              (Boolean(connectorId) || !selfContainedTurn)
+              (connectorId || !selfContainedTurn)
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getGoogleToolContext(auth.userId),
@@ -1737,7 +1733,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              (Boolean(connectorId) || !selfContainedTurn)
+              (connectorId || !selfContainedTurn)
                 ? ((await preflight.run(
                     "other_connector_tools",
                     () => getConnectedToolContext(auth.userId),
@@ -1751,7 +1747,7 @@ export const Route = createFileRoute("/api/chat")({
             const permittedTools = customKova
               ? customKova.filterTools(connectionTools)
               : connectionTools;
-            const availableTools = Boolean(connectorId)
+            const availableTools = connectorId
               ? permittedTools.filter(({ function: { name } }) =>
                   selectedConnectorIds.some(
                     (id) =>
@@ -1764,7 +1760,7 @@ export const Route = createFileRoute("/api/chat")({
 
             const freeConnectorRequest = enableTools && callerTier === "free";
             let finalMessages = body.messages as unknown as ChatMsg[];
-            if (Boolean(connectorId) && !enableTools)
+            if (connectorId && !enableTools)
               finalMessages = connectedToolsUnavailableMessages(finalMessages);
             // A selected workflow resource may have influenced any earlier
             // assistant response (and therefore a durable conversation summary).
@@ -2520,7 +2516,7 @@ export const Route = createFileRoute("/api/chat")({
               // planning is finished. Tool results remain, but untrusted resource
               // bodies never participate in deciding which connector reads to run.
               messages:
-                workflowSkill || freeConnectorBudget || (Boolean(connectorId) && !enableTools)
+                workflowSkill || freeConnectorBudget || (connectorId && !enableTools)
                   ? [...finalMessages, ...finalToolMessages]
                   : workingMessages,
               stream: true,
