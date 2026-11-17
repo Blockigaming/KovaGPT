@@ -609,18 +609,20 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 5px 8px;
   border: 1px solid var(--composer-border, transparent);
-  border-radius: var(--kova-radius-composer, 26px);
+  border-radius: 999px;
   background: var(--composer-background, var(--surface-secondary));
   color: var(--foreground);
   animation: kova-dictation-enter 160ms ease-out;
+}
+.kova-inline-dictation:has(> .kova-inline-dictation-content) {
+  border-radius: var(--kova-radius-composer, 26px);
 }
 .kova-inline-dictation-controls {
   display: flex;
   min-width: 0;
   width: 100%;
-  min-height: 66px;
   align-items: center;
   gap: clamp(10px, 1.5vw, 18px);
 }
@@ -628,10 +630,10 @@
 .kova-inline-dictation-processing {
   display: grid;
   flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
-  min-height: 52px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
   border-radius: 999px;
@@ -649,15 +651,15 @@
 }
 .kova-inline-dictation-controls button svg,
 .kova-inline-dictation-processing svg {
-  width: 25px;
-  height: 25px;
+  width: 20px;
+  height: 20px;
   stroke-width: 2;
 }
 .kova-inline-dictation-wave {
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
-  height: 52px;
+  height: 32px;
   align-items: center;
   justify-content: center;
   gap: clamp(1px, 0.26vw, 4px);
@@ -670,7 +672,7 @@
   flex: 1 1 2px;
   min-width: 1px;
   max-width: 3px;
-  max-height: 38px;
+  max-height: 28px;
   border-radius: 999px;
   background: currentColor;
   opacity: 0.77;
@@ -749,24 +751,13 @@
   }
 }
 @media (max-width: 560px) {
-  .kova-inline-dictation {
-    padding: 8px;
-  }
   .kova-inline-dictation-controls {
     gap: 6px;
-  }
-  .kova-inline-dictation-controls button,
-  .kova-inline-dictation-processing {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
   }
   .kova-inline-dictation-actions {
     gap: 6px;
   }
   .kova-inline-dictation-wave {
-    height: 44px;
     gap: 1px;
   }
 }
