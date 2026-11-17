@@ -358,8 +358,8 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
 
 test("unknown routes return home with a dismissible notice", async ({ page }) => {
   const missing = await page.goto("/definitely-not-a-real-kova-route");
-  expect(missing?.status()).toBe(404);
   await waitForKovaHydration(page);
+  expect(missing?.status()).toBe(404);
   await expect(page).toHaveURL("/");
   await expectEmptyWorkspaceLandmarks(page);
   const notice = page.locator("[data-sonner-toast]").filter({
