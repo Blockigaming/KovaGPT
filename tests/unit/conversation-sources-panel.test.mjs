@@ -6,6 +6,7 @@ import ts from "typescript";
 let inventory = { web: [], memory: [], attachments: [], browser: [] };
 const jsx = (type, props) => ({ type, props: props ?? {} });
 const modules = {
+  "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
   "./ResponseSourceIcon": { ResponseSourceIcon: "response-source-icon" },
   "@/lib/browser-activity-contract.mjs": browserActivity,
   "@/assets/plugins/github.svg": { default: "github.svg" },
@@ -20,6 +21,7 @@ const modules = {
       "Image",
       "Monitor",
       "GitBranch",
+      "Plug",
       "Database",
       "Zap",
       "LibraryBig",

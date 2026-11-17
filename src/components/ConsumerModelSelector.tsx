@@ -58,7 +58,7 @@ export function ConsumerModelSelector({
   const lastEffortIndex = efforts.length - 1;
 
   function slide(event: PointerEvent<HTMLInputElement>) {
-    if (drag.current?.pointerId !== event.pointerId) return;
+    if (locked || drag.current?.pointerId !== event.pointerId) return;
     const { left, width } = drag.current.bounds;
     const position = Math.min(1, Math.max(0, (event.clientX - left) / width));
     setDragPosition(position);
@@ -112,6 +112,7 @@ export function ConsumerModelSelector({
             aria-pressed={isDefault}
             disabled={locked}
             onClick={() => {
+              if (locked) return;
               onChange(DEFAULT_CONSUMER_MODEL);
               onModeChange("instant");
             }}
@@ -136,6 +137,7 @@ export function ConsumerModelSelector({
                 data-testid={`consumer-model-${model.id}`}
                 className={optionClass}
                 onClick={() => {
+                  if (locked) return;
                   onChange(model.id);
                   setOpen(false);
                 }}
@@ -185,7 +187,7 @@ export function ConsumerModelSelector({
               aria-valuetext={effort.label}
               disabled={locked}
               onPointerDown={(event) => {
-                if (event.button !== 0 || !event.isPrimary || !thumbRail.current) return;
+                if (locked || event.button !== 0 || !event.isPrimary || !thumbRail.current) return;
                 const bounds = thumbRail.current.getBoundingClientRect();
                 if (!bounds.width) return;
                 event.preventDefault();
@@ -204,6 +206,7 @@ export function ConsumerModelSelector({
                 if (drag.current?.pointerId === event.pointerId) finishDrag();
               }}
               onChange={(event) => {
+                if (locked) return;
                 const next = efforts[event.currentTarget.valueAsNumber];
                 if (next) onModeChange(next.id);
               }}

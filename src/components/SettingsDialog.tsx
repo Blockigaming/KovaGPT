@@ -1,4 +1,4 @@
-import { settingsSearchMatches } from "@/lib/settings-search.mjs";
+import { settingsSearchMatches, VOICE_SETTINGS_SEARCH_TERMS } from "@/lib/settings-search.mjs";
 import { EmailChangeForm } from "@/components/EmailChangeForm";
 import { VoiceConnectionStatus } from "@/components/VoiceConnectionStatus";
 import { SettingsNavigationResize } from "@/components/SettingsNavigationResize";
@@ -192,7 +192,7 @@ const SETTINGS_SEARCH_TOPICS: Record<string, string> = {
   security: "password passkey two factor 2fa mfa recovery devices sessions sign in sign out",
   email: "email address verification change email account",
   parental: "parental controls parent teen child restrictions family safety",
-  voice: "dictation speech microphone transcription audio speaker elevenlabs read aloud talk",
+  voice: VOICE_SETTINGS_SEARCH_TERMS,
   storage: "disk cache files attachments library device storage offline",
   data: "history delete clear chats archive download export privacy public shared links training",
   memory: "remember forget saved memories instructions preferences personalization context",

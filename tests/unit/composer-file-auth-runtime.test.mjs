@@ -82,6 +82,7 @@ function fixture(
     ...initial,
   };
   const react = {
+    useImperativeHandle() {},
     useRef(value) {
       const index = cursor++;
       hooks[index] ??= { current: value };
@@ -105,6 +106,9 @@ function fixture(
   };
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const modules = {
+    "./ChatOutputTemplates": { ChatOutputTemplates: "ChatOutputTemplates" },
+    "@/lib/chat-output-templates": {},
+    "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
     "./AttachmentPreviewMobile": Object.fromEntries(
       ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
         (name) => [name, () => null],

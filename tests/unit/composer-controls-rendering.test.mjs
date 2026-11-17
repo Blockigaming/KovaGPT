@@ -28,6 +28,9 @@ const captureUpgrade = (factory) => (type, props, key) => {
   return factory(type, props, key);
 };
 const closedSurfaces = {
+  "./ChatOutputTemplates": { ChatOutputTemplates: empty },
+  "@/lib/chat-output-templates": {},
+  "@/lib/plugin-review-catalog": { PLUGIN_BRAND_ASSET_URLS: {} },
   "./AttachmentPreviewMobile": Object.fromEntries(
     ["AttachmentPreviewAsk", "AttachmentPreviewFileInfo", "AttachmentPreviewMobileHeader"].map(
       (name) => [name, () => null],
