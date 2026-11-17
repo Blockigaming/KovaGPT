@@ -1,0 +1,59 @@
+name: Desktop to mobile ratio audit
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/interface-ratio-audit.yml
+      - playwright.interface-ratio.config.ts
+      - tests/interface-ratio/**
+      - src/styles/phone-layout.css
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: interface-ratio-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      KOVA_BROWSER_PREVIEW: node
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check measurement source formatting
+        run: npx --no-install prettier --check .github/workflows/interface-ratio-audit.yml playwright.interface-ratio.config.ts tests/interface-ratio/desktop-mobile.spec.ts docs/design/desktop-mobile-ratios.md
+      - name: Build the isolated application
+        run: npm run build:azure
+      - name: Install the pinned browser
+        run: bash scripts/ci/install-playwright-browsers.sh chromium
+      - name: Measure desktop and three touch viewport sizes
+        run: npx --no-install playwright test --config=playwright.interface-ratio.config.ts
+      - name: Record source revision
+        if: always()
+        run: |
+          mkdir -p test-results/interface-ratio
+          git rev-parse HEAD > test-results/interface-ratio/commit.txt
+      - name: Preserve geometry and fixture screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: interface-ratio-${{ github.event.pull_request.head.sha || github.sha }}
+          path: test-results/interface-ratio/
+          if-no-files-found: error
+          retention-days: 7
