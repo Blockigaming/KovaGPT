@@ -332,7 +332,10 @@ test("the conversation checklist collects sources, outputs and real browser meta
   await expect(page.getByText("Fixture browser session active.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   const panel = page.locator(".kova-conversation-outputs");
-  await expect(panel.getByRole("heading", { name: "Outputs", exact: true })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   for (const name of [
     "GitHub",
     "Supabase",
@@ -343,8 +346,12 @@ test("the conversation checklist collects sources, outputs and real browser meta
     "Memory",
   ])
     await expect(panel.getByText(name, { exact: true })).toBeVisible();
-  await expect(panel.getByText("5 tabs", { exact: true })).toBeVisible();
-  await expect(panel.getByRole("img", { name: "Current cloud browser preview" })).toBeVisible();
+  const browser = panel.getByRole("region", { name: "Cloud browser", exact: true });
+  await expect(browser).toContainText("Active");
+  await expect(browser).toContainText("example.com");
+  const preview = browser.getByRole("img", { name: "Current cloud browser preview" });
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute("src", "/api/browser/preview/fixture-session");
   await page.screenshot({
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,
