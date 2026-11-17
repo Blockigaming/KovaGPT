@@ -180,6 +180,7 @@ export function ComposerVoiceDialogView({
         data-ui-reference="chatgpt-separate-voice"
         data-voice-availability={availability}
         data-voice-phase={phase}
+        data-voice-mode={mode}
         data-voice-review={hasTranscript || Boolean(audioPlayer) ? "true" : "false"}
         data-voice-content-first={contentFirst ? "true" : "false"}
         data-voice-compact={compact ? "true" : "false"}
