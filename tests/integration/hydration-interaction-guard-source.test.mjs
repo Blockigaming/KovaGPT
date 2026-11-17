@@ -193,7 +193,10 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   assert.match(highImpact, /name: "Archived chats"[\s\S]{0,100}toHaveCount\(0\)/);
 
   const uiQuality = specsByPath.get("tests/e2e/ui-quality.spec.ts");
-  assert.match(uiQuality, /await home\.click\(\);\s*await waitForKovaHydration\(page\);/);
+  assert.match(
+    uiQuality,
+    /const missing = await page\.goto\("\/definitely-not-a-real-kova-route"\);\s*await waitForKovaHydration\(page\);\s*expect\(missing\?\.status\(\)\)\.toBe\(404\);\s*await expect\(page\)\.toHaveURL\("\/"\);/,
+  );
   assert.match(uiQuality, /await page\.reload\([^;]+;\s*await waitForKovaHydration\(page\);/);
   assert.match(uiQuality, /await page\.route\("\*\*\/api\/chat"/);
   assert.match(
