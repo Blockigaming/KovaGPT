@@ -11,8 +11,8 @@ const guard = fileURLToPath(
 // Keep the default and a hard upper bound; this never reaches the app's env.
 const durationArgument = process.argv.slice(2).find((arg) => arg.startsWith("--duration-ms="));
 const durationMs = durationArgument ? Number(durationArgument.split("=")[1]) : 180000;
-if (!Number.isSafeInteger(durationMs) || durationMs < 1000 || durationMs > 900000)
-  throw new Error("Local preview duration must be between 1000 and 900000 milliseconds");
+if (!Number.isSafeInteger(durationMs) || durationMs < 1000 || durationMs > 1_800_000)
+  throw new Error("Local preview duration must be between 1000 and 1800000 milliseconds");
 if (!existsSync(entry)) throw new Error("Run npm run build:azure first");
 
 // Deliberately do not inherit cloud credentials, database settings or NODE_OPTIONS.
