@@ -130,7 +130,9 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
         Number.isFinite(consumed) &&
         Number.isFinite(capacity) &&
         capacity > 0
-        ? Math.min(100, Math.max(0, Math.ceil((100 * consumed) / capacity)))
+        ? consumed >= capacity
+          ? 100
+          : Math.max(0, Math.floor((100 * consumed) / capacity))
         : null;
     };
     return {
@@ -149,7 +151,7 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
             ? { regularUsed: null, thinkingUsed: null }
             : total),
         costPercentUsed:
-          !costState || (window.id === "five_hour" && legacyWindow)
+          !costState
             ? null
             : window.id === "five_hour"
               ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
