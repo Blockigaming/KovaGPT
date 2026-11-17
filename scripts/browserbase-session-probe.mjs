@@ -61,7 +61,9 @@ export async function probeBrowserbaseSession(apiKey, fetchImpl = fetch) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    console.log(JSON.stringify(await probeBrowserbaseSession(process.env.BROWSERBASE_API_KEY)));
+    const { createResponseMs, liveViewResponseMs, releaseAcknowledged } =
+      await probeBrowserbaseSession(process.env.BROWSERBASE_API_KEY);
+    console.log(JSON.stringify({ createResponseMs, liveViewResponseMs, releaseAcknowledged }));
   } catch (error) {
     console.error(error instanceof Error ? error.message : "browserbase_probe_failed");
     process.exitCode = 1;
