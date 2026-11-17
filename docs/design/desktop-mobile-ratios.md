@@ -1,6 +1,6 @@
 # Desktop → mobile interface relationships
 
-Measured November 17, 2026. Status: reference audit in progress; no product styles changed by this audit.
+Measured November 17, 2026. Status: reference audit in progress; Kova baseline 32/32 checks passed; no product styles changed by this audit.
 
 ## Owner direction
 
@@ -25,7 +25,7 @@ Example: the reference home heading is 24 px at both measured widths, so its fon
 - Response measurements came from a fresh temporary conversation containing fictional sample text, a list, a table, code, a blockquote, and inline math. Existing conversation contents were not used. No account identifiers, library filenames, or personal content are included here.
 - The separate `ChatGPT_Response_Interface_Specification.md` is a proposed reference design, not a source of measured pixels. Its proposed values are not silently substituted for observations.
 - Kova source baseline: `2e062bd207dda195f15b34d94e920f2778c1cac1`. Source values below remain provisional until confirmed by computed styles; imports and selector precedence matter.
-- Local Chromium could not launch because the environment disallowed a required socket. An escalation request was rejected by environment policy. The measurement suite is prepared for the repository's standard GitHub Actions environment; this is not a passing local browser result.
+- Local Chromium could not launch because the environment disallowed a required socket. An escalation request was rejected by environment policy. The measurement suite subsequently passed in the repository's standard GitHub Actions environment on Ubuntu 24.04; this is not a passing local browser result.
 
 ## Reference measurements
 
@@ -120,6 +120,43 @@ These are audit findings and candidate mappings, not deployed changes. The deskt
 | Public marketing/auth pages     | Separate page structure and typography.                                                                                                                                                         | Out of this interface-ratio implementation. The owner's existing sections/design are frozen.                                                                                                           |
 
 `src/styles/assistant.css` is not imported by the active stylesheet entry. Do not use its historical values as the desktop baseline. Relevant active layers include `spec400-chat.css`, `visual-tokens.css`, `workspace-layout.css`, `app-finish.css`, and finally `phone-layout.css`.
+
+## Rendered Kova baseline: 32/32 passed
+
+[Measurement run](https://github.com/Blockigaming/KovaGPT/actions/runs/44191472210), source `9685cb0094f7488c5964f9b286214fa0cdd35359`. The application build and all 32 measurements passed. Eight states were checked at each of four viewports; all reported zero document overflow and no client exceptions. This proves baseline rendering and captures differences; it does not prove reference matching.
+
+The original audit attempt built successfully but could not install Playwright 1.56 on the new Ubuntu 26.04 `ubuntu-latest` runner. The audit runner was pinned to Ubuntu 24.04, then the unchanged browser assertions passed. No application code or check was removed to obtain that result.
+
+| Kova property                   | Desktop 1440       | Phone 390                           | Phone ÷ desktop         | Interpretation                                                                                                              |
+| ------------------------------- | ------------------ | ----------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Greeting font size              | 32                 | 28                                  | 0.875                   | Reference stays at 1.00. Candidate target: retain Kova's 32.                                                                |
+| Greeting line height            | 38.4               | 30.8                                | 0.802                   | Reference stays at 1.00. Candidate target: retain 38.4.                                                                     |
+| Greeting font/weight            | Reading serif, 400 | UI sans-serif, 600                  | Categorical change      | A design change has been introduced on phone, beyond responsive sizing.                                                     |
+| Empty composer width            | 768                | 358.81                              | 0.467                   | Width correctly follows available canvas; do not apply this ratio to text or controls.                                      |
+| Empty composer height           | 165                | 156                                 | 0.945                   | Remains tall on all three phone widths; inspect its constituent rows instead of copying the reference's total-height ratio. |
+| Empty composer text area height | 68                 | 68                                  | 1.00                    | The later forced minimum wins over the intended compact phone row.                                                          |
+| Empty composer corner           | 34                 | 21                                  | 0.618                   | Much sharper on phone; unlike the sampled reference transformation.                                                         |
+| Empty composer padding          | 16                 | 12                                  | 0.75                    | Consider together with row sizing and touch controls.                                                                       |
+| Composer text / line height     | 16 / 24.8          | 16 / 24.8                           | 1.00 / 1.00             | Already preserves the observed reference relationship.                                                                      |
+| Conversation composer height    | 57                 | 86                                  | 1.509                   | Correct structural direction: one desktop row becomes two phone rows.                                                       |
+| Conversation composer corner    | 34                 | 34                                  | 1.00                    | Already preserves the observed reference relationship.                                                                      |
+| Primary voice target            | 43 × 43            | 44 × 44                             | 1.023                   | Preserve the deliberate touch-target minimum.                                                                               |
+| Assistant body font size        | 16                 | 16                                  | 1.00                    | Already preserves the observed relationship.                                                                                |
+| Assistant body line height      | 28                 | 24                                  | 0.857                   | Reference stays at 1.00. Candidate target: retain Kova's 28.                                                                |
+| Library tab text                | 14                 | 13                                  | 0.929                   | Reference stays at 1.00. Candidate target: retain 14.                                                                       |
+| Library tab line height         | 20                 | 18.57                               | 0.929                   | Reference stays at 1.00. Candidate target: retain 20.                                                                       |
+| Library tab height              | 44                 | 44                                  | 1.00                    | Keep the existing usable target.                                                                                            |
+| Library tab horizontal padding  | 12                 | 16                                  | 1.333                   | Reference padding stays constant. Review alongside the phone filter container.                                              |
+| Library filter group            | 44 high, no frame  | 53 high, padding 4, radius 16 frame | Structural/style change | The phone rule adds a group treatment absent from the desktop design.                                                       |
+| Connections card padding        | 16                 | 12                                  | 0.75                    | Reference sample retains padding. Review Kova card structure before applying a numerical target.                            |
+| Connections card radius         | 22                 | 16                                  | 0.727                   | Reference sample retains radius.                                                                                            |
+| Connections card height         | 184                | 122                                 | 0.663                   | Its internal grid changes; height cannot be evaluated independently of content wrapping.                                    |
+| Chat header height              | 64                 | 53                                  | 0.828                   | Reference header height stays constant, but Kova's differing header structures need a like-for-like control comparison.     |
+| Bottom navigation               | Absent             | 57 high                             | Additional surface      | Preserve its destinations; there is no direct reference web equivalent.                                                     |
+
+Phone-width sweep: the empty composer remained 156 px high with a 68 px text area at 320, 390, and 430 px. The greeting was 28 px at 320/390 and 30.1 px at 430, confirming viewport-dependent type scaling rather than a constant relationship.
+
+Visual inspection of the baseline desktop home, phone home, and phone Library captures confirms these are real rendered states. Library and Connections move their visible title into the phone top bar; their in-content H1 becomes a 1 × 1 screen-reader-only node. **Do not compare that hidden H1 with the desktop title as though it were visible.** Likewise, transcript `.prose-chat` index 0 is the user's bubble; index 1 is the assistant response. Settings heading measurements require a visibility-aware follow-up rather than trusting bounding rectangles alone.
 
 ## Remaining evidence needed before “every difference” is complete
 
