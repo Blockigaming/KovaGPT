@@ -244,12 +244,15 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   await opener.click();
   const drawer = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(drawer).toBeVisible();
+  const phoneLayout = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
   await expect
     .poll(async () => (await drawer.boundingBox())?.width)
     .toBeCloseTo(
-      viewport.width < 768 || viewport.height <= 500
-        ? Math.min((280 * 13) / 17, viewport.width - 24)
-        : Math.min(viewport.width * 0.86, 320),
+      phoneLayout ? Math.min(256, viewport.width - 24) : Math.min(viewport.width * 0.86, 320),
       0,
     );
   const mainBox = (await main.boundingBox())!;
