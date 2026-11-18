@@ -232,7 +232,11 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   page,
 }) => {
   const viewport = page.viewportSize()!;
-  test.skip(viewport.width >= 1024, "compact shell");
+  test.skip(
+    viewport.width >= 1024 &&
+      !(await page.evaluate(() => matchMedia("(pointer: coarse) and (hover: none)").matches)),
+    "drawer layout",
+  );
   await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -251,10 +255,7 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   );
   await expect
     .poll(async () => (await drawer.boundingBox())?.width)
-    .toBeCloseTo(
-      phoneLayout ? Math.min(256, viewport.width - 24) : Math.min(viewport.width * 0.86, 320),
-      0,
-    );
+    .toBeCloseTo(phoneLayout ? (viewport.width * 2) / 3 : 260, 0);
   const mainBox = (await main.boundingBox())!;
   expect(mainBox.x).toBe(0);
   expect(mainBox.width).toBe(viewport.width);

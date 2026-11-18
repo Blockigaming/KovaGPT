@@ -1,3 +1,4 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useCallback, useEffect, useLayoutEffect, useState, type SetStateAction } from "react";
 
 type SidebarPreference = {
@@ -9,7 +10,7 @@ export function useSidebarPreference() {
   const [preference, setPreference] = useState<SidebarPreference | null>(null);
 
   useLayoutEffect(() => {
-    const mobile = window.matchMedia("(max-width: 1023px)");
+    const mobile = window.matchMedia(SIDEBAR_DRAWER_QUERY);
     const restore = () => {
       const pinned = !mobile.matches;
       let open = pinned;

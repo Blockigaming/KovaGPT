@@ -1,3 +1,4 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
 import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
 import { ContinueWorking } from "@/components/HomeChatFrame";
@@ -98,7 +99,7 @@ const ChatProjectDialog = lazy(() =>
 );
 
 function isMobileViewport() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+  return typeof window !== "undefined" && window.matchMedia(SIDEBAR_DRAWER_QUERY).matches;
 }
 
 function RailTooltip({ label, children }: { label: string; children: React.ReactElement }) {
@@ -531,7 +532,7 @@ export function Sidebar({
     setSearchOpen(false);
   }, [user?.id, isLoaded, isSignedIn, cancelPendingSelection]);
   useLayoutEffect(() => {
-    const media = window.matchMedia("(max-width: 1023px)");
+    const media = window.matchMedia(SIDEBAR_DRAWER_QUERY);
     const update = () => setMobileViewport(media.matches);
     update();
     media.addEventListener("change", update);

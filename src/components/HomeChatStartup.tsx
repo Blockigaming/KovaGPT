@@ -10,7 +10,9 @@ function HomeChatPlaceholder() {
       >
         <div className="spec400-composer">
           <div className="spec400-input-region">
-            <div className="spec400-composer-input text-muted-foreground">Work with KovaGPT</div>
+            <div className="spec400-composer-input">
+              <span className="h-2 w-28 rounded-full bg-muted-foreground/20" />
+            </div>
           </div>
           <div className="spec400-composer-toolbar">
             <span className="spec400-toolbar-button spec400-toolbar-icon">

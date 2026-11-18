@@ -167,7 +167,8 @@
   }
 
   .kova-home-composer-placeholder .spec400-composer-input {
-    color: var(--muted-foreground);
+    display: flex;
+    align-items: center;
   }
 
   .kova-assistant .kova-empty-composer .spec400-input-region {
@@ -346,22 +347,19 @@
     display: none;
   }
 
-  /* Apply the overlay ratio to wider rails. Narrow rails need enough room
-     for the brand and both 44px header controls before adding the safe inset. */
   .kova-sidebar[data-kova-core-sidebar] {
-    --kova-sidebar-drawer-width: min(
-      max(calc(var(--sidebar-expanded, 280px) * 13 / 17), calc(16rem + var(--safe-left))),
-      calc(100vw - 24px)
-    );
-  }
-
-  .kova-sidebar[data-kova-core-sidebar] {
+    --kova-sidebar-drawer-width: calc(100vw * 2 / 3);
     --sidebar-row-height: 44px;
   }
 
   .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-header {
     min-height: calc(60px + var(--safe-top, 0px));
-    padding-inline: 16px 12px;
+    padding-inline: 12px 8px;
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-brand {
+    font-size: 16px;
+    gap: 6px;
   }
 
   .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-primary {

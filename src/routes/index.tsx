@@ -1,3 +1,4 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
 import type { CSSProperties } from "react";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
@@ -518,7 +519,7 @@ function KovaGPT() {
     (tab?: string) => {
       // Keep Settings above the mobile drawer and preserve in-memory chat work.
       if (
-        window.matchMedia("(max-width: 1023px)").matches ||
+        window.matchMedia(SIDEBAR_DRAWER_QUERY).matches ||
         attachments.length ||
         tempChat ||
         isStreaming ||
@@ -756,7 +757,7 @@ function KovaGPT() {
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
   const [paneRatio, setPaneRatio] = useState(0.45);
   const openAttachmentSidebar = () => {
-    if (window.matchMedia("(min-width: 1024px)").matches) setSidebarOpen(true);
+    if (!window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) setSidebarOpen(true);
   };
   const [attachmentPaneRatio, setAttachmentPaneRatio] = useState(0.4);
   const resizeAttachmentPane = (next: number) =>

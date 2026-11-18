@@ -1,3 +1,4 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { permanentlyDeleteChat } from "@/lib/permanent-chat-delete";
 import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
@@ -194,7 +195,7 @@ export function AppShell({
 
   const openSettings = useCallback(
     (tab?: string) => {
-      if (window.matchMedia("(max-width: 1023px)").matches) {
+      if (window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setSettingsTab(tab);

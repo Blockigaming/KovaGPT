@@ -551,19 +551,19 @@ button.kova-sidebar-scrim {
     display: none;
   }
 }
-@media (max-width: 1023px) {
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
   .kova-sidebar[data-kova-core-sidebar] {
     position: fixed;
     inset: 0 auto 0 0;
     height: 100dvh;
     margin: 0;
-    width: var(--kova-sidebar-drawer-width, min(86vw, 320px));
+    width: var(--kova-sidebar-drawer-width, 260px);
     min-width: 0;
     max-width: calc(100vw - 24px);
     border-radius: 0 24px 24px 0;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
-    width: var(--kova-sidebar-drawer-width, min(86vw, 320px));
+    width: var(--kova-sidebar-drawer-width, 260px);
     transform: translateX(-100%);
   }
   .kova-sidebar-inner {
@@ -885,5 +885,26 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
     flex: 0 0 auto;
     width: auto;
     border: 1px solid var(--border);
+  }
+}
+
+/* A touch tablet keeps the same drawer width as a 390px phone. */
+@media (min-width: 1024px) and (pointer: coarse) and (hover: none) {
+  .kova-sidebar-rail[data-kova-core-rail],
+  .kova-desktop-topbar,
+  .kova-sidebar-toggle[aria-label="Collapse sidebar"] {
+    display: none;
+  }
+
+  .kova-topbar:not(.kova-desktop-topbar) {
+    display: block;
+  }
+
+  .kova-sidebar-scrim[data-state="open"] {
+    display: block;
+  }
+
+  .kova-sidebar-toggle[aria-label="Close sidebar"] {
+    display: flex;
   }
 }
