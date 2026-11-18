@@ -570,6 +570,9 @@ button.kova-sidebar-scrim {
     width: 100%;
     min-width: 0;
   }
+  .kova-sidebar-header-actions {
+    gap: 0;
+  }
   .kova-sidebar-header .kova-header-search {
     display: inline-flex;
   }

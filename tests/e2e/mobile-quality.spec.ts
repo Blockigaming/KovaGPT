@@ -57,6 +57,7 @@ test("navigation opens, contains its controls, and dismisses predictably", async
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThan(page.viewportSize()!.width);
   const header = navigation.locator(".kova-sidebar-header");
+  await expect(header.locator(".kova-sidebar-header-actions")).toHaveCSS("column-gap", "0px");
   await expect(async () => {
     const gap = await header.evaluate((element) => {
       const brand = element.querySelector<HTMLElement>(".kova-sidebar-brand")!;
