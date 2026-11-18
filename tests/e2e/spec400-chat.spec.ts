@@ -17,7 +17,7 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
         matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
           .matches,
     ));
-  await expect(composer).toHaveCSS("border-radius", "34px");
+  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
