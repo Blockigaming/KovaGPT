@@ -38,7 +38,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
 import "./conversation-header.css";
 
-function OutputsIcon() {
+function OutputsIcon({ active }: { active: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -51,6 +51,7 @@ function OutputsIcon() {
       <circle cx="6" cy="7" r="2.8" />
       <circle cx="6" cy="17" r="2.8" />
       <path d="M13 7h7M13 17h7" />
+      {active && <circle cx="20" cy="3" r="3" fill="#34d399" stroke="var(--background)" />}
     </svg>
   );
 }
@@ -91,6 +92,7 @@ export function ConversationHeaderActions({
   browserPresentation,
 }: {
   browserPresentation?: {
+    active?: boolean;
     thumbnail: ReactNode;
     tabCount?: number;
     renderDialog: (props: {
@@ -117,6 +119,7 @@ export function ConversationHeaderActions({
     () => conversationSources(conversation, isLoaded && isSignedIn ? (user?.id ?? null) : null),
     [conversation, isLoaded, isSignedIn, user?.id],
   );
+  const browserActive = signedIn && browserPresentation?.active === true;
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
   const [outputsOpen, setOutputsOpen] = useState(false);
@@ -507,8 +510,8 @@ export function ConversationHeaderActions({
               ref={outputsRef}
               type="button"
               className="kova-conversation-icon"
-              aria-label="Activity"
-              title="Activity"
+              aria-label={browserActive ? "Activity, Cloud Browser active" : "Activity"}
+              title={browserActive ? "Cloud Browser active" : "Activity"}
               aria-haspopup="dialog"
               aria-expanded={outputsOpen}
               onClick={() => {
@@ -516,7 +519,7 @@ export function ConversationHeaderActions({
                 setOutputsOpen(true);
               }}
             >
-              <OutputsIcon />
+              <OutputsIcon active={browserActive} />
             </button>
             <MobileBottomSheet
               open={outputsOpen}
@@ -542,17 +545,17 @@ export function ConversationHeaderActions({
                 ref={outputsRef}
                 type="button"
                 className="kova-conversation-icon"
-                aria-label="Activity"
+                aria-label={browserActive ? "Activity, Cloud Browser active" : "Activity"}
                 title="Activity"
               >
-                <OutputsIcon />
+                <OutputsIcon active={browserActive} />
               </button>
             </PopoverTrigger>
             <PopoverContent
               align="end"
               sideOffset={10}
               className="kova-conversation-outputs"
-              aria-label="Activity"
+              aria-label={browserActive ? "Activity, Cloud Browser active" : "Activity"}
               onCloseAutoFocus={(event) => {
                 if (!dialogOpeningRef.current) return;
                 event.preventDefault();
