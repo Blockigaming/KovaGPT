@@ -23,7 +23,7 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   await expect(page.getByText("$16", { exact: true })).toBeVisible();
   await expect(page.getByText("$80", { exact: true })).toBeVisible();
   await expect(page.getByText("+ applicable tax", { exact: true })).toHaveCount(2);
-  await expect(page.getByRole("button", { name: "Start Plus" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Upgrade to Plus" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upgrade to Pro" })).toBeVisible();
   const freePlan = page.locator('[data-pricing-plan="free"]');
   const plusPlan = page.locator('[data-pricing-plan="plus"]');

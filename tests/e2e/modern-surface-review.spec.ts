@@ -43,7 +43,9 @@ for (const theme of ["dark", "light"] as const) {
         await expect(page.getByText("Offer details and eligibility", { exact: true })).toHaveCount(
           0,
         );
-        await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "Upgrade to Plus", exact: true }),
+        ).toBeVisible();
       }
 
       expect(

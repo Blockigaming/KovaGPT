@@ -410,7 +410,7 @@ test("guest account gate prevents messaging and restores login focus", async ({ 
   // The homepage opens auth inline; paid entry still exercises the shared modal.
   await page.goto("/pricing");
   await waitForKovaHydration(page);
-  await page.getByRole("button", { name: "Start Plus", exact: true }).click();
+  await page.getByRole("button", { name: "Upgrade to Plus", exact: true }).click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
   const login = page.getByRole("button", { name: "Sign in to continue", exact: true });
   await login.click();

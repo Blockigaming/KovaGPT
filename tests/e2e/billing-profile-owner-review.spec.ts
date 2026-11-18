@@ -51,6 +51,8 @@ for (const theme of ["dark", "light"] as const) {
     if (theme === "dark") expect(Math.min(...rgb)).toBeGreaterThan(200);
     else expect(Math.max(...rgb)).toBeLessThan(100);
     await page.getByRole("menuitem", { name: "Upgrade plan", exact: true }).click();
+    await expect(page).toHaveURL(/\/pricing$/);
+    await page.getByRole("button", { name: "Upgrade to Plus", exact: true }).click();
     await expect(page).toHaveURL("https://checkout.stripe.com/c/pay/cs_test_profile");
     expect(creates).toBe(1);
   });

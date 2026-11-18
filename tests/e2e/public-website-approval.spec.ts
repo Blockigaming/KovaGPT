@@ -193,7 +193,7 @@ test("hosted checkout starts automatically and fails safely without configured p
   });
   await page.goto("/pricing");
   await waitForKovaHydration(page);
-  const start = page.getByRole("button", { name: "Start Plus", exact: true });
+  const start = page.getByRole("button", { name: "Upgrade to Plus", exact: true });
   await start.click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly/);
   const dialog = page.getByRole("main");
@@ -205,7 +205,7 @@ test("hosted checkout starts automatically and fails safely without configured p
   await page.screenshot({ path: `${evidence}/checkout-unavailable.png` });
   await page.getByRole("link", { name: "Back to plans", exact: true }).click();
   await expect(page).toHaveURL(/\/pricing/);
-  await expect(page.getByRole("button", { name: "Start Plus", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Upgrade to Plus", exact: true })).toBeVisible();
   expect(stripeRequests).toEqual([]);
 });
 

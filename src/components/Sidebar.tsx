@@ -1250,15 +1250,7 @@ export function Sidebar({
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
-        <Link
-          to={tierStatus === "ready" && tier === "pro" ? "/pricing" : "/subscribe"}
-          search={
-            tier === "pro"
-              ? undefined
-              : ({ plan: tier === "plus" ? "pro_monthly" : "plus_monthly" } as never)
-          }
-          onClick={() => cancelPendingSelection()}
-        >
+        <Link to="/pricing" onClick={() => cancelPendingSelection()}>
           <Sparkles aria-hidden="true" />
           {tierStatus === "ready" && tier === "pro" ? "View plans" : "Upgrade plan"}
         </Link>

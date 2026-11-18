@@ -1,4 +1,4 @@
-import { PublicShell } from "@/components/public/PublicShell";
+import "@/components/public/public-foundation.css";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -119,7 +119,15 @@ function PricingPage() {
   };
 
   return (
-    <PublicShell>
+    <div className="flex min-h-dvh min-w-0 flex-col bg-background text-foreground">
+      <header className="mx-auto flex w-full max-w-6xl px-5 pt-4 sm:px-6">
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Back to KovaGPT
+        </Link>
+      </header>
       <main
         id="main-content"
         tabIndex={-1}
@@ -187,7 +195,7 @@ function PricingPage() {
                 period="/ month"
                 taxNotice="+ applicable tax"
                 description={CAPABILITY_REGISTRY.plans.plus.description}
-                cta="Start Plus"
+                cta="Upgrade to Plus"
                 highlight
                 onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!)}
                 features={CAPABILITY_REGISTRY.plans.plus.features}
@@ -252,7 +260,7 @@ function PricingPage() {
       </main>
 
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
-    </PublicShell>
+    </div>
   );
 }
 
