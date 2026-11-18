@@ -8,7 +8,7 @@ if (engine && !["chromium", "firefox", "webkit"].includes(engine))
 export default defineConfig({
   testDir: "./tests/interface-ratio",
   // Cross-engine state runs do not compare Chromium's frozen font geometry.
-  ...(engine ? { testMatch: "mobile-states.spec.ts" } : {}),
+  ...(engine ? { testMatch: ["mobile-states.spec.ts", "startup.spec.ts"] } : {}),
   timeout: 60_000,
   expect: { timeout: 20_000 },
   workers: 2,

@@ -37,12 +37,19 @@
     text-align: center;
   }
 
+  .kova-assistant
+    section.kova-empty-chat
+    > .kova-empty-chat-content:not(:has(.spec400-recent-work)) {
+    padding-block-start: 0 !important;
+  }
+
   .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-greeting {
-    margin-block-start: 0;
+    /* Center the greeting in the clear canvas above the docked composer. */
+    margin-block: auto;
   }
 
   .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-empty-composer {
-    margin-block-start: auto;
+    margin-block-start: 0;
   }
 
   /* Kova's stacked home composer corresponds to Work: input 52 → 26 (×0.5),
