@@ -120,7 +120,7 @@ export function MobileTopBar({
             className={
               chatStarted
                 ? "kova-mobile-conversation-tools flex items-center justify-end"
-                : "flex items-center justify-end gap-0.5"
+                : "kova-mobile-home-actions flex items-center justify-end gap-0.5"
             }
           >
             {conversationActions}

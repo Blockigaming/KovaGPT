@@ -31,6 +31,21 @@ test.beforeEach(async ({ page }, testInfo) => {
 test("navigation opens, contains its controls, and dismisses predictably", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  if (page.viewportSize()!.width <= 599) {
+    const actions = page.locator(".kova-mobile-home-actions");
+    await expect(actions.getByRole("button", { name: /Free offer/ })).toBeVisible();
+    const centers = await actions.getByRole("button").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const glyph = button.querySelector("svg")!.getBoundingClientRect();
+        const { width, height } = button.getBoundingClientRect();
+        return { x: glyph.x + glyph.width / 2, target: Math.min(width, height) };
+      }),
+    );
+    expect(centers).toHaveLength(3);
+    expect(centers.every((button) => button.target >= 44)).toBe(true);
+    expect(centers[1].x - centers[0].x).toBeCloseTo(32, 0);
+    expect(centers[2].x - centers[1].x).toBeCloseTo(32, 0);
+  }
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
@@ -50,7 +65,7 @@ test("navigation opens, contains its controls, and dismisses predictably", async
       };
     });
     expect(Math.min(geometry.width, geometry.height)).toBeGreaterThanOrEqual(44);
-    expect(geometry.dx).toBeCloseTo(0, 0);
+    expect(geometry.dx).toBeCloseTo(action === search ? 6 : -6, 0);
     expect(geometry.dy).toBeCloseTo(0, 0);
   }
   const box = await navigation.boundingBox();

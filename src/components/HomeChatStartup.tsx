@@ -66,7 +66,7 @@ export function HomeChatStartup() {
               <PanelLeft className="size-5" />
             </span>
             <span className="spec400-mobile-page-title pl-1">KovaGPT</span>
-            <div className="flex items-center gap-0.5 opacity-45">
+            <div className="kova-mobile-home-actions flex items-center gap-0.5 opacity-45">
               <span className="grid h-11 w-11 place-items-center">
                 <MessageCircleOff className="size-5" />
               </span>
