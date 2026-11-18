@@ -136,8 +136,8 @@ function includeMessage(row: { messageIds: string[] }, messageId: string) {
  * The current Message contract records provided web/memory context and available
  * attachments, not per-source influence or attachment consumption. Keep those
  * distinctions instead of upgrading any of them to "used". Browser rows require
- * an explicit browser_interact activity; there is no chat browser event producer
- * today. Synthetic review fixtures must identify themselves in their own UI.
+ * an explicit browser_interact activity. Synthetic review fixtures must identify
+ * themselves in their own UI.
  */
 export function conversationSources(
   conversation: Conversation,

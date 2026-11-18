@@ -17,7 +17,7 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
         matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
           .matches,
     ));
-  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "21px" : "34px");
+  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
@@ -118,7 +118,7 @@ test("signed-in homepage initially scrolls to the latest content", async ({ page
   await expect(page.locator("#chat-greeting")).toBeVisible();
   await expect(page.getByRole("button", { name: "Prepare or manage Work" })).toHaveCount(0);
   const home = page.locator(".kova-empty-chat");
-  await expect(home.locator("#continue-working-heading")).toBeVisible();
+  await expect(home.getByRole("heading", { name: "Continue working", exact: true })).toBeVisible();
   await expect
     .poll(() => home.evaluate((node) => node.scrollHeight - node.clientHeight))
     .toBeGreaterThan(8);
@@ -293,9 +293,16 @@ test("a composer link preview aligns with the first letter of the draft", async 
   await input.press("Space");
   await expect(preview).toBeVisible();
 
-  const textStart = await input.evaluate(
-    (element) =>
-      element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
-  );
-  expect((await preview.boundingBox())!.x).toBeCloseTo(textStart, 0);
+  await expect
+    .poll(() =>
+      input.evaluate((element) => {
+        const link = element
+          .closest(".spec400-composer")!
+          .querySelector(".kova-link-preview-composer")!;
+        const textStart =
+          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft);
+        return Math.abs(link.getBoundingClientRect().left - textStart);
+      }),
+    )
+    .toBeLessThan(0.5);
 });

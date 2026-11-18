@@ -20,6 +20,7 @@ const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const streamingStatus = await readFile("src/components/StreamingStatus.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
 const starters = await readFile("src/components/HomeChatStarters.tsx", "utf8");
+const homeFrame = await readFile("src/components/HomeChatFrame.tsx", "utf8");
 const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx", "utf8");
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const publicShell = await readFile("src/components/public/PublicShell.tsx", "utf8");
@@ -352,12 +353,12 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   for (const className of ["kova-composer-menu spec400-attach-menu kova-composer-full-menu"]) {
     const popover = positionedPopovers.find((props) => props.includes(`className="${className}"`));
     assert.ok(popover, `${className} retains its positioned popover`);
+    assert.match(popover, /aria-label=\{[\s\S]*?"Attach files and tools"\s*\}/);
     assert.match(popover, /side=\{longDraft \? "top" : "bottom"\}/);
     assert.match(popover, /sideOffset=\{5\}/);
     assert.match(popover, /collisionPadding=\{8\}/);
   }
   assert.doesNotMatch(composer, /spec400-options-panel|setOptionsOpen/);
-  assert.match(composer, /aria-label="Attach files and tools"/);
   assert.match(composerStyles, /\.spec400-toolbar-button,[\s\S]*?min-height: 44px;/);
   assert.match(composer, /\["ArrowDown", "ArrowUp", "Home", "End"\]\.includes\(event\.key\)/);
   assert.match(composer, /button:not\(:disabled\),a\[href\]/);
@@ -371,7 +372,8 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(home, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
-  assert.match(starters, /<div className="kova-empty-composer">\s*\{children\}/);
+  assert.match(starters, /<HomeChatFrame[\s\S]*?\{children\}/);
+  assert.match(homeFrame, /<div className="kova-empty-composer">\s*\{children\}/);
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

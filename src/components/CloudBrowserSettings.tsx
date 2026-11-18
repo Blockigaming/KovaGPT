@@ -15,6 +15,7 @@ type Readiness = {
   origins: string[];
   siteRulesEnforced?: boolean;
   publicWeb?: boolean;
+  chatAvailable?: boolean;
 };
 export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
   const [rules, setRules] = useState<CloudBrowserRules>({ sites: [] });
@@ -97,10 +98,17 @@ export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
         <p className="text-sm" role="status">
           {!readiness
             ? "Checking availability…"
-            : readiness.available
-              ? "Browser runner available"
-              : "Browser runner unavailable. Browsing requires a configured, verified runner."}
+            : readiness.chatAvailable
+              ? "Cloud Browser is ready for chat"
+              : readiness.available
+                ? "Browser runner available"
+                : "Browser runner unavailable. Browsing requires a configured, verified runner."}
         </p>
+        {readiness?.chatAvailable && (
+          <p className="text-sm text-muted-foreground">
+            In chat, ask Cloud Browser to open a public HTTPS link. Available on Plus and Pro.
+          </p>
+        )}
         {readiness?.available && (
           <p className="text-sm text-muted-foreground">
             {readiness.publicWeb

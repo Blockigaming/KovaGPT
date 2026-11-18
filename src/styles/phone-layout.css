@@ -1,4 +1,3 @@
-.kova-phone-navigation,
 .kova-public-launch-phone {
   display: none;
 }
@@ -82,43 +81,6 @@
     font-weight: 600;
     line-height: 1.1;
     text-align: start;
-  }
-
-  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-greeting {
-    margin-block-start: auto;
-  }
-
-  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-empty-composer {
-    margin-block-start: 0;
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work {
-    margin-block: 0 20px;
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work ul {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-inline: 10px;
-    border: 1px solid var(--border);
-    border-radius: 17px;
-    background: var(--card);
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work li + li {
-    border-block-start: 1px solid var(--border);
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work li:nth-child(n + 3) {
-    display: none;
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work button {
-    min-height: 56px;
-    padding: 8px 2px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
   }
 
   .kova-assistant .kova-empty-composer {
@@ -301,81 +263,5 @@
   [data-public-shell] main .public-article-body {
     font-size: 1rem;
     line-height: 1.65;
-  }
-}
-
-/* Reserve a row for the tab bar so it never overlays scrollable content. */
-@media (width < 768px) and (height > 500px) {
-  :root:not([data-kova-keyboard]):has(.kova-phone-navigation, .kova-images-workspace) {
-    --phone-toast-clearance: 64px;
-  }
-
-  .kova-phone-workspace {
-    display: grid;
-    grid-template: minmax(0, 1fr) auto / minmax(0, 1fr);
-  }
-
-  .kova-phone-workspace > .kova-app-content {
-    grid-area: 1 / 1;
-    padding-block-end: 0;
-  }
-
-  .kova-phone-workspace > .kova-phone-navigation {
-    grid-area: 2 / 1;
-  }
-
-  .kova-phone-navigation {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    flex: none;
-    gap: 2px;
-    padding: 4px max(6px, var(--safe-right)) max(4px, var(--safe-bottom)) max(6px, var(--safe-left));
-    border-block-start: 1px solid var(--border);
-    background: var(--background);
-  }
-
-  .kova-phone-navigation > a {
-    display: flex;
-    min-height: 48px;
-    min-width: 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: 3px 1px;
-    border-radius: 12px;
-    color: var(--muted-foreground);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    line-height: 1.15;
-    text-align: center;
-    overflow-wrap: anywhere;
-  }
-
-  .kova-phone-navigation-icon {
-    display: grid;
-    width: 38px;
-    height: 25px;
-    place-items: center;
-    border-radius: 10px;
-  }
-
-  .kova-phone-navigation > a[data-current="true"] {
-    color: var(--foreground);
-    font-weight: 600;
-  }
-
-  .kova-phone-navigation > a[data-current="true"] .kova-phone-navigation-icon {
-    background: var(--accent);
-  }
-
-  .kova-phone-navigation > a:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: -2px;
-  }
-
-  .kova-assistant[data-keyboard-open="true"] .kova-phone-navigation,
-  :root[data-kova-keyboard] .kova-phone-workspace > .kova-phone-navigation {
-    display: none;
   }
 }

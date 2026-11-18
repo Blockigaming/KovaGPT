@@ -112,7 +112,8 @@ test("empty chat removes prompt examples and scopes recent work to signed-in his
     assert.equal(starters.includes(label), false);
   assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
   assert.match(route, /conversations=\{isLoaded && isSignedIn \? historyConversations : \[\]\}/);
-  assert.match(homeView, /Continue working/);
+  assert.match(homeView, /<ContinueWorking/);
+  assert.match(await readFile("src/components/HomeChatFrame.tsx", "utf8"), /Continue working/);
   assert.doesNotMatch(route, /Sign in to save chats and attach files/);
   assert.match(
     await readFile("src/components/DesktopChatToolbar.tsx", "utf8"),

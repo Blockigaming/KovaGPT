@@ -42,7 +42,7 @@ async function geometry(page: Page) {
         matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
           .matches,
     ));
-  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "21px" : "34px");
+  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
   const singleRow =
     conversation &&
     (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
@@ -255,13 +255,14 @@ for (const theme of ["light", "dark"] as const) {
       animations: "disabled",
     });
     if (page.viewportSize()!.width >= 1024) {
-      await revealSidebar(page);
       await page.locator(".kova-user-message").last().click({ button: "right" });
       await page.getByRole("menuitem", { name: "Edit message", exact: true }).click();
+      await revealSidebar(page);
       await page.getByRole("button", { name: "Open chat Second review chat", exact: true }).click();
       await expect(input).toHaveValue("Second chat draft");
       await expect(page.getByText("Editing a previous prompt", { exact: true })).toHaveCount(0);
       await expect(page.getByLabel("Remove Keep.txt", { exact: true })).toHaveCount(0);
+      await revealSidebar(page);
       await page
         .getByRole("button", { name: "Open chat Composer review chat", exact: true })
         .click();

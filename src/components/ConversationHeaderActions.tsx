@@ -1,3 +1,5 @@
+import { CloudBrowserPreview } from "./CloudBrowserPreview";
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
@@ -695,10 +697,14 @@ export function ConversationHeaderActions({
                 <DialogTitle>Browser activity</DialogTitle>
                 <DialogDescription>{selectedBrowser?.label}</DialogDescription>
               </DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                This is a recorded browser event. No live session is connected. A live preview and
-                controls appear here when a verified browser session is active.
-              </p>
+              {signedIn &&
+              user?.id &&
+              selectedBrowser.browser?.previewPath &&
+              browserActivityIsFresh(selectedBrowser.browser) ? (
+                <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
+              ) : (
+                <p className="text-sm text-muted-foreground">This browser session has ended.</p>
+              )}
               <Button
                 variant="outline"
                 className="min-h-11"

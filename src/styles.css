@@ -16,6 +16,7 @@
 @import "./styles/tool-workspaces.css";
 @import "./styles/app-finish.css";
 @import "./styles/phone-layout.css";
+@import "./styles/phone-equivalence.css";
 
 @custom-variant dark (&:is(.dark *));
 

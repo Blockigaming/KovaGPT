@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { SIDEBAR_DRAWER_QUERY } from "../../src/lib/sidebar-viewport";
 import { waitForKovaHydration } from "./hydration";
 
 // Response preferences remain in Settings after the composer tray was simplified.
@@ -47,6 +48,10 @@ export async function revealSidebar(page: Page) {
   return navigation;
 }
 
+export function usesSidebarDrawer(page: Page) {
+  return page.evaluate((query) => matchMedia(query).matches, SIDEBAR_DRAWER_QUERY);
+}
+
 export async function dismissMobileSidebar(page: Page) {
   const drawer = page.getByRole("dialog", {
     name: "Primary navigation",
@@ -55,6 +60,14 @@ export async function dismissMobileSidebar(page: Page) {
   await expect(drawer).toBeVisible();
   await drawer.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(drawer).toBeHidden();
+}
+
+export async function revealContinueWorking(page: Page) {
+  await expect(page.locator(".kova-empty-chat .spec400-recent-work")).toBeAttached();
+  const recommendations = page.getByRole("region", { name: "Continue working", exact: true });
+  if (!(await recommendations.isVisible())) await revealSidebar(page);
+  await expect(recommendations).toBeVisible();
+  return recommendations;
 }
 
 export async function openCurrentSettings(page: Page) {

@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { captureCandidateVisual } from "./candidate-visual-evidence";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar } from "./current-ui";
+import { revealSidebar, usesSidebarDrawer } from "./current-ui";
 import { waitForCommittedChat } from "./chat-history-commit";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -26,7 +26,7 @@ async function expectEmptyWorkspaceLandmarks(page: Page) {
   await expect(navigationTitle).toHaveAttribute("role", "heading");
   await expect(navigationTitle).toHaveAttribute("aria-level", "1");
   await expect(navigationTitle).toHaveText("KovaGPT");
-  if (page.viewportSize()!.width < 1024) await expect(navigationTitle).toBeVisible();
+  if (await usesSidebarDrawer(page)) await expect(navigationTitle).toBeVisible();
   else await expect(navigationTitle).toBeHidden();
 }
 
@@ -108,6 +108,9 @@ test("empty workspace remains contained and composer focus is deliberate", async
         ),
         input: bounds(".spec400-composer-input"),
         coarse: matchMedia("(any-pointer: coarse)").matches,
+        phone: matchMedia(
+          "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+        ).matches,
         attach: bounds('[aria-label="Attach"]'),
         send: bounds('[aria-label="Send message"]'),
       };
@@ -115,9 +118,11 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.width).toBeLessThanOrEqual(metrics.composerWidth);
     if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.height).toBeGreaterThanOrEqual(
-      focused.radius === 21 ? 92 : coarseComposer ? 136 : 148,
-    );
+    if (metrics.phone) {
+      // A short prompt fits in the compact phone frame with 44 px actions.
+      expect(metrics.height).toBeCloseTo(92, 0);
+      expect(metrics.input!.height).toBeCloseTo(34, 0);
+    } else expect(metrics.height).toBeGreaterThanOrEqual(coarseComposer ? 136 : 148);
     expect(metrics.input!.height).toBeGreaterThanOrEqual(26);
     const control = coarseComposer ? 44 : 36;
     expect(metrics.attach!.width).toBe(control);
@@ -213,8 +218,11 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
 
-    const composer = page.locator(".spec400-composer");
     const input = page.getByRole("textbox", { name: "Message KovaGPT" }).first();
+    const composer = page
+      .locator(".spec400-composer")
+      .filter({ has: page.getByRole("textbox", { name: "Message KovaGPT", exact: true }) });
+    await expect(input).toBeEnabled();
     const before = await composer.evaluate((element) => {
       const style = getComputedStyle(element);
       return [style.outlineStyle, Number.parseFloat(style.outlineWidth)] as const;

@@ -53,6 +53,7 @@ export function ConversationSourcesPanel({
         separateInputs={separateInputs}
         hideSourcesHeading={hideSourcesHeading}
         browserPreview={browserPreview}
+        browserOwnerId={ownerId ?? undefined}
         browserTabCount={browserTabCount}
         showActivity={showActivity}
         onOpenAttachment={onOpenAttachment}

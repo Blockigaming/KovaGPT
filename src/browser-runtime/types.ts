@@ -20,6 +20,8 @@ export interface PermissionPolicy {
 export interface CreateSessionOptions extends SessionIdentity {
   engine?: BrowserEngine;
   idleTimeoutMs?: number;
+  readOnly?: boolean;
+  onClosed?: () => Promise<void>;
   permissions: PermissionPolicy;
 }
 
@@ -100,4 +102,6 @@ export interface RuntimeSession {
   tabs: Map<string, { page: Page; descriptor: TabDescriptor }>;
   storagePath: string;
   closing?: Promise<void>;
+  releaseRemote?: () => Promise<void>;
+  onClosed?: () => Promise<void>;
 }

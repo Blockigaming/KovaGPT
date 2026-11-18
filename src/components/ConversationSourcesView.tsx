@@ -1,5 +1,6 @@
 import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import { ResponseSourceIcon } from "./ResponseSourceIcon";
+import { CloudBrowserPreview } from "./CloudBrowserPreview";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import type { ReactNode } from "react";
 import {
@@ -55,6 +56,7 @@ export function ConversationSourcesView({
   onOpenMemory,
   onOpenBrowser,
   browserPreview,
+  browserOwnerId,
   browserTabCount,
   showActivity = true,
   activeBrowserOnly = false,
@@ -66,6 +68,7 @@ export function ConversationSourcesView({
   onOpenMemory: (sources: MemorySources) => void;
   onOpenBrowser?: (activity: ConversationBrowserSource) => void;
   browserPreview?: ReactNode;
+  browserOwnerId?: string;
   browserTabCount?: number;
   showActivity?: boolean;
   activeBrowserOnly?: boolean;
@@ -241,16 +244,9 @@ export function ConversationSourcesView({
               {browserPreview ??
                 (activity.status === "active" &&
                 browserActivityIsFresh(activity.browser) &&
-                activity.browser?.previewPath ? (
-                  <span className="kova-browser-live-preview">
-                    <img
-                      src={activity.browser.previewPath}
-                      alt="Current cloud browser preview"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
-                    {activity.browser.hostname ? <small>{activity.browser.hostname}</small> : null}
-                  </span>
+                activity.browser?.previewPath &&
+                browserOwnerId ? (
+                  <CloudBrowserPreview browser={activity.browser} ownerId={browserOwnerId} />
                 ) : (
                   <span className="kova-browser-card-content">
                     <Monitor aria-hidden="true" />

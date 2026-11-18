@@ -36,8 +36,8 @@ import {
   Copy,
 } from "lucide-react";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { Sidebar } from "@/components/Sidebar";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -409,7 +409,7 @@ function ImagesPage() {
       // Keep Settings above the mobile drawer and preserve unsaved image work.
       if (
         tab !== "logout" &&
-        !window.matchMedia("(max-width: 1023px)").matches &&
+        !window.matchMedia(SIDEBAR_DRAWER_QUERY).matches &&
         !prompt.trim() &&
         !editSelection &&
         !loading &&
@@ -1345,7 +1345,6 @@ function ImagesPage() {
             </section>
           </div>
         </div>
-        <PhoneNavigation pathname="/images" inactive={sidebarOpen || settingsOpen} />
       </main>
 
       <SettingsDialog

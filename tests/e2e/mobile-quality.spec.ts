@@ -12,6 +12,7 @@ const mobileProjects = new Set([
   "phone-430x932",
   "phone-landscape-844x390",
   "tablet-768x1024",
+  "tablet-1024x768",
 ]);
 
 async function expectNoPageOverflow(page: Page) {
@@ -30,14 +31,66 @@ test.beforeEach(async ({ page }, testInfo) => {
 test("navigation opens, contains its controls, and dismisses predictably", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  if (page.viewportSize()!.width <= 599) {
+    const actions = page.locator(".kova-mobile-home-actions");
+    await expect(actions.getByRole("button", { name: /Free offer/ })).toBeVisible();
+    const centers = await actions.getByRole("button").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const glyph = button.querySelector("svg")!.getBoundingClientRect();
+        const { width, height } = button.getBoundingClientRect();
+        return { x: glyph.x + glyph.width / 2, target: Math.min(width, height) };
+      }),
+    );
+    expect(centers).toHaveLength(3);
+    expect(centers.every((button) => button.target >= 44)).toBe(true);
+    expect(centers[1].x - centers[0].x).toBeCloseTo(32, 0);
+    expect(centers[2].x - centers[1].x).toBeCloseTo(32, 0);
+  }
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close sidebar", exact: true })).toBeVisible();
+  const search = navigation.getByRole("button", { name: "Search chats", exact: true });
+  const close = navigation.getByRole("button", { name: "Close sidebar", exact: true });
+  for (const action of [search, close]) {
+    await expect(action).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(action).toHaveCSS("border-top-width", "0px");
+    const geometry = await action.evaluate((button) => {
+      const target = button.getBoundingClientRect();
+      const glyph = button.querySelector("svg")!.getBoundingClientRect();
+      return {
+        width: button.offsetWidth,
+        height: button.offsetHeight,
+        dx: glyph.x + glyph.width / 2 - target.x - target.width / 2,
+        dy: glyph.y + glyph.height / 2 - target.y - target.height / 2,
+      };
+    });
+    expect(Math.min(geometry.width, geometry.height)).toBeGreaterThanOrEqual(44);
+    expect(geometry.dx).toBeCloseTo(action === search ? 6 : -6, 0);
+    expect(geometry.dy).toBeCloseTo(0, 0);
+  }
   const box = await navigation.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThan(page.viewportSize()!.width);
-  await page.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  const header = navigation.locator(".kova-sidebar-header");
+  await expect(header.locator(".kova-sidebar-header-actions")).toHaveCSS("column-gap", "0px");
+  await expect(async () => {
+    const gap = await header.evaluate((element) => {
+      const brand = element.querySelector<HTMLElement>(".kova-sidebar-brand")!;
+      const tools = element.querySelector<HTMLElement>(".kova-sidebar-header-actions")!;
+      return (
+        tools.getBoundingClientRect().left - brand.getBoundingClientRect().left - brand.scrollWidth
+      );
+    });
+    expect(gap).toBeGreaterThanOrEqual(0);
+  }).toPass();
+  await search.tap();
+  const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
+  await expect(palette.getByRole("combobox")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(palette).toBeHidden();
+  await expect(navigation).toBeVisible();
+  await expect(search).toBeFocused();
+  await close.tap();
   await expect(navigation).toBeHidden();
   await expectNoPageOverflow(page);
 });
@@ -59,7 +112,9 @@ test("composer and attachment menu stay reachable on narrow screens", async ({ p
   await expect(sheet).toBeHidden();
 });
 
-test("phone workspace tabs sit below the composer and navigate between pages", async ({ page }) => {
+test("the single phone composer and drawer retain every workspace destination and the draft", async ({
+  page,
+}) => {
   const viewport = page.viewportSize()!;
   test.skip(viewport.width >= 768 || viewport.height <= 500, "portrait phone layout");
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -68,36 +123,38 @@ test("phone workspace tabs sit below the composer and navigate between pages", a
   const tabs = page.getByRole("navigation", { name: "Mobile workspace" });
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(composer).toBeInViewport({ ratio: 1 });
-  await expect(tabs.getByRole("link", { name: "Chat", exact: true })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  const [composerBox, tabBox] = await Promise.all([composer.boundingBox(), tabs.boundingBox()]);
-  expect(composerBox!.y).toBeGreaterThan(viewport.height / 2);
-  expect(composerBox!.y + composerBox!.height).toBeLessThanOrEqual(tabBox!.y);
-  expect(tabBox!.y + tabBox!.height).toBeCloseTo(viewport.height, 0);
+  await expect(tabs).toHaveCount(0);
+  await expect(page.locator(".kova-composer-tray")).toBeHidden();
+  const box = (await page.locator(".spec400-composer:visible").boundingBox())!;
+  expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(24);
   await composer.fill("Keep this draft while I change pages");
 
   for (const name of ["Projects", "Library", "Connections"]) {
-    const destination = tabs.getByRole("link", { name, exact: true });
-    const hitTarget = await destination.boundingBox();
-    expect(Math.min(hitTarget!.width, hitTarget!.height)).toBeGreaterThanOrEqual(44);
-    await destination.tap();
-    await expect(destination).toHaveAttribute("aria-current", "page");
+    await page.getByRole("button", { name: "Open menu", exact: true }).tap();
+    const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+    const destination = drawer.getByRole("link", { name, exact: true });
+    expect((await destination.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    if (name === "Library") {
+      await destination.focus();
+      await page.keyboard.press("Enter");
+      await expect(
+        page.getByRole("main").getByRole("heading", { name, exact: true, level: 1 }),
+      ).toBeFocused();
+    } else {
+      await destination.tap();
+    }
     await expect(page.getByRole("main")).toBeVisible();
+    await expect(tabs).toHaveCount(0);
+    await page.getByRole("button", { name: "Open menu", exact: true }).tap();
+    await expect(drawer.getByRole("link", { name, exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await expectNoPageOverflow(page);
+    await drawer.getByRole("link", { name: "Chat", exact: true }).tap();
+    await expect(composer).toHaveValue("Keep this draft while I change pages");
+    await expect(composer).not.toBeFocused();
   }
-
-  const libraryTab = tabs.getByRole("link", { name: "Library", exact: true });
-  await libraryTab.focus();
-  await page.keyboard.press("Enter");
-  await expect(
-    page
-      .getByRole("heading", { name: "Library", exact: true, level: 1 })
-      .and(page.locator(":focus")),
-  ).toBeVisible();
-  await tabs.getByRole("link", { name: "Chat", exact: true }).tap();
-  await expect(composer).toHaveValue("Keep this draft while I change pages");
 });
 
 test("mobile public header exposes the app and opens its menu without moving the article", async ({
@@ -171,9 +228,13 @@ test("phone article outlines jump to readable sections below the header", async 
     await expect(page).toHaveURL(/#section-1$/);
     const content = page.locator("#section-1").getByRole("heading", { level: 2 });
     await expect(content).toBeInViewport();
-    const headingBox = await content.boundingBox();
-    const headerBox = await page.locator(".kova-public-header").boundingBox();
-    expect(headingBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    // Anchor navigation is smooth for motion-enabled users. Assert the final
+    // position rather than an intermediate frame as the heading passes by.
+    await expect(async () => {
+      const headingBox = await content.boundingBox();
+      const headerBox = await page.locator(".kova-public-header").boundingBox();
+      expect(headingBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    }).toPass({ timeout: 5_000 });
     await expectNoPageOverflow(page);
   }
 });

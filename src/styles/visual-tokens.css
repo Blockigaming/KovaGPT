@@ -130,7 +130,7 @@
   --kova-radius-output: 16px;
   --kova-sidebar-width: 260px;
   --kova-sidebar-rail-width: 60px;
-  --kova-sidebar-drawer-width: min(86vw, 320px);
+  --kova-sidebar-drawer-width: 260px;
   --kova-reading-width: 768px;
   --kova-composer-width: 768px;
   --composer-background: #ffffff;

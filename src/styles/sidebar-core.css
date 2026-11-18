@@ -543,6 +543,24 @@ button.kova-sidebar-scrim {
   font-weight: 500;
   line-height: 24px;
 }
+@media (max-width: 599px) {
+  .kova-mobile-home-actions {
+    gap: 0;
+    --mobile-header-icon-inset: 6px;
+  }
+  .kova-mobile-home-actions:has(> :nth-child(3)) {
+    --mobile-header-icon-inset: 12px;
+  }
+  .kova-mobile-home-actions:dir(rtl) {
+    --mobile-header-direction: -1;
+  }
+  .kova-mobile-home-actions > :first-child:not(:last-child) > svg {
+    translate: calc(var(--mobile-header-icon-inset) * var(--mobile-header-direction, 1));
+  }
+  .kova-mobile-home-actions > :last-child:not(:first-child) > svg {
+    translate: calc(-1 * var(--mobile-header-icon-inset) * var(--mobile-header-direction, 1));
+  }
+}
 @media (min-width: 1024px) {
   .kova-sidebar-rail[data-kova-core-rail] {
     display: flex;
@@ -551,24 +569,50 @@ button.kova-sidebar-scrim {
     display: none;
   }
 }
-@media (max-width: 1023px) {
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
   .kova-sidebar[data-kova-core-sidebar] {
     position: fixed;
     inset: 0 auto 0 0;
     height: 100dvh;
     margin: 0;
-    width: var(--kova-sidebar-drawer-width, min(86vw, 320px));
+    width: var(--kova-sidebar-drawer-width, 260px);
     min-width: 0;
     max-width: calc(100vw - 24px);
     border-radius: 0 24px 24px 0;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
-    width: var(--kova-sidebar-drawer-width, min(86vw, 320px));
+    width: var(--kova-sidebar-drawer-width, 260px);
     transform: translateX(-100%);
   }
   .kova-sidebar-inner {
     width: 100%;
     min-width: 0;
+  }
+  .kova-sidebar-header-actions {
+    gap: 0;
+  }
+  .kova-sidebar-header .kova-header-search {
+    display: inline-flex;
+  }
+  /* Move the glyphs inward without shrinking or overlapping their tap targets. */
+  .kova-sidebar-header .kova-header-search > svg {
+    translate: 6px;
+  }
+  .kova-sidebar-header .kova-header-search + .kova-sidebar-toggle > svg {
+    translate: -6px;
+  }
+  .kova-sidebar-header:dir(rtl) .kova-header-search > svg {
+    translate: -6px;
+  }
+  .kova-sidebar-header:dir(rtl) .kova-header-search + .kova-sidebar-toggle > svg {
+    translate: 6px;
+  }
+  .kova-sidebar .kova-sidebar-header .kova-header-button {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .kova-sidebar .kova-sidebar-header .kova-header-button:is(:hover, :active) {
+    background: transparent;
+    color: var(--foreground);
   }
   .kova-sidebar-search {
     height: 44px;
@@ -740,10 +784,6 @@ button.kova-auth-sign-up:hover {
     padding-inline: 20px 12px;
     min-height: calc(76px + var(--safe-top, 0px));
   }
-  .kova-sidebar-header .kova-header-button {
-    border-radius: 50%;
-    background: var(--sidebar-active);
-  }
   .kova-sidebar-primary {
     padding-inline: 12px;
     gap: 6px;
@@ -763,11 +803,6 @@ button.kova-auth-sign-up:hover {
   }
 }
 @media (max-width: 767px) {
-  .kova-sidebar-header .kova-header-button.kova-sidebar-toggle {
-    border-radius: 50%;
-  }
-}
-@media (max-width: 767px) {
   .kova-sidebar .kova-nav-row,
   .kova-sidebar .kova-chat-row-main {
     font-size: 16px;
@@ -781,10 +816,6 @@ button.kova-auth-sign-up:hover {
     touch-action: manipulation;
   }
   .kova-sidebar[data-kova-core-sidebar] :is(.kova-nav-row, .kova-chat-row-main) {
-    border-radius: 14px;
-  }
-  .kova-sidebar[data-kova-core-sidebar] :is(.kova-header-button, .kova-sidebar-toggle) {
-    min-width: 44px;
     border-radius: 14px;
   }
 }
@@ -885,5 +916,33 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
     flex: 0 0 auto;
     width: auto;
     border: 1px solid var(--border);
+  }
+}
+
+/* A touch tablet keeps the same drawer width as a 390px phone. */
+@media (min-width: 1024px) and (pointer: coarse) and (hover: none) {
+  .kova-sidebar-rail[data-kova-core-rail],
+  .kova-desktop-topbar,
+  .kova-sidebar-toggle[aria-label="Collapse sidebar"] {
+    display: none;
+  }
+
+  .kova-topbar:not(.kova-desktop-topbar) {
+    display: block;
+  }
+
+  .kova-sidebar-scrim[data-state="open"] {
+    display: block;
+  }
+
+  .kova-sidebar-toggle[aria-label="Close sidebar"] {
+    display: flex;
+  }
+}
+
+@media (pointer: coarse) {
+  .kova-sidebar .kova-chat-row-main {
+    -webkit-touch-callout: none;
+    user-select: none;
   }
 }

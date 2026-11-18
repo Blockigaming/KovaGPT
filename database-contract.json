@@ -2312,7 +2312,7 @@
     "execute on function public.claim_account_export_artifact_cleanup(integer, uuid) to service_role",
     "execute on function public.claim_account_export_jobs(text, integer, integer) to service_role",
     "execute on function public.claim_account_export_jobs(text, integer, integer) to service_role",
-    "execute on function public.claim_browserbase_slot(integer, interval) to service_role",
+    "execute on function public.claim_browserbase_slot(uuid, uuid, text, integer) to service_role",
     "execute on function public.claim_chat_context_summaries(integer) to service_role",
     "execute on function public.claim_due_scheduled_tasks(text, integer, integer)\n  to service_role",
     "execute on function public.claim_due_scheduled_tasks(text,integer,integer) to service_role",
@@ -3010,7 +3010,7 @@
     "all on function public.claim_account_export_artifact_cleanup(integer, uuid)\n  from public, anon, authenticated",
     "all on function public.claim_account_export_jobs(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_account_export_jobs(text, integer, integer)\n  from public, anon, authenticated",
-    "all on function public.claim_browserbase_slot(integer, interval) from public, anon, authenticated",
+    "all on function public.claim_browserbase_slot(uuid, uuid, text, integer) from public, anon, authenticated",
     "all on function public.claim_chat_context_summaries(integer) from public,anon,authenticated",
     "all on function public.claim_due_scheduled_tasks(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_due_scheduled_tasks(text,integer,integer) from public,anon,authenticated",
@@ -3925,5 +3925,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "0a6f9fc3c4738c33521205ee0a1f6a775cfa81979d0da0ffe2615eef8cf96e22"
+  "sha256": "6b3f18db56923e88b6ee5aca8a33992b9f125df12d6fd46838e56dc4175aba9b"
 }

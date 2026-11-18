@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { fixture, functionNames, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openComposerAddMenu } from "./current-ui";
+import { openComposerAddMenu, usesSidebarDrawer } from "./current-ui";
 
 async function start(page: Parameters<typeof fixture>[0], empty = false) {
   await fixture(page, "dark", true);
@@ -18,6 +18,21 @@ async function start(page: Parameters<typeof fixture>[0], empty = false) {
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeEnabled();
 }
 
+async function openResource(
+  page: Parameters<typeof fixture>[0],
+  name: "Choose project" | "Files" | "Plugins",
+) {
+  const tray = page.locator(".kova-composer-tray");
+  if (await tray.isVisible()) {
+    const trigger = tray.getByRole("button", { name, exact: true });
+    await trigger.click();
+    return trigger;
+  }
+  const menu = await openComposerAddMenu(page);
+  await menu.getByRole("button", { name, exact: true }).click();
+  return page.getByRole("button", { name: "Attach", exact: true });
+}
+
 test("requested: topbar, prompt insets and exact attachment actions", async ({ page }, info) => {
   await start(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
@@ -25,13 +40,31 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   const composer = page.locator(".spec400-composer");
   const box = (await composer.boundingBox())!;
   const inset = await composer.evaluate((surface) => {
-    const text = surface.querySelector("textarea")!.getBoundingClientRect();
+    const input = surface.querySelector("textarea")!;
+    const text = input.getBoundingClientRect();
     const frame = surface.getBoundingClientRect();
-    return { x: text.x - frame.x, y: text.y - frame.y };
+    return {
+      x: text.x - frame.x + Number.parseFloat(getComputedStyle(input).paddingLeft),
+      y: text.y - frame.y,
+    };
   });
-  expect(inset.x).toBeLessThanOrEqual(18);
+  const phoneComposer = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  const insetComposer = await page.evaluate(
+    () =>
+      matchMedia("(width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none)")
+        .matches,
+  );
+  if (phoneComposer) expect(inset.x).toBeCloseTo(16, 0);
+  else {
+    if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
+    expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 18);
+  }
   expect(inset.y).toBeLessThanOrEqual(20);
-  if (page.viewportSize()!.width >= 1024) {
+  if (!(await usesSidebarDrawer(page))) {
     const header = (await page.locator(".kova-desktop-topbar").boundingBox())!;
     expect(header.y).toBeLessThanOrEqual(1);
     await expect(page.getByRole("button", { name: "Open desktop app", exact: true })).toBeVisible();
@@ -64,8 +97,7 @@ test("requested: empty project, plugin and file pickers contain no sample record
   page,
 }) => {
   await start(page, true);
-  const tray = page.locator(".kova-composer-tray");
-  await tray.getByRole("button", { name: "Choose project", exact: true }).click();
+  await openResource(page, "Choose project");
   const projects = page.getByRole("dialog", { name: "Choose project", exact: true });
   await expect(projects.getByRole("button", { name: "New project" })).toBeVisible();
   await expect(projects.getByText("No active projects found.")).toHaveCount(0);
@@ -79,12 +111,12 @@ test("requested: empty project, plugin and file pickers contain no sample record
     0,
   );
   await page.keyboard.press("Escape");
-  await tray.getByRole("button", { name: "Files", exact: true }).click();
+  await openResource(page, "Files");
   const files = page.getByRole("dialog", { name: "Choose files", exact: true });
   await expect(files).toContainText("No saved files yet.");
   await expect(files.locator(".kova-composer-library button")).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await tray.getByRole("button", { name: "Plugins", exact: true }).click();
+  await openResource(page, "Plugins");
   const plugins = page.getByRole("dialog", { name: "Choose plugins", exact: true });
   await expect(plugins).toContainText("No connected plugins.");
   await expect(plugins.locator(".kova-composer-plugin")).toHaveCount(0);
@@ -116,8 +148,7 @@ test("opening Choose project uses the prefetched list", async ({ page }) => {
   await page.goto("/");
   await waitForKovaHydration(page);
   await expect.poll(() => requests).toBe(1);
-  const trigger = page.getByRole("button", { name: "Choose project", exact: true });
-  await trigger.click();
+  const trigger = await openResource(page, "Choose project");
   const picker = page.getByRole("dialog", { name: "Choose project", exact: true });
   await expect(
     picker.getByRole("button", { name: "Add project Prefetched project" }),
@@ -126,8 +157,11 @@ test("opening Choose project uses the prefetched list", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await expect.poll(() => requests).toBe(2);
-  await trigger.click();
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await input.fill("Keep this project draft");
+  await openResource(page, "Choose project");
   await picker.getByRole("button", { name: "Add project Prefetched project" }).click();
+  await expect(input).toHaveValue("Keep this project draft");
   await expect(
     page.getByRole("button", { name: "Remove project Prefetched project" }),
   ).toBeVisible();
@@ -165,10 +199,7 @@ test("requested: connected plugin rows come only from current account status", a
   );
   await page.goto("/");
   await waitForKovaHydration(page);
-  await page
-    .locator(".kova-composer-tray")
-    .getByRole("button", { name: "Plugins", exact: true })
-    .click();
+  await openResource(page, "Plugins");
   const plugins = page.getByRole("dialog", { name: "Choose plugins", exact: true });
   await expect(plugins.locator(".kova-composer-plugin")).toHaveCount(3);
   for (const name of ["Gmail", "Google Drive", "Notion"])
