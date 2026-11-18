@@ -3193,6 +3193,11 @@ function KovaGPT() {
       chatRulesActive={chatRulesActive}
       onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
       placeholder="Work with KovaGPT"
+      focusOnHomeStartup={
+        principalReady
+          ? Boolean(isSignedIn && activeId === null && !tempChat && !composerVoiceMode)
+          : undefined
+      }
       responseSettings={settings}
       onResponseSettingsChange={(change) => setSettings((previous) => ({ ...previous, ...change }))}
       onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}

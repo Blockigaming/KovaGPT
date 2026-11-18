@@ -40,18 +40,29 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   const composer = page.locator(".spec400-composer");
   const box = (await composer.boundingBox())!;
   const inset = await composer.evaluate((surface) => {
-    const text = surface.querySelector("textarea")!.getBoundingClientRect();
+    const input = surface.querySelector("textarea")!;
+    const text = input.getBoundingClientRect();
     const frame = surface.getBoundingClientRect();
-    return { x: text.x - frame.x, y: text.y - frame.y };
+    return {
+      x: text.x - frame.x + Number.parseFloat(getComputedStyle(input).paddingLeft),
+      y: text.y - frame.y,
+    };
   });
+  const phoneComposer = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
   const insetComposer = await page.evaluate(
     () =>
-      matchMedia(
-        "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse), (width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none)",
-      ).matches,
+      matchMedia("(width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none)")
+        .matches,
   );
-  if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
-  expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 18);
+  if (phoneComposer) expect(inset.x).toBeCloseTo(16, 0);
+  else {
+    if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
+    expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 18);
+  }
   expect(inset.y).toBeLessThanOrEqual(20);
   if (!(await usesSidebarDrawer(page))) {
     const header = (await page.locator(".kova-desktop-topbar").boundingBox())!;

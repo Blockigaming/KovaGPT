@@ -212,6 +212,8 @@ export type ChatActivityComposer = {
   openTemplates: (format: ChatOutputFormat) => void;
 };
 
+let handledHomeStartupFocus = false;
+
 export function ChatInput({
   activityComposerRef,
   value,
@@ -257,6 +259,7 @@ export function ChatInput({
   savedConversations = [],
   surface = "conversation",
   viewportManaged = false,
+  focusOnHomeStartup,
   attachmentContext,
   latestAssistantText = "",
   latestAssistantReply,
@@ -320,6 +323,8 @@ export function ChatInput({
   /** Controls whether the desktop add menu opens below the centered composer or above a docked one. */
   surface?: "empty" | "conversation";
   viewportManaged?: boolean;
+  /** Undefined until the home route has restored the signed-in workspace. */
+  focusOnHomeStartup?: boolean;
   /** Invalidate pending reads when changing chat or entering/leaving prompt edit. */
   attachmentContext?: string;
   /** Completed assistant reply available for explicitly requested speech playback. */
@@ -402,6 +407,30 @@ export function ChatInput({
   const isCoarsePointer = interaction === "touch";
 
   const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (focusOnHomeStartup === undefined || handledHomeStartupFocus) return;
+    handledHomeStartupFocus = true;
+    const input = ref.current;
+    const navigation = performance.getEntriesByType("navigation")[0] as
+      PerformanceNavigationTiming | undefined;
+    if (
+      !focusOnHomeStartup ||
+      !input ||
+      input.disabled ||
+      !navigation ||
+      navigation.type === "back_forward" ||
+      new URL(navigation.name).pathname !== "/" ||
+      window.location.pathname !== "/" ||
+      !window.matchMedia(
+        "(width < 768px) and (pointer: coarse), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+      ).matches ||
+      document.visibilityState !== "visible" ||
+      document.activeElement !== document.body ||
+      document.querySelector('dialog[open], [aria-modal="true"]')
+    )
+      return;
+    input.focus({ preventScroll: true });
+  }, [focusOnHomeStartup]);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
