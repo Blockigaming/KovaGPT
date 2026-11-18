@@ -199,6 +199,11 @@ for (const theme of ["light", "dark"] as const) {
         top + height,
       );
       await expectReachable(input, top, top + height);
+      await expectReachable(
+        page.getByRole("button", { name: "Expand input", exact: true }),
+        top,
+        top + height,
+      );
       await expect(input).toHaveCSS("overflow-y", "auto");
       const imageChip = page.locator('.spec400-attachment-chip[data-kind="image"]');
       await expect(imageChip).toHaveCSS("height", "46px");
@@ -274,6 +279,14 @@ for (const theme of ["light", "dark"] as const) {
     await expect(input).toHaveValue(edited);
     await expect(trigger).toBeFocused();
     await expect(page.getByLabel("Remove Rotation notes.txt", { exact: true })).toBeVisible();
+    await trigger.click();
+    await expect(editor).toHaveValue(edited);
+    await editor.focus();
+    await simulateKeyboard(page, 220, 12);
+    await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(input).toHaveValue(edited);
+    await expect(trigger).toBeFocused();
     await page.screenshot({ path: info.outputPath("rotated-draft.png") });
   });
 }

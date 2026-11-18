@@ -103,23 +103,32 @@
     padding-block: 2px;
   }
 
-  .kova-assistant[data-keyboard-open="true"] .spec400-composer {
-    --keyboard-content-min: 34px;
+  .kova-assistant[data-keyboard-open="true"]
+    .spec400-chat-input[data-composer-surface]
+    .spec400-composer {
+    --keyboard-content-min: 44px;
     flex: 0 1 auto;
-    /* One legible input line, 44px actions, 4px gap and 14px border/padding. */
-    min-height: calc(var(--keyboard-content-min) + 62px) !important;
-    padding: 6px !important;
-    gap: 4px;
+    /* A 44px writing/expand row, 44px actions, 2px gap, 10px border/padding. */
+    min-height: calc(var(--keyboard-content-min) + 56px) !important;
+    padding: 4px 8px !important;
+    gap: 2px;
+    border-radius: 22px;
     overflow: hidden;
   }
 
-  .kova-assistant[data-keyboard-open="true"] .spec400-composer:has(.spec400-attachment-chips) {
-    --keyboard-content-min: 84px;
+  .kova-assistant[data-keyboard-open="true"]
+    .spec400-chat-input[data-composer-surface]
+    .spec400-composer:has(.spec400-attachment-chips) {
+    --keyboard-content-min: 92px;
   }
 
   .kova-assistant[data-keyboard-open="true"]
-    :is(.spec400-composer-disclaimer, [data-chat-history-migration]) {
+    :is(.spec400-composer-disclaimer, [data-chat-history-migration], .kova-composer-tray) {
     display: none;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .kova-conversation-scroll {
+    padding-block: 0;
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-composer-content {
@@ -127,15 +136,19 @@
     flex-direction: column;
     flex: 1 1 auto;
     min-height: var(--keyboard-content-min);
-    gap: 4px;
+    gap: 2px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-composer .spec400-input-region {
-    min-height: 34px;
+    min-height: 44px;
     flex: 1 1 auto;
     align-items: stretch;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-expand-input {
+    translate: 0px 0px !important;
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-composer-input {
