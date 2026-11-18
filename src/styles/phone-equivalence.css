@@ -3,6 +3,7 @@
    Keep this file mobile-only: reflow is not a second visual theme. */
 .kova-phone-resource-actions,
 .kova-phone-more-destination,
+.kova-phone-continue-working,
 .spec400-inline-project-context[data-desktop-tray="true"] {
   display: none;
 }
@@ -54,19 +55,21 @@
     text-align: center;
   }
 
-  .kova-assistant
-    section.kova-empty-chat
-    > .kova-empty-chat-content:not(:has(.spec400-recent-work)) {
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
     padding-block-start: 0 !important;
   }
 
-  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-greeting {
+  .kova-assistant .kova-empty-chat-content .kova-greeting {
     /* Center the greeting in the clear canvas above the docked composer. */
     margin-block: auto;
   }
 
-  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-empty-composer {
+  .kova-assistant .kova-empty-chat-content .kova-empty-composer {
     margin-block-start: 0;
+  }
+
+  .kova-assistant .kova-empty-chat-content > .spec400-recent-work {
+    display: none;
   }
 
   /* A quiet two-row dock leaves the primary actions available at touch size. */
@@ -133,9 +136,7 @@
     padding-block: 0 !important;
   }
 
-  .kova-assistant[data-keyboard-open="true"]
-    .kova-empty-chat-content
-    > :is(.kova-greeting, .spec400-recent-work) {
+  .kova-assistant[data-keyboard-open="true"] .kova-empty-chat-content > .kova-greeting {
     display: none;
   }
 
@@ -310,8 +311,39 @@
     border: 0;
   }
 
-  .kova-phone-more-destination {
+  .kova-phone-more-destination,
+  .kova-phone-continue-working {
     display: block;
+  }
+
+  .kova-phone-continue-working .spec400-recent-work {
+    margin: 12px 0 4px;
+    padding-inline: 8px;
+  }
+
+  .kova-phone-continue-working .spec400-recent-work h2 {
+    margin: 0 8px 6px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+
+  .kova-phone-continue-working .spec400-recent-work ul {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .kova-phone-continue-working .spec400-recent-work button {
+    min-height: 44px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 10px !important;
+  }
+
+  .kova-phone-continue-working .spec400-recent-work strong {
+    max-width: 100%;
   }
 
   /* Intrinsic popover geometry stays the same; collision handling/scrolling

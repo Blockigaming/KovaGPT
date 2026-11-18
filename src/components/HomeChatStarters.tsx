@@ -1,21 +1,24 @@
-import { useEffect, useRef, type ReactNode, type Ref } from "react";
+import { useEffect, useId, useRef, type ReactNode, type Ref } from "react";
 import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
 
 export function ContinueWorking({
   conversations,
   onSelect,
+  limit = 4,
 }: {
   conversations: Conversation[];
   onSelect: (id: string) => void;
+  limit?: number;
 }) {
+  const headingId = useId();
   return (
-    <section className="spec400-recent-work" aria-labelledby="continue-working-heading">
-      <h2 id="continue-working-heading">Continue working</h2>
+    <section className="spec400-recent-work" aria-labelledby={headingId}>
+      <h2 id={headingId}>Continue working</h2>
       <ul>
         {[...conversations]
           .sort((a, b) => b.updatedAt - a.updatedAt)
-          .slice(0, 4)
+          .slice(0, limit)
           .map((conversation) => (
             <li key={conversation.id}>
               <button type="button" onClick={() => onSelect(conversation.id)}>

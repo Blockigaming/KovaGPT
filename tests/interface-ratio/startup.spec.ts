@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Route } from "@playwright/test";
 import { fixture } from "../e2e/actual-app-fixture";
+import { dismissMobileSidebar, openComposerAddMenu, revealSidebar } from "../e2e/current-ui";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 async function frame(shell: Locator) {
@@ -116,3 +117,45 @@ for (const theme of ["dark", "light"] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+test("dark: recommendations and tools open from a clear phone chat", async ({ page }, info) => {
+  test.skip(
+    info.project.name === "desktop-1440" || info.project.name === "tablet-768",
+    "phone layout",
+  );
+  await fixture(page, "dark", true, true, "plus");
+  await page.goto("/", { waitUntil: "load" });
+  await waitForKovaHydration(page);
+  const shell = page.locator(".kova-assistant[data-ui='modern']:not([data-kova-home-startup])");
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await expect(input).toBeEnabled();
+  await shell
+    .locator("header.kova-topbar:visible")
+    .getByRole("button", { name: "New chat", exact: true })
+    .click();
+  const homeRecommendations = shell.locator(".kova-empty-chat .spec400-recent-work");
+  await expect(homeRecommendations).toBeAttached();
+  await expect(homeRecommendations).toBeHidden();
+  await page.evaluate(() => document.fonts.ready);
+  const opening = await frame(shell);
+  checkOpeningLayout(opening, page.viewportSize()!);
+  const capture = info.project.name === "phone-390" && !process.env.KOVA_MOBILE_STATE_ENGINE;
+  const menu = await openComposerAddMenu(page);
+  await expect(menu.getByRole("button", { name: "Choose project", exact: true })).toBeVisible();
+  await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
+  await expect(menu.getByRole("button", { name: "Plugins", exact: true })).toBeVisible();
+  if (capture) await page.screenshot({ path: info.outputPath("composer-menu.png") });
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+
+  const drawer = await revealSidebar(page);
+  const recent = drawer.getByRole("region", { name: "Continue working", exact: true });
+  await expect(recent.getByRole("button")).toHaveCount(2);
+  if (capture) await page.screenshot({ path: info.outputPath("navigation.png") });
+  await dismissMobileSidebar(page);
+  compare(opening, await frame(shell), "closing the drawer");
+  await revealSidebar(page);
+  await recent.getByRole("button", { name: /Composer review chat/ }).click();
+  await expect(page.locator("#message-answer-a")).toBeVisible();
+  await expect(drawer).toBeHidden();
+});

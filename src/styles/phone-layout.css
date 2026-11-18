@@ -84,43 +84,6 @@
     text-align: start;
   }
 
-  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-greeting {
-    margin-block-start: auto;
-  }
-
-  .kova-assistant .kova-empty-chat-content:not(:has(.spec400-recent-work)) .kova-empty-composer {
-    margin-block-start: 0;
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work {
-    margin-block: 0 20px;
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work ul {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-inline: 10px;
-    border: 1px solid var(--border);
-    border-radius: 17px;
-    background: var(--card);
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work li + li {
-    border-block-start: 1px solid var(--border);
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work li:nth-child(n + 3) {
-    display: none;
-  }
-
-  .kova-assistant .kova-empty-chat .spec400-recent-work button {
-    min-height: 56px;
-    padding: 8px 2px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-  }
-
   .kova-assistant .kova-empty-composer {
     position: sticky;
     z-index: 2;

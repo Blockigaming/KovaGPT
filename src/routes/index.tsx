@@ -3252,6 +3252,7 @@ function KovaGPT() {
       <Sidebar
         conversations={historyConversations}
         trackBackgroundReplies={principalReady}
+        showPhoneRecommendations={showEmptyChat && !tempChat}
         activeId={activeId}
         onSelect={setActiveId}
         onNew={startNewChat}

@@ -8,6 +8,8 @@ on:
       - playwright.interface-ratio.config.ts
       - tests/interface-ratio/**
       - src/components/HomeChat*.tsx
+      - src/components/ChatInput.tsx
+      - src/components/Sidebar.tsx
       - src/components/auth/ClerkSafe.tsx
       - src/routes/__root.tsx
       - src/routes/index.tsx
