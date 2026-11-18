@@ -6,7 +6,11 @@ export async function readBrowserCapacity({ projectId, apiKey, fetchImpl = fetch
   );
   if (!response.ok) throw new Error(`Browserbase project lookup failed (HTTP ${response.status})`);
   const project = await response.json();
-  if (project.id !== projectId || !Number.isSafeInteger(project.concurrency) || project.concurrency < 0) {
+  if (
+    project.id !== projectId ||
+    !Number.isSafeInteger(project.concurrency) ||
+    project.concurrency < 0
+  ) {
     throw new Error("Browserbase returned invalid project capacity");
   }
   return project.concurrency;
