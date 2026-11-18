@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHookHarness, loadUiModule } from "../helpers/ui-state-harness.mjs";
 import { requiresAppAccount } from "../../src/lib/app-access-policy.mjs";
+import { SIDEBAR_DRAWER_QUERY } from "../../src/lib/sidebar-viewport.ts";
 
 test("unresolved account state renders a neutral shell on home and protected routes", () => {
   let pathname = "/",
@@ -35,6 +36,7 @@ test("settings block every sidebar setter without overwriting the saved preferen
     "src/hooks/use-sidebar-preference.ts",
     {
       react: { ...hooks.react, useLayoutEffect: hooks.react.useEffect },
+      "@/lib/sidebar-viewport": { SIDEBAR_DRAWER_QUERY },
     },
     {
       window: {
