@@ -188,7 +188,7 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(seoLanding, /<PublicShell>/);
   assert.doesNotMatch(seoLanding, /<NovaLogo/);
   assert.match(pricing, /data-billing-page/);
-  assert.match(pricing, /<PublicShell>/);
+  assert.doesNotMatch(pricing, /<PublicShell>/);
   assert.doesNotMatch(pricing, /<NovaLogo/);
   const recoveryLogo = openingTag(resetPassword, "NovaLogo", /\bmark\b/);
   assert.match(recoveryLogo, /className="mb-6 h-8 w-8"/);

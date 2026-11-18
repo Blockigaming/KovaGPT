@@ -112,13 +112,15 @@ test("requested: every Settings section has room and Settings owns sidebar inter
   await expect(settings).toBeHidden();
 });
 
-test("requested: account Upgrade opens the selected hosted checkout flow", async ({ page }) => {
+test("requested: account Upgrade shows plans before checkout", async ({ page }) => {
   await fixture(page, "dark", true);
   await page.goto("/");
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
   await sidebar.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Upgrade plan", exact: true }).click();
+  await expect(page).toHaveURL(/\/pricing$/);
+  await page.getByRole("button", { name: "Upgrade to Plus", exact: true }).click();
   await expect(page).toHaveURL(/\/subscribe\?plan=plus_monthly$/);
   await expect(page.getByRole("heading", { name: "Opening checkout…", exact: true })).toBeVisible();
   await expect(page.locator(".kova-settings-dialog")).toHaveCount(0);
@@ -191,7 +193,6 @@ for (const path of [
   "/terms",
   "/privacy",
   "/refund",
-  "/pricing",
 ]) {
   test(`requested: public articles and legal pages have a searchable real page directory: ${path}`, async ({
     page,
@@ -233,7 +234,12 @@ test("requested: every published catalog route renders its actual content and sh
         const response = await request.get(item.path);
         expect(response.status(), item.path).toBe(200);
         const html = await response.text();
-        expect(html, item.path).toContain('class="kova-footer-directory"');
+        if (item.path === "/pricing") {
+          expect(html, item.path).toContain("Back to KovaGPT");
+          expect(html, item.path).not.toContain('class="kova-footer-directory"');
+        } else {
+          expect(html, item.path).toContain('class="kova-footer-directory"');
+        }
         expect(html, item.path).toContain('id="main-content"');
       }),
     );

@@ -101,7 +101,12 @@ async function verifyRoute(
     name: "Public navigation",
     exact: true,
   });
-  if ((await publicNavigation.count()) === 1) {
+  if (route === "/pricing") {
+    await expect(page.getByRole("link", { name: "Back to KovaGPT" })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("button", { name: "Upgrade to Plus", exact: true })).toBeVisible();
+    await expect(publicNavigation).toHaveCount(0);
+    await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  } else if ((await publicNavigation.count()) === 1) {
     await expect(publicNavigation, `${route} ${colorScheme} navigation`).toBeVisible();
     await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
   } else {
