@@ -9,6 +9,11 @@
 }
 
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  /* The inert startup dialog has no interactive focus target. */
+  dialog[data-kova-entry-pending]:focus {
+    outline: none;
+  }
+
   .kova-assistant[data-ui="modern"],
   .kova-phone-workspace,
   .kova-images-workspace {

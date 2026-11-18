@@ -73,6 +73,8 @@ for (const theme of ["dark", "light"] as const) {
     const pending = page.locator("[data-kova-home-startup]");
     const ready = page.locator(".kova-assistant[data-ui='modern']:not([data-kova-home-startup])");
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const entryDialog = page.locator("dialog[data-kova-entry-pending]");
+    const phone = /^(phone|landscape)-/.test(info.project.name);
     const capture = ["desktop-1440", "phone-390"].includes(info.project.name);
 
     for (const visit of ["first interactive load", "reload"]) {
@@ -89,7 +91,8 @@ for (const theme of ["dark", "light"] as const) {
         else await page.goto("/", { waitUntil: "load" });
         await waitForKovaHydration(page);
         await expect(pending).toBeVisible();
-        await expect(page.locator("dialog[data-kova-entry-pending]")).toHaveAttribute("open", "");
+        await expect(entryDialog).toHaveAttribute("open", "");
+        if (phone) await expect(entryDialog).toHaveCSS("outline-style", "none");
         await expect(input).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
         first = await frame(pending);
