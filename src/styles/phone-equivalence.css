@@ -8,6 +8,13 @@
     --phone-gutter: 16px;
   }
 
+  /* Hash targets must not move while native anchor scrolling measures them.
+     The reveal animation on a section and its parent otherwise shifts the
+     final heading under the sticky public header. */
+  [data-public-shell] [data-kova-revealed="true"]:is(:target, :has(:target)) {
+    animation: none;
+  }
+
   /* The reference header and heading retain their desktop size. */
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
     min-height: calc(64px + var(--safe-top, 0px));
@@ -97,24 +104,35 @@
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-composer {
+    --keyboard-content-min: 34px;
     flex: 0 1 auto;
-    min-height: 0 !important;
-    padding: 8px !important;
+    /* One legible input line, 44px actions, 4px gap and 14px border/padding. */
+    min-height: calc(var(--keyboard-content-min) + 62px) !important;
+    padding: 6px !important;
     gap: 4px;
     overflow: hidden;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer:has(.spec400-attachment-chips) {
+    --keyboard-content-min: 84px;
+  }
+
+  .kova-assistant[data-keyboard-open="true"]
+    :is(.spec400-composer-disclaimer, [data-chat-history-migration]) {
+    display: none;
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-composer-content {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: var(--keyboard-content-min);
     gap: 4px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
 
-  .kova-assistant[data-keyboard-open="true"] .spec400-input-region {
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer .spec400-input-region {
     min-height: 34px;
     flex: 1 1 auto;
     align-items: stretch;

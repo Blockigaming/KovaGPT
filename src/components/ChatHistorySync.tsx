@@ -403,6 +403,7 @@ export function ChatHistorySyncStatus() {
     return (
       <div
         className="mx-auto my-1 flex min-h-11 w-[calc(100%-1.5rem)] max-w-3xl min-w-0 items-center gap-2 px-1 text-sm text-muted-foreground"
+        data-chat-history-migration=""
         aria-label="Chat history synchronization"
         aria-busy={working || undefined}
       >

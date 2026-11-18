@@ -50,13 +50,13 @@ jobs:
       - name: Verify desktop freeze and mobile relationships
         run: npx --no-install playwright test --config=playwright.interface-ratio.config.ts
       - name: Verify mobile navigation, overlays and keyboard reachability
-        if: always() && steps.build.outcome == 'success'
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: PLAYWRIGHT_PREBUILT=1 npx --no-install playwright test tests/e2e/mobile-quality.spec.ts tests/e2e/mobile-shell-ui-truth.spec.ts --project=phone-320x700 --project=phone-390x844 --project=phone-430x932 --project=phone-landscape-844x390 --workers=2 --output=test-results/interface-ratio/mobile-behavior
       - name: Verify the initial composer quality contract
-        if: always() && steps.build.outcome == 'success'
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: PLAYWRIGHT_PREBUILT=1 npx --no-install playwright test tests/e2e/ui-quality.spec.ts --grep="empty workspace remains contained" --project=phone-320x700 --project=phone-390x844 --workers=2 --output=test-results/interface-ratio/composer-quality
       - name: Verify remaining phone editors and management dialogs
-        if: always() && steps.build.outcome == 'success'
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: >-
           PLAYWRIGHT_PREBUILT=1 npx --no-install playwright test
           tests/e2e/projects-library-workspaces.spec.ts
