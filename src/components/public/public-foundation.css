@@ -76,7 +76,8 @@
   color: var(--foreground);
   border-color: var(--border);
 }
-:is([data-public-shell], [data-billing-page]) :is(.public-action, .public-table-scroll):focus-visible {
+:is([data-public-shell], [data-billing-page])
+  :is(.public-action, .public-table-scroll):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
