@@ -9,6 +9,25 @@ async function expectReachable(control: Locator, top: number, bottom: number) {
     const geometry = await control.evaluate((element) => {
       const box = element.getBoundingClientRect();
       const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      const ancestors = [];
+      for (
+        let node = element.parentElement;
+        node && ancestors.length < 6;
+        node = node.parentElement
+      ) {
+        const style = getComputedStyle(node);
+        ancestors.push({
+          className: node.className,
+          box: node.getBoundingClientRect().toJSON(),
+          scrollTop: node.scrollTop,
+          maxHeight: style.maxHeight,
+          minHeight: style.minHeight,
+          flex: style.flex,
+          overflow: style.overflow,
+          translate: style.translate,
+          transform: style.transform,
+        });
+      }
       return {
         top: box.top,
         bottom: box.bottom,
@@ -16,13 +35,15 @@ async function expectReachable(control: Locator, top: number, bottom: number) {
         right: box.right,
         width: document.documentElement.clientWidth,
         receivesPointer: hit !== null && element.contains(hit),
+        hit: hit?.outerHTML.slice(0, 250),
+        ancestors,
       };
     });
-    expect(geometry.top).toBeGreaterThanOrEqual(top - 1);
-    expect(geometry.bottom).toBeLessThanOrEqual(bottom + 1);
+    expect(geometry.top, JSON.stringify(geometry)).toBeGreaterThanOrEqual(top - 1);
+    expect(geometry.bottom, JSON.stringify(geometry)).toBeLessThanOrEqual(bottom + 1);
     expect(geometry.left).toBeGreaterThanOrEqual(0);
     expect(geometry.right).toBeLessThanOrEqual(geometry.width + 1);
-    expect(geometry.receivesPointer).toBe(true);
+    expect(geometry.receivesPointer, JSON.stringify(geometry)).toBe(true);
   }).toPass({ timeout: 5_000 });
 }
 
@@ -117,6 +138,7 @@ for (const theme of ["light", "dark"] as const) {
       await fixture(page, theme, true, saved, "plus");
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
+      expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
       await page.evaluate((portrait) => {
         const root = document.documentElement;
         root.style.setProperty("--safe-top", portrait ? "47px" : "0px");
@@ -216,6 +238,13 @@ for (const theme of ["light", "dark"] as const) {
     await editor.fill(edited);
     for (const size of [{ width: 844, height: 390 }, { width: 390, height: 844 }, viewport]) {
       await page.setViewportSize(size);
+      await page.evaluate((portrait) => {
+        const root = document.documentElement;
+        root.style.setProperty("--safe-top", portrait ? "47px" : "0px");
+        root.style.setProperty("--safe-left", portrait ? "0px" : "47px");
+        root.style.setProperty("--safe-right", portrait ? "0px" : "47px");
+        root.style.setProperty("--safe-bottom", portrait ? "34px" : "21px");
+      }, size.height > size.width);
       await expect(editor).toHaveValue(edited);
       await expectReachable(
         dialog.getByRole("button", { name: "Close", exact: true }),

@@ -21,6 +21,18 @@ export default defineConfig({
     serviceWorkers: "block",
     reducedMotion: "reduce",
     trace: "retain-on-failure",
+    // Firefox's touch event emulation alone retains a mouse media query.
+    // Gecko LookAndFeel defines 1 as Coarse, 2 as Fine, and 4 as Hover.
+    ...(engine === "firefox"
+      ? {
+          launchOptions: {
+            firefoxUserPrefs: {
+              "ui.primaryPointerCapabilities": 1,
+              "ui.allPointerCapabilities": 1,
+            },
+          },
+        }
+      : {}),
   },
   webServer: {
     command: "node scripts/azure/local-preview.mjs --duration-ms=600000",

@@ -170,7 +170,11 @@
     margin: 0;
     padding: max(16px, var(--safe-top)) max(16px, var(--safe-right)) max(16px, var(--safe-bottom))
       max(16px, var(--safe-left));
-    translate: none;
+    /* Keep the individual translation reset separate from transform: the
+       production optimizer otherwise drops it beside transform:none. */
+    --tw-translate-x: 0px;
+    --tw-translate-y: 0px;
+    translate: 0px 0px !important;
     transform: none;
     animation: none;
     gap: 8px;
@@ -184,6 +188,11 @@
 
   .spec400-expanded-input > :not(.spec400-expanded-textarea) {
     flex-shrink: 0;
+  }
+
+  .spec400-expanded-input > [data-kova-dialog-close] {
+    top: max(12px, var(--safe-top));
+    right: max(12px, var(--safe-right));
   }
 
   :root[data-kova-keyboard]
