@@ -38,7 +38,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
 import "./conversation-header.css";
 
-function OutputsIcon({ active }: { active: boolean }) {
+function OutputsIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -51,7 +51,6 @@ function OutputsIcon({ active }: { active: boolean }) {
       <circle cx="6" cy="7" r="2.8" />
       <circle cx="6" cy="17" r="2.8" />
       <path d="M13 7h7M13 17h7" />
-      {active && <circle cx="20" cy="3" r="3" fill="#34d399" stroke="var(--background)" />}
     </svg>
   );
 }
@@ -119,7 +118,6 @@ export function ConversationHeaderActions({
     () => conversationSources(conversation, isLoaded && isSignedIn ? (user?.id ?? null) : null),
     [conversation, isLoaded, isSignedIn, user?.id],
   );
-  const browserActive = signedIn && browserPresentation?.active === true;
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);
   const [outputsOpen, setOutputsOpen] = useState(false);
@@ -445,16 +443,13 @@ export function ConversationHeaderActions({
             </button>
           ))}
       </section>
+      {signedIn && browserPresentation?.active && (
       <ConversationSourcesPanel
         browserOnly
         showActivity={false}
         conversation={conversation}
-        browserTabCount={
-          signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
-        }
-        browserPreview={
-          signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
-        }
+        browserTabCount={browserPresentation.tabCount}
+        browserPreview={browserPresentation.thumbnail}
         onOpenAttachment={() => {}}
         onOpenMemory={() => {}}
         onOpenBrowser={(activity) => {
@@ -463,6 +458,7 @@ export function ConversationHeaderActions({
           setSelectedBrowser(activity);
         }}
       />
+      )}
       {steps.length > 0 && (
         <section className="kova-activity-inventory" aria-label="Steps">
           <button
@@ -510,8 +506,8 @@ export function ConversationHeaderActions({
               ref={outputsRef}
               type="button"
               className="kova-conversation-icon"
-              aria-label={browserActive ? "Activity, Cloud Browser active" : "Activity"}
-              title={browserActive ? "Cloud Browser active" : "Activity"}
+              aria-label="Activity"
+              title="Activity"
               aria-haspopup="dialog"
               aria-expanded={outputsOpen}
               onClick={() => {
@@ -519,7 +515,7 @@ export function ConversationHeaderActions({
                 setOutputsOpen(true);
               }}
             >
-              <OutputsIcon active={browserActive} />
+              <OutputsIcon />
             </button>
             <MobileBottomSheet
               open={outputsOpen}
@@ -545,17 +541,17 @@ export function ConversationHeaderActions({
                 ref={outputsRef}
                 type="button"
                 className="kova-conversation-icon"
-                aria-label={browserActive ? "Activity, Cloud Browser active" : "Activity"}
+                aria-label="Activity"
                 title="Activity"
               >
-                <OutputsIcon active={browserActive} />
+                <OutputsIcon />
               </button>
             </PopoverTrigger>
             <PopoverContent
               align="end"
               sideOffset={10}
               className="kova-conversation-outputs"
-              aria-label={browserActive ? "Activity, Cloud Browser active" : "Activity"}
+              aria-label="Activity"
               onCloseAutoFocus={(event) => {
                 if (!dialogOpeningRef.current) return;
                 event.preventDefault();
@@ -681,7 +677,7 @@ export function ConversationHeaderActions({
         </DialogContent>
       </Dialog>
       {selectedBrowser &&
-        (browserPresentation && signedIn && userTier !== "free" ? (
+        (browserPresentation?.active && signedIn ? (
           browserPresentation.renderDialog({
             activity: selectedBrowser,
             onClose: () => setSelectedBrowser(null),
