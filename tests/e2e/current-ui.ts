@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { SIDEBAR_DRAWER_QUERY } from "../../src/lib/sidebar-viewport";
 import { waitForKovaHydration } from "./hydration";
 
 // Response preferences remain in Settings after the composer tray was simplified.
@@ -45,6 +46,10 @@ export async function revealSidebar(page: Page) {
   }
   await expect(navigation).toBeVisible();
   return navigation;
+}
+
+export function usesSidebarDrawer(page: Page) {
+  return page.evaluate((query) => matchMedia(query).matches, SIDEBAR_DRAWER_QUERY);
 }
 
 export async function dismissMobileSidebar(page: Page) {

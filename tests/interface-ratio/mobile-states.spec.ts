@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "../e2e/actual-app-fixture";
 import { coreFixture } from "../e2e/core-app-fixture";
+import { usesSidebarDrawer } from "../e2e/current-ui";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 async function expectReachable(control: Locator, top: number, bottom: number) {
@@ -81,7 +82,7 @@ test("crossing the phone and tablet boundaries preserves the draft and model men
     await expect(input).toHaveValue(draft);
     await expect(input).toHaveCSS("font-size", "16px");
     const mobileHeader = page.locator(".kova-chat-main > .kova-topbar:not(.kova-desktop-topbar)");
-    if (width < 1024) await expect(mobileHeader).toBeVisible();
+    if (await usesSidebarDrawer(page)) await expect(mobileHeader).toBeVisible();
     else await expect(mobileHeader).toBeHidden();
     const trigger = page.getByRole("button", { name: /^Choose model and effort/ });
     await trigger.click();

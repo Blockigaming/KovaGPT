@@ -44,7 +44,13 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
     const frame = surface.getBoundingClientRect();
     return { x: text.x - frame.x, y: text.y - frame.y };
   });
-  expect(inset.x).toBeLessThanOrEqual(18);
+  const phoneComposer = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  if (phoneComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
+  expect(inset.x).toBeLessThanOrEqual(phoneComposer ? 24 : 18);
   expect(inset.y).toBeLessThanOrEqual(20);
   if (page.viewportSize()!.width >= 1024) {
     const header = (await page.locator(".kova-desktop-topbar").boundingBox())!;

@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { captureCandidateVisual } from "./candidate-visual-evidence";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar } from "./current-ui";
+import { revealSidebar, usesSidebarDrawer } from "./current-ui";
 import { waitForCommittedChat } from "./chat-history-commit";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -26,7 +26,7 @@ async function expectEmptyWorkspaceLandmarks(page: Page) {
   await expect(navigationTitle).toHaveAttribute("role", "heading");
   await expect(navigationTitle).toHaveAttribute("aria-level", "1");
   await expect(navigationTitle).toHaveText("KovaGPT");
-  if (page.viewportSize()!.width < 1024) await expect(navigationTitle).toBeVisible();
+  if (await usesSidebarDrawer(page)) await expect(navigationTitle).toBeVisible();
   else await expect(navigationTitle).toBeHidden();
 }
 
