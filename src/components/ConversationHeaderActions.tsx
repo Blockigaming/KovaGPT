@@ -703,7 +703,10 @@ export function ConversationHeaderActions({
               browserActivityIsFresh(selectedBrowser.browser) ? (
                 <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
               ) : (
-                <p className="text-sm text-muted-foreground">This browser session has ended.</p>
+                <p className="text-sm text-muted-foreground">
+                  This is a recorded browser event. No live session is connected. A live preview
+                  appears here when a verified browser session is active.
+                </p>
               )}
               <Button
                 variant="outline"

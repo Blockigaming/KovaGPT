@@ -97,6 +97,7 @@ test("explicit analysis keeps image-intent heuristics and automatic web search f
   const imageEnd = source.indexOf("            // Detect the owner account", imageStart);
   const imageSelection = new Function(
     "explicitHostedTool",
+    "explicitBrowser",
     "lastText",
     "lastUser",
     "clientTool",
@@ -105,7 +106,7 @@ test("explicit analysis keeps image-intent heuristics and automatic web search f
   );
   let imageDetections = 0;
   assert.equal(
-    imageSelection(true, "Create an image of the data", {}, "data_analysis", () => {
+    imageSelection(true, false, "Create an image of the data", {}, "data_analysis", () => {
       imageDetections++;
       return true;
     }),
@@ -113,8 +114,12 @@ test("explicit analysis keeps image-intent heuristics and automatic web search f
   );
   assert.equal(imageDetections, 0);
   assert.equal(
-    imageSelection(false, "Create an image", {}, undefined, () => true),
+    imageSelection(false, false, "Create an image", {}, undefined, () => true),
     true,
+  );
+  assert.equal(
+    imageSelection(false, true, "Create an image", {}, undefined, () => true),
+    false,
   );
   assert.match(source, /if \(\s*!explicitHostedTool &&\s*!lockdownBlocksNetwork &&/);
 });

@@ -1348,9 +1348,9 @@ export const Route = createFileRoute("/api/chat")({
             let webBlock = "";
             let webSources: KovaSource[] = [];
             if (
-              !explicitBrowser &&
               !explicitHostedTool &&
               !lockdownBlocksNetwork &&
+              !explicitBrowser &&
               (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&

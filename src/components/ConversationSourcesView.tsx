@@ -1,6 +1,5 @@
 import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import { ResponseSourceIcon } from "./ResponseSourceIcon";
-import { CloudBrowserPreview } from "./CloudBrowserPreview";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import type { ReactNode } from "react";
 import {
@@ -56,7 +55,6 @@ export function ConversationSourcesView({
   onOpenMemory,
   onOpenBrowser,
   browserPreview,
-  browserOwnerId,
   browserTabCount,
   showActivity = true,
   activeBrowserOnly = false,
@@ -68,7 +66,6 @@ export function ConversationSourcesView({
   onOpenMemory: (sources: MemorySources) => void;
   onOpenBrowser?: (activity: ConversationBrowserSource) => void;
   browserPreview?: ReactNode;
-  browserOwnerId?: string;
   browserTabCount?: number;
   showActivity?: boolean;
   activeBrowserOnly?: boolean;
@@ -241,19 +238,13 @@ export function ConversationSourcesView({
               aria-label="Open browser activity"
             >
               {browsers.length > 1 && <span className="sr-only">{activity.status}</span>}
-              {browserPreview ??
-                (activity.status === "active" &&
-                browserActivityIsFresh(activity.browser) &&
-                activity.browser?.previewPath &&
-                browserOwnerId ? (
-                  <CloudBrowserPreview browser={activity.browser} ownerId={browserOwnerId} />
-                ) : (
-                  <span className="kova-browser-card-content">
-                    <Monitor aria-hidden="true" />
-                    <strong>{activity.label}</strong>
-                    <small>Recorded activity · no live preview</small>
-                  </span>
-                ))}
+              {browserPreview ?? (
+                <span className="kova-browser-card-content">
+                  <Monitor aria-hidden="true" />
+                  <strong>{activity.label}</strong>
+                  <small>Recorded activity · no live preview</small>
+                </span>
+              )}
             </button>
           ))}
         </section>

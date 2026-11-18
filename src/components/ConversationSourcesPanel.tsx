@@ -1,5 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { ConversationSourcesView } from "./ConversationSourcesView";
+import { CloudBrowserPreview } from "./CloudBrowserPreview";
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 export { ConversationActivitySummary } from "./ConversationSourcesView";
 import { useUser } from "@/components/auth/ClerkSafe";
 import type { Conversation } from "@/lib/chat-store";
@@ -39,6 +41,13 @@ export function ConversationSourcesPanel({
     () => conversationSources(conversation, ownerId),
     [conversation, ownerId],
   );
+  const latest = inventory.browser.at(-1);
+  const preview =
+    latest?.status === "active" &&
+    latest.browser?.previewPath &&
+    browserActivityIsFresh(latest.browser)
+      ? latest.browser
+      : null;
   return (
     <>
       <ConversationSourcesView
@@ -52,8 +61,12 @@ export function ConversationSourcesPanel({
         activeBrowserOnly={activeBrowserOnly}
         separateInputs={separateInputs}
         hideSourcesHeading={hideSourcesHeading}
-        browserPreview={browserPreview}
-        browserOwnerId={ownerId ?? undefined}
+        browserPreview={
+          browserPreview ??
+          (browserOnly && ownerId && preview ? (
+            <CloudBrowserPreview browser={preview} ownerId={ownerId} />
+          ) : undefined)
+        }
         browserTabCount={browserTabCount}
         showActivity={showActivity}
         onOpenAttachment={onOpenAttachment}
