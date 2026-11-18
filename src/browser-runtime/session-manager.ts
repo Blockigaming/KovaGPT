@@ -46,7 +46,35 @@ export class BrowserSessionManager {
     try {
       // A process per session is intentional: contexts isolate cookies/storage while the
       // process boundary prevents accidental cross-user browser reuse.
-      browser = await this.engines.get(engine).launch({ headless: true });
+      const apiKey = process.env.BROWSERBASE_API_KEY;
+      const projectId = process.env.BROWSERBASE_PROJECT_ID;
+      if (apiKey || projectId) {
+        if (!apiKey || !projectId || engine !== "chromium") {
+          throw new Error("Browserbase requires a configured Chromium project");
+        }
+        const response = await fetch("https://api.browserbase.com/v1/sessions", {
+          method: "POST",
+          headers: { "X-BB-API-Key": apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, keepAlive: false }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!response.ok)
+          throw new Error(`Browserbase session creation failed (HTTP ${response.status})`);
+        const session = await response.json();
+        try {
+          browser = await chromium.connectOverCDP(session.connectUrl, { timeout: 15000 });
+        } catch {
+          await fetch(`https://api.browserbase.com/v1/sessions/${encodeURIComponent(session.id)}`, {
+            method: "POST",
+            headers: { "X-BB-API-Key": apiKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId, status: "REQUEST_RELEASE" }),
+            signal: AbortSignal.timeout(5000),
+          });
+          throw new Error("Browserbase connection failed");
+        }
+      } else {
+        browser = await this.engines.get(engine).launch({ headless: true });
+      }
       const context = await browser.newContext({
         acceptDownloads: false,
         serviceWorkers: "block",
