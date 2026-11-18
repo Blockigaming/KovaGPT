@@ -84,7 +84,9 @@ test("the single phone composer and drawer retain every workspace destination an
     if (name === "Library") {
       await destination.focus();
       await page.keyboard.press("Enter");
-      await expect(page.getByRole("heading", { name, exact: true, level: 1 })).toBeFocused();
+      await expect(
+        page.getByRole("main").getByRole("heading", { name, exact: true, level: 1 }),
+      ).toBeFocused();
     } else {
       await destination.tap();
     }
