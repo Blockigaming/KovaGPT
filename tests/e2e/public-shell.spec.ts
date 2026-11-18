@@ -51,16 +51,18 @@ for (let offset = 0; offset < publicRoutes.length; offset += routesPerBatch) {
           page.getByRole("link", { name: "Skip to content" }),
           `${route} should expose one root-level skip link`,
         ).toHaveCount(1);
-        await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
         if (route === "/pricing") {
           await expect(page.locator("[data-billing-page]")).toHaveCount(1);
-          await expect(
-            page
-              .getByRole("navigation", { name: "Public navigation" })
-              .getByRole("link", { name: "Open KovaGPT", exact: true }),
-          ).toHaveAttribute("href", "/");
+          await expect(page.getByRole("link", { name: "Back to KovaGPT" })).toHaveAttribute(
+            "href",
+            "/",
+          );
+          await expect(page.getByRole("navigation", { name: "Public navigation" })).toHaveCount(0);
+          await expect(page.getByRole("contentinfo")).toHaveCount(0);
+        } else {
+          await expect(page.getByRole("navigation", { name: "Public navigation" })).toBeVisible();
+          await expect(page.getByRole("contentinfo")).toBeVisible();
         }
-        await expect(page.getByRole("contentinfo")).toBeVisible();
 
         const viewport = await page.evaluate(() => ({
           clientWidth: document.documentElement.clientWidth,
@@ -90,6 +92,8 @@ test("public footer links and the missing guide reach the correct destinations",
     .click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(page).toHaveTitle("KovaGPT Billing");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/features$/);
   await page
     .getByRole("navigation", { name: "Footer navigation" })
     .getByRole("link", { name: "Privacy" })

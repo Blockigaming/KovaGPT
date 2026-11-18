@@ -184,7 +184,7 @@ function pricingFixture(isSignedIn) {
       "@/components/PublicFooter": { PublicFooter: "public-footer" },
       "@/components/NovaLogo": { NovaLogo: "logo" },
       "@/components/EnterpriseContactDialog": { EnterpriseContactDialog: "enterprise-dialog" },
-      "@/components/public/PublicShell": { PublicShell: "public-shell" },
+      "@/components/public/public-foundation.css": {},
       "@/components/public/PlanComparison": { PlanComparison: "comparison" },
       "@/components/ui/dialog": {
         Dialog: "dialog",
@@ -241,7 +241,7 @@ test("pricing routes all paid CTAs to canonical checkout without claiming eligib
       assert.ok(!card.props.ctaDisabled);
       assert.equal(
         card.props.cta,
-        card.props.name === "Kova Plus" ? "Start Plus" : "Upgrade to Pro",
+        card.props.name === "Kova Plus" ? "Upgrade to Plus" : "Upgrade to Pro",
       );
       assert.equal(card.props.note, undefined);
       assert.equal(card.props.paymentNote, undefined);
