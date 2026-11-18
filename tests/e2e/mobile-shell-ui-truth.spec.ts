@@ -177,10 +177,9 @@ test.describe("mobile shell UI truth", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
 
-    const opener =
-      viewport.width < 1024
-        ? page.getByRole("button", { name: "Open menu" })
-        : page.getByRole("button", { name: "Search chats", exact: true });
+    const opener = page.getByRole("button", { name: /^(Open menu|Search chats)$/ }).filter({
+      visible: true,
+    });
     await opener.focus();
     const openerHandle = await opener.elementHandle();
     expect(openerHandle).not.toBeNull();

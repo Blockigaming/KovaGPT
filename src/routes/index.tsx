@@ -395,7 +395,7 @@ function KovaGPT() {
     }
   }, [activeId, storagePrincipal, editingMessage]);
 
-  const [sidebarOpen, setSidebarOpen, sidebarReady] = useSidebarPreference();
+  const [sidebarOpen, setSidebarOpen, sidebarReady, sidebarIsDrawer] = useSidebarPreference();
   const activityComposerRef = useRef<ChatActivityComposer>(null);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -1687,9 +1687,9 @@ function KovaGPT() {
     });
   }, [active, conversations, isStreaming, setConversations, userKey]);
 
-  const openCommandPalette = useCallback(() => {
+  const openCommandPalette = useCallback((trigger?: HTMLElement) => {
     commandReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     setCommandOpen(true);
   }, []);
   useEffect(() => {
@@ -3717,7 +3717,7 @@ function KovaGPT() {
             onOpenSettings={() => openSettings("general")}
             returnFocusTarget={commandReturnFocusRef.current}
             sidebarOpen={sidebarOpen}
-            onCloseSidebar={() => setSidebarOpen(false)}
+            onCloseSidebar={sidebarIsDrawer ? () => setSidebarOpen(false) : undefined}
           />
         </Suspense>
       )}

@@ -149,7 +149,7 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
-  onOpenWorkspaceSearch?: () => void;
+  onOpenWorkspaceSearch?: (trigger?: HTMLElement) => void;
   workspaceSearchOpen?: boolean;
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
@@ -502,7 +502,7 @@ export function Sidebar({
   const openChatSearch = (event?: { currentTarget: HTMLElement }) => {
     if (onOpenWorkspaceSearch) {
       cancelPendingSelection();
-      onOpenWorkspaceSearch();
+      onOpenWorkspaceSearch(event?.currentTarget);
     } else {
       if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
       setSearchOpen((value) => !value);
@@ -1862,15 +1862,7 @@ export function Sidebar({
                   aria-label="Search chats"
                   aria-haspopup="dialog"
                   aria-expanded={workspaceSearchOpen}
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) {
-                      cancelPendingSelection();
-                      onOpenWorkspaceSearch();
-                    } else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen((value) => !value);
-                    }
-                  }}
+                  onClick={openChatSearch}
                 >
                   <span className="kova-sidebar-icon" aria-hidden="true">
                     <SearchGlyph />
@@ -1971,7 +1963,7 @@ export function Sidebar({
                   className="kova-nav-row"
                   type="button"
                   onClick={(event) => {
-                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();
+                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch(event.currentTarget);
                     else {
                       searchReturnFocusRef.current = event.currentTarget;
                       setSearchOpen(true);

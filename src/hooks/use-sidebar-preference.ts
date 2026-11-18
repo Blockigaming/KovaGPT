@@ -50,5 +50,10 @@ export function useSidebarPreference() {
     }
   }, [preference]);
 
-  return [preference?.open ?? false, setOpen, preference !== null] as const;
+  return [
+    preference?.open ?? false,
+    setOpen,
+    preference !== null,
+    preference?.pinned === false,
+  ] as const;
 }

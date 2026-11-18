@@ -101,10 +101,11 @@ test("workspace search preserves the sidebar and restores its active dialog", as
 });
 
 for (const input of ["pointer", "keyboard"] as const) {
-  test(`search can explicitly close an open phone sidebar and focus the composer with ${input}`, async ({
+  test(`search can explicitly close an open touch sidebar and focus the composer with ${input}`, async ({
     page,
+    hasTouch,
   }) => {
-    test.skip(page.viewportSize()!.width >= 1024);
+    test.skip(!hasTouch);
     await coreFixture(page, "dark", "free");
     await page.goto("/");
     await waitForKovaHydration(page);

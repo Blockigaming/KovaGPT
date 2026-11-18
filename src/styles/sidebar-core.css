@@ -570,6 +570,16 @@ button.kova-sidebar-scrim {
     width: 100%;
     min-width: 0;
   }
+  .kova-sidebar-header .kova-header-search {
+    display: inline-flex;
+  }
+  .kova-sidebar .kova-sidebar-header .kova-header-button {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .kova-sidebar .kova-sidebar-header .kova-header-button:is(:hover, :active) {
+    background: transparent;
+    color: var(--foreground);
+  }
   .kova-sidebar-search {
     height: 44px;
     min-height: 44px;
@@ -740,10 +750,6 @@ button.kova-auth-sign-up:hover {
     padding-inline: 20px 12px;
     min-height: calc(76px + var(--safe-top, 0px));
   }
-  .kova-sidebar-header .kova-header-button {
-    border-radius: 50%;
-    background: var(--sidebar-active);
-  }
   .kova-sidebar-primary {
     padding-inline: 12px;
     gap: 6px;
@@ -763,11 +769,6 @@ button.kova-auth-sign-up:hover {
   }
 }
 @media (max-width: 767px) {
-  .kova-sidebar-header .kova-header-button.kova-sidebar-toggle {
-    border-radius: 50%;
-  }
-}
-@media (max-width: 767px) {
   .kova-sidebar .kova-nav-row,
   .kova-sidebar .kova-chat-row-main {
     font-size: 16px;
@@ -781,10 +782,6 @@ button.kova-auth-sign-up:hover {
     touch-action: manipulation;
   }
   .kova-sidebar[data-kova-core-sidebar] :is(.kova-nav-row, .kova-chat-row-main) {
-    border-radius: 14px;
-  }
-  .kova-sidebar[data-kova-core-sidebar] :is(.kova-header-button, .kova-sidebar-toggle) {
-    min-width: 44px;
     border-radius: 14px;
   }
 }

@@ -12,6 +12,7 @@ const mobileProjects = new Set([
   "phone-430x932",
   "phone-landscape-844x390",
   "tablet-768x1024",
+  "tablet-1024x768",
 ]);
 
 async function expectNoPageOverflow(page: Page) {
@@ -33,7 +34,25 @@ test("navigation opens, contains its controls, and dismisses predictably", async
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
-  await expect(page.getByRole("button", { name: "Close sidebar", exact: true })).toBeVisible();
+  const search = navigation.getByRole("button", { name: "Search chats", exact: true });
+  const close = navigation.getByRole("button", { name: "Close sidebar", exact: true });
+  for (const action of [search, close]) {
+    await expect(action).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(action).toHaveCSS("border-top-width", "0px");
+    const geometry = await action.evaluate((button) => {
+      const target = button.getBoundingClientRect();
+      const glyph = button.querySelector("svg")!.getBoundingClientRect();
+      return {
+        width: button.offsetWidth,
+        height: button.offsetHeight,
+        dx: glyph.x + glyph.width / 2 - target.x - target.width / 2,
+        dy: glyph.y + glyph.height / 2 - target.y - target.height / 2,
+      };
+    });
+    expect(Math.min(geometry.width, geometry.height)).toBeGreaterThanOrEqual(44);
+    expect(geometry.dx).toBeCloseTo(0, 0);
+    expect(geometry.dy).toBeCloseTo(0, 0);
+  }
   const box = await navigation.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThan(page.viewportSize()!.width);
@@ -48,7 +67,14 @@ test("navigation opens, contains its controls, and dismisses predictably", async
     });
     expect(gap).toBeGreaterThanOrEqual(0);
   }).toPass();
-  await page.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  await search.tap();
+  const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
+  await expect(palette.getByRole("combobox")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(palette).toBeHidden();
+  await expect(navigation).toBeVisible();
+  await expect(search).toBeFocused();
+  await close.tap();
   await expect(navigation).toBeHidden();
   await expectNoPageOverflow(page);
 });
