@@ -219,8 +219,11 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
 
-    const composer = page.locator(".spec400-composer");
     const input = page.getByRole("textbox", { name: "Message KovaGPT" }).first();
+    const composer = page
+      .locator(".spec400-composer")
+      .filter({ has: page.getByRole("textbox", { name: "Message KovaGPT", exact: true }) });
+    await expect(input).toBeEnabled();
     const before = await composer.evaluate((element) => {
       const style = getComputedStyle(element);
       return [style.outlineStyle, Number.parseFloat(style.outlineWidth)] as const;

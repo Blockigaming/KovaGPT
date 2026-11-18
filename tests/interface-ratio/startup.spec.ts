@@ -14,8 +14,53 @@ async function frame(shell: Locator) {
   };
 }
 
+type HomeFrame = Awaited<ReturnType<typeof frame>>;
+
+function checkOpeningLayout(first: HomeFrame, width: number) {
+  if (width < 1024) expect(first.sidebar).toBeNull();
+  if (width >= 768) return;
+  expect(first.navigation).not.toBeNull();
+  expect(first.composer.width).toBeCloseTo(width - 32, 0);
+  const center = first.heading.y + first.heading.height / 2;
+  const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;
+  expect(Math.abs(center - freeSpaceCenter)).toBeLessThanOrEqual(8);
+}
+
+function compare(first: HomeFrame, next: HomeFrame, phase: string) {
+  for (const surface of ["header", "composer"] as const)
+    for (const edge of ["x", "y", "width", "height"] as const)
+      expect(
+        Math.abs(first[surface][edge] - next[surface][edge]),
+        `${surface} ${edge} during ${phase}`,
+      ).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(
+      first.heading.y + first.heading.height / 2 - (next.heading.y + next.heading.height / 2),
+    ),
+    `greeting position during ${phase}`,
+  ).toBeLessThanOrEqual(2);
+}
+
 for (const theme of ["dark", "light"] as const) {
-  test(`${theme}: the responsive home frame is already in place before the app loads`, async ({
+  test(`${theme}: the server paints the responsive home without app scripts`, async ({ page }) => {
+    await fixture(page, theme, true, false, "plus");
+    const pending = page.locator("[data-kova-home-startup]");
+    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    await page.route("**/*", (route) =>
+      route.request().resourceType() === "script" ? route.abort() : route.fallback(),
+    );
+    await page.goto("/", { waitUntil: "load" });
+    await expect(pending).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
+    await expect(pending).toHaveAttribute("inert", "");
+    await expect(input).toHaveCount(0);
+    await page.evaluate(() => document.fonts.ready);
+    checkOpeningLayout(await frame(pending), page.viewportSize()!.width);
+  });
+
+  // Use a fresh browser profile for successful loading. A previously aborted
+  // module request can persist through reload in WebKit.
+  test(`${theme}: the home frame stays in place through account readiness and reload`, async ({
     page,
   }, info) => {
     await fixture(page, theme, true, false, "plus", { preserveStorageOnReload: true });
@@ -25,48 +70,7 @@ for (const theme of ["dark", "light"] as const) {
     const pending = page.locator("[data-kova-home-startup]");
     const ready = page.locator(".kova-assistant[data-ui='modern']:not([data-kova-home-startup])");
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-
-    // Refuse scripts on the first request so even engines that wait for the
-    // load event can finish shaping fonts and capture the server-rendered frame.
-    const scriptRoute = (route: Route) =>
-      route.request().resourceType() === "script" ? route.abort() : route.fallback();
-    await page.route("**/*", scriptRoute);
-    await page.goto("/", { waitUntil: "load" });
-    await expect(pending).toBeVisible();
-    await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
-    await expect(pending).toHaveAttribute("inert", "");
-    await expect(input).toHaveCount(0);
-    await page.evaluate(() => document.fonts.ready);
-    const first = await frame(pending);
-    console.log("KOVA_STARTUP", JSON.stringify({ theme, viewport, first }));
-    await page.unroute("**/*", scriptRoute);
-
-    if (viewport.width < 1024) expect(first.sidebar).toBeNull();
-    if (viewport.width < 768) {
-      expect(first.navigation).not.toBeNull();
-      expect(first.composer.width).toBeCloseTo(viewport.width - 32, 0);
-      const center = first.heading.y + first.heading.height / 2;
-      const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;
-      expect(Math.abs(center - freeSpaceCenter)).toBeLessThanOrEqual(8);
-    }
-
     const capture = ["desktop-1440", "phone-390"].includes(info.project.name);
-    if (capture) await page.screenshot({ path: info.outputPath("before-interactive.png") });
-
-    const compare = (next: Awaited<ReturnType<typeof frame>>, phase: string) => {
-      for (const surface of ["header", "composer"] as const)
-        for (const edge of ["x", "y", "width", "height"] as const)
-          expect(
-            Math.abs(first[surface][edge] - next[surface][edge]),
-            `${surface} ${edge} during ${phase}`,
-          ).toBeLessThanOrEqual(2);
-      expect(
-        Math.abs(
-          first.heading.y + first.heading.height / 2 - (next.heading.y + next.heading.height / 2),
-        ),
-        `greeting position during ${phase}`,
-      ).toBeLessThanOrEqual(2);
-    };
 
     for (const visit of ["first interactive load", "reload"]) {
       let release!: () => void;
@@ -76,14 +80,19 @@ for (const theme of ["dark", "light"] as const) {
         await route.fallback();
       };
       await page.route("**/auth/v1/user", holdAccount);
+      let first: HomeFrame;
       try {
-        await page.reload({ waitUntil: "load" });
+        if (visit === "reload") await page.reload({ waitUntil: "load" });
+        else await page.goto("/", { waitUntil: "load" });
         await waitForKovaHydration(page);
         await expect(pending).toBeVisible();
         await expect(page.locator("dialog[data-kova-entry-pending]")).toHaveAttribute("open", "");
         await expect(input).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
-        compare(await frame(pending), `account check on ${visit}`);
+        first = await frame(pending);
+        checkOpeningLayout(first, viewport.width);
+        if (capture && visit === "first interactive load")
+          await page.screenshot({ path: info.outputPath("before-interactive.png") });
       } finally {
         release();
         await page.unroute("**/auth/v1/user", holdAccount);
@@ -93,7 +102,9 @@ for (const theme of ["dark", "light"] as const) {
       await expect(pending).toHaveCount(0);
       await page.evaluate(() => document.fonts.ready);
       if (viewport.width < 1024) await expect(input).not.toBeFocused();
-      await expect(async () => compare(await frame(ready), visit)).toPass({ timeout: 5_000 });
+      await expect(async () => compare(first, await frame(ready), visit)).toPass({
+        timeout: 5_000,
+      });
       if (capture && visit === "first interactive load")
         await page.screenshot({ path: info.outputPath("ready.png") });
       await input.fill("Draft typed after startup");
