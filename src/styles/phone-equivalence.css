@@ -74,7 +74,7 @@
   }
 
   .kova-assistant .kova-assistant-message .prose-chat {
-    font-size: 16px;
+    font-size: var(--kova-reading-size, 16px);
     line-height: 1.75;
   }
 
