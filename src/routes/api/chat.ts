@@ -1350,10 +1350,10 @@ export const Route = createFileRoute("/api/chat")({
             if (
               !explicitHostedTool &&
               !lockdownBlocksNetwork &&
-              !explicitBrowser &&
               (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&
+              !explicitBrowser &&
               (m.id !== "instant" || explicitWebSearch)
             ) {
               if (explicitWebSearch || shouldRunWebSearch(lastText, personalContext?.webSearch)) {
