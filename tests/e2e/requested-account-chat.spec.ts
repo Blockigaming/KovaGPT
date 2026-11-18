@@ -193,7 +193,6 @@ for (const path of [
   "/terms",
   "/privacy",
   "/refund",
-  "/pricing",
 ]) {
   test(`requested: public articles and legal pages have a searchable real page directory: ${path}`, async ({
     page,
@@ -235,7 +234,12 @@ test("requested: every published catalog route renders its actual content and sh
         const response = await request.get(item.path);
         expect(response.status(), item.path).toBe(200);
         const html = await response.text();
-        expect(html, item.path).toContain('class="kova-footer-directory"');
+        if (item.path === "/pricing") {
+          expect(html, item.path).toContain("Back to KovaGPT");
+          expect(html, item.path).not.toContain('class="kova-footer-directory"');
+        } else {
+          expect(html, item.path).toContain('class="kova-footer-directory"');
+        }
         expect(html, item.path).toContain('id="main-content"');
       }),
     );

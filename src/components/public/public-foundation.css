@@ -76,7 +76,7 @@
   color: var(--foreground);
   border-color: var(--border);
 }
-[data-public-shell] :is(.public-action, .public-table-scroll):focus-visible {
+:is([data-public-shell], [data-billing-page]) :is(.public-action, .public-table-scroll):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
@@ -175,29 +175,29 @@
   padding-block: var(--public-section-space);
   text-align: center;
 }
-[data-public-shell] .public-plan-comparison {
+:is([data-public-shell], [data-billing-page]) .public-plan-comparison {
   margin-block-start: 5rem;
 }
-[data-public-shell] .public-plan-comparison h2 {
+:is([data-public-shell], [data-billing-page]) .public-plan-comparison h2 {
   font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 500;
   letter-spacing: -0.025em;
 }
-[data-public-shell] .public-table-scroll {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll {
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-output);
 }
-[data-public-shell] .public-table-scroll table {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll table {
   width: 100%;
   min-width: 42rem;
   border-collapse: collapse;
   table-layout: fixed;
   text-align: start;
 }
-[data-public-shell] .public-table-scroll :is(th, td) {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll :is(th, td) {
   padding: 1.25rem;
   border-bottom: 1px solid var(--border);
   text-align: start;
@@ -206,16 +206,16 @@
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
-[data-public-shell] .public-table-scroll th {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll th {
   font-weight: 500;
 }
-[data-public-shell] .public-table-scroll thead {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll thead {
   background: var(--muted);
 }
-[data-public-shell] .public-table-scroll td {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll td {
   color: var(--muted-foreground);
 }
-[data-public-shell] .public-table-scroll tbody tr:last-child > * {
+:is([data-public-shell], [data-billing-page]) .public-table-scroll tbody tr:last-child > * {
   border-bottom: 0;
 }
 @media (max-width: 767px) {
@@ -627,23 +627,23 @@
     margin-block-start: 24px;
   }
 
-  [data-public-shell] .public-plan-comparison > .public-table-scroll {
+  :is([data-public-shell], [data-billing-page]) .public-plan-comparison > .public-table-scroll {
     display: none;
   }
 
-  [data-public-shell] .public-phone-plan-comparison {
+  :is([data-public-shell], [data-billing-page]) .public-phone-plan-comparison {
     display: grid;
     gap: 10px;
   }
 
-  [data-public-shell] .public-phone-plan-row {
+  :is([data-public-shell], [data-billing-page]) .public-phone-plan-row {
     padding: 12px;
     border: 1px solid var(--border);
     border-radius: var(--kova-radius-card);
     background: var(--card);
   }
 
-  [data-public-shell] .public-phone-plan-row dl {
+  :is([data-public-shell], [data-billing-page]) .public-phone-plan-row dl {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
@@ -652,18 +652,18 @@
     line-height: 1.45;
   }
 
-  [data-public-shell] .public-phone-plan-row dl > div {
+  :is([data-public-shell], [data-billing-page]) .public-phone-plan-row dl > div {
     padding: 8px;
     border-radius: var(--kova-radius-compact);
     background: var(--muted);
     overflow-wrap: anywhere;
   }
 
-  [data-public-shell] .public-phone-plan-row dt {
+  :is([data-public-shell], [data-billing-page]) .public-phone-plan-row dt {
     font-weight: 600;
   }
 
-  [data-public-shell] .public-phone-plan-row dd {
+  :is([data-public-shell], [data-billing-page]) .public-phone-plan-row dd {
     margin: 3px 0 0;
     color: var(--muted-foreground);
   }

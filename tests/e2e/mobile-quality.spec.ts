@@ -104,7 +104,7 @@ test("mobile public header exposes the app and opens its menu without moving the
   page,
 }) => {
   test.skip(page.viewportSize()!.width >= 768, "phone layout");
-  await page.goto("/pricing", { waitUntil: "domcontentloaded" });
+  await page.goto("/overview", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const navigation = page.getByRole("navigation", { name: "Public navigation", exact: true });
   await expect(navigation.getByRole("link", { name: "Open app" })).toBeInViewport();
@@ -112,7 +112,7 @@ test("mobile public header exposes the app and opens its menu without moving the
   const initialY = (await main.boundingBox())!.y;
   await navigation.getByRole("button", { name: "Open navigation" }).tap();
   const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
-  await expect(menu.getByRole("link", { name: "Pricing", exact: true })).toHaveAttribute(
+  await expect(menu.getByRole("link", { name: "About", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
   );
@@ -149,11 +149,11 @@ test("phone footer groups reveal their links without taking over the page", asyn
 
   const directory = page.locator(".kova-footer-directory");
   await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
-  await directory.locator("summary").tap();
+  await directory.locator("summary").press("Enter");
   const search = directory.getByRole("searchbox", { name: "Search the page directory" });
   await search.fill("privacy");
   await expect(directory.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
-  await directory.locator("summary").tap();
+  await directory.locator("summary").press("Enter");
   await expect(directory.locator('nav[aria-label="All public pages"]')).toHaveCount(0);
 });
 
