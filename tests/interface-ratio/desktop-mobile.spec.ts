@@ -172,7 +172,7 @@ for (const state of states) {
     if (state.name === "home") {
       unchanged(".kova-greeting h1", ["family", "weight"]);
       expect(row(".kova-greeting h1").font).toBe("26px");
-      unchanged(".spec400-composer", ["radius"]);
+      expect(row(".spec400-composer").radius).toBe("24px");
       unchanged(".spec400-composer-input", ["font", "line"]);
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
