@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 222,
-  "latest": "20261117174500_kova_private_chat_budget_pacing.sql",
+  "count": 223,
+  "latest": "20261118150000_kova_browserbase_priority_queue.sql",
   "migrations": [
     {
       "order": 1,
@@ -4683,6 +4683,20 @@
       "dataBackfill": true,
       "reversible": false,
       "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 223,
+      "filename": "20261118150000_kova_browserbase_priority_queue.sql",
+      "timestamp": "20261118150000",
+      "sha256": "f0c592af1c6f3d5af492a0d42cb032099c30404d04b3c793cb2779509ccc9aa3",
+      "tables": ["browserbase_queue"],
+      "functions": ["claim_browserbase_slot"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["browserbase_queue"],
       "policies": [],
       "indexes": []
     }

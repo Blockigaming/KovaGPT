@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 222,
+  "migrationCount": 223,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -38,6 +38,7 @@
     "app_notifications",
     "banned_users",
     "billing_plan_tiers",
+    "browserbase_queue",
     "canvas_comments",
     "canvas_documents",
     "canvas_revisions",
@@ -430,6 +431,7 @@
     "claim_account_project_file_cleanup",
     "claim_account_retained_source_transfer",
     "claim_account_storage_artifact_cleanup",
+    "claim_browserbase_slot",
     "claim_chat_context_summaries",
     "claim_developer_funding",
     "claim_due_scheduled_tasks",
@@ -1726,6 +1728,7 @@
     "app_notifications",
     "banned_users",
     "billing_plan_tiers",
+    "browserbase_queue",
     "canvas_comments",
     "canvas_documents",
     "canvas_revisions",
@@ -2309,6 +2312,7 @@
     "execute on function public.claim_account_export_artifact_cleanup(integer, uuid) to service_role",
     "execute on function public.claim_account_export_jobs(text, integer, integer) to service_role",
     "execute on function public.claim_account_export_jobs(text, integer, integer) to service_role",
+    "execute on function public.claim_browserbase_slot(integer, interval) to service_role",
     "execute on function public.claim_chat_context_summaries(integer) to service_role",
     "execute on function public.claim_due_scheduled_tasks(text, integer, integer)\n  to service_role",
     "execute on function public.claim_due_scheduled_tasks(text,integer,integer) to service_role",
@@ -2640,6 +2644,7 @@
     "select, delete on table public.connected_accounts to authenticated",
     "select, insert, update on public.message_usage_short_window to service_role",
     "select, insert, update on table public.user_preferences to authenticated",
+    "select, insert, update, delete on public.browserbase_queue to service_role",
     "select, insert, update, delete on public.chat_branches to authenticated",
     "select, insert, update, delete on public.chat_branches to service_role",
     "select, insert, update, delete on public.chat_custom_rules to authenticated",
@@ -3005,6 +3010,7 @@
     "all on function public.claim_account_export_artifact_cleanup(integer, uuid)\n  from public, anon, authenticated",
     "all on function public.claim_account_export_jobs(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_account_export_jobs(text, integer, integer)\n  from public, anon, authenticated",
+    "all on function public.claim_browserbase_slot(integer, interval) from public, anon, authenticated",
     "all on function public.claim_chat_context_summaries(integer) from public,anon,authenticated",
     "all on function public.claim_due_scheduled_tasks(text, integer, integer)\n  from public, anon, authenticated",
     "all on function public.claim_due_scheduled_tasks(text,integer,integer) from public,anon,authenticated",
@@ -3279,6 +3285,7 @@
     "all on public.ai_usage_events from public,anon,authenticated",
     "all on public.api_profitability_admin from public,anon,authenticated",
     "all on public.billing_plan_tiers from public, anon, authenticated",
+    "all on public.browserbase_queue from public, anon, authenticated",
     "all on public.chat_branches from anon",
     "all on public.chat_context_summaries from public, anon, authenticated",
     "all on public.chat_custom_rules from anon",
@@ -3450,6 +3457,10 @@
     { "table": "public.billing_plan_tiers", "role": "authenticated", "granted": false },
     { "table": "public.billing_plan_tiers", "role": "public", "granted": false },
     { "table": "public.billing_plan_tiers", "role": "service_role", "granted": true },
+    { "table": "public.browserbase_queue", "role": "anon", "granted": false },
+    { "table": "public.browserbase_queue", "role": "authenticated", "granted": false },
+    { "table": "public.browserbase_queue", "role": "public", "granted": false },
+    { "table": "public.browserbase_queue", "role": "service_role", "granted": true },
     { "table": "public.chat_branches", "role": "anon", "granted": false },
     { "table": "public.chat_branches", "role": "authenticated", "granted": true },
     { "table": "public.chat_branches", "role": "service_role", "granted": true },
@@ -3914,5 +3925,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "47b1cf3740858af60ce03c30c20457e128e7999840d4cafdb60b50158d5762ca"
+  "sha256": "0a6f9fc3c4738c33521205ee0a1f6a775cfa81979d0da0ffe2615eef8cf96e22"
 }
