@@ -42,7 +42,7 @@ async function geometry(page: Page) {
         matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
           .matches,
     ));
-  await expect(composer).toHaveCSS("border-radius", "34px");
+  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
   const singleRow =
     conversation &&
     (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));

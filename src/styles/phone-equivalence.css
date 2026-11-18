@@ -103,6 +103,7 @@
   .kova-assistant .kova-empty-composer .spec400-composer {
     --chat-composer-corner: 24px;
     --composer-text-inset: 0px;
+    --phone-composer-inline-padding: 7px;
     min-height: 0 !important;
     padding: 5px 8px !important;
     gap: 2px;
@@ -175,9 +176,13 @@
     min-height: 34px;
   }
 
-  .kova-assistant .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-input {
+  .kova-assistant .kova-empty-composer .spec400-composer-input {
     min-height: 34px !important;
-    padding: 8px 7px 0 !important;
+    padding: 8px var(--phone-composer-inline-padding) 0 !important;
+  }
+
+  .kova-assistant .kova-empty-composer .kova-link-preview-composer {
+    --composer-text-inset: var(--phone-composer-inline-padding);
   }
 
   /* A keyboard leaves a bounded writing surface. Keep the action row outside
