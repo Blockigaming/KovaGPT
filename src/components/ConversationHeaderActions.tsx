@@ -79,7 +79,6 @@ function downloadOutput(output: ConversationOutput) {
 export function ConversationHeaderActions({
   conversation,
   signedIn,
-  userTier = "free",
   compact = false,
   navigationBlocked = false,
   isStreaming = false,
@@ -443,21 +442,22 @@ export function ConversationHeaderActions({
             </button>
           ))}
       </section>
-      {signedIn && browserPresentation?.active && (
-      <ConversationSourcesPanel
-        browserOnly
-        showActivity={false}
-        conversation={conversation}
-        browserTabCount={browserPresentation.tabCount}
-        browserPreview={browserPresentation.thumbnail}
-        onOpenAttachment={() => {}}
-        onOpenMemory={() => {}}
-        onOpenBrowser={(activity) => {
-          rememberFocus(outputsRef.current);
-          setOutputsOpen(false);
-          setSelectedBrowser(activity);
-        }}
-      />
+      {signedIn && (
+        <ConversationSourcesPanel
+          browserOnly
+          activeBrowserOnly
+          showActivity={false}
+          conversation={conversation}
+          browserTabCount={browserPresentation?.active ? browserPresentation.tabCount : undefined}
+          browserPreview={browserPresentation?.active ? browserPresentation.thumbnail : undefined}
+          onOpenAttachment={() => {}}
+          onOpenMemory={() => {}}
+          onOpenBrowser={(activity) => {
+            rememberFocus(outputsRef.current);
+            setOutputsOpen(false);
+            setSelectedBrowser(activity);
+          }}
+        />
       )}
       {steps.length > 0 && (
         <section className="kova-activity-inventory" aria-label="Steps">
