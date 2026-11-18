@@ -388,7 +388,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const home = useRouterState({ select: (state) => state.location.pathname === "/" });
   return (
-    <ClerkProvider pendingSurface={home ? <HomeChatStartup /> : undefined}>
+    <ClerkProvider phonePendingSurface={home ? <HomeChatStartup /> : undefined}>
       <QueryClientProvider client={queryClient}>
         <a
           href="#main-content"

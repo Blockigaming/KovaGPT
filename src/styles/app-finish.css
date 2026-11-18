@@ -979,25 +979,13 @@
   background: var(--accent);
 }
 
-/* Paint inert home chrome before the native account dialog is opened by
-   hydration. The existing inert app boundary still gates all real controls. */
-dialog[data-kova-entry-pending]:not([open]) {
-  display: block;
-}
-
-.kova-home-startup .spec400-composer-toolbar {
-  opacity: 0.6;
-}
-
-.kova-home-startup .kova-home-startup-desktop-shortcut {
-  margin-inline-start: auto;
-}
-
-@media (width < 1024px) {
-  .kova-home-startup
-    :is(.kova-sidebar[data-kova-core-sidebar], .kova-home-startup-desktop-shortcut) {
-    display: none;
-  }
+.kova-home-loading {
+  display: grid;
+  flex: 1;
+  min-height: 300px;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 14px;
 }
 
 /* Protected routes show skeleton geometry during authentication, never an

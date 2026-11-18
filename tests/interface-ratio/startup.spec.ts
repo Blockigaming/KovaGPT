@@ -10,7 +10,6 @@ async function frame(shell: Locator) {
     header: (await header.boundingBox())!,
     heading: (await shell.locator(".kova-greeting h1").boundingBox())!,
     composer: (await shell.locator(".spec400-composer").boundingBox())!,
-    sidebar: await shell.locator(".kova-sidebar").boundingBox(),
   };
 }
 
@@ -20,8 +19,6 @@ function checkOpeningLayout(
   first: HomeFrame,
   { width, height }: { width: number; height: number },
 ) {
-  if (width < 1024 && first.sidebar)
-    expect(first.sidebar.x + first.sidebar.width).toBeLessThanOrEqual(1);
   if (width >= 768) return;
   expect(first.composer.width).toBeCloseTo(width - 32, 0);
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
@@ -46,7 +43,9 @@ function compare(first: HomeFrame, next: HomeFrame, phase: string) {
 }
 
 for (const theme of ["dark", "light"] as const) {
-  test(`${theme}: the server paints the responsive home without app scripts`, async ({ page }) => {
+  test(`${theme}: the server paints the phone frame without changing larger viewports`, async ({
+    page,
+  }, info) => {
     await fixture(page, theme, true, false, "plus");
     const pending = page.locator("[data-kova-home-startup]");
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
@@ -54,12 +53,17 @@ for (const theme of ["dark", "light"] as const) {
       route.request().resourceType() === "script" ? route.abort() : route.fallback(),
     );
     await page.goto("/", { waitUntil: "load" });
-    await expect(pending).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
-    await expect(pending).toHaveAttribute("inert", "");
     await expect(input).toHaveCount(0);
-    await page.evaluate(() => document.fonts.ready);
-    checkOpeningLayout(await frame(pending), page.viewportSize()!);
+    if (/^(phone|landscape)-/.test(info.project.name)) {
+      await expect(pending).toBeVisible();
+      await expect(pending).toHaveAttribute("inert", "");
+      await page.evaluate(() => document.fonts.ready);
+      checkOpeningLayout(await frame(pending), page.viewportSize()!);
+    } else {
+      await expect(pending).toBeHidden();
+      await expect(page.locator("dialog[data-kova-entry-pending]")).toBeHidden();
+    }
   });
 
   // Use a fresh browser profile for successful loading. A previously aborted
@@ -86,18 +90,23 @@ for (const theme of ["dark", "light"] as const) {
         await route.fallback();
       };
       await page.route("**/auth/v1/user", holdAccount);
-      let first: HomeFrame;
+      let first: HomeFrame | undefined;
       try {
         if (visit === "reload") await page.reload({ waitUntil: "load" });
         else await page.goto("/", { waitUntil: "load" });
         await waitForKovaHydration(page);
-        await expect(pending).toBeVisible();
         await expect(entryDialog).toHaveAttribute("open", "");
-        if (phone) await expect(entryDialog).toHaveCSS("outline-style", "none");
         await expect(input).toHaveCount(0);
-        await page.evaluate(() => document.fonts.ready);
-        first = await frame(pending);
-        checkOpeningLayout(first, viewport);
+        if (phone) {
+          await expect(pending).toBeVisible();
+          await expect(entryDialog).toHaveCSS("outline-style", "none");
+          await page.evaluate(() => document.fonts.ready);
+          first = await frame(pending);
+          checkOpeningLayout(first, viewport);
+        } else {
+          await expect(pending).toBeHidden();
+          await expect(entryDialog.locator("[data-kova-entry-fallback]")).toBeVisible();
+        }
         if (capture && visit === "first interactive load")
           await page.screenshot({ path: info.outputPath("before-interactive.png") });
       } finally {
@@ -109,9 +118,12 @@ for (const theme of ["dark", "light"] as const) {
       await expect(pending).toHaveCount(0);
       await page.evaluate(() => document.fonts.ready);
       if (viewport.width < 1024) await expect(input).not.toBeFocused();
-      await expect(async () => compare(first, await frame(ready), visit)).toPass({
-        timeout: 5_000,
-      });
+      if (first) {
+        const startupFrame = first;
+        await expect(async () => compare(startupFrame, await frame(ready), visit)).toPass({
+          timeout: 5_000,
+        });
+      }
       if (capture && visit === "first interactive load")
         await page.screenshot({ path: info.outputPath("ready.png") });
       await input.fill("Draft typed after startup");
@@ -183,6 +195,18 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
   await expect(menu.getByRole("button", { name: "Plugins", exact: true })).toBeVisible();
   if (capture)
     await page.screenshot({ path: info.outputPath("composer-menu.png"), animations: "disabled" });
+  for (const [name, label] of [
+    ["Files", "Choose files"],
+    ["Plugins", "Choose plugins"],
+  ]) {
+    await menu.getByRole("button", { name, exact: true }).click();
+    const back = page
+      .getByRole("dialog", { name: label, exact: true })
+      .getByRole("button", { name: "Back to files and tools" });
+    await expect(back).toBeFocused();
+    await back.click();
+    await expect(menu.getByRole("button", { name, exact: true })).toBeFocused();
+  }
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
 
@@ -197,4 +221,7 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
   await recent.getByRole("button", { name: /Composer review chat/ }).click();
   await expect(page.locator("#message-answer-a")).toBeVisible();
   await expect(drawer).toBeHidden();
+  await expect(input).not.toBeFocused();
+  if (capture)
+    await page.screenshot({ path: info.outputPath("conversation.png"), animations: "disabled" });
 });

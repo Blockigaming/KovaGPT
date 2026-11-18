@@ -20,6 +20,7 @@ const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const streamingStatus = await readFile("src/components/StreamingStatus.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
 const starters = await readFile("src/components/HomeChatStarters.tsx", "utf8");
+const homeFrame = await readFile("src/components/HomeChatFrame.tsx", "utf8");
 const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx", "utf8");
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const publicShell = await readFile("src/components/public/PublicShell.tsx", "utf8");
@@ -371,7 +372,8 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(home, /surface=\{showEmptyChat \? "empty" : "conversation"\}/);
   assert.doesNotMatch(home, /<HomeChatStarters/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
-  assert.match(starters, /<div className="kova-empty-composer">\s*\{children\}/);
+  assert.match(starters, /<HomeChatFrame[\s\S]*?\{children\}/);
+  assert.match(homeFrame, /<div className="kova-empty-composer">\s*\{children\}/);
   assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);

@@ -73,8 +73,7 @@ import {
   type PendingAttachment,
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { HomeWelcome } from "@/components/HomeChatStarters";
-import DesktopChatToolbar from "@/components/DesktopChatToolbar";
+import { HomeChatContentPending } from "@/components/HomeChatStartup";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
@@ -103,6 +102,7 @@ const QuotaRejectedDraftPreview = lazy(() =>
 const WorkspacePaneDivider = lazy(() =>
   import("@/components/WorkspacePaneDivider").then((m) => ({ default: m.WorkspacePaneDivider })),
 );
+const DesktopChatToolbar = lazy(() => import("@/components/DesktopChatToolbar"));
 const NextChatPromptPanel = lazy(() => import("@/components/NextChatPromptPanel"));
 const ChatRequestStatus = lazy(() => import("@/components/ChatRequestStatus"));
 const WorkspaceResultContent = lazy(() =>
@@ -118,6 +118,7 @@ const ReviewedMemoryDialog = lazy(() =>
     default: module.ReviewedMemoryDialog,
   })),
 );
+const HomeWelcome = lazy(() => import("@/components/HomeChatStarters"));
 
 const ChatWorkspaceControls = lazy(() =>
   import("@/components/ChatWorkspaceControls").then((module) => ({
@@ -3213,30 +3214,32 @@ function KovaGPT() {
 
   const desktopToolbar =
     chatStarted || !sidebarOpen || isLoaded || selectedWorkflowSkill ? (
-      <DesktopChatToolbar
-        sidebarOpen={sidebarOpen}
-        isSignedIn={isSignedIn}
-        isLoaded={isLoaded}
-        chatStarted={chatStarted}
-        chatTitle={active?.title}
-        selectedWorkflowSkill={selectedWorkflowSkill ?? null}
-        isStreaming={isStreaming}
-        clearWorkflowSkill={clearWorkflowSkill}
-        freeOfferButton={freeOfferButton}
-        actions={conversationActions()}
-        tempChat={tempChat}
-        tempChatConfirmed={tempChatConfirmed}
-        onOpenSidebar={(event) => {
-          readingAnchorControllerRef.current?.capture();
-          sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
-          setSidebarOpen(true);
-        }}
-        onToggleTemporaryChat={(trigger) => {
-          temporaryTriggerRef.current = trigger;
-          temporaryReturnUrlRef.current = window.location.href;
-          setTemporaryChatEnabled(!tempChat);
-        }}
-      />
+      <Suspense fallback={null}>
+        <DesktopChatToolbar
+          sidebarOpen={sidebarOpen}
+          isSignedIn={isSignedIn}
+          isLoaded={isLoaded}
+          chatStarted={chatStarted}
+          chatTitle={active?.title}
+          selectedWorkflowSkill={selectedWorkflowSkill ?? null}
+          isStreaming={isStreaming}
+          clearWorkflowSkill={clearWorkflowSkill}
+          freeOfferButton={freeOfferButton}
+          actions={conversationActions()}
+          tempChat={tempChat}
+          tempChatConfirmed={tempChatConfirmed}
+          onOpenSidebar={(event) => {
+            readingAnchorControllerRef.current?.capture();
+            sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
+            setSidebarOpen(true);
+          }}
+          onToggleTemporaryChat={(trigger) => {
+            temporaryTriggerRef.current = trigger;
+            temporaryReturnUrlRef.current = window.location.href;
+            setTemporaryChatEnabled(!tempChat);
+          }}
+        />
+      </Suspense>
     ) : null;
 
   return (
@@ -3417,15 +3420,17 @@ function KovaGPT() {
             aria-labelledby={result && !wideResult ? "conversation-tab" : undefined}
           >
             {showEmptyChat ? (
-              <HomeWelcome
-                owner={userKey}
-                firstName={user?.firstName}
-                chatId={activeId}
-                conversations={isLoaded && isSignedIn ? historyConversations : []}
-                onSelect={setActiveId}
-              >
-                {composer}
-              </HomeWelcome>
+              <Suspense fallback={<HomeChatContentPending />}>
+                <HomeWelcome
+                  owner={userKey}
+                  firstName={user?.firstName}
+                  chatId={activeId}
+                  conversations={isLoaded && isSignedIn ? historyConversations : []}
+                  onSelect={setActiveId}
+                >
+                  {composer}
+                </HomeWelcome>
+              </Suspense>
             ) : (
               <>
                 {composerVoiceMode === "voice" && active.messages.length === 0 ? (

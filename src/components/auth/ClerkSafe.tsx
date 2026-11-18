@@ -98,15 +98,16 @@ function isActiveBan(bannedUntil: string | undefined) {
   return !Number.isFinite(timestamp) || timestamp > Date.now();
 }
 
-type AuthProviderProps = { children: ReactNode; pendingSurface?: ReactNode };
+type AuthProviderProps = { children: ReactNode; phonePendingSurface?: ReactNode };
 
 function AuthAuthorityGate({
   pending,
-  pendingSurface,
+  phonePendingSurface,
 }: {
   pending: boolean;
-  pendingSurface?: ReactNode;
+  phonePendingSurface?: ReactNode;
 }) {
+  const showPhonePending = pending && Boolean(phonePendingSurface);
   const dialog = useRef<HTMLDialogElement | null>(null);
   useEffect(() => {
     const current = dialog.current;
@@ -126,28 +127,31 @@ function AuthAuthorityGate({
     <dialog
       ref={dialog}
       aria-label="Checking account"
-      hidden={Boolean(pendingSurface) && !pending}
-      data-kova-entry-pending={pending && pendingSurface ? "" : undefined}
+      data-kova-entry-pending={showPhonePending ? "" : undefined}
       className="fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none border-0 bg-background p-0 text-foreground backdrop:bg-background"
       onCancel={(event) => event.preventDefault()}
     >
-      <div className="flex h-full" aria-busy="true" aria-hidden="true">
-        {pending && pendingSurface ? (
-          pendingSurface
-        ) : (
-          <>
-            <aside className="hidden w-64 shrink-0 rounded-r-3xl border-r border-border p-5 md:block">
-              <div className="mb-10 h-8 w-28 animate-pulse rounded-lg bg-muted" />
-              {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="mb-4 h-9 animate-pulse rounded-xl bg-muted" />
-              ))}
-            </aside>
-            <section className="flex min-w-0 flex-1 flex-col justify-end p-6">
-              <div className="mx-auto mb-6 h-32 w-full max-w-3xl animate-pulse rounded-3xl border border-border bg-muted/30" />
-            </section>
-          </>
-        )}
+      <div
+        className="flex h-full"
+        data-kova-entry-fallback={showPhonePending ? "" : undefined}
+        aria-busy="true"
+        aria-hidden="true"
+      >
+        <aside className="hidden w-64 shrink-0 rounded-r-3xl border-r border-border p-5 md:block">
+          <div className="mb-10 h-8 w-28 animate-pulse rounded-lg bg-muted" />
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="mb-4 h-9 animate-pulse rounded-xl bg-muted" />
+          ))}
+        </aside>
+        <section className="flex min-w-0 flex-1 flex-col justify-end p-6">
+          <div className="mx-auto mb-6 h-32 w-full max-w-3xl animate-pulse rounded-3xl border border-border bg-muted/30" />
+        </section>
       </div>
+      {showPhonePending ? (
+        <div className="kova-home-startup-surface" aria-busy="true">
+          {phonePendingSurface}
+        </div>
+      ) : null}
     </dialog>
   );
 }
@@ -155,7 +159,7 @@ function AuthAuthorityGate({
 function KovaClerkProvider({
   children,
   allowLegacyFallback,
-  pendingSurface,
+  phonePendingSurface,
 }: AuthProviderProps & { allowLegacyFallback: boolean }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -401,7 +405,7 @@ function KovaClerkProvider({
   if (useLegacy)
     return (
       <SupabaseClerkProvider
-        pendingSurface={pendingSurface}
+        phonePendingSurface={phonePendingSurface}
         authorityPending={authorityPending}
         authorityRevision={authorityRevision}
         legacyValidationRequired={legacyValidationRequired}
@@ -425,7 +429,10 @@ function KovaClerkProvider({
       >
         {children}
       </div>
-      <AuthAuthorityGate pending={!isLoaded || authorityPending} pendingSurface={pendingSurface} />
+      <AuthAuthorityGate
+        pending={!isLoaded || authorityPending}
+        phonePendingSurface={phonePendingSurface}
+      />
       {authIssue ? (
         <div
           role="alert"
@@ -455,7 +462,7 @@ function KovaClerkProvider({
 
 function SupabaseClerkProvider({
   children,
-  pendingSurface,
+  phonePendingSurface,
   authorityPending = false,
   authorityRevision = 0,
   legacyValidationRequired = false,
@@ -923,7 +930,7 @@ function SupabaseClerkProvider({
       </div>
       <AuthAuthorityGate
         pending={!isLoaded || authorityUnresolved}
-        pendingSurface={pendingSurface}
+        phonePendingSurface={phonePendingSurface}
       />
       {authIssue ? (
         <div

@@ -19,7 +19,6 @@ import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -356,8 +355,6 @@ export function AppShell({
           <AppErrorBoundary>{children}</AppErrorBoundary>
         </WorkspacePageUtilities.Provider>
       </div>
-      <PhoneNavigation pathname={pathname} inactive={sidebarOpen || settingsOpen} />
-
       <Suspense fallback={null}>
         {shareChatId !== null && (
           <ShareChatDialog

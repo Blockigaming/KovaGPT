@@ -176,6 +176,14 @@ for (const theme of ["light", "dark"] as const) {
       await expect(shell).toHaveAttribute("data-keyboard-open", "true");
       await expect.poll(async () => (await shell.boundingBox())?.height).toBe(height);
       await expect(input).toHaveValue(draft);
+      if (!saved) {
+        await expect
+          .poll(async () => {
+            const composer = (await page.locator(".spec400-composer").boundingBox())!;
+            return top + height - composer.y - composer.height;
+          })
+          .toBeLessThanOrEqual(8);
+      }
       await info.attach("keyboard-geometry", {
         body: JSON.stringify(
           await page.locator(".spec400-composer").evaluate((element) => ({

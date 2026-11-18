@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { Sidebar } from "@/components/Sidebar";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -1345,7 +1344,6 @@ function ImagesPage() {
             </section>
           </div>
         </div>
-        <PhoneNavigation pathname="/images" inactive={sidebarOpen || settingsOpen} />
       </main>
 
       <SettingsDialog

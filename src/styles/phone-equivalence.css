@@ -2,13 +2,40 @@
    The desktop baseline and evidence are in docs/design/desktop-mobile-ratios.md.
    Keep this file mobile-only: reflow is not a second visual theme. */
 .kova-phone-resource-actions,
-.kova-phone-more-destination,
+.kova-phone-destination,
 .kova-phone-continue-working,
+.kova-home-startup-surface,
+.kova-phone-home-placeholder,
 .spec400-inline-project-context[data-desktop-tray="true"] {
   display: none;
 }
 
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  /* Paint the same phone frame before hydration and during the route chunk
+     load. The default account placeholder remains in place at larger widths. */
+  dialog[data-kova-entry-pending]:not([open]),
+  .kova-home-startup-surface {
+    display: block;
+  }
+
+  [data-kova-entry-fallback] {
+    display: none;
+  }
+
+  .kova-phone-home-placeholder {
+    display: contents;
+  }
+
+  .kova-assistant .kova-home-loading {
+    position: absolute;
+    min-height: 0;
+    clip-path: inset(50%);
+  }
+
+  .kova-home-composer-placeholder .spec400-composer-toolbar {
+    opacity: 0.6;
+  }
+
   /* The inert startup dialog has no interactive focus target. */
   dialog[data-kova-entry-pending]:focus {
     outline: none;
@@ -27,7 +54,7 @@
     animation: none;
   }
 
-  /* Keep the larger toolbar in conversations where it carries chat actions. */
+  /* Preserve the header's content height, with safe-area space outside it. */
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
     min-height: calc(64px + var(--safe-top, 0px));
   }
@@ -37,14 +64,7 @@
   }
 
   .kova-assistant[data-compact-chat-home] .kova-topbar:not(.kova-desktop-topbar) {
-    min-height: calc(56px + var(--safe-top, 0px)) !important;
     border-bottom-color: transparent !important;
-  }
-
-  .kova-assistant[data-compact-chat-home]
-    .kova-topbar:not(.kova-desktop-topbar)
-    .kova-topbar-inner {
-    min-height: 55px;
   }
 
   .kova-assistant .kova-empty-chat .kova-greeting {
@@ -54,9 +74,11 @@
 
   .kova-assistant .kova-empty-chat .kova-greeting h1 {
     font-family: var(--font-reading, Georgia, serif);
-    font-size: 1.75rem;
+    font-size: 32px;
     font-weight: 400;
     line-height: 1.2;
+    max-width: min(100%, 24rem);
+    overflow-wrap: anywhere;
     text-align: center;
   }
 
@@ -79,7 +101,7 @@
 
   /* A quiet two-row dock leaves the primary actions available at touch size. */
   .kova-assistant .kova-empty-composer .spec400-composer {
-    --chat-composer-corner: 30px;
+    --chat-composer-corner: 34px;
     --composer-text-inset: 4px;
     min-height: 0 !important;
     padding: 8px 10px !important;
@@ -112,11 +134,39 @@
     min-height: 44px;
   }
 
+  .kova-composer-full-menu
+    .kova-composer-quick-menu
+    > .kova-composer-action:not([aria-label="Work in a project"])
+    > small {
+    display: none;
+  }
+
+  .kova-composer-full-menu
+    .kova-composer-action:is([aria-label="Choose project"], [aria-label="Work in a project"]) {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 1px;
+
+    & > svg {
+      grid-row: span 2;
+    }
+
+    & > small {
+      grid-column: 2;
+    }
+  }
+
+  .kova-assistant [data-chat-history-migration] > p {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .kova-assistant .kova-empty-composer .spec400-composer-toolbar {
     margin-block-start: 0;
   }
 
-  .kova-home-startup .spec400-composer-input {
+  .kova-home-composer-placeholder .spec400-composer-input {
     color: var(--muted-foreground);
   }
 
@@ -154,6 +204,7 @@
   }
 
   .kova-assistant[data-keyboard-open="true"] .kova-empty-composer {
+    margin-block-start: auto;
     padding-block: 2px;
   }
 
@@ -295,13 +346,17 @@
     display: none;
   }
 
-  /* Docked navigation becomes an overlay; apply 260/340 to the user's own
-     desktop rail width. Keep the viewport clamp and touch hit regions. */
+  /* Apply the overlay ratio to wider rails. Narrow rails need enough room
+     for the brand and both 44px header controls before adding the safe inset. */
   .kova-sidebar[data-kova-core-sidebar] {
     --kova-sidebar-drawer-width: min(
-      calc(var(--sidebar-expanded, 280px) * 13 / 17),
+      max(calc(var(--sidebar-expanded, 280px) * 13 / 17), calc(16rem + var(--safe-left))),
       calc(100vw - 24px)
     );
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
+    padding-inline-start: var(--safe-left);
   }
 
   .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-destinations {
@@ -311,12 +366,12 @@
     overflow: visible;
   }
 
-  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-destinations > a {
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-destinations a {
     width: 100%;
     border: 0;
   }
 
-  .kova-phone-more-destination,
+  .kova-phone-destination,
   .kova-phone-continue-working {
     display: block;
   }

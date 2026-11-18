@@ -1,6 +1,6 @@
 import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
 import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
-import { ContinueWorking } from "@/components/HomeChatStarters";
+import { ContinueWorking } from "@/components/HomeChatFrame";
 import {
   NewChatGlyph,
   LibraryGlyph,
@@ -1815,6 +1815,11 @@ export function Sidebar({
                 </button>
               ) : null}
               <div className="kova-sidebar-destinations">
+                {mobileViewport && !isOn("/") ? (
+                  <div className="kova-phone-destination">
+                    {navLink("/", "Chat", MessageSquare)}
+                  </div>
+                ) : null}
                 {railShortcuts
                   .filter((id) => !["discovery", "maps"].includes(id))
                   .map((id) => {
@@ -1834,17 +1839,19 @@ export function Sidebar({
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
                   : null}
-                {availableShortcuts
-                  .filter(
-                    (item) =>
-                      ["library", "projects", "apps"].includes(item.id) &&
-                      !railShortcuts.includes(item.id),
-                  )
-                  .map((item) => (
-                    <div key={item.id} className="kova-phone-more-destination">
-                      {navLink(item.to, item.label, SHORTCUT_ICONS[item.id])}
-                    </div>
-                  ))}
+                {mobileViewport
+                  ? availableShortcuts
+                      .filter(
+                        (item) =>
+                          ["library", "projects", "apps"].includes(item.id) &&
+                          !railShortcuts.includes(item.id),
+                      )
+                      .map((item) => (
+                        <div key={item.id} className="kova-phone-destination">
+                          {navLink(item.to, item.label, SHORTCUT_ICONS[item.id])}
+                        </div>
+                      ))
+                  : null}
                 {signedIn ? (
                   <button
                     type="button"
@@ -1858,7 +1865,7 @@ export function Sidebar({
                 ) : null}
               </details>
             </nav>
-            {showPhoneRecommendations && savedConversations.length > 0 ? (
+            {mobileViewport && showPhoneRecommendations && savedConversations.length > 0 ? (
               <div className="kova-phone-continue-working">
                 <ContinueWorking
                   conversations={savedConversations}

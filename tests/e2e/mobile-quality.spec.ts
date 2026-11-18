@@ -37,6 +37,17 @@ test("navigation opens, contains its controls, and dismisses predictably", async
   const box = await navigation.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.width).toBeLessThan(page.viewportSize()!.width);
+  const header = navigation.locator(".kova-sidebar-header");
+  await expect(async () => {
+    const gap = await header.evaluate((element) => {
+      const brand = element.querySelector<HTMLElement>(".kova-sidebar-brand")!;
+      const tools = element.querySelector<HTMLElement>(".kova-sidebar-header-actions")!;
+      return (
+        tools.getBoundingClientRect().left - brand.getBoundingClientRect().left - brand.scrollWidth
+      );
+    });
+    expect(gap).toBeGreaterThanOrEqual(0);
+  }).toPass();
   await page.getByRole("button", { name: "Close sidebar", exact: true }).click();
   await expect(navigation).toBeHidden();
   await expectNoPageOverflow(page);
@@ -91,13 +102,16 @@ test("the single phone composer and drawer retain every workspace destination an
       await destination.tap();
     }
     await expect(page.getByRole("main")).toBeVisible();
-    await expect(tabs.getByRole("link", { name, exact: true })).toHaveAttribute(
+    await expect(tabs).toHaveCount(0);
+    await page.getByRole("button", { name: "Open menu", exact: true }).tap();
+    await expect(drawer.getByRole("link", { name, exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
     await expectNoPageOverflow(page);
-    await tabs.getByRole("link", { name: "Chat", exact: true }).tap();
+    await drawer.getByRole("link", { name: "Chat", exact: true }).tap();
     await expect(composer).toHaveValue("Keep this draft while I change pages");
+    await expect(composer).not.toBeFocused();
   }
 });
 

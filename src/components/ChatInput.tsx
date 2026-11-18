@@ -443,6 +443,7 @@ export function ChatInput({
   );
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
   const [resourceSection, setResourceSection] = useState<"files" | "plugins" | null>(null);
+  const phoneResourceSection = isMobileLayout ? resourceSection : null;
   const addMenuRef = useRef<HTMLDivElement>(null);
   const resourceBackRef = useRef<HTMLButtonElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -1830,7 +1831,7 @@ export function ChatInput({
             <span>Photos</span>
           </button>
         ) : null}
-        {surface === "empty" && showResources ? (
+        {mobile && surface === "empty" && showResources ? (
           <div className="kova-phone-resource-actions" role="group" aria-label="Chat resources">
             {showChooseProject ? (
               <button
@@ -1853,6 +1854,7 @@ export function ChatInput({
                 key={item}
                 type="button"
                 className="kova-composer-action"
+                data-composer-resource={item}
                 onClick={() => {
                   setResourceSection(item);
                   window.requestAnimationFrame(() => resourceBackRef.current?.focus());
@@ -2373,9 +2375,9 @@ export function ChatInput({
                   ref={addMenuRef}
                   role="dialog"
                   aria-label={
-                    resourceSection === "files"
+                    phoneResourceSection === "files"
                       ? "Choose files"
-                      : resourceSection === "plugins"
+                      : phoneResourceSection === "plugins"
                         ? "Choose plugins"
                         : "Attach files and tools"
                   }
@@ -2399,7 +2401,7 @@ export function ChatInput({
                       event.preventDefault();
                   }}
                 >
-                  {resourceSection ? (
+                  {phoneResourceSection ? (
                     <>
                       <button
                         ref={resourceBackRef}
@@ -2407,16 +2409,19 @@ export function ChatInput({
                         className="kova-composer-action"
                         onClick={() => {
                           setResourceSection(null);
-                          window.requestAnimationFrame(() => {
-                            addMenuRef.current?.scrollTo({ top: 0 });
-                            addMenuRef.current?.focus({ preventScroll: true });
-                          });
+                          window.requestAnimationFrame(() =>
+                            addMenuRef.current
+                              ?.querySelector<HTMLButtonElement>(
+                                `[data-composer-resource="${phoneResourceSection}"]`,
+                              )
+                              ?.focus(),
+                          );
                         }}
                       >
                         <ChevronLeft aria-hidden="true" />
                         Back to files and tools
                       </button>
-                      {renderComposerActions(isMobileLayout, resourceSection)}
+                      {renderComposerActions(isMobileLayout, phoneResourceSection)}
                     </>
                   ) : (
                     renderComposerActions(isMobileLayout)
