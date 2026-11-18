@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { SIDEBAR_DRAWER_QUERY } from "../../src/lib/sidebar-viewport";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { revealSidebar } from "./current-ui";
@@ -21,7 +22,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
       clientX,
       clientY: rect.top + 10,
     });
-    const start = touch(rect.right - 10);
+    const start = touch(24);
     paragraph.dispatchEvent(
       Object.assign(new Event("touchstart", { bubbles: true }), { touches: [start] }),
     );
@@ -30,7 +31,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     range.selectNodeContents(paragraph);
     selection.removeAllRanges();
     selection.addRange(range);
-    const end = touch(rect.right - 120);
+    const end = touch(134);
     paragraph.dispatchEvent(
       Object.assign(new Event("touchmove", { bubbles: true }), { touches: [end] }),
     );
@@ -47,7 +48,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     const touch = {
       identifier: 1,
       target: paragraph,
-      clientX: rect.right - 130,
+      clientX: 144,
       clientY: rect.top + 10,
     };
     paragraph.dispatchEvent(
@@ -63,8 +64,8 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     const paragraph = element.querySelector("p")!;
     const rect = paragraph.getBoundingClientRect();
     for (const [name, x] of [
-      ["touchstart", rect.right - 10],
-      ["touchmove", rect.right - 120],
+      ["touchstart", 24],
+      ["touchmove", 134],
     ] as const) {
       const touch = {
         identifier: 2,
@@ -80,7 +81,7 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
       Object.assign(new Event("touchend", { bubbles: true }), { touches: [] }),
     );
   });
-  if (page.viewportSize()!.width < 1024) {
+  if (await page.evaluate((query) => matchMedia(query).matches, SIDEBAR_DRAWER_QUERY)) {
     await expect(sidebar).toHaveAttribute("data-state", "open");
     const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
     await expect(drawer).toBeVisible();
@@ -258,9 +259,13 @@ for (const theme of ["dark", "light"] as const) {
         await expect(
           page.locator("[data-chat-transcript]").getByRole("article", { name: "KovaGPT response" }),
         ).toContainText("A practical release checklist:", { timeout: 20_000 });
+        const drawer = await page.evaluate(
+          (query) => matchMedia(query).matches,
+          SIDEBAR_DRAWER_QUERY,
+        );
         await expect(page.locator(".kova-sidebar[data-kova-core-sidebar]")).toHaveAttribute(
           "data-state",
-          viewport.width < 1024 ? "closed" : "open",
+          drawer ? "closed" : "open",
         );
       } else {
         await page.keyboard.press("Escape");

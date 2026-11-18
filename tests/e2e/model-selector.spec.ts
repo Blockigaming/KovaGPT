@@ -52,10 +52,10 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
     () => matchMedia("(max-width: 767px) and (pointer: coarse)").matches,
   );
   if (isTouchPhone) {
-    await expect(picker).toHaveCSS("width", "250px");
+    await expect(picker).toHaveCSS("width", "282px");
     await expect(picker).toBeInViewport({ ratio: 1 });
     const bounds = (await picker.boundingBox())!;
-    expect(bounds.height).toBeLessThanOrEqual(292);
+    expect(bounds.height).toBeLessThanOrEqual(360);
     expect(bounds.height).toBeGreaterThan(150);
     const rail = (await slider.boundingBox())!;
     const touch = await page.context().newCDPSession(page);

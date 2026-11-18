@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealContinueWorking } from "./current-ui";
 
 test("reply bubbles, adjacent actions, and the compact composer fit the viewport", async ({
   page,
@@ -23,11 +24,12 @@ test("reply bubbles, adjacent actions, and the compact composer fit the viewport
   const actions = answer.getByRole("toolbar", { name: "Response actions" });
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   const composer = page.locator('[data-composer-surface="conversation"] .spec400-composer');
-  const savedChat = page
-    .getByRole("region", { name: "Continue working" })
-    .getByRole("button", { name: /Composer review chat/ });
-  await expect(bubble.or(savedChat).first()).toBeVisible();
-  if (await savedChat.isVisible()) await savedChat.click();
+  const homeWithHistory = page.locator(".kova-empty-chat:has(.spec400-recent-work)");
+  await expect(bubble.or(homeWithHistory).first()).toBeVisible();
+  if (!(await bubble.isVisible())) {
+    const recommendations = await revealContinueWorking(page);
+    await recommendations.getByRole("button", { name: /Composer review chat/ }).click();
+  }
   await expect(bubble).toBeVisible();
   await expect(input).toBeEditable();
   await expect(page.locator("[data-chat-transcript]")).toHaveCSS("scroll-behavior", "auto");

@@ -177,10 +177,9 @@ test.describe("mobile shell UI truth", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
 
-    const opener =
-      viewport.width < 1024
-        ? page.getByRole("button", { name: "Open menu" })
-        : page.getByRole("button", { name: "Search chats", exact: true });
+    const opener = page.getByRole("button", { name: /^(Open menu|Search chats)$/ }).filter({
+      visible: true,
+    });
     await opener.focus();
     const openerHandle = await opener.elementHandle();
     expect(openerHandle).not.toBeNull();
@@ -232,7 +231,11 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   page,
 }) => {
   const viewport = page.viewportSize()!;
-  test.skip(viewport.width >= 1024, "compact shell");
+  test.skip(
+    viewport.width >= 1024 &&
+      !(await page.evaluate(() => matchMedia("(pointer: coarse) and (hover: none)").matches)),
+    "drawer layout",
+  );
   await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -244,9 +247,14 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   await opener.click();
   const drawer = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(drawer).toBeVisible();
+  const phoneLayout = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
   await expect
     .poll(async () => (await drawer.boundingBox())?.width)
-    .toBeCloseTo(Math.min(viewport.width * 0.86, 320), 0);
+    .toBeCloseTo(phoneLayout ? (viewport.width * 2) / 3 : 260, 0);
   const mainBox = (await main.boundingBox())!;
   expect(mainBox.x).toBe(0);
   expect(mainBox.width).toBe(viewport.width);
@@ -308,4 +316,72 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await page.setViewportSize(viewport);
   await expect.poll(async () => (await shell.boundingBox())?.height).toBe(viewport.height);
   await expect(textbox).toHaveValue("Keep this draft");
+});
+
+test("touch hold opens the chat menu without opening the conversation", async ({
+  page,
+  hasTouch,
+  browserName,
+}) => {
+  test.skip(!hasTouch || browserName !== "chromium", "Chromium touch input");
+  await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
+  await page.addInitScript((userId) => {
+    const now = Date.now();
+    localStorage.setItem(
+      `nova-gpt-conversations-v3:user:${userId}`,
+      JSON.stringify([
+        {
+          id: "hold-shortcut",
+          title: "Hold shortcut",
+          messages: [{ id: "hold-prompt", role: "user", content: "Shortcut fixture" }],
+          mode: "instant",
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]),
+    );
+  }, owner);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page.getByRole("button", { name: "Open menu" }).tap();
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  const row = drawer.getByRole("button", { name: "Open chat Hold shortcut" });
+  await row.click({ trial: true });
+  await expect(row).toBeVisible();
+  const { x, y, width, height } = (await row.boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = { x: x + width / 2, y: y + height / 2 };
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [touch] });
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(drawer).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Move to project" })).toBeVisible();
+  await expect(page.getByText("Shortcut fixture", { exact: true })).toBeHidden();
+  await menu.getByRole("menuitem", { name: "Rename" }).tap();
+  await expect(page.getByRole("dialog", { name: "Rename chat" })).toBeVisible();
+});
+
+test("touch home keeps the greeting centered and the composer text inset", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(!hasTouch, "touch layout");
+  await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const composer = page.locator(".spec400-composer:visible");
+  const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+  const heading = page.locator(".kova-empty-chat .kova-greeting h1");
+  await expect(input).toHaveAttribute("placeholder", "Work with KovaGPT");
+  const [frame, text, greeting] = await Promise.all([
+    composer.boundingBox(),
+    input.boundingBox(),
+    heading.boundingBox(),
+  ]);
+  expect(text!.x - frame!.x).toBeGreaterThanOrEqual(20);
+  const height = page.viewportSize()!.height;
+  expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
+  expect(greeting!.y + greeting!.height).toBeLessThan(frame!.y);
 });

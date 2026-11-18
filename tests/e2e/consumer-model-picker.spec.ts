@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealContinueWorking } from "./current-ui";
 
 const products = [
   "kova-argon-4.6",
@@ -111,11 +112,8 @@ for (const [tier, selected, label, permitted] of [
     await waitForKovaHydration(page);
     // The homepage deliberately starts a fresh chat after reload. Reopen the
     // saved conversation before checking its restored model choice.
-    await page
-      .getByRole("region", { name: "Continue working", exact: true })
-      .getByRole("button")
-      .first()
-      .click();
+    const recommendations = await revealContinueWorking(page);
+    await recommendations.getByRole("button").first().click();
     await expect(page.getByText("Verified selected model request.", { exact: true })).toBeVisible();
     if (tier === "free") {
       await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);

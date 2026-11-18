@@ -84,7 +84,7 @@ function fixture() {
     showModal: (value) => {
       modal = value;
     },
-    dispatch(name, { x = 250, y = 100, time = 0, count = 1 } = {}) {
+    dispatch(name, { x = 15, y = 100, time = 0, count = 1 } = {}) {
       listeners.get(name)?.({
         target,
         timeStamp: time,
@@ -137,7 +137,7 @@ for (const interruption of [
     }
     if (interruption === "editable") f.target.editable = true;
     f.dispatch("touchstart");
-    if (interruption === "vertical scroll") f.dispatch("touchmove", { x: 245, y: 160, time: 30 });
+    if (interruption === "vertical scroll") f.dispatch("touchmove", { x: 20, y: 160, time: 30 });
     if (interruption === "multiple touches") f.dispatch("touchmove", { count: 2, time: 30 });
     if (interruption === "cancelled") f.dispatch("touchcancel");
     f.dispatch("touchmove", { x: 140, time: 100 });
@@ -145,3 +145,11 @@ for (const interruption of [
     f.cleanup();
   });
 }
+
+test("a right swipe away from the leading edge does not open the drawer", () => {
+  const f = fixture();
+  f.dispatch("touchstart", { x: 120 });
+  f.dispatch("touchmove", { x: 245, time: 100 });
+  assert.equal(f.toggles(), 0);
+  f.cleanup();
+});

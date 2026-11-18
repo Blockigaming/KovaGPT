@@ -29,7 +29,13 @@ for (const [tier, choices] of [
       );
       await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
     } else {
-      await height.toBeGreaterThanOrEqual(128);
+      const phone = await page.evaluate(
+        () =>
+          matchMedia(
+            "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
+          ).matches,
+      );
+      await height.toBeGreaterThanOrEqual(phone ? 92 : 128);
     }
     if (tier === "free") {
       await expect(composer.getByTestId("model-selector-trigger")).toHaveCount(0);

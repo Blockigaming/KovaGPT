@@ -1,4 +1,4 @@
-import { revealSidebar } from "./current-ui";
+import { revealContinueWorking, revealSidebar } from "./current-ui";
 import { test, expect, type Page } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { functionNames } from "./actual-app-fixture";
@@ -112,18 +112,20 @@ test("Home distinguishes two recommendations and has no Images sidebar shortcut"
 }) => {
   await visit(page, "/");
   await page.getByRole("button", { name: "New chat", exact: true }).first().click();
-  const recommendations = page.locator(".spec400-recent-work li");
-  await expect(recommendations).toHaveCount(2);
+  const recommendations = await revealContinueWorking(page);
+  await expect(recommendations.getByRole("button")).toHaveCount(2);
   const compact = await page.evaluate(
     () =>
       matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
         .matches,
   );
   if (compact) {
-    await expect(recommendations.nth(1)).toHaveCSS("border-block-start-width", "1px");
+    const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
+    await expect(drawer.getByRole("region", { name: "Continue working" })).toBeVisible();
+    await expect(recommendations.getByRole("button").first()).toHaveCSS("border-radius", "16px");
   } else {
-    const gap = await page
-      .locator(".spec400-recent-work ul")
+    const gap = await recommendations
+      .getByRole("list")
       .evaluate((list) => parseFloat(getComputedStyle(list).gap));
     expect(gap).toBeGreaterThanOrEqual(16);
   }

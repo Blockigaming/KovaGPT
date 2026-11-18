@@ -27,7 +27,6 @@ import { platformEvents } from "@/platform/events";
 import { applyThemeMode } from "@/lib/theme";
 import { searchConversations } from "@/lib/conversation-search";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { useLayout } from "@/hooks/use-mobile";
 import {
   browserStoragePrincipal,
   isPrincipalBrowserStorageClearedEvent,
@@ -174,8 +173,7 @@ export function CommandPalette({
   sidebarOpen?: boolean;
   onCloseSidebar?: () => void;
 }) {
-  const { isDesktop } = useLayout();
-  const closesSidebarToFocus = sidebarOpen && !isDesktop && !!onCloseSidebar;
+  const closesSidebarToFocus = sidebarOpen && !!onCloseSidebar;
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;

@@ -28,6 +28,7 @@ import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
 import { AppAccountGate } from "@/components/AppAccountGate";
+import { HomeChatStartup } from "@/components/HomeChatStartup";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
@@ -385,8 +386,9 @@ function DestinationOutlet() {
 function RootComponent() {
   useKeyboardViewport();
   const { queryClient } = Route.useRouteContext();
+  const home = useRouterState({ select: (state) => state.location.pathname === "/" });
   return (
-    <ClerkProvider>
+    <ClerkProvider phonePendingSurface={home ? <HomeChatStartup /> : undefined}>
       <QueryClientProvider client={queryClient}>
         <a
           href="#main-content"

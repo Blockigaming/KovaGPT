@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { SIDEBAR_DRAWER_QUERY } from "../../src/lib/sidebar-viewport.ts";
 
 const read = (path) => readFileSync(path, "utf8");
 const topbar = read("src/components/MobileTopBar.tsx");
@@ -31,7 +32,7 @@ test("chat and shared-shell Open menu callbacks open the sidebar across tablet b
   assert.match(topbar, /onClick=\{onOpenSidebar\}\s*aria-label="Open menu"/);
   for (const path of ["src/routes/index.tsx", "src/components/AppShell.tsx"]) {
     const callback = menuCallback(path);
-    for (const width of [375, 767, 768, 769, 820, 1023]) {
+    for (const width of [375, 767, 768, 769, 820, 1023, 1024, 1366]) {
       for (const controllerPresent of [false, true]) {
         let open = false;
         const events = [];
@@ -69,12 +70,15 @@ test("chat and shared-shell Open menu callbacks open the sidebar across tablet b
   }
 });
 
-test("mobile menu, sidebar geometry, and modal behavior share the 1024px desktop boundary", () => {
+test("sidebar geometry and modal behavior share the touch and narrow viewport query", () => {
   assert.match(topbar, /<header[\s\S]*?className="[^"]*lg:hidden"/);
-  assert.match(sidebar, /matchMedia\("\(max-width: 1023px\)"\)/);
+  assert.match(sidebar, /matchMedia\(SIDEBAR_DRAWER_QUERY\)/);
   const geometry = read("src/styles/sidebar-core.css");
-  assert.match(geometry, /@media \(max-width: 1023px\)/);
-  assert.match(geometry, /position: fixed;/);
+  assert.ok(
+    geometry.includes(
+      `@media ${SIDEBAR_DRAWER_QUERY} {\n  .kova-sidebar[data-kova-core-sidebar] {\n    position: fixed;`,
+    ),
+  );
   assert.match(geometry, /transform: translateX\(-100%\)/);
   assert.doesNotMatch(sidebar, /max-md:|md:!w-0|max-width: 767px/);
 });

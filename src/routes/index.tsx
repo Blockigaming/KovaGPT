@@ -1,3 +1,4 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
 import type { CSSProperties } from "react";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
@@ -73,7 +74,7 @@ import {
   type PendingAttachment,
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
+import { HomeChatContentPending } from "@/components/HomeChatStartup";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
@@ -394,7 +395,7 @@ function KovaGPT() {
     }
   }, [activeId, storagePrincipal, editingMessage]);
 
-  const [sidebarOpen, setSidebarOpen, sidebarReady] = useSidebarPreference();
+  const [sidebarOpen, setSidebarOpen, sidebarReady, sidebarIsDrawer] = useSidebarPreference();
   const activityComposerRef = useRef<ChatActivityComposer>(null);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -518,7 +519,7 @@ function KovaGPT() {
     (tab?: string) => {
       // Keep Settings above the mobile drawer and preserve in-memory chat work.
       if (
-        window.matchMedia("(max-width: 1023px)").matches ||
+        window.matchMedia(SIDEBAR_DRAWER_QUERY).matches ||
         attachments.length ||
         tempChat ||
         isStreaming ||
@@ -756,7 +757,7 @@ function KovaGPT() {
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
   const [paneRatio, setPaneRatio] = useState(0.45);
   const openAttachmentSidebar = () => {
-    if (window.matchMedia("(min-width: 1024px)").matches) setSidebarOpen(true);
+    if (!window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) setSidebarOpen(true);
   };
   const [attachmentPaneRatio, setAttachmentPaneRatio] = useState(0.4);
   const resizeAttachmentPane = (next: number) =>
@@ -1686,9 +1687,9 @@ function KovaGPT() {
     });
   }, [active, conversations, isStreaming, setConversations, userKey]);
 
-  const openCommandPalette = useCallback(() => {
+  const openCommandPalette = useCallback((trigger?: HTMLElement) => {
     commandReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     setCommandOpen(true);
   }, []);
   useEffect(() => {
@@ -3245,6 +3246,7 @@ function KovaGPT() {
   return (
     <div
       data-sidebar-ready={sidebarReady && isLoaded}
+      data-compact-chat-home={showEmptyChat || undefined}
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
     >
@@ -3254,6 +3256,7 @@ function KovaGPT() {
       <Sidebar
         conversations={historyConversations}
         trackBackgroundReplies={principalReady}
+        showPhoneRecommendations={showEmptyChat && !tempChat}
         activeId={activeId}
         onSelect={setActiveId}
         onNew={startNewChat}
@@ -3418,13 +3421,7 @@ function KovaGPT() {
             aria-labelledby={result && !wideResult ? "conversation-tab" : undefined}
           >
             {showEmptyChat ? (
-              <Suspense
-                fallback={
-                  <p className="kova-home-loading" role="status">
-                    Loading
-                  </p>
-                }
-              >
+              <Suspense fallback={<HomeChatContentPending />}>
                 <HomeWelcome
                   owner={userKey}
                   firstName={user?.firstName}
@@ -3579,9 +3576,6 @@ function KovaGPT() {
           </Suspense>
           <div id="chat-attachment-preview-dock" className="kova-attachment-preview-dock" />
         </div>
-        {showEmptyChat && !tempChat && (
-          <PhoneNavigation pathname="/" inactive={sidebarOpen || settingsOpen} />
-        )}
       </main>
 
       <Suspense fallback={null}>
@@ -3723,7 +3717,7 @@ function KovaGPT() {
             onOpenSettings={() => openSettings("general")}
             returnFocusTarget={commandReturnFocusRef.current}
             sidebarOpen={sidebarOpen}
-            onCloseSidebar={() => setSidebarOpen(false)}
+            onCloseSidebar={sidebarIsDrawer ? () => setSidebarOpen(false) : undefined}
           />
         </Suspense>
       )}

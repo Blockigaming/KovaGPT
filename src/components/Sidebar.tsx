@@ -1,5 +1,7 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
 import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
+import { ContinueWorking } from "@/components/HomeChatFrame";
 import {
   NewChatGlyph,
   LibraryGlyph,
@@ -97,7 +99,7 @@ const ChatProjectDialog = lazy(() =>
 );
 
 function isMobileViewport() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+  return typeof window !== "undefined" && window.matchMedia(SIDEBAR_DRAWER_QUERY).matches;
 }
 
 function RailTooltip({ label, children }: { label: string; children: React.ReactElement }) {
@@ -130,6 +132,7 @@ export function Sidebar({
   hideGuestLogin = false,
   mapsReleaseApproved = false,
   compactOnly = false,
+  showPhoneRecommendations = false,
 }: {
   conversations: Conversation[];
   trackBackgroundReplies?: boolean;
@@ -146,11 +149,12 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
-  onOpenWorkspaceSearch?: () => void;
+  onOpenWorkspaceSearch?: (trigger?: HTMLElement) => void;
   workspaceSearchOpen?: boolean;
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
+  showPhoneRecommendations?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const unreadReplyIds = useChatReplyActivity(
@@ -233,6 +237,19 @@ export function Sidebar({
     frame: number | null;
   } | null>(null);
   const selectTimerRef = useRef<number | null>(null);
+  const [mobileChatMenuId, setMobileChatMenuId] = useState<string | null>(null);
+  const chatHoldRef = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const heldChatRef = useRef<string | null>(null);
+  const cancelChatHold = useCallback(() => {
+    if (chatHoldRef.current) window.clearTimeout(chatHoldRef.current.timer);
+    chatHoldRef.current = null;
+  }, []);
+  useEffect(() => cancelChatHold, [cancelChatHold]);
+  useEffect(() => {
+    if (open) return;
+    cancelChatHold();
+    setMobileChatMenuId(null);
+  }, [open, cancelChatHold]);
   const selectionPointerTypeRef = useRef<string | null>(null);
   const renameOperationRef = useRef<object | null>(null);
   const accountRef = useRef(user?.id);
@@ -485,7 +502,7 @@ export function Sidebar({
   const openChatSearch = (event?: { currentTarget: HTMLElement }) => {
     if (onOpenWorkspaceSearch) {
       cancelPendingSelection();
-      onOpenWorkspaceSearch();
+      onOpenWorkspaceSearch(event?.currentTarget);
     } else {
       if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
       setSearchOpen((value) => !value);
@@ -528,7 +545,7 @@ export function Sidebar({
     setSearchOpen(false);
   }, [user?.id, isLoaded, isSignedIn, cancelPendingSelection]);
   useLayoutEffect(() => {
-    const media = window.matchMedia("(max-width: 1023px)");
+    const media = window.matchMedia(SIDEBAR_DRAWER_QUERY);
     const update = () => setMobileViewport(media.matches);
     update();
     media.addEventListener("change", update);
@@ -575,6 +592,7 @@ export function Sidebar({
           return;
       }
       const touch = event.touches[0];
+      if (touch.clientX > 32) return;
       gesture = {
         id: touch.identifier,
         x: touch.clientX,
@@ -597,12 +615,12 @@ export function Sidebar({
       }
       const dx = touch.clientX - gesture.x;
       const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 750 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
+      if (event.timeStamp - gesture.time > 750 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
         reset();
         return;
       }
-      // Right-to-left opens, as requested; clear horizontal intent is required.
-      if (isClearSidebarSwipe({ open: false, dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
+      // Open only from the leading edge so ordinary horizontal gestures stay native.
+      if (isClearSidebarSwipe({ dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
         reset();
         swipeToggleRef.current();
       }
@@ -639,7 +657,7 @@ export function Sidebar({
       if (
         !(target instanceof Element) ||
         target.closest(
-          'button:not(.kova-sidebar-scrim), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
+          'button:not(.kova-chat-row-main), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
         )
       )
         return;
@@ -675,7 +693,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (isClearSidebarSwipe({ open: true, dx, dy, elapsedMs: event.timeStamp - start.time })) {
+      if (isClearSidebarSwipe({ dx, dy, elapsedMs: event.timeStamp - start.time })) {
         start = null;
         swipeToggleRef.current();
       }
@@ -987,8 +1005,36 @@ export function Sidebar({
         className="kova-chat-row-main"
         onPointerDown={(event) => {
           selectionPointerTypeRef.current = event.pointerType;
+          heldChatRef.current = null;
+          cancelChatHold();
+          if (event.pointerType !== "touch" || !event.isPrimary || !isMobileViewport()) return;
+          const { clientX: x, clientY: y } = event;
+          chatHoldRef.current = {
+            x,
+            y,
+            timer: window.setTimeout(() => {
+              chatHoldRef.current = null;
+              heldChatRef.current = conversation.id;
+              setMobileChatMenuId(conversation.id);
+            }, 500),
+          };
+        }}
+        onPointerMove={(event) => {
+          const hold = chatHoldRef.current;
+          if (hold && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 10)
+            cancelChatHold();
+        }}
+        onPointerUp={cancelChatHold}
+        onPointerCancel={cancelChatHold}
+        onContextMenu={(event) => {
+          if (selectionPointerTypeRef.current === "touch" && isMobileViewport())
+            event.preventDefault();
         }}
         onClick={(event) => {
+          if (heldChatRef.current === conversation.id && event.detail > 0) {
+            event.preventDefault();
+            return;
+          }
           const pointerType = selectionPointerTypeRef.current;
           const fineMouse =
             pointerType === "mouse" ||
@@ -1051,7 +1097,18 @@ export function Sidebar({
           <Pin aria-hidden="true" fill={conversation.pinned ? "currentColor" : "none"} />
         </button>
       ) : null}
-      <DropdownMenu modal={false}>
+      <DropdownMenu
+        modal={false}
+        open={mobileViewport ? mobileChatMenuId === conversation.id : undefined}
+        onOpenChange={
+          mobileViewport
+            ? (isOpen) =>
+                setMobileChatMenuId((current) =>
+                  isOpen ? conversation.id : current === conversation.id ? null : current,
+                )
+            : undefined
+        }
+      >
         <DropdownMenuTrigger asChild>
           <button
             type="button"
@@ -1072,6 +1129,16 @@ export function Sidebar({
           collisionPadding={12}
           className="kova-sidebar-chat-menu"
           data-sidebar-menu-placement="floating"
+          onInteractOutside={(event) => {
+            // Releasing a touch can focus the held row after the menu opens.
+            const target = event.target;
+            if (
+              heldChatRef.current === conversation.id &&
+              target instanceof Element &&
+              target.closest(".kova-chat-row-main")
+            )
+              event.preventDefault();
+          }}
           onCloseAutoFocus={(event) => {
             if (closePinMenu(conversation.id, event)) return;
             const pending = archiveReturnFocusRef.current;
@@ -1787,15 +1854,7 @@ export function Sidebar({
                   aria-label="Search chats"
                   aria-haspopup="dialog"
                   aria-expanded={workspaceSearchOpen}
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) {
-                      cancelPendingSelection();
-                      onOpenWorkspaceSearch();
-                    } else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen((value) => !value);
-                    }
-                  }}
+                  onClick={openChatSearch}
                 >
                   <span className="kova-sidebar-icon" aria-hidden="true">
                     <SearchGlyph />
@@ -1804,6 +1863,11 @@ export function Sidebar({
                 </button>
               ) : null}
               <div className="kova-sidebar-destinations">
+                {mobileViewport && !isOn("/") ? (
+                  <div className="kova-phone-destination">
+                    {navLink("/", "Chat", MessageSquare)}
+                  </div>
+                ) : null}
                 {railShortcuts
                   .filter((id) => !["discovery", "maps"].includes(id))
                   .map((id) => {
@@ -1823,6 +1887,19 @@ export function Sidebar({
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
                   : null}
+                {mobileViewport
+                  ? availableShortcuts
+                      .filter(
+                        (item) =>
+                          ["library", "projects", "apps"].includes(item.id) &&
+                          !railShortcuts.includes(item.id),
+                      )
+                      .map((item) => (
+                        <div key={item.id} className="kova-phone-destination">
+                          {navLink(item.to, item.label, SHORTCUT_ICONS[item.id])}
+                        </div>
+                      ))
+                  : null}
                 {signedIn ? (
                   <button
                     type="button"
@@ -1836,6 +1913,18 @@ export function Sidebar({
                 ) : null}
               </details>
             </nav>
+            {mobileViewport && showPhoneRecommendations && savedConversations.length > 0 ? (
+              <div className="kova-phone-continue-working">
+                <ContinueWorking
+                  conversations={savedConversations}
+                  limit={2}
+                  onSelect={(id) => {
+                    closeAfterMobileNavigation("/");
+                    onSelect(id);
+                  }}
+                />
+              </div>
+            ) : null}
             <section
               className="kova-sidebar-history"
               aria-label="Chats"
@@ -1866,7 +1955,7 @@ export function Sidebar({
                   className="kova-nav-row"
                   type="button"
                   onClick={(event) => {
-                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();
+                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch(event.currentTarget);
                     else {
                       searchReturnFocusRef.current = event.currentTarget;
                       setSearchOpen(true);

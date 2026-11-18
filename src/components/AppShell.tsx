@@ -1,3 +1,4 @@
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { permanentlyDeleteChat } from "@/lib/permanent-chat-delete";
 import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
@@ -19,7 +20,6 @@ import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -195,7 +195,7 @@ export function AppShell({
 
   const openSettings = useCallback(
     (tab?: string) => {
-      if (window.matchMedia("(max-width: 1023px)").matches) {
+      if (window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) {
         settingsReturnFocusRef.current =
           document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setSettingsTab(tab);
@@ -356,8 +356,6 @@ export function AppShell({
           <AppErrorBoundary>{children}</AppErrorBoundary>
         </WorkspacePageUtilities.Provider>
       </div>
-      <PhoneNavigation pathname={pathname} inactive={sidebarOpen || settingsOpen} />
-
       <Suspense fallback={null}>
         {shareChatId !== null && (
           <ShareChatDialog

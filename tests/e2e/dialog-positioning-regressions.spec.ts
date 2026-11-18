@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { coreFixture } from "./core-app-fixture";
-import { dismissMobileSidebar, openCurrentSettings } from "./current-ui";
+import { dismissMobileSidebar, openCurrentSettings, usesSidebarDrawer } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -102,7 +102,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/images");
     await waitForKovaHydration(page);
     const modal = page.locator(".kova-settings-dialog");
-    const mobile = page.viewportSize()!.width < 1024;
+    const mobile = await usesSidebarDrawer(page);
     if (!mobile) {
       await page.getByRole("button", { name: "Account menu", exact: true }).click();
       await page.getByRole("menuitem", { name: "Settings", exact: true }).click();

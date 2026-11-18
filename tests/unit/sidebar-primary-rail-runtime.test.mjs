@@ -68,6 +68,7 @@ function fixture(options = {}) {
     signedIn: true,
     canSchedule: true,
     mapsReleaseApproved: false,
+    mobileViewport: false,
     railShortcuts: [],
     collapsed: true,
     compactOnly: false,
@@ -178,6 +179,20 @@ test("expanded navigation preserves saved shortcut order without displaying Work
   );
   assert.equal(controls(f.tree).filter(({ props }) => props.to === "/work").length, 0);
   assert.deepEqual(f.calls, [], "opening a direct Work URL must not change sidebar choices");
+});
+
+test("phone navigation keeps a direct Chat link and access to hidden workspace shortcuts", () => {
+  const f = expandedFeatures({
+    mobileViewport: true,
+    railShortcuts: ["library", "projects"],
+    path: "/library",
+  });
+  assert.deepEqual(
+    controls(f.tree)
+      .filter(({ type }) => type === "Link")
+      .map(({ props }) => props.to),
+    ["/", "/library", "/projects", "/apps"],
+  );
 });
 
 test("More never displays Work, including on the direct Work route", () => {
