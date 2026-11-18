@@ -150,14 +150,8 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   await menu.getByRole("link", { name: "Pricing" }).click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(menu).toBeHidden();
-  const pricingToggle = page.getByRole("button", { name: "Open navigation" });
-  await expect(pricingToggle).toHaveAttribute("aria-expanded", "false");
-  await pricingToggle.click();
-  await expect(menu.getByRole("link", { name: "Pricing", exact: true })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(menu.getByRole("link", { name: "Open KovaGPT" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Back to KovaGPT" })).toBeVisible();
 
   const targets = page.locator("header a, header button, footer a");
   const count = await targets.count();
