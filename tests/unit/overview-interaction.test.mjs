@@ -67,8 +67,8 @@ test("comparison keeps each tier's mode and allowance data in the correct column
   const tree = PlanComparison();
   const expected = [
     ["free-mode", "plus-mode", "pro-mode"],
-    ["Very limited", "5× Free", "100× Free (20× Plus)"],
-    ["Limited", "Limited", "Unlimited with Argon Lite"],
+    ["Very limited", "Expanded dynamic usage", "Highest dynamic usage"],
+    ["Limited", "Expanded", "Highest allowance"],
     ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],
     ["Limited", "Expanded", "Highest allowance"],
     ["Included", "Included", "Included"],

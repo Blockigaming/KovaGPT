@@ -230,9 +230,8 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
               <p className="leading-6 text-muted-foreground">
-                Free and Plus chat stops when your allowance is used. Pro includes unlimited basic
-                chat with Argon Lite; advanced model usage is limited. Wait for a reset or choose an
-                eligible plan for more usage.
+                Chat pauses when your plan allowance is used. Usage varies with the model and task.
+                Check Usage for your next refresh, or choose an eligible plan for more capacity.
               </p>
             </article>
             <article className="border-t border-border pt-5">
@@ -335,7 +334,7 @@ function PlanCard({
         {cta}
       </button>
       <div className="my-auto h-px bg-border" aria-hidden="true" />
-      <ul className="flex min-h-0 flex-col gap-3 text-sm md:justify-around md:pt-4">
+      <ul className="flex min-h-0 flex-col gap-3 rounded-[18px] border border-border bg-muted/25 p-4 text-sm">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />

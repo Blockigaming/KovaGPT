@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 221,
-  "latest": "20261113020000_kova_verified_email_change.sql",
+  "count": 222,
+  "latest": "20261117174500_kova_private_chat_budget_pacing.sql",
   "migrations": [
     {
       "order": 1,
@@ -4665,6 +4665,20 @@
       "sha256": "a6c2f120157f38de3bc7629fa2e306051a1054f1b54663739f61ce75ced3bb6e",
       "tables": ["kova_private"],
       "functions": ["kova_auth_change_email"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 222,
+      "filename": "20261117174500_kova_private_chat_budget_pacing.sql",
+      "timestamp": "20261117174500",
+      "sha256": "1edad47ba8193119ddb1cd1a79224790ad6617800cbec4d899306ffa1f42d495",
+      "tables": ["kova_private"],
+      "functions": ["kova_plan_cost_progress", "try_consume_paid_message", "acquire_ai_generation"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,

@@ -7,7 +7,7 @@ import { chatUsageWindows, legacyFiveHourWindow } from "../../src/lib/plan-usage
 const owner = "11111111-1111-4111-8111-111111111111";
 const sqlPath = "supabase/migrations/20261109145000_kova_hourly_windows_monthly_cost_safety.sql";
 
-async function fixture() {
+async function fixture(privatePolicy) {
   const db = new PGlite();
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create table auth.users(id uuid primary key);
@@ -20,6 +20,8 @@ async function fixture() {
     );
     create function public.effective_user_usage_multiplier(uuid)
       returns integer language sql stable as $$select 1$$;
+    create function public.effective_user_plan_tier(uuid)
+      returns text language sql stable as $$select 'free'::text$$;
     create function public.try_consume_daily_message(uuid,boolean,integer,integer)
       returns boolean language plpgsql security definer set search_path=public as $$
       begin
@@ -36,6 +38,21 @@ async function fixture() {
   );
   await db.exec(baseline);
   await db.exec(readFileSync(sqlPath, "utf8"));
+  if (privatePolicy) {
+    await db.exec("create schema if not exists kova_private");
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261117174500_kova_private_chat_budget_pacing.sql",
+        "utf8",
+      ),
+    );
+    for (const [plan, allowance] of Object.entries(privatePolicy)) {
+      await db.query("insert into kova_private.chat_plan_budget_policy values ($1,$2)", [
+        plan,
+        allowance,
+      ]);
+    }
+  }
   // The synthetic fixture creates daily_usage without historical production
   // grants. Give the same table access to the server role as production.
   await db.exec("grant select, insert, update on public.daily_usage to service_role");
@@ -188,4 +205,84 @@ test("legacy five-hour meter matches epoch-aligned SQL windows across UTC midnig
     start: "2026-11-14T01:00:00.000Z",
     resetsAt: "2026-11-14T06:00:00.000Z",
   });
+});
+
+test("private policy controls dynamic pacing, atomic monthly admission and customer isolation", async () => {
+  // Synthetic amounts deliberately differ from private operator configuration.
+  const policy = { free: 2.13, plus: 19.73, pro: 93.71 };
+  const db = await fixture(policy);
+  try {
+    for (const [plan, cap] of Object.entries(policy)) {
+      const result = await db.query("select * from public.kova_plan_cost_progress($1,$2)", [
+        owner,
+        plan,
+      ]);
+      assert.equal(Number(result.rows[0].monthly_allowance), cap);
+      assert.equal((await request(db, plan, cap + 0.01)).decision, "monthly_cost");
+    }
+    const costQuery = "select * from public.kova_plan_cost_progress($1,'plus')";
+    const before = (await db.query(costQuery, [owner])).rows[0];
+    const reserved = Math.min(Number(before.five_hour_allowance) / 2, 0.01);
+    const event = await request(db, "plus", reserved);
+    assert.equal(event.decision, "acquired");
+    assert.equal(Number((await db.query(costQuery, [owner])).rows[0].month_used), reserved);
+    await db.query(
+      "select public.finalize_ai_generation($1,'completed',10,0,5,0,$2,25,'{}',null)",
+      [event.event_id, reserved / 2],
+    );
+    assert.equal(Number((await db.query(costQuery, [owner])).rows[0].month_used), reserved / 2);
+    const at = "2026-11-17T12:00:00Z";
+    const queryAt = "select * from public.kova_plan_cost_progress($1,'plus',$2::timestamptz)";
+    const initial = (await db.query(queryAt, [owner, at])).rows[0];
+    await db.query(
+      "update public.ai_usage_events set created_at='2026-11-01T12:00:00Z',actual_cost_usd=4 where id=$1",
+      [event.event_id],
+    );
+    const reduced = (await db.query(queryAt, [owner, at])).rows[0];
+    assert.ok(Number(reduced.weekly_allowance) < Number(initial.weekly_allowance));
+    assert.ok(Number(reduced.five_hour_allowance) < Number(initial.five_hour_allowance));
+    const nextMonth = (await db.query(queryAt, [owner, "2026-12-01T00:00:00Z"])).rows[0];
+    assert.equal(Number(nextMonth.month_used), 0);
+    assert.equal(Number(nextMonth.monthly_allowance), policy.plus);
+    await assert.rejects(
+      db.query("select * from kova_private.chat_plan_budget_policy"),
+      /permission denied/,
+    );
+    await db.exec("set role authenticated");
+    await assert.rejects(db.query(costQuery, [owner]), /permission denied/);
+  } finally {
+    await db.close();
+  }
+});
+
+test("private cost budgeting replaces fixed message, token and premium counts", async () => {
+  const db = await fixture({ free: 2.13, plus: 19.73, pro: 93.71 });
+  try {
+    for (let i = 0; i < 3; i++) {
+      const count = await db.query("select public.try_consume_paid_message($1,false,1,1) outcome", [
+        owner,
+      ]);
+      assert.equal(count.rows[0].outcome, "allowed");
+    }
+    assert.equal((await db.query("select chats from public.daily_usage")).rows[0].chats, 3);
+    for (const plan of ["free", "plus", "pro"]) {
+      const id = crypto.randomUUID();
+      const result = await db.query(
+        `select * from public.acquire_ai_generation(
+          $1,$1,$2,null,null,'thinking',$3,true,'kova-argon-4.6',100,100,0.0001,false,
+          0,0,0,10,1000,1000,120,now()-interval '1 month',now()+interval '1 month'
+        )`,
+        [id, owner, plan],
+      );
+      assert.equal(result.rows[0].decision, "acquired");
+    }
+    assert.equal((await request(db, "free", 3)).decision, "monthly_cost");
+    await db.exec("set role authenticated");
+    await assert.rejects(
+      db.query("select public.try_consume_paid_message($1,false,1,1)", [owner]),
+      /permission denied/,
+    );
+  } finally {
+    await db.close();
+  }
 });

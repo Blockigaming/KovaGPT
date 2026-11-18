@@ -175,17 +175,13 @@ for (const width of [320, 390, 768, 1440]) {
         await expect(usage.locator("dt")).toHaveText(["Free", "Plus", "Pro"]);
         await expect(usage.locator("dd")).toHaveText([
           "Very limited",
-          "5× Free",
-          "100× Free (20× Plus)",
+          "Expanded dynamic usage",
+          "Highest dynamic usage",
         ]);
         const basic = region
           .locator("section")
           .filter({ has: page.getByRole("heading", { name: "Basic chat", exact: true }) });
-        await expect(basic.locator("dd")).toHaveText([
-          "Limited",
-          "Limited",
-          "Unlimited with Argon Lite",
-        ]);
+        await expect(basic.locator("dd")).toHaveText(["Limited", "Expanded", "Highest allowance"]);
         await page.screenshot({ path: info.outputPath("comparison.png"), fullPage: true });
       } else {
         await expect(region.getByRole("columnheader")).toHaveText([
@@ -208,13 +204,13 @@ for (const width of [320, 390, 768, 1440]) {
             .getByRole("row")
             .filter({ has: page.getByRole("rowheader", { name: "Usage", exact: true }) })
             .getByRole("cell"),
-        ).toHaveText(["Very limited", "5× Free", "100× Free (20× Plus)"]);
+        ).toHaveText(["Very limited", "Expanded dynamic usage", "Highest dynamic usage"]);
         await expect(
           region
             .getByRole("row")
             .filter({ has: page.getByRole("rowheader", { name: "Basic chat", exact: true }) })
             .getByRole("cell"),
-        ).toHaveText(["Limited", "Limited", "Unlimited with Argon Lite"]);
+        ).toHaveText(["Limited", "Expanded", "Highest allowance"]);
         const included = region.getByRole("columnheader", { name: "Included", exact: true });
         await expect
           .poll(async () => {

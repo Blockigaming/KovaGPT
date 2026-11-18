@@ -322,7 +322,12 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
   display: grid;
   grid-template-rows: subgrid;
   grid-row: span 6;
-  gap: 14px;
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 .kova-billing-plan-features > div {
   min-width: 0;

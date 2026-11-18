@@ -1,5 +1,4 @@
 import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
-import { PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
 
 export type CapabilityAvailability =
@@ -104,10 +103,6 @@ const modesByTier: Record<Tier, readonly PublishedMode[]> = {
   pro: publishedModesForTier("pro"),
 };
 
-const plusVsFree = PLAN_USAGE_FACTOR.plus / PLAN_USAGE_FACTOR.free;
-const proVsPlus = PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.plus;
-const proVsFree = PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.free;
-
 export const PLAN_ALLOWANCE_COPY = {
   free: {
     chat: "Very limited chat usage",
@@ -116,13 +111,13 @@ export const PLAN_ALLOWANCE_COPY = {
     storage: "Cloud storage included",
   },
   plus: {
-    chat: `${plusVsFree}× the usage of Free`,
+    chat: "Expanded dynamic chat usage",
     image: "Expanded image generation",
     upload: "Expanded file uploads",
     storage: "Cloud storage included",
   },
   pro: {
-    chat: "Unlimited basic chat with Argon Lite",
+    chat: "Highest dynamic chat allowance",
     image: "Expanded image generation",
     upload: "Expanded file uploads",
     storage: "Cloud storage included",
@@ -137,11 +132,10 @@ function planFeatures(tier: Tier): readonly string[] {
       : tier === "plus"
         ? "All seven models: Lite, Medium, High, Extra High, and Max"
         : "All seven models: Lite, Medium, High, Extra High, Max, and Ultra",
-    ...(tier === "pro"
-      ? [`${proVsFree}× the usage of Free`, `${proVsPlus}× the usage of Plus`]
-      : []),
+    "Organize related chats in Projects",
+    "Find saved files and images in Library",
     allowance.chat,
-    tier === "pro" ? "Advanced model usage is limited" : "Usage limits apply to all chat models",
+    "Usage limits apply to all chat models",
     allowance.image,
     allowance.upload,
     allowance.storage,
@@ -279,7 +273,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "5× the usage of Free, with all seven models through Max. Usage limits apply to all chat models.",
+        "Expanded dynamic usage, with all seven models through Max. Usage limits apply to all chat models.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -289,7 +283,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
       description:
-        "100× the usage of Free and 20× Plus, with unlimited basic chat on Argon Lite. Advanced model usage is limited.",
+        "Our highest dynamic usage, with all seven models through Ultra. Usage limits apply to all chat models.",
       features: planFeatures("pro"),
     },
   },

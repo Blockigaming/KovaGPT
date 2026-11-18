@@ -1,0 +1,93 @@
+name: Build approved PR 716 once
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-pr716-once.yml
+      - scripts/azure/release-pr716-once.mjs
+      - tests/unit/release-pr716-once.test.mjs
+  push:
+    branches: [main]
+    paths: [.github/workflows/release-pr716-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: release-pr716-once
+  cancel-in-progress: false
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: node --test tests/unit/release-pr716-once.test.mjs
+  release:
+    needs: source-tests
+    if: github.event_name == 'push' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main'
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AZURE_EXTENSION_USE_DYNAMIC_INSTALL: yes_without_prompt
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Restrict release to the reviewed PR 716 application tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/Blockigaming/KovaGPT/git/ref/heads/main --jq .object.sha)" = "$GITHUB_SHA"
+          git diff --exit-code 83122165b22d4c7075c4a4cfe559d8a5f4f98ef6 HEAD -- . \
+            ':!.github/workflows/release-pr716-once.yml' \
+            ':!scripts/azure/release-pr716-once.mjs' \
+            ':!tests/unit/release-pr716-once.test.mjs'
+      - name: Use the existing protected production identity
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Verify existing production and save private rollback configuration
+        run: node scripts/azure/release-pr716-once.mjs preflight
+      - name: Build this main commit through the existing private GHCR workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run build-ghcr-production-candidate.yml --ref main -f source_sha="$GITHUB_SHA" -f confirmation=BUILD_ONLY
+          build_id=''
+          for attempt in $(seq 1 12); do
+            build_id="$(gh run list --workflow build-ghcr-production-candidate.yml --commit "$GITHUB_SHA" --event workflow_dispatch --limit 5 --json databaseId --jq '.[0].databaseId // empty')"
+            if [[ -n "$build_id" ]]; then break; fi
+            sleep 5
+          done
+          test -n "$build_id"
+          timeout --signal=TERM --kill-after=10s 1900s gh run watch "$build_id" --exit-status --interval 15
+          gh run download "$build_id" --name ghcr-production-candidate --dir "$RUNNER_TEMP/pr716-candidate"
+      # Production OIDC has Reader access. Promotion uses the owner's existing
+      # signed-in Azure session and the tested release script after this build.
+      - name: Save immutable candidate for the approved owner deployment
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr716-production-candidate
+          path: ${{ runner.temp }}/pr716-candidate/ghcr-candidate-image.txt
+          retention-days: 30
+      - name: Remove temporary private configuration
+        if: always()
+        run: rm -f "$RUNNER_TEMP/pr716-before.json"

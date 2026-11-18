@@ -128,7 +128,7 @@ export function PublicPlans() {
                 <p className="public-plan-cancel">
                   {tier === "free" ? "No subscription required" : "Cancel through account billing"}
                 </p>
-                <ul>
+                <ul className="public-plan-benefits">
                   {plan.features.map((feature) => (
                     <li key={feature}>
                       <Check size={18} aria-hidden="true" />

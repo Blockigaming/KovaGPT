@@ -129,8 +129,10 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
       return allowance != null &&
         Number.isFinite(consumed) &&
         Number.isFinite(capacity) &&
-        capacity > 0
-        ? Math.min(100, Math.max(0, Math.ceil((100 * consumed) / capacity)))
+        capacity >= 0
+        ? consumed >= capacity
+          ? 100
+          : Math.max(0, Math.floor((100 * consumed) / capacity))
         : null;
     };
     return {
@@ -148,12 +150,11 @@ export const getMyPlanUsage = createServerFn({ method: "GET" })
           : ledger.error
             ? { regularUsed: null, thinkingUsed: null }
             : total),
-        costPercentUsed:
-          !costState || (window.id === "five_hour" && legacyWindow)
-            ? null
-            : window.id === "five_hour"
-              ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
-              : asPercent(costState.weekly_used, costState.weekly_allowance),
+        costPercentUsed: !costState
+          ? null
+          : window.id === "five_hour"
+            ? asPercent(costState.five_hour_used, costState.five_hour_allowance)
+            : asPercent(costState.weekly_used, costState.weekly_allowance),
       })),
       images: ledger.error ? null : (daily?.images ?? 0),
       uploads: ledger.error ? null : (daily?.uploads ?? 0),

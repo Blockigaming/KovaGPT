@@ -193,7 +193,7 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
 
-test("published Chat copy distinguishes limited plans from included Pro basic chat", () => {
+test("published Chat copy describes dynamic limits without an unlimited promise", () => {
   const { registry } = fixture();
   for (const tier of ["free", "plus"]) {
     const copy = [registry.plans[tier].description, ...registry.plans[tier].features].join(" ");
@@ -201,9 +201,9 @@ test("published Chat copy distinguishes limited plans from included Pro basic ch
     assert.doesNotMatch(copy, /unlimited/i);
   }
   const pro = [registry.plans.pro.description, ...registry.plans.pro.features].join(" ");
-  assert.match(pro, /Unlimited basic chat with Argon Lite/);
-  assert.match(pro, /Advanced model usage is limited/);
-  assert.doesNotMatch(pro, /unlimited advanced|unlimited usage on all models/i);
+  assert.match(pro, /Highest dynamic chat allowance/);
+  assert.match(pro, /Usage limits apply to all chat models/);
+  assert.doesNotMatch(pro, /unlimited|\d+×/i);
 });
 
 test("pricing retains exact foundation access and effort choices with relative usage copy", () => {
@@ -219,11 +219,11 @@ test("pricing retains exact foundation access and effort choices with relative u
   );
   assert.match(
     registry.plans.plus.description,
-    /^5× the usage of Free, with all seven models through Max\./,
+    /^Expanded dynamic usage, with all seven models through Max\./,
   );
   assert.match(
     registry.plans.pro.description,
-    /^100× the usage of Free and 20× Plus, with unlimited basic chat on Argon Lite\./,
+    /^Our highest dynamic usage, with all seven models through Ultra\./,
   );
   assert.match(registry.plans.free.features[0], /Thinking/);
   assert.match(registry.plans.plus.features[0], /High/);
@@ -244,7 +244,7 @@ test("pricing retains exact foundation access and effort choices with relative u
   assert.equal(modes.getMode("high").label, "High");
 });
 
-test("new usage ratios preserve prices and billing identifiers", () => {
+test("dynamic chat copy preserves prices and billing identifiers", () => {
   const { registry } = fixture();
   assert.deepEqual(
     ["free", "plus", "pro"].map((tier) => registry.plans[tier].monthlyPriceUsd),
@@ -260,9 +260,9 @@ test("new usage ratios preserve prices and billing identifiers", () => {
   assert.equal(planUsage.PLAN_USAGE_FACTOR.plus / planUsage.PLAN_USAGE_FACTOR.free, 5);
   assert.equal(planUsage.PLAN_USAGE_FACTOR.pro / planUsage.PLAN_USAGE_FACTOR.plus, 20);
   assert.equal(planUsage.PLAN_USAGE_FACTOR.pro / planUsage.PLAN_USAGE_FACTOR.free, 100);
-  assert.ok(registry.plans.plus.features.includes("5× the usage of Free"));
-  assert.ok(registry.plans.pro.features.includes("100× the usage of Free"));
-  assert.ok(registry.plans.pro.features.includes("20× the usage of Plus"));
+  assert.ok(registry.plans.plus.features.includes("Expanded dynamic chat usage"));
+  assert.ok(registry.plans.pro.features.includes("Organize related chats in Projects"));
+  assert.ok(registry.plans.pro.features.includes("Find saved files and images in Library"));
   assert.ok(registry.plans.free.features.includes("Very limited chat usage"));
   for (const tier of ["free", "plus", "pro"])
     assert.doesNotMatch(
