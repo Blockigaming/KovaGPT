@@ -14,7 +14,7 @@ For a comparable scalar property:
 
 For structural changes, apply the behavior instead: fewer columns, a toolbar wrapping, a sidebar becoming an overlay, or a dialog filling the viewport. A width measured at one viewport is not a universal percentage.
 
-Use the measured ratios as a starting point. The November 18 revision keeps Kova's greeting, header height, and composer shape at their desktop values. It puts navigation in one phone drawer and keeps the message field and controls in a compact lower dock.
+Use the measured ratios as a starting point. The phone layout uses a smaller greeting, a shorter header, and a tighter composer with Kova’s existing typography and corners. It puts navigation in one phone drawer and keeps the message field and controls in a compact lower dock.
 
 ## Implemented mobile transformations
 
@@ -22,19 +22,19 @@ All product changes are scoped to phone widths below 768 px and short coarse-poi
 
 | Correspondence                  | Reference desktop → narrow                                        | Kova implementation                                                                                                                     |
 | ------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Home greeting                   | Type, weight, family and alignment retained                       | Kova's centered 32 px serif heading retains its line height and wraps at narrow widths                                                  |
-| Empty chat composer             | Prompt and tools in one compact frame on a narrow viewport        | Text area 68 → 34, with 44 px touch targets, 8 px vertical padding and the desktop 34 px corners                                        |
-| Empty composer total height     | 127 → 101 in the signed-in stacked reference                      | Approximately 165 → 100 on an empty phone chat. Short, multiline, and attached states can reflow                                        |
+| Home greeting                   | Type, weight, family and alignment retained                       | Kova's centered serif heading uses 26 px on phones                                                                                      |
+| Empty chat composer             | Prompt and tools in one compact frame on a narrow viewport        | Text area 68 → 34, with 44 px touch targets, 5 px vertical padding and the existing 34 px corners                                       |
+| Empty composer total height     | 127 → 101 in the signed-in stacked reference                      | Approximately 165 → 92 on an empty phone chat. Short, multiline, and attached states can reflow                                         |
 | Conversation composer           | One row → two, readable type and corners retained                 | Existing two-row phone structure retained; no aggregate height multiplier                                                               |
-| Header                          | The reference retains the header height at both widths            | Kova retains a 64 px header and adds the top safe-area inset on phones                                                                  |
+| Header                          | The reference retains the header height at both widths            | Kova uses a 56 px phone header plus the top safe-area inset                                                                             |
 | Chat shortcuts and tools        | Sidebar destinations move to the drawer                           | Chat, Projects, Library, Connections, and Images use one phone drawer. The composer + menu includes Choose project, Files, and Plugins. |
 | Navigation                      | Docked 340 → overlay 260                                          | Width follows the configured rail with a 256 px floor for the title and touch controls, then clamps to the viewport                     |
 | Model menu                      | Intrinsic width and radius unchanged, collision-aware positioning | Kova 282 px / 18 px retained; viewport clamp and internal scrolling                                                                     |
 | Response text, lists and quotes | Same typography, spacing and indentation                          | Restore 16/28 body, desktop heading scale, list and quote indentation                                                                   |
 | Code horizontal inset           | 20 → 16 (0.8)                                                     | Kova 16 → 12.8; text size, vertical inset and local scrolling retained                                                                  |
-| Page headings                   | Type retained                                                     | Kova's 28/36 management, 30/37.5 catalog, 32/38 Images, 28/33.6 Settings headings                                                       |
-| Library                         | Toolbar reflows; tabs scroll; card grid loses columns             | Keep 14/20 tabs, 8 px gaps, 12 px tab insets, round pills, 32 px page gutters; remove extra phone-only frame                            |
-| Connections                     | Fewer columns, same card internals                                | One column; retain Kova padding 16, radius 22, gap 10 and footer controls                                                               |
+| Page headings                   | Type retained                                                     | 24 px phone headings with 1.2 line height across the primary workspaces                                                                 |
+| Library                         | Toolbar reflows; tabs scroll; card grid loses columns             | 14/20 tabs, 4 px gaps, 16 px horizontal tab insets, and 20 px page gutters                                                              |
+| Connections                     | Fewer columns, same card internals                                | One column, 8 px padding and gap, with Kova’s existing card radius and footer controls                                                  |
 
 ### Matching the composer state
 

@@ -120,7 +120,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
     if (metrics.phone) {
       // A short prompt fits in the compact phone frame with 44 px actions.
-      expect(metrics.height).toBeCloseTo(100, 0);
+      expect(metrics.height).toBeCloseTo(92, 0);
       expect(metrics.input!.height).toBeCloseTo(34, 0);
     } else expect(metrics.height).toBeGreaterThanOrEqual(coarseComposer ? 136 : 148);
     expect(metrics.input!.height).toBeGreaterThanOrEqual(26);

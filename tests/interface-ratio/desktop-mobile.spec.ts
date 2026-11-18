@@ -170,15 +170,16 @@ for (const state of states) {
       (data.viewport.width < 1024 && data.viewport.height <= 500 && data.viewport.coarse);
     if (!phone) return;
     if (state.name === "home") {
-      unchanged(".kova-greeting h1", ["family", "weight", "font", "line"]);
+      unchanged(".kova-greeting h1", ["family", "weight"]);
+      expect(row(".kova-greeting h1").font).toBe("26px");
       unchanged(".spec400-composer", ["radius"]);
       unchanged(".spec400-composer-input", ["font", "line"]);
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.5, 2);
       expect(row(".spec400-composer").height).toBeGreaterThanOrEqual(92);
-      expect(row(".spec400-composer").height).toBeLessThanOrEqual(108);
-      unchanged(".kova-topbar", ["height"]);
+      expect(row(".spec400-composer").height).toBeLessThanOrEqual(96);
+      expect(row(".kova-topbar").height).toBe(56);
       expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
       await expect(page.locator(".kova-composer-tray")).toBeHidden();
       await expect(page.getByRole("navigation", { name: "Mobile workspace" })).toHaveCount(0);
@@ -188,26 +189,30 @@ for (const state of states) {
       unchanged(".spec400-composer", ["radius"]);
     }
     if (state.name === "library") {
-      unchanged(".kova-file-filters", ["padding", "radius", "gap"]);
-      unchanged(".kova-file-filters button", ["font", "line", "padding", "radius"]);
+      unchanged(".kova-file-filters", ["padding", "radius"]);
+      expect(row(".kova-file-filters").gap).toBe("4px");
+      unchanged(".kova-file-filters button", ["font", "line", "radius"]);
     }
     if (state.name === "connections") {
-      unchanged(".spec400-plugin-card", ["padding", "radius", "gap", "display"]);
+      unchanged(".spec400-plugin-card", ["radius", "display"]);
+      expect(row(".spec400-plugin-card").padding).toBe("8px");
+      expect(row(".spec400-plugin-card").gap).toBe("8px");
       expect(row(".spec400-plugin-grid").columns.split(" ")).toHaveLength(1);
     }
     if (state.name === "settings") {
-      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS("font-size", "28px");
+      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS("font-size", "24px");
       await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS(
         "line-height",
-        "33.6px",
+        "28.8px",
       );
     }
     if (state.name === "tasks") {
-      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "28px");
-      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "36px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "24px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "28.8px");
     }
     if (["library", "projects", "connections", "images"].includes(state.name)) {
-      unchanged(".kova-page-title", ["font", "line", "weight"]);
+      unchanged(".kova-page-title", ["weight"]);
+      expect(row(".kova-page-title").font).toBe("24px");
       expect(row(".kova-page-title").height).toBeGreaterThan(20);
     }
   });

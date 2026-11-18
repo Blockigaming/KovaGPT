@@ -54,13 +54,13 @@
     animation: none;
   }
 
-  /* Preserve the header's content height, with safe-area space outside it. */
+  /* Keep the phone header compact and reserve the top safe area separately. */
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
-    min-height: calc(64px + var(--safe-top, 0px));
+    min-height: calc(56px + var(--safe-top, 0px));
   }
 
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
-    min-height: 63px;
+    min-height: 55px;
   }
 
   .kova-assistant[data-compact-chat-home] .kova-topbar:not(.kova-desktop-topbar) {
@@ -74,7 +74,7 @@
 
   .kova-assistant .kova-empty-chat .kova-greeting h1 {
     font-family: var(--font-reading, Georgia, serif);
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 400;
     line-height: 1.2;
     max-width: min(100%, 24rem);
@@ -104,13 +104,13 @@
     --chat-composer-corner: 34px;
     --composer-text-inset: 4px;
     min-height: 0 !important;
-    padding: 8px 10px !important;
-    gap: 4px;
+    padding: 5px 8px !important;
+    gap: 2px;
     border-radius: var(--chat-composer-corner);
   }
 
   .kova-assistant[data-compact-chat-home] .kova-empty-composer {
-    padding-block-end: max(12px, var(--safe-bottom));
+    padding-block-end: max(8px, var(--safe-bottom));
   }
 
   .kova-assistant[data-compact-chat-home] .kova-empty-composer .kova-composer-tray {
@@ -355,6 +355,23 @@
     );
   }
 
+  .kova-sidebar[data-kova-core-sidebar] {
+    --sidebar-row-height: 44px;
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-header {
+    min-height: calc(60px + var(--safe-top, 0px));
+    padding-inline: 16px 12px;
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-primary {
+    gap: 2px;
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-history {
+    padding-top: 12px;
+  }
+
   .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
     padding-inline-start: var(--safe-left);
   }
@@ -448,8 +465,7 @@
     padding-inline: 16px;
   }
 
-  /* Page titles stay in the page, at their own desktop size. The compact
-     navigation label remains a navigation control, not a replacement H1. */
+  /* Keep workspace headings in the page and use compact phone dimensions. */
   .kova-phone-workspace
     main
     :is(#library-title, #projects-title, #scheduled-tasks-title, #apps-title) {
@@ -463,41 +479,27 @@
     white-space: normal !important;
   }
 
-  .kova-phone-workspace .kova-directory {
-    --page-title-size: var(--layout-title-size);
-    --page-title-line: var(--layout-title-line);
+  .kova-phone-workspace[data-ui="modern"] main .kova-page-title,
+  .kova-phone-workspace
+    main
+    :is(#library-title, #projects-title, #scheduled-tasks-title, #apps-title) {
+    font-size: 24px;
+    line-height: 1.2;
   }
 
-  .kova-phone-workspace .kova-core-page.kova-file-directory {
-    --page-title-size: 30px;
-    --page-title-line: 40px;
-  }
-
-  .kova-phone-workspace .kova-core-page.kova-file-directory.spec400-management {
-    --page-title-size: 28px;
-    --page-title-line: 36px;
-  }
-
-  .kova-phone-workspace[data-ui="modern"] .kova-page-header .kova-page-title,
-  .kova-phone-workspace[data-ui="modern"] .kova-core-page .kova-page-header .kova-page-title {
-    font-size: var(--page-title-size, 30px);
-    line-height: var(--page-title-line, 1.25);
-  }
-
-  .kova-phone-workspace main #scheduled-tasks-title {
-    font-size: 28px;
-    line-height: 36px;
+  .kova-phone-workspace[data-ui="modern"] .kova-app-content main:is(.kova-page, .kova-tool-page) {
+    padding-inline: max(20px, var(--safe-left)) max(20px, var(--safe-right));
   }
 
   .kova-phone-workspace[data-ui="modern"] .kova-page-header {
-    gap: 16px 24px;
+    gap: 12px 16px;
     margin-block-end: 8px;
     padding-block-end: 0;
     border-block-end: 0;
   }
 
   .kova-phone-workspace[data-ui="modern"] .spec400-library > .kova-page-header {
-    gap: 20px;
+    gap: 12px;
     margin-block-end: 0;
   }
 
@@ -506,13 +508,13 @@
   }
 
   .kova-phone-workspace .spec400-page-header {
-    gap: 24px;
-    margin-block-end: 32px;
+    gap: 16px;
+    margin-block-end: 20px;
   }
 
   .kova-images-workspace [data-ui-reference="chatgpt.images.gallery"] #images-title {
-    font-size: 32px;
-    line-height: 38px;
+    font-size: 24px;
+    line-height: 1.2;
   }
 
   .kova-settings-route
@@ -520,19 +522,19 @@
     .kova-settings-content
     .kova-settings-content-header
     h2 {
-    font-size: 28px;
+    font-size: 24px;
     line-height: 1.2;
   }
 
   /* Library: toolbar reflows, tabs scroll, grid loses columns. Its controls,
      gutters, spacing and card treatment do not become a new design. */
   .kova-phone-workspace[data-ui="modern"] .kova-app-content main.kova-library-page {
-    padding-inline: max(32px, var(--safe-left)) max(32px, var(--safe-right));
+    padding-inline: max(20px, var(--safe-left)) max(20px, var(--safe-right));
   }
 
   .kova-phone-workspace .kova-core-page.kova-file-directory.spec400-management .kova-file-filters {
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 4px;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -546,7 +548,7 @@
     button {
     flex: 0 0 auto;
     min-height: 44px;
-    padding: 8px 12px;
+    padding: 8px 16px;
     border-radius: 999px;
     font-size: 14px;
     line-height: 20px;
@@ -554,21 +556,21 @@
 
   .kova-phone-workspace .kova-core-page.kova-file-directory .kova-grid.kova-file-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 24px;
+    gap: 16px;
   }
 
   /* Catalog cards retain their own desktop internals while the grid reflows. */
   .kova-phone-workspace .spec400-plugin-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+    gap: 8px;
   }
 
   .kova-phone-workspace .spec400-plugin-grid > .spec400-plugin-card {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    padding: 16px;
+    gap: 8px;
+    padding: 8px;
     border-radius: 22px;
   }
 
