@@ -244,8 +244,9 @@ if (scope === "public") {
     await waitForKovaHydration(page);
     await page.evaluate(() => document.fonts.ready);
     const notice = page.getByLabel("Chat history synchronization", { exact: true });
-    const composer = page.locator(".spec400-composer");
-    await expect(composer).toBeVisible();
+    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const composer = page.locator(".spec400-composer").filter({ has: input });
+    await expect(input).toBeEnabled();
     await expect(notice).toHaveCount(0);
     const beforeTop = (await composer.boundingBox())!.y;
     hold = true;
