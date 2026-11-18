@@ -1,6 +1,6 @@
 # Desktop → mobile interface relationships
 
-Measured November 17, 2026. Status: mobile equivalence implemented. The corrected page geometry and mobile interactions have passed; exact revision checks are linked below and on PR #717. The frozen desktop baseline passed 32/32 checks before these corrections.
+Measured November 17, 2026. [PR #717](https://github.com/Blockigaming/KovaGPT/pull/717) is the review candidate for the responsive website and startup changes. Production is on hold for the owner's preview review.
 
 ## Owner direction
 
@@ -50,6 +50,16 @@ The initial compact **Chat** reference (52 → 87 px) is not the corresponding s
 | Heading               | 24/28.8                     | 24/28.8   | 1                                       |
 
 Only corresponding properties are multiplied. Available width, wrapped text height, and row counts are layout constraints. Kova's existing phone destinations are retained when there is no direct reference counterpart. Browser-zoom observations do not establish portrait-phone vertical placement or real keyboard acceptance.
+
+## First paint and available space
+
+On the signed-in reference desktop at 1363 × 936, the pending home input and the interactive editor shared the same outer composer box: x 468, y 442, width 768, height 52. The pending editor changed to the interactive editor inside that box. The narrow-width observations above establish the two-row transformation and side gutters. There is no matched capture of the reference's first paint on a physical phone.
+
+Kova paints a neutral greeting, the correct header, and the same composer frame while the existing account check runs. The startup content is inert and contains no conversation or account data. The interactive home uses the shared layout immediately. On phones without recent work, the greeting centers in the space above the bottom composer. Short and keyboard-constrained viewports keep their own safe area and draft handling. Desktop continues to use the frozen layout once ready.
+
+`startup.spec.ts` records the server-rendered layout with browser scripts blocked. It compares the header and composer during a delayed account check and after the empty chat becomes interactive, then repeats that comparison on reload. The ratio workflow preserves review captures from the built application at 390 × 844 and 1440 × 900 in dark and light modes.
+
+The mobile website work stays together in PR #717. The first-visit and reload tests cover the web startup portion of [PR #642](https://github.com/Blockigaming/KovaGPT/pull/642). That branch also changes account authority. [PR #631](https://github.com/Blockigaming/KovaGPT/pull/631) includes separate native apps and desktop capabilities. Its browser layout concerns are checked against the current drawer, touch menu, and interactive form implementations.
 
 ## Evidence and limits
 

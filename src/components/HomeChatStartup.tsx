@@ -1,6 +1,8 @@
 import { AudioLines, Folder, LibraryBig, Mic, Monitor, PanelLeft, Plug, Plus } from "lucide-react";
 import { HomeChatFrame } from "@/components/HomeChatStarters";
 import { PhoneNavigation } from "@/components/PhoneNavigation";
+import { DEFAULT_SIDEBAR_LAYOUT } from "@/lib/sidebar-layout.mjs";
+import type { CSSProperties } from "react";
 
 // Paint the public geometry while account authority is unresolved. This shell
 // has no account data, inputs, or active controls.
@@ -13,7 +15,12 @@ export function HomeChatStartup() {
       aria-hidden="true"
       inert
     >
-      <aside className="kova-sidebar gap-5 p-4" data-kova-core-sidebar="" data-state="open">
+      <aside
+        className="kova-sidebar gap-5 p-4"
+        data-kova-core-sidebar=""
+        data-state="open"
+        style={{ "--sidebar-expanded": `${DEFAULT_SIDEBAR_LAYOUT.width}px` } as CSSProperties}
+      >
         <strong className="text-xl font-medium">KovaGPT</strong>
         {[0, 1, 2].map((row) => (
           <span key={row} className="h-5 w-2/3 rounded-md bg-muted" />
