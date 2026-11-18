@@ -18,7 +18,7 @@
     display: block;
   }
 
-  [data-kova-entry-fallback] {
+  [data-kova-entry-fallback] > :is(aside, section) {
     display: none;
   }
 

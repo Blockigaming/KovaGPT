@@ -146,12 +146,10 @@ function AuthAuthorityGate({
         <section className="flex min-w-0 flex-1 flex-col justify-end p-6">
           <div className="mx-auto mb-6 h-32 w-full max-w-3xl animate-pulse rounded-3xl border border-border bg-muted/30" />
         </section>
+        {showPhonePending ? (
+          <div className="kova-home-startup-surface w-full">{phonePendingSurface}</div>
+        ) : null}
       </div>
-      {showPhonePending ? (
-        <div className="kova-home-startup-surface" aria-busy="true">
-          {phonePendingSurface}
-        </div>
-      ) : null}
     </dialog>
   );
 }
