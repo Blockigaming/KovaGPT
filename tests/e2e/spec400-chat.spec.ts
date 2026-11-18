@@ -118,7 +118,7 @@ test("signed-in homepage initially scrolls to the latest content", async ({ page
   await expect(page.locator("#chat-greeting")).toBeVisible();
   await expect(page.getByRole("button", { name: "Prepare or manage Work" })).toHaveCount(0);
   const home = page.locator(".kova-empty-chat");
-  await expect(home.locator("#continue-working-heading")).toBeVisible();
+  await expect(home.getByRole("heading", { name: "Continue working", exact: true })).toBeVisible();
   await expect
     .poll(() => home.evaluate((node) => node.scrollHeight - node.clientHeight))
     .toBeGreaterThan(8);

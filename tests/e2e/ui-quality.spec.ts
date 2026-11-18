@@ -119,9 +119,8 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.width).toBeLessThanOrEqual(metrics.composerWidth);
     if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
     if (metrics.phone) {
-      // The Work-style input halves (68 → 34) while padding, corners and
-      // readable type stay at Kova's desktop values; controls retain 44px.
-      expect(metrics.height).toBeCloseTo(132, 0);
+      // A short prompt fits in the compact phone frame with 44 px actions.
+      expect(metrics.height).toBeCloseTo(100, 0);
       expect(metrics.input!.height).toBeCloseTo(34, 0);
     } else expect(metrics.height).toBeGreaterThanOrEqual(coarseComposer ? 136 : 148);
     expect(metrics.input!.height).toBeGreaterThanOrEqual(26);
