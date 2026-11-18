@@ -908,3 +908,10 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
     display: flex;
   }
 }
+
+@media (pointer: coarse) {
+  .kova-sidebar .kova-chat-row-main {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+}

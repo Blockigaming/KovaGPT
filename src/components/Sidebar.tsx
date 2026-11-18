@@ -237,6 +237,19 @@ export function Sidebar({
     frame: number | null;
   } | null>(null);
   const selectTimerRef = useRef<number | null>(null);
+  const [mobileChatMenuId, setMobileChatMenuId] = useState<string | null>(null);
+  const chatHoldRef = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const heldChatRef = useRef<string | null>(null);
+  const cancelChatHold = useCallback(() => {
+    if (chatHoldRef.current) window.clearTimeout(chatHoldRef.current.timer);
+    chatHoldRef.current = null;
+  }, []);
+  useEffect(() => cancelChatHold, [cancelChatHold]);
+  useEffect(() => {
+    if (open) return;
+    cancelChatHold();
+    setMobileChatMenuId(null);
+  }, [open, cancelChatHold]);
   const selectionPointerTypeRef = useRef<string | null>(null);
   const renameOperationRef = useRef<object | null>(null);
   const accountRef = useRef(user?.id);
@@ -579,6 +592,7 @@ export function Sidebar({
           return;
       }
       const touch = event.touches[0];
+      if (touch.clientX > 32) return;
       gesture = {
         id: touch.identifier,
         x: touch.clientX,
@@ -601,12 +615,12 @@ export function Sidebar({
       }
       const dx = touch.clientX - gesture.x;
       const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 750 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
+      if (event.timeStamp - gesture.time > 750 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
         reset();
         return;
       }
-      // Right-to-left opens, as requested; clear horizontal intent is required.
-      if (isClearSidebarSwipe({ open: false, dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
+      // Open only from the leading edge so ordinary horizontal gestures stay native.
+      if (isClearSidebarSwipe({ dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
         reset();
         swipeToggleRef.current();
       }
@@ -643,7 +657,7 @@ export function Sidebar({
       if (
         !(target instanceof Element) ||
         target.closest(
-          'button:not(.kova-sidebar-scrim), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
+          'button:not(.kova-chat-row-main), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]',
         )
       )
         return;
@@ -679,7 +693,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (isClearSidebarSwipe({ open: true, dx, dy, elapsedMs: event.timeStamp - start.time })) {
+      if (isClearSidebarSwipe({ dx, dy, elapsedMs: event.timeStamp - start.time })) {
         start = null;
         swipeToggleRef.current();
       }
@@ -991,8 +1005,36 @@ export function Sidebar({
         className="kova-chat-row-main"
         onPointerDown={(event) => {
           selectionPointerTypeRef.current = event.pointerType;
+          heldChatRef.current = null;
+          cancelChatHold();
+          if (event.pointerType !== "touch" || !event.isPrimary || !isMobileViewport()) return;
+          const { clientX: x, clientY: y } = event;
+          chatHoldRef.current = {
+            x,
+            y,
+            timer: window.setTimeout(() => {
+              chatHoldRef.current = null;
+              heldChatRef.current = conversation.id;
+              setMobileChatMenuId(conversation.id);
+            }, 500),
+          };
+        }}
+        onPointerMove={(event) => {
+          const hold = chatHoldRef.current;
+          if (hold && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 10)
+            cancelChatHold();
+        }}
+        onPointerUp={cancelChatHold}
+        onPointerCancel={cancelChatHold}
+        onContextMenu={(event) => {
+          if (selectionPointerTypeRef.current === "touch" && isMobileViewport())
+            event.preventDefault();
         }}
         onClick={(event) => {
+          if (heldChatRef.current === conversation.id && event.detail > 0) {
+            event.preventDefault();
+            return;
+          }
           const pointerType = selectionPointerTypeRef.current;
           const fineMouse =
             pointerType === "mouse" ||
@@ -1055,7 +1097,18 @@ export function Sidebar({
           <Pin aria-hidden="true" fill={conversation.pinned ? "currentColor" : "none"} />
         </button>
       ) : null}
-      <DropdownMenu modal={false}>
+      <DropdownMenu
+        modal={false}
+        open={mobileViewport ? mobileChatMenuId === conversation.id : undefined}
+        onOpenChange={
+          mobileViewport
+            ? (isOpen) =>
+                setMobileChatMenuId((current) =>
+                  isOpen ? conversation.id : current === conversation.id ? null : current,
+                )
+            : undefined
+        }
+      >
         <DropdownMenuTrigger asChild>
           <button
             type="button"
@@ -1076,6 +1129,16 @@ export function Sidebar({
           collisionPadding={12}
           className="kova-sidebar-chat-menu"
           data-sidebar-menu-placement="floating"
+          onInteractOutside={(event) => {
+            // Releasing a touch can focus the held row after the menu opens.
+            const target = event.target;
+            if (
+              heldChatRef.current === conversation.id &&
+              target instanceof Element &&
+              target.closest(".kova-chat-row-main")
+            )
+              event.preventDefault();
+          }}
           onCloseAutoFocus={(event) => {
             if (closePinMenu(conversation.id, event)) return;
             const pending = archiveReturnFocusRef.current;
