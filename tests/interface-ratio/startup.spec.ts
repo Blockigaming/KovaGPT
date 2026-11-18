@@ -20,7 +20,8 @@ function checkOpeningLayout(
   first: HomeFrame,
   { width, height }: { width: number; height: number },
 ) {
-  if (width < 1024) expect(first.sidebar).toBeNull();
+  if (width < 1024 && first.sidebar)
+    expect(first.sidebar.x + first.sidebar.width).toBeLessThanOrEqual(1);
   if (width >= 768) return;
   expect(first.composer.width).toBeCloseTo(width - 32, 0);
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
@@ -139,6 +140,7 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
   const homeRecommendations = shell.locator(".kova-empty-chat .spec400-recent-work");
   await expect(homeRecommendations).toBeAttached();
   await expect(homeRecommendations).toBeHidden();
+  await expect(shell.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
   await page.evaluate(() => document.fonts.ready);
   const opening = await frame(shell);
   checkOpeningLayout(opening, page.viewportSize()!);

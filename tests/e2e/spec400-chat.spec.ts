@@ -293,9 +293,16 @@ test("a composer link preview aligns with the first letter of the draft", async 
   await input.press("Space");
   await expect(preview).toBeVisible();
 
-  const textStart = await input.evaluate(
-    (element) =>
-      element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
-  );
-  expect((await preview.boundingBox())!.x).toBeCloseTo(textStart, 0);
+  await expect
+    .poll(() =>
+      input.evaluate((element) => {
+        const link = element
+          .closest(".spec400-composer")!
+          .querySelector(".kova-link-preview-composer")!;
+        const textStart =
+          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft);
+        return Math.abs(link.getBoundingClientRect().left - textStart);
+      }),
+    )
+    .toBeLessThan(0.5);
 });
