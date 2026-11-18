@@ -1,8 +1,14 @@
 import { defineConfig } from "@playwright/test";
 
+const engine = process.env.KOVA_MOBILE_STATE_ENGINE;
+if (engine && !["chromium", "firefox", "webkit"].includes(engine))
+  throw new Error(`Unknown mobile state engine: ${engine}`);
+
 // Rendered ratio contracts and frozen desktop geometry, using synthetic data.
 export default defineConfig({
   testDir: "./tests/interface-ratio",
+  // Cross-engine state runs do not compare Chromium's frozen font geometry.
+  ...(engine ? { testMatch: "mobile-states.spec.ts" } : {}),
   timeout: 60_000,
   expect: { timeout: 20_000 },
   workers: 2,
@@ -11,7 +17,7 @@ export default defineConfig({
   outputDir: "test-results/interface-ratio",
   use: {
     baseURL: "http://127.0.0.1:4189",
-    browserName: "chromium",
+    browserName: (engine ?? "chromium") as "chromium" | "firefox" | "webkit",
     serviceWorkers: "block",
     reducedMotion: "reduce",
     trace: "retain-on-failure",
@@ -30,11 +36,15 @@ export default defineConfig({
       { width: 430, height: 932 },
     ].map((viewport) => ({
       name: `phone-${viewport.width}`,
-      use: { viewport, isMobile: true, hasTouch: true },
+      use: { viewport, isMobile: engine !== "firefox", hasTouch: true },
     })),
     {
       name: "landscape-844",
-      use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true },
+      use: {
+        viewport: { width: 844, height: 390 },
+        isMobile: engine !== "firefox",
+        hasTouch: true,
+      },
     },
     { name: "tablet-768", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
   ],

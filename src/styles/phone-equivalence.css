@@ -56,6 +56,142 @@
     min-height: 34px !important;
   }
 
+  /* A keyboard leaves a bounded writing surface. Keep the action row outside
+     its scrolling content so a long draft or file never scrolls Send away. */
+  .kova-assistant[data-keyboard-open="true"] .kova-empty-chat {
+    padding-block: 0;
+    overflow: hidden;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] section.kova-empty-chat > .kova-empty-chat-content {
+    flex: 1 1 0;
+    min-height: 0;
+    padding-block: 0 !important;
+  }
+
+  .kova-assistant[data-keyboard-open="true"]
+    .kova-empty-chat-content
+    > :is(.kova-greeting, .spec400-recent-work) {
+    display: none;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] :is(.kova-empty-composer, .spec400-composer-dock) {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .kova-empty-composer {
+    padding-block: 2px;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-chat-input {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow: visible;
+    padding-block: 2px;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer {
+    flex: 0 1 auto;
+    min-height: 0 !important;
+    padding: 8px !important;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-input-region {
+    min-height: 34px;
+    flex: 1 1 auto;
+    align-items: stretch;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer-input {
+    min-height: 34px !important;
+    max-height: 100%;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer-toolbar {
+    flex: none;
+    margin-block-start: 0;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-attachment-chips {
+    flex: none;
+    height: 46px;
+    margin-block: 0;
+  }
+
+  .kova-assistant[data-keyboard-open="true"] .spec400-attachment-chip[data-kind="image"] {
+    flex: 0 0 90px;
+    width: 90px;
+    height: 46px;
+    border-radius: 8px;
+  }
+
+  .kova-assistant[data-keyboard-open="true"]
+    .spec400-attachment-chip[data-kind="image"]
+    .spec400-chip-inspect {
+    width: 44px;
+    height: 44px;
+  }
+
+  .kova-assistant[data-keyboard-open="true"]
+    .spec400-attachment-chip[data-kind="image"]
+    .spec400-chip-remove {
+    position: static;
+    flex: none;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Rotation keeps the full editor on the phone surface. Only the draft
+     scrolls; the close and collapse controls remain in view. */
+  body .spec400-expanded-input[data-kova-dialog-surface] {
+    inset: var(--kova-visible-top, 0px) 0 auto;
+    width: 100%;
+    max-width: 100% !important;
+    height: var(--kova-visible-height, 100dvh);
+    max-height: var(--kova-visible-height, 100dvh) !important;
+    margin: 0;
+    padding: max(16px, var(--safe-top)) max(16px, var(--safe-right)) max(16px, var(--safe-bottom))
+      max(16px, var(--safe-left));
+    translate: none;
+    transform: none;
+    animation: none;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .spec400-expanded-input .spec400-expanded-textarea {
+    min-height: 34px;
+    overflow-y: auto;
+  }
+
+  .spec400-expanded-input > :not(.spec400-expanded-textarea) {
+    flex-shrink: 0;
+  }
+
+  :root[data-kova-keyboard]
+    .spec400-expanded-input
+    :is(.spec400-expanded-description, .spec400-field-label, .spec400-composer-hint) {
+    display: none;
+  }
+
   /* Docked navigation becomes an overlay; apply 260/340 to the user's own
      desktop rail width. Keep the viewport clamp and touch hit regions. */
   .kova-sidebar[data-kova-core-sidebar] {

@@ -2022,246 +2022,249 @@ export function ChatInput({
           if (event.key === "Tab") setComposerFocusOrigin("keyboard");
         }}
       >
-        {(attachments.length > 0 || pasteOffer) && (
-          <ul className="spec400-attachment-chips" aria-label="Attachments">
-            {attachments.map((attachment, index) => (
-              <li
-                key={attachment.clientId ?? `${attachment.name}:${index}`}
-                className="spec400-attachment-chip"
-                data-status={attachment.status}
-                data-kind={attachment.kind}
-              >
-                <button
-                  type="button"
-                  className="spec400-chip-inspect"
-                  data-attachment-preview-trigger=""
-                  aria-label={`Inspect ${attachment.name}`}
-                  aria-description={attachment.pasteSummary}
-                  title={`${attachment.pasteSummary ?? attachment.name} · ${attachmentState(attachment)}`}
-                  onClick={(event) => {
-                    previewTriggerRef.current = event.currentTarget;
-                    previewReturnToInputRef.current = false;
-                    setPreviewOffset(0);
-                    setPreviewAttachment(attachment);
-                  }}
+        <div className="contents spec400-composer-content">
+          {(attachments.length > 0 || pasteOffer) && (
+            <ul className="spec400-attachment-chips" aria-label="Attachments">
+              {attachments.map((attachment, index) => (
+                <li
+                  key={attachment.clientId ?? `${attachment.name}:${index}`}
+                  className="spec400-attachment-chip"
+                  data-status={attachment.status}
+                  data-kind={attachment.kind}
                 >
-                  {attachment.kind === "image" ? (
-                    <>
-                      {attachment.dataUrl && (
-                        <img
-                          className="spec400-attachment-thumb"
-                          src={attachment.dataUrl}
-                          alt=""
-                          decoding="async"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {attachment.status === "uploading" ? (
-                        <Loader2
-                          className="spec400-attachment-image-state animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : attachment.status === "failed" ? (
-                        <AlertCircle
-                          className="spec400-attachment-image-state"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                    </>
-                  ) : attachment.status === "uploading" ? (
-                    <Loader2 className="animate-spin" aria-hidden="true" />
-                  ) : attachment.status === "failed" ? (
-                    <AlertCircle aria-hidden="true" />
-                  ) : (
-                    <FileText aria-hidden="true" />
-                  )}
-                  <span
-                    className={
-                      attachment.kind === "image"
-                        ? "spec400-chip-name sr-only"
-                        : "spec400-chip-name"
-                    }
+                  <button
+                    type="button"
+                    className="spec400-chip-inspect"
+                    data-attachment-preview-trigger=""
+                    aria-label={`Inspect ${attachment.name}`}
+                    aria-description={attachment.pasteSummary}
+                    title={`${attachment.pasteSummary ?? attachment.name} · ${attachmentState(attachment)}`}
+                    onClick={(event) => {
+                      previewTriggerRef.current = event.currentTarget;
+                      previewReturnToInputRef.current = false;
+                      setPreviewOffset(0);
+                      setPreviewAttachment(attachment);
+                    }}
                   >
-                    {attachment.pasteSummary ?? attachment.name}
-                  </span>
-                  <span className="sr-only">{attachmentState(attachment)}</span>
-                  {attachment.localPaste && <small>Local</small>}
-                  {attachment.pdf && (
-                    <small>
-                      {attachment.pdf.pageCount} {attachment.pdf.pageCount === 1 ? "page" : "pages"}
-                      {attachment.status === "complete" &&
-                      attachment.pdf.pages.some((page) => page.status === "failed")
-                        ? " · partial text"
-                        : ""}
-                    </small>
-                  )}
-                  {attachment.selectedPdfPages && (
-                    <small>Selected: {formatPdfPageNumbers(attachment.selectedPdfPages)}</small>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className="spec400-chip-remove"
-                  aria-label={`Remove ${attachment.name}`}
-                  onClick={() => removeAttachment(index)}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-            {pasteOffer && (
-              <li className="spec400-attachment-chip" data-status="pending">
-                <button
-                  type="button"
-                  className="spec400-chip-inspect"
-                  data-attachment-preview-trigger=""
-                  aria-label="Inspect pending pasted text"
-                  aria-description={pasteOffer.summary}
-                  onClick={(event) => {
-                    previewTriggerRef.current = event.currentTarget;
-                    previewReturnToInputRef.current = false;
-                    setPreviewOffset(0);
-                    setPastePreviewOpen(true);
-                  }}
-                >
-                  <FileText aria-hidden="true" />
-                  <span className="spec400-chip-name">{pasteOffer.summary}</span>
-                  <small>Not attached</small>
-                </button>
-                <button
-                  type="button"
-                  className="spec400-chip-remove"
-                  aria-label="Remove pending pasted text"
-                  onClick={() => {
-                    setPasteOffer(null);
-                    setPastePreviewOpen(false);
-                    window.requestAnimationFrame(() => ref.current?.focus());
-                  }}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </li>
-            )}
-          </ul>
-        )}
-        {linkPreviewUrl && (
-          <LinkPreviewChip
-            key={linkPreviewUrl}
-            url={linkPreviewUrl}
-            placement="composer"
-            onRemove={removeLinkPreview}
-          />
-        )}
-        <div className="spec400-input-region">
-          <textarea
-            ref={ref}
-            value={visibleComposerValue}
-            onChange={(event) => {
-              setSlashDismissed(false);
-              setSlashModels(false);
-              setSlashIndex(0);
-              updateComposerText(event.target.value, event.target.selectionStart);
-            }}
-            onKeyDown={handleKey}
-            disabled={disabled}
-            onCompositionStart={() => {
-              composingRef.current = true;
-            }}
-            onCompositionEnd={() => {
-              composingRef.current = false;
-            }}
-            placeholder={placeholder ?? "Work with KovaGPT"}
-            rows={1}
-            spellCheck
-            autoComplete="off"
-            autoCorrect="on"
-            autoCapitalize="sentences"
-            enterKeyHint={
-              effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer ? "send" : "enter"
-            }
-            className="spec400-composer-input"
-            aria-label="Message KovaGPT"
-            aria-keyshortcuts={
-              isMobileLayout
-                ? undefined
-                : effectiveSendOnEnter
-                  ? "Enter Control+Enter Meta+Enter"
-                  : "Control+Enter Meta+Enter"
-            }
-          />
-          <button
-            ref={expandTriggerRef}
-            type="button"
-            className="spec400-expand-input"
-            aria-label="Expand input"
-            title="Expand input"
-            disabled={disabled}
-            onClick={() => setExpanded(true)}
-          >
-            <ExpandViewIcon />
-          </button>
-        </div>
-        {pluginContexts.length > 0 && (
-          <div className="spec400-plugin-tokens" role="group" aria-label="Selected plugins">
-            {pluginContexts.map((plugin) => {
-              const logo =
-                PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id];
-              return (
-                <button
-                  key={plugin.id}
-                  type="button"
-                  className="spec400-plugin-token"
-                  disabled={disabled || isStreaming}
-                  onClick={() => {
-                    onPluginContextsChange?.(
-                      pluginContexts.filter((item) => item.id !== plugin.id),
-                    );
-                    window.requestAnimationFrame(() => ref.current?.focus());
-                  }}
-                  aria-label={`Remove plugin ${plugin.label}`}
-                  title={`Remove ${plugin.label} · Backspace or Delete removes the last selected plugin`}
-                >
-                  {logo ? (
-                    <img src={logo} alt="" aria-hidden="true" />
-                  ) : (
-                    <Plug aria-hidden="true" />
-                  )}
-                  <span>{plugin.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {projectContext && !showResources && (
-          <div className="flex min-w-0 flex-wrap gap-2 px-3">
+                    {attachment.kind === "image" ? (
+                      <>
+                        {attachment.dataUrl && (
+                          <img
+                            className="spec400-attachment-thumb"
+                            src={attachment.dataUrl}
+                            alt=""
+                            decoding="async"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {attachment.status === "uploading" ? (
+                          <Loader2
+                            className="spec400-attachment-image-state animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : attachment.status === "failed" ? (
+                          <AlertCircle
+                            className="spec400-attachment-image-state"
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                      </>
+                    ) : attachment.status === "uploading" ? (
+                      <Loader2 className="animate-spin" aria-hidden="true" />
+                    ) : attachment.status === "failed" ? (
+                      <AlertCircle aria-hidden="true" />
+                    ) : (
+                      <FileText aria-hidden="true" />
+                    )}
+                    <span
+                      className={
+                        attachment.kind === "image"
+                          ? "spec400-chip-name sr-only"
+                          : "spec400-chip-name"
+                      }
+                    >
+                      {attachment.pasteSummary ?? attachment.name}
+                    </span>
+                    <span className="sr-only">{attachmentState(attachment)}</span>
+                    {attachment.localPaste && <small>Local</small>}
+                    {attachment.pdf && (
+                      <small>
+                        {attachment.pdf.pageCount}{" "}
+                        {attachment.pdf.pageCount === 1 ? "page" : "pages"}
+                        {attachment.status === "complete" &&
+                        attachment.pdf.pages.some((page) => page.status === "failed")
+                          ? " · partial text"
+                          : ""}
+                      </small>
+                    )}
+                    {attachment.selectedPdfPages && (
+                      <small>Selected: {formatPdfPageNumbers(attachment.selectedPdfPages)}</small>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="spec400-chip-remove"
+                    aria-label={`Remove ${attachment.name}`}
+                    onClick={() => removeAttachment(index)}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+              {pasteOffer && (
+                <li className="spec400-attachment-chip" data-status="pending">
+                  <button
+                    type="button"
+                    className="spec400-chip-inspect"
+                    data-attachment-preview-trigger=""
+                    aria-label="Inspect pending pasted text"
+                    aria-description={pasteOffer.summary}
+                    onClick={(event) => {
+                      previewTriggerRef.current = event.currentTarget;
+                      previewReturnToInputRef.current = false;
+                      setPreviewOffset(0);
+                      setPastePreviewOpen(true);
+                    }}
+                  >
+                    <FileText aria-hidden="true" />
+                    <span className="spec400-chip-name">{pasteOffer.summary}</span>
+                    <small>Not attached</small>
+                  </button>
+                  <button
+                    type="button"
+                    className="spec400-chip-remove"
+                    aria-label="Remove pending pasted text"
+                    onClick={() => {
+                      setPasteOffer(null);
+                      setPastePreviewOpen(false);
+                      window.requestAnimationFrame(() => ref.current?.focus());
+                    }}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+          {linkPreviewUrl && (
+            <LinkPreviewChip
+              key={linkPreviewUrl}
+              url={linkPreviewUrl}
+              placement="composer"
+              onRemove={removeLinkPreview}
+            />
+          )}
+          <div className="spec400-input-region">
+            <textarea
+              ref={ref}
+              value={visibleComposerValue}
+              onChange={(event) => {
+                setSlashDismissed(false);
+                setSlashModels(false);
+                setSlashIndex(0);
+                updateComposerText(event.target.value, event.target.selectionStart);
+              }}
+              onKeyDown={handleKey}
+              disabled={disabled}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+              }}
+              placeholder={placeholder ?? "Work with KovaGPT"}
+              rows={1}
+              spellCheck
+              autoComplete="off"
+              autoCorrect="on"
+              autoCapitalize="sentences"
+              enterKeyHint={
+                effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer ? "send" : "enter"
+              }
+              className="spec400-composer-input"
+              aria-label="Message KovaGPT"
+              aria-keyshortcuts={
+                isMobileLayout
+                  ? undefined
+                  : effectiveSendOnEnter
+                    ? "Enter Control+Enter Meta+Enter"
+                    : "Control+Enter Meta+Enter"
+              }
+            />
             <button
+              ref={expandTriggerRef}
               type="button"
-              className="spec400-selected-tool min-w-0"
-              disabled={isStreaming}
-              onClick={() => onProjectContext?.(null)}
-              aria-label={`Remove project ${projectContext.name}`}
+              className="spec400-expand-input"
+              aria-label="Expand input"
+              title="Expand input"
+              disabled={disabled}
+              onClick={() => setExpanded(true)}
             >
-              <Folder aria-hidden="true" />
-              <span className="truncate">{projectContext.name}</span>
-              <X aria-hidden="true" />
+              <ExpandViewIcon />
             </button>
           </div>
-        )}
-        {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
-          <button
-            type="button"
-            className="spec400-selected-tool"
-            disabled={disabled || isStreaming}
-            onClick={() => chooseTool(selectedToolOption)}
-            aria-label={`Remove ${selectedToolOption.label}`}
-          >
-            <ActiveToolIcon aria-hidden="true" />
-            {selectedToolOption.label}
-            <X aria-hidden="true" />
-          </button>
-        )}
-        <div aria-live="polite" className="sr-only">
-          {uploadAnnouncement}
+          {pluginContexts.length > 0 && (
+            <div className="spec400-plugin-tokens" role="group" aria-label="Selected plugins">
+              {pluginContexts.map((plugin) => {
+                const logo =
+                  PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id];
+                return (
+                  <button
+                    key={plugin.id}
+                    type="button"
+                    className="spec400-plugin-token"
+                    disabled={disabled || isStreaming}
+                    onClick={() => {
+                      onPluginContextsChange?.(
+                        pluginContexts.filter((item) => item.id !== plugin.id),
+                      );
+                      window.requestAnimationFrame(() => ref.current?.focus());
+                    }}
+                    aria-label={`Remove plugin ${plugin.label}`}
+                    title={`Remove ${plugin.label} · Backspace or Delete removes the last selected plugin`}
+                  >
+                    {logo ? (
+                      <img src={logo} alt="" aria-hidden="true" />
+                    ) : (
+                      <Plug aria-hidden="true" />
+                    )}
+                    <span>{plugin.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {projectContext && !showResources && (
+            <div className="flex min-w-0 flex-wrap gap-2 px-3">
+              <button
+                type="button"
+                className="spec400-selected-tool min-w-0"
+                disabled={isStreaming}
+                onClick={() => onProjectContext?.(null)}
+                aria-label={`Remove project ${projectContext.name}`}
+              >
+                <Folder aria-hidden="true" />
+                <span className="truncate">{projectContext.name}</span>
+                <X aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect && (
+            <button
+              type="button"
+              className="spec400-selected-tool"
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(selectedToolOption)}
+              aria-label={`Remove ${selectedToolOption.label}`}
+            >
+              <ActiveToolIcon aria-hidden="true" />
+              {selectedToolOption.label}
+              <X aria-hidden="true" />
+            </button>
+          )}
+          <div aria-live="polite" className="sr-only">
+            {uploadAnnouncement}
+          </div>
         </div>
         <div className="spec400-composer-toolbar" role="group" aria-label="Message tools">
           <div className="spec400-composer-tools">
@@ -2723,7 +2726,7 @@ export function ChatInput({
         >
           <DialogHeader>
             <DialogTitle>Expand input</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="spec400-expanded-description">
               Edit the same draft. Closing this editor keeps your changes.
             </DialogDescription>
           </DialogHeader>

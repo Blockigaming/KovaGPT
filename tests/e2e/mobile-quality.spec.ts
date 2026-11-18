@@ -171,9 +171,13 @@ test("phone article outlines jump to readable sections below the header", async 
     await expect(page).toHaveURL(/#section-1$/);
     const content = page.locator("#section-1").getByRole("heading", { level: 2 });
     await expect(content).toBeInViewport();
-    const headingBox = await content.boundingBox();
-    const headerBox = await page.locator(".kova-public-header").boundingBox();
-    expect(headingBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    // Anchor navigation is smooth for motion-enabled users. Assert the final
+    // position rather than an intermediate frame as the heading passes by.
+    await expect(async () => {
+      const headingBox = await content.boundingBox();
+      const headerBox = await page.locator(".kova-public-header").boundingBox();
+      expect(headingBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+    }).toPass({ timeout: 5_000 });
     await expectNoPageOverflow(page);
   }
 });

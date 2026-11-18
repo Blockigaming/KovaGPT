@@ -130,11 +130,21 @@ for (const theme of ["light", "dark"] as const) {
         (_, i) => `Line ${i + 1}: preserve this mobile draft.`,
       ).join("\n");
       await input.fill(draft);
-      await page.getByLabel("Choose files", { exact: true }).setInputFiles({
-        name: "Mobile draft notes.txt",
-        mimeType: "text/plain",
-        buffer: Buffer.from("Synthetic mobile attachment, never uploaded to production."),
-      });
+      await page.getByLabel("Choose files", { exact: true }).setInputFiles([
+        {
+          name: "Mobile draft notes.txt",
+          mimeType: "text/plain",
+          buffer: Buffer.from("Synthetic mobile attachment, never uploaded to production."),
+        },
+        {
+          name: "Mobile image.png",
+          mimeType: "image/png",
+          buffer: Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=",
+            "base64",
+          ),
+        },
+      ]);
       await expect(page.getByLabel("Remove Mobile draft notes.txt", { exact: true })).toBeVisible();
       await input.focus();
       const height = viewport.height <= 500 ? 220 : 360;
@@ -168,6 +178,11 @@ for (const theme of ["light", "dark"] as const) {
       );
       await expectReachable(input, top, top + height);
       await expect(input).toHaveCSS("overflow-y", "auto");
+      const imageChip = page.locator('.spec400-attachment-chip[data-kind="image"]');
+      await expect(imageChip).toHaveCSS("height", "46px");
+      const removeImage = page.getByLabel("Remove Mobile image.png", { exact: true });
+      await removeImage.scrollIntoViewIfNeeded();
+      await expectReachable(removeImage, top, top + height);
       expect(
         await page.locator("html").evaluate((el) => el.scrollWidth - el.clientWidth),
       ).toBeLessThanOrEqual(1);
@@ -216,6 +231,15 @@ for (const theme of ["light", "dark"] as const) {
         await page.locator("html").evaluate((el) => el.scrollWidth - el.clientWidth),
       ).toBeLessThanOrEqual(1);
     }
+    await editor.focus();
+    await simulateKeyboard(page, 220, 12);
+    await expectReachable(dialog.getByRole("button", { name: "Close", exact: true }), 12, 232);
+    await expectReachable(
+      dialog.getByRole("button", { name: "Collapse input", exact: true }),
+      12,
+      232,
+    );
+    await expectReachable(editor, 12, 232);
     await dialog.getByRole("button", { name: "Collapse input", exact: true }).click();
     await expect(dialog).toBeHidden();
     await expect(input).toHaveValue(edited);
