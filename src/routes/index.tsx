@@ -2083,7 +2083,7 @@ function KovaGPT() {
         },
       };
 
-      const updateAssistantMessage = (update: (message: Message) => Message) => {
+      const updateAssistantMessage = (update: (message: Message) => Message, touch = true) => {
         setConversations((prev) =>
           prev.map((conversation) =>
             conversation.id === nextConvId
@@ -2092,7 +2092,7 @@ function KovaGPT() {
                   messages: conversation.messages.map((message) =>
                     message.id === assistantMsg.id ? update(message) : message,
                   ),
-                  updatedAt: Date.now(),
+                  ...(touch ? { updatedAt: Date.now() } : {}),
                 }
               : conversation,
           ),
@@ -2256,28 +2256,19 @@ function KovaGPT() {
             }
             if (delta?.kind === "tool_confirm" && delta?.action_id) {
               waitingForConfirmation = true;
-              setConversations((prev) =>
-                prev.map((c) => {
-                  if (c.id !== nextConvId) return c;
-                  const msgs = c.messages.map((m) => {
-                    if (m.id !== assistantMsg.id) return m;
-                    const confirmation = {
-                      actionId: String(delta.action_id),
-                      tool: String(delta.tool ?? ""),
-                      summary: String(delta.summary ?? "Confirm action"),
-                      argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
-                      status: "pending" as const,
-                    };
-                    const pendingConfirms = (m.pendingConfirms ?? []).some(
-                      (item) => item.actionId === confirmation.actionId,
-                    )
-                      ? m.pendingConfirms
-                      : [...(m.pendingConfirms ?? []), confirmation];
-                    return { ...m, pendingConfirms };
-                  });
-                  return { ...c, messages: msgs };
-                }),
-              );
+              const confirmation = {
+                actionId: String(delta.action_id),
+                tool: String(delta.tool ?? ""),
+                summary: String(delta.summary ?? "Confirm action"),
+                argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
+                status: "pending" as const,
+              };
+              updateAssistantMessage((message) => {
+                const pendingConfirms = message.pendingConfirms ?? [];
+                if (pendingConfirms.some((item) => item.actionId === confirmation.actionId))
+                  return message;
+                return { ...message, pendingConfirms: [...pendingConfirms, confirmation] };
+              }, false);
             }
             if (typeof delta?.content === "string" && delta.content) {
               assembledReply += delta.content;
@@ -3101,7 +3092,6 @@ function KovaGPT() {
           key={`${storagePrincipal}:${active.id}:${compact}`}
           conversation={active}
           signedIn={Boolean(isLoaded && isSignedIn)}
-          userTier={tier}
           compact={compact}
           isStreaming={isStreaming}
           navigationBlocked={Boolean(input || attachments.length || isStreaming)}
