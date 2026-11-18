@@ -277,6 +277,8 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await waitForKovaHydration(page);
 
   const textbox = page.getByRole("textbox", { name: "Message KovaGPT" });
+  const compactPhone = viewport.width < 768 || viewport.height <= 500;
+  if (compactPhone) await expect(textbox).toBeFocused();
   await textbox.fill("Keep this draft");
   const visibleHeight = viewport.height - (viewport.height < 500 ? 145 : 300);
   await page.evaluate((height) => {
@@ -288,6 +290,12 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   const shell = page.locator(".kova-assistant[data-ui=modern]");
   await expect(shell).toHaveAttribute("data-keyboard-open", "true");
   await expect.poll(async () => (await shell.boundingBox())?.height).toBe(visibleHeight);
+  if (compactPhone) {
+    const composer = (await page.locator(".spec400-composer:visible").boundingBox())!;
+    const keyboardGap = visibleHeight - composer.y - composer.height;
+    expect(keyboardGap).toBeGreaterThanOrEqual(8);
+    expect(keyboardGap).toBeLessThanOrEqual(16);
+  }
   const send = page.getByRole("button", { name: "Send message" });
   const sendBox = (await send.boundingBox())!;
   expect(sendBox.y + sendBox.height).toBeLessThanOrEqual(visibleHeight + 1);
@@ -380,8 +388,14 @@ test("touch home keeps the greeting centered and the composer text inset", async
     input.boundingBox(),
     heading.boundingBox(),
   ]);
-  expect(text!.x - frame!.x).toBeGreaterThanOrEqual(20);
+  const width = page.viewportSize()!.width;
   const height = page.viewportSize()!.height;
+  const inset =
+    text!.x -
+    frame!.x +
+    (await input.evaluate((field) => Number.parseFloat(getComputedStyle(field).paddingLeft)));
+  if (width < 768 || (width < 1024 && height <= 500)) expect(inset).toBeCloseTo(16, 0);
+  else expect(inset).toBeGreaterThanOrEqual(20);
   expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
   expect(greeting!.y + greeting!.height).toBeLessThan(frame!.y);
 });

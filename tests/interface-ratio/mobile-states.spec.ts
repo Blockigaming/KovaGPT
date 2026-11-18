@@ -178,12 +178,10 @@ for (const theme of ["light", "dark"] as const) {
       await expect.poll(async () => (await shell.boundingBox())?.height).toBe(height);
       await expect(input).toHaveValue(draft);
       if (!saved) {
-        await expect
-          .poll(async () => {
-            const composer = (await page.locator(".spec400-composer").boundingBox())!;
-            return top + height - composer.y - composer.height;
-          })
-          .toBeLessThanOrEqual(8);
+        const composer = (await page.locator(".spec400-composer").boundingBox())!;
+        const keyboardGap = top + height - composer.y - composer.height;
+        expect(keyboardGap).toBeGreaterThanOrEqual(8);
+        expect(keyboardGap).toBeLessThanOrEqual(16);
       }
       await info.attach("keyboard-geometry", {
         body: JSON.stringify(

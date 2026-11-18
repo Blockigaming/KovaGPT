@@ -117,7 +117,8 @@ for (const theme of ["dark", "light"] as const) {
       await expect(input).toBeEnabled();
       await expect(pending).toHaveCount(0);
       await page.evaluate(() => document.fonts.ready);
-      if (viewport.width < 1024) await expect(input).not.toBeFocused();
+      if (phone) await expect(input).toBeFocused();
+      else await expect(input).not.toBeFocused();
       if (first) {
         const startupFrame = first;
         await expect(async () => compare(startupFrame, await frame(ready), visit)).toPass({
