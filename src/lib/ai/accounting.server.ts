@@ -74,10 +74,56 @@ export type Acquisition = { eventId: string } | { rejection: string };
 export async function getGenerationTokenHeadroom(input: {
   userId: string;
   plan: "free";
+  model?: CatalogModel;
   signal?: AbortSignal;
-}): Promise<{ tokenLimit: number; limitingQuota: "daily_tokens" | "monthly_tokens" }> {
+}): Promise<{
+  tokenLimit: number;
+  limitingQuota:
+    "daily_tokens" | "monthly_tokens" | "monthly_cost" | "weekly_cost" | "five_hour_cost";
+}> {
   const config = getAiRuntimeConfig();
   const db = client();
+  if (input.model) {
+    let query = db.rpc("kova_plan_cost_progress", { _user_id: input.userId, _plan: input.plan });
+    if (input.signal) query = query.abortSignal(input.signal);
+    const { data, error } = await query;
+    // Only a missing migration permits the older token-ledger fallback.
+    if (error && !["PGRST202", "42883"].includes(error.code))
+      throw new Error("usage_headroom_unavailable");
+    if (!error) {
+      if (!Array.isArray(data) || data.length !== 1) throw new Error("usage_headroom_unavailable");
+      const row = data[0];
+      const remaining = [
+        ["monthly_cost", row.month_used, row.monthly_allowance],
+        ["weekly_cost", row.weekly_used, row.weekly_allowance],
+        ["five_hour_cost", row.five_hour_used, row.five_hour_allowance],
+      ]
+        .map(([quota, used, allowance]) => {
+          if (
+            used == null ||
+            allowance == null ||
+            !Number.isFinite(Number(used)) ||
+            !Number.isFinite(Number(allowance)) ||
+            Number(used) < 0 ||
+            Number(allowance) < 0
+          )
+            throw new Error("usage_headroom_unavailable");
+          return { quota, available: Math.max(0, Number(allowance) - Number(used)) };
+        })
+        .sort((a, b) => a.available - b.available);
+      const rate = Math.max(...Object.values(input.model.pricePerMillion));
+      if (!Number.isFinite(rate) || rate <= 0) throw new Error("usage_headroom_unavailable");
+      // Conservatively size the complete request at the highest token rate.
+      // The atomic cost reservation still checks the actual input/output estimate.
+      return {
+        tokenLimit: Math.min(
+          Number.MAX_SAFE_INTEGER,
+          Math.floor((remaining[0].available * 1_000_000) / rate),
+        ),
+        limitingQuota: remaining[0].quota as "monthly_cost" | "weekly_cost" | "five_hour_cost",
+      };
+    }
+  }
   const now = new Date();
   const dayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();

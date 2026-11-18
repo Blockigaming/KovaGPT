@@ -35,6 +35,14 @@ function fixture(rows, options = {}) {
           global: {
             fetch: async (input, request) => {
               const url = new URL(input);
+              if (url.pathname === "/rest/v1/rpc/kova_plan_cost_progress") {
+                requests.push({ rpc: "kova_plan_cost_progress" });
+                assert.deepEqual(JSON.parse(request.body), { _user_id: owner, _plan: "free" });
+                assert.ok(request.signal);
+                return options.costError
+                  ? Response.json({ code: options.costError }, { status: 404 })
+                  : Response.json(options.costRows);
+              }
               assert.equal(url.pathname, "/rest/v1/ai_usage_events");
               assert.equal(
                 url.searchParams.get("select"),
@@ -96,7 +104,13 @@ function fixture(rows, options = {}) {
   });
   return {
     requests,
-    read: () => exports.getGenerationTokenHeadroom({ userId: owner, plan: "free", signal }),
+    read: () =>
+      exports.getGenerationTokenHeadroom({
+        userId: owner,
+        plan: "free",
+        model: options.model,
+        signal,
+      }),
   };
 }
 
@@ -142,4 +156,35 @@ test("failed, unbounded, inconsistent or malformed ledger reads fail closed", as
     [Array.from({ length: 501 }, () => event(1)), { changingCount: true }],
   ])
     await assert.rejects(fixture(rows, options).read(), /usage_headroom_unavailable/);
+});
+
+test("cost headroom uses the tightest private window and selected model pricing", async () => {
+  const model = { pricePerMillion: { input: 0.5, cachedInput: 0.05, output: 2 } };
+  const row = {
+    month_used: "0.25",
+    monthly_allowance: "2.13",
+    weekly_used: "0.05",
+    weekly_allowance: "0.50",
+    five_hour_used: "0.01",
+    five_hour_allowance: "0.03",
+  };
+  const f = fixture([event(500_000)], { model, costRows: [row] });
+  const result = await f.read();
+  assert.ok(result.tokenLimit >= 9999 && result.tokenLimit <= 10000);
+  assert.equal(result.limitingQuota, "five_hour_cost");
+  assert.deepEqual(f.requests, [{ rpc: "kova_plan_cost_progress" }]);
+  const exhausted = await fixture([], { model, costRows: [{ ...row, month_used: "2.13" }] }).read();
+  assert.equal(exhausted.tokenLimit, 0);
+  assert.equal(exhausted.limitingQuota, "monthly_cost");
+  for (const costRows of [
+    [],
+    [{ ...row, weekly_allowance: null }],
+    [{ ...row, month_used: "NaN" }],
+  ])
+    await assert.rejects(fixture([], { model, costRows }).read(), /usage_headroom_unavailable/);
+  await assert.rejects(
+    fixture([], { model, costError: "PGRST000" }).read(),
+    /usage_headroom_unavailable/,
+  );
+  assert.equal((await fixture([], { model, costError: "PGRST202" }).read()).tokenLimit, 10000);
 });

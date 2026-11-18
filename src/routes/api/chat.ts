@@ -1859,7 +1859,12 @@ export const Route = createFileRoute("/api/chat")({
             if (auth && callerTier === "free") {
               try {
                 freeHeadroom = await preflight.run("usage_headroom", (signal) =>
-                  getGenerationTokenHeadroom({ userId: auth!.userId, plan: "free", signal }),
+                  getGenerationTokenHeadroom({
+                    userId: auth!.userId,
+                    plan: "free",
+                    model: catalogModel,
+                    signal,
+                  }),
                 );
               } catch (error) {
                 if (error instanceof ChatPreflightError) throw error;

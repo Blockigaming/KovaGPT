@@ -162,8 +162,14 @@ test("requested: Share confirms only a copied public view-only snapshot; Activit
   await expect(header.getByRole("button")).toHaveCount(2);
   await header.getByRole("button", { name: "Activity", exact: true }).click();
   const activity = page.locator(".kova-conversation-outputs");
-  await expect(activity.getByRole("heading", { name: "Outputs", exact: true })).toBeVisible();
-  await expect(activity.getByRole("heading", { name: "Inputs", exact: true })).toBeVisible();
+  await expect(activity.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(activity.getByRole("button", { name: "Sources", exact: true })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   await expect(activity).toContainText("Actual-input.txt");
   await expect(activity.getByRole("region", { name: "Cloud browser", exact: true })).toHaveCount(0);
   await page.screenshot({ path: info.outputPath("chat-activity.png"), animations: "disabled" });

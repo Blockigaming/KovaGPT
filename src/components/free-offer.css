@@ -18,11 +18,11 @@
   color: #0369a1;
 }
 @media (max-width: 599px) {
-  .kova-mobile-conversation-tools .kova-free-offer {
+  .kova-topbar .kova-free-offer {
     min-width: 44px;
     padding-inline: 0;
   }
-  .kova-mobile-conversation-tools .kova-free-offer span {
+  .kova-topbar .kova-free-offer span {
     display: none;
   }
 }

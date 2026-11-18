@@ -19,8 +19,10 @@ export default defineConfig({
         ]
       : "**/interface-fit/interface-fit-audit.spec.ts",
   timeout: 60_000,
-  // Nine sizes per engine include controlled loading and retry scenarios.
-  globalTimeout: 720_000,
+  // The full nine-size audit has 666 checks, including controlled loading and
+  // retry scenarios. Allow slower CI engines to finish without relaxing any
+  // individual test deadline or retrying failed assertions.
+  globalTimeout: 1_500_000,
   workers: 3,
   retries: 0,
   outputDir: `test-results/interface-fit/${scope}-${engine ?? "all"}/screenshots`,
@@ -36,7 +38,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "node scripts/azure/local-preview.mjs --duration-ms=900000",
+    command: "node scripts/azure/local-preview.mjs --duration-ms=1620000",
     url: "http://127.0.0.1:4189/api/health",
     timeout: 20_000,
     reuseExistingServer: false,

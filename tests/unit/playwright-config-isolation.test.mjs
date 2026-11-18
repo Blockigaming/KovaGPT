@@ -162,10 +162,21 @@ test("deployed baseline evidence classifies observations truthfully", async () =
 
 test("dependency audit retries registry errors without weakening the gate", async () => {
   const workflow = await readRootFile(".github/workflows/ci.yml");
+  const audit = await readRootFile("scripts/security/dependency-audit.mjs");
+  const packageJson = JSON.parse(await readRootFile("package.json"));
 
   assert.match(workflow, /for attempt in 1 2 3/u);
-  assert.match(workflow, /npm audit --audit-level=high --omit=dev/u);
-  assert.match(workflow, /timeout --signal=TERM --kill-after=10s 210s npm audit/u);
+  assert.equal(
+    packageJson.scripts["audit:dependencies"],
+    "node scripts/security/dependency-audit.mjs",
+  );
+  assert.match(workflow, /timeout --signal=TERM --kill-after=10s 210s npm run audit:dependencies/u);
+  assert.match(
+    audit,
+    /spawnSync\("npm", \["audit", "--json", "--omit=dev", "--audit-level=high"\]/u,
+  );
+  assert.match(audit, /const manifest = verifyPicomatch\(\)/u);
+  assert.match(audit, /assert\.equal\(status\.unresolved\.length, 0,/u);
   assert.match(workflow, /if \[\[ "\$attempt" -eq 3 \]\]; then[\s\S]*?exit 1/u);
   assert.doesNotMatch(workflow, /name: Dependency audit[\s\S]{0,160}continue-on-error:\s*true/u);
 });

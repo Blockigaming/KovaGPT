@@ -10,6 +10,7 @@ FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 ENV NODE_ENV=development
 COPY package.json package-lock.json ./
+COPY vendor/picomatch ./vendor/picomatch
 RUN npm ci
 
 FROM node:24-bookworm-slim AS build

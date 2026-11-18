@@ -1,4 +1,3 @@
-import { PLAN_USAGE_FACTOR } from "./plan-usage-policy.mjs";
 /** Contextual paths, not a claim that every path is a separate root-cause article. */
 export const HELP_ENVIRONMENTS = Object.freeze([
   {
@@ -147,8 +146,8 @@ export function contextualHelp(faq, { environment, connection, plan, stage = "fi
     plan === "free"
       ? "Kova Free has very limited usage. All chat models have usage limits."
       : plan === "plus"
-        ? `Kova Plus has ${PLAN_USAGE_FACTOR.plus / PLAN_USAGE_FACTOR.free}× Free usage. All chat models have usage limits.`
-        : `Kova Pro has ${PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.free}× Free usage (${PLAN_USAGE_FACTOR.pro}× Plus), unlimited basic chat with Argon Lite, and limited advanced model usage.`;
+        ? "Kova Plus has expanded dynamic chat usage. All chat models have usage limits."
+        : "Kova Pro has the highest dynamic chat allowance. All chat models have usage limits.";
   const needsBrowser = /Troubleshooting|Account|Chat|Search|Files|Apps|Settings|Privacy/.test(
     faq.category,
   );

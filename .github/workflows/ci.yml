@@ -29,7 +29,7 @@ defaults:
 jobs:
   verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     env:
@@ -123,7 +123,9 @@ jobs:
         run: |
           set -u
           for attempt in 1 2 3; do
-            if timeout --signal=TERM --kill-after=10s 210s npm audit --audit-level=high --omit=dev; then
+            # npm audit remains authoritative except for the fingerprinted,
+            # regression-tested local Picomatch backport. All other high findings fail.
+            if timeout --signal=TERM --kill-after=10s 210s npm run audit:dependencies; then
               exit 0
             fi
             if [[ "$attempt" -eq 3 ]]; then
@@ -254,7 +256,7 @@ jobs:
   public-surface:
     if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     # Each viewport traverses the complete public catalog in both themes.
@@ -302,7 +304,7 @@ jobs:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && !cancelled()
     name: ${{ matrix.check_name }}
     needs: [verify, public-surface]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     # The tablet job runs three full browser projects on two workers.
@@ -408,7 +410,7 @@ jobs:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && !cancelled()
     name: Browser (phone)
     needs: [verify, browser]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require all browser shards to finish successfully
@@ -419,7 +421,7 @@ jobs:
   release-e2e:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) && !cancelled()
     needs: [verify, public-surface]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     # Keep all four release checks and allow the largest shard to finish and upload its report.
@@ -459,7 +461,7 @@ jobs:
   e2e-report:
     if: always() && (needs.release-e2e.result == 'success' || needs.release-e2e.result == 'failure') && !cancelled()
     needs: release-e2e
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -524,7 +526,7 @@ jobs:
     # when an unrelated unit test fails. A failed verify job still blocks merge.
     # A superseded, cancelled run must not queue another rehearsal.
     if: always() && needs.verify.outputs.run_database == 'true' && !cancelled()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout

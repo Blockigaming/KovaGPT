@@ -1,5 +1,4 @@
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
-import { PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
 
 const tiers = ["free", "plus", "pro"] as const;
 const rows = [
@@ -11,13 +10,9 @@ const rows = [
   },
   {
     label: "Usage",
-    values: [
-      "Very limited",
-      `${PLAN_USAGE_FACTOR.plus / PLAN_USAGE_FACTOR.free}× Free`,
-      `${PLAN_USAGE_FACTOR.pro / PLAN_USAGE_FACTOR.free}× Free (${PLAN_USAGE_FACTOR.pro}× Plus)`,
-    ],
+    values: ["Very limited", "Expanded dynamic usage", "Highest dynamic usage"],
   },
-  { label: "Basic chat", values: ["Limited", "Limited", "Unlimited with Argon Lite"] },
+  { label: "Basic chat", values: ["Limited", "Expanded", "Highest allowance"] },
   {
     label: "Advanced chat",
     values: ["Argon Medium, limited", "All seven models, limited", "All advanced models, limited"],

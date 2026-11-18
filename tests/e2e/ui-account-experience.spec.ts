@@ -19,6 +19,7 @@ async function prepare(page: import("@playwright/test").Page) {
               ...window,
               regularUsed: 12,
               thinkingUsed: 2,
+              costPercentUsed: window.id === "five_hour" ? 37 : 11,
             })),
             images: 1,
             uploads: 1,
@@ -69,10 +70,10 @@ test("Settings keeps a closed rail, shows percentage usage, and exposes editable
   await waitForKovaHydration(page);
   await expect(
     page.getByRole("progressbar", { name: "5-hour chat usage", exact: true }),
-  ).toHaveAttribute("aria-valuenow", "24");
+  ).toHaveAttribute("aria-valuenow", "37");
   await expect(
     page.getByRole("progressbar", { name: "Weekly chat usage", exact: true }),
-  ).toHaveAttribute("aria-valuenow", "3");
+  ).toHaveAttribute("aria-valuenow", "11");
   await expect(page.getByRole("progressbar")).toHaveCount(2);
   await expect(page.getByText(/Usage percentages are estimates/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Close settings", exact: true })).toBeVisible();

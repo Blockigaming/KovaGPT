@@ -28,14 +28,28 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   const freePlan = page.locator('[data-pricing-plan="free"]');
   const plusPlan = page.locator('[data-pricing-plan="plus"]');
   const proPlan = page.locator('[data-pricing-plan="pro"]');
+  const benefitLists = [freePlan, plusPlan, proPlan].map((plan) => plan.getByRole("list"));
+  const benefitCounts = await Promise.all(
+    benefitLists.map((list) => list.getByRole("listitem").count()),
+  );
+  expect(benefitCounts[0]).toBeGreaterThan(0);
+  expect(new Set(benefitCounts).size).toBe(1);
+  for (const list of benefitLists) {
+    await expect(list).toHaveCSS("row-gap", "12px");
+    await expect(list).toHaveCSS("border-radius", "18px");
+  }
   await expect(freePlan.getByText("Very limited chat usage", { exact: true })).toBeVisible();
-  await expect(plusPlan.getByText("5× the usage of Free", { exact: true })).toBeVisible();
-  await expect(proPlan.getByText("100× the usage of Free", { exact: true })).toBeVisible();
-  await expect(proPlan.getByText("20× the usage of Plus", { exact: true })).toBeVisible();
+  await expect(plusPlan.getByText("Expanded dynamic chat usage", { exact: true })).toBeVisible();
   await expect(
-    proPlan.getByText("Unlimited basic chat with Argon Lite", { exact: true }),
+    proPlan.getByText("Organize related chats in Projects", { exact: true }),
   ).toBeVisible();
-  await expect(proPlan.getByText("Advanced model usage is limited", { exact: true })).toBeVisible();
+  await expect(
+    proPlan.getByText("Find saved files and images in Library", { exact: true }),
+  ).toBeVisible();
+  await expect(proPlan.getByText("Highest dynamic chat allowance", { exact: true })).toBeVisible();
+  await expect(
+    proPlan.getByText("Usage limits apply to all chat models", { exact: true }),
+  ).toBeVisible();
   for (const plan of [freePlan, plusPlan])
     await expect(
       plan.getByText("Usage limits apply to all chat models", { exact: true }),
@@ -46,8 +60,8 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   );
   const comparison = page.getByRole("region", { name: "Plan comparison", exact: true });
   await expect(comparison).toBeVisible();
-  await expect(comparison).toContainText("100× Free (20× Plus)");
-  await expect(comparison).toContainText("Unlimited with Argon Lite");
+  await expect(comparison).toContainText("Highest dynamic usage");
+  await expect(comparison).toContainText("Highest allowance");
   if (testInfo.project.name === "desktop-1440x900") {
     await expect(
       comparison.getByRole("table", { name: "KovaGPT Free, Plus, and Pro plan comparison" }),

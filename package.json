@@ -89,7 +89,10 @@
     "public:audit": "node scripts/publication/audit.mjs --audit-only",
     "public:ready": "node scripts/publication/audit.mjs",
     "public:render": "node scripts/publication/render.mjs",
-    "public:test": "node --test tests/unit/publication-contract.test.mjs tests/unit/capability-truth.test.mjs tests/unit/public-foundation.test.mjs"
+    "public:test": "node --test tests/unit/publication-contract.test.mjs tests/unit/capability-truth.test.mjs tests/unit/public-foundation.test.mjs",
+    "audit:dependencies": "node scripts/security/dependency-audit.mjs",
+    "prebuild": "node scripts/security/verify-picomatch.mjs",
+    "prebuild:dev": "node scripts/security/verify-picomatch.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.50.0",
@@ -129,7 +132,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "docx": "9.7.1",
-    "fast-xml-parser": "5.11.1",
+    "fast-xml-parser": "5.12.1",
     "fflate": "0.8.3",
     "gifenc": "1.0.3",
     "h3-v2": "npm:h3@^2.0.1-rc.20",
@@ -149,7 +152,7 @@
     "rehype-katex": "7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "6.0.0",
-    "seroval": "1.6.9",
+    "seroval": "1.6.11",
     "sonner": "^2.0.7",
     "srvx": "^0.11.22",
     "stripe": "22.6.0",
@@ -157,7 +160,8 @@
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
     "vite-tsconfig-paths": "^6.0.2",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "picomatch": "file:vendor/picomatch"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -191,6 +195,7 @@
     "undici": "8.12.2",
     "fast-uri": "3.1.9",
     "js-yaml": "4.3.2",
-    "sharp": "0.35.5"
+    "sharp": "0.35.5",
+    "picomatch": "$picomatch"
   }
 }
