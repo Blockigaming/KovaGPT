@@ -3,7 +3,7 @@ import { coreFixture } from "./core-app-fixture";
 import { owner, chatA } from "./actual-app-fixture";
 import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar } from "./current-ui";
+import { revealSidebar, usesSidebarDrawer } from "./current-ui";
 
 test("response is unboxed with five ordered actions, public sharing, and a bookmark that saves and removes", async ({
   page,
@@ -177,7 +177,7 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
     .getByRole("button", { name: "Options for Composer review chat", exact: true })
     .filter({ visible: true });
   await options.click();
-  if (page.viewportSize()!.width >= 1024) {
+  if (!(await usesSidebarDrawer(page))) {
     const menu = await page.getByRole("menu").boundingBox();
     const sidebar = await page.locator("#kova-primary-navigation").boundingBox();
     expect(menu!.x).toBeGreaterThanOrEqual(sidebar!.x + sidebar!.width);
@@ -217,7 +217,9 @@ test("chat deletion has a five second Undo window and never writes a Trash copy"
   await expect(page.getByRole("button", { name: "Undo", exact: true })).toHaveCount(0);
 });
 
-test("activity shows default sections and adds recorded browser and steps", async ({ page }) => {
+test("activity shows default sections and steps while hiding completed browser sessions", async ({
+  page,
+}) => {
   await coreFixture(page, "dark", "free", {
     preserveStorageOnReload: true,
     savedMessages: [
@@ -250,7 +252,7 @@ test("activity shows default sections and adds recorded browser and steps", asyn
   await expect(panel).toHaveCSS("border-top-width", "0px");
   await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Sources", exact: true })).toBeVisible();
-  await expect(panel.getByRole("heading", { name: "Cloud browser", exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Cloud browser", exact: true })).toHaveCount(0);
   await expect(panel.getByRole("button", { name: "Steps", exact: true })).toBeVisible();
   await expect(panel.getByText("Read the supplied notes", { exact: true })).toBeVisible();
   if (!desktop) {

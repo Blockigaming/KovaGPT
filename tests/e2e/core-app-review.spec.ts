@@ -7,6 +7,7 @@ import {
   chooseSettingsSection,
   revealSidebar,
   dismissMobileSidebar,
+  usesSidebarDrawer,
 } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
@@ -59,7 +60,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
 }, info) => {
   test.setTimeout(60_000);
   const confirmSidebarState = async () => {
-    if (page.viewportSize()!.width < 1024) {
+    if (await usesSidebarDrawer(page)) {
       const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
       // Navigation can already dismiss the drawer before the destination mounts.
       if (await drawer.isVisible()) await dismissMobileSidebar(page);

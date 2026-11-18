@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { fixture, owner, chatA, planUsageFixture } from "./actual-app-fixture";
 import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { composerResourceTrigger, usesSidebarDrawer } from "./current-ui";
 import { CHAT_USAGE_WINDOWS } from "../../src/lib/plan-usage-policy.mjs";
 
 test("a signed-out visitor must choose login or signup", async ({ page }) => {
@@ -38,8 +39,11 @@ test("Free has a blue Thinking toggle and Voice switches to Send in a quiet comp
   await expect(page.getByTestId("send-button")).toBeVisible();
   await expect(page.getByTestId("voice-button")).toBeHidden();
   await expect(input).toHaveCSS("outline-style", "none");
-  await expect(page.getByRole("group", { name: "Chat resources" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Files", exact: true })).toBeVisible();
+  const files = await composerResourceTrigger(page, "Files");
+  await expect(files).toBeVisible();
+  await files.click();
+  await expect(page.getByRole("dialog", { name: "Choose files", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await input.fill("");
   await expect(page.getByTestId("voice-button")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -49,7 +53,7 @@ test("Free has a blue Thinking toggle and Voice switches to Send in a quiet comp
   });
 });
 test("sidebar resizes, customizes, scrolls and matches account popup insets", async ({ page }) => {
-  test.skip(page.viewportSize()!.width < 1024, "Desktop resize control");
+  test.skip(await usesSidebarDrawer(page), "Desktop resize control");
   await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
   await page.goto("/");
   await waitForKovaHydration(page);
@@ -330,7 +334,9 @@ test("the conversation checklist collects sources, outputs and real browser meta
     .fill("Review the browser activity fixture");
   await page.getByTestId("send-button").click();
   await expect(page.getByText("Fixture browser session active.", { exact: true })).toBeVisible();
+  const previewRequest = page.waitForRequest("**/api/browser/preview/fixture-session");
   await page.getByRole("button", { name: "Activity", exact: true }).click();
+  expect((await previewRequest).headers()["x-kova-owner"]).toBe(owner);
   const panel = page.locator(".kova-conversation-outputs");
   await expect(panel.getByRole("button", { name: "Outputs", exact: true })).toHaveAttribute(
     "aria-expanded",
@@ -351,7 +357,10 @@ test("the conversation checklist collects sources, outputs and real browser meta
   await expect(browser).toContainText("example.com");
   const preview = browser.getByRole("img", { name: "Current cloud browser preview" });
   await expect(preview).toBeVisible();
-  await expect(preview).toHaveAttribute("src", "/api/browser/preview/fixture-session");
+  await expect(preview).toHaveAttribute("src", /^blob:/);
+  await expect
+    .poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBe(400);
   await page.screenshot({
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,

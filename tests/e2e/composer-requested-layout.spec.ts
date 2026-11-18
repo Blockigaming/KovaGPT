@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { fixture, functionNames, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openComposerAddMenu, usesSidebarDrawer } from "./current-ui";
+import { composerResourceTrigger, openComposerAddMenu, usesSidebarDrawer } from "./current-ui";
 
 async function start(page: Parameters<typeof fixture>[0], empty = false) {
   await fixture(page, "dark", true);
@@ -22,15 +22,12 @@ async function openResource(
   page: Parameters<typeof fixture>[0],
   name: "Choose project" | "Files" | "Plugins",
 ) {
-  const tray = page.locator(".kova-composer-tray");
-  if (await tray.isVisible()) {
-    const trigger = tray.getByRole("button", { name, exact: true });
-    await trigger.click();
-    return trigger;
-  }
-  const menu = await openComposerAddMenu(page);
-  await menu.getByRole("button", { name, exact: true }).click();
-  return page.getByRole("button", { name: "Attach", exact: true });
+  const trigger = await composerResourceTrigger(page, name);
+  const inAttachMenu = await trigger.evaluate(
+    (element) => !!element.closest(".spec400-attach-menu"),
+  );
+  await trigger.click();
+  return inAttachMenu ? page.getByRole("button", { name: "Attach", exact: true }) : trigger;
 }
 
 test("requested: topbar, prompt insets and exact attachment actions", async ({ page }, info) => {

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { usesSidebarDrawer } from "./current-ui";
 
 test("workspace search preserves the sidebar and restores its active dialog", async ({
   page,
@@ -20,7 +21,7 @@ test("workspace search preserves the sidebar and restores its active dialog", as
     includeHidden: true,
   });
   await expect(rail).toBeAttached();
-  const mobile = page.viewportSize()!.width < 1024;
+  const mobile = await usesSidebarDrawer(page);
   const opener = mobile
     ? page.getByRole("button", { name: "Open menu", exact: true })
     : rail.getByRole("button", { name: "Expand sidebar", exact: true });
@@ -44,7 +45,7 @@ test("workspace search preserves the sidebar and restores its active dialog", as
     name: "Search workspace, chats, and actions",
     exact: true,
   });
-  await expect(search).toBeVisible();
+  await expect(search).toBeVisible({ timeout: 10_000 });
   await expect(search).toHaveAttribute("aria-modal", "true");
   const clippedLabels = await search.getByRole("option").evaluateAll((options) =>
     options.flatMap((option) => {

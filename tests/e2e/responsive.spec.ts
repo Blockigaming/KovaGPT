@@ -6,6 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 import { waitForKovaHydration } from "./hydration";
+import { composerResourceTrigger, usesSidebarDrawer } from "./current-ui";
 
 /**
  * Responsive smoke suite. Runs against every viewport project in
@@ -73,7 +74,7 @@ test.describe("KovaGPT responsive shell", () => {
     });
     await page.goto("/");
     await waitForKovaHydration(page);
-    await page.getByRole("button", { name: "Choose project", exact: true }).click();
+    await (await composerResourceTrigger(page, "Choose project")).click();
     const picker = page.getByRole("dialog", { name: "Choose project", exact: true });
     await expect(picker.getByRole("alert")).toHaveText("Your projects could not be loaded.");
     await expect(picker.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
@@ -84,7 +85,7 @@ test.describe("KovaGPT responsive shell", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const width = page.viewportSize()?.width ?? 0;
-    const isMobileLayout = width < 1024;
+    const isMobileLayout = await usesSidebarDrawer(page);
 
     if (isMobileLayout) {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();

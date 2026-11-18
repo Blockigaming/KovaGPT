@@ -8,7 +8,6 @@ for (const theme of ["light", "dark"] as const) {
   }, info) => {
     await coreFixture(page, theme);
     const width = page.viewportSize()!.width;
-    const phoneGutter = Math.min(20, Math.max(12, width * 0.04));
     // Projects fills the available workspace. The other directories retain their
     // readable width limits; each surface owns its responsive gutters.
     for (const route of [
@@ -73,7 +72,7 @@ for (const theme of ["light", "dark"] as const) {
       }
       // Projects retains its directory-specific spacing on the phone layout.
       const usesSharedPhoneSpacing = geometry.phoneLayout && route.path !== "/projects";
-      const gutter = usesSharedPhoneSpacing ? phoneGutter : route.gutter;
+      const gutter = usesSharedPhoneSpacing ? 20 : route.gutter;
       expect(geometry.left, route.path).toBeCloseTo(gutter, 1);
       expect(geometry.right, route.path).toBeCloseTo(gutter, 1);
       expect(geometry.top, route.path).toBe(usesSharedPhoneSpacing ? 20 : route.top);

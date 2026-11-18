@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { fixture as appFixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
-import { revealSidebar } from "./current-ui";
+import { revealSidebar, usesSidebarDrawer } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1728] as const;
@@ -99,6 +99,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
   test("signed-in desktop navigation keeps chat and requested destinations reachable", async ({
     page,
   }) => {
+    test.skip(await usesSidebarDrawer(page), "Persistent navigation needs a desktop pointer");
     await page.setViewportSize({ width: 1440, height: 900 });
     await appFixture(page, "dark", true);
     await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -129,6 +130,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
   });
 
   test("collapsed desktop navigation can expand to reach Library", async ({ page }) => {
+    test.skip(await usesSidebarDrawer(page), "Collapsed rail needs a desktop pointer");
     await page.setViewportSize({ width: 1024, height: 768 });
     await appFixture(page, "dark", true);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
@@ -225,7 +227,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
         await expect(
           page.getByText("Think through a question, shape an idea, or get a polished first draft."),
         ).toHaveCount(0);
-        if (width < 1024) {
+        if (await usesSidebarDrawer(page)) {
           await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);
           await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
         } else {
