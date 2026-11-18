@@ -1,6 +1,12 @@
 /* Apply the measured desktop → narrow relationships to Kova's own geometry.
    The desktop baseline and evidence are in docs/design/desktop-mobile-ratios.md.
    Keep this file mobile-only: reflow is not a second visual theme. */
+.kova-phone-resource-actions,
+.kova-phone-more-destination,
+.spec400-inline-project-context[data-desktop-tray="true"] {
+  display: none;
+}
+
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
   .kova-assistant[data-ui="modern"],
   .kova-phone-workspace,
@@ -15,13 +21,24 @@
     animation: none;
   }
 
-  /* The reference header and heading retain their desktop size. */
+  /* Keep the larger toolbar in conversations where it carries chat actions. */
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
     min-height: calc(64px + var(--safe-top, 0px));
   }
 
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
     min-height: 63px;
+  }
+
+  .kova-assistant[data-compact-chat-home] .kova-topbar:not(.kova-desktop-topbar) {
+    min-height: calc(56px + var(--safe-top, 0px)) !important;
+    border-bottom-color: transparent !important;
+  }
+
+  .kova-assistant[data-compact-chat-home]
+    .kova-topbar:not(.kova-desktop-topbar)
+    .kova-topbar-inner {
+    min-height: 55px;
   }
 
   .kova-assistant .kova-empty-chat .kova-greeting {
@@ -31,7 +48,7 @@
 
   .kova-assistant .kova-empty-chat .kova-greeting h1 {
     font-family: var(--font-reading, Georgia, serif);
-    font-size: 32px;
+    font-size: 1.75rem;
     font-weight: 400;
     line-height: 1.2;
     text-align: center;
@@ -52,14 +69,47 @@
     margin-block-start: 0;
   }
 
-  /* Kova's stacked home composer corresponds to Work: input 52 → 26 (×0.5),
-     radius/padding/type unchanged. Preserve the separate 44px touch minimum. */
+  /* A quiet two-row dock leaves the primary actions available at touch size. */
   .kova-assistant .kova-empty-composer .spec400-composer {
-    --chat-composer-corner: 34px;
+    --chat-composer-corner: 30px;
+    --composer-text-inset: 4px;
     min-height: 0 !important;
-    padding: 16px !important;
-    gap: 12px;
+    padding: 8px 10px !important;
+    gap: 4px;
     border-radius: var(--chat-composer-corner);
+  }
+
+  .kova-assistant[data-compact-chat-home] .kova-empty-composer {
+    padding-block-end: max(12px, var(--safe-bottom));
+  }
+
+  .kova-assistant[data-compact-chat-home] .kova-empty-composer .kova-composer-tray {
+    display: none;
+  }
+
+  .kova-assistant[data-compact-chat-home]
+    .spec400-inline-project-context[data-desktop-tray="true"] {
+    display: flex;
+  }
+
+  .kova-phone-resource-actions {
+    display: grid;
+    gap: 2px;
+    margin-block-start: 6px;
+    padding-block-start: 6px;
+    border-block-start: 1px solid var(--border);
+  }
+
+  .kova-phone-resource-actions .kova-composer-action {
+    min-height: 44px;
+  }
+
+  .kova-assistant .kova-empty-composer .spec400-composer-toolbar {
+    margin-block-start: 0;
+  }
+
+  .kova-home-startup .spec400-composer-input {
+    color: var(--muted-foreground);
   }
 
   .kova-assistant .kova-empty-composer .spec400-input-region {
@@ -246,6 +296,22 @@
       calc(var(--sidebar-expanded, 280px) * 13 / 17),
       calc(100vw - 24px)
     );
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-destinations {
+    display: grid;
+    gap: 2px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-destinations > a {
+    width: 100%;
+    border: 0;
+  }
+
+  .kova-phone-more-destination {
+    display: block;
   }
 
   /* Intrinsic popover geometry stays the same; collision handling/scrolling

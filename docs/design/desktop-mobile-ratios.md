@@ -14,26 +14,27 @@ For a comparable scalar property:
 
 For structural changes, apply the behavior instead: fewer columns, a toolbar wrapping, a sidebar becoming an overlay, or a dialog filling the viewport. A width measured at one viewport is not a universal percentage.
 
-Example: the reference home heading is 24 px at both measured widths, so its font-size ratio is 1. If Kova's rendered desktop heading is 32 px, the equivalent narrow heading is 32 px. Copying the reference's absolute 24 px would change Kova's design. Keep accessibility constraints separate: a smaller reference control is not permission to reduce Kova's 44 px touch targets, and editable mobile fields must retain their legibility and keyboard behavior.
+Use the measured ratios as a starting point. The owner's latest review prioritizes the overall space and hierarchy of the compact mobile chat. Kova uses its own typography and 44 px touch targets alongside a smaller greeting and reduced chrome on the empty phone chat.
 
 ## Implemented mobile transformations
 
 All product changes are scoped to phone widths below 768 px and short coarse-pointer viewports below 1024 px. Desktop remains the source of Kova's visual design. `phone-equivalence.css` resolves the later overrides that previously redesigned mobile components. The other interface behaviors already present—overlay navigation, reflowed toolbars, local scrolling, keyboard-aware composer, and fullscreen search—remain part of the verification suite.
 
-| Correspondence                  | Reference desktop → narrow                                        | Kova implementation                                                                                          |
-| ------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Home greeting                   | Type, weight, family and alignment retained                       | Keep Kova's 32/38.4 serif heading, weight 400, centered                                                      |
-| Stacked home / Work composer    | Text area 52 → 26; padding 15/18/16 and radius 28 unchanged       | Text area 68 → 34; Kova padding 16 and radius 34 retained                                                    |
-| Stacked composer total height   | 127 → 101 (0.795)                                                 | Approximately 165 → 132 (0.800); the 44 px phone control minimum accounts for the difference                 |
-| Conversation composer           | One row → two, readable type and corners retained                 | Existing two-row phone structure retained; no aggregate height multiplier                                    |
-| Header                          | 52 → 52                                                           | Kova 64 → 64, plus device safe area                                                                          |
-| Navigation                      | Docked 340 → overlay 260                                          | Multiply the configured Kova rail width by 13/17, clamp to viewport, retain 44 px targets                    |
-| Model menu                      | Intrinsic width and radius unchanged, collision-aware positioning | Kova 282 px / 18 px retained; viewport clamp and internal scrolling                                          |
-| Response text, lists and quotes | Same typography, spacing and indentation                          | Restore 16/28 body, desktop heading scale, list and quote indentation                                        |
-| Code horizontal inset           | 20 → 16 (0.8)                                                     | Kova 16 → 12.8; text size, vertical inset and local scrolling retained                                       |
-| Page headings                   | Type retained                                                     | Kova's 28/36 management, 30/37.5 catalog, 32/38 Images, 28/33.6 Settings headings                            |
-| Library                         | Toolbar reflows; tabs scroll; card grid loses columns             | Keep 14/20 tabs, 8 px gaps, 12 px tab insets, round pills, 32 px page gutters; remove extra phone-only frame |
-| Connections                     | Fewer columns, same card internals                                | One column; retain Kova padding 16, radius 22, gap 10 and footer controls                                    |
+| Correspondence                  | Reference desktop → narrow                                        | Kova implementation                                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Home greeting                   | Type, weight, family and alignment retained                       | Kova's centered serif heading goes from 32 px on desktop to 28 px on phones                                                              |
+| Empty chat composer             | Prompt and tools in one compact frame on a narrow viewport        | Text area 68 → 34, with 44 px controls, 8 px vertical padding and 30 px corners                                                          |
+| Empty composer total height     | 127 → 101 in the signed-in stacked reference                      | Approximately 165 → 100 on an empty phone chat. Short, multiline, and attached states can reflow                                         |
+| Conversation composer           | One row → two, readable type and corners retained                 | Existing two-row phone structure retained; no aggregate height multiplier                                                                |
+| Header                          | The reference keeps a compact header at both widths               | Kova 64 → 56 on empty phone chat, with no divider and support for device safe areas                                                      |
+| Chat shortcuts and tools        | Sidebar destinations move to the drawer                           | Phone chat home uses the drawer for Projects, Library, and Connections. The composer + menu includes Choose project, Files, and Plugins. |
+| Navigation                      | Docked 340 → overlay 260                                          | Multiply the configured Kova rail width by 13/17, clamp to viewport, retain 44 px targets                                                |
+| Model menu                      | Intrinsic width and radius unchanged, collision-aware positioning | Kova 282 px / 18 px retained; viewport clamp and internal scrolling                                                                      |
+| Response text, lists and quotes | Same typography, spacing and indentation                          | Restore 16/28 body, desktop heading scale, list and quote indentation                                                                    |
+| Code horizontal inset           | 20 → 16 (0.8)                                                     | Kova 16 → 12.8; text size, vertical inset and local scrolling retained                                                                   |
+| Page headings                   | Type retained                                                     | Kova's 28/36 management, 30/37.5 catalog, 32/38 Images, 28/33.6 Settings headings                                                        |
+| Library                         | Toolbar reflows; tabs scroll; card grid loses columns             | Keep 14/20 tabs, 8 px gaps, 12 px tab insets, round pills, 32 px page gutters; remove extra phone-only frame                             |
+| Connections                     | Fewer columns, same card internals                                | One column; retain Kova padding 16, radius 22, gap 10 and footer controls                                                                |
 
 ### Matching the composer state
 
@@ -49,7 +50,7 @@ The initial compact **Chat** reference (52 → 87 px) is not the corresponding s
 | Input text            | 16/26                       | 16/26     | 1                                       |
 | Heading               | 24/28.8                     | 24/28.8   | 1                                       |
 
-Only corresponding properties are multiplied. Available width, wrapped text height, and row counts are layout constraints. Kova's existing phone destinations are retained when there is no direct reference counterpart. Browser-zoom observations do not establish portrait-phone vertical placement or real keyboard acceptance.
+Available width, wrapped text height, and row counts are layout constraints. Management page tabs and the chat drawer provide access to Kova's phone destinations. Browser-zoom observations do not establish portrait-phone vertical placement or real keyboard acceptance.
 
 ## First paint and available space
 

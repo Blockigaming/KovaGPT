@@ -25,7 +25,13 @@ for (const theme of ["light", "dark"] as const) {
       !(await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches));
     await expect(composer).toHaveCSS("display", "flex");
     const compactHeight = (await composer.boundingBox())!.height;
-    expect(compactHeight).toBeGreaterThanOrEqual(128);
+    const phone = await page.evaluate(
+      () =>
+        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches,
+    );
+    expect(compactHeight).toBeGreaterThanOrEqual(phone ? 92 : 128);
+    if (phone) expect(compactHeight).toBeLessThanOrEqual(108);
 
     // This text fits the full expanded row but wraps the narrow desktop slot.
     // A height-based toggle would alternate between those two layouts forever.

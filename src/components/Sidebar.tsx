@@ -1831,6 +1831,17 @@ export function Sidebar({
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
                   : null}
+                {availableShortcuts
+                  .filter(
+                    (item) =>
+                      ["library", "projects", "apps"].includes(item.id) &&
+                      !railShortcuts.includes(item.id),
+                  )
+                  .map((item) => (
+                    <div key={item.id} className="kova-phone-more-destination">
+                      {navLink(item.to, item.label, SHORTCUT_ICONS[item.id])}
+                    </div>
+                  ))}
                 {signedIn ? (
                   <button
                     type="button"

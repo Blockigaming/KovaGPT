@@ -1,6 +1,5 @@
 import { AudioLines, Folder, LibraryBig, Mic, Monitor, PanelLeft, Plug, Plus } from "lucide-react";
 import { HomeChatFrame } from "@/components/HomeChatStarters";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { DEFAULT_SIDEBAR_LAYOUT } from "@/lib/sidebar-layout.mjs";
 import type { CSSProperties } from "react";
 
@@ -12,6 +11,7 @@ export function HomeChatStartup() {
       className="kova-assistant kova-home-startup flex h-dvh w-full overflow-hidden bg-background"
       data-ui="modern"
       data-kova-home-startup=""
+      data-compact-chat-home="true"
       aria-hidden="true"
       inert
     >
@@ -78,7 +78,6 @@ export function HomeChatStartup() {
             </div>
           </div>
         </HomeChatFrame>
-        <PhoneNavigation pathname="/" inactive />
       </div>
     </div>
   );

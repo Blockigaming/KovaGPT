@@ -10,17 +10,19 @@ async function frame(shell: Locator) {
     heading: (await shell.locator(".kova-greeting h1").boundingBox())!,
     composer: (await shell.locator(".spec400-composer").boundingBox())!,
     sidebar: await shell.locator(".kova-sidebar").boundingBox(),
-    navigation: await shell.locator(".kova-phone-navigation").boundingBox(),
   };
 }
 
 type HomeFrame = Awaited<ReturnType<typeof frame>>;
 
-function checkOpeningLayout(first: HomeFrame, width: number) {
+function checkOpeningLayout(
+  first: HomeFrame,
+  { width, height }: { width: number; height: number },
+) {
   if (width < 1024) expect(first.sidebar).toBeNull();
   if (width >= 768) return;
-  expect(first.navigation).not.toBeNull();
   expect(first.composer.width).toBeCloseTo(width - 32, 0);
+  expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
   const center = first.heading.y + first.heading.height / 2;
   const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;
   expect(Math.abs(center - freeSpaceCenter)).toBeLessThanOrEqual(8);
@@ -55,7 +57,7 @@ for (const theme of ["dark", "light"] as const) {
     await expect(pending).toHaveAttribute("inert", "");
     await expect(input).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
-    checkOpeningLayout(await frame(pending), page.viewportSize()!.width);
+    checkOpeningLayout(await frame(pending), page.viewportSize()!);
   });
 
   // Use a fresh browser profile for successful loading. A previously aborted
@@ -90,7 +92,7 @@ for (const theme of ["dark", "light"] as const) {
         await expect(input).toHaveCount(0);
         await page.evaluate(() => document.fonts.ready);
         first = await frame(pending);
-        checkOpeningLayout(first, viewport.width);
+        checkOpeningLayout(first, viewport);
         if (capture && visit === "first interactive load")
           await page.screenshot({ path: info.outputPath("before-interactive.png") });
       } finally {

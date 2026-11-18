@@ -59,7 +59,9 @@ test("composer and attachment menu stay reachable on narrow screens", async ({ p
   await expect(sheet).toBeHidden();
 });
 
-test("phone workspace tabs sit below the composer and navigate between pages", async ({ page }) => {
+test("the single phone composer and drawer retain every workspace destination and the draft", async ({
+  page,
+}) => {
   const viewport = page.viewportSize()!;
   test.skip(viewport.width >= 768 || viewport.height <= 500, "portrait phone layout");
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -68,36 +70,33 @@ test("phone workspace tabs sit below the composer and navigate between pages", a
   const tabs = page.getByRole("navigation", { name: "Mobile workspace" });
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(composer).toBeInViewport({ ratio: 1 });
-  await expect(tabs.getByRole("link", { name: "Chat", exact: true })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  const [composerBox, tabBox] = await Promise.all([composer.boundingBox(), tabs.boundingBox()]);
-  expect(composerBox!.y).toBeGreaterThan(viewport.height / 2);
-  expect(composerBox!.y + composerBox!.height).toBeLessThanOrEqual(tabBox!.y);
-  expect(tabBox!.y + tabBox!.height).toBeCloseTo(viewport.height, 0);
+  await expect(tabs).toHaveCount(0);
+  await expect(page.locator(".kova-composer-tray")).toBeHidden();
+  const box = (await page.locator(".spec400-composer:visible").boundingBox())!;
+  expect(viewport.height - box.y - box.height).toBeLessThanOrEqual(24);
   await composer.fill("Keep this draft while I change pages");
 
   for (const name of ["Projects", "Library", "Connections"]) {
-    const destination = tabs.getByRole("link", { name, exact: true });
-    const hitTarget = await destination.boundingBox();
-    expect(Math.min(hitTarget!.width, hitTarget!.height)).toBeGreaterThanOrEqual(44);
-    await destination.tap();
-    await expect(destination).toHaveAttribute("aria-current", "page");
+    await page.getByRole("button", { name: "Open menu", exact: true }).tap();
+    const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+    const destination = drawer.getByRole("link", { name, exact: true });
+    expect((await destination.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    if (name === "Library") {
+      await destination.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("heading", { name, exact: true, level: 1 })).toBeFocused();
+    } else {
+      await destination.tap();
+    }
     await expect(page.getByRole("main")).toBeVisible();
+    await expect(tabs.getByRole("link", { name, exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await expectNoPageOverflow(page);
+    await tabs.getByRole("link", { name: "Chat", exact: true }).tap();
+    await expect(composer).toHaveValue("Keep this draft while I change pages");
   }
-
-  const libraryTab = tabs.getByRole("link", { name: "Library", exact: true });
-  await libraryTab.focus();
-  await page.keyboard.press("Enter");
-  await expect(
-    page
-      .getByRole("heading", { name: "Library", exact: true, level: 1 })
-      .and(page.locator(":focus")),
-  ).toBeVisible();
-  await tabs.getByRole("link", { name: "Chat", exact: true }).tap();
-  await expect(composer).toHaveValue("Keep this draft while I change pages");
 });
 
 test("mobile public header exposes the app and opens its menu without moving the article", async ({

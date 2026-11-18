@@ -73,7 +73,6 @@ import {
   type PendingAttachment,
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { PhoneNavigation } from "@/components/PhoneNavigation";
 import { HomeWelcome } from "@/components/HomeChatStarters";
 import DesktopChatToolbar from "@/components/DesktopChatToolbar";
 
@@ -3243,6 +3242,7 @@ function KovaGPT() {
   return (
     <div
       data-sidebar-ready={sidebarReady && isLoaded}
+      data-compact-chat-home={showEmptyChat || undefined}
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       data-ui="modern"
     >
@@ -3569,9 +3569,6 @@ function KovaGPT() {
           </Suspense>
           <div id="chat-attachment-preview-dock" className="kova-attachment-preview-dock" />
         </div>
-        {showEmptyChat && !tempChat && (
-          <PhoneNavigation pathname="/" inactive={sidebarOpen || settingsOpen} />
-        )}
       </main>
 
       <Suspense fallback={null}>

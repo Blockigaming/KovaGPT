@@ -30,6 +30,7 @@ import {
   Camera,
   BookOpen,
   Boxes,
+  ChevronLeft,
   ChevronRight,
   MessageSquare,
   Search,
@@ -441,6 +442,9 @@ export function ChatInput({
     "keyboard",
   );
   const [utilityMenu, setUtilityMenu] = useState<"files" | "plugins" | null>(null);
+  const [resourceSection, setResourceSection] = useState<"files" | "plugins" | null>(null);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+  const resourceBackRef = useRef<HTMLButtonElement>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [libraryGrid, setLibraryGrid] = useState(false);
   const [librarySort, setLibrarySort] = useState<"recent" | "name">("recent");
@@ -873,6 +877,18 @@ export function ChatInput({
     }
   };
 
+  const openProjectPicker = (
+    startChat: boolean,
+    trigger: HTMLElement | null,
+    anchor: HTMLElement | null = composerAnchorRef.current,
+  ) => {
+    projectTriggerRef.current = trigger;
+    projectAnchorRef.current = anchor;
+    setStartProjectChat(startChat);
+    projectReturnUrlRef.current = window.location.href;
+    setProjectPickerOpen(true);
+  };
+
   const selectSlashCommand = (command: SlashCommand, trigger: HTMLElement | null) => {
     if (command === "model") {
       setSlashModels(true);
@@ -893,13 +909,7 @@ export function ChatInput({
       const study = COMPOSER_TOOLS.find((tool) => tool.id === "study");
       if (study && onToolSelect) chooseTool(study);
     }
-    if (command === "project") {
-      projectTriggerRef.current = ref.current;
-      projectAnchorRef.current = composerAnchorRef.current;
-      setStartProjectChat(true);
-      projectReturnUrlRef.current = window.location.href;
-      setProjectPickerOpen(true);
-    }
+    if (command === "project") openProjectPicker(true, ref.current);
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1784,11 +1794,7 @@ export function ChatInput({
           onClick={() => {
             closeActions();
             if (!requireFileAccount(trigger)) return;
-            projectTriggerRef.current = trigger;
-            projectAnchorRef.current = composerAnchorRef.current;
-            setStartProjectChat(true);
-            projectReturnUrlRef.current = window.location.href;
-            setProjectPickerOpen(true);
+            openProjectPicker(true, trigger);
           }}
         >
           <Folder aria-hidden="true" />
@@ -1823,6 +1829,41 @@ export function ChatInput({
             <ImageIcon aria-hidden="true" />
             <span>Photos</span>
           </button>
+        ) : null}
+        {surface === "empty" && showResources ? (
+          <div className="kova-phone-resource-actions" role="group" aria-label="Chat resources">
+            {showChooseProject ? (
+              <button
+                type="button"
+                className="kova-composer-action"
+                aria-label="Choose project"
+                disabled={!isLoaded || disabled || isStreaming}
+                onClick={() => {
+                  closeActions();
+                  if (requireFileAccount(trigger)) openProjectPicker(false, trigger);
+                }}
+              >
+                <Folder aria-hidden="true" />
+                <span>Choose project</span>
+                <small>Use a project in this message</small>
+              </button>
+            ) : null}
+            {(["files", "plugins"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="kova-composer-action"
+                onClick={() => {
+                  setResourceSection(item);
+                  window.requestAnimationFrame(() => resourceBackRef.current?.focus());
+                }}
+              >
+                {item === "files" ? <LibraryBig aria-hidden="true" /> : <Plug aria-hidden="true" />}
+                <span>{item === "files" ? "Files" : "Plugins"}</span>
+                <ChevronRight aria-hidden="true" className="ml-auto" />
+              </button>
+            ))}
+          </div>
         ) : null}
         {user ? (
           <ComposerPluginList
@@ -2234,8 +2275,11 @@ export function ChatInput({
               })}
             </div>
           )}
-          {projectContext && !showResources && (
-            <div className="flex min-w-0 flex-wrap gap-2 px-3">
+          {projectContext && (
+            <div
+              className="spec400-inline-project-context flex min-w-0 flex-wrap gap-2 px-3"
+              data-desktop-tray={showResources || undefined}
+            >
               <button
                 type="button"
                 className="spec400-selected-tool min-w-0"
@@ -2303,7 +2347,10 @@ export function ChatInput({
                 open={plusOpen}
                 onOpenChange={(next) => {
                   setPlusOpen(next);
-                  if (next) setSlashDismissed(true);
+                  if (next) {
+                    setResourceSection(null);
+                    setSlashDismissed(true);
+                  }
                 }}
               >
                 <PopoverAnchor virtualRef={composerAnchorRef} />
@@ -2323,8 +2370,15 @@ export function ChatInput({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
+                  ref={addMenuRef}
                   role="dialog"
-                  aria-label="Attach files and tools"
+                  aria-label={
+                    resourceSection === "files"
+                      ? "Choose files"
+                      : resourceSection === "plugins"
+                        ? "Choose plugins"
+                        : "Attach files and tools"
+                  }
                   className="kova-composer-menu spec400-attach-menu kova-composer-full-menu"
                   side={longDraft ? "top" : "bottom"}
                   align="start"
@@ -2345,7 +2399,28 @@ export function ChatInput({
                       event.preventDefault();
                   }}
                 >
-                  {renderComposerActions(isMobileLayout)}
+                  {resourceSection ? (
+                    <>
+                      <button
+                        ref={resourceBackRef}
+                        type="button"
+                        className="kova-composer-action"
+                        onClick={() => {
+                          setResourceSection(null);
+                          window.requestAnimationFrame(() => {
+                            addMenuRef.current?.scrollTo({ top: 0 });
+                            addMenuRef.current?.focus({ preventScroll: true });
+                          });
+                        }}
+                      >
+                        <ChevronLeft aria-hidden="true" />
+                        Back to files and tools
+                      </button>
+                      {renderComposerActions(isMobileLayout, resourceSection)}
+                    </>
+                  ) : (
+                    renderComposerActions(isMobileLayout)
+                  )}
                 </PopoverContent>
               </Popover>
             )}
@@ -2555,13 +2630,9 @@ export function ChatInput({
                 projectContext ? `Selected project ${projectContext.name}` : "Choose project"
               }
               disabled={!user || disabled || isStreaming}
-              onClick={(event) => {
-                projectTriggerRef.current = event.currentTarget;
-                projectAnchorRef.current = event.currentTarget;
-                setStartProjectChat(false);
-                projectReturnUrlRef.current = window.location.href;
-                setProjectPickerOpen(true);
-              }}
+              onClick={(event) =>
+                openProjectPicker(false, event.currentTarget, event.currentTarget)
+              }
             >
               {projectContext ? (
                 <Globe aria-hidden="true" className="spec400-selected-project-icon" />

@@ -86,6 +86,7 @@ jobs:
           tests/e2e/scheduled-task-editor.spec.ts
           tests/e2e/workspace-select-controls.spec.ts
           tests/e2e/reference-composer-behavior.spec.ts
+          tests/e2e/composer-requested-layout.spec.ts
           --project=phone-320x700 --project=phone-landscape-844x390
           --workers=2 --output=test-results/interface-ratio/mobile-editors
       - name: Record source revision

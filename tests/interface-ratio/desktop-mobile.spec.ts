@@ -171,21 +171,19 @@ for (const state of states) {
       (data.viewport.width < 1024 && data.viewport.height <= 500 && data.viewport.coarse);
     if (!phone) return;
     if (state.name === "home") {
-      unchanged(".kova-greeting h1", ["font", "line", "family", "weight"]);
-      unchanged(".spec400-composer", ["padding", "radius", "gap"]);
+      unchanged(".kova-greeting h1", ["family", "weight"]);
+      expect(row(".kova-greeting h1").font).toBe("28px");
+      expect(row(".spec400-composer").radius).toBe("30px");
       unchanged(".spec400-composer-input", ["font", "line"]);
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.5, 2);
-      expect(
-        Math.abs(
-          row(".spec400-composer").height - (desktop(".spec400-composer").height * 101) / 127,
-        ),
-      ).toBeLessThanOrEqual(2);
-      expect(
-        Math.abs(row(".kova-topbar").height - desktop(".kova-topbar").height),
-      ).toBeLessThanOrEqual(1);
+      expect(row(".spec400-composer").height).toBeGreaterThanOrEqual(92);
+      expect(row(".spec400-composer").height).toBeLessThanOrEqual(108);
+      expect(row(".kova-topbar").height).toBeCloseTo(56, 0);
       expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
+      await expect(page.locator(".kova-composer-tray")).toBeHidden();
+      await expect(page.getByRole("navigation", { name: "Mobile workspace" })).toHaveCount(0);
     }
     if (state.name === "conversation") {
       unchanged(".prose-chat", ["font", "line"], 1);

@@ -352,12 +352,12 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   for (const className of ["kova-composer-menu spec400-attach-menu kova-composer-full-menu"]) {
     const popover = positionedPopovers.find((props) => props.includes(`className="${className}"`));
     assert.ok(popover, `${className} retains its positioned popover`);
+    assert.match(popover, /aria-label=\{[\s\S]*?"Attach files and tools"\s*\}/);
     assert.match(popover, /side=\{longDraft \? "top" : "bottom"\}/);
     assert.match(popover, /sideOffset=\{5\}/);
     assert.match(popover, /collisionPadding=\{8\}/);
   }
   assert.doesNotMatch(composer, /spec400-options-panel|setOptionsOpen/);
-  assert.match(composer, /aria-label="Attach files and tools"/);
   assert.match(composerStyles, /\.spec400-toolbar-button,[\s\S]*?min-height: 44px;/);
   assert.match(composer, /\["ArrowDown", "ArrowUp", "Home", "End"\]\.includes\(event\.key\)/);
   assert.match(composer, /button:not\(:disabled\),a\[href\]/);
