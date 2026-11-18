@@ -85,7 +85,7 @@ export class BrowserSessionManager {
         const connection = new URL(session.connectUrl);
         if (
           connection.protocol !== "wss:" ||
-          connection.hostname !== "connect.browserbase.com" ||
+          !/^connect(?:\.[a-z0-9-]+)?\.browserbase\.com$/.test(connection.hostname) ||
           connection.username ||
           connection.password ||
           connection.port
