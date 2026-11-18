@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Route } from "@playwright/test";
-import { fixture } from "../e2e/actual-app-fixture";
+import { chatA, chatB, fixture, owner } from "../e2e/actual-app-fixture";
 import { dismissMobileSidebar, openComposerAddMenu, revealSidebar } from "../e2e/current-ui";
 import { waitForKovaHydration } from "../e2e/hydration";
 
@@ -127,16 +127,48 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
     info.project.name === "desktop-1440" || info.project.name === "tablet-768",
     "phone layout",
   );
-  await fixture(page, "dark", true, true, "plus");
+  await fixture(page, "dark", true, false, "plus");
+  const timestamp = Date.now();
+  const records = [chatA, chatB].map((id, index) => ({
+    id,
+    revision: 1,
+    sync_version: index + 1,
+    mutation_id: crypto.randomUUID(),
+    archived: false,
+    deleted_at: null,
+    payload: {
+      id,
+      title: index ? "Second review chat" : "Composer review chat",
+      mode: "instant",
+      createdAt: timestamp,
+      updatedAt: timestamp + index,
+      messages: [
+        { id: "prompt-a", role: "user", content: "Draft a release checklist." },
+        { id: "answer-a", role: "assistant", content: "Review the draft before publishing." },
+      ],
+    },
+  }));
+  await page.route("**/api/chat/history**", (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const cursor = Number(new URL(route.request().url()).searchParams.get("cursor") ?? 0);
+    const next = records.find((record) => record.sync_version > cursor);
+    const nextCursor = next?.sync_version ?? cursor;
+    return route.fulfill({
+      json: {
+        ownerId: owner,
+        epoch: "44444444-4444-4444-8444-444444444444",
+        records: next ? [next] : [],
+        nextCursor,
+        currentVersion: records.length,
+        hasMore: nextCursor < records.length,
+      },
+    });
+  });
   await page.goto("/", { waitUntil: "load" });
   await waitForKovaHydration(page);
   const shell = page.locator(".kova-assistant[data-ui='modern']:not([data-kova-home-startup])");
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect(input).toBeEnabled();
-  await shell
-    .locator("header.kova-topbar:visible")
-    .getByRole("button", { name: "New chat", exact: true })
-    .click();
   const homeRecommendations = shell.locator(".kova-empty-chat .spec400-recent-work");
   await expect(homeRecommendations).toBeAttached();
   await expect(homeRecommendations).toBeHidden();
@@ -149,14 +181,16 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
   await expect(menu.getByRole("button", { name: "Choose project", exact: true })).toBeVisible();
   await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
   await expect(menu.getByRole("button", { name: "Plugins", exact: true })).toBeVisible();
-  if (capture) await page.screenshot({ path: info.outputPath("composer-menu.png") });
+  if (capture)
+    await page.screenshot({ path: info.outputPath("composer-menu.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
 
   const drawer = await revealSidebar(page);
   const recent = drawer.getByRole("region", { name: "Continue working", exact: true });
   await expect(recent.getByRole("button")).toHaveCount(2);
-  if (capture) await page.screenshot({ path: info.outputPath("navigation.png") });
+  if (capture)
+    await page.screenshot({ path: info.outputPath("navigation.png"), animations: "disabled" });
   await dismissMobileSidebar(page);
   compare(opening, await frame(shell), "closing the drawer");
   await revealSidebar(page);
