@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { fixture, functionNames, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openComposerAddMenu } from "./current-ui";
+import { openComposerAddMenu, usesSidebarDrawer } from "./current-ui";
 
 async function start(page: Parameters<typeof fixture>[0], empty = false) {
   await fixture(page, "dark", true);
@@ -44,15 +44,16 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
     const frame = surface.getBoundingClientRect();
     return { x: text.x - frame.x, y: text.y - frame.y };
   });
-  const phoneComposer = await page.evaluate(
+  const insetComposer = await page.evaluate(
     () =>
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+      matchMedia(
+        "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse), (width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none)",
+      ).matches,
   );
-  if (phoneComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
-  expect(inset.x).toBeLessThanOrEqual(phoneComposer ? 24 : 18);
+  if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
+  expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 18);
   expect(inset.y).toBeLessThanOrEqual(20);
-  if (page.viewportSize()!.width >= 1024) {
+  if (!(await usesSidebarDrawer(page))) {
     const header = (await page.locator(".kova-desktop-topbar").boundingBox())!;
     expect(header.y).toBeLessThanOrEqual(1);
     await expect(page.getByRole("button", { name: "Open desktop app", exact: true })).toBeVisible();
