@@ -35,15 +35,18 @@ type BrowserDatabase = {
 const database = (caller: AuthedCaller) =>
   caller.supabaseAdmin as unknown as SupabaseClient<BrowserDatabase>;
 const active = new Map<string, string>();
-const runtime = new BrowserRuntime({
-  artifactRoot: join(tmpdir(), `kova-chat-browser-${randomUUID()}`),
-  auditSink: {
-    async append() {},
-    async list() {
-      return [];
+let browserRuntime: BrowserRuntime | undefined;
+function getBrowserRuntime() {
+  return (browserRuntime ??= new BrowserRuntime({
+    artifactRoot: join(tmpdir(), `kova-chat-browser-${randomUUID()}`),
+    auditSink: {
+      async append() {},
+      async list() {
+        return [];
+      },
     },
-  },
-});
+  }));
+}
 
 export function chatBrowserFailure(code: string, publicMessage: string, status = 503) {
   return new ChatPreflightError({
@@ -78,6 +81,7 @@ export async function readChatBrowserPage({
     );
   if (!apiKey || !projectId) throw unavailable();
   const db = database(caller);
+  const runtime = getBrowserRuntime();
   const requestId = randomUUID();
   let sessionId: string | undefined;
   let queued = false;

@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
-import {
-  browserActivityIsFresh,
-  type BrowserActivityMetadata,
-} from "@/lib/browser-activity-contract.mjs";
+import type { BrowserActivityMetadata } from "@/lib/browser-activity-contract.mjs";
 
 export function CloudBrowserPreview({
   browser,
@@ -12,13 +9,14 @@ export function CloudBrowserPreview({
   browser: BrowserActivityMetadata;
   ownerId: string;
 }) {
-  const path = browser.previewPath;
-  const expiresAt = browser.expiresAt ?? browser.observedAt + 300000;
+  const { previewPath: path, observedAt } = browser;
+  const expiresAt = browser.expiresAt ?? observedAt + 300000;
   const [preview, setPreview] = useState<{ path: string; ownerId: string; url: string } | null>(
     null,
   );
   useEffect(() => {
-    if (!path || !browserActivityIsFresh(browser)) return;
+    const now = Date.now();
+    if (!path || observedAt > now + 30000 || now >= expiresAt) return;
     const controller = new AbortController();
     let objectUrl: string | undefined;
     const expire = () => {
@@ -49,7 +47,7 @@ export function CloudBrowserPreview({
       window.clearTimeout(timeout);
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [browser, expiresAt, ownerId, path]);
+  }, [expiresAt, observedAt, ownerId, path]);
   const url =
     preview && preview.path === path && preview.ownerId === ownerId && Date.now() < expiresAt
       ? preview.url
