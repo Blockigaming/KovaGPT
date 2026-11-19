@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { BrowserType } from "playwright";
 import {
   BrowserRuntime,
   BrowserRuntimeError,
@@ -132,6 +133,37 @@ test("expires inactive browser sessions after fifteen minutes", async () => {
   expect(await runtime.sessions.sweep(created + 14 * 60_000)).toBe(0);
   expect(await runtime.sessions.sweep(created + 15 * 60_000)).toBe(1);
   expect(() => runtime.listTabs(session.id, "owner-a")).toThrow(BrowserRuntimeError);
+});
+
+test("closes the browser at its quota deadline even after activity", async () => {
+  let browserClosed = false;
+  const engine = {
+    async launch() {
+      return {
+        async newContext() {
+          return { async close() {} };
+        },
+        isConnected: () => true,
+        once() {},
+        async close() {
+          browserClosed = true;
+        },
+      };
+    },
+  } as unknown as BrowserType;
+  const manager = new BrowserSessionManager(runtime.artifacts, runtime.auditSink, {
+    get: () => engine,
+  });
+  try {
+    const hardExpiresAt = Date.now() + 1_000;
+    const session = await manager.create({ ...sessionOptions(), hardExpiresAt });
+    expect(Date.parse(session.expiresAt)).toBe(hardExpiresAt);
+    expect(Date.parse(manager.get(session.id, "owner-a").descriptor.expiresAt)).toBe(hardExpiresAt);
+    await expect.poll(() => browserClosed, { timeout: 4_000 }).toBe(true);
+    expect(() => manager.get(session.id, "owner-a")).toThrow(BrowserRuntimeError);
+  } finally {
+    await manager.shutdown();
+  }
 });
 
 test("admits Browserbase regional CDP endpoints and rejects look-alike hosts", async () => {

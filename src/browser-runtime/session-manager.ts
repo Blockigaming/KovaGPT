@@ -15,6 +15,11 @@ import { BrowserArtifactStore } from "./artifacts";
 // Idle browsers are released after 15 minutes with no authenticated operation.
 const DEFAULT_IDLE_MS = 15 * 60_000;
 const BROWSERBASE_CDP_HEARTBEAT_MS = 4 * 60_000;
+const BROWSERBASE_READ_ONLY_TIMEOUT_SECONDS = 960;
+
+function sessionExpiry(now: number, idleMs: number, hardExpiresAt = Infinity) {
+  return new Date(Math.min(now + idleMs, hardExpiresAt)).toISOString();
+}
 
 export class PlaywrightEngineProvider implements EngineProvider {
   get(engine: BrowserEngine) {
@@ -43,6 +48,8 @@ export class BrowserSessionManager {
       throw runtimeError("invalid_identity", "Owner and workspace are required");
     const id = randomUUID();
     const engine = options.engine ?? "chromium";
+    const { hardExpiresAt } = options;
+    const idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_MS;
     const storagePath = await this.artifacts.initializeSession(id);
     let browser;
     let releaseRemote: (() => Promise<void>) | undefined;
@@ -52,12 +59,18 @@ export class BrowserSessionManager {
       // process boundary prevents accidental cross-user browser reuse.
       const apiKey = process.env.BROWSERBASE_API_KEY?.trim();
       const projectId = process.env.BROWSERBASE_PROJECT_ID?.trim();
+      const remainingMs = (hardExpiresAt ?? Infinity) - Date.now();
+      if (remainingMs <= 0) throw runtimeError("session_expired", "Browser time has expired");
       if (apiKey || projectId) {
         if (!apiKey || !projectId || engine !== "chromium") {
           throw new Error("Browserbase requires a configured Chromium project");
         }
         const headers = { "X-BB-API-Key": apiKey, "Content-Type": "application/json" };
         const sessionsUrl = "https://api.browserbase.com/v1/sessions";
+        const timeout = Math.min(
+          BROWSERBASE_READ_ONLY_TIMEOUT_SECONDS,
+          Math.max(60, Math.ceil(remainingMs / 1000)),
+        );
         const response = await fetch(sessionsUrl, {
           method: "POST",
           headers,
@@ -65,7 +78,7 @@ export class BrowserSessionManager {
           body: JSON.stringify({
             projectId,
             keepAlive: false,
-            ...(options.readOnly ? { timeout: 960 } : {}),
+            ...(options.readOnly ? { timeout } : {}),
             browserSettings: { recordSession: false, logSession: false, solveCaptchas: false },
           }),
           signal: AbortSignal.timeout(8000),
@@ -117,6 +130,8 @@ export class BrowserSessionManager {
         remoteHeartbeat.unref();
       }
       const now = Date.now();
+      if (hardExpiresAt !== undefined && now >= hardExpiresAt)
+        throw runtimeError("session_expired", "Browser time has expired");
       const session: RuntimeSession = {
         descriptor: {
           id,
@@ -126,8 +141,8 @@ export class BrowserSessionManager {
           workRunId: options.workRunId,
           chatId: options.chatId,
           createdAt: new Date(now).toISOString(),
-          expiresAt: new Date(now + (options.idleTimeoutMs ?? DEFAULT_IDLE_MS)).toISOString(),
-          idleTimeoutMs: options.idleTimeoutMs ?? DEFAULT_IDLE_MS,
+          expiresAt: sessionExpiry(now, idleTimeoutMs, hardExpiresAt),
+          idleTimeoutMs,
           lastUsedAt: new Date(now).toISOString(),
           permissions: Object.freeze({
             ...options.permissions,
@@ -140,11 +155,21 @@ export class BrowserSessionManager {
         storagePath,
         releaseRemote,
         remoteHeartbeat,
+        hardExpiresAt,
         onClosed: options.onClosed,
       };
       await audit(this.auditSink, session, "session.created", "success", { engine });
       if (!browser.isConnected()) throw new Error("Browser connection closed");
       this.#sessions.set(id, session);
+      if (hardExpiresAt !== undefined) {
+        session.deadlineTimer = setTimeout(
+          () => {
+            void this.close(id, options.ownerId, "time_limit").catch(() => undefined);
+          },
+          Math.max(0, hardExpiresAt - Date.now()),
+        );
+        session.deadlineTimer.unref();
+      }
       browser.once("disconnected", () => {
         if (this.#sessions.has(id))
           void this.close(id, options.ownerId, "disconnected").catch(() => undefined);
@@ -172,7 +197,11 @@ export class BrowserSessionManager {
     if (touch) {
       const now = Date.now();
       session.descriptor.lastUsedAt = new Date(now).toISOString();
-      session.descriptor.expiresAt = new Date(now + session.descriptor.idleTimeoutMs).toISOString();
+      session.descriptor.expiresAt = sessionExpiry(
+        now,
+        session.descriptor.idleTimeoutMs,
+        session.hardExpiresAt,
+      );
     }
     return session;
   }
@@ -185,6 +214,7 @@ export class BrowserSessionManager {
     session.closing = (async () => {
       this.#sessions.delete(sessionId);
       clearInterval(session.remoteHeartbeat);
+      clearTimeout(session.deadlineTimer);
       await Promise.allSettled([
         audit(this.auditSink, session, "session.closed", "success", { reason }),
         session.context.close(),

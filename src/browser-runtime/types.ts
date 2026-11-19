@@ -20,6 +20,7 @@ export interface PermissionPolicy {
 export interface CreateSessionOptions extends SessionIdentity {
   engine?: BrowserEngine;
   idleTimeoutMs?: number;
+  hardExpiresAt?: number;
   readOnly?: boolean;
   onClosed?: () => Promise<void>;
   permissions: PermissionPolicy;
@@ -104,5 +105,7 @@ export interface RuntimeSession {
   closing?: Promise<void>;
   releaseRemote?: () => Promise<void>;
   remoteHeartbeat?: ReturnType<typeof setInterval>;
+  hardExpiresAt?: number;
+  deadlineTimer?: ReturnType<typeof setTimeout>;
   onClosed?: () => Promise<void>;
 }
