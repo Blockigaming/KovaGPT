@@ -309,7 +309,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.56.0-noble
     # The tablet job runs three full browser projects on two workers.
     # Allow it to finish on slower runners without changing per-test limits.
-    timeout-minutes: ${{ matrix.id == 'tablet' && 65 || 45 }}
+    timeout-minutes: ${{ matrix.id == 'tablet' && 75 || 45 }}
     env:
       HOME: /root
       KOVA_BROWSER_PREVIEW: "node"

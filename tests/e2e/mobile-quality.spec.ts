@@ -99,11 +99,13 @@ test("composer and attachment menu stay reachable on narrow screens", async ({ p
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const composer = page.locator(".spec400-composer");
-  await expect(composer).toBeVisible();
-  const box = await composer.boundingBox();
-  expect(box).not.toBeNull();
-  expect(box!.x).toBeGreaterThanOrEqual(0);
-  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await expect(async () => {
+    await expect(composer).toBeVisible();
+    const box = await composer.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  }).toPass({ timeout: 5_000 });
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const sheet = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   await expect(sheet).toBeVisible();
