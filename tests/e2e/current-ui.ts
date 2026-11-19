@@ -30,9 +30,7 @@ export async function composerResourceTrigger(
   name: "Choose project" | "Files" | "Plugins",
 ) {
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeEnabled();
-  const trayAction = page
-    .getByRole("group", { name: "Chat resources", exact: true })
-    .getByRole("button", { name, exact: true });
+  const trayAction = page.locator(".kova-composer-tray").getByRole("button", { name, exact: true });
   if (await trayAction.isVisible()) return trayAction;
   const menu = await openComposerAddMenu(page);
   return menu.getByRole("button", { name, exact: true });

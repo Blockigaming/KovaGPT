@@ -108,11 +108,13 @@ test("requested: empty project, plugin and file pickers contain no sample record
     0,
   );
   await page.keyboard.press("Escape");
+  await expect(projects).toBeHidden();
   await openResource(page, "Files");
   const files = page.getByRole("dialog", { name: "Choose files", exact: true });
   await expect(files).toContainText("No saved files yet.");
   await expect(files.locator(".kova-composer-library button")).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await expect(files).toBeHidden();
   await openResource(page, "Plugins");
   const plugins = page.getByRole("dialog", { name: "Choose plugins", exact: true });
   await expect(plugins).toContainText("No connected plugins.");
