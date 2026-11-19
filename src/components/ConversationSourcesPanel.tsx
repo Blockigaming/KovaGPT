@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { ConversationSourcesView } from "./ConversationSourcesView";
-import { CloudBrowserPreview } from "./CloudBrowserPreview";
+import { CloudBrowserPreviewImage } from "./CloudBrowserPreview";
+import { useCloudBrowserPreview } from "@/hooks/use-cloud-browser-preview";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 export { ConversationActivitySummary } from "./ConversationSourcesView";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -48,12 +49,15 @@ export function ConversationSourcesPanel({
     browserActivityIsFresh(latest.browser)
       ? latest.browser
       : null;
+  const requestedPreview = browserOnly && !browserPreview ? preview : null;
+  const previewUrl = useCloudBrowserPreview(requestedPreview, ownerId);
+  const browserRows = activeBrowserOnly && requestedPreview && !previewUrl ? [] : inventory.browser;
   return (
     <>
       <ConversationSourcesView
         inventory={
           browserOnly
-            ? { providers: [], web: [], memory: [], attachments: [], browser: inventory.browser }
+            ? { providers: [], web: [], memory: [], attachments: [], browser: browserRows }
             : hideBrowser
               ? { ...inventory, browser: [] }
               : inventory
@@ -63,8 +67,8 @@ export function ConversationSourcesPanel({
         hideSourcesHeading={hideSourcesHeading}
         browserPreview={
           browserPreview ??
-          (browserOnly && ownerId && preview ? (
-            <CloudBrowserPreview browser={preview} ownerId={ownerId} />
+          (previewUrl && requestedPreview ? (
+            <CloudBrowserPreviewImage url={previewUrl} hostname={requestedPreview.hostname} />
           ) : undefined)
         }
         browserTabCount={browserTabCount}

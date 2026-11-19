@@ -2246,13 +2246,18 @@ function KovaGPT() {
             }
 
             if (delta?.kind === "activity" && delta?.label) {
-              const { messageActivitiesFromDelta } =
-                await import("@/lib/message-activity-list.mjs");
+              const { receiveMessageActivity } = await import("@/lib/message-activity-list.mjs");
               if (!isCurrentRequest()) return;
-              updateAssistantMessage((message) => {
-                const activities = messageActivitiesFromDelta(message.activities ?? [], delta);
-                return { ...message, activities };
-              });
+              const appendActivity = receiveMessageActivity(
+                delta,
+                userKey,
+                nextConvId,
+                assistantMsg.id,
+              );
+              updateAssistantMessage((message) => ({
+                ...message,
+                activities: appendActivity(message.activities),
+              }));
             }
             if (delta?.kind === "tool_confirm" && delta?.action_id) {
               waitingForConfirmation = true;

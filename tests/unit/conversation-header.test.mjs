@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as browserActivity from "../../src/lib/browser-activity-contract.mjs";
+import * as messageActivity from "../../src/lib/message-activity-list.mjs";
 
 function load(path, modules = {}) {
   const code = ts.transpileModule(readFileSync(path, "utf8"), {
@@ -123,10 +124,12 @@ function fixture(overrides = {}, desktop = true) {
   const modules = {
     "./CloudBrowserPreview": { CloudBrowserPreview: "CloudBrowserPreview" },
     "@/lib/browser-activity-contract.mjs": browserActivity,
+    "@/lib/message-activity-list.mjs": messageActivity,
     react: {
       lazy: () => "LazyComponent",
       Suspense: "Suspense",
       useMemo: (fn) => fn(),
+      useSyncExternalStore: (_subscribe, getSnapshot) => getSnapshot(),
       useState(initial) {
         const i = cursor++;
         states[i] ??= { value: initial };

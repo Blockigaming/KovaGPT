@@ -1,4 +1,22 @@
-import { normalizeBrowserActivity } from "./browser-activity-contract.mjs";
+import { browserActivityIsFresh, normalizeBrowserActivity } from "./browser-activity-contract.mjs";
+
+let liveBrowserActivity = null;
+let expiryTimer;
+const liveBrowserListeners = new Set();
+
+export function getLiveBrowserActivity() {
+  return liveBrowserActivity;
+}
+
+export function subscribeToLiveBrowserActivity(listener) {
+  liveBrowserListeners.add(listener);
+  return () => liveBrowserListeners.delete(listener);
+}
+
+function publishLiveBrowserActivity(activity) {
+  liveBrowserActivity = activity;
+  for (const listener of liveBrowserListeners) listener();
+}
 
 export function messageActivitiesFromDelta(current, delta) {
   return appendMessageActivity(current, {
@@ -17,6 +35,24 @@ export function messageActivitiesFromDelta(current, delta) {
           ? "running"
           : "done",
   });
+}
+
+export function receiveMessageActivity(delta, principal, conversationId, messageId) {
+  const [activity] = messageActivitiesFromDelta([], delta);
+  const browser = activity.browser;
+  if (
+    typeof window !== "undefined" &&
+    principal &&
+    activity.status === "running" &&
+    browser?.previewPath &&
+    browserActivityIsFresh(browser)
+  ) {
+    const expiresAt = browser.expiresAt ?? browser.observedAt + 300_000;
+    window.clearTimeout(expiryTimer);
+    publishLiveBrowserActivity({ principal, conversationId, messageId, expiresAt, activity });
+    expiryTimer = window.setTimeout(() => publishLiveBrowserActivity(null), expiresAt - Date.now());
+  }
+  return (current = []) => appendMessageActivity(current, activity);
 }
 
 // Keep each operation in arrival order; only its own status updates replace a row.
@@ -39,4 +75,30 @@ export function appendMessageActivity(current, next) {
   }
   if (match < 0) return [...current, next];
   return current.map((item, index) => (index === match ? { ...item, ...next } : item));
+}
+
+// Chat history deliberately strips live leases. Put a matching lease back for
+// presentation without copying it to another account, chat, or message.
+export function conversationWithLiveBrowserActivity(
+  conversation,
+  live,
+  principal,
+  now = Date.now(),
+) {
+  if (
+    !conversation ||
+    !live ||
+    live.principal !== principal ||
+    live.conversationId !== conversation.id ||
+    live.expiresAt <= now
+  )
+    return conversation;
+  return {
+    ...conversation,
+    messages: conversation.messages.map((message) =>
+      message.role === "assistant" && message.id === live.messageId
+        ? { ...message, activities: appendMessageActivity(message.activities ?? [], live.activity) }
+        : message,
+    ),
+  };
 }
