@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   appendMessageActivity,
+  conversationWithLiveBrowserActivity,
   messageActivitiesFromDelta,
 } from "../../src/lib/message-activity-list.mjs";
+import { normalizeChatHistory } from "../../src/lib/chat-history-policy.mjs";
 
 test("streamed activity retains operation IDs and truthful pending and terminal states", () => {
   const delta = { tool: "search_web", activity_id: "site", label: "Searching", status: "pending" };
@@ -34,6 +36,57 @@ test("streamed browser metadata retains safe preview references and excludes arb
   assert.equal(row.status, "done");
   assert.equal(row.browser.sessionId, "demo");
   assert.equal(row.browser.previewPath, undefined);
+});
+
+test("a saved-chat snapshot can still show its own live browser after losing ephemeral activity", () => {
+  const observedAt = 1000;
+  const expiresAt = 601_000;
+  const [activity] = messageActivitiesFromDelta([], {
+    activity_id: "test-open",
+    tool: "browser_interact",
+    label: "Opened example.com",
+    status: "running",
+    browser: {
+      sessionId: "live-test",
+      tabCount: 1,
+      observedAt,
+      expiresAt,
+      previewPath: "/api/browser/preview/live-test",
+    },
+  });
+  const saved = normalizeChatHistory(
+    {
+      id: "chat-a",
+      title: "Browser test",
+      mode: "instant",
+      createdAt: observedAt,
+      updatedAt: observedAt,
+      messages: [
+        { id: "reply-a", role: "assistant", content: "Example Domain", activities: [activity] },
+        { id: "reply-b", role: "assistant", content: "Another reply" },
+      ],
+    },
+    "owner-a",
+  );
+  assert.deepEqual(saved.messages[0].activities, []);
+  const live = {
+    principal: "owner-a",
+    conversationId: "chat-a",
+    messageId: "reply-a",
+    expiresAt,
+    activity,
+  };
+  const presentation = conversationWithLiveBrowserActivity(saved, live, "owner-a", observedAt);
+  assert.deepEqual(presentation.messages[0].activities, [activity]);
+  assert.equal(presentation.messages[1], saved.messages[1]);
+  assert.deepEqual(saved.messages[0].activities, []);
+  assert.equal(conversationWithLiveBrowserActivity(saved, live, "owner-b", observedAt), saved);
+  assert.equal(conversationWithLiveBrowserActivity(saved, live, "owner-a", expiresAt), saved);
+  const otherChat = { ...saved, id: "chat-b" };
+  assert.equal(
+    conversationWithLiveBrowserActivity(otherChat, live, "owner-a", observedAt),
+    otherChat,
+  );
 });
 
 const activity = (label, status = "done", activityId) => ({

@@ -202,6 +202,13 @@ import {
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { useTier } from "@/hooks/useTier";
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
+import {
+  appendMessageActivity,
+  conversationWithLiveBrowserActivity,
+  messageActivitiesFromDelta,
+  type LiveBrowserActivity,
+} from "@/lib/message-activity-list.mjs";
 import {
   consumePrincipalHandoff,
   isPrincipalBrowserStorageClearedEvent,
@@ -291,6 +298,7 @@ function KovaGPT() {
     [isLoaded, storagePrincipal, userKey],
   );
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [liveBrowserActivity, setLiveBrowserActivity] = useState<LiveBrowserActivity | null>(null);
   const [composerVoiceMode, setComposerVoiceMode] = useState<"dictate" | "voice" | null>(null);
   const composerVoiceSessionRef = useRef<{
     mode: "dictate" | "voice";
@@ -943,6 +951,7 @@ function KovaGPT() {
     setTempChatStartOpen(false);
     setTempChatConfirmed(false);
     setActiveId(null);
+    setLiveBrowserActivity(null);
     setInput("");
     setAttachments([]);
     setSelectedTool(null);
@@ -1088,6 +1097,7 @@ function KovaGPT() {
       setSettingsState({ settings: DEFAULT_SETTINGS, persist: false });
       setSettingsPrincipal(null);
       setActiveId(null);
+      setLiveBrowserActivity(null);
       setInput("");
       setAttachments([]);
       setSelectedTool(null);
@@ -1224,6 +1234,18 @@ function KovaGPT() {
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
   );
+  const activityConversation = useMemo(
+    () => conversationWithLiveBrowserActivity(active, liveBrowserActivity, storagePrincipal),
+    [active, liveBrowserActivity, storagePrincipal],
+  );
+  useEffect(() => {
+    if (!liveBrowserActivity) return;
+    const timer = window.setTimeout(
+      () => setLiveBrowserActivity((current) => (current === liveBrowserActivity ? null : current)),
+      Math.max(0, liveBrowserActivity.expiresAt - Date.now()),
+    );
+    return () => window.clearTimeout(timer);
+  }, [liveBrowserActivity]);
   const [modelChoice, setModelChoice] = useState<{
     principal: string;
     conversationId: string | null;
@@ -2246,13 +2268,25 @@ function KovaGPT() {
             }
 
             if (delta?.kind === "activity" && delta?.label) {
-              const { messageActivitiesFromDelta } =
-                await import("@/lib/message-activity-list.mjs");
-              if (!isCurrentRequest()) return;
-              updateAssistantMessage((message) => {
-                const activities = messageActivitiesFromDelta(message.activities ?? [], delta);
-                return { ...message, activities };
-              });
+              const [activity] = messageActivitiesFromDelta([], delta);
+              const browser = activity.browser;
+              if (
+                activity.status === "running" &&
+                browser?.previewPath &&
+                browserActivityIsFresh(browser)
+              ) {
+                setLiveBrowserActivity({
+                  principal: storagePrincipal,
+                  conversationId: nextConvId,
+                  messageId: assistantMsg.id,
+                  expiresAt: browser.expiresAt ?? browser.observedAt + 300_000,
+                  activity,
+                });
+              }
+              updateAssistantMessage((message) => ({
+                ...message,
+                activities: appendMessageActivity(message.activities ?? [], activity),
+              }));
             }
             if (delta?.kind === "tool_confirm" && delta?.action_id) {
               waitingForConfirmation = true;
@@ -3086,11 +3120,11 @@ function KovaGPT() {
   };
 
   const conversationActions = (compact = false) =>
-    active && chatStarted ? (
+    activityConversation && chatStarted ? (
       <Suspense fallback={null}>
         <ConversationHeaderActions
-          key={`${storagePrincipal}:${active.id}:${compact}`}
-          conversation={active}
+          key={`${storagePrincipal}:${activityConversation.id}:${compact}`}
+          conversation={activityConversation}
           signedIn={Boolean(isLoaded && isSignedIn)}
           compact={compact}
           isStreaming={isStreaming}
@@ -3098,7 +3132,7 @@ function KovaGPT() {
           onShare={(trigger) => {
             shareReturnFocusRef.current = trigger;
             shareReturnUrlRef.current = window.location.href;
-            setShareChatId(active.id);
+            setShareChatId(activityConversation.id);
           }}
           onCreateOutput={(format) => activityComposerRef.current?.openTemplates(format)}
           onAddFiles={(trigger) => activityComposerRef.current?.addFiles(trigger)}

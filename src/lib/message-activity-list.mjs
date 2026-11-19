@@ -40,3 +40,29 @@ export function appendMessageActivity(current, next) {
   if (match < 0) return [...current, next];
   return current.map((item, index) => (index === match ? { ...item, ...next } : item));
 }
+
+// Chat history deliberately strips live leases. Put a matching lease back for
+// presentation without copying it to another account, chat, or message.
+export function conversationWithLiveBrowserActivity(
+  conversation,
+  live,
+  principal,
+  now = Date.now(),
+) {
+  if (
+    !conversation ||
+    !live ||
+    live.principal !== principal ||
+    live.conversationId !== conversation.id ||
+    live.expiresAt <= now
+  )
+    return conversation;
+  return {
+    ...conversation,
+    messages: conversation.messages.map((message) =>
+      message.role === "assistant" && message.id === live.messageId
+        ? { ...message, activities: appendMessageActivity(message.activities ?? [], live.activity) }
+        : message,
+    ),
+  };
+}
