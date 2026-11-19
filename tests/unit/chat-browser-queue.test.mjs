@@ -92,6 +92,15 @@ test("only the first eligible waiter can claim its own slot, in tier then arriva
   assert.equal(await claim(plus, "plus"), false);
   assert.equal(await claim(firstPro, "pro"), false);
   assert.equal(await claim(secondPro, "pro"), false);
+  // PGlite can enqueue both requests in the same millisecond. Give the
+  // waiters distinct timestamps so this exercises arrival order, not a tie.
+  await db.query(
+    `update public.browserbase_queue as first
+     set queued_at = second.queued_at - interval '1 millisecond'
+     from public.browserbase_queue as second
+     where first.owner_id = $1 and second.owner_id = $2`,
+    [firstPro.owner, secondPro.owner],
+  );
   await release(active);
   assert.equal(await claim(free, "free"), false);
   assert.equal(await claim(plus, "plus"), false);
