@@ -328,6 +328,9 @@ export function AppShell({
         className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
         data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
       >
+        {pathname === "/work" && (
+          <div id="kova-browser-workspace" className="kova-browser-workspace-slot" />
+        )}
         <OfflineBanner />
         {!hideMobileTopBar && (
           <MobileTopBar

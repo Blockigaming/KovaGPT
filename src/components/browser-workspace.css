@@ -1,0 +1,104 @@
+.kova-browser-workspace-slot {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 32;
+  flex: none;
+  block-size: 0;
+}
+
+.kova-app-content:has(> .kova-browser-workspace-slot > .kova-browser-workspace) {
+  overflow: hidden;
+}
+
+.kova-browser-workspace {
+  --browser-workspace-top: 0px;
+  position: absolute;
+  inset-block-start: var(--browser-workspace-top);
+  inset-inline: 0;
+  display: flex;
+  flex-direction: column;
+  block-size: calc(var(--kova-visible-height, 100dvh) - var(--browser-workspace-top));
+  min-inline-size: 0;
+  overflow: hidden;
+  padding-block-end: env(safe-area-inset-bottom, 0px);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.kova-browser-workspace-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-block-size: 56px;
+  padding: 8px 16px;
+  border-block-end: 1px solid var(--border);
+}
+
+.kova-browser-workspace-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.kova-browser-workspace-header p {
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.kova-browser-workspace-header button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--kova-radius-button);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.kova-browser-workspace-header button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.kova-browser-workspace-header button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.kova-browser-workspace-header button svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.kova-browser-workspace-page {
+  display: flex;
+  flex: 1;
+  min-block-size: 0;
+  padding: 12px;
+}
+
+.kova-browser-workspace-page .kova-browser-live-preview {
+  flex: 1;
+  aspect-ratio: auto;
+}
+
+.kova-browser-workspace-page .kova-browser-live-preview img {
+  object-fit: contain;
+}
+
+@media (width < 1024px) {
+  .kova-browser-workspace {
+    --browser-workspace-top: calc(56px + env(safe-area-inset-top, 0px));
+  }
+}
+
+@media (pointer: coarse) {
+  .kova-browser-workspace-header button {
+    inline-size: 44px;
+    block-size: 44px;
+  }
+}

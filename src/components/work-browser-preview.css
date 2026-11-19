@@ -147,6 +147,20 @@
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
+.kova-browser-workspace .work-browser-panel {
+  flex: 1;
+  min-block-size: 0;
+  align-content: start;
+  grid-auto-rows: max-content;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.kova-browser-workspace .work-browser-preview-body {
+  min-block-size: clamp(150px, 32dvh, 400px);
+}
 @media (max-width: 480px) {
   .work-browser-panel {
     padding: 12px;

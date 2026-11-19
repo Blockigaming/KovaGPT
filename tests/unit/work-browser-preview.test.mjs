@@ -84,6 +84,7 @@ function fixture(options = {}) {
     "@/components/ui/input": { Input: "input" },
     "@/components/BrowserPrivateEntryCard": { BrowserPrivateEntryCard: "private-entry-card" },
     "@/components/BrowserInteractionCard": { BrowserInteractionCard: "browser-interaction-card" },
+    "@/components/BrowserWorkspace": { BrowserWorkspace: "browser-workspace" },
     "@/components/ui/button": { Button: "button" },
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": { ChevronDown: "svg", Globe2: "svg", Monitor: "svg" },
@@ -254,6 +255,7 @@ test("clickable text card opens owner controls without issuing a browser command
     false,
   );
   await f.click("Open browser controls");
+  assert.equal(f.find("browser-workspace", () => true).props.title, "Cloud browser");
   assert.equal(f.button("Hide browser controls").props["aria-expanded"], true);
   assert.equal(f.commands.length, 0);
   await f.click("Read current page");
@@ -294,6 +296,8 @@ test("takeover, return and end use exact existing operations; returning control 
   const f = fixture({ mode: "agent" });
   await f.flush();
   await f.click("Take over");
+  const workspace = f.find("browser-workspace", () => true);
+  assert.match(text(workspace), /You have control/);
   assert.deepEqual(f.commands[0], {
     expectedUserId: ownerId,
     runId,

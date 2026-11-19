@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { BrowserPrivateEntryCard } from "@/components/BrowserPrivateEntryCard";
 import { BrowserInteractionCard } from "@/components/BrowserInteractionCard";
+import { BrowserWorkspace } from "@/components/BrowserWorkspace";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -37,6 +38,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     [cleared, setCleared] = useState(false);
   const [dismissedSignIn, setDismissedSignIn] = useState<string | null>(null);
   const controlsId = useId();
+  const previewButton = useRef<HTMLButtonElement>(null);
   const lifetime = useRef<AbortController | null>(null),
     serial = useRef(0),
     busyRef = useRef(false);
@@ -141,6 +143,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       )
         throw Error("invalid");
       setView(response.result.closed ? null : response.result);
+      if (response.result.closed) setControlsOpen(false);
       setSnapshot((previous) =>
         previous
           ? {
@@ -215,21 +218,24 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     setText("");
     setTarget("");
   }
-  return (
+  const panel = (
     <section
       aria-label="Private Work browser"
       className="work-browser-panel"
       data-ui-reference="chatgpt.agent.browser-card"
     >
       <div className="work-browser-heading">
-        <h4>
-          <Monitor aria-hidden="true" /> Cloud browser
-        </h4>
+        {!controlsOpen && (
+          <h4>
+            <Monitor aria-hidden="true" /> Cloud browser
+          </h4>
+        )}
         <span className="work-browser-status" role="status">
           {status}
         </span>
       </div>
       <button
+        ref={previewButton}
         type="button"
         className="work-browser-preview"
         data-ui-reference="chatgpt.agent.browser-preview"
@@ -536,5 +542,19 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
         </div>
       )}
     </section>
+  );
+  return controlsOpen ? (
+    <BrowserWorkspace
+      title="Cloud browser"
+      onClose={toggleControls}
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        previewButton.current?.focus({ preventScroll: true });
+      }}
+    >
+      {panel}
+    </BrowserWorkspace>
+  ) : (
+    panel
   );
 }

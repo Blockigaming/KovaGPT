@@ -365,6 +365,19 @@ test("the conversation checklist collects sources, outputs and real browser meta
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,
   });
+  await browser.getByRole("button", { name: "Open browser activity" }).click();
+  const workspace = page.getByRole("dialog", { name: "Cloud browser", exact: true });
+  await expect(workspace.getByRole("img", { name: "Current cloud browser preview" })).toBeVisible();
+  const bounds = await workspace.boundingBox();
+  const main = await page.locator(".kova-chat-main").boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(main).not.toBeNull();
+  expect(bounds!.x).toBeCloseTo(main!.x, 0);
+  expect(bounds!.width).toBeCloseTo(main!.width, 0);
+  expect(bounds!.y + bounds!.height).toBeCloseTo(main!.y + main!.height, 0);
+  await workspace.getByRole("button", { name: "Close browser workspace", exact: true }).click();
+  await expect(workspace).toBeHidden();
+  await expect(page.getByRole("button", { name: "Activity", exact: true })).toBeFocused();
 });
 
 test("Library search and guided help use rounded, usable fields", async ({ page }) => {

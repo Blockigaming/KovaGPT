@@ -1,4 +1,5 @@
 import { CloudBrowserPreview } from "./CloudBrowserPreview";
+import { BrowserWorkspace } from "./BrowserWorkspace";
 import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -700,6 +701,23 @@ export function ConversationHeaderActions({
             onClose: () => setSelectedBrowser(null),
             onCloseAutoFocus: restoreFocus,
           })
+        ) : signedIn && user?.id && selectedBrowser.browser?.previewPath ? (
+          <BrowserWorkspace
+            title="Cloud browser"
+            description={selectedBrowser.label}
+            onClose={() => setSelectedBrowser(null)}
+            onCloseAutoFocus={restoreFocus}
+          >
+            <div className="kova-browser-workspace-page">
+              {browserActivityIsFresh(selectedBrowser.browser) ? (
+                <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
+              ) : (
+                <p role="status" className="text-sm text-muted-foreground">
+                  This browser session has ended.
+                </p>
+              )}
+            </div>
+          </BrowserWorkspace>
         ) : (
           <Dialog
             open={Boolean(selectedBrowser)}
@@ -712,17 +730,10 @@ export function ConversationHeaderActions({
                 <DialogTitle>Browser activity</DialogTitle>
                 <DialogDescription>{selectedBrowser?.label}</DialogDescription>
               </DialogHeader>
-              {signedIn &&
-              user?.id &&
-              selectedBrowser.browser?.previewPath &&
-              browserActivityIsFresh(selectedBrowser.browser) ? (
-                <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  This is a recorded browser event. No live session is connected. A live preview
-                  appears here when a verified browser session is active.
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                This is a recorded browser event. No live session is connected. A live preview
+                appears here when a verified browser session is active.
+              </p>
               <Button
                 variant="outline"
                 className="min-h-11"
