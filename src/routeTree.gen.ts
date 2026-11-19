@@ -223,6 +223,7 @@ import { Route as ApiAuthRecoveryRequestRouteImport } from './routes/api/auth/re
 import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/recovery/reset'
 import { Route as ApiAuthSessionsRevokeOthersRouteImport } from './routes/api/auth/sessions/revoke-others'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify/resend'
+import { Route as ApiBrowserPreviewSessionIdRouteImport } from './routes/api/browser/preview/$sessionId'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
@@ -1331,6 +1332,12 @@ const ApiAuthVerifyResendRoute = ApiAuthVerifyResendRouteImport.update({
   path: '/resend',
   getParentRoute: () => ApiAuthVerifyRoute,
 } as any)
+const ApiBrowserPreviewSessionIdRoute =
+  ApiBrowserPreviewSessionIdRouteImport.update({
+    id: '/api/browser/preview/$sessionId',
+    path: '/api/browser/preview/$sessionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDeveloperPaymentsWebhookRoute =
   ApiDeveloperPaymentsWebhookRouteImport.update({
     id: '/api/developer/payments/webhook',
@@ -1623,6 +1630,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/browser/preview/$sessionId': typeof ApiBrowserPreviewSessionIdRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -1852,6 +1860,7 @@ export interface FileRoutesByTo {
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/browser/preview/$sessionId': typeof ApiBrowserPreviewSessionIdRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -2082,6 +2091,7 @@ export interface FileRoutesById {
   '/api/auth/recovery/reset': typeof ApiAuthRecoveryResetRoute
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
+  '/api/browser/preview/$sessionId': typeof ApiBrowserPreviewSessionIdRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
@@ -2313,6 +2323,7 @@ export interface FileRouteTypes {
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
+    | '/api/browser/preview/$sessionId'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2542,6 +2553,7 @@ export interface FileRouteTypes {
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
+    | '/api/browser/preview/$sessionId'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2771,6 +2783,7 @@ export interface FileRouteTypes {
     | '/api/auth/recovery/reset'
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
+    | '/api/browser/preview/$sessionId'
     | '/api/developer/payments/webhook'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
@@ -2990,6 +3003,7 @@ export interface RootRouteChildren {
   ApiAuthRecoveryRequestRoute: typeof ApiAuthRecoveryRequestRoute
   ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
   ApiAuthSessionsRevokeOthersRoute: typeof ApiAuthSessionsRevokeOthersRoute
+  ApiBrowserPreviewSessionIdRoute: typeof ApiBrowserPreviewSessionIdRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
@@ -4505,6 +4519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthVerifyResendRouteImport
       parentRoute: typeof ApiAuthVerifyRoute
     }
+    '/api/browser/preview/$sessionId': {
+      id: '/api/browser/preview/$sessionId'
+      path: '/api/browser/preview/$sessionId'
+      fullPath: '/api/browser/preview/$sessionId'
+      preLoaderRoute: typeof ApiBrowserPreviewSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/developer/payments/webhook': {
       id: '/api/developer/payments/webhook'
       path: '/api/developer/payments/webhook'
@@ -4926,6 +4947,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRecoveryRequestRoute: ApiAuthRecoveryRequestRoute,
   ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
   ApiAuthSessionsRevokeOthersRoute: ApiAuthSessionsRevokeOthersRoute,
+  ApiBrowserPreviewSessionIdRoute: ApiBrowserPreviewSessionIdRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,

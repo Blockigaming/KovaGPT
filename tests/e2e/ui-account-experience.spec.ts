@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { fixture, owner, planUsageFixture } from "./actual-app-fixture";
 import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar } from "./current-ui";
+import { revealSidebar, usesSidebarDrawer } from "./current-ui";
 
 async function prepare(page: import("@playwright/test").Page) {
   await fixture(page, "dark", true, true, "free");
@@ -50,7 +50,7 @@ test("collapsed sidebar is slim, hides search, and Connections uses compact unnu
   await expect(page.getByRole("tab", { name: "All", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Connected", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Discover", exact: true })).toHaveCount(0);
-  if (page.viewportSize()!.width >= 1024) {
+  if (!(await usesSidebarDrawer(page))) {
     const rail = page.getByRole("navigation", { name: "Collapsed navigation" });
     await expect(rail).toBeVisible();
     await expect(rail.getByRole("button", { name: "Search chats", exact: true })).toHaveCount(0);
@@ -99,7 +99,7 @@ test("secondary-page chat menus include Rename, Pin, Share, project choices, and
   page,
 }, info) => {
   test.skip(
-    page.viewportSize()!.width < 1024,
+    await usesSidebarDrawer(page),
     "Desktop submenu; mobile navigation is covered by the drawer suite",
   );
   await prepare(page);

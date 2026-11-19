@@ -2,6 +2,7 @@ export type BrowserActivityMetadata = {
   sessionId: string;
   tabCount: number;
   observedAt: number;
+  expiresAt?: number;
   hostname?: string;
   previewPath?: string;
 };

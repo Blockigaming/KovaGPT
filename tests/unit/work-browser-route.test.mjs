@@ -114,6 +114,7 @@ function fixture(tier = "plus") {
     "@/lib/cloud-browser-rules.mjs": cloudRules,
   });
   const route = load("src/routes/api/work/browser.ts", {
+    "@/lib/chat-browser.server": { chatBrowserReadiness: async () => false },
     "@tanstack/react-router": { createFileRoute: () => () => ({}) },
     "@/lib/api-auth.server": {
       requireVerifiedUser: async () => (confirmed ? caller : new Response(null, { status: 401 })),

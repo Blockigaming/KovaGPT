@@ -152,6 +152,7 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
   const enabled = (input) =>
     vm.runInNewContext(`${greeting} Boolean(${expression})`, {
       selectedHostedTool: null,
+      explicitBrowser: false,
       connectorId: undefined,
       auth: { userId: "owner" },
       usesExistingContext: true,
@@ -180,6 +181,7 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
     { usesExistingContext: false },
     { hasAttachments: true },
     { selectedHostedTool: "web_search" },
+    { explicitBrowser: true },
     { customKova: { config: { apps: [] } } },
   ])
     assert.equal(enabled(input), false);

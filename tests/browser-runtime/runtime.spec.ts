@@ -3,7 +3,11 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BrowserRuntime, BrowserRuntimeError } from "../../src/browser-runtime/index";
+import {
+  BrowserRuntime,
+  BrowserRuntimeError,
+  BrowserSessionManager,
+} from "../../src/browser-runtime/index";
 
 let server: Server;
 let origin: string;
@@ -128,4 +132,43 @@ test("expires inactive browser sessions after fifteen minutes", async () => {
   expect(await runtime.sessions.sweep(created + 14 * 60_000)).toBe(0);
   expect(await runtime.sessions.sweep(created + 15 * 60_000)).toBe(1);
   expect(() => runtime.listTabs(session.id, "owner-a")).toThrow(BrowserRuntimeError);
+});
+
+test("admits Browserbase regional CDP endpoints and rejects look-alike hosts", async () => {
+  const apiKey = process.env.BROWSERBASE_API_KEY;
+  const projectId = process.env.BROWSERBASE_PROJECT_ID;
+  const fetch = globalThis.fetch;
+  const remoteId = "12345678-abcd-1234-efab-123456789abc";
+  let connectUrl = "wss://connect.usw2.browserbase.com/session";
+  let released = 0;
+  const manager = new BrowserSessionManager(runtime.artifacts, runtime.auditSink, {
+    get() {
+      throw new Error("CDP connection allowed");
+    },
+  });
+  process.env.BROWSERBASE_API_KEY = "fixture-browserbase-key";
+  process.env.BROWSERBASE_PROJECT_ID = "fixture-project";
+  globalThis.fetch = async (url) => {
+    if (url === "https://api.browserbase.com/v1/sessions") {
+      return Response.json({ id: remoteId, connectUrl });
+    }
+    expect(url).toBe(`https://api.browserbase.com/v1/sessions/${remoteId}`);
+    released += 1;
+    return Response.json({ status: "COMPLETED" });
+  };
+  try {
+    await expect(manager.create(sessionOptions())).rejects.toThrow("CDP connection allowed");
+    connectUrl = "wss://connect.usw2.browserbase.com.example.org/session";
+    await expect(manager.create(sessionOptions())).rejects.toThrow(
+      "Invalid Browserbase connection endpoint",
+    );
+    expect(released).toBe(2);
+  } finally {
+    globalThis.fetch = fetch;
+    if (apiKey === undefined) delete process.env.BROWSERBASE_API_KEY;
+    else process.env.BROWSERBASE_API_KEY = apiKey;
+    if (projectId === undefined) delete process.env.BROWSERBASE_PROJECT_ID;
+    else process.env.BROWSERBASE_PROJECT_ID = projectId;
+    await manager.shutdown();
+  }
 });

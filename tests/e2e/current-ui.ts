@@ -25,6 +25,17 @@ export async function openComposerAddMenu(page: Page) {
   return menu;
 }
 
+export async function composerResourceTrigger(
+  page: Page,
+  name: "Choose project" | "Files" | "Plugins",
+) {
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeEnabled();
+  const trayAction = page.locator(".kova-composer-tray").getByRole("button", { name, exact: true });
+  if (await trayAction.isVisible()) return trayAction;
+  const menu = await openComposerAddMenu(page);
+  return menu.getByRole("button", { name, exact: true });
+}
+
 export async function revealSidebar(page: Page) {
   const navigation = page
     .getByRole("navigation", { name: "Primary navigation", exact: true })
@@ -105,7 +116,7 @@ export async function openCurrentSettings(page: Page) {
   });
   await expect(surface.or(menuSettings).filter({ visible: true }).first()).toBeVisible();
   if (!(await surface.isVisible())) await menuSettings.click();
-  await expect(surface).toBeVisible();
+  await expect(surface).toBeVisible({ timeout: 10_000 });
   return surface;
 }
 

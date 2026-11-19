@@ -83,6 +83,8 @@ RUN groupadd --system --gid 10001 kova && \
 
 COPY --from=build --chown=kova:kova /app/dist ./dist
 COPY --from=build --chown=kova:kova /app/package.json ./package.json
+COPY --from=deps --chown=kova:kova /app/node_modules/playwright ./node_modules/playwright
+COPY --from=deps --chown=kova:kova /app/node_modules/playwright-core ./node_modules/playwright-core
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/dispatch.mjs ./scripts/auth-email/dispatch.mjs
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/notification-dispatch.mjs ./scripts/auth-email/notification-dispatch.mjs
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/production-worker.mjs ./scripts/auth-email/production-worker.mjs

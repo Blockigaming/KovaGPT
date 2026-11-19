@@ -238,26 +238,13 @@ export function ConversationSourcesView({
               aria-label="Open browser activity"
             >
               {browsers.length > 1 && <span className="sr-only">{activity.status}</span>}
-              {browserPreview ??
-                (activity.status === "active" &&
-                browserActivityIsFresh(activity.browser) &&
-                activity.browser?.previewPath ? (
-                  <span className="kova-browser-live-preview">
-                    <img
-                      src={activity.browser.previewPath}
-                      alt="Current cloud browser preview"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
-                    {activity.browser.hostname ? <small>{activity.browser.hostname}</small> : null}
-                  </span>
-                ) : (
-                  <span className="kova-browser-card-content">
-                    <Monitor aria-hidden="true" />
-                    <strong>{activity.label}</strong>
-                    <small>Recorded activity · no live preview</small>
-                  </span>
-                ))}
+              {browserPreview ?? (
+                <span className="kova-browser-card-content">
+                  <Monitor aria-hidden="true" />
+                  <strong>{activity.label}</strong>
+                  <small>Recorded activity · no live preview</small>
+                </span>
+              )}
             </button>
           ))}
         </section>

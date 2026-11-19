@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { fixture, owner } from "./actual-app-fixture";
 import { resolveFixtureFunctionName } from "./server-function-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar, usesSidebarDrawer } from "./current-ui";
 
 const projectId = "33333333-3333-4333-8333-333333333333";
 const instructions = "Use the reference documents and keep answers concise.";
@@ -101,9 +102,8 @@ async function contained(page: Page) {
 }
 
 async function expandDesktopNavigation(page: Page) {
-  if (page.viewportSize()!.width < 1024) return;
-  const expand = page.getByRole("button", { name: "Expand sidebar", exact: true });
-  if (await expand.isVisible()) await expand.click();
+  if (await usesSidebarDrawer(page)) return;
+  await revealSidebar(page);
   await expect(
     page.getByRole("navigation", { name: "KovaGPT features", exact: true }),
   ).toBeVisible();
@@ -301,9 +301,7 @@ test("workspace destinations stay together in desktop navigation and the phone d
   await page.goto("/projects");
   await waitForKovaHydration(page);
   await expect(page.locator(".kova-project-file:visible")).toHaveCount(3);
-  if (page.viewportSize()!.width < 1024) {
-    await page.getByRole("button", { name: "Open menu", exact: true }).click();
-  } else await expandDesktopNavigation(page);
+  await revealSidebar(page);
   const workspace = page.getByRole("navigation", { name: "KovaGPT features", exact: true });
   for (const name of ["Projects", "Library", "Scheduled tasks"]) {
     await expect(workspace.getByRole("link", { name, exact: true })).toBeVisible();
@@ -312,7 +310,7 @@ test("workspace destinations stay together in desktop navigation and the phone d
   await more.locator("summary").click();
   await expect(workspace.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
   await expect(more.getByRole("link", { name: "Discover", exact: true })).toHaveCount(0);
-  if (page.viewportSize()!.width < 1024) {
+  if (await usesSidebarDrawer(page)) {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeFocused();
   }

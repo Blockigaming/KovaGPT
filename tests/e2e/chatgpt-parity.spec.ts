@@ -12,7 +12,9 @@ test.describe("KovaGPT parity invariants", () => {
       await page.goto("/");
       await stablePage(page);
       await assertNoHorizontalOverflow(page);
-      const composer = page.locator(".spec400-composer").first();
+      const composer = page.locator(".spec400-composer").filter({
+        has: page.getByRole("textbox", { name: "Message KovaGPT", exact: true }),
+      });
       await expect(composer).toBeVisible();
       const box = await composer.boundingBox();
       expect(box).not.toBeNull();

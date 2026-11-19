@@ -1,3 +1,5 @@
+import { CloudBrowserPreview } from "./CloudBrowserPreview";
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
@@ -79,7 +81,6 @@ function downloadOutput(output: ConversationOutput) {
 export function ConversationHeaderActions({
   conversation,
   signedIn,
-  userTier = "free",
   compact = false,
   navigationBlocked = false,
   isStreaming = false,
@@ -91,6 +92,7 @@ export function ConversationHeaderActions({
   browserPresentation,
 }: {
   browserPresentation?: {
+    active?: boolean;
     thumbnail: ReactNode;
     tabCount?: number;
     renderDialog: (props: {
@@ -442,24 +444,23 @@ export function ConversationHeaderActions({
             </button>
           ))}
       </section>
-      <ConversationSourcesPanel
-        browserOnly
-        showActivity={false}
-        conversation={conversation}
-        browserTabCount={
-          signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
-        }
-        browserPreview={
-          signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
-        }
-        onOpenAttachment={() => {}}
-        onOpenMemory={() => {}}
-        onOpenBrowser={(activity) => {
-          rememberFocus(outputsRef.current);
-          setOutputsOpen(false);
-          setSelectedBrowser(activity);
-        }}
-      />
+      {signedIn && (
+        <ConversationSourcesPanel
+          browserOnly
+          activeBrowserOnly
+          showActivity={false}
+          conversation={conversation}
+          browserTabCount={browserPresentation?.active ? browserPresentation.tabCount : undefined}
+          browserPreview={browserPresentation?.active ? browserPresentation.thumbnail : undefined}
+          onOpenAttachment={() => {}}
+          onOpenMemory={() => {}}
+          onOpenBrowser={(activity) => {
+            rememberFocus(outputsRef.current);
+            setOutputsOpen(false);
+            setSelectedBrowser(activity);
+          }}
+        />
+      )}
       {steps.length > 0 && (
         <section className="kova-activity-inventory" aria-label="Steps">
           <button
@@ -678,7 +679,7 @@ export function ConversationHeaderActions({
         </DialogContent>
       </Dialog>
       {selectedBrowser &&
-        (browserPresentation && signedIn && userTier !== "free" ? (
+        (browserPresentation?.active && signedIn ? (
           browserPresentation.renderDialog({
             activity: selectedBrowser,
             onClose: () => setSelectedBrowser(null),
@@ -696,10 +697,17 @@ export function ConversationHeaderActions({
                 <DialogTitle>Browser activity</DialogTitle>
                 <DialogDescription>{selectedBrowser?.label}</DialogDescription>
               </DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                This is a recorded browser event. No live session is connected. A live preview and
-                controls appear here when a verified browser session is active.
-              </p>
+              {signedIn &&
+              user?.id &&
+              selectedBrowser.browser?.previewPath &&
+              browserActivityIsFresh(selectedBrowser.browser) ? (
+                <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This is a recorded browser event. No live session is connected. A live preview
+                  appears here when a verified browser session is active.
+                </p>
+              )}
               <Button
                 variant="outline"
                 className="min-h-11"

@@ -31,11 +31,15 @@ export async function handleWorkBrowser(request: Request) {
     return json({ error: "work_browser_rate_limited" }, rate.status === "limited" ? 429 : 503);
   try {
     if (url.searchParams.get("scope") === "permissions") {
-      if (request.method === "GET")
-        return json({
-          rules: await readCloudBrowserRules(caller.supabaseAdmin, caller.userId),
-          readiness: await browserReadiness(),
-        });
+      if (request.method === "GET") {
+        const { chatBrowserReadiness } = await import("@/lib/chat-browser.server");
+        const [rules, readiness, chatAvailable] = await Promise.all([
+          readCloudBrowserRules(caller.supabaseAdmin, caller.userId),
+          browserReadiness(),
+          chatBrowserReadiness(caller),
+        ]);
+        return json({ rules, readiness: { ...readiness, chatAvailable } });
+      }
       if (request.headers.get("content-type")?.split(";", 1)[0] !== "application/json")
         return json({ error: "json_content_type_required" }, 415);
       const body = await readBoundedJsonObject(request, 16000);

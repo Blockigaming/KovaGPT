@@ -1,4 +1,4 @@
-/** Future browser adapters emit this metadata with tool=browser_interact.
+/** Browser adapters emit this metadata with tool=browser_interact.
  * Preview bytes stay behind the same-origin authenticated browser endpoint. */
 export function normalizeBrowserActivity(value) {
   if (
@@ -30,10 +30,19 @@ export function normalizeBrowserActivity(value) {
     sessionId: value.sessionId,
     tabCount: value.tabCount,
     observedAt: value.observedAt,
+    ...(Number.isFinite(value.expiresAt) &&
+    value.expiresAt > value.observedAt &&
+    value.expiresAt <= value.observedAt + 900000
+      ? { expiresAt: value.expiresAt }
+      : {}),
     ...(hostname ? { hostname } : {}),
     ...(previewPath ? { previewPath } : {}),
   };
 }
 export function browserActivityIsFresh(value, now = Date.now()) {
-  return Boolean(value && value.observedAt <= now + 30000 && value.observedAt >= now - 300000);
+  return Boolean(
+    value &&
+    value.observedAt <= now + 30000 &&
+    now < (value.expiresAt ?? value.observedAt + 300000),
+  );
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import * as browserActivity from "../../src/lib/browser-activity-contract.mjs";
 
 function load(path, modules = {}) {
   const code = ts.transpileModule(readFileSync(path, "utf8"), {
@@ -120,6 +121,8 @@ function fixture(overrides = {}, desktop = true) {
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const primitives = (names) => Object.fromEntries(names.map((name) => [name, name]));
   const modules = {
+    "./CloudBrowserPreview": { CloudBrowserPreview: "CloudBrowserPreview" },
+    "@/lib/browser-activity-contract.mjs": browserActivity,
     react: {
       lazy: () => "LazyComponent",
       Suspense: "Suspense",

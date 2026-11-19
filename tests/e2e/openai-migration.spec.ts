@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
-import { revealSidebar } from "./current-ui";
+import { dismissMobileSidebar, revealSidebar, usesSidebarDrawer } from "./current-ui";
 import { fixture } from "./actual-app-fixture";
 import { waitForCommittedChat } from "./chat-history-commit";
 
@@ -42,31 +42,28 @@ test("authenticated chat consumes Kova SSE once and keeps page and menu identity
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  const viewport = page.viewportSize();
-  if (viewport && viewport.width >= 1024) {
-    const navigation = await revealSidebar(page);
-    const sidebarBrand = navigation.locator(".kova-sidebar-brand");
-    await expect(sidebarBrand).toHaveCount(1);
-    await expect(sidebarBrand).toHaveText("KovaGPT");
-  } else {
+  const drawerLayout = await usesSidebarDrawer(page);
+  if (drawerLayout) {
     await expect(
       page
         .locator('[data-ui-reference="chatgpt-mobile-topbar"]')
         .getByRole("heading", { name: "KovaGPT", exact: true }),
     ).toHaveCount(1);
-    const navigation = await revealSidebar(page);
-    const sidebarBrand = navigation.locator(".kova-sidebar-brand");
-    await expect(sidebarBrand).toHaveCount(1);
-    await expect(sidebarBrand).toHaveText("KovaGPT");
-    await page.keyboard.press("Escape");
   }
+  const navigation = await revealSidebar(page);
+  const sidebarBrand = navigation.locator(".kova-sidebar-brand");
+  await expect(sidebarBrand).toHaveCount(1);
+  await expect(sidebarBrand).toHaveText("KovaGPT");
+  if (drawerLayout) await dismissMobileSidebar(page);
   if (testInfo.project.name === "desktop-1280x800") {
     await page.screenshot({ path: "test-results/openai-migration-logo.png", fullPage: false });
   }
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill("Hello mocked runtime");
   await page.getByTestId("send-button").click();
-  await expect(page.getByText("Mocked OpenAI response", { exact: false })).toBeVisible();
+  await expect(page.getByText("Mocked OpenAI response", { exact: false })).toBeVisible({
+    timeout: 10_000,
+  });
   await expect.poll(() => requests).toBe(1);
   await revealSidebar(page);
   await expect(

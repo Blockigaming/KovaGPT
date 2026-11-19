@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { png } from "../helpers/image-fixture.mjs";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { usesSidebarDrawer } from "./current-ui";
 
 test("chat attachments open in the workspace preview without downloading", async ({ page }) => {
   await fixture(page, "dark", true, true, "free", {
@@ -27,6 +28,9 @@ test("chat attachments open in the workspace preview without downloading", async
   const openText = message.getByRole("button", { name: "review.txt", exact: true });
   const openImage = message.locator("[data-chat-image] > img");
   const wide = page.viewportSize()!.width >= 1024;
+  const sidebar = page.locator("main[data-sidebar]");
+  const sidebarState = (await usesSidebarDrawer(page)) ? "closed" : "open";
+  await expect(sidebar).toHaveAttribute("data-sidebar", sidebarState);
 
   const checkGeometry = async (name: string, docked = wide) => {
     const preview = page.getByRole("dialog", { name, exact: true });
@@ -79,7 +83,7 @@ test("chat attachments open in the workspace preview without downloading", async
     await expect
       .poll(async () => (await textPreview.boundingBox())!.width)
       .toBeLessThan(previousWidth);
-    await expect(page.locator("main[data-sidebar]")).toHaveAttribute("data-sidebar", "open");
+    await expect(sidebar).toHaveAttribute("data-sidebar", sidebarState);
   }
   await page.keyboard.press("Escape");
   await expect(textPreview).toBeHidden();
