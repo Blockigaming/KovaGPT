@@ -70,11 +70,12 @@ test("only the first eligible waiter can claim its own slot, in tier then arriva
   const release = (user) =>
     db.query("delete from public.browserbase_queue where request_id=$1", [user.request]);
   assert.equal(await claim(active, "plus"), true);
+  assert.equal(await claim(free, "free"), false);
   assert.equal(await claim(plus, "plus"), false);
   assert.equal(await claim(firstPro, "pro"), false);
   assert.equal(await claim(secondPro, "pro"), false);
-  assert.equal(await claim(free, "free"), false);
   await release(active);
+  assert.equal(await claim(free, "free"), false);
   assert.equal(await claim(plus, "plus"), false);
   assert.equal(await claim(secondPro, "pro"), false);
   assert.equal(await claim(firstPro, "pro"), true);
@@ -86,4 +87,7 @@ test("only the first eligible waiter can claim its own slot, in tier then arriva
   await db.exec("set role authenticated");
   await assert.rejects(() => claim(free, "pro"), /permission denied/);
   await assert.rejects(() => release(plus), /permission denied/);
+  await db.exec("reset role");
+  await release(plus);
+  assert.equal(await claim(free, "free"), true);
 });

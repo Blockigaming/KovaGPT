@@ -11,7 +11,7 @@ import { readCloudBrowserRules } from "@/lib/cloud-browser-preferences.server.mj
 import { assertCloudBrowserDestination } from "@/lib/cloud-browser-rules.mjs";
 import { ChatPreflightError } from "@/lib/chat-preflight.server.mjs";
 
-type BrowserTier = "plus" | "pro";
+type BrowserTier = "free" | "plus" | "pro";
 type Preview = { preview_jpeg: string | null; preview_expires_at: string | null };
 type BrowserDatabase = {
   public: {

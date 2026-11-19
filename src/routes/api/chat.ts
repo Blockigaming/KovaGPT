@@ -1286,13 +1286,13 @@ export const Route = createFileRoute("/api/chat")({
             let browserActivity: ReturnType<typeof createToolActivityEvent> | undefined;
             let browserBlock = "";
             if (explicitBrowser) {
-              if (!auth?.emailVerified || callerTier === "free") {
+              if (!auth?.emailVerified) {
                 throw new ChatPreflightError({
                   stage: "cloud_browser",
-                  code: "cloud_browser_paid_plan_required",
+                  code: "cloud_browser_verified_account_required",
                   status: 403,
                   retryable: false,
-                  publicMessage: "Cloud Browser requires a verified account on Plus or Pro.",
+                  publicMessage: "Cloud Browser requires a verified account.",
                 });
               }
               if (lockdownBlocksNetwork || (customKova && !customKova.allows("web")) || capture) {
