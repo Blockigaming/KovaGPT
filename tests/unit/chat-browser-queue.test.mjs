@@ -41,40 +41,59 @@ test("browser activity carries a 15-minute idle expiry without changing legacy m
   );
 });
 
-test("only the first eligible waiter can claim its own slot, in tier then arrival order", async (t) => {
+async function queueDatabase(t) {
   const db = new PGlite();
   await t.after(() => db.close());
-  await db.exec("create role service_role; create role anon; create role authenticated;");
-  await db.exec(
-    await readFile(
-      new URL(
-        "../../supabase/migrations/20261118150000_kova_browserbase_priority_queue.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
-  const users = Array.from({ length: 5 }, () => ({
-    owner: crypto.randomUUID(),
-    request: crypto.randomUUID(),
-  }));
-  const [active, plus, firstPro, secondPro, free] = users;
-  const claim = async ({ owner, request }, tier) =>
-    (
-      await db.query("select public.claim_browserbase_slot($1,$2,$3,1) as allowed", [
+  await db.exec("create role service_role bypassrls; create role anon; create role authenticated;");
+  for (const migration of [
+    "20261118150000_kova_browserbase_priority_queue.sql",
+    "20261119131500_kova_chat_browser_daily_time.sql",
+  ]) {
+    await db.exec(
+      await readFile(new URL(`../../supabase/migrations/${migration}`, import.meta.url), "utf8"),
+    );
+  }
+  await db.exec("set role service_role");
+  return db;
+}
+
+function browserRequest() {
+  return { owner: crypto.randomUUID(), request: crypto.randomUUID() };
+}
+
+function queueClient(db) {
+  return {
+    async claim({ owner, request }, tier, capacity = 1) {
+      const { rows } = await db.query(
+        "select public.claim_browserbase_slot_with_quota($1,$2,$3,$4) as result",
+        [owner, request, tier, capacity],
+      );
+      return rows[0].result;
+    },
+    release({ owner, request }, opened = false) {
+      return db.query("select public.release_browserbase_slot_with_quota($1,$2,$3)", [
         owner,
         request,
-        tier,
-      ])
-    ).rows[0].allowed;
-  const release = (user) =>
-    db.query("delete from public.browserbase_queue where request_id=$1", [user.request]);
+        opened,
+      ]);
+    },
+  };
+}
+
+test("only the first eligible waiter can claim its own slot, in tier then arrival order", async (t) => {
+  const db = await queueDatabase(t);
+  const users = Array.from({ length: 5 }, browserRequest);
+  const [active, plus, firstPro, secondPro, free] = users;
+  const queue = queueClient(db);
+  const claim = async (user, tier) => (await queue.claim(user, tier)).status === "admitted";
+  const { release } = queue;
   assert.equal(await claim(active, "plus"), true);
+  assert.equal(await claim(free, "free"), false);
   assert.equal(await claim(plus, "plus"), false);
   assert.equal(await claim(firstPro, "pro"), false);
   assert.equal(await claim(secondPro, "pro"), false);
-  assert.equal(await claim(free, "free"), false);
   await release(active);
+  assert.equal(await claim(free, "free"), false);
   assert.equal(await claim(plus, "plus"), false);
   assert.equal(await claim(secondPro, "pro"), false);
   assert.equal(await claim(firstPro, "pro"), true);
@@ -86,4 +105,58 @@ test("only the first eligible waiter can claim its own slot, in tier then arriva
   await db.exec("set role authenticated");
   await assert.rejects(() => claim(free, "pro"), /permission denied/);
   await assert.rejects(() => release(plus), /permission denied/);
+  await db.exec("reset role");
+  await release(plus);
+  assert.equal(await claim(free, "free"), true);
+});
+
+test("reserves and settles UTC daily time for Free and Plus and leaves Pro uncapped", async (t) => {
+  const db = await queueDatabase(t);
+  await db.exec("set time zone 'America/Los_Angeles'");
+  const { claim, release } = queueClient(db);
+  const [free, plus, pro] = Array.from({ length: 3 }, browserRequest);
+  const used = async ({ owner }) =>
+    (
+      await db.query(
+        "select reserved_ms from public.browserbase_daily_usage where owner_id=$1 and usage_day=(clock_timestamp() at time zone 'UTC')::date",
+        [owner],
+      )
+    ).rows[0]?.reserved_ms;
+  const seed = ({ owner }, milliseconds, daysAgo = 0) =>
+    db.query(
+      `insert into public.browserbase_daily_usage (owner_id,usage_day,reserved_ms)
+     values ($1,(clock_timestamp() at time zone 'UTC')::date - $3::int,$2)
+     on conflict (owner_id,usage_day) do update set reserved_ms=excluded.reserved_ms`,
+      [owner, milliseconds, daysAgo],
+    );
+  await seed(free, 600_000, 1);
+  assert.equal((await claim(free, "free")).status, "admitted");
+  assert.equal(await used(free), 600_000);
+  assert.equal(
+    (await claim({ ...free, request: crypto.randomUUID() }, "free", 3)).status,
+    "waiting",
+  );
+  await release(free, true);
+  const consumed = await used(free);
+  assert.ok(consumed > 0 && consumed < 600_000);
+  await release(free, true);
+  assert.equal(await used(free), consumed);
+  await seed(free, 600_000);
+  assert.equal((await claim(free, "free")).status, "daily_limit");
+
+  await seed(plus, 3_580_000);
+  const admission = await claim(plus, "plus");
+  assert.equal(admission.status, "admitted");
+  assert.ok(Date.parse(admission.deadline) > Date.now());
+  assert.equal(await used(plus), 3_600_000);
+  await release(plus);
+  assert.equal(await used(plus), 3_580_000);
+  await seed(plus, 3_600_000);
+  assert.equal((await claim(plus, "plus")).status, "daily_limit");
+
+  assert.deepEqual(await claim(pro, "pro"), { status: "admitted", deadline: null });
+  assert.equal(await used(pro), undefined);
+  await release(pro, true);
+  await db.exec("set role authenticated");
+  await assert.rejects(() => used(free), /permission denied/);
 });

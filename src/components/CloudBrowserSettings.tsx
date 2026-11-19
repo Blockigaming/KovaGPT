@@ -106,7 +106,9 @@ export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
         </p>
         {readiness?.chatAvailable && (
           <p className="text-sm text-muted-foreground">
-            In chat, ask Cloud Browser to open a public HTTPS link. Available on Plus and Pro.
+            In chat, ask Cloud Browser to open a public HTTPS link. Queue priority is Pro, then
+            Plus, then Free. Free gets 10 minutes per day, Plus gets 60 minutes, and Pro has no
+            daily limit. Daily limits reset at midnight UTC.
           </p>
         )}
         {readiness?.available && (

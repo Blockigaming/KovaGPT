@@ -11,13 +11,20 @@ import { readCloudBrowserRules } from "@/lib/cloud-browser-preferences.server.mj
 import { assertCloudBrowserDestination } from "@/lib/cloud-browser-rules.mjs";
 import { ChatPreflightError } from "@/lib/chat-preflight.server.mjs";
 
-type BrowserTier = "plus" | "pro";
+type BrowserTier = "free" | "plus" | "pro";
+type BrowserClaim =
+  { status: "waiting" | "daily_limit" } | { status: "admitted"; deadline: string | null };
 type Preview = { preview_jpeg: string | null; preview_expires_at: string | null };
 type BrowserDatabase = {
   public: {
     Tables: {
       browserbase_queue: {
-        Row: Preview & { owner_id: string; request_id: string; claimed: boolean };
+        Row: Preview & {
+          owner_id: string;
+          request_id: string;
+          claimed: boolean;
+          quota_reserved_ms: number | null;
+        };
         Insert: never;
         Update: Partial<Preview>;
         Relationships: [];
@@ -25,9 +32,13 @@ type BrowserDatabase = {
     };
     Views: Record<string, never>;
     Functions: {
-      claim_browserbase_slot: {
+      claim_browserbase_slot_with_quota: {
         Args: { p_owner: string; p_request: string; p_tier: BrowserTier; p_capacity: number };
-        Returns: boolean;
+        Returns: BrowserClaim;
+      };
+      release_browserbase_slot_with_quota: {
+        Args: { p_owner: string; p_request: string; p_opened: boolean };
+        Returns: undefined;
       };
     };
   };
@@ -53,7 +64,7 @@ export function chatBrowserFailure(code: string, publicMessage: string, status =
     stage: "cloud_browser",
     code,
     status,
-    retryable: status === 503 || status === 429,
+    retryable: status === 503 || (status === 429 && code !== "cloud_browser_daily_limit"),
     publicMessage,
   });
 }
@@ -85,13 +96,15 @@ export async function readChatBrowserPage({
   const requestId = randomUUID();
   let sessionId: string | undefined;
   let queued = false;
+  let opened = false;
   const release = async () => {
     if (active.get(userId) === sessionId) active.delete(userId);
     await db
-      .from("browserbase_queue")
-      .delete()
-      .eq("owner_id", userId)
-      .eq("request_id", requestId)
+      .rpc("release_browserbase_slot_with_quota", {
+        p_owner: userId,
+        p_request: requestId,
+        p_opened: opened,
+      })
       .abortSignal(AbortSignal.timeout(4000));
   };
   try {
@@ -111,19 +124,33 @@ export async function readChatBrowserPage({
     const previous = active.get(userId);
     if (previous) await runtime.closeSession(previous, userId).catch(() => undefined);
     const waitUntil = Date.now() + 8000;
+    let hardExpiresAt: number | undefined;
     while (true) {
       signal.throwIfAborted();
       queued = true;
       const claim = await db
-        .rpc("claim_browserbase_slot", {
+        .rpc("claim_browserbase_slot_with_quota", {
           p_owner: userId,
           p_request: requestId,
           p_tier: tier,
           p_capacity: capacity,
         })
         .abortSignal(AbortSignal.any([signal, AbortSignal.timeout(4000)]));
-      if (claim.error) throw unavailable();
-      if (claim.data === true) break;
+      if (claim.error || !claim.data) throw unavailable();
+      if (claim.data.status === "daily_limit") {
+        throw chatBrowserFailure(
+          "cloud_browser_daily_limit",
+          "You've reached your daily Cloud Browser limit. Your time resets at midnight UTC.",
+          429,
+        );
+      }
+      if (claim.data.status === "admitted") {
+        if (tier !== "pro") {
+          hardExpiresAt = Date.parse(claim.data.deadline ?? "");
+          if (!Number.isFinite(hardExpiresAt)) throw unavailable();
+        }
+        break;
+      }
       if (Date.now() >= waitUntil) {
         throw chatBrowserFailure(
           "cloud_browser_busy",
@@ -138,6 +165,7 @@ export async function readChatBrowserPage({
       workspaceId: chatId ?? requestId,
       chatId,
       readOnly: true,
+      hardExpiresAt,
       permissions: {
         grants: ["navigate", "dom_snapshot", "screenshot"],
         allowedOrigins: [url.origin],
@@ -145,6 +173,7 @@ export async function readChatBrowserPage({
       onClosed: release,
     });
     sessionId = descriptor.id;
+    opened = true;
     signal.throwIfAborted();
     const { context } = runtime.sessions.get(sessionId, userId, false);
     // Browserbase renders the page. All network requests go through the existing
@@ -257,7 +286,7 @@ export async function chatBrowserReadiness(caller: AuthedCaller) {
       readBrowserCapacity({ projectId, apiKey }),
       database(caller)
         .from("browserbase_queue")
-        .select("request_id")
+        .select("request_id,quota_reserved_ms")
         .limit(0)
         .abortSignal(AbortSignal.timeout(5000)),
     ]);
