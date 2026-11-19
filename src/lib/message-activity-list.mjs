@@ -1,4 +1,22 @@
-import { normalizeBrowserActivity } from "./browser-activity-contract.mjs";
+import { browserActivityIsFresh, normalizeBrowserActivity } from "./browser-activity-contract.mjs";
+
+let liveBrowserActivity = null;
+let expiryTimer;
+const liveBrowserListeners = new Set();
+
+export function getLiveBrowserActivity() {
+  return liveBrowserActivity;
+}
+
+export function subscribeToLiveBrowserActivity(listener) {
+  liveBrowserListeners.add(listener);
+  return () => liveBrowserListeners.delete(listener);
+}
+
+function publishLiveBrowserActivity(activity) {
+  liveBrowserActivity = activity;
+  for (const listener of liveBrowserListeners) listener();
+}
 
 export function messageActivitiesFromDelta(current, delta) {
   return appendMessageActivity(current, {
@@ -17,6 +35,24 @@ export function messageActivitiesFromDelta(current, delta) {
           ? "running"
           : "done",
   });
+}
+
+export function receiveMessageActivity(delta, principal, conversationId, messageId) {
+  const [activity] = messageActivitiesFromDelta([], delta);
+  const browser = activity.browser;
+  if (
+    typeof window !== "undefined" &&
+    principal &&
+    activity.status === "running" &&
+    browser?.previewPath &&
+    browserActivityIsFresh(browser)
+  ) {
+    const expiresAt = browser.expiresAt ?? browser.observedAt + 300_000;
+    window.clearTimeout(expiryTimer);
+    publishLiveBrowserActivity({ principal, conversationId, messageId, expiresAt, activity });
+    expiryTimer = window.setTimeout(() => publishLiveBrowserActivity(null), expiresAt - Date.now());
+  }
+  return (current = []) => appendMessageActivity(current, activity);
 }
 
 // Keep each operation in arrival order; only its own status updates replace a row.

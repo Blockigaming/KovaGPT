@@ -3,7 +3,7 @@ import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   FileText,
   Image,
@@ -38,6 +38,11 @@ import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
+import {
+  conversationWithLiveBrowserActivity,
+  getLiveBrowserActivity,
+  subscribeToLiveBrowserActivity,
+} from "@/lib/message-activity-list.mjs";
 import "./conversation-header.css";
 
 function OutputsIcon() {
@@ -79,7 +84,7 @@ function downloadOutput(output: ConversationOutput) {
 }
 
 export function ConversationHeaderActions({
-  conversation,
+  conversation: savedConversation,
   signedIn,
   compact = false,
   navigationBlocked = false,
@@ -115,9 +120,19 @@ export function ConversationHeaderActions({
 }) {
   const { user, isLoaded, isSignedIn } = useUser();
   const { isDesktop } = useLayout();
+  const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
+  const liveBrowserActivity = useSyncExternalStore(
+    subscribeToLiveBrowserActivity,
+    getLiveBrowserActivity,
+    () => null,
+  );
+  const conversation = useMemo(
+    () => conversationWithLiveBrowserActivity(savedConversation, liveBrowserActivity, ownerId),
+    [savedConversation, liveBrowserActivity, ownerId],
+  );
   const sourceInventory = useMemo(
-    () => conversationSources(conversation, isLoaded && isSignedIn ? (user?.id ?? null) : null),
-    [conversation, isLoaded, isSignedIn, user?.id],
+    () => conversationSources(conversation, ownerId),
+    [conversation, ownerId],
   );
   const [selectedBrowser, setSelectedBrowser] = useState<ConversationBrowserSource | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<MemorySources | null>(null);

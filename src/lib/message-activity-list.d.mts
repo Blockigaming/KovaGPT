@@ -11,9 +11,17 @@ export function messageActivitiesFromDelta(
   current: readonly Activity[],
   delta: Record<string, unknown>,
 ): Activity[];
-export function conversationWithLiveBrowserActivity(
-  conversation: Conversation | null,
+export function receiveMessageActivity(
+  delta: Record<string, unknown>,
+  principal: string | null,
+  conversationId: string,
+  messageId: string,
+): (current?: readonly Activity[]) => Activity[];
+export function getLiveBrowserActivity(): LiveBrowserActivity | null;
+export function subscribeToLiveBrowserActivity(listener: () => void): () => void;
+export function conversationWithLiveBrowserActivity<T extends Conversation | null>(
+  conversation: T,
   live: LiveBrowserActivity | null,
-  principal: string,
+  principal: string | null,
   now?: number,
-): Conversation | null;
+): T;
