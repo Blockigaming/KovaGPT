@@ -5,7 +5,7 @@ const fail = () => {
 };
 const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 /** Runs only in the networkless browser image. Tests supply a real local browser.
- * No screenshots, video, HAR, console/network logging or storageState export. */
+ * Owner-only frames are ephemeral. No recording, network logging or storageState export. */
 export async function createInteractiveBrowser({ chromium, exchange }) {
   const browser = await chromium.launch({
     headless: true,
@@ -24,7 +24,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     view = null,
     targets = new Map(),
     activeActor = null;
-  let page;
+  let page, frame, pendingFrame;
   const approvedPages = new Set(),
     popups = new Map(),
     initialNavigations = new Set(),
@@ -353,7 +353,10 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
             count = 0,
             node;
           while ((node = walk.nextNode()) && count++ < 2000 && output.length < maximum) {
-            if (node.parentElement?.closest("script,style,input,textarea,noscript")) continue;
+            if (
+              node.parentElement?.closest("script,style,input,textarea,noscript,[contenteditable]")
+            )
+              continue;
             output += (node.textContent ?? "").slice(0, maximum - output.length) + " ";
           }
           return output.slice(0, maximum);
@@ -386,6 +389,52 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     if (Buffer.byteLength(JSON.stringify(result)) > maximum) fail();
     return result;
   }
+  async function ownerFrame() {
+    if (mode !== "takeover") fail();
+    if (interactions.pending) {
+      if (pendingFrame?.id !== interactions.pending.id)
+        pendingFrame = { id: interactions.pending.id, result: await snapshot("owner") };
+      return { ...pendingFrame.result, sequence };
+    }
+    pendingFrame = null;
+    let jpeg;
+    for (const quality of [55, 32, 16]) {
+      const candidate = await page.screenshot({ type: "jpeg", quality, timeout: 2500 });
+      if (candidate.length <= 256000) {
+        jpeg = candidate.toString("base64");
+        break;
+      }
+    }
+    if (!jpeg) fail();
+    if (frame?.jpeg !== jpeg || frame?.page !== page) frame = { id: randomUUID(), jpeg, page };
+    return {
+      mode,
+      sequence,
+      url: safeUrl(),
+      frame: { id: frame.id, jpeg, width: 1280, height: 900 },
+    };
+  }
+  async function visualAction(input) {
+    if (input.kind === "capture") return ownerFrame();
+    if (interactions.pending) return ownerFrame();
+    if (input.kind === "click" || input.kind === "scroll") {
+      if (input.frame !== frame?.id || page !== frame.page)
+        return { ...(await ownerFrame()), staleFrame: true };
+      if (input.kind === "click") await pageAction(() => page.mouse.click(input.x, input.y));
+      else {
+        await page.mouse.move(input.x, input.y);
+        await page.mouse.wheel(input.deltaX, input.deltaY);
+        await page.waitForTimeout(80);
+      }
+    } else if (input.kind === "input") {
+      // Native input events, with no local persistence or assistant-visible copy.
+      await interactions.during(() => page.keyboard.insertText(input.text));
+      if (!interactions.pending) await page.waitForTimeout(80);
+    } else if (input.kind === "key") {
+      await pageAction(() => page.keyboard.press(input.key));
+    } else fail();
+    return ownerFrame();
+  }
   async function target(command) {
     if (command.view !== view || typeof command.target !== "string") fail();
     const saved = targets.get(command.target);
@@ -405,10 +454,17 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
         !command ||
         !["owner", "agent"].includes(command.actor) ||
         !Number.isSafeInteger(command.sequence) ||
-        command.sequence <= sequence ||
+        command.sequence < sequence ||
         command.sequence > 1000000
       )
         fail();
+      if (command.visual !== undefined && command.actor !== "owner") fail();
+      if (command.visual?.kind === "frame") {
+        if (command.sequence !== sequence || activeActor || command.operation !== "snapshot")
+          fail();
+        return ownerFrame();
+      }
+      if (command.sequence === sequence) fail();
       if (command.actor === "agent" && mode !== "agent") fail();
       if (
         command.actor === "owner" &&
@@ -428,7 +484,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
         if (command.operation === "takeover") {
           if (command.actor !== "owner") fail();
           mode = "takeover";
-          return await snapshot("owner");
+          return command.visual ? await ownerFrame() : await snapshot("owner");
         }
         if (command.operation === "release") {
           if (command.actor !== "owner" || mode !== "takeover") fail();
@@ -439,10 +495,13 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
               for (const element of elements) if ("value" in element) element.value = "";
             });
           mode = "agent";
+          frame = pendingFrame = null;
           view = null;
           targets = new Map();
           return { sequence, mode, url: safeUrl() };
         }
+        if (command.visual && command.operation === "snapshot")
+          return await visualAction(command.visual);
         if (command.operation === "navigate") {
           if (interactions.pending) fail();
           if (
@@ -484,7 +543,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
         } else if (command.operation !== "snapshot") fail();
         if (!interactions.pending && ["navigate", "click", "press"].includes(command.operation))
           await page.waitForLoadState("networkidle", { timeout: 1500 }).catch(() => {});
-        return await snapshot(command.actor);
+        return command.visual ? await ownerFrame() : await snapshot(command.actor);
       } finally {
         activeActor = null;
       }

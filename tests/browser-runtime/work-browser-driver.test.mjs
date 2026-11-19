@@ -232,3 +232,69 @@ test("real Chromium owner takeover never exposes password values and model requi
   assert.ok(clicked.nodes.some((v) => v.label === "Changed"));
   await assert.rejects(driver.command({ actor: "agent", sequence: 8, operation: "snapshot" }));
 });
+
+test("owner takeover shows real Chromium pixels and sends pointer and typing to that page", async (t) => {
+  const visits = [];
+  const driver = await createInteractiveBrowser({
+    chromium,
+    exchange: async ({ url }) => {
+      visits.push(url);
+      return {
+        status: 200,
+        headers: { "content-type": "text/html" },
+        bodyBase64: Buffer.from(
+          `
+        <!doctype html><title>Graphical takeover</title>
+        <form action="/submitted">
+          <input aria-label="Example text" name="text"
+            style="position:absolute;left:20px;top:20px;width:170px;height:32px">
+        </form>
+        <div style="height:1800px;background:linear-gradient(white, blue)"></div>
+        `,
+        ).toString("base64"),
+      };
+    },
+  });
+  t.after(() => driver.close());
+  const route = (sequence, visual, operation = "snapshot") =>
+    driver.command({
+      actor: "owner",
+      sequence,
+      operation,
+      visual,
+      ...(operation === "navigate" ? { url: origin } : {}),
+    });
+  const first = await route(1, { kind: "capture" }, "navigate");
+  assert.match(first.frame.jpeg, /^\/9j\//);
+  assert.equal(first.text, undefined);
+  const passive = await route(1, { kind: "frame" });
+  assert.deepEqual(passive, first);
+  const clicked = await route(2, { kind: "click", frame: passive.frame.id, x: 40, y: 35 });
+  const typed = await route(3, { kind: "input", text: "sample entry" });
+  assert.notEqual(typed.frame.jpeg, clicked.frame.jpeg);
+  const submitted = await route(4, { kind: "key", key: "Enter" });
+  assert.equal(submitted.url, origin + "/submitted");
+  assert.ok(visits.some((url) => new URL(url).searchParams.get("text") === "sample entry"));
+  assert.equal(JSON.stringify(submitted).includes("sample entry"), false);
+  const scrolled = await route(5, {
+    kind: "scroll",
+    frame: submitted.frame.id,
+    x: 50,
+    y: 80,
+    deltaX: 0,
+    deltaY: 330,
+  });
+  assert.notEqual(scrolled.frame.jpeg, submitted.frame.jpeg);
+  await assert.rejects(
+    driver.command({
+      actor: "agent",
+      sequence: 6,
+      operation: "snapshot",
+      visual: { kind: "frame" },
+    }),
+  );
+  await driver.command({ actor: "owner", sequence: 6, operation: "release" });
+  await assert.rejects(route(6, { kind: "frame" }));
+  const resumed = await driver.command({ actor: "agent", sequence: 7, operation: "snapshot" });
+  assert.equal(resumed.frame, undefined);
+});

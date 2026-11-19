@@ -48,7 +48,14 @@
   font-size: 13px;
 }
 
-.kova-browser-workspace-header button {
+.kova-browser-workspace-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.kova-browser-workspace-close {
   display: grid;
   flex: none;
   place-items: center;
@@ -59,17 +66,17 @@
   cursor: pointer;
 }
 
-.kova-browser-workspace-header button:hover {
+.kova-browser-workspace-close:hover {
   background: var(--accent);
   color: var(--foreground);
 }
 
-.kova-browser-workspace-header button:focus-visible {
+.kova-browser-workspace-close:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
 
-.kova-browser-workspace-header button svg {
+.kova-browser-workspace-close svg {
   inline-size: 18px;
   block-size: 18px;
 }
@@ -97,7 +104,7 @@
 }
 
 @media (pointer: coarse) {
-  .kova-browser-workspace-header button {
+  .kova-browser-workspace-close {
     inline-size: 44px;
     block-size: 44px;
   }

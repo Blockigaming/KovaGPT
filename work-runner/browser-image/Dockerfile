@@ -8,6 +8,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=optional --ignore-scripts && chmod -R a+rX /browser /ms-playwright && mkdir -p /home/browser && chown 65532:65532 /home/browser
 COPY --chmod=0444 driver.mjs worker.mjs interactions.mjs ./
 ENV HOME=/home/browser PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-LABEL com.kova.browser.protocol=kova-browser-v1
+LABEL com.kova.browser.protocol=kova-browser-v1 com.kova.browser.visual=1
 USER 65532:65532
 ENTRYPOINT ["node", "/browser/worker.mjs"]

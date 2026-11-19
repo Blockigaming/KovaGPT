@@ -161,7 +161,7 @@ export async function browserRunnerCommand(configuration, input, signal, fetcher
     input,
     signal,
     fetcher,
-    65536,
+    input.visual ? 400000 : 65536,
   );
 }
 export async function browserRunnerCapabilities(configuration, signal, fetcher = fetch) {
@@ -208,6 +208,7 @@ export async function browserRunnerCapabilities(configuration, signal, fetcher =
     idleTimeoutSeconds: 900,
     ...(value.siteRulesVersion === 1 ? { siteRulesVersion: 1 } : {}),
     ...(value.publicWeb === true ? { publicWeb: true } : {}),
+    ...(value.visualTakeover === true ? { visualTakeover: true } : {}),
   };
 }
 export function createBrowserBackendAuthority(configuration, rawOrigin, fetcher = fetch) {

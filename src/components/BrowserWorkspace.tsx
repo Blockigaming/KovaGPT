@@ -6,15 +6,19 @@ import "./browser-workspace.css";
 export function BrowserWorkspace({
   title,
   description,
+  actions,
   children,
   onClose,
   onCloseAutoFocus,
+  onEscapeKeyDown,
 }: {
   title: string;
   description?: string;
+  actions?: ReactNode;
   children: ReactNode;
   onClose: () => void;
   onCloseAutoFocus?: (event: Event) => void;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }) {
   const host =
     typeof document === "undefined" ? null : document.getElementById("kova-browser-workspace");
@@ -48,15 +52,23 @@ export function BrowserWorkspace({
           {...(!description ? { "aria-describedby": undefined } : {})}
           onInteractOutside={(event) => event.preventDefault()}
           onCloseAutoFocus={onCloseAutoFocus}
+          onEscapeKeyDown={onEscapeKeyDown}
         >
           <header className="kova-browser-workspace-header">
             <div className="min-w-0">
               <Dialog.Title>{title}</Dialog.Title>
               {description && <Dialog.Description>{description}</Dialog.Description>}
             </div>
-            <Dialog.Close type="button" aria-label="Close browser workspace">
-              <X aria-hidden="true" />
-            </Dialog.Close>
+            <div className="kova-browser-workspace-actions">
+              {actions}
+              <Dialog.Close
+                type="button"
+                className="kova-browser-workspace-close"
+                aria-label="Close browser workspace"
+              >
+                <X aria-hidden="true" />
+              </Dialog.Close>
+            </div>
           </header>
           {children}
         </Dialog.Content>

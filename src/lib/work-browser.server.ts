@@ -111,6 +111,7 @@ export async function browserReadiness() {
     origins,
     siteRulesEnforced: value.siteRulesVersion === 1,
     publicWeb: value.publicWeb === true,
+    visualTakeover: value.visualTakeover === true,
   };
 }
 export async function listWorkBrowsers(caller: AuthedCaller, runId: string) {
@@ -149,7 +150,8 @@ export async function commandWorkBrowser(
     throw Error("work_browser_unavailable");
   if (input.operation !== "close") {
     const ready = await browserReadiness();
-    if (!ready.available) throw Error("work_browser_unavailable");
+    if (!ready.available || (input.visual && !ready.visualTakeover))
+      throw Error("work_browser_unavailable");
     if (input.url && !ready.publicWeb && !ready.origins.includes(new URL(input.url).origin))
       throw Error("work_browser_origin_denied");
     const rules = await readCloudBrowserRules(caller.supabaseAdmin, caller.userId);
@@ -159,6 +161,53 @@ export async function commandWorkBrowser(
   }
   const db = database(caller),
     deadline = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
+  if (input.visual?.kind === "frame") {
+    if (
+      input.expectedRevision !== run.revision ||
+      run.status !== "paused" ||
+      run.step ||
+      run.effect?.status === "started"
+    )
+      throw Error("work_browser_revision_conflict");
+    const current = await db
+      .from("work_browser_sessions")
+      .select("sequence,mode,expires_at")
+      .eq("owner_id", caller.userId)
+      .eq("run_id", run.id)
+      .eq("id", input.sessionId)
+      .abortSignal(deadline)
+      .maybeSingle();
+    const expiresAt = Date.parse(current.data?.expires_at ?? "");
+    if (
+      current.error ||
+      current.data?.mode !== "takeover" ||
+      current.data.sequence !== input.expectedSequence ||
+      !(expiresAt > Date.now())
+    )
+      throw Error("work_browser_sequence_conflict");
+    const result = await browserRunnerCommand(
+      config,
+      {
+        operation: "snapshot",
+        visual: input.visual,
+        actor: "owner",
+        ownerId: caller.userId,
+        runId: run.id,
+        sessionId: input.sessionId,
+        sequence: input.expectedSequence,
+        expiresAt,
+      },
+      deadline,
+    );
+    if (
+      result?.runId !== run.id ||
+      result.sessionId !== input.sessionId ||
+      result.sequence !== input.expectedSequence ||
+      result.mode !== "takeover"
+    )
+      throw Error("work_browser_unconfirmed");
+    return { result, expiresAt };
+  }
   const admitted = await db
     .rpc("admit_work_browser_owner", {
       p_owner: caller.userId,

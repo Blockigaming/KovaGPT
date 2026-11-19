@@ -16,7 +16,7 @@ const nodes = (node) =>
     ? []
     : Array.isArray(node)
       ? node.flatMap(nodes)
-      : [node, ...nodes(node.props?.children)];
+      : [node, ...nodes(node.props?.children), ...nodes(node.props?.actions)];
 const text = (node) =>
   node == null || typeof node === "boolean"
     ? ""
@@ -68,9 +68,7 @@ function fixture(options = {}) {
       state[index] ??= { current: initial };
       return state[index];
     },
-    useId() {
-      return "browser-controls";
-    },
+    useEffectEvent: (callback) => callback,
     useEffect(effect, deps) {
       const index = cursor++;
       if (!state[index] || deps.some((value, i) => !Object.is(value, state[index].deps[i]))) {
@@ -85,6 +83,7 @@ function fixture(options = {}) {
     "@/components/BrowserPrivateEntryCard": { BrowserPrivateEntryCard: "private-entry-card" },
     "@/components/BrowserInteractionCard": { BrowserInteractionCard: "browser-interaction-card" },
     "@/components/BrowserWorkspace": { BrowserWorkspace: "browser-workspace" },
+    "@/components/WorkBrowserViewport": { WorkBrowserViewport: "browser-viewport" },
     "@/components/ui/button": { Button: "button" },
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": { ChevronDown: "svg", Globe2: "svg", Monitor: "svg" },
@@ -118,7 +117,7 @@ function fixture(options = {}) {
         if (!body) {
           if (rejectRead) throw Error("status unavailable");
           return {
-            readiness: { available: true, origins: ["https://browser-fixture.net"] },
+            readiness: { available: true, visualTakeover: true },
             runRevision: options.snapshotRevision ?? run.revision,
             runStatus: options.snapshotStatus ?? run.status,
             sessions: closed
@@ -135,7 +134,7 @@ function fixture(options = {}) {
         }
         if (options.hold) await options.hold;
         if (rejectAction) throw Error("unconfirmed");
-        sequence++;
+        if (body.visual?.kind !== "frame") sequence++;
         if (body.operation === "release") mode = "agent";
         if (body.operation === "takeover") mode = "takeover";
         if (body.operation === "close") closed = true;
@@ -150,6 +149,7 @@ function fixture(options = {}) {
             url: "https://browser-fixture.net/account",
             ...(mode === "takeover" && !closed
               ? {
+                  frame: { id: "fixture-frame", jpeg: "fixture-jpeg", width: 1280, height: 900 },
                   title: "Private fixture",
                   text: '<img src=x onerror="injectedBrowser=true"> Safe account page',
                   view: "current-page-view",
@@ -178,6 +178,8 @@ function fixture(options = {}) {
     Error,
     URL,
     Number,
+    window: { setTimeout() {}, clearTimeout() {} },
+    document: { addEventListener() {}, removeEventListener() {} },
     require(name) {
       assert.ok(Object.hasOwn(modules, name), `Unexpected import ${name}`);
       return modules[name];
@@ -209,17 +211,12 @@ function fixture(options = {}) {
     await node.props.onClick();
     await flush();
   };
-  const input = async (type, value) => {
-    find("input", (node) => node.props.type === type).props.onChange({ target: { value } });
-    await flush();
-  };
   return {
     flush,
     render,
     click,
     button,
     find,
-    input,
     requests,
     run,
     clear() {
@@ -243,34 +240,16 @@ function fixture(options = {}) {
   };
 }
 
-test("clickable text card opens owner controls without issuing a browser command or inventing a screenshot", async () => {
-  const f = fixture();
+test("the opened view contains the live page and session actions", async () => {
+  const f = fixture({ mode: "agent" });
   await f.flush();
-  const preview = f.button("Open browser controls");
-  assert.equal(preview.props["aria-expanded"], false);
-  assert.equal(preview.props.className, "work-browser-preview");
-  assert.match(text(preview), /No page captured.*Text preview/);
-  assert.equal(
-    nodes(f.tree).some((node) => node.type === "pre"),
-    false,
-  );
-  await f.click("Open browser controls");
-  assert.equal(f.find("browser-workspace", () => true).props.title, "Cloud browser");
-  assert.equal(f.button("Hide browser controls").props["aria-expanded"], true);
-  assert.equal(f.commands.length, 0);
-  await f.click("Read current page");
-  assert.match(
-    text(f.button("Hide browser controls")),
-    /browser-fixture\.net.*Private fixture.*Safe account page/,
-  );
-  assert.equal(
-    nodes(f.tree).some((node) => ["img", "iframe", "canvas"].includes(node.type)),
-    false,
-  );
-  assert.equal(
-    nodes(f.tree).some((node) => node.props.dangerouslySetInnerHTML),
-    false,
-  );
+  await f.click("Take over");
+  const workspace = f.find("browser-workspace", () => true);
+  assert.equal(workspace.props.title, "Cloud browser");
+  assert.equal(f.find("browser-viewport", () => true).props.frame.id, "fixture-frame");
+  assert.equal(text(workspace), "");
+  assert.equal(text(workspace.props.actions), "Return control");
+  assert.ok(!text(f.tree).includes("Safe account page"));
 });
 
 test("takeover requires a confirmed paused revision with no active step or started effect", async () => {
@@ -288,7 +267,7 @@ test("takeover requires a confirmed paused revision with no active step or start
     button.props.onClick(); // The command guard also blocks a stale/programmatic handler.
     await f.flush();
     assert.equal(f.commands.length, 0);
-    assert.equal(f.button("End session").props.disabled, false);
+    assert.notEqual(f.button("End session").props.disabled, true);
   }
 });
 
@@ -297,7 +276,7 @@ test("takeover, return and end use exact existing operations; returning control 
   await f.flush();
   await f.click("Take over");
   const workspace = f.find("browser-workspace", () => true);
-  assert.match(text(workspace), /You have control/);
+  assert.equal(text(workspace.props.actions), "Return control");
   assert.deepEqual(f.commands[0], {
     expectedUserId: ownerId,
     runId,
@@ -305,12 +284,13 @@ test("takeover, return and end use exact existing operations; returning control 
     expectedRevision: 3,
     expectedSequence: 1,
     operation: "takeover",
+    visual: { kind: "capture" },
   });
-  assert.match(text(f.tree), /Automation is blocked during takeover/);
+  assert.equal(f.find("browser-viewport", () => true).props.frame.id, "fixture-frame");
   await f.click("Return control");
   assert.equal(f.commands[1].operation, "release");
   assert.equal(f.commands[1].expectedSequence, 2);
-  assert.match(text(f.tree), /This run is still paused; use Resume run to continue/);
+  assert.match(text(f.tree), /Agent has control/);
   assert.equal(f.run.status, "paused");
   assert.ok(f.requests.every(({ path }) => path.startsWith("/api/work/browser")));
   assert.equal(text(f.tree).includes("Safe account page"), false);
@@ -323,23 +303,18 @@ test("takeover, return and end use exact existing operations; returning control 
   assert.match(text(f.tree), /No open session/);
 });
 
-test("hiding controls clears unsubmitted private entries without ending the session", async () => {
-  const f = fixture();
+test("closing the workspace discards its frame without ending the browser", async () => {
+  const f = fixture({ mode: "agent" });
   await f.flush();
-  await f.click("Open browser controls");
-  await f.click("Read current page");
-  f.find("Select", () => true).props.onValueChange(targetId);
+  await f.click("Take over");
+  f.find("browser-workspace", () => true).props.onClose();
   await f.flush();
-  await f.input("password", "ephemeral-owner-password");
-  await f.click("Hide browser controls");
-  await f.click("Open browser controls");
-  assert.equal(f.find("Select", () => true).props.value, "no-page-control");
   assert.equal(
-    nodes(f.tree).some((node) => node.type === "input" && node.props.type === "password"),
+    nodes(f.tree).some((node) => node.type === "browser-viewport"),
     false,
   );
+  assert.notEqual(f.button("Open browser").props.disabled, true);
   assert.equal(f.commands.length, 1);
-  assert.match(text(f.tree), /Safe account page/);
 });
 
 test("failed or mismatched actions lock further control until a fresh authoritative read", async () => {
@@ -349,26 +324,28 @@ test("failed or mismatched actions lock further control until a fresh authoritat
     f.rejectAction(!badSequence);
     await f.click("Take over");
     assert.equal(f.button("Take over").props.disabled, true);
-    assert.match(text(f.tree), /The action is not confirmed/);
+    assert.match(text(f.tree), /The last browser action could not be confirmed/);
     f.rejectAction(false);
-    await f.click("Refresh browser status");
-    assert.equal(f.button(badSequence ? "Return control" : "Take over").props.disabled, false);
+    await f.click("Reconnect");
+    if (badSequence) assert.equal(f.button("Return control").props.disabled, false);
+    else assert.equal(f.button("Take over").props.disabled, false);
   }
 });
 
-test("a changed sequence or failed status refresh discards the previous private preview", async () => {
-  for (const fail of [false, true]) {
-    const f = fixture();
-    await f.flush();
-    await f.click("Open browser controls");
-    await f.click("Read current page");
-    assert.match(text(f.tree), /Safe account page/);
-    if (fail) f.rejectRead(true);
-    else f.changeSequence();
-    await f.click("Refresh browser status");
-    assert.equal(text(f.tree).includes("Safe account page"), false);
-    if (fail) assert.equal(f.button("Return control").props.disabled, true);
-  }
+test("sending an owner click forwards the coordinates and current sequence", async () => {
+  const f = fixture({ mode: "agent" });
+  await f.flush();
+  await f.click("Take over");
+  f.find("browser-viewport", () => true).props.onInput({
+    kind: "click",
+    frame: "fixture-frame",
+    x: 50,
+    y: 50,
+  });
+  await f.flush();
+  assert.equal(f.commands[1].operation, "snapshot");
+  assert.equal(f.commands[1].expectedSequence, 2);
+  assert.deepEqual(f.commands[1].visual, { kind: "click", frame: "fixture-frame", x: 50, y: 50 });
 });
 
 test("repeated clicks do not duplicate a command and owner clear rejects a delayed preview", async () => {
