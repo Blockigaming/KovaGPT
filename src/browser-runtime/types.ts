@@ -103,5 +103,6 @@ export interface RuntimeSession {
   storagePath: string;
   closing?: Promise<void>;
   releaseRemote?: () => Promise<void>;
+  remoteHeartbeat?: ReturnType<typeof setInterval>;
   onClosed?: () => Promise<void>;
 }

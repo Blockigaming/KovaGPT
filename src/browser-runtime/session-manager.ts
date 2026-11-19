@@ -14,6 +14,7 @@ import { BrowserArtifactStore } from "./artifacts";
 
 // Idle browsers are released after 15 minutes with no authenticated operation.
 const DEFAULT_IDLE_MS = 15 * 60_000;
+const BROWSERBASE_CDP_HEARTBEAT_MS = 4 * 60_000;
 
 export class PlaywrightEngineProvider implements EngineProvider {
   get(engine: BrowserEngine) {
@@ -45,6 +46,7 @@ export class BrowserSessionManager {
     const storagePath = await this.artifacts.initializeSession(id);
     let browser;
     let releaseRemote: (() => Promise<void>) | undefined;
+    let remoteHeartbeat: ReturnType<typeof setInterval> | undefined;
     try {
       // A process per session is intentional: contexts isolate cookies/storage while the
       // process boundary prevents accidental cross-user browser reuse.
@@ -105,6 +107,15 @@ export class BrowserSessionManager {
           ? { javaScriptEnabled: false, viewport: { width: 840, height: 540 } }
           : {}),
       });
+      if (releaseRemote && options.readOnly) {
+        const cdp = await browser.newBrowserCDPSession();
+        // Browserbase closes inactive CDP connections before Kova's idle limit.
+        // This control-plane command never refreshes the user's idle deadline.
+        remoteHeartbeat = setInterval(() => {
+          void cdp.send("Browser.getVersion").catch(() => undefined);
+        }, BROWSERBASE_CDP_HEARTBEAT_MS);
+        remoteHeartbeat.unref();
+      }
       const now = Date.now();
       const session: RuntimeSession = {
         descriptor: {
@@ -128,6 +139,7 @@ export class BrowserSessionManager {
         tabs: new Map(),
         storagePath,
         releaseRemote,
+        remoteHeartbeat,
         onClosed: options.onClosed,
       };
       await audit(this.auditSink, session, "session.created", "success", { engine });
@@ -139,6 +151,7 @@ export class BrowserSessionManager {
       });
       return { ...session.descriptor };
     } catch (error) {
+      clearInterval(remoteHeartbeat);
       await Promise.allSettled([
         browser?.close(),
         releaseRemote?.(),
@@ -171,6 +184,7 @@ export class BrowserSessionManager {
     if (session.closing) return session.closing;
     session.closing = (async () => {
       this.#sessions.delete(sessionId);
+      clearInterval(session.remoteHeartbeat);
       await Promise.allSettled([
         audit(this.auditSink, session, "session.closed", "success", { reason }),
         session.context.close(),
