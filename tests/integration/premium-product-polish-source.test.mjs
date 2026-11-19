@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { messageActivitiesFromDelta } from "../../src/lib/message-activity-list.mjs";
+import { receiveMessageActivity } from "../../src/lib/message-activity-list.mjs";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
@@ -9,12 +9,17 @@ test("streaming batches tokens and updates matching activity operations without 
   const source = await read("src/routes/index.tsx");
   assert.match(source, /pendingContent \+= chunk/);
   assert.match(source, /requestAnimationFrame\(flushAssistant\)/);
-  assert.match(source, /messageActivitiesFromDelta\(message\.activities \?\? \[\], delta\)/);
+  assert.match(
+    source,
+    /receiveMessageActivity\(\s*delta,\s*userKey,\s*nextConvId,\s*assistantMsg\.id,?\s*\)/,
+  );
+  assert.match(source, /activities: appendActivity\(message\.activities\)/);
   const delta = { activity_id: "first", tool: "search_web", label: "Read site", status: "pending" };
-  let rows = messageActivitiesFromDelta([], delta);
-  rows = messageActivitiesFromDelta(rows, { ...delta, status: "done" });
-  rows = messageActivitiesFromDelta(rows, { ...delta, status: "done" });
-  rows = messageActivitiesFromDelta(rows, { ...delta, activity_id: "second", status: "done" });
+  const apply = (rows, event) => receiveMessageActivity(event, "owner", "chat", "reply")(rows);
+  let rows = apply([], delta);
+  rows = apply(rows, { ...delta, status: "done" });
+  rows = apply(rows, { ...delta, status: "done" });
+  rows = apply(rows, { ...delta, activity_id: "second", status: "done" });
   assert.deepEqual(
     rows.map(({ activityId, status }) => ({ activityId, status })),
     [
