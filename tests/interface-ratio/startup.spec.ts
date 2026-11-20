@@ -68,71 +68,73 @@ for (const theme of ["dark", "light"] as const) {
 
   // Use a fresh browser profile for successful loading. A previously aborted
   // module request can persist through reload in WebKit.
-  test(`${theme}: the home frame stays in place through account readiness and reload`, async ({
-    page,
-  }, info) => {
-    await fixture(page, theme, true, false, "plus", { preserveStorageOnReload: true });
-    const viewport = page.viewportSize()!;
-    const errors: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
-    const pending = page.locator("[data-kova-home-startup]");
-    const ready = page.locator(".kova-assistant[data-ui='modern']:not([data-kova-home-startup])");
-    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-    const entryDialog = page.locator("dialog[data-kova-entry-pending]");
-    const phone = /^(phone|landscape)-/.test(info.project.name);
-    const capture = ["desktop-1440", "phone-390"].includes(info.project.name);
+  for (const tier of ["free", "plus"] as const) {
+    test(`${theme} ${tier}: the home frame stays in place through account readiness and reload`, async ({
+      page,
+    }, info) => {
+      await fixture(page, theme, true, false, tier, { preserveStorageOnReload: true });
+      const viewport = page.viewportSize()!;
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      const pending = page.locator("[data-kova-home-startup]");
+      const ready = page.locator(".kova-assistant[data-ui='modern']:not([data-kova-home-startup])");
+      const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+      const entryDialog = page.locator("dialog[data-kova-entry-pending]");
+      const phone = /^(phone|landscape)-/.test(info.project.name);
+      const capture = tier === "plus" && ["desktop-1440", "phone-390"].includes(info.project.name);
 
-    for (const visit of ["first interactive load", "reload"]) {
-      let release!: () => void;
-      const account = new Promise<void>((resolve) => (release = resolve));
-      const holdAccount = async (route: Route) => {
-        await account;
-        await route.fallback();
-      };
-      await page.route("**/auth/v1/user", holdAccount);
-      let first: HomeFrame | undefined;
-      try {
-        if (visit === "reload") await page.reload({ waitUntil: "load" });
-        else await page.goto("/", { waitUntil: "load" });
-        await waitForKovaHydration(page);
-        await expect(entryDialog).toHaveAttribute("open", "");
-        await expect(input).toHaveCount(0);
-        if (phone) {
-          await expect(pending).toBeVisible();
-          await expect(entryDialog).toHaveCSS("outline-style", "none");
-          await page.evaluate(() => document.fonts.ready);
-          first = await frame(pending);
-          checkOpeningLayout(first, viewport);
-        } else {
-          await expect(pending).toBeHidden();
-          await expect(entryDialog.locator("[data-kova-entry-fallback]")).toBeVisible();
+      for (const visit of ["first interactive load", "reload"]) {
+        let release!: () => void;
+        const account = new Promise<void>((resolve) => (release = resolve));
+        const holdAccount = async (route: Route) => {
+          await account;
+          await route.fallback();
+        };
+        await page.route("**/auth/v1/user", holdAccount);
+        let first: HomeFrame | undefined;
+        try {
+          if (visit === "reload") await page.reload({ waitUntil: "load" });
+          else await page.goto("/", { waitUntil: "load" });
+          await waitForKovaHydration(page);
+          await expect(entryDialog).toHaveAttribute("open", "");
+          await expect(input).toHaveCount(0);
+          if (phone) {
+            await expect(pending).toBeVisible();
+            await expect(entryDialog).toHaveCSS("outline-style", "none");
+            await page.evaluate(() => document.fonts.ready);
+            first = await frame(pending);
+            checkOpeningLayout(first, viewport);
+          } else {
+            await expect(pending).toBeHidden();
+            await expect(entryDialog.locator("[data-kova-entry-fallback]")).toBeVisible();
+          }
+          if (capture && visit === "first interactive load")
+            await page.screenshot({ path: info.outputPath("before-interactive.png") });
+        } finally {
+          release();
+          await page.unroute("**/auth/v1/user", holdAccount);
+        }
+
+        await expect(input).toBeEnabled();
+        await expect(pending).toHaveCount(0);
+        await page.evaluate(() => document.fonts.ready);
+        if (phone) await expect(input).toBeFocused();
+        else await expect(input).not.toBeFocused();
+        if (first) {
+          const startupFrame = first;
+          await expect(async () => compare(startupFrame, await frame(ready), visit)).toPass({
+            timeout: 5_000,
+          });
         }
         if (capture && visit === "first interactive load")
-          await page.screenshot({ path: info.outputPath("before-interactive.png") });
-      } finally {
-        release();
-        await page.unroute("**/auth/v1/user", holdAccount);
+          await page.screenshot({ path: info.outputPath("ready.png") });
+        await input.fill("Draft typed after startup");
+        await expect(input).toHaveValue("Draft typed after startup");
+        await input.fill("");
       }
-
-      await expect(input).toBeEnabled();
-      await expect(pending).toHaveCount(0);
-      await page.evaluate(() => document.fonts.ready);
-      if (phone) await expect(input).toBeFocused();
-      else await expect(input).not.toBeFocused();
-      if (first) {
-        const startupFrame = first;
-        await expect(async () => compare(startupFrame, await frame(ready), visit)).toPass({
-          timeout: 5_000,
-        });
-      }
-      if (capture && visit === "first interactive load")
-        await page.screenshot({ path: info.outputPath("ready.png") });
-      await input.fill("Draft typed after startup");
-      await expect(input).toHaveValue("Draft typed after startup");
-      await input.fill("");
-    }
-    expect(errors).toEqual([]);
-  });
+      expect(errors).toEqual([]);
+    });
+  }
 }
 
 test("dark: recommendations and tools open from a clear phone chat", async ({ page }, info) => {

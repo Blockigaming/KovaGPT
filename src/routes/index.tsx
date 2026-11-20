@@ -1,3 +1,4 @@
+import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
 import type { CSSProperties } from "react";
@@ -1777,7 +1778,7 @@ function KovaGPT() {
   }, [commandOpen, startNewChat, openCommandPalette]);
 
   const historyAction = useCallback(
-    async (kind: "delete" | "restore" | "title", item: string | Conversation) => {
+    async (action: HomeChatAction) => {
       const generation = storageGenerationRef.current;
       const current = () => generation === storageGenerationRef.current;
       const context = {
@@ -1788,44 +1789,13 @@ function KovaGPT() {
         activeId,
         setActive: setActiveId,
       };
-      const actions = await import("@/lib/home-chat-history-actions");
-      if (!current()) return;
-      if (kind === "title") await actions.titleHomeChat(context, item as Conversation);
-      else if (kind === "restore") await actions.restoreHomeChat(context, item as Conversation);
-      else await actions.removeHomeChat(context, item as string);
+      const { runHomeChatAction } = await import("@/lib/home-chat-history-actions");
+      return runHomeChatAction(context, action);
     },
     [activeId, conversations, setConversations, userKey],
   );
-  const deleteChat = useCallback((id: string) => historyAction("delete", id), [historyAction]);
-  const renameChat = useCallback(
-    (id: string, title: string) => {
-      setConversations((previous) =>
-        previous.map((conversation) =>
-          conversation.id === id ? { ...conversation, title, updatedAt: Date.now() } : conversation,
-        ),
-      );
-    },
-    [setConversations],
-  );
-  const toggleChatPin = useCallback(
-    (id: string) => {
-      setConversations((previous) =>
-        previous.map((conversation) =>
-          conversation.id === id
-            ? {
-                ...conversation,
-                pinned: !conversation.pinned,
-                pinnedAt: !conversation.pinned ? Date.now() : undefined,
-              }
-            : conversation,
-        ),
-      );
-    },
-    [setConversations],
-  );
-
   const autoTitle = useCallback(
-    (id: string, messages: Message[]) => historyAction("title", { id, messages } as Conversation),
+    (id: string, messages: Message[]) => historyAction({ kind: "title", chat: { id, messages } }),
     [historyAction],
   );
 
@@ -3289,8 +3259,8 @@ function KovaGPT() {
         activeId={activeId}
         onSelect={setActiveId}
         onNew={startNewChat}
-        onDelete={deleteChat}
-        onRename={renameChat}
+        onDelete={(id) => historyAction({ kind: "delete", id })}
+        onRename={(id, title) => historyAction({ kind: "rename", id, title })}
         open={sidebarOpen && !settingsOpen}
         onToggle={() => {
           readingAnchorControllerRef.current?.capture();
@@ -3312,23 +3282,8 @@ function KovaGPT() {
           shareReturnUrlRef.current = undefined;
           setShareChatId(id);
         }}
-        onDuplicate={(id) => {
-          setConversations((prev) => {
-            const src = prev.find((c) => c.id === id);
-            if (!src) return prev;
-            const copy: Conversation = {
-              ...src,
-              id: newId(),
-              title: `${src.title} (copy)`,
-              messages: src.messages.map((m) => ({ ...m, id: newId() })),
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            };
-            return [copy, ...prev];
-          });
-          toast.success("Chat duplicated");
-        }}
-        onTogglePin={toggleChatPin}
+        onDuplicate={(id) => historyAction({ kind: "duplicate", id })}
+        onTogglePin={(id) => historyAction({ kind: "pin", id })}
       />
 
       <main
@@ -3473,21 +3428,12 @@ function KovaGPT() {
                         <div className="flex-1" aria-hidden="true" />
                       ) : (
                         <div
-                          className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-5 py-4"
                           role="status"
                           aria-label="Loading conversation"
                           aria-busy="true"
                           data-chat-transcript-loading="true"
                         >
                           <span className="sr-only">Loading conversation…</span>
-                          <div
-                            aria-hidden="true"
-                            className="ml-auto max-h-12 min-h-0 w-1/2 flex-1 rounded-[var(--kova-radius-message)] bg-muted motion-safe:animate-pulse"
-                          />
-                          <div
-                            aria-hidden="true"
-                            className="max-h-16 min-h-0 w-3/4 flex-[2] bg-[repeating-linear-gradient(to_bottom,var(--muted)_0_8px,transparent_8px_20px)] motion-safe:animate-pulse"
-                          />
                         </div>
                       )
                     }
@@ -3749,7 +3695,9 @@ function KovaGPT() {
             onClose={() => setCommandOpen(false)}
             onNewChat={startNewChat}
             onSelectChat={setActiveId}
-            onSelectArchived={(conversation) => historyAction("restore", conversation)}
+            onSelectArchived={(conversation) =>
+              historyAction({ kind: "restore", chat: conversation })
+            }
             onOpenSettings={() => openSettings("general")}
             returnFocusTarget={commandReturnFocusRef.current}
             sidebarOpen={sidebarOpen}

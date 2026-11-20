@@ -190,9 +190,7 @@ export function ResponsiveModelSelector({
         aria-label="Thinking"
         aria-pressed={mode === "thinking"}
         title={
-          mode === "thinking"
-            ? "Argon Medium is on. Click for Argon Lite."
-            : "Thinking uses Argon Medium. Normal chat uses Argon Lite."
+          modelLabel ? `${modelLabel} ${modeDisplayLabel(current)}` : modeDisplayLabel(current)
         }
         className="kova-thinking-toggle"
         onClick={() => onChange(mode === "thinking" ? "instant" : "thinking")}
@@ -229,7 +227,7 @@ export function ResponsiveModelSelector({
             {current.id === "thinking" && <Brain aria-hidden="true" className="h-4 w-4 shrink-0" />}
             <span className={(useSheet ? "truncate " : "") + "leading-none text-foreground"}>
               {compact ? (
-                modeDisplayLabel(current)
+                [modelLabel, modeDisplayLabel(current)].filter(Boolean).join(" ")
               ) : (
                 <>
                   KovaGPT<span className="ml-1 font-normal">· {modeDisplayLabel(current)}</span>

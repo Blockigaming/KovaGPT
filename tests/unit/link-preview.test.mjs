@@ -4,8 +4,10 @@ import {
   cleanLinkTitle,
   COMPOSER_LINK_MARKER,
   firstLinkPreviewToken,
-  toComposerLinkDisplay,
-  fromComposerLinkDisplay,
+  canonicalComposerOffset,
+  composerLinkDisplay,
+  composerTextChange,
+  linkPreviewTokens,
   fallbackLinkTitle,
   firstLinkPreviewUrl,
   isOnlyLink,
@@ -132,19 +134,22 @@ test("pasted page links render as one invisible editor position, retaining canon
   assert.equal(token?.raw, url);
   assert.equal(token?.start, "Explain this ".length);
   assert.equal(token?.end, "Explain this ".length + url.length);
-  const compact = toComposerLinkDisplay(canonical, token.raw);
-  assert.equal(compact, "Explain this " + COMPOSER_LINK_MARKER + " please");
-  assert.equal(fromComposerLinkDisplay(compact, token.raw), canonical);
-  // One Backspace on the marker removes every URL character in one operation.
-  const afterBackspace = compact.replace(COMPOSER_LINK_MARKER, "");
-  assert.equal(afterBackspace, "Explain this  please");
-  // Keeping the marker while typing leaves the original URL untouched.
-  assert.equal(fromComposerLinkDisplay(compact + " next", token.raw), canonical + " next");
+  const display = composerLinkDisplay(canonical, [token]);
+  assert.equal(display.text, "Explain this " + COMPOSER_LINK_MARKER + " please");
+  assert.equal(canonicalComposerOffset(display, display.text.length), canonical.length);
+  const compact = display.text.replace(COMPOSER_LINK_MARKER, "");
+  const edit = composerTextChange(display.text, compact, token.start);
+  const start = canonicalComposerOffset(display, edit.start);
+  const end = canonicalComposerOffset(display, edit.end);
+  assert.equal(
+    canonical.slice(0, start) + edit.text + canonical.slice(end),
+    "Explain this  please",
+  );
 });
 
 test("unmodified nonlink drafts never get an atomic marker", () => {
   assert.equal(firstLinkPreviewToken("ordinary text"), null);
-  assert.equal(toComposerLinkDisplay("ordinary text", ""), "ordinary text");
+  assert.equal(composerLinkDisplay("ordinary text", []).text, "ordinary text");
 });
 
 test("a typed bare domain becomes a preview as soon as whitespace follows it", () => {
@@ -192,7 +197,23 @@ test("YouTube homepage previews read page metadata directly", async () => {
 test("the composer marker replaces the link and leaves email addresses intact", () => {
   const text = "contact@youtube.com and youtube.com ";
   assert.equal(
-    toComposerLinkDisplay(text, "youtube.com"),
+    composerLinkDisplay(text, linkPreviewTokens(text)).text,
     "contact@youtube.com and " + COMPOSER_LINK_MARKER + " ",
   );
+});
+
+test("editing a draft with several collapsed links changes only the selected URL", () => {
+  const draft = "Look at youtube.com github.com youtube.com ";
+  const links = linkPreviewTokens(draft);
+  assert.deepEqual(
+    links.map((link) => link.url),
+    ["https://youtube.com/", "https://github.com/", "https://youtube.com/"],
+  );
+  const display = composerLinkDisplay(draft, links);
+  const offset = display.positions[1].offset;
+  const changed = display.text.slice(0, offset) + display.text.slice(offset + 1);
+  const edit = composerTextChange(display.text, changed, offset);
+  assert.equal(canonicalComposerOffset(display, edit.start), links[1].start);
+  assert.equal(canonicalComposerOffset(display, edit.end), links[1].end);
+  assert.equal(edit.text, "");
 });

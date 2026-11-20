@@ -291,9 +291,11 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await expect(shell).toHaveAttribute("data-keyboard-open", "true");
   await expect.poll(async () => (await shell.boundingBox())?.height).toBe(visibleHeight);
   if (compactPhone) {
-    const composer = (await page.locator(".spec400-composer:visible").boundingBox())!;
+    const composerFrame = page.locator(".spec400-composer:visible");
+    await expect(composerFrame).toHaveCSS("border-radius", "20px");
+    const composer = (await composerFrame.boundingBox())!;
     const keyboardGap = visibleHeight - composer.y - composer.height;
-    expect(keyboardGap).toBeGreaterThanOrEqual(8);
+    expect(keyboardGap).toBeGreaterThanOrEqual(12);
     expect(keyboardGap).toBeLessThanOrEqual(16);
   }
   const send = page.getByRole("button", { name: "Send message" });

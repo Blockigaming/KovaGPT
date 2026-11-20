@@ -1,20 +1,23 @@
 /* Two-row composer: a clear writing area above a stable action row. */
 .spec400-chat-input {
+  container: chat-composer / inline-size;
   width: 100%;
   max-width: var(--kova-composer-width, 768px);
   margin-inline: auto;
   padding: 0 0 max(12px, env(safe-area-inset-bottom));
 }
 .spec400-composer {
-  --composer-compact-padding: 7px;
+  --composer-action-inset: 12px;
+  --composer-action-size: 36px;
+  --composer-action-gap: 8px;
   --composer-compact-gap: 8px;
-  --composer-text-inset: 8px;
+  --composer-text-inset: 10px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   min-height: 148px;
-  padding: 16px 12px 10px;
+  padding: 16px var(--composer-action-inset) var(--composer-action-inset);
   gap: 12px;
   border: 1px solid var(--composer-border, transparent);
   border-radius: var(--kova-radius-composer, 26px);
@@ -23,7 +26,7 @@
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
   min-height: 0;
-  padding: 6px 8px;
+  padding-block-start: 6px;
   gap: 2px;
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-input-region {
@@ -33,35 +36,33 @@
   padding-bottom: max(6px, env(safe-area-inset-bottom));
 }
 @media (min-width: 1024px) and (pointer: fine) {
-  .spec400-chat-input[data-composer-surface="conversation"]
-    .spec400-composer:not(
-      :has(
-        .spec400-composer-input[data-multiline="true"],
-        .spec400-attachment-chips,
-        .spec400-plugin-tokens,
-        .spec400-selected-tool
-      )
-    ) {
-    --composer-text-inset: 0px;
-    display: grid;
-    grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
-    align-items: center;
-    padding: 6px var(--composer-compact-padding);
-    gap: var(--composer-compact-gap);
+  @container chat-composer (min-width: 34rem) {
+    .spec400-chat-input[data-composer-surface="conversation"]
+      .spec400-composer:not(
+        :has(
+          .spec400-composer-input[data-multiline="true"],
+          .spec400-attachment-chip,
+          .spec400-plugin-tokens,
+          .spec400-selected-tool
+        )
+      ) {
+      --composer-text-inset: 0px;
+      display: grid;
+      grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--composer-compact-gap);
 
-    &:has(.kova-link-preview-composer) {
-      grid-template-areas:
-        ". preview preview"
-        "tools input trailing";
-    }
-    .kova-link-preview-composer {
-      grid-area: preview;
-    }
-    .spec400-composer-toolbar {
-      display: contents;
-    }
-    .spec400-input-region {
-      padding-inline: 0;
+      &:has(.spec400-composer-media) {
+        grid-template-areas:
+          "preview preview preview"
+          "tools input trailing";
+      }
+      .spec400-composer-toolbar {
+        display: contents;
+      }
+      .spec400-input-region {
+        padding-inline: 0;
+      }
     }
   }
 }
@@ -106,7 +107,8 @@
 }
 .spec400-composer-toolbar,
 .spec400-composer-tools,
-.spec400-composer-trailing {
+.spec400-composer-trailing,
+.spec400-composer-speech-actions {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -115,72 +117,75 @@
 .spec400-composer-trailing .spec400-primary-voice,
 .spec400-composer-trailing [data-testid="stop-button"],
 .spec400-composer-trailing [data-testid="send-button"] {
-  width: 43px;
-  height: 43px;
-  min-width: 43px;
-  min-height: 43px;
+  width: var(--composer-action-size);
+  height: var(--composer-action-size);
+  min-width: var(--composer-action-size);
+  min-height: var(--composer-action-size);
   justify-content: center;
   padding: 0;
 }
 .spec400-composer-trailing .spec400-primary-voice svg,
 .spec400-composer-trailing [data-testid="stop-button"] svg,
 .spec400-composer-trailing [data-testid="send-button"] svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
-@media (pointer: coarse), (max-width: 1023px) {
-  .spec400-composer-trailing .spec400-primary-voice,
-  .spec400-composer-trailing [data-testid="stop-button"],
-  .spec400-composer-trailing [data-testid="send-button"] {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+@media (any-pointer: coarse), (max-width: 1023px) {
+  .spec400-composer {
+    --composer-action-size: 44px;
+  }
+  .spec400-composer-trailing .spec400-primary-voice svg,
+  .spec400-composer-trailing [data-testid="stop-button"] svg,
+  .spec400-composer-trailing [data-testid="send-button"] svg {
+    width: 22px;
+    height: 22px;
   }
 }
 .spec400-composer-toolbar {
+  position: relative;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: end;
+  column-gap: var(--composer-action-gap);
   flex: none;
   margin-top: 0;
 }
 .spec400-composer-tools {
   grid-area: tools;
-  flex: 0 1 auto;
+  flex: none;
+  align-self: end;
   flex-wrap: nowrap;
 }
 .spec400-composer-trailing {
+  position: relative;
+  align-items: end;
   grid-area: trailing;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--composer-action-gap);
+  margin-inline-start: auto;
+}
+.spec400-composer-speech-actions {
   flex: none;
-  margin-left: auto;
+  gap: var(--composer-action-gap);
 }
 .spec400-composer:has(
   .spec400-composer-input[data-multiline="true"],
-  .spec400-attachment-chips,
+  .spec400-attachment-chip,
   .spec400-plugin-tokens,
   .spec400-selected-tool
 ) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 12px;
+  padding-block-start: 12px;
 }
 .spec400-composer:has(
     .spec400-composer-input[data-multiline="true"],
-    .spec400-attachment-chips,
+    .spec400-composer-media,
     .spec400-plugin-tokens,
     .spec400-selected-tool
-  )
-  .spec400-composer-toolbar {
-  display: flex;
-}
-.spec400-composer:has(
-    .spec400-composer-input[data-multiline="true"],
-    .spec400-attachment-chips,
-    .spec400-plugin-tokens,
-    .spec400-selected-tool,
-    .kova-link-preview-composer
   )
   .spec400-input-region {
   min-height: 26px;
@@ -633,7 +638,7 @@
     flex-direction: column;
     align-items: stretch;
     min-height: 136px;
-    padding: 12px;
+    padding-block-start: 12px;
     gap: 8px;
   }
   .spec400-composer-toolbar {
@@ -844,9 +849,6 @@
     gap: 4px;
   }
 }
-.spec400-chat-input {
-  container-type: inline-size;
-}
 /* Scoped overrides beat earlier high-specificity prototype geometry. */
 body .spec400-context-drawer[data-kova-dialog-surface] {
   border-radius: var(--kova-radius-panel);
@@ -865,55 +867,99 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     animation: none;
   }
 }
-/* Selected files stay visible as compact thumbnails inside the composer. */
-.spec400-attachment-chips {
+/* Photos, files and pages share one wrapping area at the top of the composer. */
+.spec400-composer-media {
+  grid-area: preview;
+  container: composer-media / inline-size;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 8px;
   list-style: none;
   padding: 0;
-  margin: 0 0 4px;
+  margin: 0 0 8px;
   min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
+  min-height: 0;
+  max-width: calc(var(--composer-card-width, 220px) * 3 + 32px);
+  max-height: min(42dvh, 384px);
+  overflow: hidden auto;
+  overscroll-behavior-block: contain;
   scrollbar-width: thin;
+}
+.spec400-composer-card {
+  flex: none;
+  min-width: 0;
+  width: min(100%, var(--composer-card-width, 220px), max(120px, calc((100% - 8px) / 2)));
+  height: 53px;
+}
+.spec400-composer-media:not([data-photo-count="0"]):has(> .spec400-composer-card) {
+  /* Let successive card rows flow beside the photo while it overlaps their lines. */
+  display: flow-root;
+  font-size: 0;
+  line-height: 0;
+
+  > [data-kind="image"] {
+    float: inline-start;
+    margin-inline-end: 8px;
+  }
+
+  > .spec400-composer-card {
+    display: inline-flex;
+    vertical-align: top;
+    margin-inline-end: 8px;
+    margin-block-end: 8px;
+    width: min(
+      calc(100% - 8px),
+      var(--composer-card-width, 220px),
+      max(120px, calc((100% - 16px) / 2))
+    );
+  }
+
+  @media (min-width: 1024px) and (pointer: fine) {
+    > [data-kind="image"] {
+      margin-block-end: 8px;
+    }
+
+    /* Two 64px rows leave an 8px gap below the 120px photo. */
+    > .spec400-composer-card {
+      margin-block-end: 11px;
+    }
+  }
 }
 .spec400-attachment-chip {
   position: relative;
   display: inline-flex;
   align-items: center;
-  max-width: min(100%, 320px);
+  flex: none;
   min-width: 0;
-  min-height: 44px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 15px;
+  background: var(--surface-secondary, var(--muted));
   overflow: hidden;
 }
 .spec400-attachment-chip[data-kind="image"] {
-  flex: 0 0 120px;
-  width: 120px;
-  height: 120px;
-  max-width: 120px;
-  min-height: 0;
+  width: min(calc((100% - 8px) / 2), var(--composer-photo-size, 120px));
+  aspect-ratio: 1;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--foreground) 6%, var(--background));
 }
 .spec400-chip-inspect {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 8px 4px 8px 12px;
-  border-radius: var(--kova-radius-compact);
+  min-height: 50px;
+  padding: 8px 0 8px 8px;
+  border-radius: inherit;
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 13px;
+  line-height: 19px;
 }
 .spec400-attachment-chip[data-kind="image"] .spec400-chip-inspect {
   width: 100%;
   height: 100%;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
 }
@@ -939,16 +985,28 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   flex: none;
   color: var(--muted-foreground);
 }
-.spec400-chip-name {
+.spec400-attachment-chip:not([data-kind="image"]) .spec400-chip-inspect > svg {
+  width: 24px;
+  height: 24px;
+}
+.spec400-chip-labels {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.spec400-chip-name,
+.spec400-chip-labels small {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.spec400-chip-inspect small {
+.spec400-chip-labels small {
   color: var(--muted-foreground);
-  font-size: 0.75rem;
-  white-space: nowrap;
+  font-size: 11px;
+  line-height: 15px;
 }
 .spec400-chip-remove {
   display: inline-flex;
@@ -957,7 +1015,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   flex: none;
   width: 44px;
   min-height: 44px;
-  border-radius: var(--kova-radius-button);
+  border-radius: 10px;
 }
 .spec400-chip-remove > svg {
   width: 16px;
@@ -979,7 +1037,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   width: 14px;
   height: 14px;
 }
-.spec400-chip-inspect:hover,
 .spec400-chip-remove:hover {
   background: var(--accent);
 }
@@ -990,9 +1047,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 }
 .spec400-attachment-chip[data-status="failed"] {
   border-color: var(--destructive);
-}
-.spec400-attachment-chip[data-kind="image"] .spec400-chip-inspect:hover {
-  background: rgb(255 255 255 / 8%);
 }
 .spec400-plugin-tokens {
   display: flex;
@@ -1083,11 +1137,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   font-size: 0.875rem;
   line-height: 1.375rem;
   tab-size: 4;
-}
-@media (max-width: 767px) {
-  .spec400-attachment-chip {
-    max-width: 100%;
-  }
 }
 /* Empty chat: Grok's prompt-first whitespace, Claude's quiet serif greeting,
    and ChatGPT's observed vertical suggested-prompt rows. Each element has one
@@ -1199,19 +1248,22 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 
 /* The picker is part of the action row, aligned with Dictate and Voice/Send. */
 .spec400-composer-trailing .kova-model-trigger,
-.spec400-composer-trailing .kova-model-static {
-  min-height: 40px;
-  padding: 8px 10px;
-  border-radius: 12px;
+.spec400-composer-trailing .kova-model-static,
+.spec400-composer-trailing .kova-composer-model-status,
+.spec400-composer-trailing .kova-thinking-toggle {
+  min-width: 0;
+  min-height: var(--composer-action-size);
+  height: var(--composer-action-size);
+  padding: 6px 8px;
   font-size: 14px;
   font-weight: 500;
 }
+.spec400-composer-trailing :is(.kova-model-trigger, .kova-model-static) {
+  border-radius: 12px;
+}
 @media (max-width: 479px) {
   .spec400-composer {
-    padding: 14px 8px 8px;
-  }
-  .spec400-composer-toolbar {
-    gap: 2px;
+    padding-block-start: 14px;
   }
   .spec400-composer-tools {
     gap: 0;
@@ -1220,13 +1272,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     width: 44px;
     min-width: 44px;
     padding: 8px;
-  }
-  .spec400-composer-trailing {
-    gap: 0;
-  }
-  .spec400-composer-trailing .kova-model-trigger {
-    gap: 4px;
-    padding-inline: 6px;
   }
 }
 
@@ -1923,4 +1968,40 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   place-items: center;
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Reserve the transcript's space while the conversation loads. */
+[data-chat-transcript-loading] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  gap: 1rem;
+  overflow: hidden;
+  padding: 1rem 1.25rem;
+}
+[data-chat-transcript-loading]::before,
+[data-chat-transcript-loading]::after {
+  content: "";
+  min-height: 0;
+}
+[data-chat-transcript-loading]::before {
+  flex: 1;
+  width: 50%;
+  max-height: 3rem;
+  margin-inline-start: auto;
+  border-radius: var(--kova-radius-message);
+  background: var(--muted);
+}
+[data-chat-transcript-loading]::after {
+  flex: 2;
+  width: 75%;
+  max-height: 4rem;
+  background: repeating-linear-gradient(to bottom, var(--muted) 0 8px, transparent 8px 20px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-chat-transcript-loading]::before,
+  [data-chat-transcript-loading]::after {
+    animation: var(--animate-pulse);
+  }
 }

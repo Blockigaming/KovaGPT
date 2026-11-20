@@ -10,7 +10,7 @@ import { copyChatImage, downloadChatImage, shareChatImage } from "@/lib/chat-ima
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
 import {
   CONSUMER_MODELS,
-  consumerModel,
+  DEFAULT_CONSUMER_MODEL,
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import {
@@ -77,6 +77,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  Fragment,
   type ReactNode,
   useImperativeHandle,
   type Ref,
@@ -103,10 +104,12 @@ import { ComposerPluginList, useComposerPluginConnections } from "@/components/C
 import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import { LinkPreviewChip } from "@/components/LinkPreviewChip";
 import {
-  COMPOSER_LINK_MARKER,
+  canonicalComposerOffset,
+  composerLinkDisplay,
+  composerTextChange,
   firstLinkPreviewToken,
-  fromComposerLinkDisplay,
-  toComposerLinkDisplay,
+  linkPreviewTokens,
+  type ComposerLinkToken,
 } from "@/lib/link-preview.mjs";
 const ComposerSignInDialog = lazy(() =>
   import("@/components/ComposerSignInDialog").then((module) => ({
@@ -371,14 +374,20 @@ export function ChatInput({
     size: number;
     error?: string;
   } | null>(null);
-  const [atomicLinkRaw, setAtomicLinkRaw] = useState<string | null>(null);
-  // Only the rendered composer collapses the URL. State, history and model
-  // requests retain the exact original characters.
-  const draftLinkToken = firstLinkPreviewToken(value);
-  const activeAtomicLink = draftLinkToken?.raw === atomicLinkRaw ? atomicLinkRaw : null;
-  const visibleComposerValue = activeAtomicLink
-    ? toComposerLinkDisplay(value, activeAtomicLink)
-    : value;
+  const [collapsedLinks, setCollapsedLinks] = useState<ComposerLinkToken[]>([]);
+  // Only the editor displays the compact tokens. The draft keeps exact URLs.
+  const draftLinks = linkPreviewTokens(value);
+  const activeLinks = draftLinks.filter((link) =>
+    collapsedLinks.some(({ start, raw }) => start === link.start && raw === link.raw),
+  );
+  const editor = composerLinkDisplay(value, activeLinks);
+  const previewLinks = draftLinks.filter(
+    (link) =>
+      link.end < value.length || /^https:\/\//iu.test(link.raw) || activeLinks.includes(link),
+  );
+  const mediaOrderRef = useRef<{ context: typeof attachmentContextRef.current; keys: string[] }>(
+    null,
+  );
   const composerStateRef = useRef({ value, attachments });
   composerStateRef.current = { value, attachments };
   const updateAttachments = (next: PendingAttachment[]) => {
@@ -388,7 +397,7 @@ export function ChatInput({
   const uploadBatchRef = useRef(false);
   useEffect(() => {
     setPasteOffer(null);
-    setAtomicLinkRaw(null);
+    setCollapsedLinks([]);
   }, [attachmentAutoSave.scope, attachmentContext]);
   const documentReadsRef = useRef(new Set<AbortController>());
   const documentReadIdsRef = useRef(new Map<string, AbortController>());
@@ -887,24 +896,50 @@ export function ChatInput({
     }
   };
 
+  const editComposerDraft = (
+    start: number,
+    end: number,
+    text: string,
+    { completeLinks = false, visible }: { completeLinks?: boolean; visible?: string } = {},
+  ) => {
+    const next = value.slice(0, start) + text + value.slice(end);
+    const caret = start + text.length;
+    const shift = caret - end;
+    const remaining = activeLinks.filter((link) => link.end <= start || link.start >= end);
+    const collapsed = linkPreviewTokens(next).filter(
+      (link) =>
+        (completeLinks && link.end <= caret) ||
+        remaining.some(
+          (previous) =>
+            previous.raw === link.raw &&
+            (previous.end <= start ? previous.start : previous.start + shift) === link.start,
+        ),
+    );
+    setCollapsedLinks(collapsed);
+    onChange(next);
+    if (visible !== composerLinkDisplay(next, collapsed).text) {
+      const position = composerLinkDisplay(
+        next.slice(0, caret),
+        collapsed.filter((link) => link.end <= caret),
+      ).text.length;
+      window.requestAnimationFrame(() => ref.current?.setSelectionRange(position, position));
+    }
+  };
+
   const updateComposerText = (visible: string, caret: number) => {
-    if (activeAtomicLink) {
-      const kept = visible.includes(COMPOSER_LINK_MARKER);
-      onChange(kept ? fromComposerLinkDisplay(visible, activeAtomicLink) : visible);
-      if (!kept) setAtomicLinkRaw(null);
-      return;
-    }
-    onChange(visible);
-    // Typing an URL must not collapse it mid-word. Complete typed links when
-    // whitespace is entered; pasted links collapse immediately.
-    if (!composingRef.current && caret > 0 && /\s/u.test(visible[caret - 1])) {
-      const token = firstLinkPreviewToken(visible, { requireBareDelimiter: true });
-      if (token && token.end <= caret - 1) {
-        setAtomicLinkRaw(token.raw);
-        const position = caret - token.raw.length + 1;
-        window.requestAnimationFrame(() => ref.current?.setSelectionRange(position, position));
-      }
-    }
+    if (visible === editor.text) return;
+    const change = composerTextChange(editor.text, visible, caret);
+    const start = canonicalComposerOffset(editor, change.start);
+    const end = canonicalComposerOffset(editor, change.end);
+    // Typing a word immediately after a collapsed page starts new text.
+    const separator =
+      /^[\p{L}\p{N}]/u.test(change.text) && activeLinks.some((link) => link.end === start)
+        ? " "
+        : "";
+    editComposerDraft(start, end, separator + change.text, {
+      completeLinks: !composingRef.current && /\s$/u.test(change.text),
+      visible,
+    });
   };
 
   const openProjectPicker = (
@@ -958,54 +993,28 @@ export function ChatInput({
       onPluginContextsChange(pluginContexts.slice(0, -1));
       return;
     }
-    // A link typed manually has the same one-keystroke removal behavior even
-    // before its title chip has collapsed the editor text.
+    // Erase the whole URL wherever a deletion touches a previewed link.
     if (
-      !activeAtomicLink &&
       !disabled &&
       (e.key === "Backspace" || e.key === "Delete") &&
       !(e.nativeEvent as KeyboardEvent).isComposing
     ) {
-      const token = firstLinkPreviewToken(value, { requireBareDelimiter: true });
-      if (token) {
-        const start = e.currentTarget.selectionStart;
-        const end = e.currentTarget.selectionEnd;
-        const hitsToken =
-          start < end
-            ? start < token.end && end > token.start
-            : e.key === "Backspace"
-              ? start > token.start && start <= token.end
-              : start >= token.start && start < token.end;
-        if (hitsToken) {
-          e.preventDefault();
-          const from = start < end ? Math.min(start, token.start) : token.start;
-          const through = start < end ? Math.max(end, token.end) : token.end;
-          onChange(value.slice(0, from) + value.slice(through));
-          window.requestAnimationFrame(() => ref.current?.setSelectionRange(from, from));
-          return;
-        }
-      }
-    }
-    if (activeAtomicLink && (e.key === "Backspace" || e.key === "Delete")) {
-      const start = e.currentTarget.selectionStart;
-      const end = e.currentTarget.selectionEnd;
-      const markerAt = visibleComposerValue.indexOf(COMPOSER_LINK_MARKER);
-      const hitsToken =
-        markerAt >= 0 &&
-        (start < end
-          ? start <= markerAt && markerAt < end
-          : (e.key === "Backspace" && start === markerAt + 1) ||
-            (e.key === "Delete" && start === markerAt));
-      if (hitsToken) {
+      const start = canonicalComposerOffset(editor, e.currentTarget.selectionStart);
+      const end = canonicalComposerOffset(editor, e.currentTarget.selectionEnd);
+      const touched = previewLinks.filter((link) =>
+        start < end
+          ? start < link.end && end > link.start
+          : e.key === "Backspace"
+            ? start > link.start && start <= link.end
+            : start >= link.start && start < link.end,
+      );
+      if (touched.length) {
         e.preventDefault();
-        const next =
-          start < end
-            ? visibleComposerValue.slice(0, start) + visibleComposerValue.slice(end)
-            : visibleComposerValue.slice(0, markerAt) + visibleComposerValue.slice(markerAt + 1);
-        setAtomicLinkRaw(null);
-        onChange(next);
-        const caret = start < end ? start : markerAt;
-        window.requestAnimationFrame(() => ref.current?.setSelectionRange(caret, caret));
+        editComposerDraft(
+          Math.min(start, touched[0].start),
+          Math.max(end, touched.at(-1)!.end),
+          "",
+        );
         return;
       }
     }
@@ -1375,27 +1384,20 @@ export function ChatInput({
       // of individual characters. The canonical prompt still stores the URL.
       const plain = event.clipboardData.getData("text/plain");
       const target = event.target as HTMLElement;
-      const pastedToken = firstLinkPreviewToken(plain);
       if (
         !disabled &&
         target === ref.current &&
-        pastedToken &&
-        !activeAtomicLink &&
-        plain.length <= LOCAL_PASTE_THRESHOLD
+        plain.length <= LOCAL_PASTE_THRESHOLD &&
+        firstLinkPreviewToken(plain)
       ) {
         event.preventDefault();
         const field = ref.current;
-        const start = field.selectionStart;
-        const end = field.selectionEnd;
-        const canonical = value.slice(0, start) + plain + value.slice(end);
-        const token = firstLinkPreviewToken(canonical);
-        const caret = start + plain.length;
-        const collapses = token && token.end <= caret;
-        setAtomicLinkRaw(collapses ? token.raw : null);
-        onChange(canonical);
-        const position = collapses ? caret - token.raw.length + 1 : caret;
-        window.requestAnimationFrame(() => {
-          if (ref.current) ref.current.setSelectionRange(position, position);
+        const start = canonicalComposerOffset(editor, field.selectionStart);
+        const end = canonicalComposerOffset(editor, field.selectionEnd);
+        const leadingSpace = /\S/u.test(value[start - 1] ?? "") && /^\S/u.test(plain) ? " " : "";
+        const trailingSpace = /\S/u.test(value[end] ?? "") && /\S$/u.test(plain) ? " " : "";
+        editComposerDraft(start, end, leadingSpace + plain + trailingSpace, {
+          completeLinks: true,
         });
         return;
       }
@@ -1413,12 +1415,14 @@ export function ChatInput({
         selectionPasteTarget?.tagName === "TEXTAREA" ? selectionPasteTarget : ref.current;
       try {
         const prepared = prepareLocalPaste(plain);
+        const start = selectionTarget?.selectionStart ?? value.length;
+        const end = selectionTarget?.selectionEnd ?? value.length;
         const paste = {
           ...prepared,
           id: crypto.randomUUID(),
           original: composerStateRef.current.value,
-          start: selectionTarget?.selectionStart ?? value.length,
-          end: selectionTarget?.selectionEnd ?? value.length,
+          start: selectionTarget === ref.current ? canonicalComposerOffset(editor, start) : start,
+          end: selectionTarget === ref.current ? canonicalComposerOffset(editor, end) : end,
         };
         if (generation !== pasteGenerationRef.current) return;
         setPasteOffer(paste);
@@ -2034,16 +2038,176 @@ export function ChatInput({
     setPreviewOffset(0);
   };
   const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
-  const linkPreviewToken = activeAtomicLink
-    ? draftLinkToken
-    : firstLinkPreviewToken(value, { requireBareDelimiter: true });
-  const linkPreviewUrl = linkPreviewToken?.url ?? null;
-  const removeLinkPreview = () => {
-    if (!linkPreviewToken || disabled) return;
-    setAtomicLinkRaw(null);
-    onChange(value.slice(0, linkPreviewToken.start) + value.slice(linkPreviewToken.end));
-    window.requestAnimationFrame(() => ref.current?.focus());
-  };
+
+  const mediaTiles = new Map<string, ReactNode>();
+  attachments.forEach((attachment, index) => {
+    const isPhoto = attachment.kind === "image";
+    const group = isPhoto ? "photo" : "file";
+    const fileDetails = [
+      attachment.localPaste && "Local",
+      attachment.pdf &&
+        `${attachment.pdf.pageCount} ${attachment.pdf.pageCount === 1 ? "page" : "pages"}`,
+      attachment.pdf &&
+        attachment.status === "complete" &&
+        attachment.pdf.pages.some((page) => page.status === "failed") &&
+        "partial text",
+      attachment.selectedPdfPages &&
+        `Selected: ${formatPdfPageNumbers(attachment.selectedPdfPages)}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    mediaTiles.set(
+      `${group}:${attachment.clientId ?? `${attachment.name}:${index}`}`,
+      <li
+        className={
+          isPhoto ? "spec400-attachment-chip" : "spec400-attachment-chip spec400-composer-card"
+        }
+        data-status={attachment.status}
+        data-kind={attachment.kind}
+      >
+        <button
+          type="button"
+          className="spec400-chip-inspect"
+          data-attachment-preview-trigger=""
+          aria-label={`Inspect ${attachment.name}`}
+          aria-description={attachment.pasteSummary}
+          title={[
+            attachment.pasteSummary ?? attachment.name,
+            attachmentState(attachment),
+            fileDetails,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          onClick={(event) => {
+            previewTriggerRef.current = event.currentTarget;
+            previewReturnToInputRef.current = false;
+            setPreviewOffset(0);
+            setPreviewAttachment(attachment);
+          }}
+        >
+          {isPhoto ? (
+            <>
+              {attachment.dataUrl && (
+                <img
+                  className="spec400-attachment-thumb"
+                  src={attachment.dataUrl}
+                  alt=""
+                  decoding="async"
+                  aria-hidden="true"
+                />
+              )}
+              {attachment.status === "uploading" ? (
+                <Loader2
+                  className="spec400-attachment-image-state animate-spin"
+                  aria-hidden="true"
+                />
+              ) : attachment.status === "failed" ? (
+                <AlertCircle className="spec400-attachment-image-state" aria-hidden="true" />
+              ) : null}
+            </>
+          ) : attachment.status === "uploading" ? (
+            <Loader2 className="animate-spin" aria-hidden="true" />
+          ) : attachment.status === "failed" ? (
+            <AlertCircle aria-hidden="true" />
+          ) : (
+            <FileText aria-hidden="true" />
+          )}
+          {isPhoto ? (
+            <span className="sr-only">{attachment.name}</span>
+          ) : (
+            <span className="spec400-chip-labels">
+              <span className="spec400-chip-name">
+                {attachment.pasteSummary ?? attachment.name}
+              </span>
+              {fileDetails && <small>{fileDetails}</small>}
+            </span>
+          )}
+          <span className="sr-only">{attachmentState(attachment)}</span>
+        </button>
+        <button
+          type="button"
+          className="spec400-chip-remove"
+          aria-label={`Remove ${attachment.name}`}
+          onClick={() => removeAttachment(index)}
+        >
+          <X aria-hidden="true" />
+        </button>
+      </li>,
+    );
+  });
+  if (pasteOffer) {
+    mediaTiles.set(
+      `file:pending:${pasteOffer.id}`,
+      <li className="spec400-attachment-chip spec400-composer-card" data-status="pending">
+        <button
+          type="button"
+          className="spec400-chip-inspect"
+          data-attachment-preview-trigger=""
+          aria-label="Inspect pending pasted text"
+          aria-description={pasteOffer.summary}
+          title={pasteOffer.summary}
+          onClick={(event) => {
+            previewTriggerRef.current = event.currentTarget;
+            previewReturnToInputRef.current = false;
+            setPreviewOffset(0);
+            setPastePreviewOpen(true);
+          }}
+        >
+          <FileText aria-hidden="true" />
+          <span className="spec400-chip-labels">
+            <span className="spec400-chip-name">{pasteOffer.summary}</span>
+            <small>Not attached</small>
+          </span>
+        </button>
+        <button
+          type="button"
+          className="spec400-chip-remove"
+          aria-label="Remove pending pasted text"
+          onClick={() => {
+            setPasteOffer(null);
+            setPastePreviewOpen(false);
+            window.requestAnimationFrame(() => ref.current?.focus());
+          }}
+        >
+          <X aria-hidden="true" />
+        </button>
+      </li>,
+    );
+  }
+  const linkCounts = new Map<string, number>();
+  for (const link of previewLinks) {
+    const occurrence = linkCounts.get(link.raw) ?? 0;
+    linkCounts.set(link.raw, occurrence + 1);
+    mediaTiles.set(
+      `link:${link.raw}:${occurrence}`,
+      <li className="spec400-composer-link spec400-composer-card">
+        <LinkPreviewChip
+          url={link.url}
+          placement="composer"
+          onRemove={() => {
+            if (disabled) return;
+            editComposerDraft(link.start, link.end, "");
+            window.requestAnimationFrame(() => ref.current?.focus());
+          }}
+        />
+      </li>,
+    );
+  }
+  // Preserve insertion order within each group while keeping photos at the front.
+  const mediaContext = attachmentContextRef.current;
+  const previousMediaOrder =
+    mediaOrderRef.current?.context === mediaContext ? mediaOrderRef.current.keys : [];
+  const mediaKeys = [
+    ...previousMediaOrder.filter((key) => mediaTiles.has(key)),
+    ...Array.from(mediaTiles.keys()).filter((key) => !previousMediaOrder.includes(key)),
+  ];
+  const mediaOrder = ["photo:", "file:", "link:"].flatMap((prefix) =>
+    mediaKeys.filter((key) => key.startsWith(prefix)),
+  );
+  const photoCount = attachments.filter((attachment) => attachment.kind === "image").length;
+  useEffect(() => {
+    mediaOrderRef.current = { context: mediaContext, keys: mediaOrder };
+  });
 
   return (
     <div
@@ -2095,141 +2259,21 @@ export function ChatInput({
         }}
       >
         <div className="contents spec400-composer-content">
-          {(attachments.length > 0 || pasteOffer) && (
-            <ul className="spec400-attachment-chips" aria-label="Attachments">
-              {attachments.map((attachment, index) => (
-                <li
-                  key={attachment.clientId ?? `${attachment.name}:${index}`}
-                  className="spec400-attachment-chip"
-                  data-status={attachment.status}
-                  data-kind={attachment.kind}
-                >
-                  <button
-                    type="button"
-                    className="spec400-chip-inspect"
-                    data-attachment-preview-trigger=""
-                    aria-label={`Inspect ${attachment.name}`}
-                    aria-description={attachment.pasteSummary}
-                    title={`${attachment.pasteSummary ?? attachment.name} · ${attachmentState(attachment)}`}
-                    onClick={(event) => {
-                      previewTriggerRef.current = event.currentTarget;
-                      previewReturnToInputRef.current = false;
-                      setPreviewOffset(0);
-                      setPreviewAttachment(attachment);
-                    }}
-                  >
-                    {attachment.kind === "image" ? (
-                      <>
-                        {attachment.dataUrl && (
-                          <img
-                            className="spec400-attachment-thumb"
-                            src={attachment.dataUrl}
-                            alt=""
-                            decoding="async"
-                            aria-hidden="true"
-                          />
-                        )}
-                        {attachment.status === "uploading" ? (
-                          <Loader2
-                            className="spec400-attachment-image-state animate-spin"
-                            aria-hidden="true"
-                          />
-                        ) : attachment.status === "failed" ? (
-                          <AlertCircle
-                            className="spec400-attachment-image-state"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                      </>
-                    ) : attachment.status === "uploading" ? (
-                      <Loader2 className="animate-spin" aria-hidden="true" />
-                    ) : attachment.status === "failed" ? (
-                      <AlertCircle aria-hidden="true" />
-                    ) : (
-                      <FileText aria-hidden="true" />
-                    )}
-                    <span
-                      className={
-                        attachment.kind === "image"
-                          ? "spec400-chip-name sr-only"
-                          : "spec400-chip-name"
-                      }
-                    >
-                      {attachment.pasteSummary ?? attachment.name}
-                    </span>
-                    <span className="sr-only">{attachmentState(attachment)}</span>
-                    {attachment.localPaste && <small>Local</small>}
-                    {attachment.pdf && (
-                      <small>
-                        {attachment.pdf.pageCount}{" "}
-                        {attachment.pdf.pageCount === 1 ? "page" : "pages"}
-                        {attachment.status === "complete" &&
-                        attachment.pdf.pages.some((page) => page.status === "failed")
-                          ? " · partial text"
-                          : ""}
-                      </small>
-                    )}
-                    {attachment.selectedPdfPages && (
-                      <small>Selected: {formatPdfPageNumbers(attachment.selectedPdfPages)}</small>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="spec400-chip-remove"
-                    aria-label={`Remove ${attachment.name}`}
-                    onClick={() => removeAttachment(index)}
-                  >
-                    <X aria-hidden="true" />
-                  </button>
-                </li>
+          {mediaOrder.length > 0 && (
+            <ul
+              className="spec400-composer-media"
+              data-photo-count={photoCount}
+              aria-label="Attachments"
+            >
+              {mediaOrder.map((key) => (
+                <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
               ))}
-              {pasteOffer && (
-                <li className="spec400-attachment-chip" data-status="pending">
-                  <button
-                    type="button"
-                    className="spec400-chip-inspect"
-                    data-attachment-preview-trigger=""
-                    aria-label="Inspect pending pasted text"
-                    aria-description={pasteOffer.summary}
-                    onClick={(event) => {
-                      previewTriggerRef.current = event.currentTarget;
-                      previewReturnToInputRef.current = false;
-                      setPreviewOffset(0);
-                      setPastePreviewOpen(true);
-                    }}
-                  >
-                    <FileText aria-hidden="true" />
-                    <span className="spec400-chip-name">{pasteOffer.summary}</span>
-                    <small>Not attached</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="spec400-chip-remove"
-                    aria-label="Remove pending pasted text"
-                    onClick={() => {
-                      setPasteOffer(null);
-                      setPastePreviewOpen(false);
-                      window.requestAnimationFrame(() => ref.current?.focus());
-                    }}
-                  >
-                    <X aria-hidden="true" />
-                  </button>
-                </li>
-              )}
             </ul>
-          )}
-          {linkPreviewUrl && (
-            <LinkPreviewChip
-              key={linkPreviewUrl}
-              url={linkPreviewUrl}
-              placement="composer"
-              onRemove={removeLinkPreview}
-            />
           )}
           <div className="spec400-input-region">
             <textarea
               ref={ref}
-              value={visibleComposerValue}
+              value={editor.text}
               onChange={(event) => {
                 setSlashDismissed(false);
                 setSlashModels(false);
@@ -2475,92 +2519,105 @@ export function ChatInput({
                 disabled={disabled}
               />
             ) : canChangeAgent && mode && onModeChange ? (
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+              <ModelSelector
+                mode={mode}
+                onChange={onModeChange}
+                userTier={userTier}
+                modelLabel={
+                  CONSUMER_MODELS.find(
+                    (model) =>
+                      model.id === (userTier === "free" ? DEFAULT_CONSUMER_MODEL : hostedModel),
+                  )?.label
+                }
+                compact
+              />
             ) : (
               <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
             )}
-            <button
-              type="button"
-              ref={dictationTriggerRef}
-              data-testid="dictate-button"
-              className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
-              aria-label="Type with voice"
-              aria-controls="kova-inline-dictation"
-              aria-expanded={activeVoiceMode === "dictate"}
-              disabled={disabled || isStreaming || !isLoaded || !online}
-              title="Type with voice"
-              onClick={(event) => openVoice("dictate", event.currentTarget)}
-            >
-              <Mic aria-hidden="true" />
-              <span className="sr-only">Type with voice</span>
-            </button>
-            <button
-              type="button"
-              data-testid="voice-button"
-              className="spec400-send-button spec400-primary-voice"
-              hidden={hasDraft || isStreaming}
-              aria-label="Voice"
-              aria-haspopup="dialog"
-              aria-expanded={activeVoiceMode === "voice"}
-              disabled={
-                disabled ||
-                isStreaming ||
-                !isLoaded ||
-                !user ||
-                !online ||
-                !onVoiceSubmit ||
-                voiceOpeningBlocked
-              }
-              title={
-                onVoiceSubmit
-                  ? "Start a voice conversation"
-                  : "Voice conversations require a saved chat"
-              }
-              onClick={(event) => openVoice("voice", event.currentTarget)}
-            >
-              <AudioLines aria-hidden="true" />
-              <span className="sr-only">Voice</span>
-            </button>
-            {isStreaming ? (
+            <div className="spec400-composer-speech-actions">
               <button
                 type="button"
-                onPointerDown={(event) => {
-                  // Keep keyboard/viewport geometry stable until this click lands.
-                  if (event.button === 0) event.preventDefault();
-                }}
-                onClick={onStop}
-                className="spec400-send-button"
-                aria-label="Stop generating"
-                data-testid="stop-button"
+                ref={dictationTriggerRef}
+                data-testid="dictate-button"
+                className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
+                aria-label="Type with voice"
+                aria-controls="kova-inline-dictation"
+                aria-expanded={activeVoiceMode === "dictate"}
+                disabled={disabled || isStreaming || !isLoaded || !online}
+                title="Type with voice"
+                onClick={(event) => openVoice("dictate", event.currentTarget)}
               >
-                <Square aria-hidden="true" />
-                <span>Stop</span>
+                <Mic aria-hidden="true" />
+                <span className="sr-only">Type with voice</span>
               </button>
-            ) : (
               <button
                 type="button"
-                onPointerDown={(event) => {
-                  if (event.button === 0) event.preventDefault();
-                }}
-                disabled={!canSubmit}
-                onClick={triggerSubmit}
-                className="spec400-send-button"
-                hidden={!hasDraft}
-                aria-label="Send message"
-                data-testid="send-button"
-                title={
-                  disabled
-                    ? "Messaging is unavailable"
-                    : sendDisabled
-                      ? "Getting this chat ready…"
-                      : (blockedAttachmentMessage ??
-                        (!online ? "Reconnect to send" : "Send message"))
+                data-testid="voice-button"
+                className="spec400-send-button spec400-primary-voice"
+                hidden={hasDraft || isStreaming}
+                aria-label="Voice"
+                aria-haspopup="dialog"
+                aria-expanded={activeVoiceMode === "voice"}
+                disabled={
+                  disabled ||
+                  isStreaming ||
+                  !isLoaded ||
+                  !user ||
+                  !online ||
+                  !onVoiceSubmit ||
+                  voiceOpeningBlocked
                 }
+                title={
+                  onVoiceSubmit
+                    ? "Start a voice conversation"
+                    : "Voice conversations require a saved chat"
+                }
+                onClick={(event) => openVoice("voice", event.currentTarget)}
               >
-                <ArrowUp aria-hidden="true" />
-                <span>Send</span>
+                <AudioLines aria-hidden="true" />
+                <span className="sr-only">Voice</span>
               </button>
-            )}
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onPointerDown={(event) => {
+                    // Keep keyboard/viewport geometry stable until this click lands.
+                    if (event.button === 0) event.preventDefault();
+                  }}
+                  onClick={onStop}
+                  className="spec400-send-button"
+                  aria-label="Stop generating"
+                  data-testid="stop-button"
+                >
+                  <Square aria-hidden="true" />
+                  <span>Stop</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onPointerDown={(event) => {
+                    if (event.button === 0) event.preventDefault();
+                  }}
+                  disabled={!canSubmit}
+                  onClick={triggerSubmit}
+                  className="spec400-send-button"
+                  hidden={!hasDraft}
+                  aria-label="Send message"
+                  data-testid="send-button"
+                  title={
+                    disabled
+                      ? "Messaging is unavailable"
+                      : sendDisabled
+                        ? "Getting this chat ready…"
+                        : (blockedAttachmentMessage ??
+                          (!online ? "Reconnect to send" : "Send message"))
+                  }
+                >
+                  <ArrowUp aria-hidden="true" />
+                  <span>Send</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

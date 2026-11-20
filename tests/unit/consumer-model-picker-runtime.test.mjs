@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reactFixture } from "../helpers/kova-react-fixture.mjs";
+import { reactFixture, text } from "../helpers/kova-react-fixture.mjs";
 import * as selection from "../../src/lib/consumer-model-selection.mjs";
 import { CONSUMER_EFFORTS } from "../../src/lib/consumer-effort-policy.mjs";
 import { isModeAllowedForTier } from "../../src/lib/mode-entitlements.mjs";
@@ -41,6 +41,7 @@ function fixture(overrides = {}) {
         "@/components/auth/ClerkSafe": { useUser: () => config },
         "@/components/ui/popover": {
           Popover: "popover",
+          PopoverAnchor: "popover-anchor",
           PopoverContent: "popover-content",
           PopoverTrigger: "popover-trigger",
         },
@@ -80,6 +81,27 @@ for (const [tier, max, last] of [
     assert.equal(f.config.mode, last);
   });
 }
+
+test("the trigger always names the selected Kova model, version and allowed effort", () => {
+  for (const tier of ["plus", "pro"]) {
+    const f = fixture({ tier });
+    for (const model of selection.CONSUMER_MODELS) {
+      for (const effort of CONSUMER_EFFORTS.filter((item) => isModeAllowedForTier(tier, item.id))) {
+        f.config.value = model.id;
+        f.config.mode = effort.id;
+        f.render();
+        const trigger = f.find(
+          "button",
+          (node) => node.props["data-testid"] === "model-selector-trigger",
+        );
+        const label = `${model.label} ${effort.label}`;
+        assert.equal(text(trigger), label);
+        assert.equal(trigger.props.title, label);
+        assert.equal(trigger.props["aria-label"], `Choose model and effort, ${label}`);
+      }
+    }
+  }
+});
 
 test("Default applies the recommended model and Lite through the choice callbacks", async () => {
   const f = fixture({ tier: "pro", value: "kova-xenon-5", mode: "ultra" });

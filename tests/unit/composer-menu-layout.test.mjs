@@ -47,7 +47,7 @@ test("phone composer stays touch-sized and grows for multiline text or attachmen
   assert.doesNotMatch(surface, /(?:^|[;{]\s*)height:|overflow: hidden/);
   assert.match(
     chatStyles,
-    /\.spec400-attachment-chips\s*\{[^}]*flex-wrap: nowrap[^}]*overflow-x: auto/,
+    /\.spec400-composer-media\s*\{[^}]*flex-wrap: wrap[^}]*overflow: hidden auto/,
   );
   assert.match(chatStyles, /env\(safe-area-inset-bottom\)/);
   assert.match(composer, /const limit = isMobileLayout \? 144 : 240/);

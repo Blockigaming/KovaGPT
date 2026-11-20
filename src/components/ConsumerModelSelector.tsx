@@ -7,7 +7,7 @@ import {
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { isModeAllowedForTier, modesForTier, type ModeId, type Tier } from "@/lib/modes";
 
 const optionClass =
@@ -53,7 +53,8 @@ export function ConsumerModelSelector({
   );
   const effort = efforts[effortIndex];
   const isDefault = value === DEFAULT_CONSUMER_MODEL && effort.id === "instant";
-  const modelLabel = isDefault ? "Default" : (consumerModel(value)?.label ?? "Model unavailable");
+  const modelLabel = consumerModel(value)?.label ?? "Model unavailable";
+  const selectionLabel = `${modelLabel} ${effort.label}`;
   const recommended = consumerModel(DEFAULT_CONSUMER_MODEL)?.label;
   const lastEffortIndex = efforts.length - 1;
 
@@ -79,19 +80,24 @@ export function ConsumerModelSelector({
         setOpen(next);
       }}
     >
+      <PopoverAnchor aria-hidden="true" className="kova-consumer-model-anchor" />
       <PopoverTrigger asChild>
         <button
           type="button"
           disabled={locked}
-          aria-label={`Choose model and effort, ${modelLabel} ${effort.label}`}
+          aria-label={`Choose model and effort, ${selectionLabel}`}
+          title={selectionLabel}
           data-testid="model-selector-trigger"
           data-slot="model-selector-trigger"
           data-ui-reference="chatgpt-model-selector"
-          className="kova-model-trigger kova-consumer-model-trigger inline-flex min-w-0 max-w-40 items-center gap-1.5 bg-accent/50 font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 data-[state=open]:bg-accent sm:max-w-52"
+          className="kova-model-trigger kova-consumer-model-trigger"
         >
-          <span className="truncate">{modelLabel.replace(/^Kova /, "")}</span>
-          <span className="shrink-0 text-muted-foreground">{effort.label}</span>
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="kova-consumer-model-pill">
+            <span>
+              {modelLabel} <span className="text-muted-foreground">{effort.label}</span>
+            </span>
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent

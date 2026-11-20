@@ -230,7 +230,7 @@ for (const [width, height] of viewports) {
     const model = composer.getByTestId("model-selector-trigger");
     await expect(model).toBeVisible();
     await composer.getByRole("textbox", { name: "Message KovaGPT" }).fill("Draft");
-    await model.locator("span.truncate").evaluate((label) => {
+    await model.locator(".kova-consumer-model-pill > span").evaluate((label) => {
       label.textContent = "Kova long model label for narrow viewports ".repeat(5);
     });
     await expect(composer.getByRole("button", { name: "Send message" })).toBeInViewport();

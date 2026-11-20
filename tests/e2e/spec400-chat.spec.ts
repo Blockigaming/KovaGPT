@@ -1,3 +1,4 @@
+import { expectsSeparateModeRow } from "./current-ui";
 import {
   CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
@@ -8,6 +9,68 @@ import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
+
+test("composer stays in one pane on a spanned foldable", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium" || page.viewportSize()?.width !== 1440);
+  await fixture(page, "dark", true, false, "pro");
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const composer = page.locator('[data-composer-surface="empty"] .spec400-composer');
+  const input = composer.getByRole("textbox", { name: "Message KovaGPT" });
+  await input.fill("Review the attached image");
+  await composer.locator('input[aria-label="Choose files"]').setInputFiles("public/kova-logo.png");
+  await expect(composer.locator('li[data-status="complete"]')).toHaveCount(1);
+
+  const session = await page.context().newCDPSession(page);
+  for (const orientation of ["vertical", "horizontal"] as const) {
+    const sideBySide = orientation === "vertical";
+    const width = sideBySide ? 1114 : 720;
+    const height = sideBySide ? 720 : 1114;
+    const hinge = { orientation, offset: 540, maskLength: 34 };
+    await session.send("Emulation.setDeviceMetricsOverride", {
+      width,
+      height,
+      screenWidth: width,
+      screenHeight: height,
+      deviceScaleFactor: 1,
+      mobile: true,
+      displayFeature: hinge,
+      devicePosture: { type: "folded" },
+    });
+    await session.send("Emulation.setDisplayFeaturesOverride", { features: [hinge] });
+    await expect
+      .poll(async () => {
+        const box = await composer.boundingBox();
+        if (!box) return false;
+        const start = sideBySide ? box.x : box.y;
+        const end = start + (sideBySide ? box.width : box.height);
+        return start >= hinge.offset + hinge.maskLength || end <= hinge.offset;
+      })
+      .toBe(true);
+    await expect(composer.getByTestId("send-button")).toBeInViewport({ ratio: 1 });
+  }
+});
+
+test("a short split window keeps Send visible with a full attachment tray", async ({ page }) => {
+  test.skip(page.viewportSize()?.width !== 1440);
+  await fixture(page, "dark", true, true, "pro");
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const chat = page.locator('[data-composer-surface="conversation"]');
+  if (!(await chat.isVisible())) {
+    const sidebar = await revealSidebar(page);
+    await sidebar.getByRole("button", { name: "Open chat Composer review chat" }).press("Enter");
+  }
+  await chat.getByRole("textbox", { name: "Message KovaGPT" }).fill("Review these images");
+  await chat
+    .locator('input[aria-label="Choose files"]')
+    .setInputFiles(["public/kova-logo.png", "public/images/classroom-hero-restored-768.webp"]);
+  await expect(chat.locator('li[data-status="complete"]')).toHaveCount(2);
+  await page.setViewportSize({ width: 240, height: 320 });
+  await expect(chat.getByTestId("send-button")).toBeInViewport({ ratio: 1 });
+  await expect(chat.getByTestId("model-selector-trigger")).toBeInViewport({ ratio: 1 });
+  await expect(chat.getByTestId("dictate-button")).toBeInViewport({ ratio: 1 });
+});
 
 async function expectRestingComposer(page: Page, composer = page.locator(".spec400-composer")) {
   const compactDesktop = await page.evaluate(
@@ -28,7 +91,10 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
-  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+  if (conversation)
+    await height.toBeLessThanOrEqual(
+      singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+    );
   else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
@@ -288,30 +354,341 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
 });
 
 for (const surface of ["empty", "conversation"] as const) {
-  test(`a composer link preview preserves draft alignment in ${surface} chat`, async ({ page }) => {
+  test(`composer media previews wrap from the top left in ${surface} chat`, async ({ page }) => {
     await fixture(page, "dark", true, surface === "conversation");
     await page.goto("/");
     await waitForKovaHydration(page);
     const composer = page.locator(`[data-composer-surface="${surface}"] .spec400-composer`);
+    if (surface === "conversation" && !(await composer.isVisible())) {
+      const sidebar = await revealSidebar(page);
+      await sidebar
+        .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+        .press("Enter");
+    }
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-    const preview = composer.locator(".kova-link-preview-composer");
-    const draftStart = () =>
+    const tray = composer.getByRole("list", { name: "Attachments", exact: true });
+    const photos = tray.locator(':scope > [data-kind="image"]');
+    const cards = tray.locator(":scope > .spec400-composer-card");
+    const websites = tray.locator(".kova-link-preview-composer");
+    const expectStableToolbar = async () => {
+      const stacked = await expectsSeparateModeRow(composer);
+      await expect
+        .poll(() =>
+          composer.evaluate((frame, modeOnOwnRow) => {
+            const outer = frame.getBoundingClientRect();
+            const leading = frame.querySelector(".kova-composer-plus")!.getBoundingClientRect();
+            const send = frame
+              .querySelector('[data-testid="send-button"]')!
+              .getBoundingClientRect();
+            const dictate = frame
+              .querySelector('[data-testid="dictate-button"]')!
+              .getBoundingClientRect();
+            const model = frame
+              .querySelector(
+                ".spec400-composer-trailing :is(.kova-model-trigger, .kova-model-static, .kova-composer-model-status,.kova-thinking-toggle)",
+              )!
+              .getBoundingClientRect();
+            const center = (rect: DOMRect) => rect.y + rect.height / 2;
+            return {
+              left: Math.round(leading.left - outer.left),
+              right: Math.round(outer.right - send.right),
+              bottom: Math.round(outer.bottom - send.bottom),
+              aligned:
+                [leading, dictate].every(
+                  (action) => Math.abs(center(action) - center(send)) < 0.5,
+                ) &&
+                (modeOnOwnRow
+                  ? Math.abs(model.right - send.right) < 0.5
+                  : Math.abs(center(model) - center(send)) < 0.5),
+              heightMatches: [leading, model, dictate].every(
+                (action) => action.height === send.height,
+              ),
+              gaps: [
+                Math.round(modeOnOwnRow ? dictate.top - model.bottom : dictate.left - model.right),
+                Math.round(send.left - dictate.right),
+              ],
+            };
+          }, stacked),
+        )
+        .toEqual({
+          left: 13,
+          right: 13,
+          bottom: 13,
+          aligned: true,
+          heightMatches: true,
+          gaps: [8, 8],
+        });
+    };
+    const pasteWebsites = (text: string) =>
+      input.evaluate((element, text) => {
+        const clipboardData = new DataTransfer();
+        clipboardData.setData("text/plain", text);
+        element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+      }, text);
+    const pasteAttachment = (name: string, type: string, data: string) =>
       input.evaluate(
-        (element) =>
-          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
+        (element, { name, type, data }) => {
+          const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0));
+          const clipboardData = new DataTransfer();
+          clipboardData.items.add(new File([bytes], name, { type }));
+          element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+        },
+        { name, type, data },
       );
+    const photo =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=";
 
     await input.fill("go to youtube.com");
-    await expect(preview).toBeHidden();
-    const originalStart = await draftStart();
+    await expect(tray).toBeHidden();
+    await expectStableToolbar();
     await input.press("End");
     await input.press("Space");
-    await expect(preview).toBeVisible();
-
-    await expect.poll(async () => Math.abs((await draftStart()) - originalStart)).toBeLessThan(0.5);
+    await expect(websites).toHaveCount(1);
+    await pasteAttachment("Review notes.txt", "text/plain", "UmV2aWV3IG5vdGVz");
+    await expect(cards.nth(0)).toHaveAttribute("data-status", "complete");
+    await pasteAttachment(
+      "Long filename for the second reference file.txt",
+      "text/plain",
+      "U2Vjb25k",
+    );
+    await expect(cards.nth(1)).toHaveAttribute("data-status", "complete");
     await expect
-      .poll(async () => Math.abs((await preview.boundingBox())!.x - originalStart))
-      .toBeLessThan(0.5);
+      .poll(() =>
+        cards.evaluateAll((items) => {
+          const [first, second, website] = items.map((item) => item.getBoundingClientRect());
+          return {
+            aligned: first.top === second.top && first.left < second.left,
+            websiteFitsExpectedRow:
+              items[0].parentElement!.clientWidth >= first.width * 3 + 16 - 0.5
+                ? website.top === first.top && website.left > second.left
+                : website.top > first.top && website.left === first.left,
+            sameSize: [first, second, website].every(
+              (card) => Math.abs(card.width - first.width) < 0.5 && card.height === 53,
+            ),
+          };
+        }),
+      )
+      .toEqual({ aligned: true, websiteFitsExpectedRow: true, sameSize: true });
+    await tray
+      .getByRole("button", { name: "Remove Long filename for the second reference file.txt" })
+      .click();
+    await pasteAttachment("Pasted logo.png", "image/png", photo);
+    await expect(
+      photos.nth(0).getByRole("button", { name: "Inspect Pasted logo.png" }),
+    ).toBeVisible();
+    await expect(photos.nth(0)).toHaveAttribute("data-status", "complete");
+    await expect(
+      cards.nth(0).getByRole("button", { name: "Inspect Review notes.txt" }),
+    ).toBeVisible();
+    await expect(cards.nth(1).locator("[data-link-preview-url]")).toHaveAttribute(
+      "data-link-preview-url",
+      "https://youtube.com/",
+    );
+    const file = cards.nth(0);
+    const normalColor = await websites
+      .first()
+      .evaluate((link) => getComputedStyle(link).backgroundColor);
+    await expect(file).toHaveCSS("background-color", normalColor);
+    if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+      const inspect = file.getByRole("button", { name: "Inspect Review notes.txt" });
+      await inspect.hover();
+      await expect(inspect).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      const link = websites.first().getByRole("link");
+      await link.hover();
+      await expect(link).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    }
+    await expectStableToolbar();
+    await expect
+      .poll(() =>
+        cards.evaluateAll((items) => {
+          const strip = items[0].parentElement!;
+          const photo = strip.firstElementChild!.getBoundingClientRect();
+          const [file, website] = items.map((item) => item.getBoundingClientRect());
+          const bothFit = photo.width + file.width + website.width + 24 <= strip.clientWidth + 0.5;
+          return {
+            fileBesidePhoto: file.top === photo.top && file.left > photo.left,
+            websiteFitsExpectedRow: bothFit
+              ? website.top === photo.top && website.left > file.left
+              : website.top ===
+                  file.bottom + parseFloat(getComputedStyle(items[0]).marginBlockEnd) &&
+                website.left === file.left,
+            sameWidth: file.width === website.width,
+            bothFit,
+          };
+        }),
+      )
+      .toMatchObject({
+        fileBesidePhoto: true,
+        websiteFitsExpectedRow: true,
+        sameWidth: true,
+        ...(page.viewportSize()!.width === 430 || page.viewportSize()!.width >= 1280
+          ? { bothFit: true }
+          : {}),
+      });
+    await input.press("End");
+    await pasteWebsites("https://github.com/review");
+    await pasteWebsites("https://en.wikipedia.org/wiki/Kova");
+    await expect(websites).toHaveCount(3);
+    await expect(input).not.toHaveValue(/youtube|github|wikipedia/);
+    await expect
+      .poll(() =>
+        cards.evaluateAll((items) => {
+          const strip = items[0].parentElement!;
+          const [first, ...rest] = items.map((item) => item.getBoundingClientRect());
+          const photo = strip.firstElementChild!.getBoundingClientRect();
+          const cardsBesidePhoto = Math.floor(
+            (strip.clientWidth - photo.width - 8 + 0.5) / (first.width + 8),
+          );
+          const nextRow = rest[cardsBesidePhoto - 1];
+          const rowGap = parseFloat(getComputedStyle(items[0]).marginBlockEnd);
+          return {
+            stacked: nextRow.top === first.bottom + rowGap && nextRow.left === first.left,
+            photoBesideBothRows: nextRow.top < photo.bottom && nextRow.left >= photo.right + 8,
+          };
+        }),
+      )
+      .toEqual({ stacked: true, photoBesideBothRows: true });
+    await tray.getByRole("button", { name: "Remove Review notes.txt" }).click();
+    await pasteAttachment("Second photo.png", "image/png", photo);
+    await expect(
+      photos.nth(1).getByRole("button", { name: "Inspect Second photo.png" }),
+    ).toBeVisible();
+
+    const phone = await page.evaluate(
+      () =>
+        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches,
+    );
+    if (phone) {
+      await input.focus();
+      await page.evaluate(() => {
+        const visual = window.visualViewport!;
+        const height = visual.height - 150;
+        Object.defineProperty(visual, "height", { configurable: true, value: height });
+        visual.dispatchEvent(new Event("resize"));
+      });
+      await expect(page.locator(".kova-assistant[data-ui=modern]")).toHaveAttribute(
+        "data-keyboard-open",
+        "true",
+      );
+      const plus = composer.getByRole("button", { name: "Attach", exact: true });
+      await expect(plus).toHaveCSS("width", "44px");
+      await expect(plus).toHaveCSS("height", "44px");
+    }
+
+    await pasteWebsites(
+      Array.from({ length: 12 }, (_, index) => `https://example.org/page-${index}`).join(" "),
+    );
+    await expect(websites).toHaveCount(15);
+    const desktop = await page.evaluate(
+      () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
+    );
+    const readLayout = () =>
+      composer.evaluate((frame) => {
+        const shell = frame.getBoundingClientRect();
+        const field = frame.querySelector("textarea")!;
+        const strip = frame.querySelector<HTMLElement>(".spec400-composer-media")!;
+        const boxes = Array.from(
+          strip.querySelectorAll(".spec400-attachment-chip, .spec400-composer-link"),
+          (tile) => tile.getBoundingClientRect(),
+        );
+        const rows = [...new Set(boxes.map((box) => Math.round(box.top)))];
+        const [first, second] = boxes;
+        const links = boxes.slice(2);
+        const linksPerRow = [...new Set(links.map((box) => box.top))].map(
+          (top) => links.filter((box) => box.top === top).length,
+        );
+        const cardsPerFullRow = Math.floor((strip.clientWidth + 0.5) / (links[0].width + 8));
+        const linksPerSideRow = Math.max(
+          0,
+          Math.floor(
+            (strip.clientWidth - first.width - second.width - 16 + 0.5) / (links[0].width + 8),
+          ),
+        );
+        const linksAfterPhotos = links.length - 2 * linksPerSideRow;
+        const expectedLinksPerRow = [
+          ...(linksPerSideRow ? [linksPerSideRow, linksPerSideRow] : []),
+          ...Array.from({ length: Math.ceil(linksAfterPhotos / cardsPerFullRow) }, (_, index) =>
+            Math.min(cardsPerFullRow, linksAfterPhotos - index * cardsPerFullRow),
+          ),
+        ];
+        const stripBox = strip.getBoundingClientRect();
+        return {
+          inset: first.left - shell.left,
+          topInset: first.top - shell.top,
+          photosSideBySide: second.top === first.top && second.left > first.left,
+          squarePhotos: [first, second].every((box) => Math.abs(box.width - box.height) < 0.5),
+          linksFillFreeSpace:
+            links.filter((link) => link.top < first.bottom).length === 2 * linksPerSideRow,
+          linksWrapByAvailableSpace: linksPerRow.join() === expectedLinksPerRow.join(),
+          cardsPerFullRow,
+          gapBelowPhotos:
+            (links.find((link) => link.top >= first.bottom)?.top ?? first.bottom) - first.bottom,
+          promptGap: field.getBoundingClientRect().top - stripBox.bottom,
+          promptStart: field.getBoundingClientRect().left - shell.left,
+          rows: rows.length,
+          rowsStartAtLeft: rows
+            .filter((top) => top >= Math.round(first.bottom))
+            .every(
+              (top) =>
+                Math.abs(boxes.find((box) => Math.round(box.top) === top)!.left - first.left) < 0.5,
+            ),
+          sidewaysOverflow: strip.scrollWidth > strip.clientWidth,
+        };
+      });
+    await expect.poll(readLayout).toMatchObject({
+      photosSideBySide: true,
+      squarePhotos: true,
+      linksFillFreeSpace: true,
+      linksWrapByAvailableSpace: true,
+      ...(page.viewportSize()!.width >= 1280 ? { cardsPerFullRow: 3 } : {}),
+      rowsStartAtLeft: true,
+      sidewaysOverflow: false,
+    });
+    const layout = await readLayout();
+    expect(layout.inset).toBeGreaterThan(2);
+    expect(layout.inset).toBeLessThan(layout.promptStart);
+    expect(layout.topInset).toBeGreaterThan(2);
+    expect(layout.promptGap).toBeGreaterThanOrEqual(8);
+    expect(layout.rows).toBeGreaterThanOrEqual(phone && page.viewportSize()!.width < 768 ? 6 : 3);
+    await expect(input).toBeInViewport();
+    const send = composer.getByTestId("send-button");
+    await expect(send).toBeInViewport();
+    await expectStableToolbar();
+    if (desktop) {
+      expect(layout.gapBelowPhotos).toBeGreaterThanOrEqual(8);
+      await expect(send).toHaveCSS("width", "36px");
+      await expect(send).toHaveCSS("height", "36px");
+      await expect
+        .poll(() =>
+          send.evaluate((button) => {
+            const action = button.getBoundingClientRect();
+            const arrow = button.querySelector("svg")!.getBoundingClientRect();
+            const microphone = button
+              .parentElement!.querySelector('[data-testid="dictate-button"]')!
+              .getBoundingClientRect();
+            const actionCenterY = action.top + action.height / 2;
+            return Math.max(
+              Math.abs(action.left + action.width / 2 - (arrow.left + arrow.width / 2)),
+              Math.abs(actionCenterY - (arrow.top + arrow.height / 2)),
+              Math.abs(actionCenterY - (microphone.top + microphone.height / 2)),
+            );
+          }),
+        )
+        .toBeLessThan(0.5);
+    }
+
+    await websites
+      .nth(1)
+      .getByRole("button", { name: /^Remove linked page from message/ })
+      .click();
+    await expect(websites).toHaveCount(14);
+    await expect(tray.locator('[data-link-preview-url="https://github.com/review"]')).toHaveCount(
+      0,
+    );
+    await expect(
+      tray.locator('[data-link-preview-url="https://en.wikipedia.org/wiki/Kova"]'),
+    ).toHaveCount(1);
   });
 }
 

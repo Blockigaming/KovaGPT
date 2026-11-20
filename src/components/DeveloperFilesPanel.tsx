@@ -90,7 +90,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
                 {file.byte_size} bytes · Expires {new Date(file.expires_at).toLocaleDateString()}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={busy} onClick={() => void action(file, false)}>
                 View
               </Button>
@@ -119,7 +119,7 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
       {data && !data.data.length && (
         <p className="text-sm text-muted-foreground">No files on this page.</p>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
           disabled={busy || page === 0}

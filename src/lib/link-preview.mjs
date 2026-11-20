@@ -34,33 +34,62 @@ export function normalizeLinkPreviewUrl(raw) {
 // page chip is displayed. The canonical draft still stores the original link.
 export const COMPOSER_LINK_MARKER = "\u2063";
 
-export function firstLinkPreviewToken(text, { requireBareDelimiter = false } = {}) {
-  if (typeof text !== "string") return null;
+function* scanLinkPreviewTokens(text, requireBareDelimiter) {
+  if (typeof text !== "string") return;
   for (const match of text.slice(0, 20_000).matchAll(LINK_PATTERN)) {
     const raw = match[0].replace(/[.,!?;:)\]}]+$/u, "");
     const hasScheme = /^https:\/\//iu.test(raw);
     const end = match.index + raw.length;
     if (!hasScheme && requireBareDelimiter && end === text.length) continue;
     const url = normalizeLinkPreviewUrl(hasScheme ? raw : `https://${raw}`);
-    if (url) return { raw, url, start: match.index, end: match.index + raw.length };
+    if (url) yield { raw, url, start: match.index, end };
   }
-  return null;
+}
+
+export function firstLinkPreviewToken(text, { requireBareDelimiter = false } = {}) {
+  return scanLinkPreviewTokens(text, requireBareDelimiter).next().value ?? null;
+}
+
+export function linkPreviewTokens(text, { requireBareDelimiter = false } = {}) {
+  return Array.from(scanLinkPreviewTokens(text, requireBareDelimiter));
 }
 
 export function firstLinkPreviewUrl(text) {
   return firstLinkPreviewToken(text)?.url ?? null;
 }
 
-export function toComposerLinkDisplay(text, rawLink) {
-  if (typeof text !== "string" || typeof rawLink !== "string" || !rawLink) return text;
-  const token = firstLinkPreviewToken(text);
-  if (token?.raw !== rawLink) return text;
-  return text.slice(0, token.start) + COMPOSER_LINK_MARKER + text.slice(token.end);
+export function composerLinkDisplay(draft, collapsed) {
+  let text = "";
+  let previousEnd = 0;
+  const positions = collapsed.map((token) => {
+    text += draft.slice(previousEnd, token.start);
+    const offset = text.length;
+    text += COMPOSER_LINK_MARKER;
+    previousEnd = token.end;
+    return { offset, token };
+  });
+  return { text: text + draft.slice(previousEnd), positions };
 }
 
-export function fromComposerLinkDisplay(display, rawLink) {
-  if (typeof display !== "string" || typeof rawLink !== "string" || !rawLink) return display;
-  return display.replace(COMPOSER_LINK_MARKER, rawLink);
+export function canonicalComposerOffset(display, offset) {
+  return display.positions.reduce(
+    (position, link) => position + (link.offset < offset ? link.token.raw.length - 1 : 0),
+    offset,
+  );
+}
+
+export function composerTextChange(previous, next, caret) {
+  // Match the unchanged suffix after the caret first. Several invisible URL
+  // markers can look identical, so prefix matching alone can remove the wrong link.
+  let previousEnd = previous.length;
+  let nextEnd = next.length;
+  while (previousEnd > 0 && nextEnd > caret && previous[previousEnd - 1] === next[nextEnd - 1]) {
+    previousEnd--;
+    nextEnd--;
+  }
+  let start = 0;
+  while (start < previousEnd && start < nextEnd && previous[start] === next[start]) start++;
+  return { start, end: previousEnd, text: next.slice(start, nextEnd) };
 }
 
 export function isOnlyLink(text, url) {

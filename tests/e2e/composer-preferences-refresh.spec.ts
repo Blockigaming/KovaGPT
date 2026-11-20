@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { chooseSettingsSection } from "./current-ui";
+import { chooseSettingsSection, expectsSeparateModeRow } from "./current-ui";
 
 for (const [tier, choices] of [
   ["free", ["Lite", "Medium"]],
@@ -27,7 +27,9 @@ for (const [tier, choices] of [
       const singleRow = await page.evaluate(
         () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
       );
-      await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+      await height.toBeLessThanOrEqual(
+        singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+      );
     } else {
       const phone = await page.evaluate(
         () =>
