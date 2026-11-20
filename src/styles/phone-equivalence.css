@@ -1,3 +1,7 @@
+.kova-greeting .kova-home-welcome-logo {
+  display: none;
+}
+
 /* Apply the measured desktop → narrow relationships to Kova's own geometry.
    The desktop baseline and evidence are in docs/design/desktop-mobile-ratios.md.
    Keep this file mobile-only: reflow is not a second visual theme. */
@@ -72,14 +76,15 @@
     margin-block: 0 24px;
   }
 
-  .kova-assistant .kova-empty-chat .kova-greeting h1 {
-    font-family: var(--font-reading, Georgia, serif);
-    font-size: 26px;
-    font-weight: 400;
-    line-height: 1.2;
-    max-width: min(100%, 24rem);
-    overflow-wrap: anywhere;
-    text-align: center;
+  .kova-greeting .kova-home-greeting-text {
+    display: none;
+  }
+
+  .kova-greeting .kova-home-welcome-logo {
+    display: block;
+    width: clamp(48px, 16vw, 72px);
+    height: auto;
+    opacity: 0.45;
   }
 
   .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {

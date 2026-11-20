@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { ArrowUp, Loader2, X } from "lucide-react";
+import { ArrowUp, X } from "lucide-react";
 import type { ComposerVoiceDialogViewProps } from "@/components/ComposerVoiceDialogView";
 import "./composer-voice.css";
 
@@ -100,7 +100,7 @@ export function ComposerDictationView({
         <div className="kova-inline-dictation-actions">
           {processing ? (
             <span className="kova-inline-dictation-processing" role="status" aria-label={status}>
-              <Loader2 className="animate-spin" aria-hidden="true" />
+              <span className="spec400-loading-spinner" aria-hidden="true" />
             </span>
           ) : (
             recordingControl
