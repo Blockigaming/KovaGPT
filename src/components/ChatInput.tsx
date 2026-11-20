@@ -2041,8 +2041,9 @@ export function ChatInput({
 
   const mediaTiles = new Map<string, ReactNode>();
   attachments.forEach((attachment, index) => {
+    const group = attachment.kind === "image" ? "photo" : "file";
     mediaTiles.set(
-      `file:${attachment.clientId ?? `${attachment.name}:${index}`}`,
+      `${group}:${attachment.clientId ?? `${attachment.name}:${index}`}`,
       <li
         className="spec400-attachment-chip"
         data-status={attachment.status}
@@ -2124,7 +2125,7 @@ export function ChatInput({
   });
   if (pasteOffer) {
     mediaTiles.set(
-      `paste:${pasteOffer.id}`,
+      `file:pending:${pasteOffer.id}`,
       <li className="spec400-attachment-chip" data-status="pending">
         <button
           type="button"
@@ -2177,14 +2178,17 @@ export function ChatInput({
       </li>,
     );
   }
-  // Keep existing previews in place when a new item of another type is added.
+  // Preserve insertion order within each group while keeping photos at the front.
   const mediaContext = attachmentContextRef.current;
   const previousMediaOrder =
     mediaOrderRef.current?.context === mediaContext ? mediaOrderRef.current.keys : [];
-  const mediaOrder = [
+  const mediaKeys = [
     ...previousMediaOrder.filter((key) => mediaTiles.has(key)),
     ...Array.from(mediaTiles.keys()).filter((key) => !previousMediaOrder.includes(key)),
   ];
+  const mediaOrder = ["photo:", "file:", "link:"].flatMap((prefix) =>
+    mediaKeys.filter((key) => key.startsWith(prefix)),
+  );
   useEffect(() => {
     mediaOrderRef.current = { context: mediaContext, keys: mediaOrder };
   });

@@ -897,7 +897,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   overflow: hidden;
 }
 .spec400-attachment-chip[data-kind="image"] {
-  width: min(100%, var(--composer-photo-size, 120px));
+  width: min(calc((100% - 8px) / 2), var(--composer-photo-size, 120px));
   aspect-ratio: 1;
   min-height: 0;
   border-radius: 16px;

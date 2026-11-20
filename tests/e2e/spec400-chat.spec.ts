@@ -309,29 +309,35 @@ for (const surface of ["empty", "conversation"] as const) {
         clipboardData.setData("text/plain", text);
         element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
       }, text);
+    const pasteAttachment = (name: string, type: string, data: string) =>
+      input.evaluate(
+        (element, { name, type, data }) => {
+          const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0));
+          const clipboardData = new DataTransfer();
+          clipboardData.items.add(new File([bytes], name, { type }));
+          element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+        },
+        { name, type, data },
+      );
+    const photo =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=";
 
     await input.fill("go to youtube.com");
     await expect(tray).toBeHidden();
     await input.press("End");
     await input.press("Space");
     await expect(websites).toHaveCount(1);
-    await input.evaluate((element) => {
-      const image = atob(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=",
-      );
-      const file = new File(
-        [Uint8Array.from(image, (char) => char.charCodeAt(0))],
-        "Pasted logo.png",
-        { type: "image/png" },
-      );
-      const clipboardData = new DataTransfer();
-      clipboardData.items.add(file);
-      element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
-    });
+    await pasteAttachment("Review notes.txt", "text/plain", "UmV2aWV3IG5vdGVz");
+    await expect(tiles.nth(0)).toHaveAttribute("data-status", "complete");
+    await pasteAttachment("Pasted logo.png", "image/png", photo);
     await expect(
-      tiles.nth(1).getByRole("button", { name: "Inspect Pasted logo.png" }),
+      tiles.nth(0).getByRole("button", { name: "Inspect Pasted logo.png" }),
     ).toBeVisible();
-    await expect(tiles.nth(0).locator("[data-link-preview-url]")).toHaveAttribute(
+    await expect(tiles.nth(0)).toHaveAttribute("data-status", "complete");
+    await expect(
+      tiles.nth(1).getByRole("button", { name: "Inspect Review notes.txt" }),
+    ).toBeVisible();
+    await expect(tiles.nth(2).locator("[data-link-preview-url]")).toHaveAttribute(
       "data-link-preview-url",
       "https://youtube.com/",
     );
@@ -340,6 +346,11 @@ for (const surface of ["empty", "conversation"] as const) {
     await pasteWebsites("https://en.wikipedia.org/wiki/Kova");
     await expect(websites).toHaveCount(3);
     await expect(input).not.toHaveValue(/youtube|github|wikipedia/);
+    await tray.getByRole("button", { name: "Remove Review notes.txt" }).click();
+    await pasteAttachment("Second photo.png", "image/png", photo);
+    await expect(
+      tiles.nth(1).getByRole("button", { name: "Inspect Second photo.png" }),
+    ).toBeVisible();
 
     const phone = await page.evaluate(
       () =>
@@ -377,14 +388,13 @@ for (const surface of ["empty", "conversation"] as const) {
         const firstInEachRow = rows.map(
           (top) => boxes.find((box) => Math.round(box.top) === top)!.left,
         );
-        const image = boxes[1];
-        const first = boxes[0];
+        const [first, second] = boxes;
         const stripBox = strip.getBoundingClientRect();
         return {
           inset: first.left - shell.left,
           topInset: first.top - shell.top,
-          sameFirstRow: image.top === first.top && image.left > first.left,
-          squareImage: Math.abs(image.width - image.height) < 0.5,
+          photosSideBySide: second.top === first.top && second.left > first.left,
+          squarePhotos: [first, second].every((box) => Math.abs(box.width - box.height) < 0.5),
           promptGap: field.getBoundingClientRect().top - stripBox.bottom,
           promptStart: field.getBoundingClientRect().left - shell.left,
           rows: rows.length,
@@ -393,8 +403,8 @@ for (const surface of ["empty", "conversation"] as const) {
         };
       });
     await expect.poll(readLayout).toMatchObject({
-      sameFirstRow: true,
-      squareImage: true,
+      photosSideBySide: true,
+      squarePhotos: true,
       rowsStartAtLeft: true,
       sidewaysOverflow: false,
     });
