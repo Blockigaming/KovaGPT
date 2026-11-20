@@ -887,6 +887,29 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   width: min(100%, var(--composer-card-width, 220px), max(120px, calc((100% - 8px) / 2)));
   height: 53px;
 }
+.spec400-composer-media:not([data-photo-count="0"]):has(> .spec400-composer-card) {
+  /* Let successive card rows flow beside the photo while it overlaps their lines. */
+  display: flow-root;
+  font-size: 0;
+  line-height: 0;
+
+  > [data-kind="image"] {
+    float: inline-start;
+    margin-inline-end: 8px;
+  }
+
+  > .spec400-composer-card {
+    display: inline-flex;
+    vertical-align: top;
+    margin-inline-end: 8px;
+    margin-block-end: 8px;
+    width: min(
+      calc(100% - 8px),
+      var(--composer-card-width, 220px),
+      max(120px, calc((100% - 16px) / 2))
+    );
+  }
+}
 .spec400-attachment-chip {
   position: relative;
   display: inline-flex;

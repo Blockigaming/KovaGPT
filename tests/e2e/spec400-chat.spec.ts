@@ -374,12 +374,12 @@ for (const surface of ["empty", "conversation"] as const) {
           const strip = items[0].parentElement!;
           const photo = strip.firstElementChild!.getBoundingClientRect();
           const [file, website] = items.map((item) => item.getBoundingClientRect());
-          const bothFit = photo.width + file.width + website.width + 16 <= strip.clientWidth + 0.5;
+          const bothFit = photo.width + file.width + website.width + 24 <= strip.clientWidth + 0.5;
           return {
             fileBesidePhoto: file.top === photo.top && file.left > photo.left,
             websiteFitsExpectedRow: bothFit
               ? website.top === photo.top && website.left > file.left
-              : website.top > photo.top && website.left === photo.left,
+              : website.top === file.top + file.height + 8 && website.left === file.left,
             sameWidth: file.width === website.width,
             bothFit,
           };
@@ -398,6 +398,23 @@ for (const surface of ["empty", "conversation"] as const) {
     await pasteWebsites("https://en.wikipedia.org/wiki/Kova");
     await expect(websites).toHaveCount(3);
     await expect(input).not.toHaveValue(/youtube|github|wikipedia/);
+    await expect
+      .poll(() =>
+        cards.evaluateAll((items) => {
+          const strip = items[0].parentElement!;
+          const [first, ...rest] = items.map((item) => item.getBoundingClientRect());
+          const photo = strip.firstElementChild!.getBoundingClientRect();
+          const cardsBesidePhoto = Math.floor(
+            (strip.clientWidth - photo.width - 8 + 0.5) / (first.width + 8),
+          );
+          const nextRow = rest[cardsBesidePhoto - 1];
+          return {
+            stacked: nextRow.top === first.top + first.height + 8 && nextRow.left === first.left,
+            photoBesideBothRows: nextRow.top < photo.bottom && nextRow.left >= photo.right + 8,
+          };
+        }),
+      )
+      .toEqual({ stacked: true, photoBesideBothRows: true });
     await tray.getByRole("button", { name: "Remove Review notes.txt" }).click();
     await pasteAttachment("Second photo.png", "image/png", photo);
     await expect(
@@ -440,21 +457,21 @@ for (const surface of ["empty", "conversation"] as const) {
           (tile) => tile.getBoundingClientRect(),
         );
         const rows = [...new Set(boxes.map((box) => Math.round(box.top)))];
-        const firstInEachRow = rows.map(
-          (top) => boxes.find((box) => Math.round(box.top) === top)!.left,
-        );
         const [first, second] = boxes;
         const links = boxes.slice(2);
         const linksPerRow = [...new Set(links.map((box) => box.top))].map(
           (top) => links.filter((box) => box.top === top).length,
         );
-        const cardsPerFullRow = Math.floor((strip.clientWidth + 8.5) / (links[0].width + 8));
-        const linksFirstRow = Math.floor(
-          (strip.clientWidth - first.width - second.width - 8 + 0.5) / (links[0].width + 8),
+        const cardsPerFullRow = Math.floor((strip.clientWidth + 0.5) / (links[0].width + 8));
+        const linksPerSideRow = Math.max(
+          0,
+          Math.floor(
+            (strip.clientWidth - first.width - second.width - 16 + 0.5) / (links[0].width + 8),
+          ),
         );
-        const linksAfterPhotos = links.length - linksFirstRow;
+        const linksAfterPhotos = links.length - 2 * linksPerSideRow;
         const expectedLinksPerRow = [
-          ...(linksFirstRow ? [linksFirstRow] : []),
+          ...(linksPerSideRow ? [linksPerSideRow, linksPerSideRow] : []),
           ...Array.from({ length: Math.ceil(linksAfterPhotos / cardsPerFullRow) }, (_, index) =>
             Math.min(cardsPerFullRow, linksAfterPhotos - index * cardsPerFullRow),
           ),
@@ -465,13 +482,19 @@ for (const surface of ["empty", "conversation"] as const) {
           topInset: first.top - shell.top,
           photosSideBySide: second.top === first.top && second.left > first.left,
           squarePhotos: [first, second].every((box) => Math.abs(box.width - box.height) < 0.5),
-          linksFillFreeSpace: (links[0].top === first.top) === linksFirstRow > 0,
+          linksFillFreeSpace:
+            links.filter((link) => link.top < first.bottom).length === 2 * linksPerSideRow,
           linksWrapByAvailableSpace: linksPerRow.join() === expectedLinksPerRow.join(),
           cardsPerFullRow,
           promptGap: field.getBoundingClientRect().top - stripBox.bottom,
           promptStart: field.getBoundingClientRect().left - shell.left,
           rows: rows.length,
-          rowsStartAtLeft: firstInEachRow.every((left) => Math.abs(left - first.left) < 0.5),
+          rowsStartAtLeft: rows
+            .filter((top) => top >= Math.round(first.bottom))
+            .every(
+              (top) =>
+                Math.abs(boxes.find((box) => Math.round(box.top) === top)!.left - first.left) < 0.5,
+            ),
           sidewaysOverflow: strip.scrollWidth > strip.clientWidth,
         };
       });

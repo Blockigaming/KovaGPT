@@ -110,9 +110,9 @@
   }
 
   /* Reserve a minimum of 120px for each card beside a single photo. */
-  @container composer-media (364px <= width < 428px) {
+  @container composer-media (372px <= width < 436px) {
     .spec400-composer-media[data-photo-count="1"] > .spec400-composer-card {
-      --composer-card-width: calc((100cqi - var(--composer-photo-size) - 16px) / 2);
+      --composer-card-width: calc((100cqi - var(--composer-photo-size) - 24px) / 2);
     }
   }
 
