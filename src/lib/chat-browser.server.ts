@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { Page } from "playwright";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { RealtimeClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createBrowserEgress } from "../../work-runner/browser-egress.mjs";
 import { BrowserRuntime } from "@/browser-runtime/runtime";
 import type { AuthedCaller } from "@/lib/api-auth.server";
@@ -11,6 +11,7 @@ import { readBrowserCapacity } from "@/lib/browserbase-capacity.server.mjs";
 import { readCloudBrowserRules } from "@/lib/cloud-browser-preferences.server.mjs";
 import { assertCloudBrowserDestination } from "@/lib/cloud-browser-rules.mjs";
 import { ChatPreflightError } from "@/lib/chat-preflight.server.mjs";
+import { ChatBrowserRelay, maxBrowserFrameBytes } from "@/lib/chat-browser-relay.server";
 import type { CloudBrowserControl, CloudBrowserFrame } from "@/lib/cloud-browser-control";
 
 type BrowserTier = "free" | "plus" | "pro";
@@ -25,6 +26,7 @@ type BrowserDatabase = {
           owner_id: string;
           request_id: string;
           claimed: boolean;
+          expires_at: string;
           quota_reserved_ms: number | null;
         };
         Insert: never;
@@ -56,9 +58,45 @@ type ActiveChatBrowser = {
   busy: boolean;
   frame?: CloudBrowserFrame;
   controls: AbortController;
+  supabaseAdmin: AuthedCaller["supabaseAdmin"];
 };
 const active = new Map<string, ActiveChatBrowser>();
+let browserRelay: ChatBrowserRelay | undefined;
 let browserRuntime: BrowserRuntime | undefined;
+
+function getBrowserRelay() {
+  if (browserRelay) return browserRelay;
+  const url = process.env.SUPABASE_URL;
+  const publicKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !publicKey || !serviceKey) return undefined;
+  const client = new RealtimeClient(`${url.replace(/\/$/u, "")}/realtime/v1`, {
+    params: { apikey: publicKey },
+    timeout: 2000,
+  });
+  browserRelay = new ChatBrowserRelay(client, serviceKey, (ownerId, requestId) => {
+    const session = active.get(ownerId);
+    if (session?.requestId !== requestId) return undefined;
+    return async (action) => {
+      try {
+        return { frame: await controlLocalChatBrowser(ownerId, session, action) };
+      } catch (error) {
+        if (error instanceof ChatPreflightError) {
+          return { error: { code: error.code, message: error.message, status: error.status } };
+        }
+        return {
+          error: {
+            code: "cloud_browser_control_unavailable",
+            message: "Cloud Browser could not complete that action.",
+            status: 503,
+          },
+        };
+      }
+    };
+  });
+  return browserRelay;
+}
+
 function getBrowserRuntime() {
   return (browserRuntime ??= new BrowserRuntime({
     artifactRoot: join(tmpdir(), `kova-chat-browser-${randomUUID()}`),
@@ -280,8 +318,10 @@ export async function readChatBrowserPage({
       takeover: false,
       busy: false,
       controls,
+      supabaseAdmin: caller.supabaseAdmin,
     };
     active.set(userId, interactive);
+    getBrowserRelay();
     loading = false;
     return {
       title,
@@ -310,20 +350,55 @@ export async function controlChatBrowser(
   action: CloudBrowserControl,
 ): Promise<CloudBrowserFrame | null> {
   const current = active.get(caller.userId);
-  const expired = () =>
-    chatBrowserFailure("cloud_browser_expired", "This browser session has ended.", 404);
-  if (!current || current.requestId !== requestId) throw expired();
+  if (current?.requestId === requestId)
+    return controlLocalChatBrowser(caller.userId, current, action);
+  const result = await database(caller)
+    .from("browserbase_queue")
+    .select("request_id")
+    .eq("owner_id", caller.userId)
+    .eq("request_id", requestId)
+    .eq("claimed", true)
+    .gt("expires_at", new Date().toISOString())
+    .abortSignal(AbortSignal.timeout(900))
+    .maybeSingle();
+  if (!result.error && !result.data) throw browserExpired();
+  const relay = getBrowserRelay();
+  const resumed =
+    !result.error && relay
+      ? await relay.forward(caller.userId, requestId, action).catch(() => null)
+      : null;
+  if (!resumed)
+    throw chatBrowserFailure(
+      "cloud_browser_control_unavailable",
+      "Cloud Browser could not complete that action.",
+    );
+  if ("error" in resumed) {
+    const { code, message, status } = resumed.error;
+    throw chatBrowserFailure(code, message, status);
+  }
+  return resumed.frame;
+}
+
+function browserExpired() {
+  return chatBrowserFailure("cloud_browser_expired", "This browser session has ended.", 404);
+}
+
+async function controlLocalChatBrowser(
+  ownerId: string,
+  current: ActiveChatBrowser,
+  action: CloudBrowserControl,
+): Promise<CloudBrowserFrame | null> {
   const runtime = getBrowserRuntime();
   const getSession = (touch = false) => {
     try {
-      return runtime.sessions.get(current.sessionId, caller.userId, touch);
+      return runtime.sessions.get(current.sessionId, ownerId, touch);
     } catch {
-      throw expired();
+      throw browserExpired();
     }
   };
   if (action.kind === "release") {
     current.controls.abort();
-    await runtime.closeSession(current.sessionId, caller.userId).catch(() => undefined);
+    await runtime.closeSession(current.sessionId, ownerId).catch(() => undefined);
     return null;
   }
   getSession();
@@ -335,7 +410,7 @@ export async function controlChatBrowser(
   const { page } = current;
   try {
     if (action.kind === "takeover") {
-      const rules = await readCloudBrowserRules(caller.supabaseAdmin, caller.userId);
+      const rules = await readCloudBrowserRules(current.supabaseAdmin, ownerId);
       try {
         assertCloudBrowserDestination(rules, page.url());
       } catch {
@@ -389,11 +464,11 @@ export async function controlChatBrowser(
         403,
       );
     const viewport = page.viewportSize();
-    if (!viewport) throw expired();
+    if (!viewport) throw browserExpired();
     // Keep owner-entered page state in the browser. Never save these frames in Chat history.
     for (const quality of [55, 32, 16]) {
       const bytes = await page.screenshot({ type: "jpeg", quality, timeout: 3500 });
-      if (bytes.length > 256000) continue;
+      if (bytes.length > maxBrowserFrameBytes) continue;
       getSession();
       const jpeg = bytes.toString("base64");
       if (
