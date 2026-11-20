@@ -1,6 +1,4 @@
-import { CloudBrowserPreview } from "./CloudBrowserPreview";
-import { BrowserWorkspace } from "./BrowserWorkspace";
-import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
+import { CloudBrowserTakeover } from "./CloudBrowserTakeover";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
@@ -702,22 +700,14 @@ export function ConversationHeaderActions({
             onCloseAutoFocus: restoreFocus,
           })
         ) : signedIn && user?.id && selectedBrowser.browser?.previewPath ? (
-          <BrowserWorkspace
-            title="Cloud browser"
+          <CloudBrowserTakeover
+            key={selectedBrowser.browser.sessionId}
+            browser={selectedBrowser.browser}
+            ownerId={user.id}
             description={selectedBrowser.label}
             onClose={() => setSelectedBrowser(null)}
             onCloseAutoFocus={restoreFocus}
-          >
-            <div className="kova-browser-workspace-page">
-              {browserActivityIsFresh(selectedBrowser.browser) ? (
-                <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
-              ) : (
-                <p role="status" className="text-sm text-muted-foreground">
-                  This browser session has ended.
-                </p>
-              )}
-            </div>
-          </BrowserWorkspace>
+          />
         ) : (
           <Dialog
             open={Boolean(selectedBrowser)}

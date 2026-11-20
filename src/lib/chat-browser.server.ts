@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import type { Page } from "playwright";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createBrowserEgress } from "../../work-runner/browser-egress.mjs";
 import { BrowserRuntime } from "@/browser-runtime/runtime";
@@ -10,6 +11,7 @@ import { readBrowserCapacity } from "@/lib/browserbase-capacity.server.mjs";
 import { readCloudBrowserRules } from "@/lib/cloud-browser-preferences.server.mjs";
 import { assertCloudBrowserDestination } from "@/lib/cloud-browser-rules.mjs";
 import { ChatPreflightError } from "@/lib/chat-preflight.server.mjs";
+import type { CloudBrowserControl, CloudBrowserFrame } from "@/lib/cloud-browser-control";
 
 type BrowserTier = "free" | "plus" | "pro";
 type BrowserClaim =
@@ -45,7 +47,17 @@ type BrowserDatabase = {
 };
 const database = (caller: AuthedCaller) =>
   caller.supabaseAdmin as unknown as SupabaseClient<BrowserDatabase>;
-const active = new Map<string, string>();
+type ActiveChatBrowser = {
+  requestId: string;
+  sessionId: string;
+  page: Page;
+  origin: string;
+  takeover: boolean;
+  busy: boolean;
+  frame?: CloudBrowserFrame;
+  controls: AbortController;
+};
+const active = new Map<string, ActiveChatBrowser>();
 let browserRuntime: BrowserRuntime | undefined;
 function getBrowserRuntime() {
   return (browserRuntime ??= new BrowserRuntime({
@@ -98,7 +110,11 @@ export async function readChatBrowserPage({
   let queued = false;
   let opened = false;
   const release = async () => {
-    if (active.get(userId) === sessionId) active.delete(userId);
+    const current = active.get(userId);
+    if (current?.sessionId === sessionId && current) {
+      current.controls.abort();
+      active.delete(userId);
+    }
     await db
       .rpc("release_browserbase_slot_with_quota", {
         p_owner: userId,
@@ -122,7 +138,13 @@ export async function readChatBrowserPage({
     signal.throwIfAborted();
     if (capacity === 0) throw unavailable();
     const previous = active.get(userId);
-    if (previous) await runtime.closeSession(previous, userId).catch(() => undefined);
+    if (previous?.takeover)
+      throw chatBrowserFailure(
+        "cloud_browser_under_your_control",
+        "Return control in Cloud Browser before starting another browser task.",
+        409,
+      );
+    if (previous) await runtime.closeSession(previous.sessionId, userId).catch(() => undefined);
     const waitUntil = Date.now() + 8000;
     let hardExpiresAt: number | undefined;
     while (true) {
@@ -179,9 +201,18 @@ export async function readChatBrowserPage({
     // Browserbase renders the page. All network requests go through the existing
     // DNS-pinned egress broker, with no credentials and no redirect passthrough.
     let remaining = 40;
+    let loading = true;
+    const controls = new AbortController();
+    let interactive: ActiveChatBrowser | undefined;
+    const browserSignal = () => {
+      if (loading) return signal;
+      if (interactive?.takeover && active.get(userId) === interactive)
+        return interactive.controls.signal;
+      throw new Error("browser_request_denied");
+    };
     const fetchPage = createBrowserEgress({
       origins: [url.origin],
-      assertAuthority: () => signal.throwIfAborted(),
+      assertAuthority: () => browserSignal().throwIfAborted(),
     });
     await context.route("**/*", async (route) => {
       try {
@@ -189,7 +220,7 @@ export async function readChatBrowserPage({
         const request = route.request();
         const result = await fetchPage(
           { url: request.url(), method: request.method(), headers: {}, bodyBase64: "" },
-          { signal },
+          { signal: browserSignal() },
         );
         if (result.status < 200 || result.status >= 300) throw new Error("browser_request_denied");
         await route.fulfill({
@@ -198,7 +229,7 @@ export async function readChatBrowserPage({
           headers: {
             "x-dns-prefetch-control": "off",
             "content-security-policy":
-              "default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; form-action 'none'; base-uri 'none'",
+              "default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; form-action 'self'; base-uri 'none'",
           },
           body: Buffer.from(result.bodyBase64, "base64"),
         });
@@ -242,7 +273,17 @@ export async function readChatBrowserPage({
     if (saved.error || !saved.data) throw unavailable();
     signal.throwIfAborted();
     runtime.sessions.get(sessionId, userId, false);
-    active.set(userId, sessionId);
+    interactive = {
+      requestId,
+      sessionId,
+      page,
+      origin: url.origin,
+      takeover: false,
+      busy: false,
+      controls,
+    };
+    active.set(userId, interactive);
+    loading = false;
     return {
       title,
       content,
@@ -261,6 +302,115 @@ export async function readChatBrowserPage({
     if (signal.aborted) signal.throwIfAborted();
     if (error instanceof ChatPreflightError) throw error;
     throw unavailable();
+  }
+}
+
+export async function controlChatBrowser(
+  caller: AuthedCaller,
+  requestId: string,
+  action: CloudBrowserControl,
+): Promise<CloudBrowserFrame | null> {
+  const current = active.get(caller.userId);
+  const expired = () =>
+    chatBrowserFailure("cloud_browser_expired", "This browser session has ended.", 404);
+  if (!current || current.requestId !== requestId) throw expired();
+  const runtime = getBrowserRuntime();
+  const getSession = (touch = false) => {
+    try {
+      return runtime.sessions.get(current.sessionId, caller.userId, touch);
+    } catch {
+      throw expired();
+    }
+  };
+  if (action.kind === "release") {
+    current.controls.abort();
+    await runtime.closeSession(current.sessionId, caller.userId).catch(() => undefined);
+    return null;
+  }
+  getSession();
+  if (current.busy)
+    throw chatBrowserFailure("cloud_browser_busy", "A browser action is in progress.", 409);
+  if (action.kind !== "takeover" && !current.takeover)
+    throw chatBrowserFailure("cloud_browser_not_in_control", "Take over the browser first.", 409);
+  current.busy = true;
+  const { page } = current;
+  try {
+    if (action.kind === "takeover") {
+      const rules = await readCloudBrowserRules(caller.supabaseAdmin, caller.userId);
+      try {
+        assertCloudBrowserDestination(rules, page.url());
+      } catch {
+        throw chatBrowserFailure(
+          "cloud_browser_site_denied",
+          "This site is blocked in your Cloud Browser settings.",
+          403,
+        );
+      }
+      getSession(true);
+      current.takeover = true;
+    } else if (action.kind === "frame") {
+      const viewport = page.viewportSize();
+      if (
+        action.width !== undefined &&
+        action.height !== undefined &&
+        (viewport?.width !== action.width || viewport?.height !== action.height)
+      )
+        await page.setViewportSize({ width: action.width, height: action.height });
+    } else {
+      getSession(true);
+      if (action.kind === "click" || action.kind === "scroll") {
+        const frame = current.frame;
+        if (
+          !frame ||
+          action.frame !== frame.id ||
+          action.x >= frame.width ||
+          action.y >= frame.height
+        )
+          return frame ?? null;
+        if (action.kind === "click") {
+          await page.mouse.click(action.x, action.y);
+          await page.waitForLoadState("domcontentloaded", { timeout: 3500 }).catch(() => undefined);
+        } else {
+          await page.mouse.move(action.x, action.y);
+          await page.mouse.wheel(action.deltaX, action.deltaY);
+        }
+      } else if (action.kind === "input") {
+        if (!(await page.locator("input[type=password]:focus").count()))
+          await page.keyboard.insertText(action.text);
+      } else if (action.kind === "key") {
+        await page.keyboard.press(action.key);
+        if (action.key === "Enter")
+          await page.waitForLoadState("domcontentloaded", { timeout: 3500 }).catch(() => undefined);
+      }
+    }
+    if (new URL(page.url()).origin !== current.origin)
+      throw chatBrowserFailure(
+        "cloud_browser_site_denied",
+        "Cloud Browser stays on the site opened in this chat.",
+        403,
+      );
+    const viewport = page.viewportSize();
+    if (!viewport) throw expired();
+    // Keep owner-entered page state in the browser. Never save these frames in Chat history.
+    for (const quality of [55, 32, 16]) {
+      const bytes = await page.screenshot({ type: "jpeg", quality, timeout: 3500 });
+      if (bytes.length > 256000) continue;
+      getSession();
+      const jpeg = bytes.toString("base64");
+      if (
+        current.frame?.jpeg !== jpeg ||
+        current.frame.width !== viewport.width ||
+        current.frame.height !== viewport.height
+      )
+        current.frame = { id: randomUUID(), jpeg, ...viewport };
+      return current.frame;
+    }
+    throw chatBrowserFailure(
+      "cloud_browser_frame_too_large",
+      "Cloud Browser could not display this page.",
+    );
+  } finally {
+    current.busy = false;
   }
 }
 

@@ -12,14 +12,6 @@ export type BrowserBinding = {
   destination?: string;
   siteRulesVersion?: 1;
 };
-export type BrowserViewportSize = { width: number; height: number };
-export type BrowserVisualInput =
-  | { kind: "capture" }
-  | ({ kind: "frame" } & (BrowserViewportSize | { width?: never; height?: never }))
-  | { kind: "click"; frame: string; x: number; y: number }
-  | { kind: "scroll"; frame: string; x: number; y: number; deltaX: number; deltaY: number }
-  | { kind: "input"; text: string }
-  | { kind: "key"; key: string };
 export type BrowserCommand = {
   ownerId: string;
   runId: string;
@@ -44,7 +36,6 @@ export type BrowserCommand = {
   text?: string;
   key?: string;
   delta?: number;
-  visual?: BrowserVisualInput;
 };
 export type BrowserResult = {
   sessionId: string;
@@ -52,8 +43,6 @@ export type BrowserResult = {
   sequence: number;
   mode?: "takeover" | "agent";
   closed?: boolean;
-  frame?: { id: string; jpeg: string; width: number; height: number };
-  staleFrame?: true;
   view?: string;
   url?: string;
   title?: string;
@@ -91,7 +80,6 @@ export function browserRunnerCapabilities(
   idleTimeoutSeconds: 900;
   siteRulesVersion?: 1;
   publicWeb?: true;
-  visualTakeover?: true;
 }>;
 export function createBrowserBackendAuthority(
   configuration: unknown,

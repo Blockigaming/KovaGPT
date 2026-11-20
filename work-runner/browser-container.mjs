@@ -67,8 +67,7 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
         row.length !== 1 ||
         row[0].Os !== "linux" ||
         row[0].Config?.User !== "65532:65532" ||
-        row[0].Config?.Labels?.["com.kova.browser.protocol"] !== "kova-browser-v1" ||
-        row[0].Config?.Labels?.["com.kova.browser.visual"] !== "1"
+        row[0].Config?.Labels?.["com.kova.browser.protocol"] !== "kova-browser-v1"
       )
         fail();
       return true;
@@ -189,7 +188,7 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
           networkActive = 0,
           networkCount = 0,
           networkBytes = 0,
-          networkOutputBytes = 0;
+          outputBytes = 0;
         const decoder = new StringDecoder("utf8"),
           pending = new Map();
         let readyResolve, readyReject;
@@ -218,8 +217,9 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
         child.on("close", stop);
         child.stderr.on("data", () => stop());
         child.stdout.on("data", (chunk) => {
+          outputBytes += chunk.length;
           buffer += decoder.write(chunk);
-          if (Buffer.byteLength(buffer) > 3000000) {
+          if (Buffer.byteLength(buffer) > 3000000 || outputBytes > 4000000) {
             stop();
             return;
           }
@@ -252,13 +252,7 @@ export function createBrowserContainerFactory({ image }, spawnChild = spawn) {
                 : row.resolve(message.result);
               continue;
             }
-            networkOutputBytes += Buffer.byteLength(raw);
-            if (
-              message.kind !== "network" ||
-              networkActive >= 8 ||
-              ++networkCount > 500 ||
-              networkOutputBytes > 4000000
-            ) {
+            if (message.kind !== "network" || networkActive >= 8 || ++networkCount > 500) {
               stop();
               return;
             }

@@ -6,10 +6,10 @@ import {
   type WheelEvent,
 } from "react";
 import type {
-  BrowserResult,
-  BrowserViewportSize,
-  BrowserVisualInput,
-} from "@/lib/work-browser-transport.mjs";
+  CloudBrowserFrame,
+  CloudBrowserSize,
+  CloudBrowserControl,
+} from "@/lib/cloud-browser-control";
 
 const remoteKeys = new Set([
   "Enter",
@@ -27,16 +27,16 @@ const remoteKeys = new Set([
   "ArrowRight",
 ]);
 
-export function WorkBrowserViewport({
+export function CloudBrowserViewport({
   frame,
   enabled,
   onInput,
   onSizeChange,
 }: {
-  frame: NonNullable<BrowserResult["frame"]>;
+  frame: CloudBrowserFrame;
   enabled: boolean;
-  onInput: (input: BrowserVisualInput) => void;
-  onSizeChange: (size: BrowserViewportSize) => void;
+  onInput: (input: CloudBrowserControl) => void;
+  onSizeChange: (size: CloudBrowserSize) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -105,8 +105,8 @@ export function WorkBrowserViewport({
   }
 
   return (
-    <div className="work-browser-viewport" ref={viewport}>
-      <div className="work-browser-screen">
+    <div className="kova-cloud-browser-viewport" ref={viewport}>
+      <div className="kova-cloud-browser-screen">
         <img
           alt="Live browser page"
           src={`data:image/jpeg;base64,${frame.jpeg}`}
@@ -144,7 +144,7 @@ export function WorkBrowserViewport({
         <textarea
           ref={input}
           aria-label="Type into the live browser"
-          className="work-browser-keyboard"
+          className="kova-cloud-browser-keyboard"
           autoCapitalize="off"
           autoComplete="off"
           autoCorrect="off"

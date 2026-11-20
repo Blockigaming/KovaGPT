@@ -58,29 +58,7 @@ function fixture(tier = "plus") {
     revision: 3,
     status: "paused",
   };
-  const expiresAt = Date.now() + 60000;
   const db = {
-    from(name) {
-      assert.equal(name, "work_browser_sessions");
-      const scopes = {};
-      const query = {
-        select: () => query,
-        eq: (key, value) => {
-          scopes[key] = value;
-          return query;
-        },
-        abortSignal: () => query,
-        maybeSingle: async () => {
-          assert.deepEqual(scopes, { owner_id: owner, run_id: runId, id: sessionId });
-          calls.push({ name: "readLease" });
-          return {
-            data: { mode: "takeover", sequence: 1, expires_at: new Date(expiresAt).toISOString() },
-            error: null,
-          };
-        },
-      };
-      return query;
-    },
     rpc(name, input) {
       calls.push({ name, input });
       return {
@@ -124,17 +102,10 @@ function fixture(tier = "plus") {
         protocol: "kova-browser-v1",
         idleTimeoutSeconds: 900,
         origins: ["https://browser-fixture.net"],
-        visualTakeover: true,
       }),
       browserRunnerCommand: async (_, command) => {
         calls.push({ name: "transport", command });
-        return {
-          sessionId,
-          runId,
-          mode: "takeover",
-          sequence: command.visual?.kind === "frame" ? command.sequence : 2,
-          closed: command.operation === "close",
-        };
+        return { sessionId, runId, sequence: 2, closed: command.operation === "close" };
       },
     },
     "@/lib/work-execution-protocol.mjs": protocol,
@@ -359,31 +330,4 @@ test("permissions endpoints bind the account before reading or saving rules", as
     );
     assert.equal(result.status, status);
   }
-});
-
-test("passive frames reuse the owner lease and sequence without admitting an activity", async () => {
-  const f = fixture();
-  const visual = { kind: "frame", width: 390, height: 788 };
-  for (const bad of [
-    { kind: "frame", width: 390 },
-    { ...visual, height: 1201 },
-  ]) {
-    const result = await f.route.handleWorkBrowser(f.request({ ...f.input, visual: bad }));
-    assert.equal(result.status, 400);
-  }
-  const denied = await f.route.handleWorkBrowser(
-    f.request({ ...f.input, expectedSequence: 2, visual }),
-  );
-  assert.equal(denied.status, 409);
-  const result = await f.route.handleWorkBrowser(f.request({ ...f.input, visual }));
-  assert.equal(result.status, 200);
-  assert.equal((await result.json()).result.sequence, 1);
-  assert.ok(
-    !f.calls.some(
-      ({ name }) => name === "admit_work_browser_owner" || name === "finish_work_browser_owner",
-    ),
-  );
-  assert.deepEqual(f.calls.at(-1).command.visual, visual);
-  assert.equal(f.calls.at(-1).command.sequence, 1);
-  assert.equal(result.headers.get("Cache-Control"), "no-store");
 });

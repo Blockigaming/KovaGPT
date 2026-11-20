@@ -141,3 +141,49 @@
     block-size: 44px;
   }
 }
+
+.kova-cloud-browser-viewport {
+  flex: 1;
+  min-block-size: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  overscroll-behavior: contain;
+}
+
+.kova-cloud-browser-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.kova-cloud-browser-screen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  cursor: default;
+}
+
+.kova-cloud-browser-keyboard {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  resize: none;
+  font-size: 16px;
+}
+
+.kova-cloud-browser-screen:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.kova-cloud-browser-status {
+  margin: auto;
+  padding: 16px;
+  color: var(--muted-foreground);
+}

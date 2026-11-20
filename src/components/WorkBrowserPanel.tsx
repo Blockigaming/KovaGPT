@@ -1,68 +1,45 @@
 import { Input } from "@/components/ui/input";
+import { BrowserPrivateEntryCard } from "@/components/BrowserPrivateEntryCard";
 import { BrowserInteractionCard } from "@/components/BrowserInteractionCard";
-import { BrowserWorkspace } from "@/components/BrowserWorkspace";
-import { WorkBrowserViewport } from "@/components/WorkBrowserViewport";
 import { Button } from "@/components/ui/button";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { Monitor } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect, useId, useRef, useState } from "react";
+import { ChevronDown, Globe2, Monitor } from "lucide-react";
 import "./work-browser-preview.css";
 import type { WorkRun } from "@/lib/work-execution-protocol.mjs";
-import type {
-  BrowserCommand,
-  BrowserResult,
-  BrowserVisualInput,
-  BrowserViewportSize,
-} from "@/lib/work-browser-transport.mjs";
+import type { BrowserCommand, BrowserResult } from "@/lib/work-browser-transport.mjs";
 import { requestWorkSync } from "@/lib/work-sync-client";
 import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
-
 type Session = { id: string; sequence: number; mode: string; expires_at: string };
 type Snapshot = {
-  readiness: { available: boolean; visualTakeover?: boolean };
+  readiness: { available: boolean; origins: string[]; publicWeb?: boolean };
   runRevision: number;
   runStatus: string;
   sessions: Session[];
 };
-type CommandFields = Pick<BrowserCommand, "url" | "view" | "target" | "text" | "visual">;
-const capture = { kind: "capture" } as const;
-
 export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkRun }) {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [view, setView] = useState<BrowserResult | null>(null);
-  const [viewportSize, setViewportSize] = useState<BrowserViewportSize>();
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [statusConfirmed, setStatusConfirmed] = useState(false);
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [cleared, setCleared] = useState(false);
-  const [queued, setQueued] = useState(0);
-  const openButton = useRef<HTMLButtonElement>(null);
-  const lifetime = useRef<AbortController | null>(null);
-  const serial = useRef(0);
-  const busyRef = useRef(false);
-  const openRef = useRef(false);
-  const queue = useRef<BrowserVisualInput[]>([]);
-
-  const session = snapshot?.sessions[0];
-  const paused = run.status === "paused" && !run.step && run.effect?.status !== "started";
-  const confirmedPaused =
-    paused && snapshot?.runStatus === "paused" && snapshot.runRevision === run.revision;
-  const ready = Boolean(snapshot?.readiness.available && snapshot.readiness.visualTakeover);
-  const usable = statusConfirmed && confirmedPaused && ready && !checking;
-  const takeover = session?.mode === "takeover";
-  const disabled = !usable || busy;
-  const canEnd = Boolean(session && !busy && !checking);
-
-  function hideWorkspace() {
-    openRef.current = false;
-    queue.current = [];
-    setWorkspaceOpen(false);
-    setView(null);
-    setUrl("");
-  }
-
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null),
+    [view, setView] = useState<BrowserResult | null>(null),
+    [url, setUrl] = useState(""),
+    [target, setTarget] = useState(""),
+    [text, setText] = useState(""),
+    [error, setError] = useState<string | null>(null),
+    [busy, setBusy] = useState(false),
+    [checking, setChecking] = useState(true),
+    [statusConfirmed, setStatusConfirmed] = useState(false),
+    [controlsOpen, setControlsOpen] = useState(false),
+    [cleared, setCleared] = useState(false);
+  const [dismissedSignIn, setDismissedSignIn] = useState<string | null>(null);
+  const controlsId = useId();
+  const lifetime = useRef<AbortController | null>(null),
+    serial = useRef(0),
+    busyRef = useRef(false);
   async function refresh() {
     const signal = lifetime.current?.signal;
     if (!signal || signal.aborted || busyRef.current) return;
@@ -76,9 +53,9 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
         signal,
       )) as Snapshot;
       if (signal.aborted || captured !== serial.current) return;
-      if (!Array.isArray(value.sessions) || !value.readiness) throw Error("invalid");
+      if (!Array.isArray(value.sessions) || !Array.isArray(value.readiness?.origins))
+        throw Error("invalid");
       setSnapshot(value);
-      if (value.sessions[0]?.mode === "agent") hideWorkspace();
       setStatusConfirmed(true);
       setError(null);
       setView((old) =>
@@ -90,20 +67,23 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     } catch {
       if (!signal.aborted && captured === serial.current) {
         setView(null);
-        setError("Browser status could not be confirmed.");
+        setError("Browser status could not be confirmed. Refresh before another action.");
       }
     } finally {
       if (!signal.aborted && captured === serial.current) setChecking(false);
     }
   }
-
   useEffect(() => {
     const active = createWorkViewLifetime(ownerId, () => {
       serial.current++;
       setCleared(true);
       setSnapshot(null);
-      hideWorkspace();
+      setView(null);
+      setUrl("");
+      setTarget("");
+      setText("");
       setError(null);
+      setControlsOpen(false);
       setStatusConfirmed(false);
     });
     lifetime.current = active.controller;
@@ -111,17 +91,25 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       active.dispose();
     };
   }, [ownerId, run.id]);
-
-  const refreshForRun = useEffectEvent(refresh);
   useEffect(() => {
-    void refreshForRun();
+    void refresh();
+    // Refresh authoritative browser status when execution changes. The API still
+    // rechecks ownership, paused state, revision and sequence for every command.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerId, run.id, run.revision, run.status]);
-
-  async function command(operation: BrowserCommand["operation"], fields: CommandFields = {}) {
+  const session = snapshot?.sessions[0],
+    paused = run.status === "paused" && !run.step && run.effect?.status !== "started",
+    confirmedPaused =
+      paused && snapshot?.runStatus === "paused" && snapshot.runRevision === run.revision,
+    disabled =
+      busy || checking || !statusConfirmed || !confirmedPaused || !snapshot?.readiness.available;
+  async function command(
+    operation: BrowserCommand["operation"],
+    extra: Record<string, unknown> = {},
+  ) {
     const signal = lifetime.current?.signal;
     if (!signal || signal.aborted || busyRef.current) return;
-    if (operation === "close" ? !canEnd : !usable) return;
-    const readOnly = fields.visual?.kind === "frame";
+    if (operation !== "close" && disabled) return;
     busyRef.current = true;
     setBusy(true);
     setError(null);
@@ -132,8 +120,12 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       expectedRevision: run.revision,
       expectedSequence: session?.sequence ?? 0,
       operation,
-      ...fields,
+      ...extra,
     };
+    // Passwords and page text remain ephemeral; failed actions never leave a retry payload.
+    setText("");
+    setTarget("");
+    setView(null);
     const captured = ++serial.current;
     try {
       const response = (await requestWorkSync(ownerId, "/api/work/browser", signal, body)) as {
@@ -141,44 +133,36 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
         expiresAt: number;
       };
       if (signal.aborted || captured !== serial.current) return;
-      const { result, expiresAt } = response;
       if (
-        result?.runId !== run.id ||
-        result.sessionId !== body.sessionId ||
-        result.sequence !== body.expectedSequence + (readOnly ? 0 : 1) ||
-        !Number.isFinite(expiresAt) ||
-        (fields.visual && result.mode !== "takeover")
+        response.result?.runId !== run.id ||
+        response.result.sessionId !== body.sessionId ||
+        response.result.sequence !== body.expectedSequence + 1 ||
+        !Number.isFinite(response.expiresAt)
       )
         throw Error("invalid");
-      if (result.closed || result.mode === "agent") hideWorkspace();
-      else if (fields.visual && openRef.current) setView(result);
-      if (!readOnly)
-        setSnapshot((previous) =>
-          previous
-            ? {
-                ...previous,
-                sessions: result.closed
-                  ? []
-                  : [
-                      {
-                        id: body.sessionId,
-                        sequence: result.sequence,
-                        mode: result.mode ?? "takeover",
-                        expires_at: new Date(expiresAt).toISOString(),
-                      },
-                    ],
-              }
-            : previous,
-        );
+      setView(response.result.closed ? null : response.result);
+      setSnapshot((previous) =>
+        previous
+          ? {
+              ...previous,
+              sessions: response.result.closed
+                ? []
+                : [
+                    {
+                      id: body.sessionId,
+                      sequence: response.result.sequence,
+                      mode: response.result.mode ?? "takeover",
+                      expires_at: new Date(response.expiresAt).toISOString(),
+                    },
+                  ],
+            }
+          : previous,
+      );
     } catch {
       if (!signal.aborted && captured === serial.current) {
-        queue.current = [];
-        setView(null);
         setStatusConfirmed(false);
         setError(
-          readOnly
-            ? "The live browser disconnected."
-            : "The last browser action could not be confirmed.",
+          "The action is not confirmed. Refresh status; do not repeat a submitted form or purchase until you check its result.",
         );
       }
     } finally {
@@ -186,208 +170,371 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       if (!signal.aborted) setBusy(false);
     }
   }
-
-  const readFrame = useEffectEvent(
-    () =>
-      void command("snapshot", {
-        visual: viewportSize ? { kind: "frame", ...viewportSize } : { kind: "frame" },
-      }),
-  );
-  useEffect(() => {
-    if (!workspaceOpen || !takeover || !usable || busy || view?.interaction) return;
-    const needsResize =
-      viewportSize &&
-      view?.frame &&
-      (view.frame.width !== viewportSize.width || view.frame.height !== viewportSize.height);
-    const timer = window.setTimeout(
-      () => {
-        if (document.visibilityState === "visible") readFrame();
-      },
-      view ? (needsResize ? 120 : 3500) : 0,
-    );
-    const onVisible = () => {
-      if (document.visibilityState === "visible") readFrame();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [workspaceOpen, takeover, usable, busy, view, viewportSize]);
-
-  const sendNextInput = useEffectEvent(() => {
-    const next = queue.current.shift();
-    if (next) void command("snapshot", { visual: next });
-  });
-  useEffect(() => {
-    if (workspaceOpen && takeover && usable && !busy) sendNextInput();
-  }, [workspaceOpen, takeover, usable, busy, queued]);
-
-  function sendInput(input: BrowserVisualInput) {
-    if (!usable || !takeover || view?.interaction || queue.current.length >= 32) return;
-    if (input.kind === "input") {
-      const previous = queue.current.at(-1);
-      const text = previous?.kind === "input" ? previous.text + input.text : input.text;
-      if (new TextEncoder().encode(text).length > 3000) return;
-      if (previous?.kind === "input") queue.current.pop();
-      input = { kind: "input", text };
-    }
-    queue.current.push(input);
-    setQueued((count) => count + 1);
-  }
-
   if (cleared)
     return (
       <p className="text-sm text-muted-foreground">
         Private browser controls were cleared from this view.
       </p>
     );
-
-  const allow = view?.nodes?.find((node) => node.kind === "interaction_allow");
-  const deny = view?.nodes?.find((node) => node.kind === "interaction_deny");
-  const frame = view?.frame;
-  const status = checking
-    ? "Checking browser status…"
-    : (error ??
-      (!ready
-        ? "Live browser unavailable"
-        : takeover
-          ? "You have control"
+  let domain = "No page captured";
+  if (view?.url) {
+    try {
+      domain = new URL(view.url).hostname;
+    } catch {
+      // A malformed display URL never becomes an external navigation target.
+    }
+  }
+  const previewText = view?.text?.trim(),
+    available = Boolean(snapshot?.readiness.available || session),
+    status = checking
+      ? "Checking browser status…"
+      : !statusConfirmed
+        ? "Browser status unconfirmed"
+        : session?.mode === "takeover"
+          ? "You have control · automation blocked"
           : session
-            ? "Agent has control"
-            : "No open session"));
-
+            ? paused
+              ? "Agent control · run paused"
+              : "Agent control"
+            : "No open session";
+  const passwordNode =
+    session?.mode === "takeover" &&
+    view?.nodes?.find((node) => node.editable && !node.disabled && node.inputType === "password");
+  const handoff =
+    run.status === "paused" &&
+    run.effect?.result?.sessionId === session?.id &&
+    run.effect?.result?.sequence === session?.sequence &&
+    ["sign_in", "popup", "dialog"].includes(String(run.effect?.result?.handoff))
+      ? String(run.effect?.result?.handoff)
+      : null;
+  const allowInteraction = view?.nodes?.find((node) => node.kind === "interaction_allow");
+  const denyInteraction = view?.nodes?.find((node) => node.kind === "interaction_deny");
+  function toggleControls() {
+    setControlsOpen((open) => !open);
+    // Hiding the controls also discards any unsubmitted private entry.
+    setText("");
+    setTarget("");
+  }
   return (
-    <>
-      <section className="work-browser-panel" aria-label="Private Work browser">
-        <div className="work-browser-heading">
-          <h4>
-            <Monitor aria-hidden="true" /> Cloud browser
-          </h4>
-          <span className="work-browser-status" role="status">
-            {status}
+    <section
+      aria-label="Private Work browser"
+      className="work-browser-panel"
+      data-ui-reference="chatgpt.agent.browser-card"
+    >
+      <div className="work-browser-heading">
+        <h4>
+          <Monitor aria-hidden="true" /> Cloud browser
+        </h4>
+        <span className="work-browser-status" role="status">
+          {status}
+        </span>
+      </div>
+      <button
+        type="button"
+        className="work-browser-preview"
+        data-ui-reference="chatgpt.agent.browser-preview"
+        aria-label={controlsOpen ? "Hide browser controls" : "Open browser controls"}
+        aria-expanded={controlsOpen}
+        aria-controls={controlsId}
+        disabled={!available}
+        onClick={toggleControls}
+      >
+        <span className="work-browser-preview-chrome">
+          <span className="work-browser-domain">
+            <Globe2 aria-hidden="true" />
+            {domain}
           </span>
-        </div>
+          <span className="work-browser-preview-kind">Text preview</span>
+        </span>
+        <span className="work-browser-preview-body">
+          <span className="work-browser-preview-title">
+            {view?.title || (session ? "Private browser session" : "Open a private browser")}
+          </span>
+          <span className="work-browser-preview-text">
+            {previewText
+              ? previewText.slice(0, 480)
+              : session?.mode === "takeover"
+                ? "Open the controls and read the current page to see its text here."
+                : session
+                  ? "Pause this run, then take over to read the current page."
+                  : checking
+                    ? "Checking whether private browsing is available."
+                    : available
+                      ? "Open a website to begin a private session."
+                      : "Private browser execution is unavailable."}
+          </span>
+        </span>
+        <span className="work-browser-preview-footer">
+          <span>{controlsOpen ? "Hide controls" : "Open controls"}</span>
+          <ChevronDown aria-hidden="true" />
+        </span>
+      </button>
+      {session && (
         <div className="work-browser-actions">
+          {session.mode === "agent" ? (
+            <Button
+              variant="ghost"
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                setControlsOpen(true);
+                void command("takeover");
+              }}
+              className="work-browser-primary-action"
+            >
+              {handoff === "sign_in"
+                ? "Sign in privately"
+                : handoff
+                  ? "Review website request"
+                  : "Take over"}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              type="button"
+              disabled={disabled || Boolean(view?.interaction)}
+              onClick={() => void command("release")}
+              className="work-browser-primary-action"
+            >
+              Return control
+            </Button>
+          )}
           <Button
-            ref={openButton}
+            variant="ghost"
             type="button"
-            variant="outline"
-            disabled={disabled}
-            onClick={() => {
-              if (disabled) return;
-              openRef.current = true;
-              setWorkspaceOpen(true);
-              if (session && !takeover) void command("takeover", { visual: capture });
-            }}
+            disabled={busy || checking}
+            onClick={() => void command("close")}
           >
-            {session && !takeover ? "Take over" : "Open browser"}
+            End session
           </Button>
-          {canEnd && !workspaceOpen && (
-            <Button type="button" variant="ghost" onClick={() => void command("close")}>
-              End session
-            </Button>
-          )}
-          {error && (
-            <Button type="button" variant="ghost" onClick={() => void refresh()}>
-              Retry
-            </Button>
-          )}
         </div>
-      </section>
-      {workspaceOpen && (
-        <BrowserWorkspace
-          title="Cloud browser"
-          overlayHeader={Boolean(frame && takeover && usable)}
-          onClose={hideWorkspace}
-          onEscapeKeyDown={(event) => {
-            if (
-              event.target instanceof HTMLTextAreaElement &&
-              event.target.classList.contains("work-browser-keyboard")
-            )
-              event.preventDefault();
-          }}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            openButton.current?.focus({ preventScroll: true });
-          }}
-          actions={
-            takeover && (
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={disabled || Boolean(view?.interaction)}
-                onClick={() => {
-                  queue.current = [];
-                  void command("release");
-                }}
-              >
-                Return control
-              </Button>
-            )
-          }
-        >
-          {error ? (
-            <div className="work-browser-message">
-              <p role="alert">{error}</p>
-              <Button type="button" variant="outline" onClick={() => void refresh()}>
-                Reconnect
-              </Button>
-            </div>
-          ) : view?.interaction && view.view && allow && deny ? (
-            <div className="work-browser-message">
+      )}
+      {session?.mode === "takeover" && (
+        <p className="text-sm text-muted-foreground">
+          You have control. Automation is blocked during takeover. Return control, then use Resume
+          run to continue.
+        </p>
+      )}
+      {session?.mode === "agent" && paused && (
+        <p className="text-sm text-muted-foreground">
+          {handoff
+            ? "Work paused because a website needs your input. Take control to continue privately."
+            : "Browser control is with the agent. This run is still paused; use Resume run to continue."}
+        </p>
+      )}
+      {!paused && available && (
+        <p role="status" className="text-sm">
+          Pause this run and wait for its current step to settle before taking over.
+        </p>
+      )}
+      {paused && statusConfirmed && !confirmedPaused && (
+        <p role="status" className="text-sm">
+          Run status has changed. Refresh execution and browser status before taking over.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <Button
+        variant="link"
+        type="button"
+        disabled={busy || checking}
+        onClick={() => void refresh()}
+        className="work-browser-refresh text-sm underline"
+      >
+        {checking ? "Checking browser status…" : "Refresh browser status"}
+      </Button>
+      {controlsOpen && (
+        <div id={controlsId} className="work-browser-controls">
+          {session?.mode === "takeover" &&
+            view?.interaction &&
+            view.view &&
+            allowInteraction &&
+            denyInteraction && (
               <BrowserInteractionCard
                 key={view.view}
                 interaction={view.interaction}
                 disabled={disabled}
                 onAllow={(text) =>
                   void command("click", {
-                    visual: capture,
                     view: view.view,
-                    target: allow.id,
+                    target: allowInteraction.id,
                     ...(text !== undefined ? { text } : {}),
                   })
                 }
                 onDeny={() =>
-                  void command("click", { visual: capture, view: view.view, target: deny.id })
+                  void command("click", { view: view.view, target: denyInteraction.id })
                 }
               />
-            </div>
-          ) : frame && takeover && usable ? (
-            <WorkBrowserViewport
-              frame={frame}
-              enabled={usable}
-              onInput={sendInput}
-              onSizeChange={setViewportSize}
+            )}
+          {passwordNode && view?.view && view.url && dismissedSignIn !== view.view && (
+            <BrowserPrivateEntryCard
+              key={view.view}
+              origin={domain}
+              label={passwordNode.label}
+              disabled={disabled}
+              onCancel={() => setDismissedSignIn(view.view!)}
+              onFill={(text) =>
+                void command("fill", { view: view.view, target: passwordNode.id, text })
+              }
             />
-          ) : !session && !busy && usable ? (
-            <form
-              className="work-browser-address"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void command("open", { url: url.trim(), visual: capture });
-              }}
-            >
-              <Input
-                type="url"
-                aria-label="Website URL"
-                value={url}
-                maxLength={2048}
-                placeholder="https://example.com"
-                onChange={(event) => setUrl(event.target.value)}
-                required
-              />
-              <Button type="submit" disabled={!url.trim()}>
-                Go
+          )}
+          <p className="text-sm text-muted-foreground">
+            Pause Work before taking over. The model cannot read or act during takeover. Sessions
+            close after five minutes; sign-in data is not saved to Work history. Hiding these
+            controls does not end the session.
+          </p>
+          <p className="break-words text-xs">
+            {snapshot?.readiness.publicWeb
+              ? "Public HTTPS browsing · your site rules apply"
+              : `Configured sites: ${snapshot?.readiness.origins.join(", ")}`}
+          </p>
+          {!session && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex-1 text-sm">
+                Website URL
+                <Input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  maxLength={2048}
+                  className="block w-full border bg-background"
+                />
+              </label>
+              <Button
+                variant="outline"
+                type="button"
+                disabled={disabled || !url}
+                onClick={() => void command("open", { url })}
+                className="border"
+              >
+                Open and take over
               </Button>
-            </form>
-          ) : (
-            <div className="work-browser-message" role="status">
-              {usable || busy || checking ? "Connecting…" : "Live browser unavailable"}
             </div>
           )}
-        </BrowserWorkspace>
+          {session && (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Session expires {new Date(session.expires_at).toLocaleTimeString()}.
+              </p>
+              {session.mode === "takeover" && !view?.interaction && (
+                <div className="work-browser-actions">
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => void command("snapshot")}
+                  >
+                    Read current page
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => void command("scroll", { delta: 800 })}
+                  >
+                    Scroll down
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => void command("scroll", { delta: -800 })}
+                  >
+                    Scroll up
+                  </Button>
+                </div>
+              )}
+              {view && session.mode === "takeover" && !view.interaction && (
+                <div className="space-y-2">
+                  <p className="break-words text-sm">
+                    {view.title} {view.url}
+                  </p>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-muted p-3 text-sm">
+                    {view.text}
+                  </pre>
+                  <label className="block text-sm">
+                    Page control
+                    <Select
+                      value={target || "no-page-control"}
+                      onValueChange={(value) => setTarget(value === "no-page-control" ? "" : value)}
+                    >
+                      <SelectTrigger aria-label="Page control" className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no-page-control">Select a control</SelectItem>
+                        {view.nodes?.map((node) => (
+                          <SelectItem key={node.id} value={node.id} disabled={node.disabled}>
+                            {node.label || node.kind}{" "}
+                            {node.inputType === "password" ? "(password)" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  {view.nodes?.find((node) => node.id === target)?.editable && (
+                    <label className="block text-sm">
+                      Enter text privately
+                      <Input
+                        type={
+                          view.nodes?.find((node) => node.id === target)?.inputType === "password"
+                            ? "password"
+                            : "text"
+                        }
+                        autoComplete="off"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        maxLength={4000}
+                        className="mt-1 block w-full border bg-background"
+                      />
+                    </label>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Check the destination and consequences before submitting any form, purchase,
+                    message, or deletion.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {view.nodes?.find((node) => node.id === target)?.editable && (
+                      <Button
+                        variant="outline"
+                        type="button"
+                        disabled={disabled || !target}
+                        onClick={() => void command("fill", { view: view.view, target, text })}
+                        className="border"
+                      >
+                        Fill selected field
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={disabled || !target}
+                      onClick={() => void command("click", { view: view.view, target })}
+                      className="border"
+                    >
+                      Click selected control
+                    </Button>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      disabled={disabled || !target}
+                      onClick={() =>
+                        void command("press", { view: view.view, target, key: "Enter" })
+                      }
+                      className="border"
+                    >
+                      Press Enter on selected control
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       )}
-    </>
+    </section>
   );
 }

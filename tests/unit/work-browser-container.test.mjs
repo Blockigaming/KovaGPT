@@ -41,10 +41,7 @@ function fixture() {
                 Os: "linux",
                 Config: {
                   User: "65532:65532",
-                  Labels: {
-                    "com.kova.browser.protocol": "kova-browser-v1",
-                    "com.kova.browser.visual": "1",
-                  },
+                  Labels: { "com.kova.browser.protocol": "kova-browser-v1" },
                 },
               },
             ]

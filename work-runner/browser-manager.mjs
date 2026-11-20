@@ -3,7 +3,6 @@ import {
   workInputHash,
   workUuid,
 } from "../src/lib/work-execution-protocol.mjs";
-import { validateWorkBrowserVisual } from "../src/lib/work-browser-policy.mjs";
 import { browserOrigin, createBrowserEgress } from "./browser-egress.mjs";
 const fail = () => {
   throw new Error("work_browser_action_denied");
@@ -58,7 +57,6 @@ export function createBrowserManager(
     origins: allowed,
     idleTimeoutSeconds: 900,
     siteRulesVersion: 1,
-    visualTakeover: true,
     ...(publicWeb ? { publicWeb: true } : {}),
   };
   function scheduleIdleReap(row) {
@@ -185,12 +183,10 @@ export function createBrowserManager(
               "text",
               "key",
               "delta",
-              "visual",
             ].includes(k),
         )
       )
         fail();
-      if (input.visual !== undefined) validateWorkBrowserVisual(input.operation, input.visual);
       return store.withOwnerLock(input.ownerId, async () => {
         if (await store.ownerRetired(input.ownerId)) fail();
         const binding = {
@@ -274,21 +270,6 @@ export function createBrowserManager(
           input.expiresAt > Date.now() + 905000
         )
           fail();
-        if (input.visual?.kind === "frame") {
-          if (
-            row.closed ||
-            row.busy ||
-            row.mode !== "takeover" ||
-            input.sequence !== row.sequence ||
-            input.expiresAt !== row.expiresAt
-          )
-            fail();
-          await check(row, binding, signal);
-          const result = await row.container.command(input);
-          await check(row, binding, signal);
-          if (result.sequence !== input.sequence || result.mode !== "takeover") fail();
-          return { sessionId: row.sessionId, runId: row.runId, ...result };
-        }
         // The owner's authenticated DB admission carries the renewed expiry.
         // The subsequent authority check must match it exactly.
         row.expiresAt = input.expiresAt;
