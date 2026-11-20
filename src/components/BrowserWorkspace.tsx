@@ -7,6 +7,7 @@ export function BrowserWorkspace({
   title,
   description,
   actions,
+  overlayHeader = false,
   children,
   onClose,
   onCloseAutoFocus,
@@ -15,6 +16,7 @@ export function BrowserWorkspace({
   title: string;
   description?: string;
   actions?: ReactNode;
+  overlayHeader?: boolean;
   children: ReactNode;
   onClose: () => void;
   onCloseAutoFocus?: (event: Event) => void;
@@ -49,13 +51,17 @@ export function BrowserWorkspace({
       <Dialog.Portal container={host}>
         <Dialog.Content
           className="kova-browser-workspace"
+          data-overlay-header={overlayHeader || undefined}
           {...(!description ? { "aria-describedby": undefined } : {})}
           onInteractOutside={(event) => event.preventDefault()}
           onCloseAutoFocus={onCloseAutoFocus}
           onEscapeKeyDown={onEscapeKeyDown}
         >
-          <header className="kova-browser-workspace-header">
-            <div className="min-w-0">
+          <header
+            className="kova-browser-workspace-header"
+            data-overlay={overlayHeader || undefined}
+          >
+            <div className="kova-browser-workspace-title min-w-0">
               <Dialog.Title>{title}</Dialog.Title>
               {description && <Dialog.Description>{description}</Dialog.Description>}
             </div>

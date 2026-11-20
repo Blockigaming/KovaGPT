@@ -36,6 +36,38 @@
   border-block-end: 1px solid var(--border);
 }
 
+.kova-browser-workspace[data-overlay-header] {
+  padding-block-end: 0;
+}
+
+[data-overlay-header] > .kova-browser-workspace-header {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  min-block-size: 0;
+  padding: 8px 12px;
+  border: 0;
+  pointer-events: none;
+}
+
+[data-overlay-header] > .kova-browser-workspace-header .kova-browser-workspace-title,
+[data-overlay-header] > .kova-browser-workspace-header .kova-browser-workspace-actions {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+[data-overlay-header] > .kova-browser-workspace-header .kova-browser-workspace-title {
+  padding: 8px 12px;
+}
+
+[data-overlay-header] > .kova-browser-workspace-header .kova-browser-workspace-actions {
+  gap: 0;
+  padding-inline: 2px;
+  pointer-events: auto;
+}
+
 .kova-browser-workspace-header h2 {
   margin: 0;
   font-size: 16px;

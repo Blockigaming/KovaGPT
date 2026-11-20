@@ -11,6 +11,7 @@ import type {
   BrowserCommand,
   BrowserResult,
   BrowserVisualInput,
+  BrowserViewportSize,
 } from "@/lib/work-browser-transport.mjs";
 import { requestWorkSync } from "@/lib/work-sync-client";
 import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
@@ -28,6 +29,7 @@ const capture = { kind: "capture" } as const;
 export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkRun }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [view, setView] = useState<BrowserResult | null>(null);
+  const [viewportSize, setViewportSize] = useState<BrowserViewportSize>();
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -185,14 +187,23 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     }
   }
 
-  const readFrame = useEffectEvent(() => void command("snapshot", { visual: { kind: "frame" } }));
+  const readFrame = useEffectEvent(
+    () =>
+      void command("snapshot", {
+        visual: viewportSize ? { kind: "frame", ...viewportSize } : { kind: "frame" },
+      }),
+  );
   useEffect(() => {
     if (!workspaceOpen || !takeover || !usable || busy || view?.interaction) return;
+    const needsResize =
+      viewportSize &&
+      view?.frame &&
+      (view.frame.width !== viewportSize.width || view.frame.height !== viewportSize.height);
     const timer = window.setTimeout(
       () => {
         if (document.visibilityState === "visible") readFrame();
       },
-      view ? 3500 : 0,
+      view ? (needsResize ? 120 : 3500) : 0,
     );
     const onVisible = () => {
       if (document.visibilityState === "visible") readFrame();
@@ -202,7 +213,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [workspaceOpen, takeover, usable, busy, view]);
+  }, [workspaceOpen, takeover, usable, busy, view, viewportSize]);
 
   const sendNextInput = useEffectEvent(() => {
     const next = queue.current.shift();
@@ -287,6 +298,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       {workspaceOpen && (
         <BrowserWorkspace
           title="Cloud browser"
+          overlayHeader={Boolean(frame && takeover && usable)}
           onClose={hideWorkspace}
           onEscapeKeyDown={(event) => {
             if (
@@ -342,7 +354,12 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               />
             </div>
           ) : frame && takeover && usable ? (
-            <WorkBrowserViewport frame={frame} enabled={usable} onInput={sendInput} />
+            <WorkBrowserViewport
+              frame={frame}
+              enabled={usable}
+              onInput={sendInput}
+              onSizeChange={setViewportSize}
+            />
           ) : !session && !busy && usable ? (
             <form
               className="work-browser-address"

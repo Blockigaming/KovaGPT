@@ -1,5 +1,15 @@
-import { useRef, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
-import type { BrowserResult, BrowserVisualInput } from "@/lib/work-browser-transport.mjs";
+import {
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent,
+  type PointerEvent,
+  type WheelEvent,
+} from "react";
+import type {
+  BrowserResult,
+  BrowserViewportSize,
+  BrowserVisualInput,
+} from "@/lib/work-browser-transport.mjs";
 
 const remoteKeys = new Set([
   "Enter",
@@ -21,13 +31,33 @@ export function WorkBrowserViewport({
   frame,
   enabled,
   onInput,
+  onSizeChange,
 }: {
   frame: NonNullable<BrowserResult["frame"]>;
   enabled: boolean;
   onInput: (input: BrowserVisualInput) => void;
+  onSizeChange: (size: BrowserViewportSize) => void;
 }) {
+  const viewport = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const element = viewport.current;
+    if (!element) return;
+    function report({ width, height }: DOMRectReadOnly) {
+      if (width <= 0 || height <= 0) return;
+      const scale = Math.min(1, 1600 / width, 1200 / height);
+      onSizeChange({
+        width: Math.max(160, Math.round(width * scale)),
+        height: Math.max(160, Math.round(height * scale)),
+      });
+    }
+    report(element.getBoundingClientRect());
+    const observer = new ResizeObserver(([entry]) => report(entry.contentRect));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [onSizeChange]);
 
   function coordinates(event: PointerEvent<HTMLImageElement> | WheelEvent<HTMLImageElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -75,7 +105,7 @@ export function WorkBrowserViewport({
   }
 
   return (
-    <div className="work-browser-viewport">
+    <div className="work-browser-viewport" ref={viewport}>
       <div className="work-browser-screen">
         <img
           alt="Live browser page"

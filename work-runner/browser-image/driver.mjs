@@ -25,6 +25,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     targets = new Map(),
     activeActor = null;
   let page, frame, pendingFrame;
+  let ownerViewport = { width: 1280, height: 900 };
   const approvedPages = new Set(),
     popups = new Map(),
     initialNavigations = new Set(),
@@ -34,7 +35,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     acceptDownloads: false,
     serviceWorkers: "block",
     permissions: [],
-    viewport: { width: 1280, height: 900 },
+    viewport: ownerViewport,
   });
   context.setDefaultTimeout(5000);
   context.setDefaultNavigationTimeout(10000);
@@ -389,7 +390,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     if (Buffer.byteLength(JSON.stringify(result)) > maximum) fail();
     return result;
   }
-  async function ownerFrame() {
+  async function ownerFrame(requestedViewport) {
     if (mode !== "takeover") fail();
     if (interactions.pending) {
       if (pendingFrame?.id !== interactions.pending.id)
@@ -397,6 +398,12 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       return { ...pendingFrame.result, sequence };
     }
     pendingFrame = null;
+    if (requestedViewport?.width !== undefined)
+      ownerViewport = { width: requestedViewport.width, height: requestedViewport.height };
+    const { width, height } = ownerViewport;
+    const currentViewport = page.viewportSize();
+    if (currentViewport.width !== width || currentViewport.height !== height)
+      await page.setViewportSize(ownerViewport);
     let jpeg;
     for (const quality of [55, 32, 16]) {
       const candidate = await page.screenshot({ type: "jpeg", quality, timeout: 2500 });
@@ -406,19 +413,30 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       }
     }
     if (!jpeg) fail();
-    if (frame?.jpeg !== jpeg || frame?.page !== page) frame = { id: randomUUID(), jpeg, page };
+    if (
+      frame?.jpeg !== jpeg ||
+      frame?.page !== page ||
+      frame?.width !== width ||
+      frame?.height !== height
+    )
+      frame = { id: randomUUID(), jpeg, page, width, height };
     return {
       mode,
       sequence,
       url: safeUrl(),
-      frame: { id: frame.id, jpeg, width: 1280, height: 900 },
+      frame: { id: frame.id, jpeg, width, height },
     };
   }
   async function visualAction(input) {
     if (input.kind === "capture") return ownerFrame();
     if (interactions.pending) return ownerFrame();
     if (input.kind === "click" || input.kind === "scroll") {
-      if (input.frame !== frame?.id || page !== frame.page)
+      if (
+        input.frame !== frame?.id ||
+        page !== frame.page ||
+        input.x >= frame.width ||
+        input.y >= frame.height
+      )
         return { ...(await ownerFrame()), staleFrame: true };
       if (input.kind === "click") await pageAction(() => page.mouse.click(input.x, input.y));
       else {
@@ -462,7 +480,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       if (command.visual?.kind === "frame") {
         if (command.sequence !== sequence || activeActor || command.operation !== "snapshot")
           fail();
-        return ownerFrame();
+        return ownerFrame(command.visual);
       }
       if (command.sequence === sequence) fail();
       if (command.actor === "agent" && mode !== "agent") fail();

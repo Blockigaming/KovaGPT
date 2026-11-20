@@ -82,7 +82,10 @@ test("Work takeover displays the remote page directly inside the browser workspa
   const frameId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
   const objective = "Review the Example Domain page";
   const viewport = page.viewportSize()!;
-  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.setViewportSize({
+    width: viewport.width >= 1024 ? viewport.width - 280 : viewport.width,
+    height: viewport.width >= 1024 ? viewport.height : viewport.height - 56,
+  });
   await page.setContent(`<!doctype html><meta name="viewport" content="width=device-width">
     <style>body { background: #eee; color: #222; font: 16px system-ui; }
     main { max-width: 600px; margin: 12vh auto; }
@@ -137,6 +140,7 @@ test("Work takeover displays the remote page directly inside the browser workspa
     }),
   );
   const actions: Array<{ kind: string; text?: string; x?: number; y?: number }> = [];
+  let frameSize = { width: 1280, height: 900 };
   const expiresAt = Date.now() + 120000;
   await page.route("**/api/work/browser**", (route) => {
     if (route.request().method() === "GET")
@@ -158,6 +162,8 @@ test("Work takeover displays the remote page directly inside the browser workspa
     const body = route.request().postDataJSON();
     expect(body).toMatchObject({ runId, sessionId, expectedRevision: 4 });
     if (body.visual) actions.push(body.visual);
+    if (body.visual?.kind === "frame" && body.visual.width)
+      frameSize = { width: body.visual.width, height: body.visual.height };
     return route.fulfill({
       json: {
         expiresAt,
@@ -166,7 +172,7 @@ test("Work takeover displays the remote page directly inside the browser workspa
           sessionId,
           sequence: body.expectedSequence + (body.visual?.kind === "frame" ? 0 : 1),
           mode: body.operation === "release" ? "agent" : "takeover",
-          ...(body.visual && { frame: { id: frameId, jpeg, width: 1280, height: 900 } }),
+          ...(body.visual && { frame: { id: frameId, jpeg, ...frameSize } }),
         },
       },
     });
@@ -188,11 +194,22 @@ test("Work takeover displays the remote page directly inside the browser workspa
   expect(bounds).not.toBeNull();
   expect(bounds!.x).toBeCloseTo(main!.x, 0);
   expect(bounds!.width).toBeCloseTo(main!.width, 0);
-  await screen.click();
+  const image = (await screen.boundingBox())!;
+  expect(image.x).toBeCloseTo(bounds!.x, 0);
+  expect(image.y).toBeCloseTo(bounds!.y, 0);
+  expect(image.width).toBeCloseTo(bounds!.width, 0);
+  expect(image.height).toBeCloseTo(bounds!.height, 0);
+  const scale = Math.min(1, 1600 / image.width, 1200 / image.height);
+  const remoteWidth = Math.round(image.width * scale);
+  const remoteHeight = Math.round(image.height * scale);
+  await expect(screen).toHaveAttribute("width", String(remoteWidth));
+  await expect(screen).toHaveAttribute("height", String(remoteHeight));
+  // The page still receives input through the gap between the floating header controls.
+  await screen.click({ position: { x: image.width / 2, y: 18 } });
   await expect.poll(() => actions.map(({ kind }) => kind)).toContain("click");
   const click = actions.find(({ kind }) => kind === "click")!;
-  expect(Math.abs(click.x! - 640)).toBeLessThan(5);
-  expect(Math.abs(click.y! - 450)).toBeLessThan(5);
+  expect(Math.abs(click.x! - remoteWidth / 2)).toBeLessThan(5);
+  expect(Math.abs(click.y! - 18 * scale)).toBeLessThan(5);
   await page.keyboard.insertText("local fixture text");
   await expect
     .poll(() => actions.find(({ kind }) => kind === "input")?.text)

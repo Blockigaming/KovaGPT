@@ -269,9 +269,15 @@ test("owner takeover shows real Chromium pixels and sends pointer and typing to 
   assert.equal(first.text, undefined);
   const passive = await route(1, { kind: "frame" });
   assert.deepEqual(passive, first);
-  const clicked = await route(2, { kind: "click", frame: passive.frame.id, x: 40, y: 35 });
+  const resized = await route(1, { kind: "frame", width: 390, height: 788 });
+  assert.equal(resized.sequence, 1);
+  assert.equal(resized.frame.width, 390);
+  assert.equal(resized.frame.height, 788);
+  assert.notEqual(resized.frame.id, passive.frame.id);
+  const clicked = await route(2, { kind: "click", frame: resized.frame.id, x: 40, y: 35 });
   const typed = await route(3, { kind: "input", text: "sample entry" });
   assert.notEqual(typed.frame.jpeg, clicked.frame.jpeg);
+  assert.equal(typed.frame.width, 390);
   const submitted = await route(4, { kind: "key", key: "Enter" });
   assert.equal(submitted.url, origin + "/submitted");
   assert.ok(visits.some((url) => new URL(url).searchParams.get("text") === "sample entry"));

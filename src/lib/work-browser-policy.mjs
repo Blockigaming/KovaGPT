@@ -97,7 +97,8 @@ export function validateWorkBrowserVisual(operation, visual) {
   const captureOperations = ["open", "takeover", "navigate", "click"];
   const fields = {
     capture: [],
-    frame: [],
+    frame:
+      Object.hasOwn(visual, "width") || Object.hasOwn(visual, "height") ? ["width", "height"] : [],
     click: ["frame", "x", "y"],
     input: ["text"],
     key: ["key"],
@@ -113,15 +114,26 @@ export function validateWorkBrowserVisual(operation, visual) {
     expected.some((field) => !Object.hasOwn(visual, field))
   )
     fail();
+  if (
+    visual.kind === "frame" &&
+    expected.length &&
+    (!Number.isSafeInteger(visual.width) ||
+      visual.width < 160 ||
+      visual.width > 1600 ||
+      !Number.isSafeInteger(visual.height) ||
+      visual.height < 160 ||
+      visual.height > 1200)
+  )
+    fail();
   if (visual.kind === "click" || visual.kind === "scroll") {
     workUuid(visual.frame);
     if (
       !Number.isSafeInteger(visual.x) ||
       visual.x < 0 ||
-      visual.x >= 1280 ||
+      visual.x >= 1600 ||
       !Number.isSafeInteger(visual.y) ||
       visual.y < 0 ||
-      visual.y >= 900
+      visual.y >= 1200
     )
       fail();
   }

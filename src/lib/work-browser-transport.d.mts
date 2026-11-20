@@ -12,8 +12,10 @@ export type BrowserBinding = {
   destination?: string;
   siteRulesVersion?: 1;
 };
+export type BrowserViewportSize = { width: number; height: number };
 export type BrowserVisualInput =
-  | { kind: "capture" | "frame" }
+  | { kind: "capture" }
+  | ({ kind: "frame" } & (BrowserViewportSize | { width?: never; height?: never }))
   | { kind: "click"; frame: string; x: number; y: number }
   | { kind: "scroll"; frame: string; x: number; y: number; deltaX: number; deltaY: number }
   | { kind: "input"; text: string }

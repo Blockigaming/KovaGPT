@@ -363,7 +363,14 @@ test("permissions endpoints bind the account before reading or saving rules", as
 
 test("passive frames reuse the owner lease and sequence without admitting an activity", async () => {
   const f = fixture();
-  const visual = { kind: "frame" };
+  const visual = { kind: "frame", width: 390, height: 788 };
+  for (const bad of [
+    { kind: "frame", width: 390 },
+    { ...visual, height: 1201 },
+  ]) {
+    const result = await f.route.handleWorkBrowser(f.request({ ...f.input, visual: bad }));
+    assert.equal(result.status, 400);
+  }
   const denied = await f.route.handleWorkBrowser(
     f.request({ ...f.input, expectedSequence: 2, visual }),
   );
