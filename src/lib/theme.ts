@@ -4,6 +4,9 @@
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export const DEFAULT_THEME_COLOR = "#212121";
+export const LIGHT_THEME_COLOR = "#ffffff";
+
 const STORAGE_KEY = "kova-theme-mode";
 
 function systemPrefersDark(): boolean {
@@ -15,6 +18,9 @@ export function applyThemeMode(mode: ThemeMode) {
   if (typeof document === "undefined") return;
   const isDark = mode === "dark" || (mode === "system" && systemPrefersDark());
   document.documentElement.classList.toggle("dark", isDark);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", isDark ? DEFAULT_THEME_COLOR : LIGHT_THEME_COLOR);
   // Drop the pre-paint CSSOM override in the same task as the class update, so
   // later light/dark changes use the original stylesheet without a bright frame.
   (window as Window & { __kovaRestoreThemeSelectors?: () => void }).__kovaRestoreThemeSelectors?.();

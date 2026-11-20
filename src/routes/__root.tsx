@@ -20,7 +20,7 @@ import { useKeyboardViewport } from "@/hooks/use-keyboard-viewport";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, loadThemeMode } from "@/lib/theme";
+import { applyThemeMode, DEFAULT_THEME_COLOR, LIGHT_THEME_COLOR, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect, useRef } from "react";
@@ -42,8 +42,11 @@ const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
     const stored = localStorage.getItem("kova-theme-mode");
     if (stored === "light" || stored === "dark" || stored === "system") mode = stored;
   } catch {}
-  if (!(mode === "dark" || (mode === "system" &&
-    window.matchMedia?.("(prefers-color-scheme: dark)").matches))) return;
+  const isDark = mode === "dark" || (mode === "system" &&
+    window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", isDark ? "${DEFAULT_THEME_COLOR}" : "${LIGHT_THEME_COLOR}");
+  if (!isDark) return;
 
   const changed = [];
   const visit = (rules) => {
@@ -231,16 +234,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             "Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA, Sec-CH-Viewport-Width, Sec-CH-DPR",
         },
         { name: "format-detection", content: "telephone=no" },
-        {
-          name: "theme-color",
-          content: "#ffffff",
-          media: "(prefers-color-scheme: light)",
-        },
-        {
-          name: "theme-color",
-          content: "#212121",
-          media: "(prefers-color-scheme: dark)",
-        },
         { name: "color-scheme", content: "light dark" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
@@ -319,6 +312,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
       <head>
         <HeadContent />
+        <meta name="theme-color" content={DEFAULT_THEME_COLOR} suppressHydrationWarning />
         <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
       </head>
       <body>
@@ -351,6 +345,12 @@ function RootThemeManager() {
 
   useLayoutEffect(() => {
     applyThemeMode(loadThemeMode());
+    const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystemTheme = () => {
+      if (loadThemeMode() === "system") applyThemeMode("system");
+    };
+    scheme.addEventListener("change", syncSystemTheme);
+    return () => scheme.removeEventListener("change", syncSystemTheme);
   }, []);
 
   useEffect(() => {

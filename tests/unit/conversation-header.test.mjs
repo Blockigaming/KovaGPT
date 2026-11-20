@@ -643,10 +643,18 @@ test("composer action disc uses a compact desktop control and full phone target"
     css,
     /\.spec400-send-button \{\s*min-width: 36px;\s*min-height: 36px;\s*width: 36px;\s*height: 36px/,
   );
+  assert.match(css, /\.spec400-composer \{[^}]*--composer-action-size: 36px;/);
   assert.match(
     css,
-    /\.spec400-composer-trailing \.spec400-primary-voice,[\s\S]*\[data-testid="send-button"\] \{\s*width: 43px;\s*height: 43px;\s*min-width: 43px;\s*min-height: 43px/,
+    /@media \(any-pointer: coarse\), \(max-width: 1023px\) \{\s*\.spec400-composer \{\s*--composer-action-size: 44px;/,
   );
+  const sharedAction = css.match(
+    /\.spec400-composer-trailing \.spec400-primary-voice,\s*\.spec400-composer-trailing \[data-testid="stop-button"\],\s*\.spec400-composer-trailing \[data-testid="send-button"\] \{([^}]*)\}/,
+  );
+  assert.ok(sharedAction, "primary voice, stop and send share the same size");
+  for (const property of ["width", "height", "min-width", "min-height"]) {
+    assert.ok(sharedAction[1].includes(`${property}: var(--composer-action-size);`));
+  }
   assert.match(
     css,
     /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,

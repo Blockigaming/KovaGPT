@@ -110,8 +110,14 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
     /@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.kova-composer-menu\)[\s\S]*?background: var\(--background\) !important;/,
   );
   assert.match(home, /const greeting = useHomeGreeting/);
-  assert.match(openingTag(home, "h1", /id="chat-greeting"/), /id="chat-greeting"/);
-  assert.match(home, /id="chat-greeting"[^>]*>\s*\{greeting\}\s*<\/h1>/);
+  assert.match(starters, /headingId="chat-greeting"\s+heading=\{greeting\}/);
+  assert.match(homeFrame, /<h1\s+id=\{headingId\}/);
+  assert.match(homeFrame, /className="kova-home-greeting-text">\{heading\}<\/span>/);
+  assert.match(homeFrame, /<NovaLogo mark className="kova-home-welcome-logo" \/>/);
+  assert.equal(
+    declarations(sidebarStyles, ".kova-assistant button.kova-sidebar-scrim").background,
+    "transparent",
+  );
   assert.match(composer, /COMPOSER_TOOLS/);
   assert.match(composer, /renderComposerActions\(isMobileLayout\)/);
   assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS\.map/);

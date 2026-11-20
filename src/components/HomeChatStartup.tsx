@@ -3,7 +3,7 @@ import { HomeChatFrame } from "@/components/HomeChatFrame";
 
 function HomeChatPlaceholder() {
   return (
-    <HomeChatFrame heading={<h1 className="text-balance px-4">Welcome back!</h1>}>
+    <HomeChatFrame heading="Welcome back!">
       <div
         className="spec400-chat-input kova-home-composer-placeholder"
         data-composer-surface="empty"

@@ -518,6 +518,9 @@ button.kova-sidebar-scrim {
     opacity var(--kova-motion-standard) var(--kova-ease),
     visibility 0ms;
 }
+.kova-assistant button.kova-sidebar-scrim {
+  background: transparent;
+}
 .kova-sidebar-scrim[data-state="closed"] {
   opacity: 0;
   visibility: hidden;
