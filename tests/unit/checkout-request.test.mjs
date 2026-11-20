@@ -19,6 +19,7 @@ test("returns a frozen allowlisted Checkout request", () => {
   assert.equal("returnUrl" in parsed, false);
   assert.equal("redirect_url" in parsed, false);
   assert.equal("return_url" in parsed, false);
+
   assert.throws(() => {
     parsed.return_url = "https://evil.example";
   }, TypeError);
