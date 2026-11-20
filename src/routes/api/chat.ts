@@ -1302,9 +1302,8 @@ export const Route = createFileRoute("/api/chat")({
             }
             const browserUsageHeaders = (quota: boolean) =>
               quota && browserUrl ? { [CLOUD_BROWSER_USAGE_HEADER]: "exhausted" } : undefined;
-            const browserEvidenceReservation = browserUrl && !capture
-              ? "x".repeat(MAX_BROWSER_EVIDENCE_BYTES)
-              : "";
+            const browserEvidenceReservation =
+              browserUrl && !capture ? "x".repeat(MAX_BROWSER_EVIDENCE_BYTES) : "";
 
             if (auth && !isOwner && !capture) {
               await assertSelectedContextsCurrent(request.signal);
