@@ -301,7 +301,7 @@ for (const surface of ["empty", "conversation"] as const) {
     }
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const tray = composer.getByRole("list", { name: "Attachments", exact: true });
-    const tiles = tray.getByRole("listitem");
+    const tiles = tray.locator(":scope > li");
     const websites = tray.locator(".kova-link-preview-composer");
     const pasteWebsites = (text: string) =>
       input.evaluate((element, text) => {
@@ -383,18 +383,28 @@ for (const surface of ["empty", "conversation"] as const) {
         const shell = frame.getBoundingClientRect();
         const field = frame.querySelector("textarea")!;
         const strip = frame.querySelector<HTMLElement>(".spec400-composer-media")!;
-        const boxes = Array.from(strip.children, (tile) => tile.getBoundingClientRect());
+        const boxes = Array.from(
+          strip.querySelectorAll(".spec400-attachment-chip, .spec400-composer-link"),
+          (tile) => tile.getBoundingClientRect(),
+        );
         const rows = [...new Set(boxes.map((box) => Math.round(box.top)))];
         const firstInEachRow = rows.map(
           (top) => boxes.find((box) => Math.round(box.top) === top)!.left,
         );
         const [first, second] = boxes;
+        const links = boxes.slice(2);
+        const linkRows = [...new Set(links.map((box) => box.top))];
         const stripBox = strip.getBoundingClientRect();
         return {
           inset: first.left - shell.left,
           topInset: first.top - shell.top,
           photosSideBySide: second.top === first.top && second.left > first.left,
           squarePhotos: [first, second].every((box) => Math.abs(box.width - box.height) < 0.5),
+          linksBelowPhotos: links[0].top >= Math.max(first.bottom, second.bottom),
+          linksPerRow: linkRows.map((top) => links.filter((box) => box.top === top).length),
+          linkColumnsAlign: links.every(
+            (box, index) => Math.abs(box.left - links[index % 2].left) < 0.5,
+          ),
           promptGap: field.getBoundingClientRect().top - stripBox.bottom,
           promptStart: field.getBoundingClientRect().left - shell.left,
           rows: rows.length,
@@ -405,6 +415,9 @@ for (const surface of ["empty", "conversation"] as const) {
     await expect.poll(readLayout).toMatchObject({
       photosSideBySide: true,
       squarePhotos: true,
+      linksBelowPhotos: true,
+      linksPerRow: [2, 2, 2, 2, 2, 2, 2, 1],
+      linkColumnsAlign: true,
       rowsStartAtLeft: true,
       sidewaysOverflow: false,
     });

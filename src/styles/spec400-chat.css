@@ -879,9 +879,26 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   overscroll-behavior-block: contain;
   scrollbar-width: thin;
 }
-.spec400-composer-link {
+.spec400-composer-link-group {
+  --link-preview-width: var(--composer-link-width, 220px);
   flex: none;
-  width: min(calc((100% - 8px) / 2), var(--composer-link-width, 220px));
+  width: min(calc((100% - 8px) / 2), var(--link-preview-width));
+}
+.spec400-composer-link-group[data-multiple="true"] {
+  width: 100%;
+}
+.spec400-composer-links {
+  display: grid;
+  /* Cap rows at two cards, with one column if two readable cards will not fit. */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, max(120px, calc((100% - 8px) / 2))), 1fr)
+  );
+  gap: 8px;
+  width: min(100%, calc(var(--link-preview-width) * 2 + 8px));
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 .spec400-attachment-chip {
   position: relative;

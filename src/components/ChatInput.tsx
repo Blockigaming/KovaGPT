@@ -2189,6 +2189,8 @@ export function ChatInput({
   const mediaOrder = ["photo:", "file:", "link:"].flatMap((prefix) =>
     mediaKeys.filter((key) => key.startsWith(prefix)),
   );
+  const attachmentKeys = mediaOrder.filter((key) => !key.startsWith("link:"));
+  const linkKeys = mediaOrder.filter((key) => key.startsWith("link:"));
   useEffect(() => {
     mediaOrderRef.current = { context: mediaContext, keys: mediaOrder };
   });
@@ -2245,9 +2247,18 @@ export function ChatInput({
         <div className="contents spec400-composer-content">
           {mediaOrder.length > 0 && (
             <ul className="spec400-composer-media" aria-label="Attachments">
-              {mediaOrder.map((key) => (
+              {attachmentKeys.map((key) => (
                 <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
               ))}
+              {linkKeys.length > 0 && (
+                <li className="spec400-composer-link-group" data-multiple={linkKeys.length > 1}>
+                  <ul className="spec400-composer-links" aria-label="Website previews">
+                    {linkKeys.map((key) => (
+                      <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
+                    ))}
+                  </ul>
+                </li>
+              )}
             </ul>
           )}
           <div className="spec400-input-region">
