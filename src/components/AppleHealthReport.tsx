@@ -1,4 +1,4 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   CartesianGrid,
@@ -11,12 +11,10 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { readAppleHealthExport, type AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
-import { APPLE_HEALTH_DAY_MS } from "@/health/apple-health-metrics.mjs";
+import { APPLE_HEALTH_DAY_MS, APPLE_HEALTH_HISTORY_DAYS } from "@/health/apple-health-metrics.mjs";
 import { useAppleHealthLive } from "@/health/use-apple-health-live";
 
 const number = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-const ranges = [7, 30, 90] as const;
-type Range = (typeof ranges)[number];
 
 type TrendMetric = {
   id: string;
@@ -34,17 +32,68 @@ export function HealthTrends({
   report: AppleHealthAnalytics;
   catalog: readonly TrendMetric[];
 }) {
-  const [metricId, setMetricId] = useState("");
   const [groupId, setGroupId] = useState("");
-  const [sourceIndex, setSourceIndex] = useState(0);
-  const [range, setRange] = useState<Range>(7);
+  const [range, setRange] = useState(7);
   const available = catalog.filter((metric) => report.metrics[metric.id]?.length);
-  const groups = [...new Set(available.map(({ group }) => group))];
+  const groups = [...new Set(available.map((metric) => metric.group))];
   const group = groups.includes(groupId) ? groupId : groups[0];
-  const metrics = available.filter((metric) => metric.group === group);
-  const metric = metrics.find((item) => item.id === metricId) ?? metrics[0];
-  if (!metric) return null;
+  if (!group) return null;
+  const rangeLabel = range === APPLE_HEALTH_HISTORY_DAYS ? "1 year" : `${range} days`;
 
+  return (
+    <div className="min-w-0 space-y-6">
+      <Tabs value={group} onValueChange={setGroupId}>
+        <TabsList
+          aria-label="Metric categories"
+          className="spec400-plugin-tabs kova-health-selector"
+        >
+          {groups.map((item) => (
+            <TabsTrigger key={item} value={item}>
+              {item}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent key={group} value={group} className="mt-6 min-w-0 space-y-6">
+          <label className="block rounded-2xl border border-border bg-card px-4 py-3 sm:px-5">
+            <span className="flex justify-between gap-4 text-sm font-medium">
+              Date range <span className="tabular-nums">{rangeLabel}</span>
+            </span>
+            <input
+              type="range"
+              aria-label="Date range"
+              aria-valuetext={rangeLabel}
+              min={7}
+              max={APPLE_HEALTH_HISTORY_DAYS}
+              value={range}
+              onChange={(event) => setRange(event.currentTarget.valueAsNumber)}
+              className="block h-11 w-full cursor-pointer accent-rose-500"
+            />
+            <span aria-hidden="true" className="flex justify-between text-xs text-muted-foreground">
+              <span>7 days</span>
+              <span>1 year</span>
+            </span>
+          </label>
+          {available
+            .filter((metric) => metric.group === group)
+            .map((metric) => (
+              <HealthMetric key={metric.id} metric={metric} report={report} range={range} />
+            ))}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function HealthMetric({
+  metric,
+  report,
+  range,
+}: {
+  metric: TrendMetric;
+  report: AppleHealthAnalytics;
+  range: number;
+}) {
+  const [sourceIndex, setSourceIndex] = useState(0);
   const sources = report.metrics[metric.id] ?? [];
   const source = sources[sourceIndex] ?? sources[0];
   const values = new Map(source.days.map(({ date, value }) => [date, value]));
@@ -84,42 +133,13 @@ export function HealthTrends({
         : [];
   const selectClass =
     "min-h-10 max-w-full rounded-lg border border-border bg-background px-3 text-sm";
-  const selectGroup = (item: string) => {
-    setGroupId(item);
-    setMetricId("");
-    setSourceIndex(0);
-  };
-
   return (
-    <div className="space-y-4">
-      <Tabs value={group} onValueChange={selectGroup}>
-        <TabsList
-          aria-label="Metric categories"
-          className="spec400-plugin-tabs kova-health-selector"
-        >
-          {groups.map((item) => (
-            <TabsTrigger key={item} value={item}>
-              {item}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <Tabs
-        value={metric.id}
-        onValueChange={(value) => {
-          setMetricId(value);
-          setSourceIndex(0);
-        }}
-      >
-        <TabsList aria-label="Metric" className="spec400-plugin-tabs kova-health-selector">
-          {metrics.map(({ id, label }) => (
-            <TabsTrigger key={id} value={id}>
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+    <section
+      aria-label={metric.label}
+      className="min-w-0 space-y-4 border-t border-border pt-4 [content-visibility:auto] [contain-intrinsic-size:auto_360px]"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">{metric.label}</h3>
         {sources.length > 1 && (
           <select
             aria-label={metric.id === "StepCount" ? "Step source" : "Data source"}
@@ -134,15 +154,6 @@ export function HealthTrends({
             ))}
           </select>
         )}
-        <Tabs value={String(range)} onValueChange={(value) => setRange(Number(value) as Range)}>
-          <TabsList aria-label="Date range" className="spec400-plugin-tabs kova-health-selector">
-            {ranges.map((value) => (
-              <TabsTrigger key={value} value={String(value)} aria-label={`${value} days`}>
-                {value}D
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
       </div>
       {days.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -230,7 +241,7 @@ export function HealthTrends({
           </details>
         </>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -279,7 +290,7 @@ export function AppleHealthReport({
       const next = await readAppleHealthExport(file, controller.signal);
       if (controller.signal.aborted) return;
       if (!Object.keys(next.metrics).length) {
-        setStatus("This export contains no supported readings in its last 90 days.");
+        setStatus("This export contains no supported readings in its last 365 days.");
         return;
       }
       setReport(next);

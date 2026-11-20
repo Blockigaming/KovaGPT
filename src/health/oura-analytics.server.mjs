@@ -149,7 +149,7 @@ export async function readOuraAnalytics(
   if (typeof token !== "string" || !token || token.length > 8192 || /[\r\n]/u.test(token))
     throw new Error("invalid_health_token");
   const asOf = dayString(now);
-  const earliest = dayString(now - 89 * dayMs);
+  const earliest = dayString(now - 364 * dayMs);
   const byId = new Map(
     OURA_COLLECTIONS.flatMap(({ fields }) => fields.map(({ id }) => [id, new Map()])),
   );
@@ -170,7 +170,7 @@ export async function readOuraAnalytics(
     const results = await Promise.allSettled(
       allowed.slice(start, start + 5).map(async (collection) => {
         const recent = collection.collection === "heartrate";
-        const from = now - (recent ? 2 : 89) * dayMs;
+        const from = now - (recent ? 2 : 364) * dayMs;
         const cursors = new Set();
         let cursor;
         for (let page = 0; page < (recent ? 7 : 4); page += 1) {

@@ -41,6 +41,7 @@ const expected = {
       {
         name: "iPhone",
         days: [
+          { date: "2026-08-22", value: 123456 },
           { date: "2026-11-13", value: 444 },
           { date: "2026-11-14", value: 89 },
         ],

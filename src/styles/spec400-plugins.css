@@ -547,12 +547,14 @@
   display: none;
 }
 
-/* Health can have more metrics than fit on a phone. Keep the Connections
-   pill geometry and let the row scroll without shrinking individual options. */
+/* Give the first category extra room and wrap long category lists. */
 .spec400-plugin-tabs.kova-health-selector[role="tablist"] {
-  flex-wrap: nowrap;
   width: fit-content;
+  flex-wrap: wrap;
+  padding-inline: 10px;
 }
 .kova-health-selector[role="tablist"] [role="tab"] {
   flex: 0 0 auto;
+  max-width: 100%;
+  white-space: normal;
 }

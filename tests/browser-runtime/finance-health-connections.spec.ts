@@ -244,7 +244,7 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
   await expect(
     health.getByText("No readings for this source in the selected range."),
   ).toBeVisible();
-  await health.getByRole("tab", { name: "30 days", exact: true }).click();
+  await health.getByRole("slider", { name: "Date range" }).press("End");
   await health.getByText(/^Daily readings/).click();
   await expect(health.getByRole("cell", { name: "68", exact: true })).toBeVisible();
   expect(requests).toEqual([]);

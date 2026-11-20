@@ -670,5 +670,5 @@ export const APPLE_HEALTH_METRICS = [
   categoryCount("LossOfTaste", "Loss of taste logs", "Symptoms"),
 ];
 
-export const APPLE_HEALTH_HISTORY_DAYS = 90;
+export const APPLE_HEALTH_HISTORY_DAYS = 365;
 export const APPLE_HEALTH_DAY_MS = 86_400_000;

@@ -176,7 +176,7 @@ struct LiveHealthAnalytics: Encodable {
         let canReuse = previous?.asOf == asOf && !changing.isEmpty
         var report = LiveHealthAnalytics(asOf: asOf, metrics: canReuse ? previous?.metrics ?? [:] : [:])
         let includes: (HKSampleType) -> Bool = { !canReuse || changing.contains($0.identifier) }
-        guard let start = calendar.date(byAdding: .day, value: -89, to: today) else { return report }
+        guard let start = calendar.date(byAdding: .day, value: -364, to: today) else { return report }
         let window = HKQuery.predicateForSamples(withStart: start, end: now, options: [])
         let interval = DateComponents(calendar: calendar, timeZone: calendar.timeZone, day: 1)
 
