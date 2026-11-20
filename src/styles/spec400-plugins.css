@@ -140,7 +140,7 @@
 .spec400-plugin-card-heading > div {
   min-width: 0;
 }
-.spec400-plugins .spec400-plugin-card h2 {
+.spec400-plugins .spec400-plugin-card h3 {
   color: var(--foreground);
   font-size: 15px;
   line-height: 22px;
@@ -599,4 +599,76 @@
   border: 2px solid var(--background);
   border-radius: 50%;
   background: var(--color-rose-500);
+}
+
+.spec400-plugin-status-group + .spec400-plugin-status-group {
+  margin-block-start: 20px;
+}
+.spec400-plugin-status-group > h2 {
+  margin-block-end: 8px;
+}
+.spec400-plugin-card-action[data-connection-action="connected"] {
+  color: #15803d;
+}
+.dark .spec400-plugin-card-action[data-connection-action="connected"] {
+  color: #86efac;
+}
+.spec400-plugin-card-action[data-connection-action="reconnect"] {
+  color: #a16207;
+}
+.dark .spec400-plugin-card-action[data-connection-action="reconnect"] {
+  color: #fde047;
+}
+
+@media (max-width: 767px), (max-width: 1023px) and (pointer: coarse) {
+  .spec400-plugins .spec400-plugin-grid {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--card);
+  }
+  .spec400-plugins .spec400-plugin-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 68px;
+    gap: 8px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .spec400-plugins .spec400-plugin-card + .spec400-plugin-card {
+    border-top: 1px solid var(--border);
+  }
+  .spec400-plugins .spec400-plugin-card-heading {
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+  }
+  .spec400-plugins .spec400-plugin-card h3 {
+    overflow-wrap: anywhere;
+  }
+  .spec400-plugins .spec400-plugin-card .spec400-plugin-category,
+  .spec400-plugins .spec400-plugin-card .spec400-plugin-purpose,
+  .spec400-plugins .spec400-plugin-card .spec400-plugin-status {
+    display: none;
+  }
+  .spec400-plugins .spec400-plugin-card-footer {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .spec400-plugins .spec400-plugin-card-action {
+    min-height: 44px;
+    min-width: 0;
+    padding-inline: 10px;
+    white-space: normal;
+    text-align: center;
+    border: 0;
+    background: var(--muted);
+  }
 }

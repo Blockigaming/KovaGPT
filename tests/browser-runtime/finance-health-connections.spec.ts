@@ -207,6 +207,14 @@ test("bank Link is explicit and exchanges one public token after successful cons
 test("the Connections Health tab opens an Apple Health ZIP locally for the signed-in owner", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "webkit", {
+      configurable: true,
+      value: {
+        messageHandlers: { kovaHealth: { postMessage: () => {} } },
+      },
+    });
+  });
   await boot(page);
   const health = page.getByRole("region", { name: "A new way to manage your health", exact: true });
   await expect(health.getByText("Sample data", { exact: true })).toHaveCount(0);
@@ -333,10 +341,10 @@ test("unconfigured finance and health stay disabled and never fetch private data
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
-  await page.getByText("Manage health connections", { exact: true }).click();
-  await expect(
-    page.getByRole("region", { name: "Oura", exact: true }).getByText("Coming soon"),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "Connect Health", exact: true }).click();
+  const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
+  await expect(chooser.getByRole("button", { name: /Oura/ })).toBeDisabled();
+  await expect(chooser.getByText("Coming soon", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);

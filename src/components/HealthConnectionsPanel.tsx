@@ -1,15 +1,37 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Activity, Heart } from "lucide-react";
 import { APPLE_HEALTH_METRICS } from "@/health/apple-health-metrics.mjs";
 import type { AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
 import { AppleHealthReport, HealthTrends } from "@/components/AppleHealthReport";
+import { getAppleHealthBridge } from "@/health/use-apple-health-live";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
 import { OURA_METRICS, OURA_SCOPES } from "@/health/oura-metrics.mjs";
 import type { OuraAnalytics } from "@/health/oura-analytics.server.mjs";
 import type { AccountStatus } from "@/hooks/use-connected-accounts";
+
+const exampleDays = ["10", "11", "12", "13", "14", "15", "16"];
+const exampleHealth: AppleHealthAnalytics = {
+  asOf: "2026-11-16",
+  metrics: Object.fromEntries(
+    Object.entries({
+      StepCount: [6450, 8920, 7200, 9200, 10350, 8100, 8750],
+      SleepAnalysis: [7.2, 7.9, 6.8, 7.5, 8.2, 7.8, 7.6],
+      HeartRate: [72, 69, 74, 70, 71, 68, 70],
+    }).map(([id, values]) => [
+      id,
+      [
+        {
+          name: "Example",
+          days: values.map((value, index) => ({ date: "2026-11-" + exampleDays[index], value })),
+        },
+      ],
+    ]),
+  ),
+};
 
 const refreshInterval = 5 * 60_000;
 
@@ -133,6 +155,7 @@ function OuraConnections({
   reload,
   visible,
   onReport,
+  setChooserOpen,
 }: {
   ownerId: string | null;
   data: AccountStatus | null;
@@ -140,8 +163,10 @@ function OuraConnections({
   error: boolean;
   reload: () => Promise<boolean>;
   visible: boolean;
+  setChooserOpen: (open: boolean) => void;
   onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
+  const [showManagement, setShowManagement] = useState(false);
   const [pending, setPending] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const [selected, setSelected] = useState("");
@@ -205,93 +230,131 @@ function OuraConnections({
   }
 
   return (
-    <section className="space-y-4" aria-labelledby="oura-health-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="oura-health-title" className="text-lg font-semibold">
-          Oura
-        </h3>
-        {accounts.length > 1 && (
-          <select
-            aria-label="Oura account"
-            value={account?.id}
-            onChange={(event) => setSelected(event.currentTarget.value)}
+    <>
+      <DialogContent className="max-w-sm rounded-3xl">
+        <DialogTitle>Connect Health</DialogTitle>
+        <DialogDescription>Choose where your health data comes from.</DialogDescription>
+        <div className="grid gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 text-left"
+            disabled={pending || loading || error || !ownerId || !configured}
+            onClick={() => {
+              if (connected) {
+                setShowManagement(true);
+                setChooserOpen(false);
+              } else void update("connect");
+            }}
           >
-            {accounts.map(({ id }, index) => (
-              <option key={id} value={id}>
-                Account {index + 1}
-              </option>
-            ))}
-          </select>
+            <span className="flex items-center gap-2">
+              <Activity className="size-4" aria-hidden="true" />
+              Oura
+            </span>
+            {configured ? (connected ? "Connected" : "Connect") : "Unavailable"}
+          </Button>
+          <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm">
+            <span className="flex items-center gap-2 font-medium">
+              <Heart className="size-4 text-rose-500" aria-hidden="true" />
+              Apple Health
+            </span>
+            <span className="text-muted-foreground">Coming soon</span>
+          </div>
+        </div>
+        {message && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {message}
+          </p>
         )}
-        {account && (
-          <details className="relative text-sm">
-            <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
-            <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
-              <Button
-                variant="ghost"
-                className="justify-start"
-                disabled={pending || !configured}
-                onClick={() => void update("connect")}
-              >
-                Reconnect Oura
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start"
-                disabled={pending}
-                onClick={() => setDisconnect(account.id)}
-              >
-                Disconnect Oura
-              </Button>
-            </div>
-          </details>
+      </DialogContent>
+      <section hidden={!showManagement} className="space-y-4" aria-labelledby="oura-health-title">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id="oura-health-title" className="text-lg font-semibold">
+            Oura
+          </h3>
+          {accounts.length > 1 && (
+            <select
+              aria-label="Oura account"
+              value={account?.id}
+              onChange={(event) => setSelected(event.currentTarget.value)}
+            >
+              {accounts.map(({ id }, index) => (
+                <option key={id} value={id}>
+                  Account {index + 1}
+                </option>
+              ))}
+            </select>
+          )}
+          {account && (
+            <details className="relative text-sm">
+              <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
+              <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  disabled={pending || !configured}
+                  onClick={() => void update("connect")}
+                >
+                  Reconnect Oura
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  disabled={pending}
+                  onClick={() => setDisconnect(account.id)}
+                >
+                  Disconnect Oura
+                </Button>
+              </div>
+            </details>
+          )}
+        </div>
+        {message && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {message}
+          </p>
         )}
-      </div>
-      {message && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {message}
-        </p>
-      )}
-      {loading && (
-        <p role="status" className="text-sm text-muted-foreground">
-          Checking Oura connection…
-        </p>
-      )}
-      {error && (
-        <p role="status" className="text-sm text-muted-foreground">
-          Oura connection status is unavailable.
-        </p>
-      )}
-      {ownerId && !loading && !error && !configured && (
-        <p className="text-sm text-muted-foreground">Coming soon</p>
-      )}
-      {ownerId && !loading && !error && configured && (!connected || needsPermissions) && (
-        <Button
-          variant={connected ? "outline" : "default"}
+        {loading && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Checking Oura connection…
+          </p>
+        )}
+        {error && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Oura connection status is unavailable.
+          </p>
+        )}
+        {ownerId && !loading && !error && !configured && (
+          <p className="text-sm text-muted-foreground">Coming soon</p>
+        )}
+        {ownerId && !loading && !error && configured && (!connected || needsPermissions) && (
+          <Button
+            variant={connected ? "outline" : "default"}
+            disabled={pending}
+            onClick={() => void update("connect")}
+          >
+            {connected ? "Review Oura permissions" : account ? "Reconnect Oura" : "Connect Oura"}
+          </Button>
+        )}
+        {visible && ownerId && configured && connected && (
+          <OuraDashboard
+            key={ownerId + ":" + account.id}
+            ownerId={ownerId}
+            accountId={account.id}
+            onReport={onReport}
+          />
+        )}
+        <ConfirmActionDialog
+          open={disconnect !== null}
+          onOpenChange={(open) => !pending && !open && setDisconnect(null)}
+          title="Disconnect Oura?"
+          description="This removes the Oura connection from Kova."
+          confirmLabel="Disconnect Oura"
           disabled={pending}
-          onClick={() => void update("connect")}
-        >
-          {connected ? "Review Oura permissions" : account ? "Reconnect Oura" : "Connect Oura"}
-        </Button>
-      )}
-      {visible && ownerId && configured && connected && (
-        <OuraDashboard
-          key={ownerId + ":" + account.id}
-          ownerId={ownerId}
-          accountId={account.id}
-          onReport={onReport}
+          onConfirm={() => void update("disconnect")}
         />
-      )}
-      <ConfirmActionDialog
-        open={disconnect !== null}
-        onOpenChange={(open) => !pending && !open && setDisconnect(null)}
-        title="Disconnect Oura?"
-        description="This removes the Oura connection from Kova."
-        confirmLabel="Disconnect Oura"
-        disabled={pending}
-        onConfirm={() => void update("disconnect")}
-      />
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -311,54 +374,68 @@ export function HealthConnectionsPanel({
   reload: () => Promise<boolean>;
 }) {
   const [apple, setApple] = useState<AppleHealthAnalytics | null>(null);
+  const [native, setNative] = useState(false);
+  useEffect(() => setNative(Boolean(getAppleHealthBridge())), []);
   const [oura, setOura] = useState<AppleHealthAnalytics | null>(null);
-  const asOf = [apple?.asOf, oura?.asOf].filter(Boolean).sort().at(-1);
+  const [chooserOpen, setChooserOpen] = useState(false);
   const metrics = { ...apple?.metrics, ...oura?.metrics };
+  const asOf = [apple?.asOf, oura?.asOf].filter(Boolean).sort().at(-1);
+  const report = asOf && Object.keys(metrics).length ? { asOf, metrics } : null;
   return (
-    <section
-      className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-10 py-8 sm:space-y-14 sm:py-14"
-      aria-labelledby="health-connections-title"
-    >
-      <header className="flex flex-col items-center gap-4 text-center">
-        <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
-          <Heart className="size-6 text-rose-500" aria-hidden="true" />
-        </span>
-        <h2
-          id="health-connections-title"
-          className="text-xl font-semibold tracking-tight sm:text-2xl"
-        >
-          A new way to manage your health
-        </h2>
-      </header>
-      {asOf && Object.keys(metrics).length > 0 && (
-        <HealthTrends
-          report={{ asOf, metrics }}
-          catalog={[...APPLE_HEALTH_METRICS, ...OURA_METRICS]}
-        />
-      )}
-      {ownerId ? (
-        <details className="border-t border-border pt-3">
-          <summary className="cursor-pointer rounded-xl px-2 py-2 text-sm font-semibold hover:bg-muted/50">
-            Manage health connections
-          </summary>
-          <div className="grid gap-5 px-2 pt-4 sm:grid-cols-2">
-            <AppleHealthReport ownerId={ownerId} visible={visible} onReport={setApple} />
-            <OuraConnections
-              ownerId={ownerId}
-              data={data}
-              loading={loading}
-              error={error}
-              reload={reload}
-              visible={visible}
-              onReport={setOura}
-            />
+    <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+      <section
+        className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-10 py-8 sm:space-y-14 sm:py-14"
+        aria-labelledby="health-connections-title"
+      >
+        <header className="flex flex-col items-center gap-4 text-center">
+          <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
+            <Heart className="size-6 text-rose-500" aria-hidden="true" />
+          </span>
+          <h2
+            id="health-connections-title"
+            className="text-xl font-semibold tracking-tight sm:text-2xl"
+          >
+            A new way to manage your health
+          </h2>
+          <p className="max-w-lg text-sm text-muted-foreground sm:text-base">
+            See your activity, sleep, and heart trends in one place.
+          </p>
+          <DialogTrigger asChild>
+            <Button type="button" className="rounded-full">
+              Connect Health
+            </Button>
+          </DialogTrigger>
+        </header>
+        <section aria-label="Health trends" className="space-y-4">
+          <div className="border-b border-border pb-3">
+            <h3 className="font-semibold">Health trends</h3>
+            {!report && <p className="text-xs text-muted-foreground">Example data</p>}
           </div>
-        </details>
-      ) : (
-        <p className="text-center text-sm text-muted-foreground">
-          Sign in to manage your health connections.
-        </p>
-      )}
-    </section>
+          <HealthTrends
+            key={report ? "connected" : "example"}
+            report={report ?? exampleHealth}
+            catalog={[...APPLE_HEALTH_METRICS, ...OURA_METRICS]}
+          />
+        </section>
+        <OuraConnections
+          ownerId={ownerId}
+          data={data}
+          loading={loading}
+          error={error}
+          reload={reload}
+          visible={visible}
+          onReport={setOura}
+          setChooserOpen={setChooserOpen}
+        />
+        {native && ownerId && (
+          <details className="border-t border-border pt-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Manage health connections
+            </summary>
+            <AppleHealthReport ownerId={ownerId} visible={visible} onReport={setApple} />
+          </details>
+        )}
+      </section>
+    </Dialog>
   );
 }

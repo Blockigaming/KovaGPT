@@ -1,10 +1,3 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -249,15 +242,15 @@ function AppCard({
   configured: boolean;
   onDetails: (trigger: HTMLButtonElement) => void;
 }) {
-  configured = configured && state !== "permission_incomplete";
   const pending = state === "connecting" || state === "syncing";
+  const reconnect = ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state);
   const action = !configured
     ? "Coming soon"
     : state === "temporarily_unavailable"
       ? "Unavailable"
       : state === "connected"
-        ? "Manage"
-        : ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state)
+        ? "Connected"
+        : reconnect
           ? "Reconnect"
           : pending
             ? "Checking…"
@@ -267,7 +260,7 @@ function AppCard({
       <div className="spec400-plugin-card-heading">
         <AppLogo id={item.id} />
         <div>
-          <h2>{item.label}</h2>
+          <h3>{item.label}</h3>
           <span className="spec400-plugin-category">{item.category}</span>
         </div>
       </div>
@@ -282,8 +275,17 @@ function AppCard({
           aria-label={`${action} ${item.label}`}
           className="spec400-plugin-card-action"
           data-coming-soon={!configured || undefined}
+          data-connection-action={
+            !configured
+              ? "planned"
+              : state === "connected"
+                ? "connected"
+                : reconnect
+                  ? "reconnect"
+                  : undefined
+          }
         >
-          {configured ? action : "Details"}
+          {action}
         </Button>
       </div>
     </li>
@@ -833,12 +835,11 @@ function AppsPage() {
   principalRef.current = principal;
   const generationRef = useRef(0);
   const [lifecycleVersion, setLifecycleVersion] = useState(0);
-  const [{ query, category, connectionFilter }, setListPreferences] =
-    usePrincipalSessionPreferences(
-      PLUGIN_LIST_STORAGE_BASE,
-      isLoaded ? userKey : undefined,
-      parsePluginFilters,
-    );
+  const [{ query, connectionFilter }, setListPreferences] = usePrincipalSessionPreferences(
+    PLUGIN_LIST_STORAGE_BASE,
+    isLoaded ? userKey : undefined,
+    parsePluginFilters,
+  );
   const navigate = useNavigate({ from: "/apps" });
   const searchString = useLocation({ select: (location) => location.searchStr });
   const [connectionGroup, setConnectionGroup] = useState<"health" | "finances" | null>(null);
@@ -854,7 +855,6 @@ function AppsPage() {
     else setConnectionGroup(null);
   }, [searchString]);
   const setQuery = (query: string) => setListPreferences({ query });
-  const setCategory = (category: string) => setListPreferences({ category });
   const setConnectionFilter = (value: string) =>
     setListPreferences({ connectionFilter: value === "connected" ? "connected" : "all" });
   const loadGitHub = useServerFn(getGitHubManagement);
@@ -1390,17 +1390,38 @@ function AppsPage() {
       );
     return false;
   };
-  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector)
-    .slice()
-    .sort((a, b) => {
-      const aWorking =
-        WORKING_IDS.has(a.id) || a.status === "live" || a.status === "setup_required" ? 0 : 1;
-      const bWorking =
-        WORKING_IDS.has(b.id) || b.status === "live" || b.status === "setup_required" ? 0 : 1;
-      if (aWorking !== bWorking) return aWorking - bWorking;
-      return a.label.localeCompare(b.label);
-    });
-  const connectedCount = catalog.filter((item) => hasConnection(item.id)).length;
+  const popularity = [
+    "gmail",
+    "google-drive",
+    "google-calendar",
+    "github",
+    "notion",
+    "slack",
+    "outlook",
+    "outlook-calendar",
+    "microsoft-teams",
+    "onedrive",
+    "figma",
+    "canva",
+    "box",
+    "linear",
+  ];
+  const priority = (id: string) => {
+    const index = popularity.indexOf(id);
+    return index < 0 ? popularity.length : index;
+  };
+  const groupOf = (id: string) => {
+    const state = stateOf(id);
+    if (state === "connected") return 0;
+    if (["expired", "reauthorize", "permission_incomplete", "failed"].includes(state)) return 1;
+    return configuredOf(id) ? 2 : 3;
+  };
+  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector).sort(
+    (a, b) =>
+      groupOf(a.id) - groupOf(b.id) ||
+      priority(a.id) - priority(b.id) ||
+      a.label.localeCompare(b.label),
+  );
   const connectionCountState = !isLoaded
     ? "unknown"
     : !isSignedIn
@@ -1435,7 +1456,6 @@ function AppsPage() {
     connectionFilter === "connected" && connectionCountState !== "ready";
   const filtered = catalog.filter((c) => {
     if (connectionFilter === "connected" && !hasConnection(c.id)) return false;
-    if (category !== "all" && c.category !== category) return false;
     const q = query.trim().toLowerCase();
     return (
       !q ||
@@ -1460,7 +1480,7 @@ function AppsPage() {
   };
 
   const renderGrid = (items: ConnectorItem[]) => (
-    <ul className="spec400-plugin-grid" aria-label="Plugin directory">
+    <ul className="spec400-plugin-grid" aria-label="Connection directory">
       {items.map((item) => (
         <AppCard
           key={item.id}
@@ -1882,31 +1902,29 @@ function AppsPage() {
                     placeholder="Search connections"
                   />
                 </label>
-                <div className="spec400-plugin-category-filter">
-                  <label htmlFor="plugin-category-filter">Category</label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger id="plugin-category-filter" className="w-auto min-w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All categories</SelectItem>
-                      {PLUGIN_CATEGORIES.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <TabsContent value={connectionFilter} className="spec400-plugin-results">
-                <p className="spec400-plugin-result-count" role="status">
-                  {connectedStatusUnverified
-                    ? connectedStatusMessage
-                    : `${filtered.length} ${filtered.length === 1 ? "connection" : "connections"}${query ? ` matching “${query}”` : ""}`}
-                </p>
+                {connectedStatusUnverified && <p role="status">{connectedStatusMessage}</p>}
                 {filtered.length ? (
-                  renderGrid(filtered)
+                  [0, 1, 2, 3].map((group) => {
+                    const items = filtered.filter((item) => groupOf(item.id) === group);
+                    if (!items.length) return null;
+                    const label = ["Connected", "Reconnect required", "Available", "Coming soon"][
+                      group
+                    ];
+                    return (
+                      <section
+                        key={group}
+                        aria-label={label}
+                        className="spec400-plugin-status-group"
+                      >
+                        {connectionFilter === "all" && (
+                          <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
+                        )}
+                        {renderGrid(items)}
+                      </section>
+                    );
+                  })
                 ) : (
                   <section className="spec400-plugin-empty" aria-labelledby="apps-empty-title">
                     <Search aria-hidden="true" />
@@ -1917,7 +1935,7 @@ function AppsPage() {
                           : connectionCountState === "unavailable"
                             ? "Connection status unavailable"
                             : "Connection status unknown"
-                        : connectionFilter === "connected" && !query && category === "all"
+                        : connectionFilter === "connected" && !query
                           ? "No connections yet"
                           : "No matching connections"}
                     </h2>
@@ -1926,15 +1944,14 @@ function AppsPage() {
                         ? connectionCountState === "checking"
                           ? "Wait for the current status check to finish."
                           : "Choose a plugin from All to review and refresh its connection status."
-                        : connectionFilter === "connected" && !query && category === "all"
+                        : connectionFilter === "connected" && !query
                           ? "Choose a plugin from All to review its permissions and connect an account."
-                          : "Try another name or category."}
+                          : "Try another connection name."}
                     </p>
                     <Button
                       variant="outline"
                       onClick={() => {
                         setQuery("");
-                        setCategory("all");
                         setConnectionFilter("all");
                       }}
                     >

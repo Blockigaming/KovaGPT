@@ -607,3 +607,9 @@
     --composer-text-inset: 8px;
   }
 }
+
+@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+  .kova-desktop-recent-work {
+    display: none;
+  }
+}

@@ -13,7 +13,7 @@ export function ContinueWorking({
 }) {
   const headingId = useId();
   return (
-    <section className="spec400-recent-work" aria-labelledby={headingId}>
+    <section className="spec400-recent-work kova-desktop-recent-work" aria-labelledby={headingId}>
       <h2 id={headingId}>Continue working</h2>
       <ul>
         {[...conversations]

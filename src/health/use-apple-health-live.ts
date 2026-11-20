@@ -14,7 +14,7 @@ type Bridge = {
     owner?: string;
   }) => void;
 };
-function getBridge() {
+export function getAppleHealthBridge() {
   return (window as Window & { webkit?: { messageHandlers?: { kovaHealth?: Bridge } } }).webkit
     ?.messageHandlers?.kovaHealth;
 }
@@ -72,7 +72,7 @@ export function useAppleHealthLive(ownerId: string | null) {
     if (active.current) {
       const id = active.current;
       active.current = null;
-      getBridge()?.postMessage({ action, id });
+      getAppleHealthBridge()?.postMessage({ action, id });
     }
   }, []);
   const stop = useCallback(() => {
@@ -83,7 +83,7 @@ export function useAppleHealthLive(ownerId: string | null) {
 
   const connect = useCallback(
     (action: "start" | "resume") => {
-      const bridge = getBridge();
+      const bridge = getAppleHealthBridge();
       if (!ownerId || !bridge || active.current) return;
       const id = crypto.randomUUID();
       active.current = id;
@@ -95,7 +95,7 @@ export function useAppleHealthLive(ownerId: string | null) {
   );
 
   useEffect(() => {
-    setAvailable(Boolean(ownerId && getBridge()));
+    setAvailable(Boolean(ownerId && getAppleHealthBridge()));
     if (!ownerId) {
       stop();
       return;
@@ -128,7 +128,7 @@ export function useAppleHealthLive(ownerId: string | null) {
     window.addEventListener(updateEvent, onUpdate);
     window.addEventListener("pagehide", stop);
     const resume = () => connect("resume");
-    const bridge = getBridge();
+    const bridge = getAppleHealthBridge();
     if (bridge) resume();
     window.addEventListener("pageshow", resume);
     return () => {
