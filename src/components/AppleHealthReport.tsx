@@ -128,7 +128,9 @@ function HealthMetric({
   const categoryLabels = metric.categories ? Object.values(metric.categories) : null;
   const axisWidth = categoryLabels || metric.unit === "clock" ? 90 : 42;
   const chartMargin = 5;
-  const selectedReading = series.find(({ date }) => date === selectedDate);
+  const selectedIndex = series.findIndex(({ date }) => date === selectedDate);
+  const selectedReading = series[selectedIndex];
+  const lastIndex = series.length - 1;
   function scrubChart(event: PointerEvent<HTMLDivElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
     const plotWidth = bounds.width - axisWidth - 2 * chartMargin;
@@ -150,6 +152,8 @@ function HealthMetric({
     }
     return `${number.format(value)} ${metric.unit}`.trim();
   };
+  const readingText = (reading: (typeof series)[number]) =>
+    `${reading.date} · ${reading.value === null ? "No reading" : format(reading.value)}`;
   const stats =
     categoryLabels || metric.unit === "clock"
       ? []
@@ -206,8 +210,29 @@ function HealthMetric({
             </dl>
           )}
           <div
-            className="h-48 min-w-0 touch-pan-y"
+            className="h-48 min-w-0 touch-pan-y rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             data-testid="health-timeline"
+            role="slider"
+            tabIndex={0}
+            aria-label={`${metric.label} timeline`}
+            aria-valuemin={0}
+            aria-valuemax={lastIndex}
+            aria-valuenow={selectedIndex < 0 ? lastIndex : selectedIndex}
+            aria-valuetext={readingText(selectedReading ?? series[lastIndex])}
+            onKeyDown={(event) => {
+              const index = selectedIndex < 0 ? lastIndex : selectedIndex;
+              const nextIndex = {
+                ArrowLeft: index - 1,
+                ArrowDown: index - 1,
+                ArrowRight: index + 1,
+                ArrowUp: index + 1,
+                Home: 0,
+                End: lastIndex,
+              }[event.key];
+              if (nextIndex === undefined) return;
+              event.preventDefault();
+              setSelectedDate(series[Math.max(0, Math.min(lastIndex, nextIndex))].date);
+            }}
             onPointerDown={(event) => {
               if (!event.isPrimary || event.button !== 0) return;
               chartPress.current = {
@@ -257,7 +282,6 @@ function HealthMetric({
                   bottom: chartMargin,
                   left: chartMargin,
                 }}
-                accessibilityLayer
               >
                 <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.12} />
                 <XAxis
@@ -305,12 +329,7 @@ function HealthMetric({
             className="min-h-5 text-xs tabular-nums text-muted-foreground"
             data-testid="health-timeline-reading"
           >
-            {selectedReading && (
-              <>
-                {selectedReading.date} ·{" "}
-                {selectedReading.value === null ? "No reading" : format(selectedReading.value)}
-              </>
-            )}
+            {selectedReading && readingText(selectedReading)}
           </p>
           <details>
             <summary className="cursor-pointer text-sm text-muted-foreground">
