@@ -269,8 +269,15 @@ function HealthMetric({
             onPointerLeave={() => {
               if (!chartPress.current?.dragging) chartPress.current = null;
             }}
-            onLostPointerCapture={() => {
-              chartPress.current = null;
+            onLostPointerCapture={(event) => {
+              // A touch starts with implicit capture on the chart element.
+              // Only clear the gesture when the timeline itself loses capture.
+              if (
+                event.target === event.currentTarget &&
+                chartPress.current?.id === event.pointerId
+              ) {
+                chartPress.current = null;
+              }
             }}
           >
             <ResponsiveContainer width="100%" height="100%">
