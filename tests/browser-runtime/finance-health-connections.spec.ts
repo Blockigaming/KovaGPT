@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
 import { statSync } from "node:fs";
+import { strToU8, zipSync } from "fflate";
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE)
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
 const root = process.cwd();
@@ -203,6 +204,51 @@ test("bank Link is explicit and exchanges one public token after successful cons
     ),
   ).toHaveLength(0);
 });
+test("the Connections Health tab opens an Apple Health ZIP locally for the signed-in owner", async ({
+  page,
+}) => {
+  await boot(page);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  const zip = zipSync({
+    "apple_health_export/export.xml": strToU8(`<HealthData>
+      <ExportDate value="2026-11-20 12:00:00 -0500"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Watch" unit="count" startDate="2026-11-20 10:00:00 -0500" value="123"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone" unit="count" startDate="2026-11-20 10:00:00 -0500" value="789"/>
+    </HealthData>`),
+  });
+  const region = page.getByRole("region", { name: "Apple Health", exact: true });
+  const input = region.getByRole("button", { name: "Import Apple Health data" });
+  const chooser = page.waitForEvent("filechooser");
+  await input.click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "export.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(zip),
+  });
+  const source = region.getByLabel("Step source");
+  await expect(region.getByRole("cell", { name: "789", exact: true })).toBeVisible();
+  await source.selectOption({ label: "Watch" });
+  await expect(region.getByRole("cell", { name: "123", exact: true })).toBeVisible();
+  await expect(region.getByRole("cell", { name: "789", exact: true })).toHaveCount(0);
+  expect(requests).toEqual([]);
+
+  await page.evaluate(() => {
+    const state = window as StateWindow;
+    state.owner = "00000000-0000-4000-8000-000000000006";
+    state.renderPanels();
+  });
+  await expect(region.getByRole("table")).toHaveCount(0);
+  await page.evaluate(() => {
+    const state = window as StateWindow;
+    state.owner = null;
+    state.renderPanels();
+  });
+  await expect(input).toHaveCount(0);
+});
+
 test("unconfigured finance and health stay disabled and never fetch private data", async ({
   page,
 }) => {
