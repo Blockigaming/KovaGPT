@@ -17,12 +17,31 @@ const number = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 const ranges = [7, 30, 90] as const;
 type Range = (typeof ranges)[number];
 
-export function AppleHealthTrends({ report }: { report: AppleHealthAnalytics }) {
-  const [metricId, setMetricId] = useState("StepCount");
+type TrendMetric = {
+  id: string;
+  label: string;
+  group: string;
+  unit: string;
+  aggregation: string;
+  categories?: Record<string, string>;
+};
+
+export function HealthTrends({
+  report,
+  catalog,
+}: {
+  report: AppleHealthAnalytics;
+  catalog: readonly TrendMetric[];
+}) {
+  const [metricId, setMetricId] = useState("");
+  const [groupId, setGroupId] = useState("");
   const [sourceIndex, setSourceIndex] = useState(0);
   const [range, setRange] = useState<Range>(7);
-  const available = APPLE_HEALTH_METRICS.filter((metric) => report.metrics[metric.id]?.length);
-  const metric = available.find((item) => item.id === metricId) ?? available[0];
+  const available = catalog.filter((metric) => report.metrics[metric.id]?.length);
+  const groups = [...new Set(available.map(({ group }) => group))];
+  const group = groups.includes(groupId) ? groupId : groups[0];
+  const metrics = available.filter((metric) => metric.group === group);
+  const metric = metrics.find((item) => item.id === metricId) ?? metrics[0];
   if (!metric) return null;
 
   const sources = report.metrics[metric.id] ?? [];
@@ -37,47 +56,80 @@ export function AppleHealthTrends({ report }: { report: AppleHealthAnalytics }) 
   });
   const days = series.filter((day): day is { date: string; value: number } => day.value !== null);
   const measured = days.map(({ value }) => value);
-  const format = (value: number) => `${number.format(value)} ${metric.unit}`;
-  const stats = measured.length
-    ? ([
-        ["Latest day", measured[measured.length - 1]],
-        [
-          metric.aggregation === "sum" ? "Period total" : "Daily average",
-          measured.reduce((total, value) => total + value, 0) /
-            (metric.aggregation === "sum" ? 1 : measured.length),
-        ],
-        ["Highest day", Math.max(...measured)],
-        ["Lowest day", Math.min(...measured)],
-      ] as const)
-    : [];
-  const selectClass = "w-full min-w-0 rounded-lg border border-border bg-background p-2";
+  const categoryLabels = metric.categories ? Object.values(metric.categories) : null;
+  const format = (value: number) => {
+    if (categoryLabels) return categoryLabels[value] ?? "—";
+    if (metric.unit === "clock") {
+      const minutes = ((Math.round(value) % 1440) + 1440) % 1440;
+      const time = new Date(2000, 0, 1, 0, minutes);
+      return time.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    }
+    return `${number.format(value)} ${metric.unit}`.trim();
+  };
+  const stats =
+    categoryLabels || metric.unit === "clock"
+      ? []
+      : measured.length
+        ? ([
+            ["Latest day", measured[measured.length - 1]],
+            [
+              metric.aggregation === "sum" ? "Period total" : "Daily average",
+              measured.reduce((total, value) => total + value, 0) /
+                (metric.aggregation === "sum" ? 1 : measured.length),
+            ],
+            ["Highest day", Math.max(...measured)],
+            ["Lowest day", Math.min(...measured)],
+          ] as const)
+        : [];
+  const selectClass =
+    "min-h-10 max-w-full rounded-lg border border-border bg-background px-3 text-sm";
+  const pill = (selected: boolean) =>
+    `whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${selected ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`;
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Through {report.asOf} · {days.length} of {range} days with readings
-      </p>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <label className="min-w-0 text-sm">
-          Metric
+      {groups.length > 1 && (
+        <div
+          aria-label="Metric categories"
+          role="group"
+          className="flex gap-1 overflow-x-auto pb-1"
+        >
+          {groups.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={pill(item === group)}
+              aria-pressed={item === group}
+              onClick={() => {
+                setGroupId(item);
+                setMetricId("");
+                setSourceIndex(0);
+              }}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <select
+          aria-label="Metric"
+          className={selectClass}
+          value={metric.id}
+          onChange={(event) => {
+            setMetricId(event.currentTarget.value);
+            setSourceIndex(0);
+          }}
+        >
+          {metrics.map(({ id, label }) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+        {sources.length > 1 && (
           <select
-            className={selectClass}
-            value={metric.id}
-            onChange={(event) => {
-              setMetricId(event.currentTarget.value);
-              setSourceIndex(0);
-            }}
-          >
-            {available.map(({ id, label }) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="min-w-0 text-sm">
-          {metric.id === "StepCount" ? "Step source" : "Data source"}
-          <select
+            aria-label={metric.id === "StepCount" ? "Step source" : "Data source"}
             className={selectClass}
             value={sources.indexOf(source)}
             onChange={(event) => setSourceIndex(Number(event.currentTarget.value))}
@@ -88,42 +140,39 @@ export function AppleHealthTrends({ report }: { report: AppleHealthAnalytics }) 
               </option>
             ))}
           </select>
-        </label>
-        <label className="min-w-0 text-sm">
-          Date range
-          <select
-            className={selectClass}
-            value={range}
-            onChange={(event) => setRange(Number(event.currentTarget.value) as Range)}
-          >
-            {ranges.map((value) => (
-              <option key={value} value={value}>
-                {value} days
-              </option>
-            ))}
-          </select>
-        </label>
+        )}
+        <div aria-label="Date range" role="group" className="flex rounded-full bg-muted p-0.5">
+          {ranges.map((value) => (
+            <button
+              type="button"
+              key={value}
+              aria-label={`${value} days`}
+              aria-pressed={range === value}
+              className={pill(range === value)}
+              onClick={() => setRange(value)}
+            >
+              {value}D
+            </button>
+          ))}
+        </div>
       </div>
-      {sources.length > 1 && (
-        <p className="text-xs text-muted-foreground">
-          Choose one source to avoid counting overlapping device readings twice.
-        </p>
-      )}
       {days.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No readings for this source in the selected range.
         </p>
       ) : (
         <>
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {stats.map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-border p-3">
-                <dt className="text-xs text-muted-foreground">{label}</dt>
-                <dd className="mt-1 font-semibold tabular-nums">{format(value)}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="h-52 min-w-0">
+          {stats.length > 0 && (
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-muted/40 px-4 py-3 sm:grid-cols-4">
+              {stats.map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="mt-0.5 text-base font-medium tabular-nums">{format(value)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <div className="h-48 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} accessibilityLayer>
                 <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.12} />
@@ -132,16 +181,29 @@ export function AppleHealthTrends({ report }: { report: AppleHealthAnalytics }) 
                   tickFormatter={(date: string) => date.slice(5)}
                   fontSize={11}
                   minTickGap={10}
+                  tick={{ fill: "var(--muted-foreground)" }}
                 />
-                <YAxis width={49} fontSize={11} />
+                <YAxis
+                  width={categoryLabels || metric.unit === "clock" ? 90 : 42}
+                  fontSize={11}
+                  tick={{ fill: "var(--muted-foreground)" }}
+                  tickFormatter={categoryLabels || metric.unit === "clock" ? format : undefined}
+                  ticks={categoryLabels ? categoryLabels.map((_, index) => index) : undefined}
+                  domain={categoryLabels ? [0, categoryLabels.length - 1] : undefined}
+                />
                 <Tooltip
                   formatter={(value) => (value === undefined ? "" : format(Number(value)))}
+                  contentStyle={{
+                    background: "var(--background)",
+                    borderColor: "var(--border)",
+                    borderRadius: 12,
+                  }}
                 />
                 <Line
                   name={metric.label}
                   dataKey="value"
-                  stroke="#e11d48"
-                  strokeWidth={2}
+                  stroke="var(--color-rose-500)"
+                  strokeWidth={2.5}
                   dot={days.length <= 7}
                   isAnimationActive={false}
                 />
@@ -149,11 +211,11 @@ export function AppleHealthTrends({ report }: { report: AppleHealthAnalytics }) 
             </ResponsiveContainer>
           </div>
           <details>
-            <summary className="cursor-pointer text-sm font-medium">Daily readings</summary>
+            <summary className="cursor-pointer text-sm text-muted-foreground">
+              Daily readings · {days.length} of {range} days
+            </summary>
             <table className="mt-2 w-full text-left text-sm">
-              <caption className="sr-only">
-                Daily {metric.label.toLowerCase()} from Apple Health
-              </caption>
+              <caption className="sr-only">Daily {metric.label.toLowerCase()}</caption>
               <thead>
                 <tr>
                   <th scope="col">Date</th>
@@ -168,7 +230,11 @@ export function AppleHealthTrends({ report }: { report: AppleHealthAnalytics }) 
                     <td className="py-1.5">
                       <time dateTime={date}>{date}</time>
                     </td>
-                    <td className="py-1.5 text-right tabular-nums">{number.format(value)}</td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      {categoryLabels || metric.unit === "clock"
+                        ? format(value)
+                        : number.format(value)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -212,7 +278,6 @@ export function AppleHealthReport({
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
     if (!file || !ownerId) return;
-    live.stop();
     clear();
     const controller = new AbortController();
     pending.current = controller;
@@ -236,74 +301,75 @@ export function AppleHealthReport({
   };
 
   return (
-    <section
-      className="space-y-3 rounded-3xl bg-muted/30 p-4 sm:p-5"
-      aria-labelledby="apple-health-title"
-    >
-      <h3 id="apple-health-title" className="font-medium">
-        Apple Health
-      </h3>
-      <p className="text-sm text-muted-foreground">
-        See up to 90 days of activity, sleep, heart, and body trends. Your file stays on your
-        device.
-      </p>
-      {ownerId && (
-        <>
-          <input
-            type="file"
-            accept=".zip,.xml,application/zip,application/xml,text/xml"
-            aria-label="Apple Health report file"
-            className="hidden"
-            ref={fileInput}
-            onChange={(event) => void readFile(event)}
-          />
-          <div className="flex flex-wrap gap-2">
-            {live.available && (
+    <section className="space-y-4" aria-labelledby="apple-health-title">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 id="apple-health-title" className="text-lg font-semibold">
+            Apple Health
+          </h3>
+          {live.status && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {live.status}
+            </p>
+          )}
+          {live.updatedAt && (
+            <p className="text-xs text-muted-foreground">
+              Updated{" "}
+              {new Date(live.updatedAt).toLocaleTimeString(undefined, {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </p>
+          )}
+        </div>
+        {ownerId && (
+          <details className="relative shrink-0 text-sm">
+            <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
+            <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
+              <input
+                type="file"
+                accept=".zip,.xml,application/zip,application/xml,text/xml"
+                aria-label="Apple Health report file"
+                className="hidden"
+                ref={fileInput}
+                onChange={(event) => void readFile(event)}
+              />
               <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={() => {
-                  if (live.connected) live.stop();
-                  else {
-                    clear();
-                    live.start();
-                  }
-                }}
+                variant="ghost"
+                className="justify-start"
+                onClick={() => fileInput.current?.click()}
               >
-                {live.connected ? "Stop live updates" : "Start live updates"}
+                Import Apple Health data
               </Button>
-            )}
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => fileInput.current?.click()}
-            >
-              Import Apple Health data
-            </Button>
-            {report && (
-              <Button variant="ghost" onClick={clear}>
-                Clear report
-              </Button>
-            )}
-          </div>
-        </>
-      )}
+              {report && (
+                <Button variant="ghost" className="justify-start" onClick={clear}>
+                  Clear imported data
+                </Button>
+              )}
+              {live.connected && (
+                <Button variant="ghost" className="justify-start" onClick={live.disconnect}>
+                  Disconnect Apple Health
+                </Button>
+              )}
+            </div>
+          </details>
+        )}
+      </div>
       {status && (
         <p role="status" className="text-sm text-muted-foreground">
           {status}
         </p>
       )}
-      {live.status && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {live.status}
+      {ownerId && live.available && !live.connected && (
+        <Button onClick={live.start}>Connect Apple Health</Button>
+      )}
+      {ownerId && !live.available && !displayed && (
+        <p className="text-sm text-muted-foreground">
+          Open this tab in the KovaGPT iPhone app to connect Apple Health and get automatic updates.
+          You can also open an export from Connection options.
         </p>
       )}
-      {live.updatedAt && (
-        <p className="text-xs text-muted-foreground">
-          Last updated at {new Date(live.updatedAt).toLocaleTimeString()}
-        </p>
-      )}
-      {displayed && <AppleHealthTrends report={displayed} />}
+      {displayed && <HealthTrends report={displayed} catalog={APPLE_HEALTH_METRICS} />}
     </section>
   );
 }

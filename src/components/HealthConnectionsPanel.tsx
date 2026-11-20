@@ -1,22 +1,279 @@
-import { Heart } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AppleHealthReport } from "@/components/AppleHealthReport";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppleHealthReport, HealthTrends } from "@/components/AppleHealthReport";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
-import { HEALTH_PROVIDERS } from "@/health/providers.mjs";
-import type { HealthSummary } from "@/health/health-read.server.mjs";
+import { OURA_METRICS, OURA_SCOPES } from "@/health/oura-metrics.mjs";
+import type { OuraAnalytics } from "@/health/oura-analytics.server.mjs";
 import type { AccountStatus } from "@/hooks/use-connected-accounts";
+
+const refreshInterval = 5 * 60_000;
+
+function OuraDashboard({ ownerId, accountId }: { ownerId: string; accountId: string }) {
+  const [report, setReport] = useState<OuraAnalytics | null>(null);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    let inFlight = false;
+    let attemptedAt = -Infinity;
+    const read = async () => {
+      if (
+        document.visibilityState !== "visible" ||
+        inFlight ||
+        Date.now() - attemptedAt < refreshInterval
+      )
+        return;
+      inFlight = true;
+      attemptedAt = Date.now();
+      try {
+        const response = await fetchWithTimeoutAuthenticated(
+          "/api/health-data/read",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Kova-Expected-Owner": ownerId },
+            body: JSON.stringify({ accountId, mode: "analytics" }),
+            signal: controller.signal,
+          },
+          42_000,
+        );
+        const body = await response.json();
+        if (controller.signal.aborted) return;
+        if (!response.ok || !body.metrics || !Array.isArray(body.missing)) {
+          if ([401, 403, 404, 409].includes(response.status)) setReport(null);
+          setMessage(
+            response.status === 401 || response.status === 403
+              ? "Reconnect Oura to continue syncing."
+              : "Oura could not refresh. We’ll try again while this tab is open.",
+          );
+          return;
+        }
+        setReport(body);
+        setMessage("");
+      } catch {
+        if (!controller.signal.aborted)
+          setMessage("Oura could not refresh. We’ll try again while this tab is open.");
+      } finally {
+        inFlight = false;
+      }
+    };
+    void read();
+    const timer = window.setInterval(() => void read(), refreshInterval);
+    const onVisibility = () => void read();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [accountId, ownerId]);
+
+  return (
+    <div className="space-y-4">
+      {message && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {message}
+        </p>
+      )}
+      {!report && !message && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Syncing Oura…
+        </p>
+      )}
+      {report && (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Checked{" "}
+            {new Date(report.fetchedAt).toLocaleTimeString(undefined, {
+              hour: "numeric",
+              minute: "2-digit",
+            })}{" "}
+            · Refreshes as Oura syncs new readings
+          </p>
+          {report.missing.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Review Oura permissions to include more metrics.
+            </p>
+          )}
+          {(report.limited || report.unavailable.length > 0) && (
+            <p className="text-sm text-muted-foreground">
+              Some Oura readings are temporarily unavailable.
+            </p>
+          )}
+          {Object.keys(report.metrics).length ? (
+            <HealthTrends report={report} catalog={OURA_METRICS} />
+          ) : (
+            <p className="text-sm text-muted-foreground">Waiting for readings from Oura.</p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function OuraConnections({
+  ownerId,
+  data,
+  loading,
+  error,
+  reload,
+  visible,
+}: {
+  ownerId: string | null;
+  data: AccountStatus | null;
+  loading: boolean;
+  error: boolean;
+  reload: () => Promise<boolean>;
+  visible: boolean;
+}) {
+  const [pending, setPending] = useState(false);
+  const [disconnect, setDisconnect] = useState<string | null>(null);
+  const [selected, setSelected] = useState("");
+  const [message, setMessage] = useState("");
+  const configured = data?.configuredProviders.some(({ id }) => id === "oura") === true;
+  const accounts = data?.accounts.filter(({ provider_id }) => provider_id === "oura") ?? [];
+  const account = accounts.find(({ id }) => id === selected) ?? accounts[0];
+  const connected = account?.status === "connected";
+  const needsPermissions =
+    connected && OURA_SCOPES.some((scope) => !account.granted_scopes.includes(scope));
+
+  const request = (url: string, body: object) =>
+    fetchWithTimeoutAuthenticated(
+      url,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Kova-Expected-Owner": ownerId ?? "" },
+        body: JSON.stringify(body),
+      },
+      45_000,
+    );
+
+  async function update(action: "connect" | "disconnect") {
+    if (pending || !ownerId) return;
+    setPending(true);
+    setMessage("");
+    try {
+      if (action === "connect") {
+        const response = await request("/api/integrations/oauth/start", {
+          provider: "oura",
+          optionalScopes: OURA_SCOPES,
+          returnPath: "/apps?connection_view=health&health_provider=oura",
+        });
+        const body = await response.json();
+        const url = connectionAuthorizationUrl("oura", body.url);
+        if (!response.ok || !url) throw new Error();
+        window.location.assign(url);
+        return;
+      }
+      const response = await request("/api/integrations/oauth/disconnect", {
+        accountId: disconnect,
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error();
+      await reload();
+      setMessage(
+        body.providerRevoked
+          ? "Oura disconnected."
+          : "Oura disconnected from Kova. You can revoke access in Oura’s account settings.",
+      );
+      setDisconnect(null);
+    } catch {
+      setMessage(
+        action === "connect"
+          ? "Oura could not connect. Try again."
+          : "Oura could not disconnect. Try again.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="space-y-4" aria-labelledby="oura-health-title">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="oura-health-title" className="text-lg font-semibold">
+          Oura
+        </h3>
+        {accounts.length > 1 && (
+          <select
+            aria-label="Oura account"
+            value={account?.id}
+            onChange={(event) => setSelected(event.currentTarget.value)}
+          >
+            {accounts.map(({ id }, index) => (
+              <option key={id} value={id}>
+                Account {index + 1}
+              </option>
+            ))}
+          </select>
+        )}
+        {account && (
+          <details className="relative text-sm">
+            <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
+            <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
+              <Button
+                variant="ghost"
+                className="justify-start"
+                disabled={pending || !configured}
+                onClick={() => void update("connect")}
+              >
+                Reconnect Oura
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                disabled={pending}
+                onClick={() => setDisconnect(account.id)}
+              >
+                Disconnect Oura
+              </Button>
+            </div>
+          </details>
+        )}
+      </div>
+      {message && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {message}
+        </p>
+      )}
+      {loading && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Checking Oura connection…
+        </p>
+      )}
+      {error && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Oura connection status is unavailable.
+        </p>
+      )}
+      {ownerId && !loading && !error && !configured && (
+        <p className="text-sm text-muted-foreground">Coming soon</p>
+      )}
+      {ownerId && !loading && !error && configured && (!connected || needsPermissions) && (
+        <Button
+          variant={connected ? "outline" : "default"}
+          disabled={pending}
+          onClick={() => void update("connect")}
+        >
+          {connected ? "Review Oura permissions" : account ? "Reconnect Oura" : "Connect Oura"}
+        </Button>
+      )}
+      {visible && ownerId && configured && connected && (
+        <OuraDashboard key={ownerId + ":" + account.id} ownerId={ownerId} accountId={account.id} />
+      )}
+      <ConfirmActionDialog
+        open={disconnect !== null}
+        onOpenChange={(open) => !pending && !open && setDisconnect(null)}
+        title="Disconnect Oura?"
+        description="This removes the Oura connection from Kova."
+        confirmLabel="Disconnect Oura"
+        disabled={pending}
+        onConfirm={() => void update("disconnect")}
+      />
+    </section>
+  );
+}
 
 export function HealthConnectionsPanel({
   ownerId,
@@ -33,294 +290,48 @@ export function HealthConnectionsPanel({
   error: boolean;
   reload: () => Promise<boolean>;
 }) {
-  const [busy, setBusyState] = useState(false);
-  const running = useRef(false);
-  const setBusy = (value: boolean) => {
-    running.current = value;
-    setBusyState(value);
-  };
-  const [message, setMessage] = useState("");
-  const [result, setResult] = useState<HealthSummary | null>(null);
-  const [disconnect, setDisconnect] = useState<string | null>(null);
-  const active = useRef(true);
+  const [provider, setProvider] = useState("apple");
   useEffect(() => {
-    active.current = true;
-    return () => {
-      active.current = false;
-    };
+    if (new URLSearchParams(window.location.search).get("health_provider") === "oura")
+      setProvider("oura");
   }, []);
-  const request = (url: string, body: object) =>
-    fetchWithTimeoutAuthenticated(
-      url,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Kova-Expected-Owner": ownerId ?? "" },
-        body: JSON.stringify(body),
-      },
-      45_000,
-    );
-  const connect = async (provider: "oura") => {
-    if (running.current || !ownerId) return;
-    setBusy(true);
-    setMessage("");
-    setResult(null);
-    try {
-      const response = await request("/api/integrations/oauth/start", {
-        provider,
-        optionalScopes: HEALTH_PROVIDERS[provider].scopes,
-        returnPath: "/apps",
-      });
-      const body = await response.json();
-      const url = connectionAuthorizationUrl(provider, body.url);
-      if (!response.ok || !url) throw new Error();
-      if (active.current) window.location.assign(url);
-    } catch {
-      if (active.current)
-        setMessage("This health connection could not be started. Try again later.");
-    } finally {
-      if (active.current) setBusy(false);
-    }
-  };
-  const read = async (accountId: string) => {
-    if (running.current) return;
-    setBusy(true);
-    setResult(null);
-    setMessage("");
-    try {
-      const response = await request("/api/health-data/read", { accountId });
-      const body = await response.json();
-      if (!response.ok || !Array.isArray(body.summaries)) throw new Error();
-      if (active.current) setResult(body);
-    } catch {
-      if (active.current)
-        setMessage(
-          "Health summaries could not be read. Check provider access, refresh status or reconnect.",
-        );
-    } finally {
-      if (active.current) setBusy(false);
-    }
-  };
-  const remove = async () => {
-    if (!disconnect || running.current) return;
-    setBusy(true);
-    setResult(null);
-    setMessage("");
-    try {
-      const response = await request("/api/integrations/oauth/disconnect", {
-        accountId: disconnect,
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error();
-      if (active.current) {
-        setMessage(
-          body.providerRevoked
-            ? "Health account disconnected and access revoked."
-            : "Health account disconnected from Kova. Remove Kova access in the provider's account settings to complete remote revocation.",
-        );
-        await reload();
-      }
-    } catch {
-      if (active.current)
-        setMessage("Disconnect could not be confirmed. Refresh status before retrying.");
-    } finally {
-      if (active.current) {
-        setBusy(false);
-        setDisconnect(null);
-      }
-    }
-  };
   return (
     <section
-      className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-8 py-8 sm:py-14"
+      className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-4 py-6 sm:py-10"
       aria-labelledby="health-connections-title"
     >
-      <header className="flex flex-col items-center gap-4 text-center">
-        <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
-          <Heart aria-hidden="true" className="size-6 text-rose-500" />
-        </span>
-        <h2
-          id="health-connections-title"
-          className="text-xl font-semibold tracking-tight sm:text-2xl"
+      <h2
+        id="health-connections-title"
+        className="text-xl font-semibold tracking-tight sm:text-2xl"
+      >
+        A new way to manage your health
+      </h2>
+      <Tabs value={provider} onValueChange={setProvider}>
+        <TabsList aria-label="Health providers">
+          <TabsTrigger value="apple">Apple Health</TabsTrigger>
+          <TabsTrigger value="oura">Oura</TabsTrigger>
+        </TabsList>
+        <TabsContent
+          value="apple"
+          forceMount
+          className="mt-4 rounded-2xl border border-border p-3 data-[state=inactive]:hidden sm:p-5"
         >
-          A new way to manage your health
-        </h2>
-        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
-          View your activity, sleep, and wellness trends in one place.
-        </p>
-      </header>
-      <AppleHealthReport ownerId={ownerId} visible={visible} />
-      {!ownerId ? (
-        <p>Sign in to manage health connections.</p>
-      ) : (
-        <>
-          {loading && <p role="status">Checking connections…</p>}
-          {error && <p role="status">Health account status is unavailable.</p>}
-          <div className="grid gap-3">
-            {(["oura"] as const).map((id) => {
-              const provider = HEALTH_PROVIDERS[id];
-              const configured =
-                data?.configuredProviders.some((entry) => entry.id === id) === true;
-              const accounts = data?.accounts.filter((account) => account.provider_id === id) ?? [];
-              return (
-                <div key={id} className="space-y-3 rounded-3xl bg-muted/30 p-4 sm:p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold tracking-tight">{provider.label}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Sleep, recovery and activity summaries. Basic profile access identifies the
-                        account.
-                      </p>
-                    </div>
-                  </div>
-                  {!loading && !error && !configured && (
-                    <p className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700 dark:text-amber-300">
-                      Coming soon
-                    </p>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    disabled={!configured || busy || loading || error}
-                    onClick={() => void connect(id)}
-                  >
-                    Connect {provider.label}
-                  </Button>
-                  {accounts.map((account, index) => (
-                    <div key={account.id} className="space-y-2 border-t border-border pt-3">
-                      <p>
-                        {provider.label} account {index + 1} ·{" "}
-                        {account.status === "connected" ? "Connected" : "Reconnect required"}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          disabled={
-                            busy ||
-                            !configured ||
-                            error ||
-                            loading ||
-                            account.status !== "connected"
-                          }
-                          onClick={() => void read(account.id)}
-                        >
-                          Read {provider.label} summaries
-                        </Button>
-                        <Button
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() => setDisconnect(account.id)}
-                        >
-                          Disconnect {provider.label} {index + 1}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </>
+          <AppleHealthReport ownerId={ownerId} visible={visible && provider === "apple"} />
+        </TabsContent>
+        <TabsContent value="oura" className="mt-4 rounded-2xl border border-border p-3 sm:p-5">
+          <OuraConnections
+            ownerId={ownerId}
+            data={data}
+            loading={loading}
+            error={error}
+            reload={reload}
+            visible={visible && provider === "oura"}
+          />
+        </TabsContent>
+      </Tabs>
+      {!ownerId && (
+        <p className="text-sm text-muted-foreground">Sign in to manage your health connections.</p>
       )}
-      {message && <p role="status">{message}</p>}
-      {busy && <p role="status">Working…</p>}
-      {result && (
-        <div className="space-y-3">
-          <p>
-            Fetched {new Date(result.fetchedAt).toLocaleString()}. Scores follow the provider's own
-            scale.
-          </p>
-          {result.missing.length > 0 && (
-            <p>
-              Access is missing for: {result.missing.join(", ")}. Reconnect to review permissions.
-            </p>
-          )}
-          {result.limited && <p>A limited page of summaries is shown.</p>}
-          <div className="grid gap-3 lg:grid-cols-2">
-            {[
-              ["Sleep score", "sleep", "score", "#8b5cf6"],
-              ["Recovery score", "recovery", "score", "#0891b2"],
-              ["Activity score", "activity", "score", "#b45309"],
-              ["Steps", "activity", "steps", "#059669"],
-              ["Resting heart rate", "recovery", "restingHeartRate", "#db2777"],
-            ].map(([label, metric, field, color]) => {
-              const valueKey = field as "score" | "steps" | "restingHeartRate";
-              const points = result.summaries
-                .filter((item) => item.metric === metric && item.date && item[valueKey] !== null)
-                .map((item) => ({ date: item.date!, value: item[valueKey] }))
-                .sort((a, b) => a.date.localeCompare(b.date));
-              if (!points.length) return null;
-              return (
-                <section key={label} className="min-w-0 rounded-3xl bg-muted/30 p-4">
-                  <h3 className="mb-2 font-medium">{label}</h3>
-                  <div className="h-40">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={points} accessibilityLayer>
-                        <CartesianGrid
-                          vertical={false}
-                          stroke="currentColor"
-                          strokeOpacity={0.12}
-                        />
-                        <XAxis
-                          dataKey="date"
-                          tickFormatter={(value: string) => value.slice(5)}
-                          fontSize={11}
-                        />
-                        <YAxis width={42} fontSize={11} />
-                        <Tooltip contentStyle={{ borderRadius: 16 }} />
-                        <Line
-                          name={label}
-                          dataKey="value"
-                          stroke={color}
-                          strokeWidth={2}
-                          isAnimationActive={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-          <div className="overflow-x-auto rounded-3xl bg-muted/30 p-4">
-            <table className="w-full text-left text-sm">
-              <caption className="text-left font-medium mb-2">Recent Oura summaries</caption>
-              <thead>
-                <tr>
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Summary</th>
-                  <th className="p-2">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.summaries.map((summary, index) => (
-                  <tr key={index}>
-                    <td className="p-2 whitespace-nowrap">{summary.date ?? "Unavailable"}</td>
-                    <td className="p-2 capitalize">{summary.metric}</td>
-                    <td className="p-2">
-                      {summary.score === null
-                        ? "Not scored yet"
-                        : `${summary.score} ${summary.scoreUnit}`}
-                      {summary.steps !== null && ` · ${summary.steps} steps`}
-                      {summary.restingHeartRate !== null &&
-                        ` · resting heart rate ${summary.restingHeartRate} bpm`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {!result.summaries.length && <p>No summaries are available for the last seven days.</p>}
-        </div>
-      )}
-      <ConfirmActionDialog
-        open={disconnect !== null}
-        onOpenChange={(open) => !busy && !open && setDisconnect(null)}
-        title="Disconnect this health account?"
-        description="This removes the saved Kova connection. Provider access is revoked when supported; any remaining step will be shown afterward."
-        confirmLabel="Disconnect health account"
-        disabled={busy}
-        onConfirm={() => void remove()}
-      />
     </section>
   );
 }

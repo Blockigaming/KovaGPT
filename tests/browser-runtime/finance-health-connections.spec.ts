@@ -23,7 +23,7 @@ const mocks: Record<string, string> = {
       if(window.delayRead)return new Promise(resolve=>window.resolveRead=()=>resolve(Response.json(window.financeSnapshot)));
       return Response.json(window.financeSnapshot);
     }
-    if(url==='/api/health-data/read')return Response.json({provider:'oura',fetchedAt:new Date().toISOString(),summaries:[{metric:'sleep',date:'2026-10-30',score:87,scoreUnit:'score',steps:null,restingHeartRate:null}],missing:[],limited:false});
+    if(url==='/api/health-data/read')return Response.json({asOf:'2026-11-20',fetchedAt:new Date().toISOString(),metrics:{'daily_sleep.score':[{name:'Oura',days:[{date:'2026-11-20',value:87}]}]},missing:[],unavailable:[],limited:false});
     if(url.endsWith('/disconnect')){window.healthStatus.accounts=[];return Response.json({providerRevoked:true})}
     return Response.json({error:'unavailable'},{status:503});
   };`,
@@ -222,6 +222,8 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
   });
   const region = page.getByRole("region", { name: "Apple Health", exact: true });
   const input = region.getByRole("button", { name: "Import Apple Health data" });
+  await expect(input).toBeHidden();
+  await region.getByText("Connection options", { exact: true }).click();
   const chooser = page.waitForEvent("filechooser");
   await input.click();
   await (
@@ -232,17 +234,17 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
     buffer: Buffer.from(zip),
   });
   const source = region.getByLabel("Step source");
-  await region.getByText("Daily readings", { exact: true }).click();
+  await region.getByText(/^Daily readings/).click();
   await expect(region.getByRole("cell", { name: "789", exact: true })).toBeVisible();
   await source.selectOption({ label: "Watch" });
   await expect(region.getByRole("cell", { name: "123", exact: true })).toBeVisible();
   await expect(region.getByRole("cell", { name: "789", exact: true })).toHaveCount(0);
-  await region.getByLabel("Metric").selectOption({ label: "Heart rate" });
+  await region.getByRole("button", { name: "Vitals", exact: true }).click();
   await expect(
     region.getByText("No readings for this source in the selected range."),
   ).toBeVisible();
-  await region.getByLabel("Date range").selectOption({ label: "30 days" });
-  await region.getByText("Daily readings", { exact: true }).click();
+  await region.getByRole("button", { name: "30 days", exact: true }).click();
+  await region.getByText(/^Daily readings/).click();
   await expect(region.getByRole("cell", { name: "68", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
 
@@ -277,7 +279,15 @@ test("native Apple Health updates refresh the chart only during the active conne
   });
   await boot(page);
   const region = page.getByRole("region", { name: "Apple Health", exact: true });
-  await region.getByRole("button", { name: "Start live updates" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { healthBridgeMessages?: { action: string }[] })
+            .healthBridgeMessages?.[0]?.action,
+      ),
+    )
+    .toBe("resume");
   const push = (value: number, current: boolean) =>
     page.evaluate(
       ({ value, current }) => {
@@ -305,7 +315,8 @@ test("native Apple Health updates refresh the chart only during the active conne
   await expect(region.getByText("300 steps", { exact: true }).first()).toBeVisible();
   await push(320, true);
   await expect(region.getByText("320 steps", { exact: true }).first()).toBeVisible();
-  await region.getByRole("button", { name: "Stop live updates" }).click();
+  await region.getByText("Connection options", { exact: true }).click();
+  await region.getByRole("button", { name: "Disconnect Apple Health" }).click();
   await push(321, true);
   await expect(region.getByText("321 steps", { exact: true })).toHaveCount(0);
   await expect(region.getByText("320 steps", { exact: true })).toHaveCount(0);
@@ -320,20 +331,24 @@ test("unconfigured finance and health stay disabled and never fetch private data
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
+  await page.getByRole("tab", { name: "Oura", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Oura", exact: true }).getByText("Coming soon"),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
-test("health summaries load only after the user selects an account read", async ({ page }) => {
+test("Oura refreshes automatically only when its analytics tab is open", async ({ page }) => {
   await boot(page, { health: true });
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
-  await page.getByRole("button", { name: "Read Oura summaries" }).click();
-  await expect(page.getByText("87 score", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Oura", exact: true }).click();
+  await expect(page.getByText("87 score", { exact: true }).first()).toBeVisible();
   const operations = await page.evaluate(() => (window as StateWindow).operations);
   expect(operations).toEqual([
     [
       "/api/health-data/read",
-      { accountId: "00000000-0000-4000-8000-000000000003" },
+      { accountId: "00000000-0000-4000-8000-000000000003", mode: "analytics" },
       "00000000-0000-4000-8000-000000000001",
     ],
   ]);

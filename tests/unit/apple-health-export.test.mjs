@@ -26,7 +26,7 @@ const exportXml = `<?xml version="1.0" encoding="UTF-8"?>
     type="HKCategoryTypeIdentifierSleepAnalysis" startDate="2026-11-20 04:30:00 -0500" endDate="2026-11-20 06:00:00 -0500"/>
   <Record sourceName="Watch &amp; Fitness" value="HKCategoryValueSleepAnalysisInBed"
     type="HKCategoryTypeIdentifierSleepAnalysis" startDate="2026-11-19 22:00:00 -0500" endDate="2026-11-20 07:00:00 -0500"/>
-  <Workout sourceName="iPhone" startDate="2026-11-19 11:00:00 -0500" workoutActivityType="HKWorkoutActivityTypeRunning"/>
+  <Workout sourceName="iPhone" startDate="2026-11-19 11:00:00 -0500" duration="24" durationUnit="min" workoutActivityType="HKWorkoutActivityTypeRunning"/>
   <Record sourceName="iPhone" value="70" unit="kg"
     type="HKQuantityTypeIdentifierBodyMass" startDate="2026-11-20 10:00:00 -0500"/>
   <Record sourceName="iPhone" value="71" unit="kg"
@@ -49,6 +49,10 @@ const expected = {
     ],
     HeartRate: [{ name: "iPhone", days: [{ date: "2026-11-20", value: 86 }] }],
     SleepAnalysis: [{ name: "Watch & Fitness", days: [{ date: "2026-11-20", value: 7 }] }],
+    SleepCore: [{ name: "Watch & Fitness", days: [{ date: "2026-11-20", value: 6 }] }],
+    SleepDeep: [{ name: "Watch & Fitness", days: [{ date: "2026-11-20", value: 1.5 }] }],
+    SleepInBed: [{ name: "Watch & Fitness", days: [{ date: "2026-11-20", value: 9 }] }],
+    WorkoutDuration: [{ name: "iPhone", days: [{ date: "2026-11-19", value: 24 }] }],
     BodyMass: [{ name: "iPhone", days: [{ date: "2026-11-20", value: 70 }] }],
     Workouts: [{ name: "iPhone", days: [{ date: "2026-11-19", value: 1 }] }],
   },

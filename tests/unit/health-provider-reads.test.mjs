@@ -5,6 +5,7 @@ import {
   healthReadRequest,
   readHealthSummary,
 } from "../../src/health/health-read.server.mjs";
+import { readOuraAnalytics } from "../../src/health/oura-analytics.server.mjs";
 import { oauthRefreshRequest } from "../../src/integrations/oauth-token-request.server.mjs";
 import {
   CONNECTION_FLOWS,
@@ -174,6 +175,66 @@ test("missing scopes, oversized/malformed responses and provider failures fail c
     );
   }
 });
+test("Oura analytics preserve consent, advance pagination, and retain only allowlisted daily values", async () => {
+  const urls = [];
+  const gets = new Set();
+  const result = await readOuraAnalytics(
+    ["daily", "heart_health", "workout"],
+    "token",
+    async () => {},
+    async (raw, init) => {
+      const url = new URL(raw);
+      const collection = url.pathname.split("/").at(-1);
+      urls.push(url);
+      gets.add(init.method);
+      if (collection === "daily_activity")
+        return url.searchParams.has("next_token")
+          ? Response.json({ data: [{ day: "2026-10-31", steps: 4000 }] })
+          : Response.json({
+              data: [{ day: "2026-10-30", steps: 3200, email: "private@example.invalid" }],
+              next_token: "page-two",
+            });
+      if (collection === "daily_cardiovascular_age")
+        return Response.json({ data: [{ day: "2026-10-31", vascular_age: 43 }] });
+      if (collection === "daily_resilience")
+        return Response.json({ data: [{ day: "2026-10-31", level: "solid" }] });
+      if (collection === "daily_stress") return new Response(null, { status: 403 });
+      if (collection === "workout")
+        return Response.json({
+          data: [
+            {
+              day: "2026-10-31",
+              start_datetime: "2026-10-31T10:00:00Z",
+              end_datetime: "2026-10-31T10:30:00Z",
+              label: "private",
+            },
+            {
+              day: "2026-10-31",
+              start_datetime: "2026-10-31T11:00:00Z",
+              end_datetime: "2026-10-31T11:45:00Z",
+            },
+          ],
+        });
+      return Response.json({ data: [] });
+    },
+    now,
+  );
+  assert.deepEqual([...gets], ["GET"]);
+  assert.ok(urls.every((url) => url.hostname === "api.ouraring.com"));
+  assert.equal(urls.filter((url) => url.pathname.endsWith("/daily_activity")).length, 2);
+  assert.deepEqual(result.metrics["daily_activity.steps"][0].days, [
+    { date: "2026-10-30", value: 3200 },
+    { date: "2026-10-31", value: 4000 },
+  ]);
+  assert.equal(result.metrics["daily_cardiovascular_age.vascular_age"][0].days[0].value, 43);
+  assert.equal(result.metrics["daily_resilience.level"][0].days[0].value, 2);
+  assert.equal(result.metrics["workout.$duration"][0].days[0].value, 75);
+  assert.deepEqual(result.unavailable, ["daily_stress"]);
+  assert.ok(result.missing.includes("spo2"));
+  assert.ok(!urls.some((url) => url.pathname.endsWith("/daily_spo2")));
+  assert.ok(!JSON.stringify(result).includes("private"));
+});
+
 test("health OAuth refresh includes WHOOP offline scope; health is absent from automatic chat tools", () => {
   for (const providerId of ["oura", "whoop"]) {
     const request = oauthRefreshRequest({
