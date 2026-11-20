@@ -29,6 +29,7 @@ export function LimitReachedNotice({
   }, [onOpenChange]);
   useEffect(() => {
     if (!open || openedBrowser) return;
+    let active = true;
     const isBrowser =
       kind === "browser_limit" || kind === "browser_error" || kind === "browser_usage";
     const titles = {
@@ -57,7 +58,9 @@ export function LimitReachedNotice({
             : isBrowser
               ? message
               : `${limitMessage} ${resetMessage}`,
-      onDismiss: dismiss,
+      onDismiss: () => {
+        if (active) dismiss();
+      },
       action: canOpenBrowser
         ? { label: "Open Cloud Browser", onClick: () => setOpenedBrowser(true) }
         : kind === "browser_error" || kind === "browser_usage"
@@ -71,6 +74,7 @@ export function LimitReachedNotice({
             },
     });
     return () => {
+      active = false;
       toast.dismiss(id);
     };
   }, [canOpenBrowser, id, kind, message, navigate, open, openedBrowser, resetsAt]);
