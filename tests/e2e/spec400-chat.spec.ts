@@ -337,7 +337,13 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill(`Open ${url} in Cloud Browser.`);
-  await page.getByTestId("send-button").click();
+  const [response] = await Promise.all([
+    page.waitForResponse((result) => new URL(result.url()).pathname === "/api/chat", {
+      timeout: 12_000,
+    }),
+    page.getByTestId("send-button").click(),
+  ]);
+  expect(response.status()).toBe(429);
   const notice = page
     .locator("[data-sonner-toast]")
     .filter({ hasText: "Cloud Browser limit reached" });
