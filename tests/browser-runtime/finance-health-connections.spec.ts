@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
 import { statSync } from "node:fs";
+import { zipSync, strToU8 } from "fflate";
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE)
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
 const root = process.cwd();
@@ -225,7 +226,7 @@ test("an Apple Health report stays in the browser and clears on account switch",
   }
 
   await chooseReport("invalid");
-  await expect(region.getByRole("status")).toContainText("Choose a .kovahealth report");
+  await expect(region.getByRole("status")).toContainText("Could not read the file");
   const report = JSON.stringify({
     version: 1,
     source: "kovagpt.apple-health",
@@ -253,6 +254,35 @@ test("an Apple Health report stays in the browser and clears on account switch",
     state.renderPanels();
   });
   await expect(openReport).toHaveCount(0);
+});
+
+test("an iPhone Apple Health ZIP opens directly without sending the export", async ({ page }) => {
+  await boot(page);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  const zip = zipSync({
+    "apple_health_export/export.xml": strToU8(`<HealthData>
+      <ExportDate value="2026-11-20 12:00:00 -0500"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Watch" unit="count" startDate="2026-11-20 10:00:00 -0500" value="123"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone" unit="count" startDate="2026-11-20 10:00:00 -0500" value="789"/>
+    </HealthData>`),
+  });
+  const region = page.getByRole("region", { name: "Apple Health", exact: true });
+  const chooser = page.waitForEvent("filechooser");
+  await region.getByRole("button", { name: "Open Apple Health report" }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "export.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(zip),
+  });
+  const source = region.getByLabel("Step source");
+  await expect(region.getByRole("cell", { name: "789", exact: true })).toBeVisible();
+  await source.selectOption({ label: "Watch" });
+  await expect(region.getByRole("cell", { name: "123", exact: true })).toBeVisible();
+  await expect(region.getByRole("cell", { name: "789", exact: true })).toHaveCount(0);
+  expect(requests).toEqual([]);
 });
 test("unconfigured finance and health stay disabled and never fetch private data", async ({
   page,

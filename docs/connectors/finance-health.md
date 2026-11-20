@@ -43,6 +43,10 @@ WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local cr
 
 ## Apple Health
 
+The Health tab can open Apple’s Health export directly on iPhone. In Health, tap the profile picture, choose **Export All Health Data**, then **Save to Files**. In KovaGPT, choose **Connections → Health → Open Apple Health report** and select the export ZIP. If needed, uncompress the ZIP in Files and select `export.xml`.
+
+The browser reads daily step counts from the seven calendar days ending on the export date. Select one source at a time so overlapping samples from iPhone and Apple Watch aren’t combined. The file and the step summaries stay in the browser.
+
 The KovaGPT Health iPhone project lives at `ios/KovaHealth.xcodeproj` and requires iOS 17 or later. The app requests read access to step counts and displays daily totals across seven calendar days, including today. Apple Health may return no readings when step data is unavailable or access is denied.
 
 For device testing, open the project in Xcode, select the authorized Apple Developer team under Signing & Capabilities, and confirm the HealthKit capability and bundle identifier. Build on a physical iPhone. The unsigned simulator build checks that the project compiles. Device signing and permission tests are separate.
@@ -51,7 +55,7 @@ In the iPhone app, tap **Read step totals**, complete the Apple Health prompt, a
 
 The browser sends no report to a server and has no stored provider token or background sync. The report excludes other HealthKit metrics, source identifiers, and individual records. The app excludes the report directory from backups. Test the flow with consent granted, consent withheld, access revoked, no step data, report removal, and Kova account switching. Verify that opening a report sends no network request.
 
-If the team uses Xcode Cloud for TestFlight, first create the app record in App Store Connect. Create the workflow from Xcode and grant the Xcode Cloud GitHub app access to this repository. A signed iPhone read and a browser import are required before calling the feature available.
+If the team uses Xcode Cloud for TestFlight, first create the app record in App Store Connect. Create the workflow from Xcode and grant the Xcode Cloud GitHub app access to this repository. Verify a signed iPhone read before claiming that the native app is available and verify the Safari file picker before releasing browser import.
 
 ## Other health services
 

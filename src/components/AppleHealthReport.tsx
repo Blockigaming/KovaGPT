@@ -1,34 +1,40 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { readAppleHealthExport, type AppleHealthSource } from "@/health/apple-health-export.mjs";
 import {
   MAX_APPLE_HEALTH_REPORT_BYTES,
   parseAppleHealthReport,
-  type AppleHealthDay,
 } from "@/health/apple-health-report.mjs";
 
 export function AppleHealthReport({ ownerId }: { ownerId: string | null }) {
-  const [days, setDays] = useState<AppleHealthDay[]>([]);
-  const [error, setError] = useState(false);
+  const [result, setResult] = useState<{ sources: AppleHealthSource[]; export: boolean } | null>(
+    null,
+  );
+  const [selected, setSelected] = useState(0);
+  const [status, setStatus] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
-  const readId = useRef(0);
+  const pending = useRef<AbortController>(null);
+  const days = result?.sources[selected]?.days ?? [];
 
   useEffect(() => {
     const clearOnPageHide = () => {
-      readId.current += 1;
-      setDays([]);
-      setError(false);
+      pending.current?.abort();
+      setResult(null);
+      setSelected(0);
+      setStatus("");
     };
     window.addEventListener("pagehide", clearOnPageHide);
     return () => {
-      readId.current += 1;
+      pending.current?.abort();
       window.removeEventListener("pagehide", clearOnPageHide);
     };
   }, []);
 
   const clear = () => {
-    readId.current += 1;
-    setDays([]);
-    setError(false);
+    pending.current?.abort();
+    setResult(null);
+    setSelected(0);
+    setStatus("");
   };
 
   const readFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -36,13 +42,30 @@ export function AppleHealthReport({ ownerId }: { ownerId: string | null }) {
     event.currentTarget.value = "";
     if (!file || !ownerId) return;
     clear();
-    const id = readId.current;
+    const controller = new AbortController();
+    pending.current = controller;
+    setStatus("Reading Apple Health file…");
     try {
-      if (file.size > MAX_APPLE_HEALTH_REPORT_BYTES) throw new Error();
-      const report = parseAppleHealthReport(await file.text());
-      if (id === readId.current) setDays(report);
+      const isExport = /\.(zip|xml)$/i.test(file.name);
+      if (!isExport && file.size > MAX_APPLE_HEALTH_REPORT_BYTES) throw new Error();
+      const sources = isExport
+        ? await readAppleHealthExport(file, controller.signal)
+        : [{ name: "Apple Health", days: parseAppleHealthReport(await file.text()) }];
+      if (controller.signal.aborted) return;
+      if (!sources.length) {
+        setStatus("This export contains no step samples for its last seven days.");
+        return;
+      }
+      setResult({ sources, export: isExport });
+      setStatus("");
     } catch {
-      if (id === readId.current) setError(true);
+      if (!controller.signal.aborted) {
+        setStatus(
+          "Could not read the file. Choose an Apple Health export ZIP, export.xml or .kovahealth report.",
+        );
+      }
+    } finally {
+      if (pending.current === controller) pending.current = null;
     }
   };
 
@@ -51,23 +74,18 @@ export function AppleHealthReport({ ownerId }: { ownerId: string | null }) {
       className="!mt-3 space-y-3 rounded-3xl bg-muted/30 p-4 sm:p-5"
       aria-labelledby="apple-health-title"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="apple-health-title" className="font-medium">
-          Apple Health
-        </h3>
-        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
-          iPhone app required
-        </span>
-      </div>
+      <h3 id="apple-health-title" className="font-medium">
+        Apple Health
+      </h3>
       <p className="text-sm text-muted-foreground">
-        With the KovaGPT Health iPhone app, you can open a seven-day step report here. The report
-        stays in this tab until you clear it or leave the page.
+        On iPhone, open Health, tap your profile, choose Export All Health Data, then save to Files.
+        Open the ZIP here to see seven days of steps. Your file stays on your device.
       </p>
       {ownerId && (
         <>
           <input
             type="file"
-            accept=".kovahealth"
+            accept=".zip,.xml,.kovahealth,application/zip,application/xml,text/xml"
             aria-label="Apple Health report file"
             className="hidden"
             ref={fileInput}
@@ -89,10 +107,32 @@ export function AppleHealthReport({ ownerId }: { ownerId: string | null }) {
           </div>
         </>
       )}
-      {error && (
+      {status && (
         <p role="status" className="text-sm text-muted-foreground">
-          Choose a .kovahealth report made by the KovaGPT Health iPhone app.
+          {status}
         </p>
+      )}
+      {result?.export && (
+        <div className="space-y-2">
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            Step source
+            <select
+              className="min-w-0 max-w-full rounded-lg border border-border bg-background p-2"
+              value={selected}
+              onChange={(event) => setSelected(Number(event.currentTarget.value))}
+            >
+              {result.sources.map(({ name }, index) => (
+                <option value={index} key={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-sm text-muted-foreground">
+            Totals are shown for one source at a time because iPhone and Apple Watch can count the
+            same steps.
+          </p>
+        </div>
       )}
       {days.length > 0 && (
         <table className="w-full text-left text-sm">
