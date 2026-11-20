@@ -203,10 +203,9 @@ export async function readChatBrowserPage({
     let remaining = 40;
     let loading = true;
     const controls = new AbortController();
-    let interactive: ActiveChatBrowser | undefined;
     const browserSignal = () => {
       if (loading) return signal;
-      if (interactive?.takeover && active.get(userId) === interactive)
+      if (interactive.takeover && active.get(userId) === interactive)
         return interactive.controls.signal;
       throw new Error("browser_request_denied");
     };
@@ -273,7 +272,7 @@ export async function readChatBrowserPage({
     if (saved.error || !saved.data) throw unavailable();
     signal.throwIfAborted();
     runtime.sessions.get(sessionId, userId, false);
-    interactive = {
+    const interactive: ActiveChatBrowser = {
       requestId,
       sessionId,
       page,
