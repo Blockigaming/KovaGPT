@@ -39,6 +39,12 @@ export function HealthTrends({
   const [range, setRange] = useState<Range>(7);
   const available = catalog.filter((metric) => report.metrics[metric.id]?.length);
   const groups = [...new Set(available.map(({ group }) => group))];
+  const priorityGroups = ["Activity", "Sleep", "Recovery", "Vitals"].filter((item) =>
+    groups.includes(item),
+  );
+  const quickGroups =
+    groups.length <= 4 ? groups : (priorityGroups.length ? priorityGroups : groups).slice(0, 3);
+  const moreGroups = groups.filter((item) => !quickGroups.includes(item));
   const group = groups.includes(groupId) ? groupId : groups[0];
   const metrics = available.filter((metric) => metric.group === group);
   const metric = metrics.find((item) => item.id === metricId) ?? metrics[0];
@@ -86,29 +92,48 @@ export function HealthTrends({
   const pill = (selected: boolean) =>
     `whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${selected ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`;
 
+  const selectGroup = (item: string) => {
+    setGroupId(item);
+    setMetricId("");
+    setSourceIndex(0);
+  };
+
   return (
     <div className="space-y-4">
       {groups.length > 1 && (
         <div
           aria-label="Metric categories"
           role="group"
-          className="flex gap-1 overflow-x-auto pb-1"
+          className="flex flex-wrap items-center gap-1"
         >
-          {groups.map((item) => (
+          {quickGroups.map((item) => (
             <button
               key={item}
               type="button"
               className={pill(item === group)}
               aria-pressed={item === group}
-              onClick={() => {
-                setGroupId(item);
-                setMetricId("");
-                setSourceIndex(0);
-              }}
+              onClick={() => selectGroup(item)}
             >
               {item}
             </button>
           ))}
+          {moreGroups.length > 0 && (
+            <select
+              aria-label="More metric categories"
+              className={pill(moreGroups.includes(group))}
+              value={moreGroups.includes(group) ? group : ""}
+              onChange={(event) => selectGroup(event.currentTarget.value)}
+            >
+              <option value="" disabled>
+                More
+              </option>
+              {moreGroups.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2">
