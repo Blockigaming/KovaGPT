@@ -557,16 +557,44 @@
   min-width: max-content;
 }
 
-/* The category row keeps the same pill styling and scrolls as one strip. */
+/* Keep short lists compact and let longer lists scroll beyond the last visible pill. */
 .spec400-plugin-tabs.kova-health-selector[role="tablist"] {
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
   flex-wrap: nowrap;
+  gap: 2px;
   overflow-x: auto;
-  padding-inline: 10px;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: inline proximity;
+  scroll-padding-inline: 4px;
+  padding-inline: 4px;
   scrollbar-width: none;
 }
+
 .kova-health-selector[role="tablist"] [role="tab"] {
   flex: 0 0 auto;
+  scroll-snap-align: start;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.kova-health-selector[role="tablist"] [role="tab"]:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 767px) {
+  .kova-health-selector[role="tablist"] [role="tab"] {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-health-selector[role="tablist"] [role="tab"] {
+    transition: none;
+  }
 }
 
 .kova-health-range {

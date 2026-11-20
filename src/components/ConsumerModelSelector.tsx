@@ -7,7 +7,7 @@ import {
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { MobileIntelligence } from "./MobileIntelligence";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { isModeAllowedForTier, modesForTier, type ModeId, type Tier } from "@/lib/modes";
 
@@ -81,52 +81,20 @@ export function ConsumerModelSelector({
 
   return (
     <>
-      <Dialog open={intelligenceOpen && !locked} onOpenChange={onIntelligenceOpenChange}>
-        <DialogContent
-          aria-describedby={undefined}
-          className="max-h-[min(80dvh,32rem)] overflow-y-auto"
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            modelTrigger.current?.focus({ preventScroll: true });
-          }}
-        >
-          <DialogTitle>Intelligence</DialogTitle>
-          <div role="group" aria-label="Available models" className="flex flex-wrap gap-2">
-            {availableModels.map((model) => (
-              <button
-                key={model.id}
-                type="button"
-                aria-pressed={value === model.id}
-                className="min-h-11 rounded-full border border-border px-3 text-sm aria-pressed:bg-foreground aria-pressed:text-background"
-                onClick={() => onChange(model.id)}
-              >
-                {model.label}
-              </button>
-            ))}
-          </div>
-          <div
-            role="group"
-            aria-label="Response effort"
-            className="grid gap-1 rounded-2xl bg-accent/50 p-1"
-          >
-            {[...efforts].reverse().map((level) => (
-              <button
-                key={level.id}
-                type="button"
-                aria-pressed={level.id === mode}
-                className={`${optionClass} min-h-11 aria-pressed:bg-accent`}
-                onClick={() => {
-                  onModeChange(level.id);
-                  onIntelligenceOpenChange?.(false);
-                }}
-              >
-                <span className="flex-1">{level.label}</span>
-                {level.id === mode && <Check className="size-4" aria-hidden="true" />}
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <MobileIntelligence
+        open={intelligenceOpen && !locked}
+        onOpenChange={onIntelligenceOpenChange}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          modelTrigger.current?.focus({ preventScroll: true });
+        }}
+        models={availableModels}
+        value={value}
+        onChange={onChange}
+        mode={mode}
+        onModeChange={onModeChange}
+        efforts={efforts}
+      />
       <Popover
         open={open && !locked}
         onOpenChange={(next) => {

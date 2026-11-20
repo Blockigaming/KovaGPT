@@ -216,26 +216,39 @@ test("Plus slider stops at Max and never offers Ultra", async ({ page }) => {
   await expect(slider).toHaveAttribute("aria-valuetext", "Max");
 });
 
-test("mobile Send hold opens Intelligence without sending the draft", async ({
-  page,
-}, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await fixture(page, "dark", true, false, "plus");
-  await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
-  await page.goto("/");
-  await waitForKovaHydration(page);
-  const draft = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-  await draft.fill("Explain the causes of tides.");
-  const send = page.getByTestId("send-button");
-  await send.dispatchEvent("pointerdown", { pointerType: "touch", isPrimary: true, button: 0 });
-  const picker = page.getByRole("dialog", { name: "Intelligence", exact: true });
-  await expect(picker).toBeVisible();
-  await send.dispatchEvent("pointerup", { pointerType: "touch", isPrimary: true, button: 0 });
-  await send.dispatchEvent("click", { detail: 1 });
-  await picker.screenshot({ path: testInfo.outputPath("KovaGPT-Intelligence.png") });
-  await picker.getByRole("button", { name: "Kova Neon 4.6", exact: true }).click();
-  await picker.getByRole("group", { name: "Response effort" }).getByRole("button").first().click();
-  await expect(picker).toBeHidden();
-  await expect(draft).toHaveValue("Explain the causes of tides.");
-  await expect(page.getByTestId("model-selector-trigger")).toHaveAccessibleName(/Kova Neon 4.6/);
-});
+for (const [tier, highest] of [
+  ["plus", "Max"],
+  ["pro", "Ultra"],
+] as const) {
+  test(`mobile ${tier} Send hold selects an entitled model and effort without sending`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await fixture(page, "dark", true, false, tier);
+    await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const draft = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    await draft.fill("Explain the causes of tides.");
+    const send = page.getByTestId("send-button");
+    await send.dispatchEvent("pointerdown", { pointerType: "touch", isPrimary: true, button: 0 });
+    const picker = page.getByRole("dialog", { name: "Intelligence", exact: true });
+    await expect(picker).toBeVisible();
+    await send.dispatchEvent("pointerup", { pointerType: "touch", isPrimary: true, button: 0 });
+    await send.dispatchEvent("click", { detail: 1 });
+    await picker
+      .getByRole("combobox", { name: "Available models" })
+      .selectOption({ label: "Kova Neon 4.6" });
+    const rail = picker.getByRole("slider", { name: "Response effort" });
+    await rail.press("Home");
+    await expect(rail).toHaveAttribute("aria-valuetext", highest);
+    await picker.getByRole("button", { name: "Kova Neon 4.6 Medium", exact: true }).click();
+    await expect(rail).toHaveAttribute("aria-valuetext", "Medium");
+    await picker.getByRole("button", { name: "Close Intelligence" }).click();
+    await expect(picker).toBeHidden();
+    await expect(draft).toHaveValue("Explain the causes of tides.");
+    await expect(page.getByTestId("model-selector-trigger")).toHaveAccessibleName(
+      /Kova Neon 4.6 Medium/,
+    );
+  });
+}

@@ -50,7 +50,7 @@ export function HealthTrends({
   const rangeLabel = range === APPLE_HEALTH_HISTORY_DAYS ? "1 year" : `${range} days`;
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <Tabs value={group} onValueChange={setGroupId}>
         <TabsList
           aria-label="Metric categories"
@@ -62,7 +62,11 @@ export function HealthTrends({
             </TabsTrigger>
           ))}
         </TabsList>
-        <TabsContent key={group} value={group} className="mt-6 min-w-0 space-y-6">
+        <TabsContent
+          key={group}
+          value={group}
+          className="mt-3 min-w-0 space-y-4 sm:mt-6 sm:space-y-6"
+        >
           <label className="block rounded-2xl border border-border bg-card px-4 py-3 sm:px-5">
             <span className="flex justify-between gap-4 text-sm font-medium">
               Date range <span className="tabular-nums">{rangeLabel}</span>
