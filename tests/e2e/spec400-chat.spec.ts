@@ -288,11 +288,17 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
 });
 
 for (const surface of ["empty", "conversation"] as const) {
-  test(`a composer link preview preserves draft alignment in ${surface} chat`, async ({ page }) => {
+  test(`composer media previews use the leading inset in ${surface} chat`, async ({ page }) => {
     await fixture(page, "dark", true, surface === "conversation");
     await page.goto("/");
     await waitForKovaHydration(page);
     const composer = page.locator(`[data-composer-surface="${surface}"] .spec400-composer`);
+    if (surface === "conversation" && !(await composer.isVisible())) {
+      const sidebar = await revealSidebar(page);
+      await sidebar
+        .getByRole("button", { name: "Open chat Composer review chat", exact: true })
+        .press("Enter");
+    }
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const preview = composer.locator(".kova-link-preview-composer");
     const textEdges = () =>
@@ -300,11 +306,13 @@ for (const surface of ["empty", "conversation"] as const) {
         const left = frame.getBoundingClientRect().left;
         const field = frame.querySelector("textarea")!;
         const chip = frame.querySelector(".kova-link-preview-composer");
+        const attachment = frame.querySelector(".spec400-attachment-chip");
         const draft =
           field.getBoundingClientRect().left + parseFloat(getComputedStyle(field).paddingLeft);
         return {
           draft: draft - left,
           preview: chip ? chip.getBoundingClientRect().left - left : null,
+          attachment: attachment ? attachment.getBoundingClientRect().left - left : null,
         };
       });
 
@@ -314,6 +322,8 @@ for (const surface of ["empty", "conversation"] as const) {
     await input.press("End");
     await input.press("Space");
     await expect(preview).toBeVisible();
+    const compact = await composer.evaluate((frame) => getComputedStyle(frame).display === "grid");
+    const expectedPreviewStart = compact ? 17 : originalStart;
 
     const expectAlignment = async () => {
       await expect
@@ -321,7 +331,7 @@ for (const surface of ["empty", "conversation"] as const) {
           const edges = await textEdges();
           return Math.max(
             Math.abs(edges.draft - originalStart),
-            edges.preview === null ? Infinity : Math.abs(edges.preview - edges.draft),
+            edges.preview === null ? Infinity : Math.abs(edges.preview - expectedPreviewStart),
           );
         })
         .toBeLessThan(0.5);
@@ -334,6 +344,17 @@ for (const surface of ["empty", "conversation"] as const) {
           .matches,
     );
     if (phone) {
+      const plus = composer.getByRole("button", { name: "Attach", exact: true });
+      await expect(plus).toHaveCSS("width", "44px");
+      await expect(plus).toHaveCSS("height", "44px");
+      await expect
+        .poll(async () => {
+          const frame = (await composer.boundingBox())!;
+          const trigger = (await plus.boundingBox())!;
+          return trigger.x - frame.x;
+        })
+        .toBeCloseTo(5, 0);
+
       await page.evaluate(() => {
         const visual = window.visualViewport!;
         const height = visual.height - 150;
@@ -346,6 +367,30 @@ for (const surface of ["empty", "conversation"] as const) {
       );
       await expectAlignment();
     }
+
+    await input.evaluate((element) => {
+      const image = atob(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=",
+      );
+      const file = new File(
+        [Uint8Array.from(image, (char) => char.charCodeAt(0))],
+        "Pasted logo.png",
+        {
+          type: "image/png",
+        },
+      );
+      const clipboardData = new DataTransfer();
+      clipboardData.items.add(file);
+      element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+    });
+    await expect(composer.getByRole("button", { name: "Inspect Pasted logo.png" })).toBeAttached();
+    await expect
+      .poll(async () => {
+        const { draft, preview, attachment } = await textEdges();
+        if (preview === null || attachment === null) return Infinity;
+        return Math.max(Math.abs(preview - draft), Math.abs(attachment - draft));
+      })
+      .toBeLessThan(0.5);
   });
 }
 

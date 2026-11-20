@@ -9,6 +9,7 @@
   --composer-compact-padding: 7px;
   --composer-compact-gap: 8px;
   --composer-text-inset: 8px;
+  --composer-preview-inset: var(--composer-text-inset);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -43,6 +44,7 @@
       )
     ) {
     --composer-text-inset: 0px;
+    --composer-preview-inset: 9px;
     display: grid;
     grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
     align-items: center;
@@ -51,7 +53,7 @@
 
     &:has(.kova-link-preview-composer) {
       grid-template-areas:
-        ". preview preview"
+        "preview preview preview"
         "tools input trailing";
     }
     .kova-link-preview-composer {
@@ -872,7 +874,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   gap: 8px;
   list-style: none;
   padding: 0;
-  margin: 0 0 4px;
+  margin: 0 var(--composer-preview-inset) 4px;
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-inline: contain;

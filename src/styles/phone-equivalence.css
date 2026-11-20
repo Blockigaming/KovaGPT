@@ -176,6 +176,10 @@
     margin-block-start: 0;
   }
 
+  .kova-assistant .spec400-composer .kova-composer-plus {
+    margin-inline-start: -4px;
+  }
+
   .kova-home-composer-placeholder .spec400-composer-input {
     display: flex;
     align-items: center;
