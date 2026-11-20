@@ -88,8 +88,8 @@ test("selecting transcript text cancels a pending sidebar swipe", async ({ page 
     await expect(drawer.getByRole("button", { name: "Close sidebar", exact: true })).toBeVisible();
     await drawer.evaluate((element) => {
       for (const [name, x] of [
-        ["touchstart", 40],
-        ["touchmove", 160],
+        ["touchstart", 160],
+        ["touchmove", 40],
       ] as const) {
         const touch = { identifier: 3, target: element, clientX: x, clientY: 100 };
         element.dispatchEvent(
@@ -110,7 +110,7 @@ test("workspace search cancels an in-progress drawer closing swipe", async ({ pa
   await waitForKovaHydration(page);
   const sidebar = await revealSidebar(page);
   await sidebar.evaluate((element) => {
-    const touch = { identifier: 1, target: element, clientX: 40, clientY: 100 };
+    const touch = { identifier: 1, target: element, clientX: 160, clientY: 100 };
     element.dispatchEvent(
       Object.assign(new Event("touchstart", { bubbles: true }), { touches: [touch] }),
     );
@@ -125,7 +125,7 @@ test("workspace search cancels an in-progress drawer closing swipe", async ({ pa
   const inactiveSidebar = page.locator(".kova-sidebar[data-kova-core-sidebar]");
   await expect(inactiveSidebar).toHaveJSProperty("inert", true);
   await inactiveSidebar.evaluate((element) => {
-    const touch = { identifier: 1, target: element, clientX: 160, clientY: 100 };
+    const touch = { identifier: 1, target: element, clientX: 40, clientY: 100 };
     element.dispatchEvent(
       Object.assign(new Event("touchmove", { bubbles: true }), { touches: [touch] }),
     );

@@ -215,13 +215,16 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
 
   const drawer = await revealSidebar(page);
   const recent = drawer.getByRole("region", { name: "Continue working", exact: true });
-  await expect(recent.getByRole("button")).toHaveCount(2);
+  await expect(recent).toHaveCount(0);
   if (capture)
     await page.screenshot({ path: info.outputPath("navigation.png"), animations: "disabled" });
   await dismissMobileSidebar(page);
   compare(opening, await frame(shell), "closing the drawer");
   await revealSidebar(page);
-  await recent.getByRole("button", { name: /Composer review chat/ }).click();
+  await drawer
+    .getByRole("region", { name: "Chats", exact: true })
+    .getByRole("button", { name: /Composer review chat/ })
+    .click();
   await expect(page.locator("#message-answer-a")).toBeVisible();
   await expect(drawer).toBeHidden();
   await expect(input).not.toBeFocused();

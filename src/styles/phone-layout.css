@@ -169,42 +169,6 @@
     border-radius: 12px;
   }
 
-  .kova-phone-workspace .spec400-plugin-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-  }
-
-  .kova-phone-workspace .spec400-plugin-grid > .spec400-plugin-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 5px 8px;
-    align-items: center;
-    padding: 12px;
-    border-radius: 16px;
-  }
-
-  .kova-phone-workspace .spec400-plugin-card > .spec400-plugin-purpose {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    margin-block: 0;
-  }
-
-  .kova-phone-workspace .spec400-plugin-card > .spec400-plugin-card-footer {
-    display: contents;
-  }
-
-  .kova-phone-workspace .spec400-plugin-card-footer > :not(button) {
-    grid-column: 1;
-    grid-row: 3;
-    justify-self: start;
-  }
-
-  .kova-phone-workspace .spec400-plugin-card-footer > button {
-    grid-column: 2;
-    grid-row: 1;
-    min-height: 44px;
-  }
-
   [data-public-shell] .kova-public-header > nav:first-child {
     min-height: 56px;
     gap: 4px;

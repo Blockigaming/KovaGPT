@@ -1,7 +1,6 @@
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
 import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
-import { ContinueWorking } from "@/components/HomeChatFrame";
 import {
   NewChatGlyph,
   LibraryGlyph,
@@ -132,7 +131,6 @@ export function Sidebar({
   hideGuestLogin = false,
   mapsReleaseApproved = false,
   compactOnly = false,
-  showPhoneRecommendations = false,
 }: {
   conversations: Conversation[];
   trackBackgroundReplies?: boolean;
@@ -154,7 +152,6 @@ export function Sidebar({
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
-  showPhoneRecommendations?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const unreadReplyIds = useChatReplyActivity(
@@ -637,7 +634,7 @@ export function Sidebar({
     };
   }, [open]);
 
-  // Close the mobile drawer with a deliberate right swipe, without stealing
+  // Close the mobile drawer with a deliberate left swipe, without stealing
   // vertical scrolling or horizontal gestures from nested scrollable controls.
   useEffect(() => {
     if (!open) return;
@@ -693,7 +690,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (isClearSidebarSwipe({ dx, dy, elapsedMs: event.timeStamp - start.time })) {
+      if (isClearSidebarSwipe({ dx: -dx, dy, elapsedMs: event.timeStamp - start.time })) {
         start = null;
         swipeToggleRef.current();
       }
@@ -1025,6 +1022,7 @@ export function Sidebar({
             cancelChatHold();
         }}
         onPointerUp={cancelChatHold}
+        onPointerLeave={cancelChatHold}
         onPointerCancel={cancelChatHold}
         onContextMenu={(event) => {
           if (selectionPointerTypeRef.current === "touch" && isMobileViewport())
@@ -1913,18 +1911,6 @@ export function Sidebar({
                 ) : null}
               </details>
             </nav>
-            {mobileViewport && showPhoneRecommendations && savedConversations.length > 0 ? (
-              <div className="kova-phone-continue-working">
-                <ContinueWorking
-                  conversations={savedConversations}
-                  limit={2}
-                  onSelect={(id) => {
-                    closeAfterMobileNavigation("/");
-                    onSelect(id);
-                  }}
-                />
-              </div>
-            ) : null}
             <section
               className="kova-sidebar-history"
               aria-label="Chats"

@@ -153,14 +153,11 @@ function renderTopbar(props = {}, user = { isLoaded: true, isSignedIn: false }) 
   });
 }
 
-test("mobile home names KovaGPT and preserves specific destination and conversation titles", () => {
+test("mobile navigation uses the KovaGPT brand for every destination", () => {
   for (const [title, expected] of [
     [undefined, "KovaGPT"],
-    ["Projects", "Projects"],
-    [
-      "A saved conversation with a long descriptive title",
-      "A saved conversation with a long descriptive title",
-    ],
+    ["Projects", "KovaGPT"],
+    ["A saved conversation with a long descriptive title", "KovaGPT"],
   ]) {
     const tree = renderTopbar({ title });
     const heading = all(tree).find((node) => "data-kova-navigation-heading" in node.props);

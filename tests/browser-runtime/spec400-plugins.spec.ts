@@ -146,7 +146,9 @@ async function boot(
   await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
 }
 
-test("approved master directory supports primary and category filters", async ({ page }) => {
+test("approved directory keeps all providers and offers Health examples and search", async ({
+  page,
+}) => {
   await boot(page);
   await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
   const picker = page.getByRole("tablist", { name: "Connections" });
@@ -154,21 +156,14 @@ test("approved master directory supports primary and category filters", async ({
   await picker.getByRole("tab", { name: "Finances" }).click();
   await expect(page.getByText("Sample data").first()).toBeVisible();
   await picker.getByRole("tab", { name: "Health" }).click();
-  await expect(
-    page.getByRole("region", { name: "Fictional health dashboard example" }),
-  ).toBeVisible();
-  for (const [label, score] of [
-    ["Sleep", 82],
-    ["Recovery", 74],
-    ["Activity", 91],
-  ] as const) {
-    const ring = page.getByRole("img", { name: `Fictional ${label} score ${score} out of 100` });
-    await expect(ring.locator("circle[stroke-linecap]")).toHaveAttribute("stroke-linecap", "round");
-    await expect(ring.locator("circle[stroke-dasharray]")).toHaveAttribute(
-      "stroke-dasharray",
-      `${score} 100`,
-    );
-  }
+  const health = page.getByRole("region", { name: "Health trends", exact: true });
+  await expect(health.getByText("Example data")).toBeVisible();
+  await expect(health.getByRole("heading", { name: "Steps", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Connect Health", exact: true }).click();
+  const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
+  await expect(chooser.getByText("Apple Health", { exact: true })).toBeVisible();
+  await expect(chooser.getByText("Coming soon", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await picker.getByRole("tab", { name: "All" }).click();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);
@@ -178,12 +173,9 @@ test("approved master directory supports primary and category filters", async ({
   await expect(page.locator('[data-plugin-id="hubspot"]')).toContainText("Coming soon");
   for (const id of ["granola", "tana"]) {
     const card = page.locator(`[data-plugin-id="${id}"]`);
-    await expect(card.getByText("Coming soon", { exact: true })).toHaveCount(1);
-    await expect(card.getByRole("button")).toHaveText("Details");
+    await expect(card.getByRole("button")).toHaveText("Coming soon");
   }
-  await page.getByRole("combobox", { name: "Category", exact: true }).click();
-  await page.getByRole("option", { name: "Email", exact: true }).click();
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(2);
+  await expect(page.getByRole("combobox", { name: "Category", exact: true })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Search connections" }).fill("Gmail");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
   await page.getByRole("textbox", { name: "Search connections" }).fill("missing");
@@ -269,7 +261,7 @@ test("Manage shows verified account scopes and confirms a disconnect with workfl
   page,
 }) => {
   await boot(page, healthyGoogle);
-  await page.getByRole("button", { name: "Manage Gmail", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("connected@example.test");
   await page.getByText("Current permission scope", { exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("gmail.readonly");
@@ -348,7 +340,7 @@ test("Microsoft account management searches only the explicitly selected authori
       },
     ],
   });
-  await page.getByRole("button", { name: "Manage Outlook", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Outlook", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("mail@example.test");
   await dialog.getByRole("textbox", { name: "Search Outlook", exact: true }).fill("receipt");
@@ -396,7 +388,7 @@ test("Outlook Calendar reuses only a calendar-authorized account and requests ba
       },
     ],
   });
-  await page.getByRole("button", { name: "Manage Outlook Calendar", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Outlook Calendar", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("subject starts with");
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
@@ -442,7 +434,7 @@ test("Salesforce management sends the selected record type with the owner-bound 
       },
     ],
   });
-  await page.getByRole("button", { name: "Manage Salesforce", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Salesforce", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("combobox", { name: "Record type", exact: true }).click();
   await page.getByRole("option", { name: "Opportunities", exact: true }).click();

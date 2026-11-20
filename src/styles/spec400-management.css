@@ -1118,3 +1118,18 @@ html[data-kova-density="compact"]
     line-height: 22px;
   }
 }
+
+.kova-page :is(#library-title, #scheduled-tasks-title) {
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-weight: 600;
+}
+
+.spec400-schedules .kova-task-filters[role="tablist"] {
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-start;
+}
+.spec400-schedules .kova-task-filters [role="tab"] {
+  flex: 0 0 auto;
+  padding-inline: clamp(10px, 4vw, 18px);
+}

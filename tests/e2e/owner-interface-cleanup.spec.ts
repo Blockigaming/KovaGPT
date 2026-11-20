@@ -112,18 +112,15 @@ test("Home distinguishes two recommendations and has no Images sidebar shortcut"
 }) => {
   await visit(page, "/");
   await page.getByRole("button", { name: "New chat", exact: true }).first().click();
-  const recommendations = await revealContinueWorking(page);
-  await expect(recommendations.getByRole("button")).toHaveCount(2);
   const compact = await page.evaluate(
-    () =>
-      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-        .matches,
+    () => matchMedia("(max-width: 1023px), (hover: none) and (pointer: coarse)").matches,
   );
   if (compact) {
-    const drawer = page.getByRole("dialog", { name: "Primary navigation", exact: true });
-    await expect(drawer.getByRole("region", { name: "Continue working" })).toBeVisible();
-    await expect(recommendations.getByRole("button").first()).toHaveCSS("border-radius", "16px");
+    const drawer = await revealSidebar(page);
+    await expect(drawer.getByRole("region", { name: "Continue working" })).toHaveCount(0);
   } else {
+    const recommendations = await revealContinueWorking(page);
+    await expect(recommendations.getByRole("button")).toHaveCount(2);
     const gap = await recommendations
       .getByRole("list")
       .evaluate((list) => parseFloat(getComputedStyle(list).gap));

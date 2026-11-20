@@ -86,9 +86,11 @@ export async function dismissMobileSidebar(page: Page) {
 export async function revealContinueWorking(page: Page) {
   await expect(page.locator(".kova-empty-chat .spec400-recent-work")).toBeAttached();
   const recommendations = page.getByRole("region", { name: "Continue working", exact: true });
-  if (!(await recommendations.isVisible())) await revealSidebar(page);
-  await expect(recommendations).toBeVisible();
-  return recommendations;
+  if (await recommendations.isVisible()) return recommendations;
+  const drawer = await revealSidebar(page);
+  const chats = drawer.getByRole("region", { name: "Chats", exact: true });
+  await expect(chats).toBeVisible();
+  return chats;
 }
 
 export async function openCurrentSettings(page: Page) {

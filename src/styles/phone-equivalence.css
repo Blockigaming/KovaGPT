@@ -572,28 +572,6 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
-
-  /* Catalog cards retain their own desktop internals while the grid reflows. */
-  .kova-phone-workspace .spec400-plugin-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-  }
-
-  .kova-phone-workspace .spec400-plugin-grid > .spec400-plugin-card {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 22px;
-  }
-
-  .kova-phone-workspace .spec400-plugin-card > .spec400-plugin-card-footer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-block-start: 4px;
-  }
 }
 
 /* A small split window can be shorter than the combined draft and action rows.
@@ -638,5 +616,11 @@
 
   .kova-assistant[data-compact-chat-home] .spec400-composer {
     --composer-text-inset: 6px;
+  }
+}
+
+@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+  .kova-desktop-recent-work {
+    display: none;
   }
 }
