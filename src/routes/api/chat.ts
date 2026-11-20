@@ -1302,7 +1302,7 @@ export const Route = createFileRoute("/api/chat")({
             }
             const browserUsageHeaders = (quota: boolean) =>
               quota && browserUrl ? { [CLOUD_BROWSER_USAGE_HEADER]: "exhausted" } : undefined;
-            const browserEvidenceReservation = browserUrl
+            const browserEvidenceReservation = browserUrl && !capture
               ? "x".repeat(MAX_BROWSER_EVIDENCE_BYTES)
               : "";
 
@@ -1706,6 +1706,8 @@ export const Route = createFileRoute("/api/chat")({
                 ...transformed,
               ],
             };
+            const browserEvidenceEnd = String((body.messages as ChatMsg[])[0].content).length;
+            const browserEvidenceStart = browserEvidenceEnd - browserEvidenceReservation.length;
             // Cost control: cap output length per mode from the router config.
             if (routeDecision.maxOutputTokens > 0) {
               body.max_completion_tokens = routeDecision.maxOutputTokens;
@@ -2155,14 +2157,12 @@ export const Route = createFileRoute("/api/chat")({
                 );
                 const evidence = chatBrowserEvidence(url, page.title, page.content);
                 const initialSystem = (body.messages as ChatMsg[])[0];
-                const reservationEnd = String(initialSystem.content).length;
-                const reservationStart = reservationEnd - browserEvidenceReservation.length;
                 for (const system of new Set([initialSystem, finalMessages[0]])) {
                   if (typeof system.content === "string")
                     system.content =
-                      system.content.slice(0, reservationStart) +
+                      system.content.slice(0, browserEvidenceStart) +
                       evidence +
-                      system.content.slice(reservationEnd);
+                      system.content.slice(browserEvidenceEnd);
                 }
                 inputEstimate = estimateProviderInput(
                   freeHeadroom
