@@ -256,7 +256,12 @@ export async function readChatBrowserPage({
         if (--remaining < 0) throw new Error("browser_request_budget");
         const request = route.request();
         const result = await fetchPage(
-          { url: request.url(), method: request.method(), headers: {}, bodyBase64: "" },
+          {
+            url: request.url(),
+            method: request.method(),
+            headers: { "user-agent": "KovaGPT/1.0 (https://kovagpt.com/help/contact)" },
+            bodyBase64: "",
+          },
           { signal: browserSignal() },
         );
         if (result.status < 200 || result.status >= 300) throw new Error("browser_request_denied");
