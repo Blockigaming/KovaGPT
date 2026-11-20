@@ -20,8 +20,10 @@ export function chatBrowserDestination(text) {
   }
 }
 
-export const CLOUD_BROWSER_DAILY_LIMIT_MESSAGE =
-  "Cloud Browser limit reached. Upgrade your plan for higher usage limits or wait until midnight UTC for your daily allowance to reset.";
+export const CLOUD_BROWSER_DAILY_LIMIT_TITLE = "Cloud Browser limit reached.";
+export const CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION =
+  "Upgrade your plan for higher usage limits or wait until midnight UTC for your daily allowance to reset.";
+export const CLOUD_BROWSER_DAILY_LIMIT_MESSAGE = `${CLOUD_BROWSER_DAILY_LIMIT_TITLE} ${CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION}`;
 
 export const CLOUD_BROWSER_USAGE_HEADER = "X-Kova-Cloud-Browser-Usage";
 export const MAX_BROWSER_EVIDENCE_BYTES = 16_384;

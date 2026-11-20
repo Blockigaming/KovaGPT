@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { CLOUD_BROWSER_DAILY_LIMIT_MESSAGE } from "@/lib/chat-browser-policy.mjs";
+import {
+  CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
+  CLOUD_BROWSER_DAILY_LIMIT_TITLE,
+} from "@/lib/chat-browser-policy.mjs";
 import { ManualCloudBrowser } from "./ManualCloudBrowser";
 
 export function LimitReachedNotice({
@@ -36,7 +39,7 @@ export function LimitReachedNotice({
       image: "Image limit reached",
       chat: "Message limit reached",
       upload: "Upload limit reached",
-      browser_limit: CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+      browser_limit: CLOUD_BROWSER_DAILY_LIMIT_TITLE,
       browser_error: "Cloud Browser",
       browser_usage: "Kova usage limit reached",
     };
@@ -52,7 +55,7 @@ export function LimitReachedNotice({
       duration: Infinity,
       description:
         kind === "browser_limit"
-          ? undefined
+          ? CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION
           : canOpenBrowser
             ? `${limitMessage} You can still use Cloud Browser manually if you have browser time left.`
             : isBrowser
@@ -63,7 +66,7 @@ export function LimitReachedNotice({
       },
       action: canOpenBrowser
         ? { label: "Open Cloud Browser", onClick: () => setOpenedBrowser(true) }
-        : kind === "browser_error" || kind === "browser_usage"
+        : isBrowser
           ? undefined
           : {
               label: "View plans",

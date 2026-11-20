@@ -1,5 +1,7 @@
 import {
+  CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+  CLOUD_BROWSER_DAILY_LIMIT_TITLE,
   CLOUD_BROWSER_USAGE_HEADER,
 } from "../../src/lib/chat-browser-policy.mjs";
 import { expect, test, type Page } from "@playwright/test";
@@ -352,7 +354,11 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
     .locator("[data-sonner-toast]")
     .filter({ hasText: "Cloud Browser limit reached" });
   await expect(notice).toBeVisible();
-  await expect(notice).toContainText(CLOUD_BROWSER_DAILY_LIMIT_MESSAGE);
+  await expect(notice.locator("[data-title]")).toHaveText(CLOUD_BROWSER_DAILY_LIMIT_TITLE);
+  await expect(notice.locator("[data-description]")).toHaveText(
+    CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
+  );
+  await expect(notice.locator("[data-action]")).toHaveCount(0);
   await expect(notice).toHaveAttribute("data-y-position", "top");
   const width = page.viewportSize()!.width;
   await expect(notice).toHaveAttribute("data-x-position", width >= 1024 ? "right" : "center");
