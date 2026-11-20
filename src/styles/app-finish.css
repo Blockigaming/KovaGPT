@@ -1507,18 +1507,29 @@
   opacity: 0.6;
 }
 
-/* At very narrow widths the model gets the whole line; the three icon buttons
-   keep their usual positions along the bottom edge. */
-@container chat-composer (width < 20rem) {
-  .spec400-composer .spec400-composer-toolbar:has(.kova-consumer-model-trigger) {
+.kova-home-model-placeholder {
+  min-height: var(--composer-action-size);
+}
+
+/* Reserve a common mode row when the composer cannot comfortably fit a full
+   model name and three touch targets, including before the account loads. */
+@container chat-composer (width < 22.5rem) {
+  .spec400-composer
+    .spec400-composer-toolbar:has(
+      :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder)
+    ) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--composer-action-gap);
   }
-  .spec400-composer-toolbar:has(.kova-consumer-model-trigger) .spec400-composer-trailing {
+  .spec400-composer-toolbar:has(
+      :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder)
+    )
+    .spec400-composer-trailing {
     display: contents;
   }
-  .spec400-composer-toolbar .kova-consumer-model-trigger {
+  .spec400-composer-toolbar
+    :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder) {
     grid-area: 1 / 1 / 2 / -1;
     justify-self: end;
   }

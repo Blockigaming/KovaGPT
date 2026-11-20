@@ -28,9 +28,8 @@ async function geometry(page: Page) {
     primary,
   ]) {
     await expect(button).toBeVisible();
-    const expectedSize = button === primary && !coarseLayout ? 43 : targetSize;
-    await expect.poll(async () => (await button.boundingBox())?.width).toBe(expectedSize);
-    await expect.poll(async () => (await button.boundingBox())?.height).toBe(expectedSize);
+    await expect.poll(async () => (await button.boundingBox())?.width).toBe(targetSize);
+    await expect.poll(async () => (await button.boundingBox())?.height).toBe(targetSize);
   }
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
@@ -49,7 +48,10 @@ async function geometry(page: Page) {
     (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
-  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+  const modeOnOwnRow = await composer
+    .locator(".spec400-composer-toolbar")
+    .evaluate((toolbar) => getComputedStyle(toolbar).display === "grid");
+  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : modeOnOwnRow ? 144 : 92);
   else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   await expect
     .poll(() =>
@@ -631,8 +633,8 @@ test("requested polish: empty composer swaps voice and send and has compact atta
     () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
   );
   const sendTarget = await page.getByTestId("send-button").boundingBox();
-  expect(sendTarget!.width).toBe(touchLayout ? 44 : 43);
-  expect(sendTarget!.height).toBe(touchLayout ? 44 : 43);
+  expect(sendTarget!.width).toBe(touchLayout ? 44 : 36);
+  expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const mobileMenu = page.viewportSize()!.width < 1024;

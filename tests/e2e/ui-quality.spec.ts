@@ -107,6 +107,8 @@ test("empty workspace remains contained and composer focus is deliberate", async
           getComputedStyle(element).getPropertyValue("--kova-composer-width"),
         ),
         input: bounds(".spec400-composer-input"),
+        modeOnOwnRow:
+          getComputedStyle(element.querySelector(".spec400-composer-toolbar")!).display === "grid",
         coarse: matchMedia("(any-pointer: coarse)").matches,
         phone: matchMedia(
           "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
@@ -120,17 +122,16 @@ test("empty workspace remains contained and composer focus is deliberate", async
     if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
     if (metrics.phone) {
       // A short prompt fits in the compact phone frame with 44 px actions.
-      expect(metrics.height).toBeCloseTo(88, 0);
+      expect(metrics.height).toBeCloseTo(metrics.modeOnOwnRow ? 148 : 96, 0);
       expect(metrics.input!.height).toBeCloseTo(32, 0);
     } else expect(metrics.height).toBeGreaterThanOrEqual(coarseComposer ? 136 : 148);
     expect(metrics.input!.height).toBeGreaterThanOrEqual(26);
     const control = coarseComposer ? 44 : 36;
     expect(metrics.attach!.width).toBe(control);
     expect(metrics.attach!.height).toBe(control);
-    const sendControl = coarseComposer ? 44 : 43;
-    expect(metrics.send!.width).toBe(sendControl);
-    expect(metrics.send!.height).toBe(sendControl);
-    expect(metrics.attach!.y + control / 2).toBeCloseTo(metrics.send!.y + sendControl / 2, 1);
+    expect(metrics.send!.width).toBe(control);
+    expect(metrics.send!.height).toBe(control);
+    expect(metrics.attach!.y + control / 2).toBeCloseTo(metrics.send!.y + control / 2, 1);
     expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.y);
   }
 
