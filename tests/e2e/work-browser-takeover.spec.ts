@@ -204,12 +204,17 @@ test("Work takeover displays the remote page directly inside the browser workspa
   const remoteHeight = Math.round(image.height * scale);
   await expect(screen).toHaveAttribute("width", String(remoteWidth));
   await expect(screen).toHaveAttribute("height", String(remoteHeight));
-  // The page still receives input through the gap between the floating header controls.
-  await screen.click({ position: { x: image.width / 2, y: 18 } });
+  // On narrow phones the browser midpoint can sit under Return control.
+  const title = (await workspace.locator(".kova-browser-workspace-title").boundingBox())!;
+  const controls = (await workspace.locator(".kova-browser-workspace-actions").boundingBox())!;
+  const titleEnd = title.x + title.width;
+  expect(controls.x).toBeGreaterThan(titleEnd);
+  const clickPosition = { x: (titleEnd + controls.x) / 2 - image.x, y: 18 };
+  await screen.click({ position: clickPosition });
   await expect.poll(() => actions.map(({ kind }) => kind)).toContain("click");
   const click = actions.find(({ kind }) => kind === "click")!;
-  expect(Math.abs(click.x! - remoteWidth / 2)).toBeLessThan(5);
-  expect(Math.abs(click.y! - 18 * scale)).toBeLessThan(5);
+  expect(Math.abs(click.x! - (clickPosition.x * remoteWidth) / image.width)).toBeLessThan(5);
+  expect(Math.abs(click.y! - (clickPosition.y * remoteHeight) / image.height)).toBeLessThan(5);
   await page.keyboard.insertText("local fixture text");
   await expect
     .poll(() => actions.find(({ kind }) => kind === "input")?.text)
