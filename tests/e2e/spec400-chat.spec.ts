@@ -295,23 +295,57 @@ for (const surface of ["empty", "conversation"] as const) {
     const composer = page.locator(`[data-composer-surface="${surface}"] .spec400-composer`);
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const preview = composer.locator(".kova-link-preview-composer");
-    const draftStart = () =>
-      input.evaluate(
-        (element) =>
-          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
-      );
+    const textEdges = () =>
+      composer.evaluate((frame) => {
+        const left = frame.getBoundingClientRect().left;
+        const field = frame.querySelector("textarea")!;
+        const chip = frame.querySelector(".kova-link-preview-composer");
+        const draft =
+          field.getBoundingClientRect().left + parseFloat(getComputedStyle(field).paddingLeft);
+        return {
+          draft: draft - left,
+          preview: chip ? chip.getBoundingClientRect().left - left : null,
+        };
+      });
 
     await input.fill("go to youtube.com");
     await expect(preview).toBeHidden();
-    const originalStart = await draftStart();
+    const originalStart = (await textEdges()).draft;
     await input.press("End");
     await input.press("Space");
     await expect(preview).toBeVisible();
 
-    await expect.poll(async () => Math.abs((await draftStart()) - originalStart)).toBeLessThan(0.5);
-    await expect
-      .poll(async () => Math.abs((await preview.boundingBox())!.x - originalStart))
-      .toBeLessThan(0.5);
+    const expectAlignment = async () => {
+      await expect
+        .poll(async () => {
+          const edges = await textEdges();
+          return Math.max(
+            Math.abs(edges.draft - originalStart),
+            edges.preview === null ? Infinity : Math.abs(edges.preview - edges.draft),
+          );
+        })
+        .toBeLessThan(0.5);
+    };
+    await expectAlignment();
+
+    const phone = await page.evaluate(
+      () =>
+        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+          .matches,
+    );
+    if (phone) {
+      await page.evaluate(() => {
+        const visual = window.visualViewport!;
+        const height = visual.height - 150;
+        Object.defineProperty(visual, "height", { configurable: true, value: height });
+        visual.dispatchEvent(new Event("resize"));
+      });
+      await expect(page.locator(".kova-assistant[data-ui=modern]")).toHaveAttribute(
+        "data-keyboard-open",
+        "true",
+      );
+      await expectAlignment();
+    }
   });
 }
 

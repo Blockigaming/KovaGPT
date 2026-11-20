@@ -217,7 +217,7 @@
 
   .kova-assistant[data-keyboard-open="true"] .kova-empty-composer {
     margin-block-start: auto;
-    padding-block: 2px 8px;
+    padding-block: 2px 12px;
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-chat-input {
@@ -229,16 +229,20 @@
     padding-block: 2px;
   }
 
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer-dock > .spec400-chat-input {
+    padding-block-end: 10px;
+  }
+
   .kova-assistant[data-keyboard-open="true"]
     .spec400-chat-input[data-composer-surface]
     .spec400-composer {
     --keyboard-content-min: 44px;
     flex: 0 1 auto;
-    /* A 44px writing/expand row, 44px actions, 2px gap, 10px border/padding. */
-    min-height: calc(var(--keyboard-content-min) + 56px) !important;
-    padding: 4px 8px !important;
+    /* A 44px writing/expand row, 44px actions, 2px gap, 6px border/padding. */
+    min-height: calc(var(--keyboard-content-min) + 52px) !important;
+    padding: 2px 8px !important;
     gap: 2px;
-    border-radius: 22px;
+    border-radius: 20px;
     overflow: hidden;
   }
 
