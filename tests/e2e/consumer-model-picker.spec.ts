@@ -226,7 +226,7 @@ test("mobile Send hold opens Intelligence without sending the draft", async ({
   await waitForKovaHydration(page);
   const draft = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await draft.fill("Explain the causes of tides.");
-  const send = page.getByRole("button", { name: "Send message", exact: true });
+  const send = page.getByTestId("send-button");
   await send.dispatchEvent("pointerdown", { pointerType: "touch", isPrimary: true, button: 0 });
   const picker = page.getByRole("dialog", { name: "Intelligence", exact: true });
   await expect(picker).toBeVisible();
