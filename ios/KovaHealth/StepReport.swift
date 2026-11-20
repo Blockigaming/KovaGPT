@@ -12,10 +12,11 @@ struct StepReport: Encodable {
     let days: [Day]
 
     @MainActor
-    static func read(from store: HKHealthStore, now: Date = .now) async throws -> StepReport {
+    static func read(from store: HKHealthStore) async throws -> StepReport {
         let stepCount = HKQuantityType(.stepCount)
         try await store.requestAuthorization(toShare: [], read: [stepCount])
 
+        let now = Date.now
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
         let today = calendar.startOfDay(for: now)

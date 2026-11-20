@@ -17,7 +17,7 @@ private struct HealthView: View {
     @State private var status: String?
     @State private var isReading = false
     @State private var hasExport = StepReportFile.exists
-    @State private var isForeground = false
+    @State private var readGeneration = 0
 
     var body: some View {
         NavigationStack {
@@ -66,9 +66,12 @@ private struct HealthView: View {
             }
             .navigationTitle("KovaGPT Health")
         }
-        .onChange(of: scenePhase, initial: true) { _, phase in
-            isForeground = phase == .active
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                hasExport = StepReportFile.exists
+            }
             if phase == .background {
+                readGeneration += 1
                 report = nil
                 status = nil
             }
@@ -79,19 +82,20 @@ private struct HealthView: View {
     private func readSteps() async {
         guard !isReading else { return }
         isReading = true
+        let generation = readGeneration
         report = nil
         status = nil
         defer { isReading = false }
         do {
             let result = try await StepReport.read(from: store)
-            guard isForeground else { return }
+            guard generation == readGeneration else { return }
             if result.days.isEmpty {
                 status = "No step totals are available. Check the app’s read access in Apple Health and try again."
                 return
             }
             report = result
         } catch {
-            if isForeground {
+            if generation == readGeneration {
                 status = "Apple Health couldn’t read step totals. Try again while your device is unlocked."
             }
         }
