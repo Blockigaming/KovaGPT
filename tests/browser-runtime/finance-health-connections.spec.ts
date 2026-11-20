@@ -402,3 +402,55 @@ test("an old Plaid success callback cannot exchange its token after account swit
     ),
   ).toBe(false);
 });
+
+test("the Health timeline keeps tracking a touch after pointer capture moves to the chart", async ({
+  browser,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Chromium touch input");
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    await page.evaluate(() => {
+      const viewport = document.createElement("meta");
+      viewport.name = "viewport";
+      viewport.content = "width=device-width, initial-scale=1";
+      document.head.append(viewport);
+    });
+    await page.addStyleTag({
+      content:
+        'body { overflow-x: hidden; } [data-testid="health-timeline"] { width: 100%; height: 192px; touch-action: pan-y; }',
+    });
+    const chart = page.getByRole("slider", { name: "Steps timeline" });
+    await chart.scrollIntoViewIfNeeded();
+    const bounds = (await chart.boundingBox())!;
+    const cdp = await context.newCDPSession(page);
+    const start = bounds.x + bounds.width - 10;
+    const end = bounds.x + 50;
+    const y = bounds.y + 45;
+    const reading = page.getByTestId("health-timeline-reading");
+    await page.touchscreen.tap(start, y);
+    await expect(reading).toContainText("2026-11-16");
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: start, y }],
+    });
+    for (let step = 1; step <= 6; step++) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x: start + ((end - start) * step) / 6, y }],
+      });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect(reading).toContainText("2026-11-10");
+    await chart.press("ArrowRight");
+    await expect(reading).toContainText("2026-11-11");
+  } finally {
+    await context.close();
+  }
+});
