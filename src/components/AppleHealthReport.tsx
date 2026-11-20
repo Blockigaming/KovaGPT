@@ -1,5 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from "react";
 import {
   CartesianGrid,
   Line,
@@ -66,7 +73,12 @@ export function HealthTrends({
               max={APPLE_HEALTH_HISTORY_DAYS}
               value={range}
               onChange={(event) => setRange(event.currentTarget.valueAsNumber)}
-              className="block h-11 w-full cursor-pointer accent-rose-500"
+              style={
+                {
+                  "--kova-health-range-track": `linear-gradient(to right, var(--color-rose-500) ${((range - 7) / (APPLE_HEALTH_HISTORY_DAYS - 7)) * 100}%, color-mix(in srgb, var(--foreground) 33%, var(--card)) 0)`,
+                } as CSSProperties
+              }
+              className="kova-health-range block h-11 w-full cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
             <span aria-hidden="true" className="flex justify-between text-xs text-muted-foreground">
               <span>7 days</span>
