@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 import { coreFixture } from "./core-app-fixture";
 import {
+  expectsSeparateModeRow,
   openResponseOptions,
   revealSidebar,
   dismissMobileSidebar,
@@ -48,9 +49,7 @@ async function geometry(page: Page) {
     (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
-  const modeOnOwnRow = await composer
-    .locator(".spec400-composer-toolbar")
-    .evaluate((toolbar) => getComputedStyle(toolbar).display === "grid");
+  const modeOnOwnRow = await expectsSeparateModeRow(composer);
   if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : modeOnOwnRow ? 144 : 92);
   else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   await expect

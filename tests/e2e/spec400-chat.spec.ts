@@ -1,3 +1,4 @@
+import { expectsSeparateModeRow } from "./current-ui";
 import {
   CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
   CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
@@ -90,7 +91,10 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
-  if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
+  if (conversation)
+    await height.toBeLessThanOrEqual(
+      singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+    );
   else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
@@ -367,9 +371,10 @@ for (const surface of ["empty", "conversation"] as const) {
     const cards = tray.locator(":scope > .spec400-composer-card");
     const websites = tray.locator(".kova-link-preview-composer");
     const expectStableToolbar = async () => {
+      const stacked = await expectsSeparateModeRow(composer);
       await expect
         .poll(() =>
-          composer.evaluate((frame) => {
+          composer.evaluate((frame, modeOnOwnRow) => {
             const outer = frame.getBoundingClientRect();
             const leading = frame.querySelector(".kova-composer-plus")!.getBoundingClientRect();
             const send = frame
@@ -388,15 +393,22 @@ for (const surface of ["empty", "conversation"] as const) {
               left: Math.round(leading.left - outer.left),
               right: Math.round(outer.right - send.right),
               bottom: Math.round(outer.bottom - send.bottom),
-              aligned: [leading, model, dictate].every(
-                (action) => Math.abs(center(action) - center(send)) < 0.5,
-              ),
+              aligned:
+                [leading, dictate].every(
+                  (action) => Math.abs(center(action) - center(send)) < 0.5,
+                ) &&
+                (modeOnOwnRow
+                  ? Math.abs(model.right - send.right) < 0.5
+                  : Math.abs(center(model) - center(send)) < 0.5),
               heightMatches: [leading, model, dictate].every(
                 (action) => action.height === send.height,
               ),
-              gaps: [Math.round(dictate.left - model.right), Math.round(send.left - dictate.right)],
+              gaps: [
+                Math.round(modeOnOwnRow ? dictate.top - model.bottom : dictate.left - model.right),
+                Math.round(send.left - dictate.right),
+              ],
             };
-          }),
+          }, stacked),
         )
         .toEqual({
           left: 13,
