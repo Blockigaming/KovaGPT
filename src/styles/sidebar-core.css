@@ -580,17 +580,6 @@ button.kova-sidebar-scrim {
     max-width: calc(100vw - 24px);
     border-radius: 0 24px 24px 0;
   }
-  /* A centered notification can overlap the drawer header. Keep its actions usable
-     while letting the notification text pass taps through to the drawer. */
-  body:has([data-kova-core-sidebar][data-state="open"][aria-modal="true"])
-    [data-sonner-toaster][data-x-position="center"]
-    [data-sonner-toast] {
-    pointer-events: none;
-
-    :is(a, button) {
-      pointer-events: auto;
-    }
-  }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: var(--kova-sidebar-drawer-width, 260px);
     transform: translateX(-100%);

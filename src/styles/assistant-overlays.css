@@ -2,6 +2,20 @@
    The main route lifts its semantic tokens onto body; keep every overlay on
    those same surfaces without changing Radix placement, focus or scrolling. */
 
+/* Centered phone notices can cover the menu trigger and drawer close button.
+   Their text passes taps through, and their own controls stay interactive. */
+[data-sonner-toaster][data-x-position="center"][data-y-position="top"] {
+  pointer-events: none;
+
+  [data-sonner-toast] {
+    pointer-events: none;
+  }
+
+  :is(a, button, input, select, textarea, [role="button"]) {
+    pointer-events: auto;
+  }
+}
+
 /* A quiet resting edge, with the existing visible keyboard focus retained. */
 body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(.spec400-options-panel select, .spec400-expanded-textarea, .kova-header-title-input) {
