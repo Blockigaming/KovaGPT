@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heart } from "lucide-react";
+import { APPLE_HEALTH_METRICS } from "@/health/apple-health-metrics.mjs";
+import type { AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
 import { AppleHealthReport, HealthTrends } from "@/components/AppleHealthReport";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
@@ -11,7 +13,15 @@ import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
 const refreshInterval = 5 * 60_000;
 
-function OuraDashboard({ ownerId, accountId }: { ownerId: string; accountId: string }) {
+function OuraDashboard({
+  ownerId,
+  accountId,
+  onReport,
+}: {
+  ownerId: string;
+  accountId: string;
+  onReport: (report: AppleHealthAnalytics | null) => void;
+}) {
   const [report, setReport] = useState<OuraAnalytics | null>(null);
   const [message, setMessage] = useState("");
   useEffect(() => {
@@ -69,6 +79,11 @@ function OuraDashboard({ ownerId, accountId }: { ownerId: string; accountId: str
     };
   }, [accountId, ownerId]);
 
+  useEffect(() => {
+    onReport(report);
+  }, [onReport, report]);
+  useEffect(() => () => onReport(null), [onReport]);
+
   return (
     <div className="space-y-4">
       {message && (
@@ -101,9 +116,7 @@ function OuraDashboard({ ownerId, accountId }: { ownerId: string; accountId: str
               Some Oura readings are temporarily unavailable.
             </p>
           )}
-          {Object.keys(report.metrics).length ? (
-            <HealthTrends report={report} catalog={OURA_METRICS} />
-          ) : (
+          {!Object.keys(report.metrics).length && (
             <p className="text-sm text-muted-foreground">Waiting for readings from Oura.</p>
           )}
         </>
@@ -119,6 +132,7 @@ function OuraConnections({
   error,
   reload,
   visible,
+  onReport,
 }: {
   ownerId: string | null;
   data: AccountStatus | null;
@@ -126,6 +140,7 @@ function OuraConnections({
   error: boolean;
   reload: () => Promise<boolean>;
   visible: boolean;
+  onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
   const [pending, setPending] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
@@ -260,7 +275,12 @@ function OuraConnections({
         </Button>
       )}
       {visible && ownerId && configured && connected && (
-        <OuraDashboard key={ownerId + ":" + account.id} ownerId={ownerId} accountId={account.id} />
+        <OuraDashboard
+          key={ownerId + ":" + account.id}
+          ownerId={ownerId}
+          accountId={account.id}
+          onReport={onReport}
+        />
       )}
       <ConfirmActionDialog
         open={disconnect !== null}
@@ -290,47 +310,54 @@ export function HealthConnectionsPanel({
   error: boolean;
   reload: () => Promise<boolean>;
 }) {
-  const [provider, setProvider] = useState("apple");
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("health_provider") === "oura")
-      setProvider("oura");
-  }, []);
+  const [apple, setApple] = useState<AppleHealthAnalytics | null>(null);
+  const [oura, setOura] = useState<AppleHealthAnalytics | null>(null);
+  const asOf = [apple?.asOf, oura?.asOf].filter(Boolean).sort().at(-1);
+  const metrics = { ...apple?.metrics, ...oura?.metrics };
   return (
     <section
-      className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-4 py-6 sm:py-10"
+      className="kova-health-dashboard mx-auto w-full max-w-[680px] space-y-10 py-8 sm:space-y-14 sm:py-14"
       aria-labelledby="health-connections-title"
     >
-      <h2
-        id="health-connections-title"
-        className="text-xl font-semibold tracking-tight sm:text-2xl"
-      >
-        A new way to manage your health
-      </h2>
-      <Tabs value={provider} onValueChange={setProvider}>
-        <TabsList aria-label="Health providers">
-          <TabsTrigger value="apple">Apple Health</TabsTrigger>
-          <TabsTrigger value="oura">Oura</TabsTrigger>
-        </TabsList>
-        <TabsContent
-          value="apple"
-          forceMount
-          className="mt-4 rounded-2xl border border-border p-3 data-[state=inactive]:hidden sm:p-5"
+      <header className="flex flex-col items-center gap-4 text-center">
+        <span className="grid size-14 place-items-center rounded-full border border-border bg-card">
+          <Heart className="size-6 text-rose-500" aria-hidden="true" />
+        </span>
+        <h2
+          id="health-connections-title"
+          className="text-xl font-semibold tracking-tight sm:text-2xl"
         >
-          <AppleHealthReport ownerId={ownerId} visible={visible && provider === "apple"} />
-        </TabsContent>
-        <TabsContent value="oura" className="mt-4 rounded-2xl border border-border p-3 sm:p-5">
-          <OuraConnections
-            ownerId={ownerId}
-            data={data}
-            loading={loading}
-            error={error}
-            reload={reload}
-            visible={visible && provider === "oura"}
-          />
-        </TabsContent>
-      </Tabs>
-      {!ownerId && (
-        <p className="text-sm text-muted-foreground">Sign in to manage your health connections.</p>
+          A new way to manage your health
+        </h2>
+      </header>
+      {asOf && Object.keys(metrics).length > 0 && (
+        <HealthTrends
+          report={{ asOf, metrics }}
+          catalog={[...APPLE_HEALTH_METRICS, ...OURA_METRICS]}
+        />
+      )}
+      {ownerId ? (
+        <details className="border-t border-border pt-3">
+          <summary className="cursor-pointer rounded-xl px-2 py-2 text-sm font-semibold hover:bg-muted/50">
+            Manage health connections
+          </summary>
+          <div className="grid gap-5 px-2 pt-4 sm:grid-cols-2">
+            <AppleHealthReport ownerId={ownerId} visible={visible} onReport={setApple} />
+            <OuraConnections
+              ownerId={ownerId}
+              data={data}
+              loading={loading}
+              error={error}
+              reload={reload}
+              visible={visible}
+              onReport={setOura}
+            />
+          </div>
+        </details>
+      ) : (
+        <p className="text-center text-sm text-muted-foreground">
+          Sign in to manage your health connections.
+        </p>
       )}
     </section>
   );

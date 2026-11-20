@@ -546,3 +546,13 @@
 .spec400-connection-group[data-state="inactive"] {
   display: none;
 }
+
+/* Health can have more metrics than fit on a phone. Keep the Connections
+   pill geometry and let the row scroll without shrinking individual options. */
+.spec400-plugin-tabs.kova-health-selector[role="tablist"] {
+  flex-wrap: nowrap;
+  width: fit-content;
+}
+.kova-health-selector[role="tablist"] [role="tab"] {
+  flex: 0 0 auto;
+}

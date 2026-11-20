@@ -1,3 +1,4 @@
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   CartesianGrid,
@@ -10,7 +11,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { readAppleHealthExport, type AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
-import { APPLE_HEALTH_DAY_MS, APPLE_HEALTH_METRICS } from "@/health/apple-health-metrics.mjs";
+import { APPLE_HEALTH_DAY_MS } from "@/health/apple-health-metrics.mjs";
 import { useAppleHealthLive } from "@/health/use-apple-health-live";
 
 const number = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
@@ -39,12 +40,6 @@ export function HealthTrends({
   const [range, setRange] = useState<Range>(7);
   const available = catalog.filter((metric) => report.metrics[metric.id]?.length);
   const groups = [...new Set(available.map(({ group }) => group))];
-  const priorityGroups = ["Activity", "Sleep", "Recovery", "Vitals"].filter((item) =>
-    groups.includes(item),
-  );
-  const quickGroups =
-    groups.length <= 4 ? groups : (priorityGroups.length ? priorityGroups : groups).slice(0, 3);
-  const moreGroups = groups.filter((item) => !quickGroups.includes(item));
   const group = groups.includes(groupId) ? groupId : groups[0];
   const metrics = available.filter((metric) => metric.group === group);
   const metric = metrics.find((item) => item.id === metricId) ?? metrics[0];
@@ -89,9 +84,6 @@ export function HealthTrends({
         : [];
   const selectClass =
     "min-h-10 max-w-full rounded-lg border border-border bg-background px-3 text-sm";
-  const pill = (selected: boolean) =>
-    `whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${selected ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`;
-
   const selectGroup = (item: string) => {
     setGroupId(item);
     setMetricId("");
@@ -100,58 +92,34 @@ export function HealthTrends({
 
   return (
     <div className="space-y-4">
-      {groups.length > 1 && (
-        <div
+      <Tabs value={group} onValueChange={selectGroup}>
+        <TabsList
           aria-label="Metric categories"
-          role="group"
-          className="flex flex-wrap items-center gap-1"
+          className="spec400-plugin-tabs kova-health-selector"
         >
-          {quickGroups.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={pill(item === group)}
-              aria-pressed={item === group}
-              onClick={() => selectGroup(item)}
-            >
+          {groups.map((item) => (
+            <TabsTrigger key={item} value={item}>
               {item}
-            </button>
+            </TabsTrigger>
           ))}
-          {moreGroups.length > 0 && (
-            <select
-              aria-label="More metric categories"
-              className={pill(moreGroups.includes(group))}
-              value={moreGroups.includes(group) ? group : ""}
-              onChange={(event) => selectGroup(event.currentTarget.value)}
-            >
-              <option value="" disabled>
-                More
-              </option>
-              {moreGroups.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <select
-          aria-label="Metric"
-          className={selectClass}
-          value={metric.id}
-          onChange={(event) => {
-            setMetricId(event.currentTarget.value);
-            setSourceIndex(0);
-          }}
-        >
+        </TabsList>
+      </Tabs>
+      <Tabs
+        value={metric.id}
+        onValueChange={(value) => {
+          setMetricId(value);
+          setSourceIndex(0);
+        }}
+      >
+        <TabsList aria-label="Metric" className="spec400-plugin-tabs kova-health-selector">
           {metrics.map(({ id, label }) => (
-            <option key={id} value={id}>
+            <TabsTrigger key={id} value={id}>
               {label}
-            </option>
+            </TabsTrigger>
           ))}
-        </select>
+        </TabsList>
+      </Tabs>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
         {sources.length > 1 && (
           <select
             aria-label={metric.id === "StepCount" ? "Step source" : "Data source"}
@@ -166,20 +134,15 @@ export function HealthTrends({
             ))}
           </select>
         )}
-        <div aria-label="Date range" role="group" className="flex rounded-full bg-muted p-0.5">
-          {ranges.map((value) => (
-            <button
-              type="button"
-              key={value}
-              aria-label={`${value} days`}
-              aria-pressed={range === value}
-              className={pill(range === value)}
-              onClick={() => setRange(value)}
-            >
-              {value}D
-            </button>
-          ))}
-        </div>
+        <Tabs value={String(range)} onValueChange={(value) => setRange(Number(value) as Range)}>
+          <TabsList aria-label="Date range" className="spec400-plugin-tabs kova-health-selector">
+            {ranges.map((value) => (
+              <TabsTrigger key={value} value={String(value)} aria-label={`${value} days`}>
+                {value}D
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
       {days.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -188,9 +151,9 @@ export function HealthTrends({
       ) : (
         <>
           {stats.length > 0 && (
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-muted/40 px-4 py-3 sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-2 border-b border-border pb-4 sm:grid-cols-4">
               {stats.map(([label, value]) => (
-                <div key={label}>
+                <div key={label} className="rounded-xl px-2 py-1.5">
                   <dt className="text-xs text-muted-foreground">{label}</dt>
                   <dd className="mt-0.5 text-base font-medium tabular-nums">{format(value)}</dd>
                 </div>
@@ -274,9 +237,11 @@ export function HealthTrends({
 export function AppleHealthReport({
   ownerId,
   visible,
+  onReport,
 }: {
   ownerId: string | null;
   visible: boolean;
+  onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
   const [report, setReport] = useState<AppleHealthAnalytics | null>(null);
   const [status, setStatus] = useState("");
@@ -284,6 +249,9 @@ export function AppleHealthReport({
   const pending = useRef<AbortController>(null);
   const live = useAppleHealthLive(visible ? ownerId : null);
   const displayed = live.report ?? report;
+  useEffect(() => {
+    onReport(displayed);
+  }, [displayed, onReport]);
 
   const clear = useCallback(() => {
     pending.current?.abort();
@@ -394,7 +362,6 @@ export function AppleHealthReport({
           You can also open an export from Connection options.
         </p>
       )}
-      {displayed && <HealthTrends report={displayed} catalog={APPLE_HEALTH_METRICS} />}
     </section>
   );
 }
