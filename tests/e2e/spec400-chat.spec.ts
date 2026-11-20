@@ -16,19 +16,20 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const compactEmpty =
-    !conversation &&
-    (await page.evaluate(
-      () =>
-        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-          .matches,
-    ));
-  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
+  const phone = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  await expect(composer).toHaveCSS(
+    "border-radius",
+    phone ? (conversation ? "26px" : "21px") : "34px",
+  );
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
-  else await height.toBeGreaterThanOrEqual(compactEmpty ? 92 : 128);
+  else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
   if (singleRow) return compactDesktop;
@@ -286,32 +287,33 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
   }
 });
 
-test("a composer link preview aligns with the first letter of the draft", async ({ page }) => {
-  await fixture(page, "dark", true);
-  await page.goto("/");
-  await waitForKovaHydration(page);
-  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-  const preview = page.locator(".kova-link-preview-composer");
+for (const surface of ["empty", "conversation"] as const) {
+  test(`a composer link preview preserves draft alignment in ${surface} chat`, async ({ page }) => {
+    await fixture(page, "dark", true, surface === "conversation");
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const composer = page.locator(`[data-composer-surface="${surface}"] .spec400-composer`);
+    const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const preview = composer.locator(".kova-link-preview-composer");
+    const draftStart = () =>
+      input.evaluate(
+        (element) =>
+          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
+      );
 
-  await input.fill("go to youtube.com");
-  await expect(preview).toBeHidden();
-  await input.press("End");
-  await input.press("Space");
-  await expect(preview).toBeVisible();
+    await input.fill("go to youtube.com");
+    await expect(preview).toBeHidden();
+    const originalStart = await draftStart();
+    await input.press("End");
+    await input.press("Space");
+    await expect(preview).toBeVisible();
 
-  await expect
-    .poll(() =>
-      input.evaluate((element) => {
-        const link = element
-          .closest(".spec400-composer")!
-          .querySelector(".kova-link-preview-composer")!;
-        const textStart =
-          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft);
-        return Math.abs(link.getBoundingClientRect().left - textStart);
-      }),
-    )
-    .toBeLessThan(0.5);
-});
+    await expect.poll(async () => Math.abs((await draftStart()) - originalStart)).toBeLessThan(0.5);
+    await expect
+      .poll(async () => Math.abs((await preview.boundingBox())!.x - originalStart))
+      .toBeLessThan(0.5);
+  });
+}
 
 test("Cloud Browser limit displays a top notification and keeps the sent Wikipedia icon compact", async ({
   page,
