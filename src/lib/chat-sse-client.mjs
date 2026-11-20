@@ -276,6 +276,7 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
       : `chat_http_${response.status || "error"}`;
   error.category =
     typeof payload.category === "string" && payload.category ? payload.category : undefined;
+  error.stage = typeof payload.stage === "string" ? payload.stage : undefined;
   error.requestId =
     typeof payload.requestId === "string" && payload.requestId
       ? payload.requestId
@@ -285,4 +286,14 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
   const retryAfter = response.headers.get("retry-after");
   error.retryAfter = retryAfter && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : undefined;
   return error;
+}
+
+export function cloudBrowserErrorKind(error) {
+  if (error?.code === "cloud_browser_daily_limit") return "browser_limit";
+  if (
+    error?.stage === "cloud_browser" ||
+    (typeof error?.code === "string" && error.code.startsWith("cloud_browser_"))
+  ) {
+    return "browser_error";
+  }
 }

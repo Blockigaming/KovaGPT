@@ -306,3 +306,50 @@ test("a composer link preview aligns with the first letter of the draft", async 
     )
     .toBeLessThan(0.5);
 });
+
+test("Cloud Browser limit displays a pop-up and keeps the sent Wikipedia icon compact", async ({
+  page,
+}) => {
+  await fixture(page, "dark");
+  const icon = "https://en.wikipedia.org/static/favicon/wikipedia.ico";
+  const url = "https://en.wikipedia.org/wiki/The_Great_Wave_off_Kanagawa";
+  await page.route(icon, (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><text x="20" y="215" font-size="220">W</text></svg>',
+    }),
+  );
+  await page.route("**/api/link-preview", (route) =>
+    route.fulfill({ json: { url, title: "The Great Wave off Kanagawa", siteName: "Wikipedia" } }),
+  );
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      status: 429,
+      json: {
+        error: "You've reached your daily Cloud Browser limit. Your time resets at midnight UTC.",
+        code: "cloud_browser_daily_limit",
+        stage: "cloud_browser",
+        retryable: false,
+      },
+    }),
+  );
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await input.fill(`Open ${url} in Cloud Browser.`);
+  await page.getByTestId("send-button").click();
+  const dialog = page.getByRole("dialog", { name: "Cloud Browser limit reached" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Your time resets at midnight UTC.");
+  await expect(page.locator('[data-message-role="assistant"]')).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const prompt = page.getByLabel("Sent prompt");
+  await expect(prompt).toContainText("in Cloud Browser.");
+  const favicon = prompt.locator("img");
+  await expect(favicon).toHaveAttribute("src", icon);
+  await expect.poll(() => favicon.evaluate((image) => image.naturalWidth)).toBe(256);
+  await expect(favicon).toHaveCSS("width", "24px");
+  await expect(favicon).toHaveCSS("height", "24px");
+  await expect(input).toBeEmpty();
+});

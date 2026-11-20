@@ -5,6 +5,7 @@ import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { ChatMessage } from "@/components/ChatMessage";
+import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,7 +31,11 @@ import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { authFetch } from "@/lib/auth-fetch";
-import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
+import {
+  chatResponseError,
+  cloudBrowserErrorKind,
+  consumeChatSse,
+} from "@/lib/chat-sse-client.mjs";
 import { loadDraft, saveDraft, type Message } from "@/lib/chat-store";
 import { normalizeResponseSources, type ResponseSource } from "@/lib/response-sources";
 import {
@@ -64,6 +69,10 @@ function ProjectChatPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [title, setTitle] = useState("");
   const [messages, setMessages] = useState<ProjectChatMessage[]>([]);
+  const [browserNotice, setBrowserNotice] = useState<{
+    kind: NonNullable<ReturnType<typeof cloudBrowserErrorKind>>;
+    message: string;
+  } | null>(null);
   const requestKey =
     isLoaded && isSignedIn && userKey ? JSON.stringify([userKey, projectId, chatId]) : null;
   // Reuse the ordinary text draft contract, with a distinct project+chat object identifier.
@@ -157,6 +166,7 @@ function ProjectChatPage() {
     setProject(null);
     setTitle("");
     setMessages([]);
+    setBrowserNotice(null);
     setSending(false);
     setComposerAttachments([]);
     setRenameOpen(false);
@@ -314,6 +324,7 @@ function ProjectChatPage() {
     let assistant = "";
     let assistantFollowups: string[] = [];
     let responseCompleted = false;
+    let browserRejected = false;
     let assistantSources: ResponseSource[] | undefined;
     const responseMessage = (): ProjectChatMessage => ({
       role: "assistant",
@@ -373,7 +384,13 @@ function ProjectChatPage() {
       responseCompleted = true;
     } catch (error) {
       if (isCurrent() && !isAbortError(error)) {
-        toast.error(error instanceof Error ? error.message : "Failed to generate a response");
+        const kind = cloudBrowserErrorKind(error);
+        if (kind && error instanceof Error) {
+          browserRejected = true;
+          setBrowserNotice({ kind, message: error.message });
+        } else {
+          toast.error(error instanceof Error ? error.message : "Failed to generate a response");
+        }
       }
     } finally {
       const finalMessages: ProjectChatMessage[] = assistant.trim()
@@ -393,7 +410,7 @@ function ProjectChatPage() {
         if (isCurrent()) {
           if (followUp === undefined && draftRef.current === clearedDraft) {
             // Keep newer typing untouched. Failed/stopped requests retain the original ordinary text.
-            setInput(saved && responseCompleted ? "" : submittedDraft.text);
+            setInput(saved && (responseCompleted || browserRejected) ? "" : submittedDraft.text);
           }
           if (abortControllerRef.current === controller) abortControllerRef.current = null;
           sendOperationRef.current = null;
@@ -686,6 +703,17 @@ function ProjectChatPage() {
           />
         </div>
       </div>
+
+      {browserNotice && (
+        <LimitReachedDialog
+          open
+          kind={browserNotice.kind}
+          message={browserNotice.message}
+          onOpenChange={(open) => {
+            if (!open) setBrowserNotice(null);
+          }}
+        />
+      )}
 
       <AlertDialog
         open={navigationBlocker.status === "blocked"}

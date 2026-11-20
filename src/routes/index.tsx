@@ -49,7 +49,11 @@ import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
+import {
+  chatResponseError,
+  cloudBrowserErrorKind,
+  consumeChatSse,
+} from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -609,8 +613,9 @@ function KovaGPT() {
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
     open: boolean;
-    kind: "image" | "chat" | "upload";
+    kind: "image" | "chat" | "upload" | NonNullable<ReturnType<typeof cloudBrowserErrorKind>>;
     message?: string;
+    scope?: NextPromptScope;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightTargetRef = useRef<{
@@ -2318,7 +2323,16 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
-        if ((e as Error).name === "AbortError") {
+        const browserErrorKind = cloudBrowserErrorKind(e);
+        if (browserErrorKind || (e as Error).name === "AbortError") {
+          if (browserErrorKind && isCurrentRetryScope()) {
+            setLimitDialog({
+              open: true,
+              kind: browserErrorKind,
+              message: (e as Error).message,
+              scope: requestScope,
+            });
+          }
           const stoppedByUser = controller.signal.reason?.message === USER_STOP_REASON;
           if (!assembledReply.trim() && !stoppedByUser) {
             setConversations((prev) =>
@@ -3683,15 +3697,16 @@ function KovaGPT() {
           />
         )}
 
-        {limitDialog.open && (
-          <LimitReachedDialog
-            open={limitDialog.open}
-            onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
-            kind={limitDialog.kind}
-            message={limitDialog.message}
-            resetsAt={getUsage().resetsAt}
-          />
-        )}
+        {limitDialog.open &&
+          (!limitDialog.scope || sameNextPromptScope(limitDialog.scope, nextPromptScope)) && (
+            <LimitReachedDialog
+              open={limitDialog.open}
+              onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
+              kind={limitDialog.kind}
+              message={limitDialog.message}
+              resetsAt={getUsage().resetsAt}
+            />
+          )}
       </Suspense>
 
       {signupPromptOpen && (

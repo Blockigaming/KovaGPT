@@ -17,10 +17,24 @@ export function LimitReachedDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  kind?: "image" | "chat" | "upload";
+  kind?: "image" | "chat" | "upload" | "browser_limit" | "browser_error";
   resetsAt?: number;
   message?: string;
 }) {
+  if (kind === "browser_limit" || kind === "browser_error") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle>
+              {kind === "browser_limit" ? "Cloud Browser limit reached" : "Cloud Browser"}
+            </DialogTitle>
+            <DialogDescription>{message}</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
   const title =
     kind === "image"
       ? "Image limit reached"
