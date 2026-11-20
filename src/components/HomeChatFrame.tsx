@@ -1,4 +1,5 @@
 import { useId, type ReactNode, type Ref } from "react";
+import { NovaLogo } from "@/components/NovaLogo";
 import type { Conversation } from "@/lib/chat-store";
 
 export function ContinueWorking({
@@ -45,7 +46,7 @@ export function HomeChatFrame({
   children,
 }: {
   scrollRef?: Ref<HTMLElement>;
-  heading: ReactNode;
+  heading: string;
   headingId?: string;
   recentWork?: ReactNode;
   children: ReactNode;
@@ -62,7 +63,13 @@ export function HomeChatFrame({
           data-ui-reference="claude.greeting"
           className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
         >
-          {heading}
+          <h1
+            id={headingId}
+            className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
+          >
+            <span className="kova-home-greeting-text">{heading}</span>
+            <NovaLogo mark className="kova-home-welcome-logo" />
+          </h1>
         </div>
         <div className="kova-empty-composer">{children}</div>
         {recentWork}

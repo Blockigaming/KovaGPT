@@ -649,8 +649,10 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-.kova-inline-dictation-controls button svg,
-.kova-inline-dictation-processing svg {
+.kova-inline-dictation-processing {
+  cursor: default;
+}
+.kova-inline-dictation-controls button svg {
   width: 20px;
   height: 20px;
   stroke-width: 2;

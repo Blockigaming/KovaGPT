@@ -57,14 +57,7 @@ export function HomeWelcome({
     <HomeChatFrame
       scrollRef={homeScrollRef}
       headingId="chat-greeting"
-      heading={
-        <h1
-          id="chat-greeting"
-          className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
-        >
-          {greeting}
-        </h1>
-      }
+      heading={greeting}
       recentWork={
         conversations.length ? (
           <ContinueWorking conversations={conversations} onSelect={onSelect} />
