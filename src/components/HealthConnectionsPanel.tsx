@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Activity, Heart } from "lucide-react";
 import { APPLE_HEALTH_METRICS } from "@/health/apple-health-metrics.mjs";
 import type { AppleHealthAnalytics } from "@/health/apple-health-export.mjs";

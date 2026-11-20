@@ -280,7 +280,7 @@ test("activity shows default sections and steps while hiding completed browser s
       page.getByRole("button", { name: "Activity", exact: true }).filter({ visible: true }),
     ).toBeFocused();
     const title = page.locator("[data-kova-navigation-heading]").filter({ visible: true });
-    await expect(title).toHaveText("Composer review chat");
+    await expect(title).toHaveText("KovaGPT");
     await expect(title).toHaveCSS("text-overflow", "ellipsis");
     const titleBox = (await title.boundingBox())!;
     const header = page.locator(".kova-topbar-inner:visible");

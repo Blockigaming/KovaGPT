@@ -3,7 +3,7 @@ import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { functionNames } from "./server-function-fixture";
 
 async function openGoogleAccounts(page: Page) {
-  await page.getByRole("button", { name: "Manage Gmail", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();
   const panel = page.getByRole("region", { name: "Google connection status", exact: true });
   await expect(panel).toBeVisible();
   return panel;

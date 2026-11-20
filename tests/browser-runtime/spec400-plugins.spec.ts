@@ -269,7 +269,7 @@ test("Manage shows verified account scopes and confirms a disconnect with workfl
   page,
 }) => {
   await boot(page, healthyGoogle);
-  await page.getByRole("button", { name: "Manage Gmail", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Gmail", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("connected@example.test");
   await page.getByText("Current permission scope", { exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("gmail.readonly");
@@ -348,7 +348,7 @@ test("Microsoft account management searches only the explicitly selected authori
       },
     ],
   });
-  await page.getByRole("button", { name: "Manage Outlook", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Outlook", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("mail@example.test");
   await dialog.getByRole("textbox", { name: "Search Outlook", exact: true }).fill("receipt");
@@ -396,7 +396,7 @@ test("Outlook Calendar reuses only a calendar-authorized account and requests ba
       },
     ],
   });
-  await page.getByRole("button", { name: "Manage Outlook Calendar", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Outlook Calendar", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("subject starts with");
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
@@ -442,7 +442,7 @@ test("Salesforce management sends the selected record type with the owner-bound 
       },
     ],
   });
-  await page.getByRole("button", { name: "Manage Salesforce", exact: true }).click();
+  await page.getByRole("button", { name: "Connected Salesforce", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("combobox", { name: "Record type", exact: true }).click();
   await page.getByRole("option", { name: "Opportunities", exact: true }).click();
