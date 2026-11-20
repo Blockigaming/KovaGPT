@@ -41,6 +41,12 @@ Read summaries fetches a bounded page for the past seven days and exposes select
 
 WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local credentials and clearly reports that remote revocation still needs the provider's account settings.
 
+## Apple Health
+
+On iPhone, open Health, tap your profile picture, choose **Export All Health Data**, and save the export to Files. In KovaGPT, choose **Connections → Health → Import Apple Health data** and select the ZIP. You can also select `export.xml` from the extracted archive.
+
+KovaGPT displays daily steps for one source at a time for the seven calendar days ending on the export date. iPhone and Apple Watch can count the same steps. The file and results stay in the current browser tab. To refresh the results, export again or choose **Clear report** to remove them.
+
 ## Other health services
 
 Oura and WHOOP are the implemented web adapters in this change. Other wearables and medical-record services require their own supported APIs, app registrations, approval and consent. Apple HealthKit and Android Health Connect require a mobile application and platform permissions; website OAuth keys alone do not provide access.
