@@ -158,7 +158,7 @@ function chatFixture(storage = new Map()) {
       extractResponseFollowups,
       chatResponseError,
       cloudBrowserErrorKind,
-      LimitReachedDialog: "LimitReachedDialog",
+      LimitReachedNotice: "LimitReachedNotice",
       normalizeResponseSources: (value) => value,
       AbortController,
       crypto: { randomUUID: () => "fixture-request" },
@@ -356,7 +356,7 @@ test("project chat shows the Cloud Browser limit and saves only the sent prompt"
   );
   await settle();
   f.render();
-  const dialog = f.find((node) => node.type === "LimitReachedDialog")[0];
+  const dialog = f.find((node) => node.type === "LimitReachedNotice")[0];
   assert.equal(dialog.props.kind, "browser_limit");
   assert.equal(dialog.props.message, message);
   assert.equal(f.errors.length, 0);
@@ -368,7 +368,7 @@ test("project chat shows the Cloud Browser limit and saves only the sent prompt"
   assert.equal(f.composer().props.value, "");
   dialog.props.onOpenChange(false);
   f.render();
-  assert.equal(f.find((node) => node.type === "LimitReachedDialog").length, 0);
+  assert.equal(f.find((node) => node.type === "LimitReachedNotice").length, 0);
 });
 
 const interactiveHistory = [

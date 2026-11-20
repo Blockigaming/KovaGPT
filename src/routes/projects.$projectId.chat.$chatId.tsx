@@ -5,7 +5,7 @@ import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { ChatMessage } from "@/components/ChatMessage";
-import { LimitReachedDialog } from "@/components/LimitReachedDialog";
+import { LimitReachedNotice } from "@/components/LimitReachedNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -705,7 +705,7 @@ function ProjectChatPage() {
       </div>
 
       {browserNotice && (
-        <LimitReachedDialog
+        <LimitReachedNotice
           open
           kind={browserNotice.kind}
           message={browserNotice.message}

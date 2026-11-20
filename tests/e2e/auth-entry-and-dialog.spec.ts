@@ -48,6 +48,14 @@ test("missing and invalid email deep links return to the canonical auth dialog",
 
     const dialog = page.getByRole("dialog", { name: entry.title });
     await expect(dialog, entry.path).toBeVisible();
+    const viewport = page.viewportSize()!;
+    await expect
+      .poll(async () => {
+        const box = await dialog.boundingBox();
+        if (!box) return Infinity;
+        return viewport.width < 768 ? box.y - 16 : box.y + box.height / 2 - viewport.height / 2;
+      })
+      .toBeCloseTo(0, 0);
     await expect(page, entry.path).toHaveURL(/\/$/u);
     await expect(dialog.getByLabel("Email address"), entry.path).toBeFocused();
     await expect(page.getByLabel("Password", { exact: true }), entry.path).toHaveCount(0);

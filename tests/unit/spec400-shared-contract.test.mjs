@@ -46,7 +46,7 @@ test("usage failures cannot be reported as verified zero and promotions are trut
   const failure = source.slice(source.indexOf("if (error)"), source.indexOf("if (!data)"));
   assert.match(failure, /throw new Error/);
   assert.doesNotMatch(failure, /chats: 0/);
-  const limit = read("src/components/LimitReachedDialog.tsx");
+  const limit = read("src/components/LimitReachedNotice.tsx");
   assert.doesNotMatch(limit, /1 month|Limited offer|free trial|setInterval/);
   assert.match(limit, /Number\.isFinite/);
   assert.match(limit, /View plans/);

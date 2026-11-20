@@ -136,8 +136,8 @@ const SettingsDialog = lazy(() =>
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
 );
-const LimitReachedDialog = lazy(() =>
-  import("@/components/LimitReachedDialog").then((m) => ({ default: m.LimitReachedDialog })),
+const LimitReachedNotice = lazy(() =>
+  import("@/components/LimitReachedNotice").then((m) => ({ default: m.LimitReachedNotice })),
 );
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
@@ -3699,7 +3699,7 @@ function KovaGPT() {
 
         {limitDialog.open &&
           (!limitDialog.scope || sameNextPromptScope(limitDialog.scope, nextPromptScope)) && (
-            <LimitReachedDialog
+            <LimitReachedNotice
               open={limitDialog.open}
               onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
               kind={limitDialog.kind}

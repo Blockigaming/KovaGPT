@@ -1619,30 +1619,43 @@ body {
   }
 }
 
-/* Portaled compact overlays also follow the visible viewport while typing. */
-@media (width < 1024px) {
-  :root[data-kova-keyboard]
+/* Phone dialogs start below the safe area and follow the visible viewport
+   when the keyboard is open. Docked and full-height workspaces own their bounds. */
+@media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  body
     :is(
       [data-slot="dialog-content"],
       [data-slot="alert-dialog-content"]
-    )[data-kova-dialog-surface]:not(.kova-settings-dialog, .spec400-expanded-input) {
-    top: calc(var(--kova-visible-top, 0px) + var(--kova-visible-height, 100dvh) / 2);
-    max-height: calc(var(--kova-visible-height, 100dvh) - 2rem);
-  }
-
-  :root[data-kova-keyboard] [data-kova-bottom-sheet] {
-    bottom: max(
-      0px,
-      calc(100dvh - var(--kova-visible-height, 100dvh) - var(--kova-visible-top, 0px))
+    )[data-kova-dialog-surface]:not(
+      .kova-settings-dialog,
+      .spec400-expanded-input,
+      .spec400-context-drawer,
+      .spec400-library-inspector,
+      .kova-sources-inspector,
+      .kova-result-dialog
+    ) {
+    --kova-popup-top-gap: max(16px, env(safe-area-inset-top));
+    top: calc(var(--kova-visible-top, 0px) + var(--kova-popup-top-gap));
+    translate: -50% 0;
+    max-height: calc(
+      var(--kova-visible-height, 100dvh) - var(--kova-popup-top-gap) -
+        max(16px, env(safe-area-inset-bottom))
     );
+  }
+}
+
+/* Portaled compact overlays follow the visible viewport while typing. */
+@media (width < 1024px) {
+  :root[data-kova-keyboard] [data-kova-bottom-sheet] {
     max-height: min(calc(var(--kova-visible-height, 100dvh) * 0.88), 44rem);
-    padding-bottom: 0;
+    padding-top: 0;
   }
 
   :root[data-kova-keyboard] [data-slot="command-palette-overlay"] {
     top: var(--kova-visible-top, 0px);
     bottom: auto;
     height: var(--kova-visible-height);
+    align-items: flex-start;
     --kova-palette-top: 8px;
     --kova-palette-bottom: 8px;
   }

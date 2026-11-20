@@ -307,7 +307,7 @@ test("a composer link preview aligns with the first letter of the draft", async 
     .toBeLessThan(0.5);
 });
 
-test("Cloud Browser limit displays a pop-up and keeps the sent Wikipedia icon compact", async ({
+test("Cloud Browser limit displays a top notification and keeps the sent Wikipedia icon compact", async ({
   page,
 }) => {
   await fixture(page, "dark");
@@ -338,12 +338,19 @@ test("Cloud Browser limit displays a pop-up and keeps the sent Wikipedia icon co
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill(`Open ${url} in Cloud Browser.`);
   await page.getByTestId("send-button").click();
-  const dialog = page.getByRole("dialog", { name: "Cloud Browser limit reached" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Your time resets at midnight UTC.");
+  const notice = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Cloud Browser limit reached" });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("Your time resets at midnight UTC.");
+  await expect(notice).toHaveAttribute("data-y-position", "top");
+  const width = page.viewportSize()!.width;
+  await expect(notice).toHaveAttribute("data-x-position", width >= 1024 ? "right" : "center");
+  await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator('[data-message-role="assistant"]')).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await notice.getByRole("button", { name: "Close toast", exact: true }).click();
+  await expect(notice).toBeHidden();
   const prompt = page.getByLabel("Sent prompt");
   await expect(prompt).toContainText("in Cloud Browser.");
   const favicon = prompt.locator("img");

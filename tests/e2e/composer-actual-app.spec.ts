@@ -760,8 +760,9 @@ test("a reply in another chat shows a top-right notification and an unread dot",
     complete.resolve();
   }
 
+  const horizontal = page.viewportSize()!.width >= 1024 ? "right" : "center";
   const notification = page
-    .locator('[data-sonner-toast][data-x-position="right"][data-y-position="top"]')
+    .locator(`[data-sonner-toast][data-x-position="${horizontal}"][data-y-position="top"]`)
     .filter({ hasText: "New reply" });
   await expect(notification).toContainText("Composer review chat");
   const sidebar = await revealSidebar(page);

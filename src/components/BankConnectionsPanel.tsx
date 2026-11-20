@@ -238,7 +238,7 @@ export function BankConnectionsPanel({
       if (active.current) {
         setStatus(null);
         setStatusFailed(true);
-        toast.error("Bank connection status is unavailable.", { position: "bottom-right" });
+        toast.error("Bank connection status is unavailable.");
       }
     }
   }, [ownerId, request]);
@@ -282,7 +282,6 @@ export function BankConnectionsPanel({
               if (active.current)
                 toast.error(
                   "The link result could not be confirmed. Refresh connection status before starting another link.",
-                  { position: "bottom-right" },
                 );
             } finally {
               if (active.current) {
@@ -298,10 +297,7 @@ export function BankConnectionsPanel({
           settled = true;
           clearPlaidLinkSession(window.sessionStorage, ownerId ?? "");
           setBusy(false);
-          if (error)
-            toast.error("Plaid could not finish linking this bank. Try again later.", {
-              position: "bottom-right",
-            });
+          if (error) toast.error("Plaid could not finish linking this bank. Try again later.");
           handler.current?.destroy();
           handler.current = null;
         },
@@ -323,7 +319,6 @@ export function BankConnectionsPanel({
     if (!token) {
       toast.error(
         "This bank sign-in session expired or belongs to another account. Start a new bank connection.",
-        { position: "bottom-right" },
       );
       return;
     }
@@ -336,9 +331,7 @@ export function BankConnectionsPanel({
     void openLink(token, callbackUrl.href).catch(() => {
       if (active.current) {
         setBusy(false);
-        toast.error("Bank sign-in could not resume. Start a new bank connection.", {
-          position: "bottom-right",
-        });
+        toast.error("Bank sign-in could not resume. Start a new bank connection.");
       }
     });
   }, [ownerId, status, openLink, setBusy]);
@@ -361,7 +354,7 @@ export function BankConnectionsPanel({
     } catch {
       if (active.current) {
         setBusy(false);
-        toast.error("Bank linking is unavailable. Please try again.", { position: "bottom-right" });
+        toast.error("Bank linking is unavailable. Please try again.");
       }
     } finally {
       if (active.current) setLinking(false);
@@ -390,7 +383,6 @@ export function BankConnectionsPanel({
             action === "read"
               ? "The bank could not be read. Reconnect or try again later."
               : "Disconnect could not be confirmed. Refresh status before retrying.",
-            { position: "bottom-right" },
           );
       } finally {
         if (active.current) {
