@@ -15,17 +15,23 @@ function HomeChatPlaceholder() {
             </div>
           </div>
           <div className="spec400-composer-toolbar">
-            <span className="spec400-toolbar-button spec400-toolbar-icon">
-              <Plus />
-            </span>
-            <div className="spec400-composer-trailing">
-              <span className="h-7 w-20 rounded-full bg-muted" />
+            <div className="spec400-composer-tools">
               <span className="spec400-toolbar-button spec400-toolbar-icon">
-                <Mic />
+                <Plus />
               </span>
-              <span className="spec400-send-button spec400-primary-voice">
-                <AudioLines />
+            </div>
+            <div className="spec400-composer-trailing">
+              <span className="kova-home-model-placeholder flex items-center">
+                <span className="h-7 w-20 rounded-full bg-muted" />
               </span>
+              <div className="spec400-composer-speech-actions">
+                <span className="spec400-toolbar-button spec400-toolbar-icon">
+                  <Mic />
+                </span>
+                <span className="spec400-send-button spec400-primary-voice">
+                  <AudioLines />
+                </span>
+              </div>
             </div>
           </div>
         </div>

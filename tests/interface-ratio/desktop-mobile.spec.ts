@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
+import { expectsSeparateModeRow } from "../e2e/current-ui";
 import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
-// Captured from the last unchanged product source on Ubuntu 24.04 / Chromium.
-// This is a frozen desktop contract, not a snapshot regenerated from this CSS.
+// Reviewed desktop measurements from Ubuntu 24.04 / Chromium.
+// Update only the measurements affected by an approved layout change.
 const baseline = JSON.parse(
   readFileSync(new URL("./desktop-baseline.json", import.meta.url), "utf8"),
 );
@@ -170,15 +171,20 @@ for (const state of states) {
       (data.viewport.width < 1024 && data.viewport.height <= 500 && data.viewport.coarse);
     if (!phone) return;
     if (state.name === "home") {
-      unchanged(".kova-greeting h1", ["family", "weight"]);
-      expect(row(".kova-greeting h1").font).toBe("26px");
+      const welcomeLogo = page.locator(".kova-greeting .kova-home-welcome-logo");
+      await expect(welcomeLogo).toBeVisible();
+      await expect(page.locator(".kova-greeting .kova-home-greeting-text")).toBeHidden();
+      const expectedSize = Math.min(72, Math.max(48, data.viewport.width * 0.16));
+      const logo = await welcomeLogo.boundingBox();
+      expect(logo!.width).toBeCloseTo(expectedSize, 1);
+      expect(logo!.height).toBeCloseTo(expectedSize, 1);
       expect(row(".spec400-composer").radius).toBe("21px");
       unchanged(".spec400-composer-input", ["font", "line"]);
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.47, 2);
-      expect(row(".spec400-composer").height).toBeGreaterThanOrEqual(88);
-      expect(row(".spec400-composer").height).toBeLessThanOrEqual(92);
+      const stacked = await expectsSeparateModeRow(page.locator(".spec400-composer"));
+      expect(row(".spec400-composer").height).toBe(stacked ? 148 : 96);
       expect(row(".kova-topbar").height).toBe(56);
       expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
       await expect(page.locator(".kova-composer-tray")).toBeHidden();

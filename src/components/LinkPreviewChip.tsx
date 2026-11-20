@@ -152,7 +152,7 @@ export function LinkPreviewChip({
           className="kova-link-preview-remove"
           onClick={onRemove}
           title="Remove this link"
-          aria-label="Remove linked page from message"
+          aria-label={`Remove linked page from message: ${title}`}
         >
           <X aria-hidden="true" />
         </button>

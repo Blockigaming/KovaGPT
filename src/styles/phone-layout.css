@@ -95,7 +95,7 @@
 
   .kova-assistant .kova-empty-composer .spec400-composer {
     min-height: 0;
-    padding: 8px;
+    padding-block-start: 8px;
     gap: 3px;
     --chat-composer-corner: 21px;
     border-radius: var(--chat-composer-corner);

@@ -2,6 +2,16 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { SIDEBAR_DRAWER_QUERY } from "../../src/lib/sidebar-viewport";
 import { waitForKovaHydration } from "./hydration";
 
+export async function expectsSeparateModeRow(composer: Locator) {
+  return composer.evaluate((frame) => {
+    const container = frame.closest(".spec400-chat-input")!;
+    const styles = getComputedStyle(container);
+    const contentWidth =
+      container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+    return contentWidth < 22.5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+  });
+}
+
 // Response preferences remain in Settings after the composer tray was simplified.
 export async function openResponseOptions(page: Page, recordTrigger?: (trigger: Locator) => void) {
   const panel = await openCurrentSettings(page);

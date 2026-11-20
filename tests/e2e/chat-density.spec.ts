@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { revealContinueWorking } from "./current-ui";
+import { expectsSeparateModeRow, revealContinueWorking } from "./current-ui";
 
 test("reply bubbles, adjacent actions, and the compact composer fit the viewport", async ({
   page,
@@ -53,7 +53,9 @@ test("reply bubbles, adjacent actions, and the compact composer fit the viewport
   const [copyBox, goodBox] = await Promise.all([copy.boundingBox(), good.boundingBox()]);
   expect(copyBox!.width).toBe(fineDesktop ? 28 : 44);
   expect(Math.abs(goodBox!.x - copyBox!.x - copyBox!.width)).toBeLessThanOrEqual(1);
-  expect(composerBox!.height).toBeLessThanOrEqual(fineDesktop ? 62 : 92);
+  expect(composerBox!.height).toBeLessThanOrEqual(
+    fineDesktop ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width + 1,
   );

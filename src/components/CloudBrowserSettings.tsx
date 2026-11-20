@@ -155,7 +155,7 @@ export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
             }
           }}
         >
-          <label className="min-w-0 flex-1 text-sm">
+          <label className="min-w-0 flex-[1_1_12rem] text-sm">
             Website
             <Input
               value={site}

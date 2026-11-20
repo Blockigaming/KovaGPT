@@ -87,7 +87,7 @@ export function PublicPageView({
           </div>
         </section>
         <section className="public-editorial-panels bg-muted/25">
-          <div className="mx-auto grid max-w-7xl gap-5 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-2">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-4 py-14 sm:px-6 sm:py-20 md:grid-cols-2">
             {children}
           </div>
         </section>

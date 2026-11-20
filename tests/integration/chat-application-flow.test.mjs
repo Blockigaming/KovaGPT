@@ -1,3 +1,7 @@
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "../../src/lib/chat-browser-policy.mjs";
 import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
 import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
@@ -7,7 +11,11 @@ import { createRequire } from "node:module";
 import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
-import { consumeChatSse, chatResponseError } from "../../src/lib/chat-sse-client.mjs";
+import {
+  consumeChatSse,
+  chatResponseError,
+  cloudBrowserErrorKind,
+} from "../../src/lib/chat-sse-client.mjs";
 import { withResponsePresentation } from "../../src/lib/spec400-response-preferences.mjs";
 import { HOSTED_MODEL_MAP } from "../../src/lib/ai/kova-hosted-inference.server.mjs";
 import {
@@ -734,6 +742,9 @@ function composer(f) {
     USER_STOP_REASON: "kova_user_stopped_generation",
     consumeChatSse,
     chatResponseError,
+    cloudBrowserErrorKind,
+    chatBrowserDestination,
+    CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
     withResponsePresentation,
     AbortController,
     DOMException,

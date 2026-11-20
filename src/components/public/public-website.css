@@ -135,6 +135,10 @@
   line-height: 1.6;
   margin: 10px 0 0;
 }
+.public-auth-legal a {
+  display: inline-block;
+  max-inline-size: 100%;
+}
 .public-auth-legal a,
 .public-desktop-availability a {
   text-decoration: underline;

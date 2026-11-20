@@ -1,7 +1,7 @@
 import { permanentlyDeleteChat } from "./permanent-chat-delete";
 import { toast } from "sonner";
 import {
-  archiveConversation,
+  newId,
   loadConversations,
   removeArchivedConversation,
   saveConversations,
@@ -17,7 +17,58 @@ type Context = {
   activeId: string | null;
   setActive(id: string | null): void;
 };
-export async function titleHomeChat(context: Context, chat: Conversation) {
+type ChatForTitle = Pick<Conversation, "id" | "messages">;
+export type HomeChatAction =
+  | { kind: "delete" | "duplicate" | "pin"; id: string }
+  | { kind: "rename"; id: string; title: string }
+  | { kind: "restore"; chat: Conversation }
+  | { kind: "title"; chat: ChatForTitle };
+
+export async function runHomeChatAction(context: Context, action: HomeChatAction) {
+  if (!context.current()) return;
+  switch (action.kind) {
+    case "title":
+      return titleHomeChat(context, action.chat);
+    case "restore":
+      return restoreHomeChat(context, action.chat);
+    case "delete":
+      return removeHomeChat(context, action.id);
+    case "rename":
+      context.setItems((items) =>
+        items.map((chat) =>
+          chat.id === action.id ? { ...chat, title: action.title, updatedAt: Date.now() } : chat,
+        ),
+      );
+      return;
+    case "pin":
+      context.setItems((items) =>
+        items.map((chat) =>
+          chat.id === action.id
+            ? { ...chat, pinned: !chat.pinned, pinnedAt: chat.pinned ? undefined : Date.now() }
+            : chat,
+        ),
+      );
+      return;
+    case "duplicate":
+      context.setItems((items) => {
+        const source = items.find((chat) => chat.id === action.id);
+        if (!source) return items;
+        const timestamp = Date.now();
+        const copy = {
+          ...source,
+          id: newId(),
+          title: `${source.title} (copy)`,
+          messages: source.messages.map((message) => ({ ...message, id: newId() })),
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        };
+        return [copy, ...items];
+      });
+      toast.success("Chat duplicated");
+  }
+}
+
+export async function titleHomeChat(context: Context, chat: ChatForTitle) {
   if (!context.current()) return;
   try {
     const signal = AbortSignal.timeout(15000);
