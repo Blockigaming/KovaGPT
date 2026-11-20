@@ -570,6 +570,16 @@ button.kova-sidebar-scrim {
   }
 }
 @media (width < 1024px), (pointer: coarse) and (hover: none) {
+  .kova-sidebar[data-kova-core-sidebar] {
+    position: fixed;
+    inset: 0 auto 0 0;
+    height: 100dvh;
+    margin: 0;
+    width: var(--kova-sidebar-drawer-width, 260px);
+    min-width: 0;
+    max-width: calc(100vw - 24px);
+    border-radius: 0 24px 24px 0;
+  }
   /* A centered notification can overlap the drawer header. Keep its actions usable
      while letting the notification text pass taps through to the drawer. */
   body:has([data-kova-core-sidebar][data-state="open"][aria-modal="true"])
@@ -580,17 +590,6 @@ button.kova-sidebar-scrim {
     :is(a, button) {
       pointer-events: auto;
     }
-  }
-
-  .kova-sidebar[data-kova-core-sidebar] {
-    position: fixed;
-    inset: 0 auto 0 0;
-    height: 100dvh;
-    margin: 0;
-    width: var(--kova-sidebar-drawer-width, 260px);
-    min-width: 0;
-    max-width: calc(100vw - 24px);
-    border-radius: 0 24px 24px 0;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: var(--kova-sidebar-drawer-width, 260px);

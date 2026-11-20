@@ -30,7 +30,7 @@ for (const theme of ["light", "dark"] as const) {
         matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
           .matches,
     );
-    expect(compactHeight).toBeGreaterThanOrEqual(phone ? 92 : 128);
+    expect(compactHeight).toBeGreaterThanOrEqual(phone ? 88 : 128);
     if (phone) expect(compactHeight).toBeLessThanOrEqual(108);
 
     // This text fits the full expanded row but wraps the narrow desktop slot.

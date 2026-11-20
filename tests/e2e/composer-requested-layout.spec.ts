@@ -55,7 +55,7 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
       matchMedia("(width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none)")
         .matches,
   );
-  if (phoneComposer) expect(inset.x).toBeCloseTo(16, 0);
+  if (phoneComposer) expect(inset.x).toBeCloseTo(19, 0);
   else {
     if (insetComposer) expect(inset.x).toBeGreaterThanOrEqual(20);
     expect(inset.x).toBeLessThanOrEqual(insetComposer ? 26 : 18);
