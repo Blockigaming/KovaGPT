@@ -2059,7 +2059,9 @@ export function ChatInput({
     mediaTiles.set(
       `${group}:${attachment.clientId ?? `${attachment.name}:${index}`}`,
       <li
-        className="spec400-attachment-chip"
+        className={
+          isPhoto ? "spec400-attachment-chip" : "spec400-attachment-chip spec400-composer-card"
+        }
         data-status={attachment.status}
         data-kind={attachment.kind}
       >
@@ -2136,7 +2138,7 @@ export function ChatInput({
   if (pasteOffer) {
     mediaTiles.set(
       `file:pending:${pasteOffer.id}`,
-      <li className="spec400-attachment-chip" data-status="pending">
+      <li className="spec400-attachment-chip spec400-composer-card" data-status="pending">
         <button
           type="button"
           className="spec400-chip-inspect"
@@ -2178,7 +2180,7 @@ export function ChatInput({
     linkCounts.set(link.raw, occurrence + 1);
     mediaTiles.set(
       `link:${link.raw}:${occurrence}`,
-      <li className="spec400-composer-link">
+      <li className="spec400-composer-link spec400-composer-card">
         <LinkPreviewChip
           url={link.url}
           placement="composer"
@@ -2202,8 +2204,7 @@ export function ChatInput({
   const mediaOrder = ["photo:", "file:", "link:"].flatMap((prefix) =>
     mediaKeys.filter((key) => key.startsWith(prefix)),
   );
-  const photoKeys = mediaOrder.filter((key) => key.startsWith("photo:"));
-  const cardKeys = mediaOrder.slice(photoKeys.length);
+  const photoCount = attachments.filter((attachment) => attachment.kind === "image").length;
   useEffect(() => {
     mediaOrderRef.current = { context: mediaContext, keys: mediaOrder };
   });
@@ -2259,19 +2260,14 @@ export function ChatInput({
       >
         <div className="contents spec400-composer-content">
           {mediaOrder.length > 0 && (
-            <ul className="spec400-composer-media" aria-label="Attachments">
-              {photoKeys.map((key) => (
+            <ul
+              className="spec400-composer-media"
+              data-photo-count={photoCount}
+              aria-label="Attachments"
+            >
+              {mediaOrder.map((key) => (
                 <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
               ))}
-              {cardKeys.length > 0 && (
-                <li className="spec400-composer-card-group">
-                  <ul className="spec400-composer-cards" aria-label="File and website previews">
-                    {cardKeys.map((key) => (
-                      <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
-                    ))}
-                  </ul>
-                </li>
-              )}
             </ul>
           )}
           <div className="spec400-input-region">

@@ -105,6 +105,17 @@
     --composer-card-width: 152px;
   }
 
+  .spec400-composer-media {
+    max-width: calc(var(--composer-photo-size) + var(--composer-card-width) * 2 + 32px);
+  }
+
+  /* Reserve a minimum of 120px for each card beside a single photo. */
+  @container composer-media (364px <= width < 428px) {
+    .spec400-composer-media[data-photo-count="1"] > .spec400-composer-card {
+      --composer-card-width: calc((100cqi - var(--composer-photo-size) - 16px) / 2);
+    }
+  }
+
   .kova-assistant .kova-empty-composer .spec400-composer {
     --chat-composer-corner: 21px;
     --composer-text-inset: 10px;

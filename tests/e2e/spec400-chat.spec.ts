@@ -302,9 +302,7 @@ for (const surface of ["empty", "conversation"] as const) {
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const tray = composer.getByRole("list", { name: "Attachments", exact: true });
     const photos = tray.locator(':scope > [data-kind="image"]');
-    const cards = tray
-      .getByRole("list", { name: "File and website previews", exact: true })
-      .getByRole("listitem");
+    const cards = tray.locator(":scope > .spec400-composer-card");
     const websites = tray.locator(".kova-link-preview-composer");
     const pasteWebsites = (text: string) =>
       input.evaluate((element, text) => {
@@ -344,14 +342,17 @@ for (const surface of ["empty", "conversation"] as const) {
           const [first, second, website] = items.map((item) => item.getBoundingClientRect());
           return {
             aligned: first.top === second.top && first.left < second.left,
-            websiteStartsNextRow: website.top > first.top && website.left === first.left,
+            websiteFitsExpectedRow:
+              items[0].parentElement!.clientWidth >= first.width * 3 + 16 - 0.5
+                ? website.top === first.top && website.left > second.left
+                : website.top > first.top && website.left === first.left,
             sameSize: [first, second, website].every(
               (card) => Math.abs(card.width - first.width) < 0.5 && card.height === 53,
             ),
           };
         }),
       )
-      .toEqual({ aligned: true, websiteStartsNextRow: true, sameSize: true });
+      .toEqual({ aligned: true, websiteFitsExpectedRow: true, sameSize: true });
     await tray
       .getByRole("button", { name: "Remove Long filename for the second reference file.txt" })
       .click();
@@ -370,11 +371,28 @@ for (const surface of ["empty", "conversation"] as const) {
     await expect
       .poll(() =>
         cards.evaluateAll((items) => {
+          const strip = items[0].parentElement!;
+          const photo = strip.firstElementChild!.getBoundingClientRect();
           const [file, website] = items.map((item) => item.getBoundingClientRect());
-          return [file.top === website.top, file.left < website.left, file.width === website.width];
+          const bothFit = photo.width + file.width + website.width + 16 <= strip.clientWidth + 0.5;
+          return {
+            fileBesidePhoto: file.top === photo.top && file.left > photo.left,
+            websiteFitsExpectedRow: bothFit
+              ? website.top === photo.top && website.left > file.left
+              : website.top > photo.top && website.left === photo.left,
+            sameWidth: file.width === website.width,
+            bothFit,
+          };
         }),
       )
-      .toEqual([true, true, true]);
+      .toMatchObject({
+        fileBesidePhoto: true,
+        websiteFitsExpectedRow: true,
+        sameWidth: true,
+        ...(page.viewportSize()!.width === 430 || page.viewportSize()!.width >= 1280
+          ? { bothFit: true }
+          : {}),
+      });
     await input.press("End");
     await pasteWebsites("https://github.com/review");
     await pasteWebsites("https://en.wikipedia.org/wiki/Kova");
@@ -427,18 +445,29 @@ for (const surface of ["empty", "conversation"] as const) {
         );
         const [first, second] = boxes;
         const links = boxes.slice(2);
-        const linkRows = [...new Set(links.map((box) => box.top))];
+        const linksPerRow = [...new Set(links.map((box) => box.top))].map(
+          (top) => links.filter((box) => box.top === top).length,
+        );
+        const cardsPerFullRow = Math.floor((strip.clientWidth + 8.5) / (links[0].width + 8));
+        const linksFirstRow = Math.floor(
+          (strip.clientWidth - first.width - second.width - 8 + 0.5) / (links[0].width + 8),
+        );
+        const linksAfterPhotos = links.length - linksFirstRow;
+        const expectedLinksPerRow = [
+          ...(linksFirstRow ? [linksFirstRow] : []),
+          ...Array.from({ length: Math.ceil(linksAfterPhotos / cardsPerFullRow) }, (_, index) =>
+            Math.min(cardsPerFullRow, linksAfterPhotos - index * cardsPerFullRow),
+          ),
+        ];
         const stripBox = strip.getBoundingClientRect();
         return {
           inset: first.left - shell.left,
           topInset: first.top - shell.top,
           photosSideBySide: second.top === first.top && second.left > first.left,
           squarePhotos: [first, second].every((box) => Math.abs(box.width - box.height) < 0.5),
-          linksBelowPhotos: links[0].top >= Math.max(first.bottom, second.bottom),
-          linksPerRow: linkRows.map((top) => links.filter((box) => box.top === top).length),
-          linkColumnsAlign: links.every(
-            (box, index) => Math.abs(box.left - links[index % 2].left) < 0.5,
-          ),
+          linksFillFreeSpace: (links[0].top === first.top) === linksFirstRow > 0,
+          linksWrapByAvailableSpace: linksPerRow.join() === expectedLinksPerRow.join(),
+          cardsPerFullRow,
           promptGap: field.getBoundingClientRect().top - stripBox.bottom,
           promptStart: field.getBoundingClientRect().left - shell.left,
           rows: rows.length,
@@ -449,9 +478,9 @@ for (const surface of ["empty", "conversation"] as const) {
     await expect.poll(readLayout).toMatchObject({
       photosSideBySide: true,
       squarePhotos: true,
-      linksBelowPhotos: true,
-      linksPerRow: [2, 2, 2, 2, 2, 2, 2, 1],
-      linkColumnsAlign: true,
+      linksFillFreeSpace: true,
+      linksWrapByAvailableSpace: true,
+      ...(page.viewportSize()!.width >= 1280 ? { cardsPerFullRow: 3 } : {}),
       rowsStartAtLeft: true,
       sidewaysOverflow: false,
     });
