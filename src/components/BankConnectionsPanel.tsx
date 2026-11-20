@@ -209,6 +209,8 @@ export function BankConnectionsPanel({
   const [snapshot, setSnapshot] = useState<FinanceSnapshot | null>(null);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const active = useRef(true);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   const handler = useRef<PlaidHandler | null>(null);
   const request = useCallback(
     (url: string, body?: object) =>
@@ -238,18 +240,20 @@ export function BankConnectionsPanel({
       if (active.current) {
         setStatus(null);
         setStatusFailed(true);
-        toast.error("Bank connection status is unavailable.");
+        if (visibleRef.current) toast.error("Bank connection status is unavailable.");
       }
     }
   }, [ownerId, request]);
   useEffect(() => {
     active.current = true;
-    void reload();
     return () => {
       active.current = false;
       handler.current?.destroy();
     };
-  }, [reload]);
+  }, []);
+  useEffect(() => {
+    if (visible) void reload();
+  }, [visible, reload]);
   const openLink = useCallback(
     async (linkToken: string, receivedRedirectUri?: string) => {
       const sdk = await getPlaidSdk();

@@ -649,6 +649,12 @@
     align-items: center;
     gap: 10px;
   }
+  .spec400-plugins .spec400-plugin-card .spec400-plugin-logo {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    background: var(--muted);
+  }
   .spec400-plugins .spec400-plugin-card h3 {
     overflow-wrap: anywhere;
   }
