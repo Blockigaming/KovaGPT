@@ -1955,6 +1955,7 @@ function AppsPage() {
               <TabsContent forceMount value="health" className="spec400-connection-group">
                 <HealthConnectionsPanel
                   key={`health:${userKey ?? "guest"}`}
+                  visible={connectionGroup === "health"}
                   ownerId={isSignedIn ? userKey : null}
                   data={otherConnections.data}
                   loading={otherConnections.loading}

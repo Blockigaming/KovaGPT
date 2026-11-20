@@ -1,0 +1,20 @@
+name: Apple Health iOS build
+on:
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios-health.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-health-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  simulator:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build for iPhone Simulator without signing
+        run: |
+          xcodebuild -project ios/KovaHealth.xcodeproj -scheme KovaHealth \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
