@@ -301,7 +301,10 @@ for (const surface of ["empty", "conversation"] as const) {
     }
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const tray = composer.getByRole("list", { name: "Attachments", exact: true });
-    const tiles = tray.locator(":scope > li");
+    const photos = tray.locator(':scope > [data-kind="image"]');
+    const cards = tray
+      .getByRole("list", { name: "File and website previews", exact: true })
+      .getByRole("listitem");
     const websites = tray.locator(".kova-link-preview-composer");
     const pasteWebsites = (text: string) =>
       input.evaluate((element, text) => {
@@ -328,19 +331,50 @@ for (const surface of ["empty", "conversation"] as const) {
     await input.press("Space");
     await expect(websites).toHaveCount(1);
     await pasteAttachment("Review notes.txt", "text/plain", "UmV2aWV3IG5vdGVz");
-    await expect(tiles.nth(0)).toHaveAttribute("data-status", "complete");
+    await expect(cards.nth(0)).toHaveAttribute("data-status", "complete");
+    await pasteAttachment(
+      "Long filename for the second reference file.txt",
+      "text/plain",
+      "U2Vjb25k",
+    );
+    await expect(cards.nth(1)).toHaveAttribute("data-status", "complete");
+    await expect
+      .poll(() =>
+        cards.evaluateAll((items) => {
+          const [first, second, website] = items.map((item) => item.getBoundingClientRect());
+          return {
+            aligned: first.top === second.top && first.left < second.left,
+            websiteStartsNextRow: website.top > first.top && website.left === first.left,
+            sameSize: [first, second, website].every(
+              (card) => Math.abs(card.width - first.width) < 0.5 && card.height === 53,
+            ),
+          };
+        }),
+      )
+      .toEqual({ aligned: true, websiteStartsNextRow: true, sameSize: true });
+    await tray
+      .getByRole("button", { name: "Remove Long filename for the second reference file.txt" })
+      .click();
     await pasteAttachment("Pasted logo.png", "image/png", photo);
     await expect(
-      tiles.nth(0).getByRole("button", { name: "Inspect Pasted logo.png" }),
+      photos.nth(0).getByRole("button", { name: "Inspect Pasted logo.png" }),
     ).toBeVisible();
-    await expect(tiles.nth(0)).toHaveAttribute("data-status", "complete");
+    await expect(photos.nth(0)).toHaveAttribute("data-status", "complete");
     await expect(
-      tiles.nth(1).getByRole("button", { name: "Inspect Review notes.txt" }),
+      cards.nth(0).getByRole("button", { name: "Inspect Review notes.txt" }),
     ).toBeVisible();
-    await expect(tiles.nth(2).locator("[data-link-preview-url]")).toHaveAttribute(
+    await expect(cards.nth(1).locator("[data-link-preview-url]")).toHaveAttribute(
       "data-link-preview-url",
       "https://youtube.com/",
     );
+    await expect
+      .poll(() =>
+        cards.evaluateAll((items) => {
+          const [file, website] = items.map((item) => item.getBoundingClientRect());
+          return [file.top === website.top, file.left < website.left, file.width === website.width];
+        }),
+      )
+      .toEqual([true, true, true]);
     await input.press("End");
     await pasteWebsites("https://github.com/review");
     await pasteWebsites("https://en.wikipedia.org/wiki/Kova");
@@ -349,7 +383,7 @@ for (const surface of ["empty", "conversation"] as const) {
     await tray.getByRole("button", { name: "Remove Review notes.txt" }).click();
     await pasteAttachment("Second photo.png", "image/png", photo);
     await expect(
-      tiles.nth(1).getByRole("button", { name: "Inspect Second photo.png" }),
+      photos.nth(1).getByRole("button", { name: "Inspect Second photo.png" }),
     ).toBeVisible();
 
     const phone = await page.evaluate(

@@ -2041,7 +2041,21 @@ export function ChatInput({
 
   const mediaTiles = new Map<string, ReactNode>();
   attachments.forEach((attachment, index) => {
-    const group = attachment.kind === "image" ? "photo" : "file";
+    const isPhoto = attachment.kind === "image";
+    const group = isPhoto ? "photo" : "file";
+    const fileDetails = [
+      attachment.localPaste && "Local",
+      attachment.pdf &&
+        `${attachment.pdf.pageCount} ${attachment.pdf.pageCount === 1 ? "page" : "pages"}`,
+      attachment.pdf &&
+        attachment.status === "complete" &&
+        attachment.pdf.pages.some((page) => page.status === "failed") &&
+        "partial text",
+      attachment.selectedPdfPages &&
+        `Selected: ${formatPdfPageNumbers(attachment.selectedPdfPages)}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
     mediaTiles.set(
       `${group}:${attachment.clientId ?? `${attachment.name}:${index}`}`,
       <li
@@ -2055,7 +2069,13 @@ export function ChatInput({
           data-attachment-preview-trigger=""
           aria-label={`Inspect ${attachment.name}`}
           aria-description={attachment.pasteSummary}
-          title={`${attachment.pasteSummary ?? attachment.name} · ${attachmentState(attachment)}`}
+          title={[
+            attachment.pasteSummary ?? attachment.name,
+            attachmentState(attachment),
+            fileDetails,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           onClick={(event) => {
             previewTriggerRef.current = event.currentTarget;
             previewReturnToInputRef.current = false;
@@ -2063,7 +2083,7 @@ export function ChatInput({
             setPreviewAttachment(attachment);
           }}
         >
-          {attachment.kind === "image" ? (
+          {isPhoto ? (
             <>
               {attachment.dataUrl && (
                 <img
@@ -2090,27 +2110,17 @@ export function ChatInput({
           ) : (
             <FileText aria-hidden="true" />
           )}
-          <span
-            className={
-              attachment.kind === "image" ? "spec400-chip-name sr-only" : "spec400-chip-name"
-            }
-          >
-            {attachment.pasteSummary ?? attachment.name}
-          </span>
+          {isPhoto ? (
+            <span className="sr-only">{attachment.name}</span>
+          ) : (
+            <span className="spec400-chip-labels">
+              <span className="spec400-chip-name">
+                {attachment.pasteSummary ?? attachment.name}
+              </span>
+              {fileDetails && <small>{fileDetails}</small>}
+            </span>
+          )}
           <span className="sr-only">{attachmentState(attachment)}</span>
-          {attachment.localPaste && <small>Local</small>}
-          {attachment.pdf && (
-            <small>
-              {attachment.pdf.pageCount} {attachment.pdf.pageCount === 1 ? "page" : "pages"}
-              {attachment.status === "complete" &&
-              attachment.pdf.pages.some((page) => page.status === "failed")
-                ? " · partial text"
-                : ""}
-            </small>
-          )}
-          {attachment.selectedPdfPages && (
-            <small>Selected: {formatPdfPageNumbers(attachment.selectedPdfPages)}</small>
-          )}
         </button>
         <button
           type="button"
@@ -2133,6 +2143,7 @@ export function ChatInput({
           data-attachment-preview-trigger=""
           aria-label="Inspect pending pasted text"
           aria-description={pasteOffer.summary}
+          title={pasteOffer.summary}
           onClick={(event) => {
             previewTriggerRef.current = event.currentTarget;
             previewReturnToInputRef.current = false;
@@ -2141,8 +2152,10 @@ export function ChatInput({
           }}
         >
           <FileText aria-hidden="true" />
-          <span className="spec400-chip-name">{pasteOffer.summary}</span>
-          <small>Not attached</small>
+          <span className="spec400-chip-labels">
+            <span className="spec400-chip-name">{pasteOffer.summary}</span>
+            <small>Not attached</small>
+          </span>
         </button>
         <button
           type="button"
@@ -2189,8 +2202,8 @@ export function ChatInput({
   const mediaOrder = ["photo:", "file:", "link:"].flatMap((prefix) =>
     mediaKeys.filter((key) => key.startsWith(prefix)),
   );
-  const attachmentKeys = mediaOrder.filter((key) => !key.startsWith("link:"));
-  const linkKeys = mediaOrder.filter((key) => key.startsWith("link:"));
+  const photoKeys = mediaOrder.filter((key) => key.startsWith("photo:"));
+  const cardKeys = mediaOrder.slice(photoKeys.length);
   useEffect(() => {
     mediaOrderRef.current = { context: mediaContext, keys: mediaOrder };
   });
@@ -2247,13 +2260,13 @@ export function ChatInput({
         <div className="contents spec400-composer-content">
           {mediaOrder.length > 0 && (
             <ul className="spec400-composer-media" aria-label="Attachments">
-              {attachmentKeys.map((key) => (
+              {photoKeys.map((key) => (
                 <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
               ))}
-              {linkKeys.length > 0 && (
-                <li className="spec400-composer-link-group" data-multiple={linkKeys.length > 1}>
-                  <ul className="spec400-composer-links" aria-label="Website previews">
-                    {linkKeys.map((key) => (
+              {cardKeys.length > 0 && (
+                <li className="spec400-composer-card-group">
+                  <ul className="spec400-composer-cards" aria-label="File and website previews">
+                    {cardKeys.map((key) => (
                       <Fragment key={key}>{mediaTiles.get(key)}</Fragment>
                     ))}
                   </ul>

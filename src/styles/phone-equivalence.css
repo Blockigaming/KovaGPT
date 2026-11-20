@@ -102,7 +102,7 @@
   /* A quiet two-row dock leaves the primary actions available at touch size. */
   .kova-assistant .spec400-composer {
     --composer-photo-size: 108px;
-    --composer-link-width: 152px;
+    --composer-card-width: 152px;
   }
 
   .kova-assistant .kova-empty-composer .spec400-composer {
