@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import path from "node:path";
 import { statSync } from "node:fs";
+import { strToU8, zipSync } from "fflate";
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE)
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
 const root = process.cwd();
@@ -22,7 +23,7 @@ const mocks: Record<string, string> = {
       if(window.delayRead)return new Promise(resolve=>window.resolveRead=()=>resolve(Response.json(window.financeSnapshot)));
       return Response.json(window.financeSnapshot);
     }
-    if(url==='/api/health-data/read')return Response.json({provider:'oura',fetchedAt:new Date().toISOString(),summaries:[{metric:'sleep',date:'2026-10-30',score:87,scoreUnit:'score',steps:null,restingHeartRate:null}],missing:[],limited:false});
+    if(url==='/api/health-data/read')return Response.json({asOf:'2026-11-20',fetchedAt:new Date().toISOString(),metrics:{'daily_sleep.score':[{name:'Oura',days:[{date:'2026-11-20',value:87}]}]},missing:[],unavailable:[],limited:false});
     if(url.endsWith('/disconnect')){window.healthStatus.accounts=[];return Response.json({providerRevoked:true})}
     return Response.json({error:'unavailable'},{status:503});
   };`,
@@ -203,6 +204,126 @@ test("bank Link is explicit and exchanges one public token after successful cons
     ),
   ).toHaveLength(0);
 });
+test("the Connections Health tab opens an Apple Health ZIP locally for the signed-in owner", async ({
+  page,
+}) => {
+  await boot(page);
+  const health = page.getByRole("region", { name: "A new way to manage your health", exact: true });
+  await expect(health.getByText("Sample data", { exact: true })).toHaveCount(0);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  const zip = zipSync({
+    "apple_health_export/export.xml": strToU8(`<HealthData>
+      <ExportDate value="2026-11-20 12:00:00 -0500"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Watch" unit="count" startDate="2026-11-20 10:00:00 -0500" value="123"/>
+      <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone" unit="count" startDate="2026-11-20 10:00:00 -0500" value="789"/>
+      <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Watch" unit="count/min" startDate="2026-11-01 10:00:00 -0500" value="68"/>
+    </HealthData>`),
+  });
+  const region = page.getByRole("region", { name: "Apple Health", exact: true });
+  const input = region.getByRole("button", { name: "Import Apple Health data" });
+  await expect(input).toBeHidden();
+  await page.getByText("Manage health connections", { exact: true }).click();
+  await region.getByText("Connection options", { exact: true }).click();
+  const chooser = page.waitForEvent("filechooser");
+  await input.click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "export.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(zip),
+  });
+  const source = health.getByLabel("Step source");
+  await health.getByText(/^Daily readings/).click();
+  await expect(health.getByRole("cell", { name: "789", exact: true })).toBeVisible();
+  await source.selectOption({ label: "Watch" });
+  await expect(health.getByRole("cell", { name: "123", exact: true })).toBeVisible();
+  await expect(health.getByRole("cell", { name: "789", exact: true })).toHaveCount(0);
+  await health.getByRole("tab", { name: "Vitals", exact: true }).click();
+  await expect(
+    health.getByText("No readings for this source in the selected range."),
+  ).toBeVisible();
+  await health.getByRole("slider", { name: "Date range" }).press("End");
+  await health.getByText(/^Daily readings/).click();
+  await expect(health.getByRole("cell", { name: "68", exact: true })).toBeVisible();
+  expect(requests).toEqual([]);
+
+  await page.evaluate(() => {
+    const state = window as StateWindow;
+    state.owner = "00000000-0000-4000-8000-000000000006";
+    state.renderPanels();
+  });
+  await expect(health.getByRole("table")).toHaveCount(0);
+  await page.evaluate(() => {
+    const state = window as StateWindow;
+    state.owner = null;
+    state.renderPanels();
+  });
+  await expect(input).toHaveCount(0);
+});
+
+test("native Apple Health updates refresh the chart only during the active connection", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const messages: { action: string; id: string }[] = [];
+    Object.assign(window, { healthBridgeMessages: messages });
+    Object.defineProperty(window, "webkit", {
+      configurable: true,
+      value: {
+        messageHandlers: {
+          kovaHealth: { postMessage: (value: (typeof messages)[number]) => messages.push(value) },
+        },
+      },
+    });
+  });
+  await boot(page);
+  const health = page.getByRole("region", { name: "A new way to manage your health", exact: true });
+  const region = page.getByRole("region", { name: "Apple Health", exact: true });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as Window & { healthBridgeMessages?: { action: string }[] })
+            .healthBridgeMessages?.[0]?.action,
+      ),
+    )
+    .toBe("resume");
+  const push = (value: number, current: boolean) =>
+    page.evaluate(
+      ({ value, current }) => {
+        const { healthBridgeMessages } = window as Window & {
+          healthBridgeMessages?: { id: string }[];
+        };
+        window.dispatchEvent(
+          new CustomEvent("kova-health-update-v1", {
+            detail: {
+              id: current ? healthBridgeMessages?.[0]?.id : "wrong-connection",
+              report: {
+                asOf: "2026-11-20",
+                metrics: { StepCount: [{ date: "2026-11-20", value }] },
+              },
+            },
+          }),
+        );
+      },
+      { value, current },
+    );
+  await push(300, false);
+  await expect(health.getByText("300 steps", { exact: true })).toHaveCount(0);
+  await push(300, true);
+  await expect(health.getByText("300 steps", { exact: true }).first()).toBeVisible();
+  await push(320, true);
+  await expect(health.getByText("320 steps", { exact: true }).first()).toBeVisible();
+  await page.getByText("Manage health connections", { exact: true }).click();
+  await region.getByText("Connection options", { exact: true }).click();
+  await region.getByRole("button", { name: "Disconnect Apple Health" }).click();
+  await push(321, true);
+  await expect(health.getByText("321 steps", { exact: true })).toHaveCount(0);
+  await expect(health.getByText("320 steps", { exact: true })).toHaveCount(0);
+});
+
 test("unconfigured finance and health stay disabled and never fetch private data", async ({
   page,
 }) => {
@@ -212,20 +333,23 @@ test("unconfigured finance and health stay disabled and never fetch private data
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect a bank", exact: true })).toHaveCount(0);
   await expect(page.getByRole("banner").getByText("Coming soon", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toBeDisabled();
+  await page.getByText("Manage health connections", { exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Oura", exact: true }).getByText("Coming soon"),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
-test("health summaries load only after the user selects an account read", async ({ page }) => {
+test("Oura refreshes automatically in the unified health dashboard", async ({ page }) => {
   await boot(page, { health: true });
-  expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
-  await page.getByRole("button", { name: "Read Oura summaries" }).click();
-  await expect(page.getByText("87 score", { exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Oura", exact: true })).toHaveCount(0);
+  await expect(page.getByText("87 score", { exact: true }).first()).toBeVisible();
   const operations = await page.evaluate(() => (window as StateWindow).operations);
   expect(operations).toEqual([
     [
       "/api/health-data/read",
-      { accountId: "00000000-0000-4000-8000-000000000003" },
+      { accountId: "00000000-0000-4000-8000-000000000003", mode: "analytics" },
       "00000000-0000-4000-8000-000000000001",
     ],
   ]);

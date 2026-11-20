@@ -359,7 +359,7 @@
   box-shadow: 0 3px 16px #00000008;
 }
 .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
-  padding: 16px !important;
+  padding-block-start: 16px;
   min-height: 156px !important;
 }
 .spec400-chat-input .spec400-composer-input {
@@ -374,9 +374,6 @@
 }
 .spec400-chat-input[data-composer-surface="empty"] .spec400-composer-toolbar {
   margin-top: 8px;
-}
-.spec400-chat-input .spec400-composer-trailing {
-  margin-left: auto;
 }
 @media (max-width: 560px) {
   .kova-composer-tray {
@@ -395,7 +392,7 @@
     display: none;
   }
   .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
-    padding: 12px !important;
+    padding-block-start: 12px;
     border-radius: var(--chat-composer-corner, var(--kova-radius-composer));
   }
 }
@@ -1096,10 +1093,9 @@
   }
 }
 
-/* Keep the media area closer to the frame than the writing and action rows. */
+/* Place the writing inset independently from the controls. */
 .spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
-  --composer-text-inset: 0px;
-  --composer-media-offset: -6px;
+  --composer-text-inset: 6px;
 }
 .spec400-chat-input[data-composer-surface="empty"] .spec400-input-region {
   padding-inline: var(--composer-text-inset);
@@ -1457,13 +1453,85 @@
   }
 }
 
+/* Keep the open effort slider stationary when a longer selection wraps the toolbar. */
+.kova-consumer-model-anchor {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: calc(2 * (var(--composer-action-size) + var(--composer-action-gap)));
+  inline-size: 0;
+  block-size: var(--composer-action-size);
+  pointer-events: none;
+}
+
+/* Keep the full model name legible and the highlight slimmer than the touch target. */
 .spec400-composer-trailing .kova-consumer-model-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  max-inline-size: 100%;
+  block-size: auto;
+  padding: 0;
   border-radius: 999px;
+  background: transparent;
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+.kova-consumer-model-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-inline-size: 100%;
+  min-block-size: 28px;
+  padding: 4px 13px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--accent) 50%, transparent);
+  overflow-wrap: anywhere;
+}
+.kova-consumer-model-trigger:is(:active, [data-state="open"]) .kova-consumer-model-pill {
+  background: var(--accent);
+}
+@media (hover: hover) {
+  .kova-consumer-model-trigger:hover .kova-consumer-model-pill {
+    background: var(--accent);
+  }
+}
+.kova-consumer-model-trigger:focus-visible {
+  outline: none;
+}
+.kova-consumer-model-trigger:focus-visible .kova-consumer-model-pill {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-consumer-model-trigger:disabled {
+  opacity: 0.6;
+}
+
+/* At very narrow widths the model gets the whole line; the three icon buttons
+   keep their usual positions along the bottom edge. */
+@container chat-composer (width < 20rem) {
+  .spec400-composer .spec400-composer-toolbar:has(.kova-consumer-model-trigger) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--composer-action-gap);
+  }
+  .spec400-composer-toolbar:has(.kova-consumer-model-trigger) .spec400-composer-trailing {
+    display: contents;
+  }
+  .spec400-composer-toolbar .kova-consumer-model-trigger {
+    grid-area: 1 / 1 / 2 / -1;
+    justify-self: end;
+  }
+  .spec400-composer-toolbar .spec400-composer-tools {
+    grid-area: 2 / 1;
+  }
+  .spec400-composer-toolbar .spec400-composer-speech-actions {
+    grid-area: 2 / 2;
+  }
 }
 
 @media (pointer: coarse), (max-width: 767px) {
-  .kova-consumer-model-menu .kova-consumer-model-option,
-  .spec400-composer-trailing .kova-consumer-model-trigger {
+  .kova-consumer-model-menu .kova-consumer-model-option {
     min-height: 44px;
   }
 }

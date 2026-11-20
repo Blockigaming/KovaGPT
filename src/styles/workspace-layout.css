@@ -135,3 +135,13 @@
     transition: none;
   }
 }
+
+/* On a spanned display, keep the workspace and its controls on one side of the hinge.
+   Navigation can occupy the other screen. */
+@media (horizontal-viewport-segments: 2) {
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
+    > :is(.kova-chat-main, .kova-app-content) {
+    flex: 0 1 env(viewport-segment-width 1 0);
+    margin-left: auto;
+  }
+}

@@ -9,6 +9,68 @@ import { fixture } from "./actual-app-fixture";
 import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
+test("composer stays in one pane on a spanned foldable", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium" || page.viewportSize()?.width !== 1440);
+  await fixture(page, "dark", true, false, "pro");
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const composer = page.locator('[data-composer-surface="empty"] .spec400-composer');
+  const input = composer.getByRole("textbox", { name: "Message KovaGPT" });
+  await input.fill("Review the attached image");
+  await composer.locator('input[aria-label="Choose files"]').setInputFiles("public/kova-logo.png");
+  await expect(composer.locator('li[data-status="complete"]')).toHaveCount(1);
+
+  const session = await page.context().newCDPSession(page);
+  for (const orientation of ["vertical", "horizontal"] as const) {
+    const sideBySide = orientation === "vertical";
+    const width = sideBySide ? 1114 : 720;
+    const height = sideBySide ? 720 : 1114;
+    const hinge = { orientation, offset: 540, maskLength: 34 };
+    await session.send("Emulation.setDeviceMetricsOverride", {
+      width,
+      height,
+      screenWidth: width,
+      screenHeight: height,
+      deviceScaleFactor: 1,
+      mobile: true,
+      displayFeature: hinge,
+      devicePosture: { type: "folded" },
+    });
+    await session.send("Emulation.setDisplayFeaturesOverride", { features: [hinge] });
+    await expect
+      .poll(async () => {
+        const box = await composer.boundingBox();
+        if (!box) return false;
+        const start = sideBySide ? box.x : box.y;
+        const end = start + (sideBySide ? box.width : box.height);
+        return start >= hinge.offset + hinge.maskLength || end <= hinge.offset;
+      })
+      .toBe(true);
+    await expect(composer.getByTestId("send-button")).toBeInViewport({ ratio: 1 });
+  }
+});
+
+test("a short split window keeps Send visible with a full attachment tray", async ({ page }) => {
+  test.skip(page.viewportSize()?.width !== 1440);
+  await fixture(page, "dark", true, true, "pro");
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const chat = page.locator('[data-composer-surface="conversation"]');
+  if (!(await chat.isVisible())) {
+    const sidebar = await revealSidebar(page);
+    await sidebar.getByRole("button", { name: "Open chat Composer review chat" }).press("Enter");
+  }
+  await chat.getByRole("textbox", { name: "Message KovaGPT" }).fill("Review these images");
+  await chat
+    .locator('input[aria-label="Choose files"]')
+    .setInputFiles(["public/kova-logo.png", "public/images/classroom-hero-restored-768.webp"]);
+  await expect(chat.locator('li[data-status="complete"]')).toHaveCount(2);
+  await page.setViewportSize({ width: 240, height: 320 });
+  await expect(chat.getByTestId("send-button")).toBeInViewport({ ratio: 1 });
+  await expect(chat.getByTestId("model-selector-trigger")).toBeInViewport({ ratio: 1 });
+  await expect(chat.getByTestId("dictate-button")).toBeInViewport({ ratio: 1 });
+});
+
 async function expectRestingComposer(page: Page, composer = page.locator(".spec400-composer")) {
   const compactDesktop = await page.evaluate(
     () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
@@ -304,6 +366,47 @@ for (const surface of ["empty", "conversation"] as const) {
     const photos = tray.locator(':scope > [data-kind="image"]');
     const cards = tray.locator(":scope > .spec400-composer-card");
     const websites = tray.locator(".kova-link-preview-composer");
+    const expectStableToolbar = async () => {
+      await expect
+        .poll(() =>
+          composer.evaluate((frame) => {
+            const outer = frame.getBoundingClientRect();
+            const leading = frame.querySelector(".kova-composer-plus")!.getBoundingClientRect();
+            const send = frame
+              .querySelector('[data-testid="send-button"]')!
+              .getBoundingClientRect();
+            const dictate = frame
+              .querySelector('[data-testid="dictate-button"]')!
+              .getBoundingClientRect();
+            const model = frame
+              .querySelector(
+                ".spec400-composer-trailing :is(.kova-model-trigger, .kova-model-static, .kova-composer-model-status,.kova-thinking-toggle)",
+              )!
+              .getBoundingClientRect();
+            const center = (rect: DOMRect) => rect.y + rect.height / 2;
+            return {
+              left: Math.round(leading.left - outer.left),
+              right: Math.round(outer.right - send.right),
+              bottom: Math.round(outer.bottom - send.bottom),
+              aligned: [leading, model, dictate].every(
+                (action) => Math.abs(center(action) - center(send)) < 0.5,
+              ),
+              heightMatches: [leading, model, dictate].every(
+                (action) => action.height === send.height,
+              ),
+              gaps: [Math.round(dictate.left - model.right), Math.round(send.left - dictate.right)],
+            };
+          }),
+        )
+        .toEqual({
+          left: 13,
+          right: 13,
+          bottom: 13,
+          aligned: true,
+          heightMatches: true,
+          gaps: [8, 8],
+        });
+    };
     const pasteWebsites = (text: string) =>
       input.evaluate((element, text) => {
         const clipboardData = new DataTransfer();
@@ -325,6 +428,7 @@ for (const surface of ["empty", "conversation"] as const) {
 
     await input.fill("go to youtube.com");
     await expect(tray).toBeHidden();
+    await expectStableToolbar();
     await input.press("End");
     await input.press("Space");
     await expect(websites).toHaveCount(1);
@@ -368,6 +472,20 @@ for (const surface of ["empty", "conversation"] as const) {
       "data-link-preview-url",
       "https://youtube.com/",
     );
+    const file = cards.nth(0);
+    const normalColor = await websites
+      .first()
+      .evaluate((link) => getComputedStyle(link).backgroundColor);
+    await expect(file).toHaveCSS("background-color", normalColor);
+    if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+      const inspect = file.getByRole("button", { name: "Inspect Review notes.txt" });
+      await inspect.hover();
+      await expect(inspect).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      const link = websites.first().getByRole("link");
+      await link.hover();
+      await expect(link).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    }
+    await expectStableToolbar();
     await expect
       .poll(() =>
         cards.evaluateAll((items) => {
@@ -379,7 +497,9 @@ for (const surface of ["empty", "conversation"] as const) {
             fileBesidePhoto: file.top === photo.top && file.left > photo.left,
             websiteFitsExpectedRow: bothFit
               ? website.top === photo.top && website.left > file.left
-              : website.top === file.top + file.height + 8 && website.left === file.left,
+              : website.top ===
+                  file.bottom + parseFloat(getComputedStyle(items[0]).marginBlockEnd) &&
+                website.left === file.left,
             sameWidth: file.width === website.width,
             bothFit,
           };
@@ -408,8 +528,9 @@ for (const surface of ["empty", "conversation"] as const) {
             (strip.clientWidth - photo.width - 8 + 0.5) / (first.width + 8),
           );
           const nextRow = rest[cardsBesidePhoto - 1];
+          const rowGap = parseFloat(getComputedStyle(items[0]).marginBlockEnd);
           return {
-            stacked: nextRow.top === first.top + first.height + 8 && nextRow.left === first.left,
+            stacked: nextRow.top === first.bottom + rowGap && nextRow.left === first.left,
             photoBesideBothRows: nextRow.top < photo.bottom && nextRow.left >= photo.right + 8,
           };
         }),
@@ -447,6 +568,9 @@ for (const surface of ["empty", "conversation"] as const) {
       Array.from({ length: 12 }, (_, index) => `https://example.org/page-${index}`).join(" "),
     );
     await expect(websites).toHaveCount(15);
+    const desktop = await page.evaluate(
+      () => matchMedia("(min-width: 1024px) and (pointer: fine)").matches,
+    );
     const readLayout = () =>
       composer.evaluate((frame) => {
         const shell = frame.getBoundingClientRect();
@@ -486,6 +610,8 @@ for (const surface of ["empty", "conversation"] as const) {
             links.filter((link) => link.top < first.bottom).length === 2 * linksPerSideRow,
           linksWrapByAvailableSpace: linksPerRow.join() === expectedLinksPerRow.join(),
           cardsPerFullRow,
+          gapBelowPhotos:
+            (links.find((link) => link.top >= first.bottom)?.top ?? first.bottom) - first.bottom,
           promptGap: field.getBoundingClientRect().top - stripBox.bottom,
           promptStart: field.getBoundingClientRect().left - shell.left,
           rows: rows.length,
@@ -514,7 +640,31 @@ for (const surface of ["empty", "conversation"] as const) {
     expect(layout.promptGap).toBeGreaterThanOrEqual(8);
     expect(layout.rows).toBeGreaterThanOrEqual(phone && page.viewportSize()!.width < 768 ? 6 : 3);
     await expect(input).toBeInViewport();
-    await expect(composer.getByTestId("send-button")).toBeInViewport();
+    const send = composer.getByTestId("send-button");
+    await expect(send).toBeInViewport();
+    await expectStableToolbar();
+    if (desktop) {
+      expect(layout.gapBelowPhotos).toBeGreaterThanOrEqual(8);
+      await expect(send).toHaveCSS("width", "36px");
+      await expect(send).toHaveCSS("height", "36px");
+      await expect
+        .poll(() =>
+          send.evaluate((button) => {
+            const action = button.getBoundingClientRect();
+            const arrow = button.querySelector("svg")!.getBoundingClientRect();
+            const microphone = button
+              .parentElement!.querySelector('[data-testid="dictate-button"]')!
+              .getBoundingClientRect();
+            const actionCenterY = action.top + action.height / 2;
+            return Math.max(
+              Math.abs(action.left + action.width / 2 - (arrow.left + arrow.width / 2)),
+              Math.abs(actionCenterY - (arrow.top + arrow.height / 2)),
+              Math.abs(actionCenterY - (microphone.top + microphone.height / 2)),
+            );
+          }),
+        )
+        .toBeLessThan(0.5);
+    }
 
     await websites
       .nth(1)

@@ -30,16 +30,22 @@ Disconnect asks Plaid to remove the Item before deleting Kova's credential. A do
 
 Create developer applications in the provider owner accounts. Configure the client credentials in the server secret manager and register these exact callbacks:
 
-| Provider | Callback                                                    | Server credential variables                          | Data requested by the UI                                                     |
-| -------- | ----------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Oura     | `https://kovagpt.com/api/integrations/oauth/callback/oura`  | `OURA_OAUTH_CLIENT_ID`, `OURA_OAUTH_CLIENT_SECRET`   | Basic profile identity and `daily` sleep, readiness and activity summaries   |
-| WHOOP    | `https://kovagpt.com/api/integrations/oauth/callback/whoop` | `WHOOP_OAUTH_CLIENT_ID`, `WHOOP_OAUTH_CLIENT_SECRET` | Basic profile identity, offline renewal, sleep, recovery and cycle summaries |
+| Provider | Callback                                                    | Server credential variables                          | Data requested by the UI                                                                                            |
+| -------- | ----------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Oura     | `https://kovagpt.com/api/integrations/oauth/callback/oura`  | `OURA_OAUTH_CLIENT_ID`, `OURA_OAUTH_CLIENT_SECRET`   | Basic profile identity, daily summaries, heart health, heart rate, oxygen, workouts, sessions, and tags as approved |
+| WHOOP    | `https://kovagpt.com/api/integrations/oauth/callback/whoop` | `WHOOP_OAUTH_CLIENT_ID`, `WHOOP_OAUTH_CLIENT_SECRET` | Basic profile identity, offline renewal, sleep, recovery and cycle summaries                                        |
 
 Each account completes its own consent flow. Users can withhold a requested scope; requested scopes are not treated as proof of Oura's actual grant. The server checks access before reading data. Expiring grants use the existing single-claim refresh mechanism to protect single-use rotating refresh tokens.
 
-Read summaries fetches a bounded page for the past seven days and exposes selected summary fields. Health summaries are not automatically added to chat, embedded, indexed, or stored as imported records. Reads revalidate account ownership, credentials, session, configuration and Lockdown Mode before returning results. Private data is discarded if the grant changes during the read.
+The Oura dashboard loads automatically after OAuth approval when its tab is visible. It checks for new cloud data every five minutes while open and shows the latest successful check. Oura's ring and phone determine when data arrives in the cloud. Daily analytics cover up to 90 days, with a shorter window for high-volume heart-rate samples. Data is reduced to approved daily values in memory. Neither connector stores readings or adds them to chat or search. Reads revalidate account ownership, credentials, session, configuration, and Lockdown Mode before returning results. Reconnect existing accounts to review newly offered permissions.
 
 WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local credentials and clearly reports that remote revocation still needs the provider's account settings.
+
+## Apple Health
+
+Open Connections → Health → Apple Health in the KovaGPT iPhone app. Connect Apple Health once and choose which data to share in the system sheet. On later visits, the app resumes the approved connection for the same KovaGPT account and refreshes its daily summaries as HealthKit reports changes while the tab is open. The app preserves Apple data on the device. Connection options disconnects automatic updates or opens an optional local export from Files. Exports stay in the current browser page and keep device sources separate.
+
+The dashboard groups readings such as sleep stages, activity, workouts, mobility, vitals, hearing, nutrition, mindfulness, and supported symptom and cycle logs. Available data depends on the device, iOS version, and granted permissions. Clinical records and raw ECG waveforms need separate handling and are outside this dashboard. The native app requires signing and physical-device testing before distribution.
 
 ## Other health services
 

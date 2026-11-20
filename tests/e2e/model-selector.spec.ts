@@ -16,8 +16,10 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
   await expect(page.getByTestId("consumer-model-trigger")).toHaveCount(0);
   await expect(thinking).toHaveAttribute("aria-pressed", "false");
+  await expect(thinking).toHaveAttribute("title", "Kova Argon 4.6 Lite");
   await thinking.click();
   await expect(thinking).toHaveAttribute("aria-pressed", "true");
+  await expect(thinking).toHaveAttribute("title", "Kova Argon 4.6 Medium");
   await expect(thinking).toHaveCSS("color", "rgb(59, 130, 246)");
   await expect(thinking.locator("svg")).toHaveCSS("color", "rgb(59, 130, 246)");
   await thinking.click();
@@ -132,7 +134,44 @@ test("Pro picker combines all models, Ultra and the recommended default", async 
   await expect(recommended).toHaveAttribute("aria-pressed", "true");
   await expect(xenon).toHaveAttribute("aria-pressed", "false");
   await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
-  await expect(trigger).toHaveAttribute("aria-label", "Choose model and effort, Default Lite");
+  await expect(trigger).toHaveAttribute(
+    "aria-label",
+    "Choose model and effort, Kova Argon 4.6 Lite",
+  );
+  await expect(trigger).toHaveText("Kova Argon 4.6 Lite");
+});
+
+test("the full current model fits beside or above the speech controls", async ({ page }) => {
+  await installAuthenticatedFixture(page, { tier: "pro" });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const composer = page.locator('[data-composer-surface="empty"] .spec400-composer');
+  const trigger = composer.getByTestId("model-selector-trigger");
+  await trigger.click();
+  const slider = page.getByRole("slider", { name: "Response effort" });
+  for (let step = 0; step < 3; step++) await slider.press("ArrowRight");
+  await page.getByTestId("consumer-model-kova-xenon-6.1").click();
+  await expect(trigger).toHaveText("Kova Xenon 6.1 Extra High");
+  await expect(trigger).toHaveAttribute("title", "Kova Xenon 6.1 Extra High");
+  await composer.getByRole("textbox", { name: "Message KovaGPT" }).fill("Keep this draft.");
+  await expect(composer.getByTestId("send-button")).toBeInViewport({ ratio: 1 });
+  const fits = await trigger.evaluate((button) => {
+    const frame = button.closest(".spec400-composer")!;
+    const mic = frame.querySelector('[data-testid="dictate-button"]')!.getBoundingClientRect();
+    const model = button.getBoundingClientRect();
+    const pill = button.querySelector<HTMLElement>(".kova-consumer-model-pill")!;
+    const text = document.createRange();
+    text.selectNodeContents(pill.firstElementChild!);
+    const painted = pill.getBoundingClientRect();
+    return (
+      (model.right + 7.5 <= mic.left || model.bottom + 7.5 <= mic.top) &&
+      painted.height < model.height &&
+      Array.from(text.getClientRects()).every(
+        (r) => r.left >= painted.left && r.right <= painted.right,
+      )
+    );
+  });
+  expect(fits).toBe(true);
 });
 
 test("signed-out visitors must log in before chat or model access", async ({ page }) => {

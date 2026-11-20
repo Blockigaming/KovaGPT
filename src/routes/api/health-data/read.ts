@@ -13,6 +13,7 @@ export const Route = createFileRoute("/api/health-data/read")({
         try {
           const body = JSON.parse(await readUtf8BodyBounded(request, 4096)) as {
             accountId?: string;
+            mode?: "analytics";
           };
           if (
             !body ||
@@ -20,7 +21,14 @@ export const Route = createFileRoute("/api/health-data/read")({
             !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu.test(body.accountId)
           )
             return Response.json({ error: "invalid_health_account" }, { status: 400, headers });
-          return Response.json(await readHealthAccount(auth, body.accountId), { headers });
+          return Response.json(
+            await readHealthAccount(
+              auth,
+              body.accountId,
+              body.mode === "analytics" ? body.mode : undefined,
+            ),
+            { headers },
+          );
         } catch (error) {
           if (error instanceof BodyReadError)
             return Response.json(

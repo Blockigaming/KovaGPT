@@ -365,7 +365,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                         ? "revoked"
                         : `expires ${String(row.expires_at).slice(0, 10)}`}
                     </span>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         disabled={busy || Boolean(row.revoked_at)}
                         variant="outline"
@@ -442,7 +442,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 variant="outline"
                 disabled={limitsPage === 0 || busy}

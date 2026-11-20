@@ -1,3 +1,5 @@
+import { probeOuraScope } from "./oura-analytics.server.mjs";
+import { OURA_SCOPES } from "./oura-metrics.mjs";
 import { readResponseBytesBounded } from "../lib/endpoint-reliability.mjs";
 
 const definitions = Object.freeze({
@@ -91,6 +93,14 @@ export async function confirmedHealthScopes(
       throw new Error("oauth_scope_check_failed");
     await ensureCurrent();
     granted.push(request.scope);
+  }
+  if (provider === "oura") {
+    for (const scope of OURA_SCOPES) {
+      if (!requested.includes(scope) || checked.has(scope)) continue;
+      await ensureCurrent();
+      if (await probeOuraScope(scope, token, fetchImpl)) granted.push(scope);
+      await ensureCurrent();
+    }
   }
   return granted;
 }

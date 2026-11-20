@@ -10,7 +10,7 @@ import { copyChatImage, downloadChatImage, shareChatImage } from "@/lib/chat-ima
 import { ConsumerModelSelector } from "@/components/ConsumerModelSelector";
 import {
   CONSUMER_MODELS,
-  consumerModel,
+  DEFAULT_CONSUMER_MODEL,
   type ConsumerModelId,
 } from "@/lib/consumer-model-selection.mjs";
 import {
@@ -2519,92 +2519,105 @@ export function ChatInput({
                 disabled={disabled}
               />
             ) : canChangeAgent && mode && onModeChange ? (
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+              <ModelSelector
+                mode={mode}
+                onChange={onModeChange}
+                userTier={userTier}
+                modelLabel={
+                  CONSUMER_MODELS.find(
+                    (model) =>
+                      model.id === (userTier === "free" ? DEFAULT_CONSUMER_MODEL : hostedModel),
+                  )?.label
+                }
+                compact
+              />
             ) : (
               <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
             )}
-            <button
-              type="button"
-              ref={dictationTriggerRef}
-              data-testid="dictate-button"
-              className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
-              aria-label="Type with voice"
-              aria-controls="kova-inline-dictation"
-              aria-expanded={activeVoiceMode === "dictate"}
-              disabled={disabled || isStreaming || !isLoaded || !online}
-              title="Type with voice"
-              onClick={(event) => openVoice("dictate", event.currentTarget)}
-            >
-              <Mic aria-hidden="true" />
-              <span className="sr-only">Type with voice</span>
-            </button>
-            <button
-              type="button"
-              data-testid="voice-button"
-              className="spec400-send-button spec400-primary-voice"
-              hidden={hasDraft || isStreaming}
-              aria-label="Voice"
-              aria-haspopup="dialog"
-              aria-expanded={activeVoiceMode === "voice"}
-              disabled={
-                disabled ||
-                isStreaming ||
-                !isLoaded ||
-                !user ||
-                !online ||
-                !onVoiceSubmit ||
-                voiceOpeningBlocked
-              }
-              title={
-                onVoiceSubmit
-                  ? "Start a voice conversation"
-                  : "Voice conversations require a saved chat"
-              }
-              onClick={(event) => openVoice("voice", event.currentTarget)}
-            >
-              <AudioLines aria-hidden="true" />
-              <span className="sr-only">Voice</span>
-            </button>
-            {isStreaming ? (
+            <div className="spec400-composer-speech-actions">
               <button
                 type="button"
-                onPointerDown={(event) => {
-                  // Keep keyboard/viewport geometry stable until this click lands.
-                  if (event.button === 0) event.preventDefault();
-                }}
-                onClick={onStop}
-                className="spec400-send-button"
-                aria-label="Stop generating"
-                data-testid="stop-button"
+                ref={dictationTriggerRef}
+                data-testid="dictate-button"
+                className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
+                aria-label="Type with voice"
+                aria-controls="kova-inline-dictation"
+                aria-expanded={activeVoiceMode === "dictate"}
+                disabled={disabled || isStreaming || !isLoaded || !online}
+                title="Type with voice"
+                onClick={(event) => openVoice("dictate", event.currentTarget)}
               >
-                <Square aria-hidden="true" />
-                <span>Stop</span>
+                <Mic aria-hidden="true" />
+                <span className="sr-only">Type with voice</span>
               </button>
-            ) : (
               <button
                 type="button"
-                onPointerDown={(event) => {
-                  if (event.button === 0) event.preventDefault();
-                }}
-                disabled={!canSubmit}
-                onClick={triggerSubmit}
-                className="spec400-send-button"
-                hidden={!hasDraft}
-                aria-label="Send message"
-                data-testid="send-button"
-                title={
-                  disabled
-                    ? "Messaging is unavailable"
-                    : sendDisabled
-                      ? "Getting this chat ready…"
-                      : (blockedAttachmentMessage ??
-                        (!online ? "Reconnect to send" : "Send message"))
+                data-testid="voice-button"
+                className="spec400-send-button spec400-primary-voice"
+                hidden={hasDraft || isStreaming}
+                aria-label="Voice"
+                aria-haspopup="dialog"
+                aria-expanded={activeVoiceMode === "voice"}
+                disabled={
+                  disabled ||
+                  isStreaming ||
+                  !isLoaded ||
+                  !user ||
+                  !online ||
+                  !onVoiceSubmit ||
+                  voiceOpeningBlocked
                 }
+                title={
+                  onVoiceSubmit
+                    ? "Start a voice conversation"
+                    : "Voice conversations require a saved chat"
+                }
+                onClick={(event) => openVoice("voice", event.currentTarget)}
               >
-                <ArrowUp aria-hidden="true" />
-                <span>Send</span>
+                <AudioLines aria-hidden="true" />
+                <span className="sr-only">Voice</span>
               </button>
-            )}
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onPointerDown={(event) => {
+                    // Keep keyboard/viewport geometry stable until this click lands.
+                    if (event.button === 0) event.preventDefault();
+                  }}
+                  onClick={onStop}
+                  className="spec400-send-button"
+                  aria-label="Stop generating"
+                  data-testid="stop-button"
+                >
+                  <Square aria-hidden="true" />
+                  <span>Stop</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onPointerDown={(event) => {
+                    if (event.button === 0) event.preventDefault();
+                  }}
+                  disabled={!canSubmit}
+                  onClick={triggerSubmit}
+                  className="spec400-send-button"
+                  hidden={!hasDraft}
+                  aria-label="Send message"
+                  data-testid="send-button"
+                  title={
+                    disabled
+                      ? "Messaging is unavailable"
+                      : sendDisabled
+                        ? "Getting this chat ready…"
+                        : (blockedAttachmentMessage ??
+                          (!online ? "Reconnect to send" : "Send message"))
+                  }
+                >
+                  <ArrowUp aria-hidden="true" />
+                  <span>Send</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -213,7 +213,8 @@ for (const theme of ["light", "dark"] as const) {
       );
       await expect(input).toHaveCSS("overflow-y", "auto");
       const imageChip = page.locator('.spec400-attachment-chip[data-kind="image"]');
-      await expect(imageChip).toHaveCSS("height", "46px");
+      await expect(imageChip).toHaveCSS("height", "108px");
+      await expect(imageChip).toHaveCSS("width", "108px");
       const removeImage = page.getByLabel("Remove Mobile image.png", { exact: true });
       await removeImage.scrollIntoViewIfNeeded();
       await expectReachable(removeImage, top, top + height);

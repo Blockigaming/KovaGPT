@@ -118,10 +118,9 @@
 
   .kova-assistant .kova-empty-composer .spec400-composer {
     --chat-composer-corner: 21px;
-    --composer-text-inset: 10px;
-    --composer-media-offset: 0px;
+    --composer-text-inset: 8px;
     min-height: 0 !important;
-    padding: 4px 8px !important;
+    padding-block-start: 4px;
     gap: 2px;
     border-radius: var(--chat-composer-corner);
   }
@@ -136,8 +135,8 @@
 
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
     --chat-composer-corner: 26px;
-    --composer-text-inset: 11px;
-    padding-block: 4px;
+    --composer-text-inset: 9px;
+    padding-block-start: 4px;
   }
 
   .kova-assistant[data-compact-chat-home] .kova-empty-composer .kova-composer-tray {
@@ -184,17 +183,19 @@
     }
   }
 
+  .kova-assistant [data-chat-history-migration] {
+    flex-wrap: wrap;
+    max-block-size: min(30dvh, 16rem);
+    overflow-y: auto;
+  }
   .kova-assistant [data-chat-history-migration] > p {
+    flex-basis: 12ch;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   .kova-assistant .kova-empty-composer .spec400-composer-toolbar {
     margin-block-start: 0;
-  }
-
-  .kova-assistant .spec400-composer .kova-composer-plus {
-    margin-inline-start: -4px;
   }
 
   .kova-home-composer-placeholder .spec400-composer-input {
@@ -259,9 +260,9 @@
     .spec400-composer {
     --keyboard-content-min: 44px;
     flex: 0 1 auto;
-    /* A 44px writing/expand row, 44px actions, 2px gap, 6px border/padding. */
-    min-height: calc(var(--keyboard-content-min) + 52px) !important;
-    padding: 2px 8px !important;
+    /* The editor and toolbar each get 44px plus the frame and row gap. */
+    min-height: calc(var(--keyboard-content-min) + 50px + var(--composer-action-inset)) !important;
+    padding-block-start: 2px;
     gap: 2px;
     border-radius: 20px;
     overflow: hidden;
@@ -590,6 +591,39 @@
   }
 }
 
+/* A small split window can be shorter than the combined draft and action rows.
+   Let attachments and draft text scroll together while the buttons stay visible. */
+@media (width <= 360px) and (height <= 420px) {
+  .kova-assistant [data-chat-history-migration] {
+    max-block-size: max(44px, 14dvh);
+  }
+
+  .kova-assistant .spec400-composer-dock {
+    max-block-size: min(100%, max(60%, 11rem));
+  }
+
+  .kova-assistant .spec400-composer-dock > .spec400-chat-input {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kova-assistant .spec400-composer-dock .spec400-composer-content {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 2rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .kova-assistant .spec400-composer-toolbar {
+    flex-shrink: 0;
+  }
+
+  .kova-assistant .spec400-composer-dock .spec400-composer-disclaimer {
+    display: none;
+  }
+}
+
 @media (width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none) {
   .kova-assistant[data-compact-chat-home] section.kova-empty-chat > .kova-empty-chat-content {
     flex: 1 1 auto;
@@ -598,6 +632,6 @@
   }
 
   .kova-assistant[data-compact-chat-home] .spec400-composer {
-    --composer-text-inset: 8px;
+    --composer-text-inset: 6px;
   }
 }

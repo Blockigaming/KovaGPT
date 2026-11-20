@@ -27,7 +27,7 @@
   border-radius: inherit;
   transition: background-color 140ms ease;
 }
-.kova-link-preview-open:hover {
+.kova-link-preview-message .kova-link-preview-open:hover {
   background: var(--accent);
 }
 .kova-link-preview-open:focus-visible {
