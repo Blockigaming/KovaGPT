@@ -6,11 +6,13 @@ import {
   useState,
   type ChangeEvent,
   type CSSProperties,
+  type PointerEvent,
 } from "react";
 import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -106,6 +108,11 @@ function HealthMetric({
   range: number;
 }) {
   const [sourceIndex, setSourceIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const chartPress = useRef<{ id: number; x: number; y: number; dragging: boolean } | null>(null);
+  useEffect(() => {
+    setSelectedDate(null);
+  }, [metric.id, range, sourceIndex]);
   const sources = report.metrics[metric.id] ?? [];
   const source = sources[sourceIndex] ?? sources[0];
   const values = new Map(source.days.map(({ date, value }) => [date, value]));
@@ -119,6 +126,21 @@ function HealthMetric({
   const days = series.filter((day): day is { date: string; value: number } => day.value !== null);
   const measured = days.map(({ value }) => value);
   const categoryLabels = metric.categories ? Object.values(metric.categories) : null;
+  const axisWidth = categoryLabels || metric.unit === "clock" ? 90 : 42;
+  const chartMargin = 5;
+  const selectedReading = series.find(({ date }) => date === selectedDate);
+  function scrubChart(event: PointerEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const plotWidth = bounds.width - axisWidth - 2 * chartMargin;
+    if (plotWidth <= 0) return;
+    const fraction = (event.clientX - bounds.left - axisWidth - chartMargin) / plotWidth;
+    const index = Math.max(
+      0,
+      Math.min(series.length - 1, Math.round(fraction * (series.length - 1))),
+    );
+    setSelectedDate(series[index].date);
+  }
+
   const format = (value: number) => {
     if (categoryLabels) return categoryLabels[value] ?? "—";
     if (metric.unit === "clock") {
@@ -183,9 +205,60 @@ function HealthMetric({
               ))}
             </dl>
           )}
-          <div className="h-48 min-w-0">
+          <div
+            className="h-48 min-w-0 touch-pan-y"
+            data-testid="health-timeline"
+            onPointerDown={(event) => {
+              if (!event.isPrimary || event.button !== 0) return;
+              chartPress.current = {
+                id: event.pointerId,
+                x: event.clientX,
+                y: event.clientY,
+                dragging: false,
+              };
+            }}
+            onPointerMove={(event) => {
+              const press = chartPress.current;
+              if (!press || press.id !== event.pointerId) return;
+              if (!press.dragging) {
+                const horizontal = Math.abs(event.clientX - press.x);
+                const vertical = Math.abs(event.clientY - press.y);
+                if (vertical > 8 && vertical > horizontal) {
+                  chartPress.current = null;
+                  return;
+                }
+                if (horizontal < 8) return;
+                event.currentTarget.setPointerCapture(event.pointerId);
+                press.dragging = true;
+              }
+              scrubChart(event);
+            }}
+            onPointerUp={(event) => {
+              if (chartPress.current?.id !== event.pointerId) return;
+              chartPress.current = null;
+              scrubChart(event);
+            }}
+            onPointerCancel={() => {
+              chartPress.current = null;
+            }}
+            onPointerLeave={() => {
+              if (!chartPress.current?.dragging) chartPress.current = null;
+            }}
+            onLostPointerCapture={() => {
+              chartPress.current = null;
+            }}
+          >
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series} accessibilityLayer>
+              <LineChart
+                data={series}
+                margin={{
+                  top: chartMargin,
+                  right: chartMargin,
+                  bottom: chartMargin,
+                  left: chartMargin,
+                }}
+                accessibilityLayer
+              >
                 <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.12} />
                 <XAxis
                   dataKey="date"
@@ -195,7 +268,7 @@ function HealthMetric({
                   tick={{ fill: "var(--muted-foreground)" }}
                 />
                 <YAxis
-                  width={categoryLabels || metric.unit === "clock" ? 90 : 42}
+                  width={axisWidth}
                   fontSize={11}
                   tick={{ fill: "var(--muted-foreground)" }}
                   tickFormatter={categoryLabels || metric.unit === "clock" ? format : undefined}
@@ -210,6 +283,13 @@ function HealthMetric({
                     borderRadius: 12,
                   }}
                 />
+                {selectedReading && (
+                  <ReferenceLine
+                    x={selectedReading.date}
+                    stroke="var(--color-rose-500)"
+                    strokeDasharray="3 3"
+                  />
+                )}
                 <Line
                   name={metric.label}
                   dataKey="value"
@@ -221,6 +301,17 @@ function HealthMetric({
               </LineChart>
             </ResponsiveContainer>
           </div>
+          <p
+            className="min-h-5 text-xs tabular-nums text-muted-foreground"
+            data-testid="health-timeline-reading"
+          >
+            {selectedReading && (
+              <>
+                {selectedReading.date} ·{" "}
+                {selectedReading.value === null ? "No reading" : format(selectedReading.value)}
+              </>
+            )}
+          </p>
           <details>
             <summary className="cursor-pointer text-sm text-muted-foreground">
               Daily readings · {days.length} of {range} days

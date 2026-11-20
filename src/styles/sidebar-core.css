@@ -949,3 +949,11 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
     user-select: none;
   }
 }
+
+@media (max-width: 767px) {
+  .kova-sidebar .kova-chat-row-main,
+  [data-testid="send-button"] {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+}

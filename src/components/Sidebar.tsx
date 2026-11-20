@@ -634,7 +634,7 @@ export function Sidebar({
     };
   }, [open]);
 
-  // Close the mobile drawer with a deliberate right swipe, without stealing
+  // Close the mobile drawer with a deliberate left swipe, without stealing
   // vertical scrolling or horizontal gestures from nested scrollable controls.
   useEffect(() => {
     if (!open) return;
@@ -690,7 +690,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (isClearSidebarSwipe({ dx, dy, elapsedMs: event.timeStamp - start.time })) {
+      if (isClearSidebarSwipe({ dx: -dx, dy, elapsedMs: event.timeStamp - start.time })) {
         start = null;
         swipeToggleRef.current();
       }
@@ -1022,6 +1022,7 @@ export function Sidebar({
             cancelChatHold();
         }}
         onPointerUp={cancelChatHold}
+        onPointerLeave={cancelChatHold}
         onPointerCancel={cancelChatHold}
         onContextMenu={(event) => {
           if (selectionPointerTypeRef.current === "touch" && isMobileViewport())

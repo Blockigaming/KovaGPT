@@ -73,6 +73,7 @@ import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 import {
   lazy,
   Suspense,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -448,6 +449,15 @@ export function ChatInput({
   selectedToolRef.current = selectedTool;
 
   const [plusOpen, setPlusOpen] = useState(false);
+  const [mobileIntelligenceOpen, setMobileIntelligenceOpen] = useState(false);
+  const sendHold = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const sendHoldConsumed = useRef(false);
+  const cancelSendHold = useCallback(() => {
+    if (sendHold.current) window.clearTimeout(sendHold.current.timer);
+    sendHold.current = null;
+  }, []);
+  useEffect(() => cancelSendHold, [cancelSendHold]);
+
   const [longDraft, setLongDraft] = useState(false);
   const composerAnchorRef = useRef<HTMLDivElement>(null);
   const [slashIndex, setSlashIndex] = useState(0);
@@ -1942,6 +1952,13 @@ export function ChatInput({
               ? "Partial text · inspect page results"
               : "Ready"
             : "Queued";
+  const paidModelPicker =
+    userTier !== "free" &&
+    canChangeAgent &&
+    hostedModel &&
+    onHostedModelChange &&
+    mode &&
+    onModeChange;
   const canSubmit =
     !pasteOffer &&
     !disabled &&
@@ -2472,6 +2489,8 @@ export function ChatInput({
                 mode={mode}
                 onModeChange={onModeChange}
                 tier={userTier}
+                intelligenceOpen={mobileIntelligenceOpen}
+                onIntelligenceOpenChange={setMobileIntelligenceOpen}
                 disabled={disabled}
               />
             ) : canChangeAgent && mode && onModeChange ? (
@@ -2540,10 +2559,46 @@ export function ChatInput({
               <button
                 type="button"
                 onPointerDown={(event) => {
-                  if (event.button === 0) event.preventDefault();
+                  if (!event.isPrimary || event.button !== 0) return;
+                  event.preventDefault();
+                  sendHoldConsumed.current = false;
+                  cancelSendHold();
+                  if (
+                    event.pointerType !== "touch" ||
+                    !paidModelPicker ||
+                    !isLoaded ||
+                    !user ||
+                    !window.matchMedia("(max-width: 767px)").matches
+                  )
+                    return;
+                  sendHold.current = {
+                    x: event.clientX,
+                    y: event.clientY,
+                    timer: window.setTimeout(() => {
+                      sendHold.current = null;
+                      sendHoldConsumed.current = true;
+                      setMobileIntelligenceOpen(true);
+                    }, 500),
+                  };
+                }}
+                onPointerMove={(event) => {
+                  const hold = sendHold.current;
+                  if (hold && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 10) {
+                    sendHoldConsumed.current = true;
+                    cancelSendHold();
+                  }
+                }}
+                onPointerUp={cancelSendHold}
+                onPointerCancel={cancelSendHold}
+                onPointerLeave={cancelSendHold}
+                onContextMenu={(event) => {
+                  if (sendHold.current || sendHoldConsumed.current) event.preventDefault();
                 }}
                 disabled={!canSubmit}
-                onClick={triggerSubmit}
+                onClick={(event) => {
+                  if (event.detail > 0 && sendHoldConsumed.current) return;
+                  triggerSubmit();
+                }}
                 className="spec400-send-button"
                 hidden={!hasDraft}
                 aria-label="Send message"
