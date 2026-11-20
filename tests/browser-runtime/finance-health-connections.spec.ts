@@ -203,6 +203,57 @@ test("bank Link is explicit and exchanges one public token after successful cons
     ),
   ).toHaveLength(0);
 });
+
+test("an Apple Health report stays in the browser and clears on account switch", async ({
+  page,
+}) => {
+  await boot(page);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  const region = page.getByRole("region", { name: "Apple Health", exact: true });
+  const openReport = region.getByRole("button", { name: "Open Apple Health report" });
+  const file = (body: string) => ({
+    name: "Apple Health Steps.kovahealth",
+    mimeType: "application/vnd.kovagpt.health+json",
+    buffer: Buffer.from(body),
+  });
+
+  async function chooseReport(body: string) {
+    const chooser = page.waitForEvent("filechooser");
+    await openReport.click();
+    await (await chooser).setFiles(file(body));
+  }
+
+  await chooseReport("invalid");
+  await expect(region.getByRole("status")).toContainText("Choose a .kovahealth report");
+  const report = JSON.stringify({
+    version: 1,
+    source: "kovagpt.apple-health",
+    days: [{ date: "2026-11-20", steps: 123 }],
+  });
+  await chooseReport(report);
+  await expect(region.getByRole("table", { name: "Daily steps from Apple Health" })).toBeVisible();
+  await expect(region.getByRole("cell", { name: "123", exact: true })).toBeVisible();
+  await region.getByRole("button", { name: "Clear report" }).click();
+  await expect(region.getByRole("table")).toHaveCount(0);
+  await chooseReport(report);
+  await expect(region.getByRole("table")).toBeVisible();
+  expect(requests).toEqual([]);
+  expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
+
+  await page.evaluate(() => {
+    const state = window as StateWindow;
+    state.owner = "00000000-0000-4000-8000-000000000006";
+    state.renderPanels();
+  });
+  await expect(region.getByRole("table")).toHaveCount(0);
+  await page.evaluate(() => {
+    const state = window as StateWindow;
+    state.owner = null;
+    state.renderPanels();
+  });
+  await expect(openReport).toHaveCount(0);
+});
 test("unconfigured finance and health stay disabled and never fetch private data", async ({
   page,
 }) => {

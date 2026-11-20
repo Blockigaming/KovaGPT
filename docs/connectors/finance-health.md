@@ -41,9 +41,21 @@ Read summaries fetches a bounded page for the past seven days and exposes select
 
 WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local credentials and clearly reports that remote revocation still needs the provider's account settings.
 
+## Apple Health
+
+The KovaGPT Health iPhone project lives at `ios/KovaHealth.xcodeproj` and requires iOS 17 or later. The app requests read access to step counts and displays daily totals across seven calendar days, including today. Apple Health may return no readings when step data is unavailable or access is denied.
+
+For device testing, open the project in Xcode, select the authorized Apple Developer team under Signing & Capabilities, and confirm the HealthKit capability and bundle identifier. Build on a physical iPhone. The unsigned simulator build checks that the project compiles. Device signing and permission tests are separate.
+
+In the iPhone app, tap **Read step totals**, complete the Apple Health prompt, and choose **Save report on this iPhone**. In KovaGPT **Connections → Health**, tap **Open Apple Health report**. In Files, select **On My iPhone → KovaGPT Health → Reports → Apple Health Steps.kovahealth**. Safari reads the compact report locally. Daily totals stay in the current tab, and **Clear report** discards them. Use **Delete saved report** in the iPhone app to remove the device copy.
+
+The browser sends no report to a server and has no stored provider token or background sync. The report excludes other HealthKit metrics, source identifiers, and individual records. The app excludes the report directory from backups. Test the flow with consent granted, consent withheld, access revoked, no step data, report removal, and Kova account switching. Verify that opening a report sends no network request.
+
+If the team uses Xcode Cloud for TestFlight, first create the app record in App Store Connect. Create the workflow from Xcode and grant the Xcode Cloud GitHub app access to this repository. A signed iPhone read and a browser import are required before calling the feature available.
+
 ## Other health services
 
-Oura and WHOOP are the implemented web adapters in this change. Other wearables and medical-record services require their own supported APIs, app registrations, approval and consent. Apple HealthKit and Android Health Connect require a mobile application and platform permissions; website OAuth keys alone do not provide access.
+Oura and WHOOP are the implemented web adapters. Other wearables and medical-record services require their own supported APIs, app registrations, approval and consent. Android Health Connect requires a mobile application and platform permissions.
 
 ## Acceptance
 

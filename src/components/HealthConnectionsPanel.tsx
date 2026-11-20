@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { HealthDashboardPreview } from "@/components/HealthDashboardPreview";
+import { AppleHealthReport } from "@/components/AppleHealthReport";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
@@ -227,19 +228,7 @@ export function HealthConnectionsPanel({
           </div>
         </>
       )}
-      <section
-        className="!mt-3 rounded-3xl bg-muted/30 p-4 sm:p-5"
-        aria-labelledby="apple-health-title"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="apple-health-title" className="font-medium">
-            Apple Health
-          </h3>
-          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-700 dark:text-amber-300">
-            Coming soon
-          </span>
-        </div>
-      </section>
+      <AppleHealthReport ownerId={ownerId} />
       {message && <p role="status">{message}</p>}
       {busy && <p role="status">Working…</p>}
       {result && (
