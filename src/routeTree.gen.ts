@@ -144,6 +144,7 @@ import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthTokenRouteImport } from './routes/api/auth/token'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
+import { Route as ApiBrowserOpenRouteImport } from './routes/api/browser/open'
 import { Route as ApiChatShareTokenRouteImport } from './routes/api/chat-share.$token'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
@@ -922,6 +923,11 @@ const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
   path: '/api/auth/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBrowserOpenRoute = ApiBrowserOpenRouteImport.update({
+  id: '/api/browser/open',
+  path: '/api/browser/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatShareTokenRoute = ApiChatShareTokenRouteImport.update({
   id: '/$token',
   path: '/$token',
@@ -1552,6 +1558,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/token': typeof ApiAuthTokenRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/browser/open': typeof ApiBrowserOpenRoute
   '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
@@ -1782,6 +1789,7 @@ export interface FileRoutesByTo {
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/token': typeof ApiAuthTokenRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/browser/open': typeof ApiBrowserOpenRoute
   '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
@@ -2013,6 +2021,7 @@ export interface FileRoutesById {
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/token': typeof ApiAuthTokenRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/browser/open': typeof ApiBrowserOpenRoute
   '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
@@ -2245,6 +2254,7 @@ export interface FileRouteTypes {
     | '/api/auth/signup'
     | '/api/auth/token'
     | '/api/auth/verify'
+    | '/api/browser/open'
     | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
@@ -2475,6 +2485,7 @@ export interface FileRouteTypes {
     | '/api/auth/signup'
     | '/api/auth/token'
     | '/api/auth/verify'
+    | '/api/browser/open'
     | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
@@ -2705,6 +2716,7 @@ export interface FileRouteTypes {
     | '/api/auth/signup'
     | '/api/auth/token'
     | '/api/auth/verify'
+    | '/api/browser/open'
     | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
@@ -2932,6 +2944,7 @@ export interface RootRouteChildren {
   ApiAuthSignupRoute: typeof ApiAuthSignupRoute
   ApiAuthTokenRoute: typeof ApiAuthTokenRoute
   ApiAuthVerifyRoute: typeof ApiAuthVerifyRouteWithChildren
+  ApiBrowserOpenRoute: typeof ApiBrowserOpenRoute
   ApiDeveloperConsoleRoute: typeof ApiDeveloperConsoleRoute
   ApiDeveloperFilesRoute: typeof ApiDeveloperFilesRoute
   ApiDeveloperFundingRoute: typeof ApiDeveloperFundingRoute
@@ -3966,6 +3979,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/browser/open': {
+      id: '/api/browser/open'
+      path: '/api/browser/open'
+      fullPath: '/api/browser/open'
+      preLoaderRoute: typeof ApiBrowserOpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat-share/$token': {
       id: '/api/chat-share/$token'
       path: '/$token'
@@ -4874,6 +4894,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSignupRoute: ApiAuthSignupRoute,
   ApiAuthTokenRoute: ApiAuthTokenRoute,
   ApiAuthVerifyRoute: ApiAuthVerifyRouteWithChildren,
+  ApiBrowserOpenRoute: ApiBrowserOpenRoute,
   ApiDeveloperConsoleRoute: ApiDeveloperConsoleRoute,
   ApiDeveloperFilesRoute: ApiDeveloperFilesRoute,
   ApiDeveloperFundingRoute: ApiDeveloperFundingRoute,

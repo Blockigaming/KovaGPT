@@ -1,3 +1,9 @@
+import {
+  CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+  CLOUD_BROWSER_DAILY_LIMIT_TITLE,
+  CLOUD_BROWSER_USAGE_HEADER,
+} from "../../src/lib/chat-browser-policy.mjs";
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
@@ -10,19 +16,20 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const compactEmpty =
-    !conversation &&
-    (await page.evaluate(
-      () =>
-        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-          .matches,
-    ));
-  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
+  const phone = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  await expect(composer).toHaveCSS(
+    "border-radius",
+    phone ? (conversation ? "26px" : "21px") : "34px",
+  );
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
-  else await height.toBeGreaterThanOrEqual(compactEmpty ? 92 : 128);
+  else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
   if (singleRow) return compactDesktop;
@@ -280,29 +287,160 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
   }
 });
 
-test("a composer link preview aligns with the first letter of the draft", async ({ page }) => {
-  await fixture(page, "dark", true);
+for (const surface of ["empty", "conversation"] as const) {
+  test(`a composer link preview preserves draft alignment in ${surface} chat`, async ({ page }) => {
+    await fixture(page, "dark", true, surface === "conversation");
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    const composer = page.locator(`[data-composer-surface="${surface}"] .spec400-composer`);
+    const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const preview = composer.locator(".kova-link-preview-composer");
+    const draftStart = () =>
+      input.evaluate(
+        (element) =>
+          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft),
+      );
+
+    await input.fill("go to youtube.com");
+    await expect(preview).toBeHidden();
+    const originalStart = await draftStart();
+    await input.press("End");
+    await input.press("Space");
+    await expect(preview).toBeVisible();
+
+    await expect.poll(async () => Math.abs((await draftStart()) - originalStart)).toBeLessThan(0.5);
+    await expect
+      .poll(async () => Math.abs((await preview.boundingBox())!.x - originalStart))
+      .toBeLessThan(0.5);
+  });
+}
+
+test("Cloud Browser limit displays a top notification and keeps the sent Wikipedia icon compact", async ({
+  page,
+}) => {
+  await fixture(page, "dark");
+  const icon = "https://en.wikipedia.org/static/favicon/wikipedia.ico";
+  const url = "https://en.wikipedia.org/wiki/The_Great_Wave_off_Kanagawa";
+  await page.route(icon, (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><text x="20" y="215" font-size="220">W</text></svg>',
+    }),
+  );
+  await page.route("**/api/link-preview", (route) =>
+    route.fulfill({ json: { url, title: "The Great Wave off Kanagawa", siteName: "Wikipedia" } }),
+  );
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      status: 429,
+      json: {
+        error: CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+        code: "cloud_browser_daily_limit",
+        stage: "cloud_browser",
+        retryable: false,
+      },
+    }),
+  );
   await page.goto("/");
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-  const preview = page.locator(".kova-link-preview-composer");
+  await input.fill(`Open ${url} in Cloud Browser.`);
+  const [response] = await Promise.all([
+    page.waitForResponse((result) => new URL(result.url()).pathname === "/api/chat", {
+      timeout: 12_000,
+    }),
+    page.getByTestId("send-button").click(),
+  ]);
+  expect(response.status()).toBe(429);
+  const notice = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Cloud Browser limit reached" });
+  await expect(notice).toBeVisible();
+  await expect(notice.locator("[data-title]")).toHaveText(CLOUD_BROWSER_DAILY_LIMIT_TITLE);
+  await expect(notice.locator("[data-description]")).toHaveText(
+    CLOUD_BROWSER_DAILY_LIMIT_DESCRIPTION,
+  );
+  await expect(notice.locator("[data-action]")).toHaveCount(0);
+  await expect(notice).toHaveAttribute("data-y-position", "top");
+  const width = page.viewportSize()!.width;
+  await expect(notice).toHaveAttribute("data-x-position", width >= 1024 ? "right" : "center");
+  await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const assistant = page.locator('[data-message-role="assistant"]');
+  await expect(assistant).toHaveCount(1);
+  await expect(
+    assistant.getByText(CLOUD_BROWSER_DAILY_LIMIT_MESSAGE, { exact: true }),
+  ).toBeVisible();
+  await notice.getByRole("button", { name: "Close toast", exact: true }).click();
+  await expect(notice).toBeHidden();
+  const prompt = page.getByLabel("Sent prompt");
+  await expect(prompt).toContainText("in Cloud Browser.");
+  const favicon = prompt.locator("img");
+  await expect(favicon).toHaveAttribute("src", icon);
+  await expect.poll(() => favicon.evaluate((image) => image.naturalWidth)).toBe(256);
+  await expect(favicon).toHaveCSS("width", "24px");
+  await expect(favicon).toHaveCSS("height", "24px");
+  await expect(input).toBeEmpty();
+});
 
-  await input.fill("go to youtube.com");
-  await expect(preview).toBeHidden();
-  await input.press("End");
-  await input.press("Space");
-  await expect(preview).toBeVisible();
-
-  await expect
-    .poll(() =>
-      input.evaluate((element) => {
-        const link = element
-          .closest(".spec400-composer")!
-          .querySelector(".kova-link-preview-composer")!;
-        const textStart =
-          element.getBoundingClientRect().left + parseFloat(getComputedStyle(element).paddingLeft);
-        return Math.abs(link.getBoundingClientRect().left - textStart);
-      }),
-    )
-    .toBeLessThan(0.5);
+test("Kova usage exhaustion offers manual Cloud Browser without retrying generation", async ({
+  page,
+}) => {
+  await fixture(page, "dark");
+  const url = "https://example.com/";
+  const sessionId = "d840146b-ab21-4a1a-8c68-9621ea1e11f2";
+  const previewPath = `/api/browser/preview/${sessionId}`;
+  const jpeg = (await page.screenshot({ type: "jpeg" })).toString("base64");
+  const requests: string[] = [];
+  await page.route("**/api/chat", (route) => {
+    requests.push("chat");
+    return route.fulfill({
+      status: 429,
+      headers: { [CLOUD_BROWSER_USAGE_HEADER]: "exhausted" },
+      json: {
+        error: "Your weekly regular message allowance is used.",
+        code: "message_window_limit",
+        category: "quota_exceeded",
+        retryable: false,
+      },
+    });
+  });
+  await page.route("**/api/browser/open", (route) => {
+    requests.push("manual");
+    expect(route.request().postDataJSON()).toEqual({ url });
+    return route.fulfill({
+      json: {
+        browser: { sessionId, tabCount: 1, observedAt: Date.now(), previewPath },
+        frame: { id: sessionId, width: 390, height: 844, jpeg },
+      },
+    });
+  });
+  await page.route(`**${previewPath}`, (route) => {
+    const command = route.request().postDataJSON();
+    requests.push(command.kind);
+    return route.fulfill({
+      json: {
+        frame: command.kind === "release" ? null : { id: sessionId, width: 390, height: 844, jpeg },
+      },
+    });
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await input.fill(`Open ${url} in Cloud Browser.`);
+  await page.getByTestId("send-button").click();
+  const notice = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Kova usage limit reached" });
+  await expect(notice).toContainText("Your weekly regular message allowance is used.", {
+    timeout: 12_000,
+  });
+  await expect(notice).toHaveAttribute("data-y-position", "top");
+  expect(requests).toEqual(["chat"]);
+  await notice.getByRole("button", { name: "Open Cloud Browser" }).click();
+  const browser = page.getByRole("dialog", { name: "Cloud browser", exact: true });
+  await expect(browser.getByRole("img", { name: "Live browser page" })).toBeVisible();
+  await browser.getByRole("button", { name: "Close browser", exact: true }).click();
+  await expect.poll(() => requests.includes("release")).toBe(true);
+  expect(requests.filter((request) => request === "chat")).toEqual(["chat"]);
 });

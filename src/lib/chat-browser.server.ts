@@ -10,6 +10,7 @@ import type { AuthedCaller } from "@/lib/api-auth.server";
 import { readBrowserCapacity } from "@/lib/browserbase-capacity.server.mjs";
 import { readCloudBrowserRules } from "@/lib/cloud-browser-preferences.server.mjs";
 import { assertCloudBrowserDestination } from "@/lib/cloud-browser-rules.mjs";
+import { CLOUD_BROWSER_DAILY_LIMIT_MESSAGE } from "@/lib/chat-browser-policy.mjs";
 import { ChatPreflightError } from "@/lib/chat-preflight.server.mjs";
 import { ChatBrowserRelay, maxBrowserFrameBytes } from "@/lib/chat-browser-relay.server";
 import type { CloudBrowserControl, CloudBrowserFrame } from "@/lib/cloud-browser-control";
@@ -119,19 +120,29 @@ export function chatBrowserFailure(code: string, publicMessage: string, status =
   });
 }
 
-export async function readChatBrowserPage({
-  caller,
-  tier,
-  chatId,
-  url,
-  signal,
-}: {
+type ChatBrowserInput = {
   caller: AuthedCaller;
   tier: BrowserTier;
   chatId?: string;
   url: URL;
   signal: AbortSignal;
-}) {
+};
+
+export async function readChatBrowserPage(input: ChatBrowserInput) {
+  const { browser, title, content } = await openChatBrowser(input, false);
+  if (title === undefined || content === undefined) throw new Error("Missing browser evidence");
+  return { browser, title, content };
+}
+
+export async function openManualChatBrowser(input: ChatBrowserInput) {
+  const { browser, frame } = await openChatBrowser(input, true);
+  return { browser, frame };
+}
+
+async function openChatBrowser(
+  { caller, tier, chatId, url, signal }: ChatBrowserInput,
+  manual: boolean,
+) {
   const userId = caller.userId;
   const apiKey = process.env.BROWSERBASE_API_KEY?.trim();
   const projectId = process.env.BROWSERBASE_PROJECT_ID?.trim();
@@ -200,7 +211,7 @@ export async function readChatBrowserPage({
       if (claim.data.status === "daily_limit") {
         throw chatBrowserFailure(
           "cloud_browser_daily_limit",
-          "You've reached your daily Cloud Browser limit. Your time resets at midnight UTC.",
+          CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
           429,
         );
       }
@@ -284,6 +295,35 @@ export async function readChatBrowserPage({
     await runtime.openUrl(sessionId, userId, tab.id, url.href, 12_000);
     const session = runtime.sessions.get(sessionId, userId);
     const page = session.tabs.get(tab.id)!.page;
+    const { expiresAt } = session.descriptor;
+    const interactive: ActiveChatBrowser = {
+      requestId,
+      sessionId,
+      page,
+      origin: url.origin,
+      takeover: false,
+      busy: false,
+      controls,
+      supabaseAdmin: caller.supabaseAdmin,
+    };
+    active.set(userId, interactive);
+    getBrowserRelay();
+    const browser = {
+      sessionId: requestId,
+      observedAt: Date.now(),
+      expiresAt: Date.parse(expiresAt),
+      tabCount: 1,
+      hostname: url.hostname,
+      previewPath: `/api/browser/preview/${requestId}`,
+    };
+    if (manual) {
+      loading = false;
+      const frame = await controlLocalChatBrowser(userId, interactive, { kind: "takeover" });
+      signal.throwIfAborted();
+      if (!frame) throw unavailable();
+      return { browser, frame };
+    }
+
     const content = await page
       .locator("main, [role=main], body")
       .last()
@@ -302,7 +342,6 @@ export async function readChatBrowserPage({
       "base64",
     );
     signal.throwIfAborted();
-    const { expiresAt } = runtime.sessions.get(sessionId, userId).descriptor;
     const saved = await db
       .from("browserbase_queue")
       .update({ preview_jpeg: jpeg, preview_expires_at: expiresAt })
@@ -315,31 +354,8 @@ export async function readChatBrowserPage({
     if (saved.error || !saved.data) throw unavailable();
     signal.throwIfAborted();
     runtime.sessions.get(sessionId, userId, false);
-    const interactive: ActiveChatBrowser = {
-      requestId,
-      sessionId,
-      page,
-      origin: url.origin,
-      takeover: false,
-      busy: false,
-      controls,
-      supabaseAdmin: caller.supabaseAdmin,
-    };
-    active.set(userId, interactive);
-    getBrowserRelay();
     loading = false;
-    return {
-      title,
-      content,
-      browser: {
-        sessionId: requestId,
-        observedAt: Date.now(),
-        expiresAt: Date.parse(expiresAt),
-        tabCount: 1,
-        hostname: url.hostname,
-        previewPath: `/api/browser/preview/${requestId}`,
-      },
-    };
+    return { browser, title, content };
   } catch (error) {
     if (sessionId) await runtime.closeSession(sessionId, userId).catch(() => undefined);
     else if (queued) await release().catch(() => undefined);

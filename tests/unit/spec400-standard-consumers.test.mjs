@@ -29,10 +29,10 @@ test("temporary-chat context uses a semantic book rather than sparkle decoration
 });
 test("phone toasts occupy the safe top region clear of expanded composers", () => {
   const toaster = read("ui/sonner");
-  assert.match(toaster, /isDesktop \? "bottom-right" : "top-center"/);
+  assert.match(toaster, /isDesktop \? "top-right" : "top-center"/);
   assert.match(
     toaster,
-    /top: "calc\(64px \+ env\(safe-area-inset-top\) \+ var\(--kova-visible-top, 0px\)\)"/,
+    /top: "calc\(max\(16px, env\(safe-area-inset-top\)\) \+ var\(--kova-visible-top, 0px\)\)"/,
   );
   assert.match(toaster, /left: "max\(16px, env\(safe-area-inset-left\)\)"/);
   assert.match(toaster, /duration=\{4_000\}/);

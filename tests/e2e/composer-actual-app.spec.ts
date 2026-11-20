@@ -35,21 +35,22 @@ async function geometry(page: Page) {
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const compactEmpty =
-    !conversation &&
-    (await page.evaluate(
-      () =>
-        matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
-          .matches,
-    ));
-  await expect(composer).toHaveCSS("border-radius", compactEmpty ? "24px" : "34px");
+  const phone = await page.evaluate(
+    () =>
+      matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
+        .matches,
+  );
+  await expect(composer).toHaveCSS(
+    "border-radius",
+    phone ? (conversation ? "26px" : "21px") : "34px",
+  );
   const singleRow =
     conversation &&
     (await page.evaluate(() => matchMedia("(min-width: 1024px) and (pointer: fine)").matches));
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
   const height = expect.poll(async () => (await composer.boundingBox())!.height);
   if (conversation) await height.toBeLessThanOrEqual(singleRow ? 62 : 92);
-  else await height.toBeGreaterThanOrEqual(compactEmpty ? 92 : 128);
+  else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
   await expect
     .poll(() =>
       composer.evaluate((node, oneRow) => {
@@ -760,8 +761,9 @@ test("a reply in another chat shows a top-right notification and an unread dot",
     complete.resolve();
   }
 
+  const horizontal = page.viewportSize()!.width >= 1024 ? "right" : "center";
   const notification = page
-    .locator('[data-sonner-toast][data-x-position="right"][data-y-position="top"]')
+    .locator(`[data-sonner-toast][data-x-position="${horizontal}"][data-y-position="top"]`)
     .filter({ hasText: "New reply" });
   await expect(notification).toContainText("Composer review chat");
   const sidebar = await revealSidebar(page);

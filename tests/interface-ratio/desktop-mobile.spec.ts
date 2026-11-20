@@ -172,13 +172,13 @@ for (const state of states) {
     if (state.name === "home") {
       unchanged(".kova-greeting h1", ["family", "weight"]);
       expect(row(".kova-greeting h1").font).toBe("26px");
-      expect(row(".spec400-composer").radius).toBe("24px");
+      expect(row(".spec400-composer").radius).toBe("21px");
       unchanged(".spec400-composer-input", ["font", "line"]);
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
-      ).toBeCloseTo(0.5, 2);
-      expect(row(".spec400-composer").height).toBeGreaterThanOrEqual(92);
-      expect(row(".spec400-composer").height).toBeLessThanOrEqual(96);
+      ).toBeCloseTo(0.47, 2);
+      expect(row(".spec400-composer").height).toBeGreaterThanOrEqual(88);
+      expect(row(".spec400-composer").height).toBeLessThanOrEqual(92);
       expect(row(".kova-topbar").height).toBe(56);
       expect(row(".spec400-primary-voice").height).toBeGreaterThanOrEqual(44);
       await expect(page.locator(".kova-composer-tray")).toBeHidden();
@@ -186,7 +186,7 @@ for (const state of states) {
     }
     if (state.name === "conversation") {
       unchanged(".prose-chat", ["font", "line"], 1);
-      unchanged(".spec400-composer", ["radius"]);
+      expect(row(".spec400-composer").radius).toBe("26px");
     }
     if (state.name === "library") {
       unchanged(".kova-file-filters", ["padding", "radius"]);

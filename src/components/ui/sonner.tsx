@@ -29,15 +29,14 @@ const Toaster = ({ style, ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
-      position={isDesktop ? "bottom-right" : "top-center"}
+      position={isDesktop ? "top-right" : "top-center"}
       closeButton
       duration={4_000}
       visibleToasts={4}
       gap={8}
-      offset={{ top: "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))" }}
+      offset={{ top: 16, right: 16 }}
       mobileOffset={{
-        top: "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))",
-        bottom: "calc(max(16px, env(safe-area-inset-bottom)) + var(--phone-toast-clearance, 0px))",
+        top: "calc(max(16px, env(safe-area-inset-top)) + var(--kova-visible-top, 0px))",
         left: "max(16px, env(safe-area-inset-left))",
         right: "max(16px, env(safe-area-inset-right))",
       }}

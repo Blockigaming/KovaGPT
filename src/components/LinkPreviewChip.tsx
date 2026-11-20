@@ -13,6 +13,12 @@ type Preview = {
   iconUrl: string | null;
 };
 
+const knownIcons: Partial<Record<string, string>> = {
+  GitHub: "https://github.com/favicon.ico",
+  Wikipedia: "https://en.wikipedia.org/static/favicon/wikipedia.ico",
+  YouTube: "https://www.youtube.com/favicon.ico",
+};
+
 const cached = new Map<string, Preview>();
 const pending = new Map<string, Promise<Preview | null>>();
 
@@ -100,16 +106,12 @@ export function LinkPreviewChip({
 
   if (!normalized) return null;
   const title = preview?.title || fallbackLinkTitle(normalized);
-  const site = preview?.siteName || siteNameForLink(normalized);
+  const siteName = siteNameForLink(normalized);
+  const site = preview?.siteName || siteName;
   // Never initiate an arbitrary icon request before the server has verified a public page.
   // Recognized brands use their fixed public icon origins, even if metadata is unavailable.
-  const knownIcon =
-    siteNameForLink(normalized) === "YouTube"
-      ? "https://www.youtube.com/favicon.ico"
-      : siteNameForLink(normalized) === "GitHub"
-        ? "https://github.com/favicon.ico"
-        : null;
-  const iconUrl = preview?.iconUrl ?? knownIcon;
+  const knownIcon = Object.hasOwn(knownIcons, siteName) ? knownIcons[siteName] : undefined;
+  const iconUrl = siteName === "Wikipedia" ? knownIcon : (preview?.iconUrl ?? knownIcon);
 
   return (
     <div

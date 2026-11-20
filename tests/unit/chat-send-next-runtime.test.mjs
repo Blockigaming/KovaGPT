@@ -1,5 +1,11 @@
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+  CLOUD_BROWSER_USAGE_HEADER,
+} from "../../src/lib/chat-browser-policy.mjs";
 import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
 import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
+import { chatResponseError, cloudBrowserErrorKind } from "../../src/lib/chat-sse-client.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -268,6 +274,9 @@ function fixture() {
     normalizeResponseSources: (value) => value,
     chatRequestMessages: (prior, user) => [...prior, user],
     chatResponseError: async (response) => response.error,
+    cloudBrowserErrorKind,
+    chatBrowserDestination,
+    CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
     summaryModule: Promise.resolve({
       withResponsePresentation: (profile) => profile,
       completedChatReply,
@@ -734,6 +743,57 @@ const quotaError = (fields = {}) =>
     retryable: false,
     ...fields,
   });
+
+for (const [status, code, kind] of [
+  [429, "cloud_browser_daily_limit", "browser_limit"],
+  [429, "message_window_limit", "browser_usage"],
+  [503, "cloud_browser_unavailable", "browser_error"],
+  [503, "chat_preflight_timeout", "browser_error"],
+]) {
+  test(`Cloud Browser ${code} shows the right notice and transcript`, async () => {
+    const f = fixture();
+    const prompt = "Open https://en.wikipedia.org/ in Cloud Browser.";
+    f.type(prompt);
+    const pending = f.context.send(prompt, []);
+    await settle();
+    const message = "Synthetic Cloud Browser failure";
+    await f.fail(
+      await chatResponseError(
+        Response.json(
+          { error: message, code, stage: "cloud_browser" },
+          {
+            status,
+            headers: kind === "browser_usage" ? { [CLOUD_BROWSER_USAGE_HEADER]: "exhausted" } : {},
+          },
+        ),
+      ),
+    );
+    await pending;
+    assert.equal(f.context.limitDialogs.length, 1);
+    assert.equal(f.context.limitDialogs[0].kind, kind);
+    const notice = f.context.limitDialogs[0];
+    const expected = kind === "browser_limit" ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE : message;
+    assert.equal(notice.message, expected);
+    assert.equal(
+      notice.browserUrl,
+      kind === "browser_usage" ? "https://en.wikipedia.org/" : undefined,
+    );
+    const messages = f.context.conversations.find(
+      (conversation) => conversation.id === f.context.activeIdRef.current,
+    ).messages;
+    assert.deepEqual(
+      Array.from(messages, ({ role, content }) => ({ role, content })),
+      [
+        { role: "user", content: prompt },
+        ...(kind === "browser_error" ? [] : [{ role: "assistant", content: expected }]),
+      ],
+    );
+    assert.equal(f.context.input, "");
+    assert.equal(f.errors.length, 0);
+    assert.equal(f.context.retryableFailedResponsesRef.current.size, 0);
+    assert.equal(f.timers.length, 0);
+  });
+}
 const quotaFiles = () => [
   {
     kind: "text_file",

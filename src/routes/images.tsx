@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/select";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
-import { LimitReachedDialog } from "@/components/LimitReachedDialog";
+import { LimitReachedNotice } from "@/components/LimitReachedNotice";
 import { getUsage } from "@/lib/limits";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe";
@@ -1363,7 +1363,7 @@ function ImagesPage() {
         title="Log in to continue"
         description="Sign in or create a free KovaGPT account to generate images and save them to your library."
       />
-      <LimitReachedDialog
+      <LimitReachedNotice
         open={limitOpen}
         onOpenChange={setLimitOpen}
         kind="image"

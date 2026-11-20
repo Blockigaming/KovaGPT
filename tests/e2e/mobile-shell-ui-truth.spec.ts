@@ -394,7 +394,7 @@ test("touch home keeps the greeting centered and the composer text inset", async
     text!.x -
     frame!.x +
     (await input.evaluate((field) => Number.parseFloat(getComputedStyle(field).paddingLeft)));
-  if (width < 768 || (width < 1024 && height <= 500)) expect(inset).toBeCloseTo(16, 0);
+  if (width < 768 || (width < 1024 && height <= 500)) expect(inset).toBeCloseTo(19, 0);
   else expect(inset).toBeGreaterThanOrEqual(20);
   expect(greeting!.y + greeting!.height / 2).toBeGreaterThan(height * 0.3);
   expect(greeting!.y + greeting!.height).toBeLessThan(frame!.y);

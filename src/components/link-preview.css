@@ -35,12 +35,17 @@
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
-.kova-link-preview-icon {
+.kova-link-preview-open .kova-link-preview-icon {
   display: block;
   flex: none;
   height: 24px;
   width: 24px;
+  max-width: 24px;
+  margin: 0;
+  border: 0;
   border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
   object-fit: contain;
 }
 .kova-link-preview-labels {

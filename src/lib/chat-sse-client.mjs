@@ -1,3 +1,8 @@
+import {
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+  CLOUD_BROWSER_USAGE_HEADER,
+} from "./chat-browser-policy.mjs";
+
 // Generated images are delivered as one base64 SSE event. Keep this slightly
 // above the server's 16 MiB image-provider response contract so valid images
 // are accepted while every unterminated event remains strictly bounded.
@@ -276,6 +281,13 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
       : `chat_http_${response.status || "error"}`;
   error.category =
     typeof payload.category === "string" && payload.category ? payload.category : undefined;
+  error.stage =
+    response.status === 429 && response.headers.get(CLOUD_BROWSER_USAGE_HEADER) === "exhausted"
+      ? "cloud_browser_usage"
+      : typeof payload.stage === "string"
+        ? payload.stage
+        : undefined;
+  if (error.code === "cloud_browser_daily_limit") error.message = CLOUD_BROWSER_DAILY_LIMIT_MESSAGE;
   error.requestId =
     typeof payload.requestId === "string" && payload.requestId
       ? payload.requestId
@@ -285,4 +297,15 @@ export async function chatResponseError(response, fallbackMessage = "Chat failed
   const retryAfter = response.headers.get("retry-after");
   error.retryAfter = retryAfter && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : undefined;
   return error;
+}
+
+export function cloudBrowserErrorKind(error) {
+  if (error?.code === "cloud_browser_daily_limit") return "browser_limit";
+  if (error?.stage === "cloud_browser_usage") return "browser_usage";
+  if (
+    error?.stage === "cloud_browser" ||
+    (typeof error?.code === "string" && error.code.startsWith("cloud_browser_"))
+  ) {
+    return "browser_error";
+  }
 }

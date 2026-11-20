@@ -46,7 +46,6 @@ export function useChatReplyActivity(
       update();
       toast("New reply", {
         id: toastId(chatId),
-        position: "top-right",
         description: chat.title,
         duration: 6000,
         action: {

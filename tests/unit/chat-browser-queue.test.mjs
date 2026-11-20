@@ -6,7 +6,12 @@ import {
   browserActivityIsFresh,
   normalizeBrowserActivity,
 } from "../../src/lib/browser-activity-contract.mjs";
-import { chatBrowserDestination, requestsChatBrowser } from "../../src/lib/chat-browser-policy.mjs";
+import {
+  chatBrowserDestination,
+  chatBrowserEvidence,
+  MAX_BROWSER_EVIDENCE_BYTES,
+  requestsChatBrowser,
+} from "../../src/lib/chat-browser-policy.mjs";
 
 test("only explicit browse requests with one public HTTPS link get a browser destination", () => {
   assert.equal(
@@ -168,4 +173,34 @@ test("reserves and settles UTC daily time for Free and Plus and leaves Pro uncap
   await release(pro, true);
   await db.exec("set role authenticated");
   await assert.rejects(() => used(free), /permission denied/);
+});
+
+test("browser evidence fits the prepaid model reservation, even with escaped text", async () => {
+  const url = new URL("https://example.com/");
+  const source = "\u0000🚲".repeat(3333);
+  const evidence = chatBrowserEvidence(url, "Example", source);
+  assert.ok(new TextEncoder().encode(evidence).byteLength <= MAX_BROWSER_EVIDENCE_BYTES);
+  const page = JSON.parse(evidence.slice(evidence.lastIndexOf("\n") + 1));
+  assert.equal(page.origin, url.origin);
+  assert.ok(page.content.length > 0 && source.startsWith(page.content));
+});
+
+test("chat reserves model usage before automating the browser, and manual opening shares only browser time", async () => {
+  const chat = await readFile(new URL("../../src/routes/api/chat.ts", import.meta.url), "utf8");
+  const manual = await readFile(
+    new URL("../../src/routes/api/browser/open.ts", import.meta.url),
+    "utf8",
+  );
+  const browser = await readFile(
+    new URL("../../src/lib/chat-browser.server.ts", import.meta.url),
+    "utf8",
+  );
+  assert.ok(chat.indexOf("acquireGeneration({") < chat.indexOf("return readChatBrowserPage({"));
+  assert.match(chat, /browserUsageHeaders\(quota\)/);
+  assert.match(manual, /await requireVerifiedUser\(request\)/);
+  assert.match(manual, /await readLockdownMode\(caller\.supabaseAdmin, caller\.userId\)/);
+  assert.match(manual, /openManualChatBrowser\(\{ caller, tier, url, signal \}\)/);
+  assert.doesNotMatch(manual, /acquireGeneration|enforceDailyMessageQuota|chatCompletions/);
+  assert.match(browser, /await openChatBrowser\(input, true\)/);
+  assert.match(browser, /\.rpc\("claim_browserbase_slot_with_quota"/);
 });

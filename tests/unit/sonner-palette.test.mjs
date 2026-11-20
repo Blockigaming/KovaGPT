@@ -58,14 +58,14 @@ test("mobile toasts move above the composer while desktop keeps its corner", () 
     assert.equal(props.position, "top-center");
     assert.equal(
       props.mobileOffset.top,
-      "calc(64px + env(safe-area-inset-top) + var(--kova-visible-top, 0px))",
+      "calc(max(16px, env(safe-area-inset-top)) + var(--kova-visible-top, 0px))",
     );
     assert.equal(props.mobileOffset.left, "max(16px, env(safe-area-inset-left))");
     assert.equal(props.mobileOffset.right, "max(16px, env(safe-area-inset-right))");
   } finally {
     mobile = false;
   }
-  assert.equal(Toaster({}).props.position, "bottom-right");
+  assert.equal(Toaster({}).props.position, "top-right");
 });
 
 test("caller styles merge without discarding palette bindings and normal toast behavior stays intact", () => {
@@ -77,7 +77,7 @@ test("caller styles merge without discarding palette bindings and normal toast b
   assert.equal(props.style["--normal-bg"], "var(--card)");
   assert.equal(props.style["--normal-text"], "var(--popover-foreground)");
   assert.equal(props.duration, 2000);
-  assert.equal(props.position, "bottom-right");
+  assert.equal(props.position, "top-right");
   assert.equal(props.closeButton, true);
   assert.equal(props.visibleToasts, 4);
 });

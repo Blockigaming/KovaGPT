@@ -110,7 +110,7 @@ export function ShareChatDialog({
       if (current.current !== expected || controller.signal.aborted) return;
       await navigator.clipboard.writeText(created.url);
       if (current.current !== expected || controller.signal.aborted) return;
-      toast.success("Public link copied", { position: "bottom-right" });
+      toast.success("Public link copied");
       onOpenChange(false);
     } catch (error) {
       if (current.current === expected && !controller.signal.aborted) {

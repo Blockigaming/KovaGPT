@@ -5,6 +5,11 @@ import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { ChatMessage } from "@/components/ChatMessage";
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "@/lib/chat-browser-policy.mjs";
+import { LimitReachedNotice } from "@/components/LimitReachedNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,7 +35,11 @@ import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { authFetch } from "@/lib/auth-fetch";
-import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
+import {
+  chatResponseError,
+  cloudBrowserErrorKind,
+  consumeChatSse,
+} from "@/lib/chat-sse-client.mjs";
 import { loadDraft, saveDraft, type Message } from "@/lib/chat-store";
 import { normalizeResponseSources, type ResponseSource } from "@/lib/response-sources";
 import {
@@ -64,6 +73,11 @@ function ProjectChatPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [title, setTitle] = useState("");
   const [messages, setMessages] = useState<ProjectChatMessage[]>([]);
+  const [browserNotice, setBrowserNotice] = useState<{
+    kind: NonNullable<ReturnType<typeof cloudBrowserErrorKind>>;
+    message: string;
+    browserUrl?: string;
+  } | null>(null);
   const requestKey =
     isLoaded && isSignedIn && userKey ? JSON.stringify([userKey, projectId, chatId]) : null;
   // Reuse the ordinary text draft contract, with a distinct project+chat object identifier.
@@ -157,6 +171,7 @@ function ProjectChatPage() {
     setProject(null);
     setTitle("");
     setMessages([]);
+    setBrowserNotice(null);
     setSending(false);
     setComposerAttachments([]);
     setRenameOpen(false);
@@ -314,6 +329,7 @@ function ProjectChatPage() {
     let assistant = "";
     let assistantFollowups: string[] = [];
     let responseCompleted = false;
+    let browserRejected = false;
     let assistantSources: ResponseSource[] | undefined;
     const responseMessage = (): ProjectChatMessage => ({
       role: "assistant",
@@ -373,7 +389,20 @@ function ProjectChatPage() {
       responseCompleted = true;
     } catch (error) {
       if (isCurrent() && !isAbortError(error)) {
-        toast.error(error instanceof Error ? error.message : "Failed to generate a response");
+        const kind = cloudBrowserErrorKind(error);
+        if (kind && error instanceof Error) {
+          browserRejected = true;
+          const message =
+            kind === "browser_limit" ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE : error.message;
+          if (kind === "browser_limit" || kind === "browser_usage") assistant = message;
+          setBrowserNotice({
+            kind,
+            message,
+            browserUrl: kind === "browser_usage" ? chatBrowserDestination(text)?.href : undefined,
+          });
+        } else {
+          toast.error(error instanceof Error ? error.message : "Failed to generate a response");
+        }
       }
     } finally {
       const finalMessages: ProjectChatMessage[] = assistant.trim()
@@ -393,7 +422,7 @@ function ProjectChatPage() {
         if (isCurrent()) {
           if (followUp === undefined && draftRef.current === clearedDraft) {
             // Keep newer typing untouched. Failed/stopped requests retain the original ordinary text.
-            setInput(saved && responseCompleted ? "" : submittedDraft.text);
+            setInput(saved && (responseCompleted || browserRejected) ? "" : submittedDraft.text);
           }
           if (abortControllerRef.current === controller) abortControllerRef.current = null;
           sendOperationRef.current = null;
@@ -455,6 +484,9 @@ function ProjectChatPage() {
 
   return (
     <AppShell>
+      {browserNotice?.browserUrl && (
+        <div id="kova-browser-workspace" className="kova-browser-workspace-slot" />
+      )}
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2 sm:gap-3 sm:px-4">
           <Link
@@ -686,6 +718,22 @@ function ProjectChatPage() {
           />
         </div>
       </div>
+
+      {browserNotice && (
+        <LimitReachedNotice
+          open
+          kind={browserNotice.kind}
+          message={browserNotice.message}
+          manualBrowser={
+            userKey && browserNotice.browserUrl
+              ? { ownerId: userKey, url: browserNotice.browserUrl }
+              : undefined
+          }
+          onOpenChange={(open) => {
+            if (!open) setBrowserNotice(null);
+          }}
+        />
+      )}
 
       <AlertDialog
         open={navigationBlocker.status === "blocked"}

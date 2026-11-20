@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 /**
- * A viewport-anchored mobile dialog with a swipe-to-dismiss handle.
+ * A top-aligned mobile dialog with a swipe-to-dismiss handle.
  * Radix owns modal isolation and nested-layer keyboard behavior. In particular,
  * Escape in a child menu must not also dismiss this sheet.
  */
@@ -55,7 +55,7 @@ export function MobileBottomSheet({
       resetDrag();
       return;
     }
-    const distance = Math.max(0, event.touches[0].clientY - dragStart.current);
+    const distance = Math.max(0, dragStart.current - event.touches[0].clientY);
     dragDistance.current = distance;
     setDragY(distance);
   };
@@ -84,22 +84,11 @@ export function MobileBottomSheet({
               previouslyFocused.current.focus();
           }}
           style={{
-            transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+            transform: dragY > 0 ? `translateY(${-dragY}px)` : undefined,
             transition: reduceMotion || dragY > 0 ? "none" : "transform 160ms ease-out",
           }}
-          className="fixed inset-x-0 bottom-0 z-[100] flex min-w-0 max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-2xl pb-[var(--safe-bottom)] border-t border-border bg-popover text-popover-foreground shadow-lg outline-none [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom duration-150 motion-reduce:animate-none"
+          className="fixed inset-x-0 top-[var(--kova-visible-top,0px)] z-[100] flex min-w-0 max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-b-2xl pt-[var(--safe-top)] border-b border-border bg-popover text-popover-foreground shadow-lg outline-none [overflow-wrap:anywhere] data-[state=open]:animate-in data-[state=open]:slide-in-from-top data-[state=closed]:animate-out data-[state=closed]:slide-out-to-top duration-150 motion-reduce:animate-none"
         >
-          <div
-            className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            onTouchCancel={resetDrag}
-            data-kova-sheet-handle=""
-            aria-hidden="true"
-          >
-            <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
-          </div>
           <div className="flex shrink-0 items-center gap-3 pb-2 pl-[max(1rem,var(--safe-left))] pr-[max(1rem,var(--safe-right))]">
             <DialogPrimitive.Title
               className={
@@ -120,6 +109,17 @@ export function MobileBottomSheet({
           </div>
           <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-[max(.5rem,var(--safe-left))] pb-4 pr-[max(.5rem,var(--safe-right))] [scrollbar-gutter:stable]">
             {children}
+          </div>
+          <div
+            className="flex shrink-0 touch-none justify-center pb-2.5 pt-2 cursor-grab active:cursor-grabbing"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={resetDrag}
+            data-kova-sheet-handle=""
+            aria-hidden="true"
+          >
+            <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

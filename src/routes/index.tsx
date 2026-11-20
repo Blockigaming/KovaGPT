@@ -46,10 +46,18 @@ import {
   CHAT_HISTORY_CHANGED_EVENT,
 } from "@/lib/chat-history-bridge";
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "@/lib/chat-browser-policy.mjs";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
+import {
+  chatResponseError,
+  cloudBrowserErrorKind,
+  consumeChatSse,
+} from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
   Suspense,
@@ -132,8 +140,8 @@ const SettingsDialog = lazy(() =>
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
 );
-const LimitReachedDialog = lazy(() =>
-  import("@/components/LimitReachedDialog").then((m) => ({ default: m.LimitReachedDialog })),
+const LimitReachedNotice = lazy(() =>
+  import("@/components/LimitReachedNotice").then((m) => ({ default: m.LimitReachedNotice })),
 );
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
@@ -609,8 +617,10 @@ function KovaGPT() {
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
     open: boolean;
-    kind: "image" | "chat" | "upload";
+    kind: "image" | "chat" | "upload" | NonNullable<ReturnType<typeof cloudBrowserErrorKind>>;
     message?: string;
+    scope?: NextPromptScope;
+    browserUrl?: string;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightTargetRef = useRef<{
@@ -2318,9 +2328,28 @@ function KovaGPT() {
       } catch (e: unknown) {
         if (!isCurrentRequest()) return;
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
-        if ((e as Error).name === "AbortError") {
+        const browserErrorKind = cloudBrowserErrorKind(e);
+        if (browserErrorKind || (e as Error).name === "AbortError") {
+          const browserMessage =
+            browserErrorKind === "browser_limit"
+              ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE
+              : (e as Error).message;
+          if (browserErrorKind && isCurrentRetryScope()) {
+            setLimitDialog({
+              open: true,
+              kind: browserErrorKind,
+              message: browserMessage,
+              browserUrl:
+                browserErrorKind === "browser_usage"
+                  ? chatBrowserDestination(trimmed)?.href
+                  : undefined,
+              scope: requestScope,
+            });
+          }
           const stoppedByUser = controller.signal.reason?.message === USER_STOP_REASON;
-          if (!assembledReply.trim() && !stoppedByUser) {
+          if (browserErrorKind === "browser_limit" || browserErrorKind === "browser_usage") {
+            updateAssistantMessage((message) => ({ ...message, content: browserMessage }));
+          } else if (!assembledReply.trim() && !stoppedByUser) {
             setConversations((prev) =>
               prev.map((conversation) =>
                 conversation.id === nextConvId
@@ -3683,15 +3712,21 @@ function KovaGPT() {
           />
         )}
 
-        {limitDialog.open && (
-          <LimitReachedDialog
-            open={limitDialog.open}
-            onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
-            kind={limitDialog.kind}
-            message={limitDialog.message}
-            resetsAt={getUsage().resetsAt}
-          />
-        )}
+        {limitDialog.open &&
+          (!limitDialog.scope || sameNextPromptScope(limitDialog.scope, nextPromptScope)) && (
+            <LimitReachedNotice
+              open={limitDialog.open}
+              onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
+              kind={limitDialog.kind}
+              message={limitDialog.message}
+              manualBrowser={
+                userKey && limitDialog.browserUrl
+                  ? { ownerId: userKey, url: limitDialog.browserUrl }
+                  : undefined
+              }
+              resetsAt={getUsage().resetsAt}
+            />
+          )}
       </Suspense>
 
       {signupPromptOpen && (

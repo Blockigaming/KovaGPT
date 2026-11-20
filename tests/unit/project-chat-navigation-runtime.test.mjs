@@ -1,3 +1,8 @@
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "../../src/lib/chat-browser-policy.mjs";
+import { chatResponseError, cloudBrowserErrorKind } from "../../src/lib/chat-sse-client.mjs";
 import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -155,7 +160,11 @@ function chatFixture(storage = new Map()) {
       },
       consumeChatSse: (body, options) => consumeRequest(options),
       extractResponseFollowups,
-      chatResponseError: async () => new Error("request failed"),
+      chatResponseError,
+      cloudBrowserErrorKind,
+      chatBrowserDestination,
+      CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+      LimitReachedNotice: "LimitReachedNotice",
       normalizeResponseSources: (value) => value,
       AbortController,
       crypto: { randomUUID: () => "fixture-request" },
@@ -339,6 +348,36 @@ for (const outcome of ["success", "generation failure", "save failure", "new typ
     assert.equal(f.composer().props.isStreaming, false);
   });
 }
+
+test("project chat shows the Cloud Browser limit and saves the matching assistant reply", async () => {
+  const f = chatFixture();
+  await f.finishLoad({ messages: [] });
+  const prompt = "Open https://en.wikipedia.org/ in Cloud Browser.";
+  const message = CLOUD_BROWSER_DAILY_LIMIT_MESSAGE;
+  f.type(prompt);
+  const sending = f.composer().props.onSubmit();
+  f.requests.generate[0].resolve(
+    Response.json({ error: message, code: "cloud_browser_daily_limit" }, { status: 429 }),
+  );
+  await settle();
+  f.render();
+  const dialog = f.find((node) => node.type === "LimitReachedNotice")[0];
+  assert.equal(dialog.props.kind, "browser_limit");
+  assert.equal(dialog.props.message, message);
+  assert.equal(f.errors.length, 0);
+  assert.equal(f.requests.stream.length, 0);
+  assert.deepEqual(f.requests.save[0].args.data.messages, [
+    { role: "user", content: prompt },
+    { role: "assistant", content: message },
+  ]);
+  f.requests.save[0].resolve({ ok: true });
+  await sending;
+  f.render();
+  assert.equal(f.composer().props.value, "");
+  dialog.props.onOpenChange(false);
+  f.render();
+  assert.equal(f.find((node) => node.type === "LimitReachedNotice").length, 0);
+});
 
 const interactiveHistory = [
   { role: "user", content: "Help me choose" },

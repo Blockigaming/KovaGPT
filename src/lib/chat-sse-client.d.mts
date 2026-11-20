@@ -33,6 +33,7 @@ export type ChatRequestError = Error & {
   status: number;
   code: string;
   category?: string;
+  stage?: string;
   requestId?: string;
   retryable: boolean;
   retryAfter?: number;
@@ -42,3 +43,7 @@ export function chatResponseError(
   response: Response,
   fallbackMessage?: string,
 ): Promise<ChatRequestError>;
+
+export function cloudBrowserErrorKind(
+  error: unknown,
+): "browser_limit" | "browser_error" | "browser_usage" | undefined;

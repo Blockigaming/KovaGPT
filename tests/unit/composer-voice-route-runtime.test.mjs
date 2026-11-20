@@ -1,4 +1,9 @@
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "../../src/lib/chat-browser-policy.mjs";
 import { chatRequestHeaders } from "../../src/lib/chat-summary-snapshot.mjs";
+import { chatResponseError, cloudBrowserErrorKind } from "../../src/lib/chat-sse-client.mjs";
 import { completedChatReply, extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -76,6 +81,10 @@ const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   completedChatReply,
   extractResponseFollowups,
   chatRequestHeaders,
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+  chatResponseError,
+  cloudBrowserErrorKind,
   React,
   // This reused send fixture does not render controls; keep its transparent
   // shared Button dependency bound while exercising the actual chat callbacks.
