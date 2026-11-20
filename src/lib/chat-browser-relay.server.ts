@@ -38,13 +38,13 @@ export class ChatBrowserRelay {
       requestId: string,
     ) => ((action: CloudBrowserControl) => Promise<BrowserControlResult>) | undefined,
   ) {
-    // Only server replicas know the topic and the separate encryption key. No
-    // browser frames, keyboard input, or replay tokens are stored in the database.
+    // Only server replicas know this 256-bit topic and the separate encryption
+    // key. The transport uses the publishable key and only carries ciphertext.
     const topic = createHmac("sha256", serviceKey)
       .update("kova-chat-browser-relay-topic-v1")
       .digest("hex");
     this.#key = createHmac("sha256", serviceKey).update("kova-chat-browser-relay-key-v1").digest();
-    this.#channel = client.channel(topic, { config: { private: true, broadcast: { ack: true } } });
+    this.#channel = client.channel(topic, { config: { private: false, broadcast: { ack: true } } });
     this.#channel.on("broadcast", { event: "command" }, ({ payload }) => {
       const command = this.#read<Command>("command", payload);
       if (!command || !cloudBrowserId.test(command.id)) return;
@@ -65,15 +65,10 @@ export class ChatBrowserRelay {
       const response = this.#read<{ id: string; result: BrowserControlResult }>("result", payload);
       if (response) this.#waiting.get(response.id)?.(response.result);
     });
-    this.#ready = new Promise<void>((resolve, reject) => {
-      void client
-        .setAuth(serviceKey)
-        .then(() => {
-          this.#channel.subscribe((status) => {
-            if (status === "SUBSCRIBED") resolve();
-          });
-        })
-        .catch(reject);
+    this.#ready = new Promise<void>((resolve) => {
+      this.#channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") resolve();
+      });
     });
     // Initial connection attempts also happen when the first request only needs a preview.
     void this.#ready.catch(() => undefined);

@@ -11,11 +11,9 @@ test("replicas relay control only to the session owner and protect input and fra
   const packets = [];
   const peers = [];
   const client = () => ({
-    async setAuth(key) {
-      assert.equal(key, secret);
-    },
     channel(topic, { config }) {
-      assert.equal(config.private, true);
+      assert.equal(config.private, false);
+      assert.match(topic, /^[a-f0-9]{64}$/);
       const handlers = new Map();
       const peer = { topic, handlers };
       peers.push(peer);
