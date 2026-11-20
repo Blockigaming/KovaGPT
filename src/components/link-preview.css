@@ -9,9 +9,7 @@
 .kova-link-preview-composer {
   display: flex;
   align-items: center;
-  align-self: flex-start;
-  margin-inline: var(--composer-preview-inset);
-  width: min(calc(100% - 2 * var(--composer-preview-inset)), 370px);
+  width: 100%;
 }
 .kova-link-preview-message {
   margin-bottom: 7px;
@@ -97,6 +95,11 @@
 /* The entire URL is a single, removable object in the composer, including on touch. */
 .kova-link-preview-composer .kova-link-preview-open {
   flex: 1 1 0;
+  gap: 6px;
+  padding-inline: 8px 0;
+}
+.kova-link-preview-composer .kova-link-preview-external {
+  display: none;
 }
 .kova-link-preview-remove {
   display: inline-flex;

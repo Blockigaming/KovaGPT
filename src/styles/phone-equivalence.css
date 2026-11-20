@@ -100,9 +100,15 @@
   }
 
   /* A quiet two-row dock leaves the primary actions available at touch size. */
+  .kova-assistant .spec400-composer {
+    --composer-photo-size: 108px;
+    --composer-link-width: 152px;
+  }
+
   .kova-assistant .kova-empty-composer .spec400-composer {
     --chat-composer-corner: 21px;
     --composer-text-inset: 10px;
+    --composer-media-offset: 0px;
     min-height: 0 !important;
     padding: 4px 8px !important;
     gap: 2px;
@@ -251,12 +257,6 @@
   }
 
   .kova-assistant[data-keyboard-open="true"]
-    .spec400-chat-input[data-composer-surface]
-    .spec400-composer:has(.spec400-attachment-chips) {
-    --keyboard-content-min: 92px;
-  }
-
-  .kova-assistant[data-keyboard-open="true"]
     :is(.spec400-composer-disclaimer, [data-chat-history-migration], .kova-composer-tray) {
     display: none;
   }
@@ -295,33 +295,13 @@
     margin-block-start: 0;
   }
 
-  .kova-assistant[data-keyboard-open="true"] .spec400-attachment-chips {
-    flex: none;
-    height: 46px;
-    margin-block: 0;
-  }
-
-  .kova-assistant[data-keyboard-open="true"] .spec400-attachment-chip[data-kind="image"] {
-    flex: 0 0 90px;
-    width: 90px;
-    height: 46px;
-    border-radius: 8px;
-  }
-
-  .kova-assistant[data-keyboard-open="true"]
-    .spec400-attachment-chip[data-kind="image"]
-    .spec400-chip-inspect {
-    width: 44px;
-    height: 44px;
-  }
-
-  .kova-assistant[data-keyboard-open="true"]
-    .spec400-attachment-chip[data-kind="image"]
-    .spec400-chip-remove {
-    position: static;
-    flex: none;
-    width: 44px;
-    height: 44px;
+  .kova-assistant[data-keyboard-open="true"] .spec400-composer-media {
+    flex: 0 1 auto;
+    max-height: min(
+      calc(var(--kova-visible-height, 100dvh) * 0.58),
+      calc(var(--kova-visible-height, 100dvh) - 120px)
+    );
+    margin-block-start: 4px;
   }
 
   /* Rotation keeps the full editor on the phone surface. Only the draft

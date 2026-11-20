@@ -288,7 +288,7 @@ test("landscape topbar keeps navigation and actions inside lateral safe areas", 
 });
 
 for (const surface of ["empty", "conversation"] as const) {
-  test(`composer media previews use the leading inset in ${surface} chat`, async ({ page }) => {
+  test(`composer media previews wrap from the top left in ${surface} chat`, async ({ page }) => {
     await fixture(page, "dark", true, surface === "conversation");
     await page.goto("/");
     await waitForKovaHydration(page);
@@ -300,43 +300,46 @@ for (const surface of ["empty", "conversation"] as const) {
         .press("Enter");
     }
     const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-    const preview = composer.locator(".kova-link-preview-composer");
-    const textEdges = () =>
-      composer.evaluate((frame) => {
-        const left = frame.getBoundingClientRect().left;
-        const field = frame.querySelector("textarea")!;
-        const chip = frame.querySelector(".kova-link-preview-composer");
-        const attachment = frame.querySelector(".spec400-attachment-chip");
-        const draft =
-          field.getBoundingClientRect().left + parseFloat(getComputedStyle(field).paddingLeft);
-        return {
-          draft: draft - left,
-          preview: chip ? chip.getBoundingClientRect().left - left : null,
-          attachment: attachment ? attachment.getBoundingClientRect().left - left : null,
-        };
-      });
+    const tray = composer.getByRole("list", { name: "Attachments", exact: true });
+    const tiles = tray.getByRole("listitem");
+    const websites = tray.locator(".kova-link-preview-composer");
+    const pasteWebsites = (text: string) =>
+      input.evaluate((element, text) => {
+        const clipboardData = new DataTransfer();
+        clipboardData.setData("text/plain", text);
+        element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+      }, text);
 
     await input.fill("go to youtube.com");
-    await expect(preview).toBeHidden();
-    const originalStart = (await textEdges()).draft;
+    await expect(tray).toBeHidden();
     await input.press("End");
     await input.press("Space");
-    await expect(preview).toBeVisible();
-    const compact = await composer.evaluate((frame) => getComputedStyle(frame).display === "grid");
-    const expectedPreviewStart = compact ? 17 : originalStart;
-
-    const expectAlignment = async () => {
-      await expect
-        .poll(async () => {
-          const edges = await textEdges();
-          return Math.max(
-            Math.abs(edges.draft - originalStart),
-            edges.preview === null ? Infinity : Math.abs(edges.preview - expectedPreviewStart),
-          );
-        })
-        .toBeLessThan(0.5);
-    };
-    await expectAlignment();
+    await expect(websites).toHaveCount(1);
+    await input.evaluate((element) => {
+      const image = atob(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=",
+      );
+      const file = new File(
+        [Uint8Array.from(image, (char) => char.charCodeAt(0))],
+        "Pasted logo.png",
+        { type: "image/png" },
+      );
+      const clipboardData = new DataTransfer();
+      clipboardData.items.add(file);
+      element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+    });
+    await expect(
+      tiles.nth(1).getByRole("button", { name: "Inspect Pasted logo.png" }),
+    ).toBeVisible();
+    await expect(tiles.nth(0).locator("[data-link-preview-url]")).toHaveAttribute(
+      "data-link-preview-url",
+      "https://youtube.com/",
+    );
+    await input.press("End");
+    await pasteWebsites("https://github.com/review");
+    await pasteWebsites("https://en.wikipedia.org/wiki/Kova");
+    await expect(websites).toHaveCount(3);
+    await expect(input).not.toHaveValue(/youtube|github|wikipedia/);
 
     const phone = await page.evaluate(
       () =>
@@ -344,17 +347,7 @@ for (const surface of ["empty", "conversation"] as const) {
           .matches,
     );
     if (phone) {
-      const plus = composer.getByRole("button", { name: "Attach", exact: true });
-      await expect(plus).toHaveCSS("width", "44px");
-      await expect(plus).toHaveCSS("height", "44px");
-      await expect
-        .poll(async () => {
-          const frame = (await composer.boundingBox())!;
-          const trigger = (await plus.boundingBox())!;
-          return trigger.x - frame.x;
-        })
-        .toBeCloseTo(5, 0);
-
+      await input.focus();
       await page.evaluate(() => {
         const visual = window.visualViewport!;
         const height = visual.height - 150;
@@ -365,32 +358,66 @@ for (const surface of ["empty", "conversation"] as const) {
         "data-keyboard-open",
         "true",
       );
-      await expectAlignment();
+      const plus = composer.getByRole("button", { name: "Attach", exact: true });
+      await expect(plus).toHaveCSS("width", "44px");
+      await expect(plus).toHaveCSS("height", "44px");
     }
 
-    await input.evaluate((element) => {
-      const image = atob(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zf1sAAAAASUVORK5CYII=",
-      );
-      const file = new File(
-        [Uint8Array.from(image, (char) => char.charCodeAt(0))],
-        "Pasted logo.png",
-        {
-          type: "image/png",
-        },
-      );
-      const clipboardData = new DataTransfer();
-      clipboardData.items.add(file);
-      element.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, clipboardData }));
+    await pasteWebsites(
+      Array.from({ length: 12 }, (_, index) => `https://example.org/page-${index}`).join(" "),
+    );
+    await expect(websites).toHaveCount(15);
+    const readLayout = () =>
+      composer.evaluate((frame) => {
+        const shell = frame.getBoundingClientRect();
+        const field = frame.querySelector("textarea")!;
+        const strip = frame.querySelector<HTMLElement>(".spec400-composer-media")!;
+        const boxes = Array.from(strip.children, (tile) => tile.getBoundingClientRect());
+        const rows = [...new Set(boxes.map((box) => Math.round(box.top)))];
+        const firstInEachRow = rows.map(
+          (top) => boxes.find((box) => Math.round(box.top) === top)!.left,
+        );
+        const image = boxes[1];
+        const first = boxes[0];
+        const stripBox = strip.getBoundingClientRect();
+        return {
+          inset: first.left - shell.left,
+          topInset: first.top - shell.top,
+          sameFirstRow: image.top === first.top && image.left > first.left,
+          squareImage: Math.abs(image.width - image.height) < 0.5,
+          promptGap: field.getBoundingClientRect().top - stripBox.bottom,
+          promptStart: field.getBoundingClientRect().left - shell.left,
+          rows: rows.length,
+          rowsStartAtLeft: firstInEachRow.every((left) => Math.abs(left - first.left) < 0.5),
+          sidewaysOverflow: strip.scrollWidth > strip.clientWidth,
+        };
+      });
+    await expect.poll(readLayout).toMatchObject({
+      sameFirstRow: true,
+      squareImage: true,
+      rowsStartAtLeft: true,
+      sidewaysOverflow: false,
     });
-    await expect(composer.getByRole("button", { name: "Inspect Pasted logo.png" })).toBeAttached();
-    await expect
-      .poll(async () => {
-        const { draft, preview, attachment } = await textEdges();
-        if (preview === null || attachment === null) return Infinity;
-        return Math.max(Math.abs(preview - draft), Math.abs(attachment - draft));
-      })
-      .toBeLessThan(0.5);
+    const layout = await readLayout();
+    expect(layout.inset).toBeGreaterThan(2);
+    expect(layout.inset).toBeLessThan(layout.promptStart);
+    expect(layout.topInset).toBeGreaterThan(2);
+    expect(layout.promptGap).toBeGreaterThanOrEqual(8);
+    expect(layout.rows).toBeGreaterThanOrEqual(phone && page.viewportSize()!.width < 768 ? 6 : 3);
+    await expect(input).toBeInViewport();
+    await expect(composer.getByTestId("send-button")).toBeInViewport();
+
+    await websites
+      .nth(1)
+      .getByRole("button", { name: /^Remove linked page from message/ })
+      .click();
+    await expect(websites).toHaveCount(14);
+    await expect(tray.locator('[data-link-preview-url="https://github.com/review"]')).toHaveCount(
+      0,
+    );
+    await expect(
+      tray.locator('[data-link-preview-url="https://en.wikipedia.org/wiki/Kova"]'),
+    ).toHaveCount(1);
   });
 }
 

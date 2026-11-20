@@ -9,7 +9,6 @@
   --composer-compact-padding: 7px;
   --composer-compact-gap: 8px;
   --composer-text-inset: 8px;
-  --composer-preview-inset: var(--composer-text-inset);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -38,26 +37,22 @@
     .spec400-composer:not(
       :has(
         .spec400-composer-input[data-multiline="true"],
-        .spec400-attachment-chips,
+        .spec400-attachment-chip,
         .spec400-plugin-tokens,
         .spec400-selected-tool
       )
     ) {
     --composer-text-inset: 0px;
-    --composer-preview-inset: 9px;
     display: grid;
     grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
     align-items: center;
     padding: 6px var(--composer-compact-padding);
     gap: var(--composer-compact-gap);
 
-    &:has(.kova-link-preview-composer) {
+    &:has(.spec400-composer-media) {
       grid-template-areas:
         "preview preview preview"
         "tools input trailing";
-    }
-    .kova-link-preview-composer {
-      grid-area: preview;
     }
     .spec400-composer-toolbar {
       display: contents;
@@ -159,7 +154,7 @@
 }
 .spec400-composer:has(
   .spec400-composer-input[data-multiline="true"],
-  .spec400-attachment-chips,
+  .spec400-attachment-chip,
   .spec400-plugin-tokens,
   .spec400-selected-tool
 ) {
@@ -170,7 +165,7 @@
 }
 .spec400-composer:has(
     .spec400-composer-input[data-multiline="true"],
-    .spec400-attachment-chips,
+    .spec400-attachment-chip,
     .spec400-plugin-tokens,
     .spec400-selected-tool
   )
@@ -179,10 +174,9 @@
 }
 .spec400-composer:has(
     .spec400-composer-input[data-multiline="true"],
-    .spec400-attachment-chips,
+    .spec400-composer-media,
     .spec400-plugin-tokens,
-    .spec400-selected-tool,
-    .kova-link-preview-composer
+    .spec400-selected-tool
   )
   .spec400-input-region {
   min-height: 26px;
@@ -867,24 +861,34 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     animation: none;
   }
 }
-/* Selected files stay visible as compact thumbnails inside the composer. */
-.spec400-attachment-chips {
+/* Photos, files and pages share one wrapping area at the top of the composer. */
+.spec400-composer-media {
+  grid-area: preview;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 8px;
   list-style: none;
   padding: 0;
-  margin: 0 var(--composer-preview-inset) 4px;
+  margin: var(--composer-media-offset, 0px) var(--composer-media-offset, 0px) 8px;
   min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
+  min-height: 0;
+  max-height: min(42dvh, 384px);
+  overflow: hidden auto;
+  overscroll-behavior-block: contain;
   scrollbar-width: thin;
+}
+.spec400-composer-link {
+  flex: none;
+  width: min(calc((100% - 8px) / 2), var(--composer-link-width, 220px));
 }
 .spec400-attachment-chip {
   position: relative;
   display: inline-flex;
   align-items: center;
-  max-width: min(100%, 320px);
+  flex: none;
+  max-width: min(100%, 224px);
   min-width: 0;
   min-height: 44px;
   border: 1px solid var(--border);
@@ -893,10 +897,8 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   overflow: hidden;
 }
 .spec400-attachment-chip[data-kind="image"] {
-  flex: 0 0 120px;
-  width: 120px;
-  height: 120px;
-  max-width: 120px;
+  width: min(100%, var(--composer-photo-size, 120px));
+  aspect-ratio: 1;
   min-height: 0;
   border-radius: 16px;
   background: color-mix(in srgb, var(--foreground) 6%, var(--background));
