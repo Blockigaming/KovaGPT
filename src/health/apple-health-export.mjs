@@ -1,3 +1,9 @@
+import {
+  APPLE_HEALTH_DAY_MS,
+  APPLE_HEALTH_HISTORY_DAYS,
+  APPLE_HEALTH_METRICS,
+} from "./apple-health-metrics.mjs";
+
 const zipEnd = 0x06054b50;
 const zipEntry = 0x02014b50;
 const zipLocal = 0x04034b50;
@@ -86,13 +92,31 @@ function calendarDay(value) {
     : null;
 }
 
+const metricsByType = new Map(APPLE_HEALTH_METRICS.map((metric) => [metric.type, metric]));
+
+function instant(value) {
+  return Date.parse(value?.replace(" ", "T").replace(/ ([+-]\d{2})(\d{2})$/, "$1:$2") ?? "");
+}
+
+function asleepHours(intervals) {
+  intervals.sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let end = -Infinity;
+  for (const [start, stop] of intervals) {
+    total += Math.max(0, stop - Math.max(start, end));
+    end = Math.max(end, stop);
+  }
+  return total / 3_600_000;
+}
+
 export async function readAppleHealthExport(file, signal) {
   const { stream, size } = await openExportXml(file);
   if (size < 1 || size > xmlLimit) throw new Error("Unsupported Apple Health export size");
   const reader = stream.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
-  const sources = new Map();
-  const week = 7 * 86_400_000;
+  const metrics = new Map();
+  const sourceSet = new Set();
+  const history = APPLE_HEALTH_HISTORY_DAYS * APPLE_HEALTH_DAY_MS;
   let buffer = "";
   let exportDay;
   let hasRoot = false;
@@ -114,7 +138,9 @@ export async function readAppleHealthExport(file, signal) {
       }
       const tags = buffer.slice(0, end + 1);
       buffer = buffer.slice(end + 1);
-      for (const match of tags.matchAll(/<(\/?HealthData|ExportDate|Record)(?=[\s/>])[^>]*>/g)) {
+      for (const match of tags.matchAll(
+        /<(\/?HealthData|ExportDate|Record|Workout)(?=[\s/>])[^>]*>/g,
+      )) {
         if (match[1] === "HealthData") hasRoot = true;
         if (match[1] === "/HealthData") complete = true;
         if (!hasRoot || complete) continue;
@@ -122,38 +148,86 @@ export async function readAppleHealthExport(file, signal) {
           exportDay ??= calendarDay(readAttributes(match[0]).value);
           continue;
         }
-        if (
-          !exportDay ||
-          match[1] !== "Record" ||
-          !match[0].includes("HKQuantityTypeIdentifierStepCount")
+        if (!exportDay) continue;
+        const record = readAttributes(match[0]);
+        const metric = metricsByType.get(match[1] === "Workout" ? "Workout" : record.type);
+        if (!metric) continue;
+        const date = calendarDay(
+          metric.aggregation === "sleep" ? record.endDate : record.startDate,
+        );
+        if (!date || date.time > exportDay.time || exportDay.time - date.time >= history) continue;
+        const value =
+          metric.type === "Workout" ? 1 : Number(record.value) * metric.units?.[record.unit];
+        let interval;
+        let timestamp;
+        if (metric.aggregation === "sleep") {
+          if (
+            !/^HKCategoryValueSleepAnalysisAsleep(?:Unspecified|Core|Deep|REM)?$/.test(
+              record.value ?? "",
+            )
+          )
+            continue;
+          const start = instant(record.startDate);
+          const end = instant(record.endDate);
+          if (
+            !Number.isFinite(start) ||
+            !Number.isFinite(end) ||
+            end <= start ||
+            end - start > APPLE_HEALTH_DAY_MS
+          )
+            continue;
+          interval = [start, end];
+        } else if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 1_000_000 ||
+          (metric.type !== "Workout" && !record.value?.trim())
         ) {
           continue;
+        } else if (metric.aggregation === "last") {
+          timestamp = instant(record.startDate);
+          if (!Number.isFinite(timestamp)) timestamp = date.time;
         }
-        const record = readAttributes(match[0]);
-        if (record.type !== "HKQuantityTypeIdentifierStepCount" || record.unit !== "count")
-          continue;
-        const date = calendarDay(record.startDate);
-        if (!date || date.time > exportDay.time || exportDay.time - date.time >= week) continue;
-        const steps = Number(record.value);
-        if (!record.value || !Number.isFinite(steps) || steps < 0 || steps > 1_000_000) continue;
         const source = sourceName(record.sourceName?.trim().slice(0, 160) || "Unknown source");
-        if (!sources.has(source)) {
-          if (sources.size >= 128) throw new Error("Too many Apple Health sources");
-          sources.set(source, new Map());
+        sourceSet.add(source);
+        if (sourceSet.size > 128) throw new Error("Too many Apple Health sources");
+        if (!metrics.has(metric.id)) metrics.set(metric.id, new Map());
+        const sources = metrics.get(metric.id);
+        if (!sources.has(source)) sources.set(source, new Map());
+        const days = sources.get(source);
+        if (!days.has(date.day)) days.set(date.day, { total: 0, count: 0, time: -Infinity });
+        const day = days.get(date.day);
+        if (interval) {
+          day.intervals ??= [];
+          if (day.intervals.length >= 1000) throw new Error("Too many sleep intervals");
+          day.intervals.push(interval);
+        } else if (timestamp === undefined) {
+          day.total += value;
+        } else if (timestamp >= day.time) {
+          day.total = value;
+          day.time = timestamp;
         }
-        const byDay = sources.get(source);
-        byDay.set(date.day, (byDay.get(date.day) ?? 0) + steps);
+        day.count += 1;
       }
     }
     if (bytes !== size || !complete || !exportDay || (buffer + decoder.decode()).trim()) {
       throw new Error("Incomplete Apple Health export");
     }
-    return Array.from(sources, ([name, days]) => ({
-      name,
-      days: Array.from(days, ([date, steps]) => ({ date, steps: Math.round(steps) })).sort((a, b) =>
-        a.date.localeCompare(b.date),
-      ),
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    const report = { asOf: exportDay.day, metrics: {} };
+    for (const metric of APPLE_HEALTH_METRICS) {
+      const sources = metrics.get(metric.id);
+      if (!sources) continue;
+      report.metrics[metric.id] = Array.from(sources, ([name, days]) => ({
+        name,
+        days: Array.from(days, ([date, day]) => ({
+          date,
+          value: day.intervals
+            ? asleepHours(day.intervals)
+            : day.total / (metric.aggregation === "avg" ? day.count : 1),
+        })).sort((a, b) => a.date.localeCompare(b.date)),
+      })).sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return report;
   } finally {
     await reader.cancel().catch(() => {});
   }

@@ -45,7 +45,9 @@ WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local cr
 
 On iPhone, open Health, tap your profile picture, choose **Export All Health Data**, and save the export to Files. In KovaGPT, choose **Connections → Health → Import Apple Health data** and select the ZIP. You can also select `export.xml` from the extracted archive.
 
-KovaGPT displays daily steps for one source at a time for the seven calendar days ending on the export date. iPhone and Apple Watch can count the same steps. The file and results stay in the current browser tab. To refresh the results, export again or choose **Clear report** to remove them.
+Apple Health import displays up to 90 calendar days of available activity, sleep, heart, and body trends. Select a metric, a 7-, 30-, or 90-day range, and a source. Imports keep sources separate because devices can record the same activity. The file and results stay in the current browser tab. Choose **Clear report** to remove them.
+
+The KovaGPT Health iPhone app target opens the existing Connections Health tab in WebKit. Its **Start live updates** button prompts for read access to selected HealthKit types. HealthKit observer queries refresh daily summaries as iOS records changes while the tab is open in the app. The bridge only accepts requests from the app's first-party Health view, has no upload API, and stops on a tab or account change. The native app requires a signed physical-device test before distribution.
 
 ## Other health services
 

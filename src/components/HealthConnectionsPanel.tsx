@@ -10,7 +10,6 @@ import {
 } from "recharts";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HealthDashboardPreview } from "@/components/HealthDashboardPreview";
 import { AppleHealthReport } from "@/components/AppleHealthReport";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
@@ -21,12 +20,14 @@ import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
 export function HealthConnectionsPanel({
   ownerId,
+  visible = true,
   data,
   loading,
   error,
   reload,
 }: {
   ownerId: string | null;
+  visible?: boolean;
   data: AccountStatus | null;
   loading: boolean;
   error: boolean;
@@ -141,18 +142,18 @@ export function HealthConnectionsPanel({
           id="health-connections-title"
           className="text-xl font-semibold tracking-tight sm:text-2xl"
         >
-          Health accounts
+          A new way to manage your health
         </h2>
         <p className="max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Import Apple Health steps or connect Oura for sleep, recovery, and activity summaries.
+          View your activity, sleep, and wellness trends in one place.
         </p>
       </header>
-      {!result && <HealthDashboardPreview />}
+      <AppleHealthReport ownerId={ownerId} visible={visible} />
       {!ownerId ? (
         <p>Sign in to manage health connections.</p>
       ) : (
         <>
-          {loading && <p role="status">Checking health accounts…</p>}
+          {loading && <p role="status">Checking connections…</p>}
           {error && <p role="status">Health account status is unavailable.</p>}
           <div className="grid gap-3">
             {(["oura"] as const).map((id) => {
@@ -220,7 +221,6 @@ export function HealthConnectionsPanel({
           </div>
         </>
       )}
-      <AppleHealthReport ownerId={ownerId} />
       {message && <p role="status">{message}</p>}
       {busy && <p role="status">Working…</p>}
       {result && (

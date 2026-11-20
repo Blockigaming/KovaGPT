@@ -18,13 +18,43 @@ const exportXml = `<?xml version="1.0" encoding="UTF-8"?>
     type="HKQuantityTypeIdentifierStepCount" startDate="2026-11-13 08:00:00 -0500"/>
   <Record sourceName="iPhone" value="80" unit="count/min"
     type="HKQuantityTypeIdentifierHeartRate" startDate="2026-11-20 08:00:00 -0500"/>
+  <Record sourceName="iPhone" value="92" unit="count/min"
+    type="HKQuantityTypeIdentifierHeartRate" startDate="2026-11-20 08:30:00 -0500"/>
+  <Record sourceName="Watch &amp; Fitness" value="HKCategoryValueSleepAnalysisAsleepCore"
+    type="HKCategoryTypeIdentifierSleepAnalysis" startDate="2026-11-19 23:00:00 -0500" endDate="2026-11-20 05:00:00 -0500"/>
+  <Record sourceName="Watch &amp; Fitness" value="HKCategoryValueSleepAnalysisAsleepDeep"
+    type="HKCategoryTypeIdentifierSleepAnalysis" startDate="2026-11-20 04:30:00 -0500" endDate="2026-11-20 06:00:00 -0500"/>
+  <Record sourceName="Watch &amp; Fitness" value="HKCategoryValueSleepAnalysisInBed"
+    type="HKCategoryTypeIdentifierSleepAnalysis" startDate="2026-11-19 22:00:00 -0500" endDate="2026-11-20 07:00:00 -0500"/>
+  <Workout sourceName="iPhone" startDate="2026-11-19 11:00:00 -0500" workoutActivityType="HKWorkoutActivityTypeRunning"/>
+  <Record sourceName="iPhone" value="70" unit="kg"
+    type="HKQuantityTypeIdentifierBodyMass" startDate="2026-11-20 10:00:00 -0500"/>
+  <Record sourceName="iPhone" value="71" unit="kg"
+    type="HKQuantityTypeIdentifierBodyMass" startDate="2026-11-20 08:00:00 -0500"/>
+  <Record sourceName="iPhone" value="123456" unit="count"
+    type="HKQuantityTypeIdentifierStepCount" startDate="2026-08-22 08:00:00 -0500"/>
 </HealthData>`;
-const expected = [
-  { name: "iPhone", days: [{ date: "2026-11-14", steps: 89 }] },
-  { name: "Watch & Fitness", days: [{ date: "2026-11-20", steps: 1000 }] },
-];
+const expected = {
+  asOf: "2026-11-20",
+  metrics: {
+    StepCount: [
+      {
+        name: "iPhone",
+        days: [
+          { date: "2026-11-13", value: 444 },
+          { date: "2026-11-14", value: 89 },
+        ],
+      },
+      { name: "Watch & Fitness", days: [{ date: "2026-11-20", value: 1000 }] },
+    ],
+    HeartRate: [{ name: "iPhone", days: [{ date: "2026-11-20", value: 86 }] }],
+    SleepAnalysis: [{ name: "Watch & Fitness", days: [{ date: "2026-11-20", value: 7 }] }],
+    BodyMass: [{ name: "iPhone", days: [{ date: "2026-11-20", value: 70 }] }],
+    Workouts: [{ name: "iPhone", days: [{ date: "2026-11-19", value: 1 }] }],
+  },
+};
 
-test("Apple Health XML, stored ZIP and compressed ZIP import only recent steps by source", async () => {
+test("Apple Health imports recent activity, sleep and body summaries by source in XML and ZIP", async () => {
   assert.deepEqual(await readAppleHealthExport(new File([exportXml], "export.xml")), expected);
   for (const level of [0, 6]) {
     const zip = zipSync(

@@ -208,6 +208,8 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
   page,
 }) => {
   await boot(page);
+  const health = page.getByRole("region", { name: "A new way to manage your health", exact: true });
+  await expect(health.getByText("Sample data", { exact: true })).toHaveCount(0);
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
   const zip = zipSync({
@@ -215,6 +217,7 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
       <ExportDate value="2026-11-20 12:00:00 -0500"/>
       <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Watch" unit="count" startDate="2026-11-20 10:00:00 -0500" value="123"/>
       <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone" unit="count" startDate="2026-11-20 10:00:00 -0500" value="789"/>
+      <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Watch" unit="count/min" startDate="2026-11-01 10:00:00 -0500" value="68"/>
     </HealthData>`),
   });
   const region = page.getByRole("region", { name: "Apple Health", exact: true });
@@ -229,10 +232,18 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
     buffer: Buffer.from(zip),
   });
   const source = region.getByLabel("Step source");
+  await region.getByText("Daily readings", { exact: true }).click();
   await expect(region.getByRole("cell", { name: "789", exact: true })).toBeVisible();
   await source.selectOption({ label: "Watch" });
   await expect(region.getByRole("cell", { name: "123", exact: true })).toBeVisible();
   await expect(region.getByRole("cell", { name: "789", exact: true })).toHaveCount(0);
+  await region.getByLabel("Metric").selectOption({ label: "Heart rate" });
+  await expect(
+    region.getByText("No readings for this source in the selected range."),
+  ).toBeVisible();
+  await region.getByLabel("Date range").selectOption({ label: "30 days" });
+  await region.getByText("Daily readings", { exact: true }).click();
+  await expect(region.getByRole("cell", { name: "68", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
 
   await page.evaluate(() => {
@@ -247,6 +258,57 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
     state.renderPanels();
   });
   await expect(input).toHaveCount(0);
+});
+
+test("native Apple Health updates refresh the chart only during the active connection", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const messages: { action: string; id: string }[] = [];
+    Object.assign(window, { healthBridgeMessages: messages });
+    Object.defineProperty(window, "webkit", {
+      configurable: true,
+      value: {
+        messageHandlers: {
+          kovaHealth: { postMessage: (value: (typeof messages)[number]) => messages.push(value) },
+        },
+      },
+    });
+  });
+  await boot(page);
+  const region = page.getByRole("region", { name: "Apple Health", exact: true });
+  await region.getByRole("button", { name: "Start live updates" }).click();
+  const push = (value: number, current: boolean) =>
+    page.evaluate(
+      ({ value, current }) => {
+        const { healthBridgeMessages } = window as Window & {
+          healthBridgeMessages?: { id: string }[];
+        };
+        window.dispatchEvent(
+          new CustomEvent("kova-health-update-v1", {
+            detail: {
+              id: current ? healthBridgeMessages?.[0]?.id : "wrong-connection",
+              report: {
+                asOf: "2026-11-20",
+                metrics: { StepCount: [{ date: "2026-11-20", value }] },
+              },
+            },
+          }),
+        );
+      },
+      { value, current },
+    );
+  await push(300, false);
+  await expect(region.getByText("300 steps", { exact: true })).toHaveCount(0);
+  await push(300, true);
+  await expect(region.getByText("Live updates are on")).toBeVisible();
+  await expect(region.getByText("300 steps", { exact: true }).first()).toBeVisible();
+  await push(320, true);
+  await expect(region.getByText("320 steps", { exact: true }).first()).toBeVisible();
+  await region.getByRole("button", { name: "Stop live updates" }).click();
+  await push(321, true);
+  await expect(region.getByText("321 steps", { exact: true })).toHaveCount(0);
+  await expect(region.getByText("320 steps", { exact: true })).toHaveCount(0);
 });
 
 test("unconfigured finance and health stay disabled and never fetch private data", async ({
