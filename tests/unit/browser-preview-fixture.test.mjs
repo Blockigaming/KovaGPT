@@ -17,7 +17,7 @@ test("ending is terminal for all subsequent control actions", () => {
     assert.equal(move("ended", a), "ended");
 });
 
-test("rectangular browser previews own their shape without a blanket pill override", () => {
+test("rectangular browser surfaces own their shape without a blanket pill override", () => {
   assert.match(
     readFileSync("src/styles.css", "utf8"),
     /@import "\.\/styles\/control-geometry\.css"/,
@@ -32,7 +32,7 @@ test("rectangular browser previews own their shape without a blanket pill overri
   });
   for (const [path, selector] of [
     ["src/components/conversation-header.css", ".kova-browser-card"],
-    ["src/components/work-browser-preview.css", ".work-browser-preview"],
+    ["src/components/work-browser-preview.css", ".work-browser-panel"],
   ]) {
     const sheet = postcss.parse(readFileSync(path, "utf8"));
     const rules = [];
@@ -44,7 +44,7 @@ test("rectangular browser previews own their shape without a blanket pill overri
           (node) => node.prop === "border-radius" && node.value !== "var(--kova-radius-button)",
         ),
       ),
-      `${selector} retains its rectangular preview radius`,
+      `${selector} retains its rectangular surface radius`,
     );
   }
 });
