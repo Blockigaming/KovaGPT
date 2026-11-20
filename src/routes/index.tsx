@@ -3308,6 +3308,7 @@ function KovaGPT() {
         data-sidebar={sidebarOpen && !settingsOpen ? "open" : "closed"}
         className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
       >
+        <div id="kova-browser-workspace" className="kova-browser-workspace-slot" />
         <MobileTopBar
           onOpenSidebar={() => {
             readingAnchorControllerRef.current?.capture();

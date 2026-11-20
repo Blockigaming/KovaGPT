@@ -299,11 +299,11 @@ test("the conversation checklist collects sources, outputs and real browser meta
                 label: "Fixture browser session",
                 status: "running",
                 browser: {
-                  sessionId: "fixture-session",
+                  sessionId: "d840146b-ab21-4a1a-8c68-9621ea1e11f2",
                   tabCount: 5,
                   observedAt: Date.now(),
                   url: "https://example.com/reference",
-                  previewPath: "/api/browser/preview/fixture-session",
+                  previewPath: "/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2",
                 },
               };
               const frame = `data: ${JSON.stringify({ choices: [{ delta }] })}\n\ndata: ${JSON.stringify({ choices: [{ delta: { content: "Fixture browser session active." } }] })}\n\n`;
@@ -321,12 +321,31 @@ test("the conversation checklist collects sources, outputs and real browser meta
     },
     { owner, chatA },
   );
-  await page.route("**/api/browser/preview/fixture-session", (route) =>
-    route.fulfill({
+  const browserCommands: string[] = [];
+  const frameImage = (await page.screenshot({ type: "jpeg" })).toString("base64");
+  await page.route("**/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2", (route) => {
+    if (route.request().method() === "POST") {
+      const action = route.request().postDataJSON();
+      browserCommands.push(action.kind);
+      return route.fulfill({
+        json: {
+          frame:
+            action.kind === "release"
+              ? null
+              : {
+                  id: "75361397-312d-4be8-8123-9f6de919b17a",
+                  jpeg: frameImage,
+                  width: action.width ?? 840,
+                  height: action.height ?? 540,
+                },
+        },
+      });
+    }
+    return route.fulfill({
       contentType: "image/svg+xml",
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240"><rect width="400" height="240" fill="#e9edf4"/><text x="35" y="125" fill="#243246" font-size="24">Fixture browser preview</text></svg>',
-    }),
-  );
+    });
+  });
   await page.goto("/");
   await waitForKovaHydration(page);
   await page
@@ -334,7 +353,9 @@ test("the conversation checklist collects sources, outputs and real browser meta
     .fill("Review the browser activity fixture");
   await page.getByTestId("send-button").click();
   await expect(page.getByText("Fixture browser session active.", { exact: true })).toBeVisible();
-  const previewRequest = page.waitForRequest("**/api/browser/preview/fixture-session");
+  const previewRequest = page.waitForRequest(
+    "**/api/browser/preview/d840146b-ab21-4a1a-8c68-9621ea1e11f2",
+  );
   await page.getByRole("button", { name: "Activity", exact: true }).click();
   expect((await previewRequest).headers()["x-kova-owner"]).toBe(owner);
   const panel = page.locator(".kova-conversation-outputs");
@@ -365,6 +386,29 @@ test("the conversation checklist collects sources, outputs and real browser meta
     path: `artifacts/ui-finish-${test.info().project.name}-checklist.png`,
     fullPage: true,
   });
+  await browser.getByRole("button", { name: "Open browser activity" }).click();
+  const workspace = page.getByRole("dialog", { name: "Cloud browser", exact: true });
+  await expect(workspace.getByRole("img", { name: "Current cloud browser preview" })).toBeVisible();
+  const bounds = await workspace.boundingBox();
+  const main = await page.locator(".kova-chat-main").boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(main).not.toBeNull();
+  expect(bounds!.x).toBeCloseTo(main!.x, 0);
+  expect(bounds!.width).toBeCloseTo(main!.width, 0);
+  expect(bounds!.y + bounds!.height).toBeCloseTo(main!.y + main!.height, 0);
+  await workspace.getByRole("button", { name: "Take over", exact: true }).click();
+  const screen = workspace.getByRole("img", { name: "Live browser page" });
+  await expect(screen).toBeVisible();
+  const picture = (await screen.boundingBox())!;
+  expect(picture.y).toBeCloseTo(bounds!.y, 0);
+  expect(picture.width).toBeCloseTo(bounds!.width, 0);
+  expect(picture.height).toBeCloseTo(bounds!.height, 0);
+  await screen.click();
+  await expect.poll(() => browserCommands).toContain("click");
+  await workspace.getByRole("button", { name: "Return control", exact: true }).click();
+  await expect.poll(() => browserCommands).toContain("release");
+  await expect(workspace).toBeHidden();
+  await expect(page.getByRole("button", { name: "Activity", exact: true })).toBeFocused();
 });
 
 test("Library search and guided help use rounded, usable fields", async ({ page }) => {

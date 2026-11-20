@@ -122,7 +122,7 @@ function fixture(overrides = {}, desktop = true) {
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const primitives = (names) => Object.fromEntries(names.map((name) => [name, name]));
   const modules = {
-    "./CloudBrowserPreview": { CloudBrowserPreview: "CloudBrowserPreview" },
+    "./CloudBrowserTakeover": { CloudBrowserTakeover: "CloudBrowserTakeover" },
     "@/lib/browser-activity-contract.mjs": browserActivity,
     "@/lib/message-activity-list.mjs": messageActivity,
     react: {

@@ -1,5 +1,4 @@
-import { CloudBrowserPreview } from "./CloudBrowserPreview";
-import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
+import { CloudBrowserTakeover } from "./CloudBrowserTakeover";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { MessageActivityList } from "./MessageActivityList";
@@ -700,6 +699,15 @@ export function ConversationHeaderActions({
             onClose: () => setSelectedBrowser(null),
             onCloseAutoFocus: restoreFocus,
           })
+        ) : signedIn && user?.id && selectedBrowser.browser?.previewPath ? (
+          <CloudBrowserTakeover
+            key={selectedBrowser.browser.sessionId}
+            browser={selectedBrowser.browser}
+            ownerId={user.id}
+            description={selectedBrowser.label}
+            onClose={() => setSelectedBrowser(null)}
+            onCloseAutoFocus={restoreFocus}
+          />
         ) : (
           <Dialog
             open={Boolean(selectedBrowser)}
@@ -712,17 +720,10 @@ export function ConversationHeaderActions({
                 <DialogTitle>Browser activity</DialogTitle>
                 <DialogDescription>{selectedBrowser?.label}</DialogDescription>
               </DialogHeader>
-              {signedIn &&
-              user?.id &&
-              selectedBrowser.browser?.previewPath &&
-              browserActivityIsFresh(selectedBrowser.browser) ? (
-                <CloudBrowserPreview browser={selectedBrowser.browser} ownerId={user.id} />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  This is a recorded browser event. No live session is connected. A live preview
-                  appears here when a verified browser session is active.
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                This is a recorded browser event. No live session is connected. A live preview
+                appears here when a verified browser session is active.
+              </p>
               <Button
                 variant="outline"
                 className="min-h-11"

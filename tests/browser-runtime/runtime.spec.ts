@@ -173,27 +173,51 @@ test("admits Browserbase regional CDP endpoints and rejects look-alike hosts", a
   const remoteId = "12345678-abcd-1234-efab-123456789abc";
   let connectUrl = "wss://connect.usw2.browserbase.com/session";
   let released = 0;
-  const manager = new BrowserSessionManager(runtime.artifacts, runtime.auditSink, {
-    get() {
-      throw new Error("CDP connection allowed");
+  let connected = 0;
+  const providerDeadline = new Date(Date.now() + 880_000).toISOString();
+  const engine = {
+    async connectOverCDP(url: string) {
+      expect(url).toBe(connectUrl);
+      connected += 1;
+      return {
+        async newContext() {
+          return { async close() {} };
+        },
+        async newBrowserCDPSession() {
+          return { async send() {} };
+        },
+        isConnected: () => true,
+        once() {},
+        async close() {},
+      };
     },
+  } as unknown as BrowserType;
+  const manager = new BrowserSessionManager(runtime.artifacts, runtime.auditSink, {
+    get: () => engine,
   });
   process.env.BROWSERBASE_API_KEY = "fixture-browserbase-key";
   process.env.BROWSERBASE_PROJECT_ID = "fixture-project";
-  globalThis.fetch = async (url) => {
+  globalThis.fetch = async (url, options) => {
     if (url === "https://api.browserbase.com/v1/sessions") {
-      return Response.json({ id: remoteId, connectUrl });
+      const body = JSON.parse(String(options?.body));
+      expect(body.timeout).toBe(900);
+      return Response.json({ id: remoteId, connectUrl, expiresAt: providerDeadline });
     }
     expect(url).toBe(`https://api.browserbase.com/v1/sessions/${remoteId}`);
     released += 1;
     return Response.json({ status: "COMPLETED" });
   };
   try {
-    await expect(manager.create(sessionOptions())).rejects.toThrow("CDP connection allowed");
+    const options = { ...sessionOptions(), readOnly: true };
+    const created = await manager.create(options);
+    expect(created.expiresAt).toBe(providerDeadline);
+    expect(manager.get(created.id, options.ownerId).descriptor.expiresAt).toBe(providerDeadline);
+    await manager.close(created.id, options.ownerId);
     connectUrl = "wss://connect.usw2.browserbase.com.example.org/session";
-    await expect(manager.create(sessionOptions())).rejects.toThrow(
+    await expect(manager.create(options)).rejects.toThrow(
       "Invalid Browserbase connection endpoint",
     );
+    expect(connected).toBe(1);
     expect(released).toBe(2);
   } finally {
     globalThis.fetch = fetch;

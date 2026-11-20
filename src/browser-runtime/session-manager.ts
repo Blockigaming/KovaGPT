@@ -15,7 +15,8 @@ import { BrowserArtifactStore } from "./artifacts";
 // Idle browsers are released after 15 minutes with no authenticated operation.
 const DEFAULT_IDLE_MS = 15 * 60_000;
 const BROWSERBASE_CDP_HEARTBEAT_MS = 4 * 60_000;
-const BROWSERBASE_READ_ONLY_TIMEOUT_SECONDS = 960;
+// Browserbase's Free plan allows at most 15 minutes per remote session.
+const BROWSERBASE_READ_ONLY_TIMEOUT_SECONDS = 900;
 
 function sessionExpiry(now: number, idleMs: number, hardExpiresAt = Infinity) {
   return new Date(Math.min(now + idleMs, hardExpiresAt)).toISOString();
@@ -48,7 +49,7 @@ export class BrowserSessionManager {
       throw runtimeError("invalid_identity", "Owner and workspace are required");
     const id = randomUUID();
     const engine = options.engine ?? "chromium";
-    const { hardExpiresAt } = options;
+    let { hardExpiresAt } = options;
     const idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_MS;
     const storagePath = await this.artifacts.initializeSession(id);
     let browser;
@@ -71,6 +72,7 @@ export class BrowserSessionManager {
           BROWSERBASE_READ_ONLY_TIMEOUT_SECONDS,
           Math.max(60, Math.ceil(remainingMs / 1000)),
         );
+        const requestedAt = Date.now();
         const response = await fetch(sessionsUrl, {
           method: "POST",
           headers,
@@ -83,7 +85,10 @@ export class BrowserSessionManager {
           }),
           signal: AbortSignal.timeout(8000),
         });
-        if (!response.ok) throw new Error("Browserbase session creation failed");
+        if (!response.ok) {
+          console.error("[browserbase] Session creation failed", { status: response.status });
+          throw new Error("Browserbase session creation failed");
+        }
         const session = await response.json();
         if (typeof session.id !== "string" || !/^[a-f0-9-]{36}$/i.test(session.id)) {
           throw new Error("Invalid Browserbase session ID");
@@ -97,6 +102,13 @@ export class BrowserSessionManager {
             signal: AbortSignal.timeout(5000),
           });
         };
+        if (options.readOnly) {
+          const providerExpiry = Date.parse(session.expiresAt ?? "");
+          hardExpiresAt = Math.min(
+            hardExpiresAt ?? Infinity,
+            Number.isFinite(providerExpiry) ? providerExpiry : requestedAt + timeout * 1000,
+          );
+        }
         const connection = new URL(session.connectUrl);
         if (
           connection.protocol !== "wss:" ||
