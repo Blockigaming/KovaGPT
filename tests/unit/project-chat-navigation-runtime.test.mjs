@@ -1,3 +1,7 @@
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "../../src/lib/chat-browser-policy.mjs";
 import { chatResponseError, cloudBrowserErrorKind } from "../../src/lib/chat-sse-client.mjs";
 import { extractResponseFollowups } from "../../src/lib/response-followups.mjs";
 import assert from "node:assert/strict";
@@ -158,6 +162,8 @@ function chatFixture(storage = new Map()) {
       extractResponseFollowups,
       chatResponseError,
       cloudBrowserErrorKind,
+      chatBrowserDestination,
+      CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
       LimitReachedNotice: "LimitReachedNotice",
       normalizeResponseSources: (value) => value,
       AbortController,
@@ -343,12 +349,11 @@ for (const outcome of ["success", "generation failure", "save failure", "new typ
   });
 }
 
-test("project chat shows the Cloud Browser limit and saves only the sent prompt", async () => {
+test("project chat shows the Cloud Browser limit and saves the matching assistant reply", async () => {
   const f = chatFixture();
   await f.finishLoad({ messages: [] });
   const prompt = "Open https://en.wikipedia.org/ in Cloud Browser.";
-  const message =
-    "You've reached your daily Cloud Browser limit. Your time resets at midnight UTC.";
+  const message = CLOUD_BROWSER_DAILY_LIMIT_MESSAGE;
   f.type(prompt);
   const sending = f.composer().props.onSubmit();
   f.requests.generate[0].resolve(
@@ -361,7 +366,10 @@ test("project chat shows the Cloud Browser limit and saves only the sent prompt"
   assert.equal(dialog.props.message, message);
   assert.equal(f.errors.length, 0);
   assert.equal(f.requests.stream.length, 0);
-  assert.deepEqual(f.requests.save[0].args.data.messages, [{ role: "user", content: prompt }]);
+  assert.deepEqual(f.requests.save[0].args.data.messages, [
+    { role: "user", content: prompt },
+    { role: "assistant", content: message },
+  ]);
   f.requests.save[0].resolve({ ok: true });
   await sending;
   f.render();

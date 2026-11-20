@@ -46,6 +46,10 @@ import {
   CHAT_HISTORY_CHANGED_EVENT,
 } from "@/lib/chat-history-bridge";
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "@/lib/chat-browser-policy.mjs";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -616,6 +620,7 @@ function KovaGPT() {
     kind: "image" | "chat" | "upload" | NonNullable<ReturnType<typeof cloudBrowserErrorKind>>;
     message?: string;
     scope?: NextPromptScope;
+    browserUrl?: string;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const inFlightTargetRef = useRef<{
@@ -2325,16 +2330,26 @@ function KovaGPT() {
         updateNextPrompt(settleNextPrompt(nextPromptRef.current, assistantMsg.id, false));
         const browserErrorKind = cloudBrowserErrorKind(e);
         if (browserErrorKind || (e as Error).name === "AbortError") {
+          const browserMessage =
+            browserErrorKind === "browser_limit"
+              ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE
+              : (e as Error).message;
           if (browserErrorKind && isCurrentRetryScope()) {
             setLimitDialog({
               open: true,
               kind: browserErrorKind,
-              message: (e as Error).message,
+              message: browserMessage,
+              browserUrl:
+                browserErrorKind === "browser_usage"
+                  ? chatBrowserDestination(trimmed)?.href
+                  : undefined,
               scope: requestScope,
             });
           }
           const stoppedByUser = controller.signal.reason?.message === USER_STOP_REASON;
-          if (!assembledReply.trim() && !stoppedByUser) {
+          if (browserErrorKind === "browser_limit" || browserErrorKind === "browser_usage") {
+            updateAssistantMessage((message) => ({ ...message, content: browserMessage }));
+          } else if (!assembledReply.trim() && !stoppedByUser) {
             setConversations((prev) =>
               prev.map((conversation) =>
                 conversation.id === nextConvId
@@ -3704,6 +3719,11 @@ function KovaGPT() {
               onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
               kind={limitDialog.kind}
               message={limitDialog.message}
+              manualBrowser={
+                userKey && limitDialog.browserUrl
+                  ? { ownerId: userKey, url: limitDialog.browserUrl }
+                  : undefined
+              }
               resetsAt={getUsage().resetsAt}
             />
           )}

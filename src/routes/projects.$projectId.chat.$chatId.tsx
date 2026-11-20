@@ -5,6 +5,10 @@ import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { ChatMessage } from "@/components/ChatMessage";
+import {
+  chatBrowserDestination,
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+} from "@/lib/chat-browser-policy.mjs";
 import { LimitReachedNotice } from "@/components/LimitReachedNotice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +76,7 @@ function ProjectChatPage() {
   const [browserNotice, setBrowserNotice] = useState<{
     kind: NonNullable<ReturnType<typeof cloudBrowserErrorKind>>;
     message: string;
+    browserUrl?: string;
   } | null>(null);
   const requestKey =
     isLoaded && isSignedIn && userKey ? JSON.stringify([userKey, projectId, chatId]) : null;
@@ -387,7 +392,14 @@ function ProjectChatPage() {
         const kind = cloudBrowserErrorKind(error);
         if (kind && error instanceof Error) {
           browserRejected = true;
-          setBrowserNotice({ kind, message: error.message });
+          const message =
+            kind === "browser_limit" ? CLOUD_BROWSER_DAILY_LIMIT_MESSAGE : error.message;
+          if (kind === "browser_limit" || kind === "browser_usage") assistant = message;
+          setBrowserNotice({
+            kind,
+            message,
+            browserUrl: kind === "browser_usage" ? chatBrowserDestination(text)?.href : undefined,
+          });
         } else {
           toast.error(error instanceof Error ? error.message : "Failed to generate a response");
         }
@@ -472,6 +484,9 @@ function ProjectChatPage() {
 
   return (
     <AppShell>
+      {browserNotice?.browserUrl && (
+        <div id="kova-browser-workspace" className="kova-browser-workspace-slot" />
+      )}
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2 sm:gap-3 sm:px-4">
           <Link
@@ -709,6 +724,11 @@ function ProjectChatPage() {
           open
           kind={browserNotice.kind}
           message={browserNotice.message}
+          manualBrowser={
+            userKey && browserNotice.browserUrl
+              ? { ownerId: userKey, url: browserNotice.browserUrl }
+              : undefined
+          }
           onOpenChange={(open) => {
             if (!open) setBrowserNotice(null);
           }}

@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { CLOUD_BROWSER_DAILY_LIMIT_MESSAGE } from "@/lib/chat-browser-policy.mjs";
+import { ManualCloudBrowser } from "./ManualCloudBrowser";
 
 export function LimitReachedNotice({
   open,
@@ -8,28 +10,34 @@ export function LimitReachedNotice({
   kind = "image",
   resetsAt,
   message,
+  manualBrowser,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  kind?: "image" | "chat" | "upload" | "browser_limit" | "browser_error";
+  kind?: "image" | "chat" | "upload" | "browser_limit" | "browser_error" | "browser_usage";
   resetsAt?: number;
   message?: string;
+  manualBrowser?: { ownerId: string; url: string };
 }) {
   const id = useId();
+  const [openedBrowser, setOpenedBrowser] = useState(false);
+  const canOpenBrowser = Boolean(manualBrowser);
   const navigate = useNavigate();
   const onOpenChangeRef = useRef(onOpenChange);
   useEffect(() => {
     onOpenChangeRef.current = onOpenChange;
   }, [onOpenChange]);
   useEffect(() => {
-    if (!open) return;
-    const isBrowser = kind === "browser_limit" || kind === "browser_error";
+    if (!open || openedBrowser) return;
+    const isBrowser =
+      kind === "browser_limit" || kind === "browser_error" || kind === "browser_usage";
     const titles = {
       image: "Image limit reached",
       chat: "Message limit reached",
       upload: "Upload limit reached",
-      browser_limit: "Cloud Browser limit reached",
+      browser_limit: CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
       browser_error: "Cloud Browser",
+      browser_usage: "Kova usage limit reached",
     };
     const dismiss = () => onOpenChangeRef.current(false);
     const reset =
@@ -41,21 +49,38 @@ export function LimitReachedNotice({
     toast.message(titles[kind], {
       id,
       duration: Infinity,
-      description: isBrowser ? message : `${limitMessage} ${resetMessage}`,
+      description:
+        kind === "browser_limit"
+          ? undefined
+          : canOpenBrowser
+            ? `${limitMessage} You can still use Cloud Browser manually if you have browser time left.`
+            : isBrowser
+              ? message
+              : `${limitMessage} ${resetMessage}`,
       onDismiss: dismiss,
-      action: isBrowser
-        ? undefined
-        : {
-            label: "View plans",
-            onClick: () => {
-              dismiss();
-              void navigate({ to: "/pricing" });
+      action: canOpenBrowser
+        ? { label: "Open Cloud Browser", onClick: () => setOpenedBrowser(true) }
+        : kind === "browser_error" || kind === "browser_usage"
+          ? undefined
+          : {
+              label: "View plans",
+              onClick: () => {
+                dismiss();
+                void navigate({ to: "/pricing" });
+              },
             },
-          },
     });
     return () => {
       toast.dismiss(id);
     };
-  }, [id, kind, message, navigate, open, resetsAt]);
-  return null;
+  }, [canOpenBrowser, id, kind, message, navigate, open, openedBrowser, resetsAt]);
+  return open && openedBrowser && manualBrowser ? (
+    <ManualCloudBrowser
+      {...manualBrowser}
+      onClose={() => {
+        setOpenedBrowser(false);
+        onOpenChange(false);
+      }}
+    />
+  ) : null;
 }

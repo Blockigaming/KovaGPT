@@ -1,3 +1,7 @@
+import {
+  CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
+  CLOUD_BROWSER_USAGE_HEADER,
+} from "../../src/lib/chat-browser-policy.mjs";
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { closeCurrentSettings, openResponseOptions, revealSidebar } from "./current-ui";
@@ -326,7 +330,7 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
     route.fulfill({
       status: 429,
       json: {
-        error: "You've reached your daily Cloud Browser limit. Your time resets at midnight UTC.",
+        error: CLOUD_BROWSER_DAILY_LIMIT_MESSAGE,
         code: "cloud_browser_daily_limit",
         stage: "cloud_browser",
         retryable: false,
@@ -348,13 +352,17 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
     .locator("[data-sonner-toast]")
     .filter({ hasText: "Cloud Browser limit reached" });
   await expect(notice).toBeVisible();
-  await expect(notice).toContainText("Your time resets at midnight UTC.");
+  await expect(notice).toContainText(CLOUD_BROWSER_DAILY_LIMIT_MESSAGE);
   await expect(notice).toHaveAttribute("data-y-position", "top");
   const width = page.viewportSize()!.width;
   await expect(notice).toHaveAttribute("data-x-position", width >= 1024 ? "right" : "center");
   await expect.poll(async () => (await notice.boundingBox())?.y).toBeCloseTo(16, 0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.locator('[data-message-role="assistant"]')).toHaveCount(0);
+  const assistant = page.locator('[data-message-role="assistant"]');
+  await expect(assistant).toHaveCount(1);
+  await expect(
+    assistant.getByText(CLOUD_BROWSER_DAILY_LIMIT_MESSAGE, { exact: true }),
+  ).toBeVisible();
   await notice.getByRole("button", { name: "Close toast", exact: true }).click();
   await expect(notice).toBeHidden();
   const prompt = page.getByLabel("Sent prompt");
@@ -365,4 +373,66 @@ test("Cloud Browser limit displays a top notification and keeps the sent Wikiped
   await expect(favicon).toHaveCSS("width", "24px");
   await expect(favicon).toHaveCSS("height", "24px");
   await expect(input).toBeEmpty();
+});
+
+test("Kova usage exhaustion offers manual Cloud Browser without retrying generation", async ({
+  page,
+}) => {
+  await fixture(page, "dark");
+  const url = "https://example.com/";
+  const sessionId = "d840146b-ab21-4a1a-8c68-9621ea1e11f2";
+  const previewPath = `/api/browser/preview/${sessionId}`;
+  const jpeg = (await page.screenshot({ type: "jpeg" })).toString("base64");
+  const requests: string[] = [];
+  await page.route("**/api/chat", (route) => {
+    requests.push("chat");
+    return route.fulfill({
+      status: 429,
+      headers: { [CLOUD_BROWSER_USAGE_HEADER]: "exhausted" },
+      json: {
+        error: "Your weekly regular message allowance is used.",
+        code: "message_window_limit",
+        category: "quota_exceeded",
+        retryable: false,
+      },
+    });
+  });
+  await page.route("**/api/browser/open", (route) => {
+    requests.push("manual");
+    expect(route.request().postDataJSON()).toEqual({ url });
+    return route.fulfill({
+      json: {
+        browser: { sessionId, tabCount: 1, observedAt: Date.now(), previewPath },
+        frame: { id: sessionId, width: 390, height: 844, jpeg },
+      },
+    });
+  });
+  await page.route(`**${previewPath}`, (route) => {
+    const command = route.request().postDataJSON();
+    requests.push(command.kind);
+    return route.fulfill({
+      json: {
+        frame: command.kind === "release" ? null : { id: sessionId, width: 390, height: 844, jpeg },
+      },
+    });
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await input.fill(`Open ${url} in Cloud Browser.`);
+  await page.getByTestId("send-button").click();
+  const notice = page
+    .locator("[data-sonner-toast]")
+    .filter({ hasText: "Kova usage limit reached" });
+  await expect(notice).toContainText("Your weekly regular message allowance is used.", {
+    timeout: 12_000,
+  });
+  await expect(notice).toHaveAttribute("data-y-position", "top");
+  expect(requests).toEqual(["chat"]);
+  await notice.getByRole("button", { name: "Open Cloud Browser" }).click();
+  const browser = page.getByRole("dialog", { name: "Cloud browser", exact: true });
+  await expect(browser.getByRole("img", { name: "Live browser page" })).toBeVisible();
+  await browser.getByRole("button", { name: "Close browser", exact: true }).click();
+  await expect.poll(() => requests.includes("release")).toBe(true);
+  expect(requests.filter((request) => request === "chat")).toEqual(["chat"]);
 });

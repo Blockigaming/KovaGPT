@@ -20,22 +20,24 @@ export function CloudBrowserTakeover({
   description,
   onClose,
   onCloseAutoFocus,
+  initialFrame,
 }: {
   browser: BrowserActivityMetadata;
   ownerId: string;
   description: string;
   onClose: () => void;
   onCloseAutoFocus: (event: Event) => void;
+  initialFrame?: CloudBrowserFrame;
 }) {
-  const [frame, setFrame] = useState<CloudBrowserFrame | null>(null);
+  const [frame, setFrame] = useState<CloudBrowserFrame | null>(initialFrame ?? null);
   const [size, setSize] = useState<CloudBrowserSize>();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [holding, setHolding] = useState(false);
+  const [holding, setHolding] = useState(Boolean(initialFrame));
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const controller = useRef<AbortController | null>(null);
   const leaving = useRef(false);
-  const acquired = useRef(false);
+  const acquired = useRef(Boolean(initialFrame));
   const pending = useRef(0);
   const path = browser.previewPath;
 
@@ -154,7 +156,7 @@ export function CloudBrowserTakeover({
       actions={
         holding ? (
           <Button type="button" variant="ghost" onClick={close}>
-            Return control
+            {initialFrame ? "Close browser" : "Return control"}
           </Button>
         ) : browserActivityIsFresh(browser) ? (
           <Button type="button" variant="ghost" disabled={busy} onClick={() => void takeOver()}>

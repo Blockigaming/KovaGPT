@@ -46,4 +46,4 @@ export function chatResponseError(
 
 export function cloudBrowserErrorKind(
   error: unknown,
-): "browser_limit" | "browser_error" | undefined;
+): "browser_limit" | "browser_error" | "browser_usage" | undefined;
