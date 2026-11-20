@@ -1,3 +1,5 @@
+import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
+
 export type OAuthProviderId =
   | "microsoft"
   | "github"
@@ -53,7 +55,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "OURA_OAUTH_CLIENT_ID",
     clientSecretEnv: "OURA_OAUTH_CLIENT_SECRET",
     requiredScopes: ["personal"],
-    optionalScopes: ["daily"],
+    optionalScopes: OURA_SCOPES,
     usesPkce: true,
     profileEndpoint: "https://api.ouraring.com/v2/usercollection/personal_info",
     profileId: (v) => text(v.id),

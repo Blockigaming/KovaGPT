@@ -34,9 +34,13 @@ struct HealthConnectionsView: UIViewRepresentable {
     weak var webView: WKWebView?
     private let store = HKHealthStore()
     private var id: UUID?
+    private var owner: UUID?
+    private static let connectionKey = "kova.health.approvedOwner"
     private var observers: [HKObserverQuery] = []
     private var refresh: Task<Void, Never>?
-    private var needsRefresh = false
+    private var needsFullRead = false
+    private var changedTypes: Set<String> = []
+    private var latest: LiveHealthAnalytics?
     private var activation: NSObjectProtocol?
 
     private func trusted(_ url: URL?) -> Bool {
@@ -80,20 +84,35 @@ struct HealthConnectionsView: UIViewRepresentable {
               message.webView === webView,
               let request = message.body as? [String: String],
               let rawId = request["id"], let requestedId = UUID(uuidString: rawId) else { return }
-        if request["action"] == "stop", requestedId == id {
-            stop()
-            return
+        if requestedId == id {
+            if request["action"] == "disconnect" {
+                if owner?.uuidString == UserDefaults.standard.string(forKey: Self.connectionKey) {
+                    UserDefaults.standard.removeObject(forKey: Self.connectionKey)
+                }
+                stop()
+                return
+            }
+            if request["action"] == "stop" { stop(); return }
         }
-        guard request["action"] == "start", id == nil, healthPage(webView?.url) else { return }
+        guard let action = request["action"], action == "resume" || action == "start",
+              id == nil, healthPage(webView?.url),
+              let rawOwner = request["owner"], let requestedOwner = UUID(uuidString: rawOwner) else { return }
         id = requestedId
-        guard HKHealthStore.isHealthDataAvailable(), let presenter = webView?.window?.rootViewController else {
-            sendError(requestedId)
+        owner = requestedOwner
+        guard HKHealthStore.isHealthDataAvailable() else { sendError(requestedId); return }
+        if action == "resume" {
+            if UserDefaults.standard.string(forKey: Self.connectionKey) == requestedOwner.uuidString {
+                observe(LiveHealthAnalytics.sampleTypes)
+            } else {
+                send(["state": "not_connected"], session: requestedId)
+                stop()
+            }
             return
         }
-
+        guard let presenter = webView?.window?.rootViewController else { sendError(requestedId); return }
         let alert = UIAlertController(
             title: "Connect Apple Health",
-            message: "Show the health trends you allow on this iPhone while this Health tab is open. KovaGPT will read daily summaries on this device.",
+            message: "Automatically refresh the health trends you allow in this tab on this iPhone. Your Apple Health readings stay on this device.",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
@@ -111,43 +130,59 @@ struct HealthConnectionsView: UIViewRepresentable {
         do {
             try await store.requestAuthorization(toShare: [], read: Set(types.map { $0 as HKObjectType }))
             guard id == session, healthPage(webView?.url) else { return }
-            for type in types {
-                let query = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completed, error in
-                    completed()
-                    if error == nil {
-                        Task { @MainActor in self?.scheduleRead() }
-                    }
-                }
-                observers.append(query)
-                store.execute(query)
+            if let owner {
+                UserDefaults.standard.set(owner.uuidString, forKey: Self.connectionKey)
             }
-            activation = NotificationCenter.default.addObserver(
-                forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-            ) { [weak self] _ in
-                Task { @MainActor in self?.scheduleRead() }
-            }
-            scheduleRead()
+            observe(types)
         } catch {
             sendError(session)
         }
     }
 
-    private func scheduleRead() {
+    private func observe(_ types: [HKSampleType]) {
+        for type in types {
+            let identifier = type.identifier
+            let query = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completed, error in
+                completed()
+                if error == nil {
+                    Task { @MainActor in self?.scheduleRead(changedType: identifier) }
+                }
+            }
+            observers.append(query)
+            store.execute(query)
+        }
+        activation = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.scheduleRead() }
+        }
+        scheduleRead()
+    }
+
+    private func scheduleRead(changedType: String? = nil) {
         guard let session = id, healthPage(webView?.url),
               UIApplication.shared.applicationState == .active else { return }
-        if refresh != nil { needsRefresh = true; return }
+        if let changedType { changedTypes.insert(changedType) }
+        else { needsFullRead = true }
+        guard refresh == nil else { return }
         refresh = Task { [weak self] in
             guard let self else { return }
             repeat {
-                needsRefresh = false
-                let report = await LiveHealthAnalytics.read(from: store)
+                // Observer queries can fire in a burst when the Watch syncs.
+                try? await Task.sleep(for: .milliseconds(750))
                 guard !Task.isCancelled, id == session else { return }
+                let changed = needsFullRead ? [] : changedTypes
+                needsFullRead = false
+                changedTypes.removeAll()
+                let report = await LiveHealthAnalytics.read(from: store, changing: changed, previous: latest)
+                guard !Task.isCancelled, id == session else { return }
+                latest = report
                 if healthPage(webView?.url),
                    let data = try? JSONEncoder().encode(report),
                    let value = try? JSONSerialization.jsonObject(with: data) {
                     send(["report": value], session: session)
                 }
-            } while needsRefresh
+            } while needsFullRead || !changedTypes.isEmpty
             refresh = nil
         }
     }
@@ -176,8 +211,11 @@ struct HealthConnectionsView: UIViewRepresentable {
     func stop() {
         refresh?.cancel()
         refresh = nil
-        needsRefresh = false
+        needsFullRead = false
+        changedTypes.removeAll()
+        latest = nil
         id = nil
+        owner = nil
         for query in observers { store.stop(query) }
         observers.removeAll()
         if let activation { NotificationCenter.default.removeObserver(activation) }

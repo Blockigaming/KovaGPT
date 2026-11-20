@@ -4,6 +4,10 @@ export const APPLE_HEALTH_METRICS: readonly {
   label: string;
   unit: string;
   aggregation: "sum" | "avg" | "last" | "sleep";
+  group: string;
+  countSamples?: boolean;
+  signed?: boolean;
+  categoryValues?: readonly string[];
   units?: Readonly<Record<string, number>>;
 }[];
 export const APPLE_HEALTH_HISTORY_DAYS: number;

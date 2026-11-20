@@ -143,6 +143,14 @@ function fixture() {
       configuredOAuthProviders: () => (state.configured ? [{ id: "oura" }] : []),
     },
     "@/integrations/connected-tools.server": { refreshExpiringConnection: async () => null },
+    "./oura-analytics.server.mjs": {
+      readOuraAnalytics: async (_scopes, _token, ensure) => {
+        state.network.push("https://api.ouraring.com/v2/usercollection/daily_activity");
+        await state.onNetwork?.();
+        await ensure();
+        return { metrics: {} };
+      },
+    },
     "./health-read.server.mjs": {
       readHealthSummary: (provider, scopes, token, ensure) =>
         readHealthSummary(provider, scopes, token, ensure, async (url) => {

@@ -7,7 +7,13 @@ import {
 import type { AppleHealthAnalytics, AppleHealthDay } from "./apple-health-export.mjs";
 
 const updateEvent = "kova-health-update-v1";
-type Bridge = { postMessage: (message: { action: "start" | "stop"; id: string }) => void };
+type Bridge = {
+  postMessage: (message: {
+    action: "start" | "resume" | "stop" | "disconnect";
+    id: string;
+    owner?: string;
+  }) => void;
+};
 function getBridge() {
   return (window as Window & { webkit?: { messageHandlers?: { kovaHealth?: Bridge } } }).webkit
     ?.messageHandlers?.kovaHealth;
@@ -26,7 +32,7 @@ function parseSnapshot(detail: unknown): AppleHealthAnalytics | null {
   if (typeof asOf !== "string" || !Number.isFinite(end) || !metrics || typeof metrics !== "object")
     return null;
   const report: AppleHealthAnalytics = { asOf, metrics: {} };
-  for (const { id } of APPLE_HEALTH_METRICS) {
+  for (const { id, signed } of APPLE_HEALTH_METRICS) {
     const entries = metrics[id];
     if (!Array.isArray(entries) || entries.length > APPLE_HEALTH_HISTORY_DAYS) continue;
     const days = new Map<string, AppleHealthDay>();
@@ -39,7 +45,7 @@ function parseSnapshot(detail: unknown): AppleHealthAnalytics | null {
         end - time >= APPLE_HEALTH_HISTORY_DAYS * APPLE_HEALTH_DAY_MS ||
         typeof value !== "number" ||
         !Number.isFinite(value) ||
-        value < 0 ||
+        (!signed && value < 0) ||
         value > 1_000_000
       )
         continue;
@@ -62,11 +68,11 @@ export function useAppleHealthLive(ownerId: string | null) {
     status: string;
   }>(empty);
 
-  const closeBridge = useCallback(() => {
+  const closeBridge = useCallback((action: "stop" | "disconnect" = "stop") => {
     if (active.current) {
       const id = active.current;
       active.current = null;
-      getBridge()?.postMessage({ action: "stop", id });
+      getBridge()?.postMessage({ action, id });
     }
   }, []);
   const stop = useCallback(() => {
@@ -74,6 +80,19 @@ export function useAppleHealthLive(ownerId: string | null) {
     setConnected(false);
     setReading(empty);
   }, [closeBridge]);
+
+  const connect = useCallback(
+    (action: "start" | "resume") => {
+      const bridge = getBridge();
+      if (!ownerId || !bridge || active.current) return;
+      const id = crypto.randomUUID();
+      active.current = id;
+      setConnected(true);
+      setReading({ ...empty, status: "Connecting to Apple Health…" });
+      bridge.postMessage({ action, id, owner: ownerId });
+    },
+    [ownerId],
+  );
 
   useEffect(() => {
     setAvailable(Boolean(ownerId && getBridge()));
@@ -86,7 +105,9 @@ export function useAppleHealthLive(ownerId: string | null) {
       if (!active.current || detail?.id !== active.current) return;
       const report = parseSnapshot(detail.report);
       if (!report) {
-        if (detail.state === "error") {
+        if (detail.state === "not_connected") {
+          stop();
+        } else if (detail.state === "error") {
           stop();
           setReading({
             ...empty,
@@ -106,22 +127,23 @@ export function useAppleHealthLive(ownerId: string | null) {
     };
     window.addEventListener(updateEvent, onUpdate);
     window.addEventListener("pagehide", stop);
+    const resume = () => connect("resume");
+    const bridge = getBridge();
+    if (bridge) resume();
+    window.addEventListener("pageshow", resume);
     return () => {
       closeBridge();
       window.removeEventListener(updateEvent, onUpdate);
       window.removeEventListener("pagehide", stop);
+      window.removeEventListener("pageshow", resume);
     };
-  }, [ownerId, closeBridge, stop]);
+  }, [ownerId, closeBridge, stop, connect]);
 
-  const start = () => {
-    const bridge = getBridge();
-    if (!ownerId || !bridge || active.current) return;
-    const id = crypto.randomUUID();
-    active.current = id;
-    setConnected(true);
-    setReading({ ...empty, status: "Connecting to Apple Health…" });
-    bridge.postMessage({ action: "start", id });
-  };
+  function disconnect() {
+    closeBridge("disconnect");
+    setConnected(false);
+    setReading(empty);
+  }
 
-  return { available, connected, ...reading, start, stop };
+  return { available, connected, ...reading, start: () => connect("start"), disconnect };
 }

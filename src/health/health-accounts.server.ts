@@ -7,9 +7,14 @@ import { decryptCredential } from "@/integrations/credential-vault.server";
 import { refreshExpiringConnection } from "@/integrations/connected-tools.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { HEALTH_PROVIDERS, type HealthProviderId } from "./providers.mjs";
+import { readOuraAnalytics } from "./oura-analytics.server.mjs";
 import { readHealthSummary } from "./health-read.server.mjs";
 
-export async function readHealthAccount(caller: AuthedCaller, accountId: string) {
+export async function readHealthAccount(
+  caller: AuthedCaller,
+  accountId: string,
+  mode?: "analytics",
+) {
   const db = caller.supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>;
   const assertAllowed = async () => {
     if (caller.revalidateSession && !(await caller.revalidateSession()))
@@ -70,12 +75,16 @@ export async function readHealthAccount(caller: AuthedCaller, accountId: string)
     )
       throw new Error("health_binding_changed");
   };
-  const result = await readHealthSummary(
-    binding.provider_id as HealthProviderId,
-    binding.granted_scopes,
-    await decryptCredential(binding.access_token_ciphertext),
-    ensureCurrent,
-  );
+  const token = await decryptCredential(binding.access_token_ciphertext);
+  const result =
+    mode === "analytics" && binding.provider_id === "oura"
+      ? await readOuraAnalytics(binding.granted_scopes, token, ensureCurrent)
+      : await readHealthSummary(
+          binding.provider_id as HealthProviderId,
+          binding.granted_scopes,
+          token,
+          ensureCurrent,
+        );
   const audit = await db.from("integration_audit_events").insert({
     owner_id: caller.userId,
     linked_account_id: accountId,

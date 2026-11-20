@@ -92,7 +92,11 @@ function calendarDay(value) {
     : null;
 }
 
-const metricsByType = new Map(APPLE_HEALTH_METRICS.map((metric) => [metric.type, metric]));
+const metricsByType = new Map();
+for (const metric of APPLE_HEALTH_METRICS) {
+  if (!metricsByType.has(metric.type)) metricsByType.set(metric.type, []);
+  metricsByType.get(metric.type).push(metric);
+}
 
 function instant(value) {
   return Date.parse(value?.replace(" ", "T").replace(/ ([+-]\d{2})(\d{2})$/, "$1:$2") ?? "");
@@ -150,64 +154,72 @@ export async function readAppleHealthExport(file, signal) {
         }
         if (!exportDay) continue;
         const record = readAttributes(match[0]);
-        const metric = metricsByType.get(match[1] === "Workout" ? "Workout" : record.type);
-        if (!metric) continue;
-        const date = calendarDay(
-          metric.aggregation === "sleep" ? record.endDate : record.startDate,
-        );
-        if (!date || date.time > exportDay.time || exportDay.time - date.time >= history) continue;
-        const value =
-          metric.type === "Workout" ? 1 : Number(record.value) * metric.units?.[record.unit];
-        let interval;
-        let timestamp;
-        if (metric.aggregation === "sleep") {
-          if (
-            !/^HKCategoryValueSleepAnalysisAsleep(?:Unspecified|Core|Deep|REM)?$/.test(
-              record.value ?? "",
+        const matching = metricsByType.get(match[1] === "Workout" ? "Workout" : record.type);
+        if (!matching) continue;
+        for (const metric of matching) {
+          const date = calendarDay(
+            metric.aggregation === "sleep" ? record.endDate : record.startDate,
+          );
+          if (!date || date.time > exportDay.time || exportDay.time - date.time >= history)
+            continue;
+          const value = metric.countSamples
+            ? 1
+            : metric.type === "Workout"
+              ? Number(record.duration) * metric.units?.[record.durationUnit]
+              : Number(record.value) * metric.units?.[record.unit];
+          let interval;
+          let timestamp;
+          if (metric.aggregation === "sleep") {
+            if (
+              metric.categoryValues &&
+              !metric.categoryValues.some(
+                (category) => record.value === "HKCategoryValueSleepAnalysis" + category,
+              )
             )
-          )
+              continue;
+            const start = instant(record.startDate);
+            const end = instant(record.endDate);
+            if (
+              !Number.isFinite(start) ||
+              !Number.isFinite(end) ||
+              end <= start ||
+              end - start > APPLE_HEALTH_DAY_MS
+            )
+              continue;
+            interval = [start, end];
+          } else if (
+            !Number.isFinite(value) ||
+            (!metric.signed && value < 0) ||
+            value > 1_000_000 ||
+            (!metric.countSamples &&
+              !(metric.type === "Workout" ? record.duration : record.value)?.trim())
+          ) {
             continue;
-          const start = instant(record.startDate);
-          const end = instant(record.endDate);
-          if (
-            !Number.isFinite(start) ||
-            !Number.isFinite(end) ||
-            end <= start ||
-            end - start > APPLE_HEALTH_DAY_MS
-          )
-            continue;
-          interval = [start, end];
-        } else if (
-          !Number.isFinite(value) ||
-          value < 0 ||
-          value > 1_000_000 ||
-          (metric.type !== "Workout" && !record.value?.trim())
-        ) {
-          continue;
-        } else if (metric.aggregation === "last") {
-          timestamp = instant(record.startDate);
-          if (!Number.isFinite(timestamp)) timestamp = date.time;
+          } else if (metric.aggregation === "last") {
+            timestamp = instant(record.startDate);
+            if (!Number.isFinite(timestamp)) timestamp = date.time;
+          }
+          const source = sourceName(record.sourceName?.trim().slice(0, 160) || "Unknown source");
+          sourceSet.add(source);
+          if (sourceSet.size > 128) throw new Error("Too many Apple Health sources");
+          if (!metrics.has(metric.id)) metrics.set(metric.id, new Map());
+          const sources = metrics.get(metric.id);
+          if (!sources.has(source)) sources.set(source, new Map());
+          const days = sources.get(source);
+          if (!days.has(date.day)) days.set(date.day, { total: 0, count: 0, time: -Infinity });
+          const day = days.get(date.day);
+          if (interval) {
+            day.intervals ??= [];
+            if (day.intervals.length >= 1000) throw new Error("Too many sleep intervals");
+            day.intervals.push(interval);
+          } else if (timestamp === undefined) {
+            day.total += value;
+          } else if (timestamp >= day.time) {
+            day.total = value;
+            day.time = timestamp;
+          }
+          day.count += 1;
         }
-        const source = sourceName(record.sourceName?.trim().slice(0, 160) || "Unknown source");
-        sourceSet.add(source);
-        if (sourceSet.size > 128) throw new Error("Too many Apple Health sources");
-        if (!metrics.has(metric.id)) metrics.set(metric.id, new Map());
-        const sources = metrics.get(metric.id);
-        if (!sources.has(source)) sources.set(source, new Map());
-        const days = sources.get(source);
-        if (!days.has(date.day)) days.set(date.day, { total: 0, count: 0, time: -Infinity });
-        const day = days.get(date.day);
-        if (interval) {
-          day.intervals ??= [];
-          if (day.intervals.length >= 1000) throw new Error("Too many sleep intervals");
-          day.intervals.push(interval);
-        } else if (timestamp === undefined) {
-          day.total += value;
-        } else if (timestamp >= day.time) {
-          day.total = value;
-          day.time = timestamp;
-        }
-        day.count += 1;
       }
     }
     if (bytes !== size || !complete || !exportDay || (buffer + decoder.decode()).trim()) {
