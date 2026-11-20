@@ -67,7 +67,7 @@ export function HealthTrends({
           value={group}
           className="mt-3 min-w-0 space-y-4 sm:mt-6 sm:space-y-6"
         >
-          <label className="block rounded-2xl border border-border bg-card px-4 py-3 sm:px-5">
+          <label className="block rounded-2xl bg-card px-4 py-3 sm:px-5">
             <span className="flex justify-between gap-4 text-sm font-medium">
               Date range <span className="tabular-nums">{rangeLabel}</span>
             </span>
