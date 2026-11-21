@@ -98,7 +98,7 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
   await slider.press("ArrowRight");
   await expect(slider).toHaveAttribute("aria-valuetext", "Max");
   await slider.press("Escape");
-  await expect(slider).toBeVisible();
+  await expect(picker).toBeHidden();
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(trigger).toBeFocused();
 });
@@ -128,7 +128,7 @@ test("Pro picker combines all models, Ultra and the recommended default", async 
   await picker.getByRole("button", { name: "Select model", exact: true }).click();
   const xenon = picker.getByTestId("consumer-model-kova-xenon-5");
   await xenon.click();
-  await expect(picker).toBeHidden();
+  await expect(slider).toBeVisible();
   await expect(trigger).toHaveAttribute(
     "aria-label",
     "Choose model and effort, Kova Xenon 5 Ultra",
