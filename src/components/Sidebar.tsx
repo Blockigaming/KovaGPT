@@ -160,6 +160,7 @@ export function Sidebar({
   onDuplicate,
   onTogglePin,
   open,
+  workspaceSearchOpen = false,
   onToggle,
   onOpenSettings,
   onOpenHelp,
@@ -180,6 +181,7 @@ export function Sidebar({
   onDuplicate?: (id: string) => void;
   onTogglePin?: (id: string) => void;
   open: boolean;
+  workspaceSearchOpen?: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
@@ -286,6 +288,7 @@ export function Sidebar({
   const accountRef = useRef(user?.id);
   accountRef.current = user?.id;
   const [searchOpen, setSearchOpen] = useState(false);
+  const navigationCovered = searchOpen || workspaceSearchOpen;
   const online = useOnline();
   const [exploreOpen, setExploreOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Conversation | null>(null);
@@ -762,7 +765,7 @@ export function Sidebar({
     if (
       !open ||
       !mobileViewport ||
-      searchOpen ||
+      navigationCovered ||
       exploreOpen ||
       confirmDelete ||
       renameChat ||
@@ -798,7 +801,7 @@ export function Sidebar({
   }, [
     open,
     mobileViewport,
-    searchOpen,
+    navigationCovered,
     exploreOpen,
     confirmDelete,
     renameChat,
@@ -1863,8 +1866,8 @@ export function Sidebar({
         className="kova-sidebar-scrim lg:hidden"
         aria-label="Close navigation menu"
         data-state={open ? "open" : "closed"}
-        aria-hidden={!open || !mobileViewport || searchOpen}
-        disabled={!open || searchOpen}
+        aria-hidden={!open || !mobileViewport || navigationCovered}
+        disabled={!open || navigationCovered}
         tabIndex={-1}
       />
 
@@ -1879,8 +1882,8 @@ export function Sidebar({
             data-kova-signed-in=""
             data-kova-refined-sidebar=""
             data-state={collapsed ? "open" : "closed"}
-            aria-hidden={!collapsed || searchOpen}
-            inert={!collapsed || searchOpen}
+            aria-hidden={!collapsed || navigationCovered}
+            inert={!collapsed || navigationCovered}
           >
             <div className="kova-rail-header">
               <RailTooltip label={compactOnly ? "Back to chat" : "Expand sidebar"}>
@@ -1986,9 +1989,9 @@ export function Sidebar({
         data-ui-reference="chatgpt-sidebar"
         aria-label="Primary navigation"
         data-state={open ? "open" : "closed"}
-        aria-modal={open && mobileViewport && !searchOpen ? true : undefined}
-        aria-hidden={collapsed || searchOpen ? true : undefined}
-        inert={collapsed || searchOpen ? true : undefined}
+        aria-modal={open && mobileViewport && !navigationCovered ? true : undefined}
+        aria-hidden={collapsed || navigationCovered ? true : undefined}
+        inert={collapsed || navigationCovered ? true : undefined}
         role={open && mobileViewport ? "dialog" : "navigation"}
       >
         <div className="kova-sidebar-inner">

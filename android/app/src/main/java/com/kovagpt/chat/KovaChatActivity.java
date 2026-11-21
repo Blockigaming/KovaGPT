@@ -49,7 +49,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Set;
+import java.util.Collections;
 
 public final class KovaChatActivity extends FragmentActivity {
     private static final String LOCK = "device-lock";
@@ -130,7 +130,7 @@ public final class KovaChatActivity extends FragmentActivity {
         new ActivityResultContracts.TakePicture(), saved -> {
             Uri result = pendingPhoto;
             pendingPhoto = null;
-            completeFiles(saved && result != null ? new Uri[]{result} : null);
+            completeFiles(saved && result != null ? new Uri[]{result} : null, result);
         }
     );
 
@@ -138,7 +138,6 @@ public final class KovaChatActivity extends FragmentActivity {
         super.onCreate(savedState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(getColor(android.R.color.background_dark));
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
             androidx.core.graphics.Insets bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime()
@@ -248,7 +247,7 @@ public final class KovaChatActivity extends FragmentActivity {
             }
         });
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            WebViewCompat.addWebMessageListener(web, "kovaNative", Set.of(KovaDestination.ORIGIN),
+            WebViewCompat.addWebMessageListener(web, "kovaNative", Collections.singleton(KovaDestination.ORIGIN),
                 (view, message, origin, mainFrame, reply) -> {
                     if (!locked && mainFrame && KovaDestination.isTrusted(origin.toString())
                         && KovaDestination.isTrusted(web.getUrl())) {
@@ -293,6 +292,10 @@ public final class KovaChatActivity extends FragmentActivity {
     }
 
     private void completeFiles(Uri[] result) {
+        completeFiles(result, null);
+    }
+
+    private void completeFiles(Uri[] result, Uri cameraResult) {
         ValueCallback<Uri[]> callback = pendingFiles;
         pendingFiles = null;
         if (callback == null) return;
@@ -301,7 +304,9 @@ public final class KovaChatActivity extends FragmentActivity {
             return;
         }
         Uri[] safe = result == null ? null : Arrays.stream(result)
-            .filter(uri -> uri != null && "content".equals(uri.getScheme())).toArray(Uri[]::new);
+            .filter(uri -> uri != null && "content".equals(uri.getScheme())
+                && (!(getPackageName() + ".camera").equals(uri.getAuthority()) || uri.equals(cameraResult)))
+            .toArray(Uri[]::new);
         callback.onReceiveValue(safe == null || safe.length == 0 ? null : safe);
     }
 

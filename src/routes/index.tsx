@@ -3272,6 +3272,7 @@ function KovaGPT() {
         }}
         onRename={(id, title) => historyAction({ kind: "rename", id, title })}
         open={sidebarOpen && !settingsOpen}
+        workspaceSearchOpen={commandOpen}
         onToggle={() => {
           readingAnchorControllerRef.current?.capture();
           setSidebarOpen((v) => !v);

@@ -25,12 +25,12 @@ struct KovaChatShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: OpenKovaVoice(),
-            phrases: ["Open voice in \(\.applicationName)", "Talk to \(\.applicationName)"],
+            phrases: ["Open voice in \(.applicationName)", "Talk to \(.applicationName)"],
             shortTitle: "Open Kova Voice", systemImageName: "waveform"
         )
         AppShortcut(
             intent: OpenKovaChat(),
-            phrases: ["Open chat in \(\.applicationName)"],
+            phrases: ["Open chat in \(.applicationName)"],
             shortTitle: "Open Kova Chat", systemImageName: "bubble.left"
         )
     }

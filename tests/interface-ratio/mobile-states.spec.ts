@@ -111,7 +111,7 @@ for (const theme of ["light", "dark"] as const) {
       ["Large", 18],
       ["Extra large", 20],
     ] as const) {
-      await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
+      await page.goto("/?settings=appearance", { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       await page.getByRole("combobox", { name: "Text size", exact: true }).click();
       await page.getByRole("option", { name: label, exact: true }).click();
