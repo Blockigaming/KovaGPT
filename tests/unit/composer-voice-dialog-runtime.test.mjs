@@ -324,7 +324,7 @@ function fixture(initial = {}, options = {}) {
     "@/lib/speech-playback.mjs": {
       createSpeechPlayback,
       stopActiveSpeechPlayback,
-      createBrowserSpeechSink(options) {
+      createReadAloudSpeechSink(options) {
         const sink = {
           options,
           writes: [],

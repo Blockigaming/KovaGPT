@@ -33,7 +33,7 @@ import {
 import { listenForVoiceTurn } from "@/lib/voice/realtime-client";
 import { createVoiceSilenceGate } from "@/lib/voice/speech-pause.mjs";
 import {
-  createBrowserSpeechSink,
+  createReadAloudSpeechSink,
   createSpeechPlayback,
   stopActiveSpeechPlayback,
 } from "@/lib/speech-playback.mjs";
@@ -595,7 +595,7 @@ export function ComposerVoiceDialog({
       let started = false;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: createBrowserSpeechSink,
+        createSink: createReadAloudSpeechSink,
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||
@@ -613,6 +613,10 @@ export function ComposerVoiceDialog({
           // Only the shared manager's current natural-ended receipt advances
           // the explicit session. Stop, stale sink callbacks and byte completion
           // cannot request another microphone turn.
+          if (nativeKovaPlatform() === "ios" && document.visibilityState !== "visible") {
+            voiceSessionActive.current = false;
+            return;
+          }
           void resumeRecording.current?.(true);
         },
         onState: (state, code) => {
@@ -1083,7 +1087,7 @@ export function ComposerVoiceDialog({
       let started = false;
       const playback = createSpeechPlayback({
         fetchImpl: authFetch,
-        createSink: createBrowserSpeechSink,
+        createSink: createReadAloudSpeechSink,
         onEnded: (completed) => {
           if (
             !isCurrent(scope) ||

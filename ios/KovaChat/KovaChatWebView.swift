@@ -213,7 +213,7 @@ struct KovaChatWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
                      initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
                      decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-            let trusted = unlocked && frame.isMainFrame && KovaDestination.isTrusted(frame.request.url) &&
+            let trusted = unlocked && UIApplication.shared.applicationState == .active && frame.isMainFrame && KovaDestination.isTrusted(frame.request.url) &&
                 origin.protocol == "https" && origin.host == "kovagpt.com" &&
                 (origin.port == 0 || origin.port == 443)
             decisionHandler(trusted ? .prompt : .deny)

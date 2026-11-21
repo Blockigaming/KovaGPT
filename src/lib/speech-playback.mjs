@@ -141,7 +141,7 @@ export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError })
 }
 
 // The native app keeps an explicitly started read-aloud response active when
-// iOS backgrounds the app. Live microphone turns retain the browser sink.
+// iOS backgrounds the app. Microphone capture is managed separately.
 export function createReadAloudSpeechSink(options) {
   const native = typeof window !== "undefined" && window.webkit?.messageHandlers?.kovaReadAloud;
   if (!native || typeof native.postMessage !== "function") return createBrowserSpeechSink(options);
