@@ -158,6 +158,7 @@ export function normalizeChatHistory(value, ownerId) {
     title: value.title,
     mode: value.mode === "pro" ? "max" : value.mode,
     ...(value.hostedModel !== undefined ? { hostedModel: value.hostedModel } : {}),
+    ...(value.recommendedModelSelection === true ? { recommendedModelSelection: true } : {}),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     messages: value.messages.map((message) => {

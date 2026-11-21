@@ -44,8 +44,10 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
   const thumb = picker.locator('[data-slot="effort-thumb"]');
   const options = picker.getByRole("group", { name: "Available models" });
   await expect(picker).toBeVisible();
+  await picker.getByRole("button", { name: "Select model", exact: true }).click();
   await expect(options.getByRole("button").first()).toHaveAccessibleName(/^Default Recommended/);
   await expect(options.getByRole("button")).toHaveCount(8);
+  await picker.getByRole("button", { name: "Back to response effort" }).click();
   await expect(picker.locator(".kova-effort-icon")).toHaveCount(0);
   await expect(slider).toHaveAttribute("max", "4");
   await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
@@ -58,7 +60,7 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
     await expect(picker).toBeInViewport({ ratio: 1 });
     const bounds = (await picker.boundingBox())!;
     expect(bounds.height).toBeLessThanOrEqual(360);
-    expect(bounds.height).toBeGreaterThan(150);
+    expect(bounds.height).toBeGreaterThan(95);
     const rail = (await slider.boundingBox())!;
     const touch = await page.context().newCDPSession(page);
     const y = Math.round(rail.y + rail.height / 2);
@@ -96,7 +98,7 @@ test("Plus picker exposes Lite through Max and supports touch dragging", async (
   await slider.press("ArrowRight");
   await expect(slider).toHaveAttribute("aria-valuetext", "Max");
   await slider.press("Escape");
-  await expect(picker).toBeHidden();
+  await expect(slider).toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(trigger).toBeFocused();
 });
@@ -112,15 +114,18 @@ test("Pro picker combines all models, Ultra and the recommended default", async 
   const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
   const recommended = picker.getByRole("button", { name: /^Default Recommended/ });
   await trigger.click();
-  await expect(picker.getByRole("button").first()).toHaveAccessibleName(/^Default Recommended/);
+  await picker.getByRole("button", { name: "Select model", exact: true }).click();
   await expect(recommended).toHaveAttribute("aria-pressed", "true");
   await expect(picker.locator('[data-testid^="consumer-model-kova-"]')).toHaveCount(7);
+  await picker.getByRole("button", { name: "Back to response effort" }).click();
   await slider.press("ArrowRight");
   await slider.press("ArrowRight");
   await expect(slider).toHaveAttribute("aria-valuetext", "High");
   await slider.press("End");
   await expect(slider).toHaveAttribute("aria-valuetext", "Ultra");
 
+  await expect(trigger).toContainText("Kova Xenon 6.1 Ultra");
+  await picker.getByRole("button", { name: "Select model", exact: true }).click();
   const xenon = picker.getByTestId("consumer-model-kova-xenon-5");
   await xenon.click();
   await expect(picker).toBeHidden();
@@ -128,11 +133,10 @@ test("Pro picker combines all models, Ultra and the recommended default", async 
     "aria-label",
     "Choose model and effort, Kova Xenon 5 Ultra",
   );
-  await trigger.click();
+  await picker.getByRole("button", { name: "Select model", exact: true }).click();
   await expect(xenon).toHaveAttribute("aria-pressed", "true");
-  await recommended.click();
-  await expect(recommended).toHaveAttribute("aria-pressed", "true");
-  await expect(xenon).toHaveAttribute("aria-pressed", "false");
+  await picker.getByRole("button", { name: "Reset to recommended model and Lite effort" }).click();
+  await expect(xenon).toHaveCount(0);
   await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
   await expect(trigger).toHaveAttribute(
     "aria-label",
@@ -150,7 +154,9 @@ test("the full current model fits beside or above the speech controls", async ({
   await trigger.click();
   const slider = page.getByRole("slider", { name: "Response effort" });
   for (let step = 0; step < 3; step++) await slider.press("ArrowRight");
+  await page.getByRole("button", { name: "Select model", exact: true }).click();
   await page.getByTestId("consumer-model-kova-xenon-6.1").click();
+  await page.keyboard.press("Escape");
   await expect(trigger).toHaveText("Kova Xenon 6.1 Extra High");
   await expect(trigger).toHaveAttribute("title", "Kova Xenon 6.1 Extra High");
   await composer.getByRole("textbox", { name: "Message KovaGPT" }).fill("Keep this draft.");
@@ -198,16 +204,33 @@ test.describe("short desktop model picker", () => {
     await waitForKovaHydration(page);
     const trigger = page.getByTestId("model-selector-trigger");
     const picker = page.getByRole("dialog", { name: "Select model", exact: true });
-    const recommended = picker.getByRole("button", { name: /^Default Recommended/ });
+    const models = picker.getByRole("button", { name: "Select model", exact: true });
+    const reset = picker.getByRole("button", {
+      name: "Reset to recommended model and Lite effort",
+    });
     const slider = picker.getByRole("slider", { name: "Response effort", exact: true });
     const thumb = picker.locator('[data-slot="effort-thumb"]');
     await trigger.press("Space");
     await expect(picker).toBeVisible();
     await expect(picker).toHaveCSS("width", "282px");
     await expect(picker).toBeInViewport({ ratio: 1 });
-    await expect(recommended).toBeFocused();
+    await expect
+      .poll(async () => {
+        const button = (await trigger.boundingBox())!;
+        const menu = (await picker.boundingBox())!;
+        const verticalGap = Math.max(
+          menu.y - (button.y + button.height),
+          button.y - (menu.y + menu.height),
+        );
+        return Math.max(
+          Math.abs(button.x + button.width - (menu.x + menu.width)),
+          Math.abs(verticalGap),
+        );
+      })
+      .toBeLessThan(10);
+    await expect(models).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(picker.getByTestId("consumer-model-kova-argon-4.6")).toBeFocused();
+    await expect(reset).toBeFocused();
     await expect(thumb).toHaveCSS("transition-property", "left");
     await expect(thumb).toHaveCSS("transition-duration", "0.18s");
 
@@ -227,7 +250,7 @@ test.describe("short desktop model picker", () => {
       "rgb(77, 130, 238)",
     );
     await expect(ticks.last()).toHaveAttribute("data-filled", "true");
-    await picker.getByRole("button", { name: "Reset response effort to Lite" }).click();
+    await reset.click();
     await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
     await expect(ticks.last()).toHaveAttribute("data-filled", "false");
     await slider.press("End");
@@ -237,8 +260,8 @@ test.describe("short desktop model picker", () => {
     await expect(trigger).toBeFocused();
     await trigger.press("Space");
     await expect(picker).toBeVisible();
-    await expect(recommended).toBeFocused();
-    await page.keyboard.press("Enter");
+    await expect(models).toBeFocused();
+    await reset.press("Enter");
     await expect(slider).toHaveAttribute("aria-valuetext", "Lite");
   });
 });

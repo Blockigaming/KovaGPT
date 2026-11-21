@@ -1,3 +1,4 @@
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { RouteLoading } from "@/components/RouteLoading";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -374,8 +375,17 @@ function DestinationOutlet() {
         state.resolvedLocation && state.location.pathname !== state.resolvedLocation.pathname,
       ),
   });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const openingChat =
+    pathname === "/" || /^\/(?:projects\/[^/]+\/chat|share)\/[^/]+$/.test(pathname);
   return changingPage ? (
-    <RouteLoading />
+    openingChat ? (
+      <main id="main-content" className="flex min-h-dvh flex-col bg-background">
+        <ChatLoadingIndicator transcript />
+      </main>
+    ) : (
+      <RouteLoading />
+    )
   ) : (
     <AppAccountGate>
       <Outlet />

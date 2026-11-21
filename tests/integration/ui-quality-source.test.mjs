@@ -428,27 +428,16 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
   assert.doesNotMatch(routeError, /error\.message|incidentId|createIncidentId/);
 });
 
-test("streaming status reports only real activity instead of invented progression", () => {
-  const status = streamingStatus;
-  assert.match(status, /Date\.now\(\) - startedAt/);
-  assert.match(status, /activity\.status === "running"/);
-  assert.match(message, /localStreamingStartedAtRef = useRef<number \| null>\(null\)/);
-  assert.match(message, /if \(!streaming\) localStreamingStartedAtRef\.current = null/);
-  assert.match(message, /streamingStartedAt \?\? localStreamingStartedAtRef\.current/);
+test("chat waiting states share a single indicator and completed replies preserve real timing", () => {
+  assert.match(streamingStatus, /data-chat-loading/);
+  assert.match(streamingStatus, /role="status"/);
+  assert.match(home, /<ChatLoadingIndicator transcript \/>/);
+  assert.match(message, /<ChatLoadingIndicator label="Waiting for response" \/>/);
   assert.match(home, /const responseStartedAt = Date\.now\(\)/);
-  assert.match(home, /startedAt: responseStartedAt/);
   assert.match(home, /const workedMs = Math\.max\(0, Date\.now\(\) - responseStartedAt\)/);
   assert.match(home, /inFlightTargetRef\.current\?\.conversationId === active\.id/);
   assert.match(home, /inFlightTargetRef\.current\.assistantMessageId === m\.id/);
-  assert.match(status, /Math\.max\(0, Math\.floor\(\(Date\.now\(\) - startedAt\) \/ 1000\)\)/);
-  assert.match(status, /return \(\) => window\.clearInterval\(timer\)/);
-  assert.match(status, /Working for \{formatResponseTime\(seconds\)\}/);
   assert.match(message, /Worked for \{formatResponseTime\(message\.workedMs \/ 1000\)\}/);
-  assert.doesNotMatch(status, />\s*Skip\s*</);
-  assert.doesNotMatch(status, /IDLE_STATUSES|Planning response|Finishing response/);
-  assert.match(status, /kova-thinking-indicator/);
-  assert.match(status, /role="status"/);
-  assert.match(status, /aria-atomic="true"/);
   assert.match(message, /<MessageActivityList activities=\{message\.activities\}/);
 });
 

@@ -2,6 +2,7 @@ import { extractResponseFollowups } from "@/lib/response-followups.mjs";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { ChatMessage } from "@/components/ChatMessage";
@@ -31,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmPermanentChat } from "@/components/ChatDeleteConfirmation";
 import { authFetch } from "@/lib/auth-fetch";
@@ -232,7 +233,7 @@ function ProjectChatPage() {
   if (!isLoaded || (isSignedIn && !userKey))
     return (
       <AppShell>
-        <div className="p-8 text-muted-foreground">Loading…</div>
+        <ChatLoadingIndicator transcript />
       </AppShell>
     );
   if (!isSignedIn) {
@@ -250,10 +251,7 @@ function ProjectChatPage() {
   if (loading || resolvedRequestKey !== requestKey) {
     return (
       <AppShell>
-        <div className="flex items-center gap-2 p-8 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading chat…
-        </div>
+        <ChatLoadingIndicator transcript />
       </AppShell>
     );
   }

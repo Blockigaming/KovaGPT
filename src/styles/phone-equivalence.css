@@ -9,7 +9,6 @@
 .kova-phone-destination,
 .kova-phone-continue-working,
 .kova-home-startup-surface,
-.kova-phone-home-placeholder,
 .spec400-inline-project-context[data-desktop-tray="true"] {
   display: none;
 }
@@ -24,16 +23,6 @@
 
   [data-kova-entry-fallback] > :is(aside, section) {
     display: none;
-  }
-
-  .kova-phone-home-placeholder {
-    display: contents;
-  }
-
-  .kova-assistant .kova-home-loading {
-    position: absolute;
-    min-height: 0;
-    clip-path: inset(50%);
   }
 
   .kova-home-composer-placeholder .spec400-composer-toolbar {

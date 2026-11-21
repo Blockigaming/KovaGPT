@@ -1,3 +1,4 @@
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { ProjectAppearanceEditor, ProjectIcon } from "@/components/ProjectAppearanceEditor";
 import { projectAppearance, type ProjectAppearance } from "@/lib/project-appearance";
 import "@/styles/spec400-management.css";
@@ -663,7 +664,7 @@ function ProjectDetailPage() {
                 disabled={creatingProjectChat}
               >
                 <Plus aria-hidden="true" />
-                {creatingProjectChat ? "Creating…" : "New chat"}
+                New chat
               </Button>
             )}
             <Button
@@ -746,6 +747,7 @@ function ProjectDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          {creatingProjectChat && <ChatLoadingIndicator label="Creating chat" />}
         </header>
 
         <Tabs value={tab} onValueChange={setTab} className="kova-project-content">
@@ -1875,12 +1877,13 @@ function ChatsTab({
             maxLength={200}
             autoFocus
           />
+          {busy && <ChatLoadingIndicator label="Creating chat" />}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setCreating(false)}>
               Cancel
             </Button>
             <Button disabled={busy || !title.trim()} onClick={handleCreate}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
+              Create
             </Button>
           </DialogFooter>
         </DialogContent>

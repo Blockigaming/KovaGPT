@@ -83,7 +83,7 @@ import {
   type PendingAttachment,
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { HomeChatContentPending } from "@/components/HomeChatStartup";
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
 import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
@@ -1239,14 +1239,21 @@ function KovaGPT() {
     principal: string;
     conversationId: string | null;
     id: ConsumerModelId;
+    recommended: boolean;
   } | null>(null);
+  const scopedModelChoice =
+    modelChoice?.principal === storagePrincipal && modelChoice.conversationId === activeId
+      ? modelChoice
+      : null;
+  const recommendedModelSelection =
+    scopedModelChoice?.recommended ?? active?.recommendedModelSelection ?? !active?.hostedModel;
   const hostedModel = resolveConsumerModelChoice(
     modelChoice,
     storagePrincipal,
     activeId,
     active?.hostedModel,
   );
-  const chooseHostedModel = (id: ConsumerModelId) => {
+  const chooseHostedModel = (id: ConsumerModelId, recommended = false) => {
     const choice = createConsumerModelChoice(
       id,
       tier,
@@ -1254,7 +1261,7 @@ function KovaGPT() {
       storagePrincipal,
       activeId,
     );
-    if (choice) setModelChoice(choice);
+    if (choice) setModelChoice({ ...choice, recommended });
   };
   const latestAssistantReply = latestSavedModelReply(active);
   // Only a newly completed request can shift layout. Historical replies and
@@ -1541,6 +1548,7 @@ function KovaGPT() {
         messages: [],
         mode,
         hostedModel,
+        recommendedModelSelection,
         createdAt: timestamp,
         updatedAt: timestamp,
         ...(pendingWorkflowSkill ? { skill: pendingWorkflowSkill } : {}),
@@ -1961,6 +1969,7 @@ function KovaGPT() {
             messages: [userMsg, assistantMsg],
             mode: requestMode,
             hostedModel: requestHostedModel,
+            recommendedModelSelection,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             temporary: tempChat,
@@ -1975,6 +1984,7 @@ function KovaGPT() {
             ? {
                 ...c,
                 hostedModel: requestHostedModel,
+                recommendedModelSelection,
                 messages: [...priorMessages, userMsg, assistantMsg],
                 memoryStartIndex:
                   typeof c.memoryStartIndex === "number"
@@ -2522,6 +2532,7 @@ function KovaGPT() {
       conversations,
       mode,
       hostedModel,
+      recommendedModelSelection,
       tier,
       autoTitle,
       settings,
@@ -2949,19 +2960,11 @@ function KovaGPT() {
         }
         userKey={userKey}
         principalResolved={isLoaded}
-        onSkipThinking={
-          isStreaming && isLastAssistant && skipThinkingRef.current
-            ? () => skipThinkingRef.current?.()
-            : undefined
-        }
-        streaming={isStreaming && isLastAssistant}
-        streamingStartedAt={
+        streaming={
           isStreaming &&
           isLastAssistant &&
           inFlightTargetRef.current?.conversationId === active.id &&
           inFlightTargetRef.current.assistantMessageId === m.id
-            ? inFlightTargetRef.current.startedAt
-            : undefined
         }
         onUpdatePendingConfirm={(messageId, next) => {
           setConversations((prev) =>
@@ -3174,6 +3177,7 @@ function KovaGPT() {
       ])}
       hostedModel={active?.kova ? undefined : hostedModel}
       onHostedModelChange={active?.kova ? undefined : chooseHostedModel}
+      recommendedModelSelection={recommendedModelSelection}
       mode={mode}
       onModeChange={active?.kova ? undefined : setMode}
       userTier={tier}
@@ -3405,7 +3409,7 @@ function KovaGPT() {
             aria-labelledby={result && !wideResult ? "conversation-tab" : undefined}
           >
             {showEmptyChat ? (
-              <Suspense fallback={<HomeChatContentPending />}>
+              <Suspense fallback={<ChatLoadingIndicator transcript />}>
                 <HomeWelcome
                   owner={userKey}
                   firstName={user?.firstName}
@@ -3426,14 +3430,7 @@ function KovaGPT() {
                       composerVoiceMode === "voice" ? (
                         <div className="flex-1" aria-hidden="true" />
                       ) : (
-                        <div
-                          role="status"
-                          aria-label="Loading conversation"
-                          aria-busy="true"
-                          data-chat-transcript-loading="true"
-                        >
-                          <span className="sr-only">Loading conversation…</span>
-                        </div>
+                        <ChatLoadingIndicator transcript />
                       )
                     }
                   >

@@ -1,3 +1,4 @@
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { Button } from "@/components/ui/button";
 // Auth shim backed by Supabase auth.
 //
@@ -137,15 +138,23 @@ function AuthAuthorityGate({
         aria-busy="true"
         aria-hidden="true"
       >
-        <aside className="hidden w-64 shrink-0 rounded-r-3xl border-r border-border p-5 md:block">
-          <div className="mb-10 h-8 w-28 animate-pulse rounded-lg bg-muted" />
-          {[0, 1, 2, 3].map((item) => (
-            <div key={item} className="mb-4 h-9 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </aside>
-        <section className="flex min-w-0 flex-1 flex-col justify-end p-6">
-          <div className="mx-auto mb-6 h-32 w-full max-w-3xl animate-pulse rounded-3xl border border-border bg-muted/30" />
-        </section>
+        {showPhonePending ? (
+          <section className="flex min-w-0 flex-1 flex-col">
+            <ChatLoadingIndicator transcript />
+          </section>
+        ) : (
+          <>
+            <aside className="hidden w-64 shrink-0 rounded-r-3xl border-r border-border p-5 md:block">
+              <div className="mb-10 h-8 w-28 animate-pulse rounded-lg bg-muted" />
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="mb-4 h-9 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </aside>
+            <section className="flex min-w-0 flex-1 flex-col justify-end p-6">
+              <div className="mx-auto mb-6 h-32 w-full max-w-3xl animate-pulse rounded-3xl border border-border bg-muted/30" />
+            </section>
+          </>
+        )}
         {showPhonePending ? (
           <div className="kova-home-startup-surface w-full">{phonePendingSurface}</div>
         ) : null}

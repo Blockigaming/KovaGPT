@@ -60,7 +60,9 @@ for (const [tier, choices] of [
       await picker.click();
       const menu = page.getByRole("dialog", { name: "Select model", exact: true });
       await expect(menu).toBeVisible();
+      await menu.getByRole("button", { name: "Select model", exact: true }).click();
       await expect(menu.locator('[data-testid^="consumer-model-kova-"]')).toHaveCount(7);
+      await menu.getByRole("button", { name: "Back to response effort" }).click();
       const slider = menu.getByRole("slider", { name: "Response effort", exact: true });
       await expect(slider).toHaveAttribute("max", String(choices.length - 1));
       for (const [index, label] of choices.entries()) {
