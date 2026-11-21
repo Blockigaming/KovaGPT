@@ -493,9 +493,17 @@ public final class KovaChatActivity extends FragmentActivity {
         web.getSettings().setTextZoom(Math.round(configuration.fontScale * 100));
         updateSystemBars((View) web.getParent());
     }
+    @Override protected void onStart() {
+        super.onStart();
+        if (web != null) signal("kova-native-foreground");
+    }
     @Override protected void onStop() {
-        signal("kova-native-audio-interruption");
-        if (!verifying && getPreferences(MODE_PRIVATE).getBoolean(LOCK, false)) setLocked(true);
+        if (!verifying && getPreferences(MODE_PRIVATE).getBoolean(LOCK, false)) {
+            signal("kova-native-audio-interruption");
+            setLocked(true);
+        } else {
+            signal("kova-native-background");
+        }
         super.onStop();
     }
     @Override protected void onSaveInstanceState(Bundle state) {

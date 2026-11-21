@@ -218,6 +218,7 @@ export function ComposerVoiceDialog({
   const closing = useRef(false);
   const generation = useRef(0);
   const phaseRef = useRef<Phase>("idle");
+  const nativeBackgrounded = useRef(false);
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -474,18 +475,30 @@ export function ComposerVoiceDialog({
       if (phaseRef.current !== "idle")
         failOperation("Audio was interrupted. Start again when your microphone is available.");
     };
-    const onVisibilityChange = () => {
-      if (
-        document.visibilityState === "hidden" &&
-        (phaseRef.current === "requesting" || phaseRef.current === "recording")
-      ) {
+    const stopHiddenCapture = () => {
+      if (phaseRef.current === "requesting" || phaseRef.current === "recording") {
         failOperation("Microphone capture stopped when you left the app. Start again to continue.");
       }
     };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") stopHiddenCapture();
+    };
+    const onBackground = () => {
+      nativeBackgrounded.current = true;
+      stopHiddenCapture();
+    };
+    const onForeground = () => {
+      nativeBackgrounded.current = false;
+    };
     window.addEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+    window.addEventListener("kova-native-background", onBackground);
+    window.addEventListener("kova-native-foreground", onForeground);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      nativeBackgrounded.current = false;
       window.removeEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+      window.removeEventListener("kova-native-background", onBackground);
+      window.removeEventListener("kova-native-foreground", onForeground);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [open, failOperation]);
@@ -632,7 +645,10 @@ export function ComposerVoiceDialog({
           // Only the shared manager's current natural-ended receipt advances
           // the explicit session. Stop, stale sink callbacks and byte completion
           // cannot request another microphone turn.
-          if (nativeKovaPlatform() === "ios" && document.visibilityState !== "visible") {
+          if (
+            nativeKovaPlatform() &&
+            (nativeBackgrounded.current || document.visibilityState !== "visible")
+          ) {
             voiceSessionActive.current = false;
             return;
           }

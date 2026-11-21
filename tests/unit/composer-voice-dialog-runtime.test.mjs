@@ -1791,6 +1791,17 @@ test("iOS Voice lets an active reply finish while hidden without reopening the m
   f.unmount();
 });
 
+test("Android background lifecycle keeps a submitted reply and prevents microphone restart", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "android" });
+  const { speech, sink } = await voiceReply(f);
+  f.dispatch({ type: "kova-native-background" });
+  assert.equal(speech.init.signal.aborted, false);
+  sink.options.onEnded();
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1);
+  f.unmount();
+});
+
 test("native Voice stops active microphone capture when hidden", async () => {
   const f = fixture({ mode: "voice" }, { nativePlatform: "ios" });
   await f.ready();
