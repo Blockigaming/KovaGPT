@@ -202,9 +202,9 @@ struct KovaChatWebView: UIViewRepresentable {
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "kovagpt-native") {
                 [weak self] callback, _ in
                 Task { @MainActor in
-                    guard let self, googleSessionID == id else { return }
-                    googleSessionID = nil
-                    googleSession = nil
+                    guard let self, self.googleSessionID == id else { return }
+                    self.googleSessionID = nil
+                    self.googleSession = nil
                     if let callback { KovaLaunch.shared.completeGoogleSignIn(callback) }
                 }
             }
