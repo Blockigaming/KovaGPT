@@ -374,7 +374,8 @@ test("touch hold opens the chat menu without opening the conversation", async ({
   await expect(drawer).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Rename" })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Move to project" })).toBeVisible();
-  await expect(page.getByText("Shortcut fixture", { exact: true })).toBeHidden();
+  await expect(menu.getByText("Shortcut fixture", { exact: true })).toBeVisible();
+  await expect(page.locator(".kova-held-chat-backdrop")).toBeVisible();
   await menu.getByRole("menuitem", { name: "Rename" }).tap();
   await expect(page.getByRole("dialog", { name: "Rename chat" })).toBeVisible();
 });

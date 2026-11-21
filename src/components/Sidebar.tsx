@@ -44,6 +44,7 @@ import {
   X,
   UserRound,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -107,6 +108,25 @@ const ChatProjectDialog = lazy(() =>
     default: module.ChatProjectDialog,
   })),
 );
+
+function HeldChatPreview({ conversation }: { conversation: Conversation }) {
+  const message = conversation.messages
+    .slice()
+    .reverse()
+    .find((entry) => entry.content.trim() || entry.attachments?.length);
+  return (
+    <div className="kova-held-chat-preview">
+      <strong>{conversation.title}</strong>
+      {message?.content && <p>{message.content.slice(0, 1200)}</p>}
+      {message?.attachments?.slice(0, 2).map((attachment, index) => (
+        <span key={index}>
+          <FileText size={16} />
+          {attachment.kind === "image" ? "Image" : attachment.name}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function isMobileViewport() {
   return typeof window !== "undefined" && window.matchMedia(SIDEBAR_DRAWER_QUERY).matches;
@@ -1003,6 +1023,8 @@ export function Sidebar({
     .filter((conversation) => !conversation.pinned)
     .sort((a, b) => b.updatedAt - a.updatedAt);
 
+  const heldMenu =
+    mobileViewport && mobileChatMenuId !== null && heldChatRef.current === mobileChatMenuId;
   const chatRow = (conversation: Conversation) => (
     <div
       key={conversation.id}
@@ -1111,6 +1133,16 @@ export function Sidebar({
           <Pin aria-hidden="true" fill={conversation.pinned ? "currentColor" : "none"} />
         </button>
       ) : null}
+      {heldMenu &&
+        mobileChatMenuId === conversation.id &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            className="kova-held-chat-backdrop"
+            onClick={() => setMobileChatMenuId(null)}
+          />,
+          document.body,
+        )}
       <DropdownMenu
         modal={false}
         open={mobileViewport ? mobileChatMenuId === conversation.id : undefined}
@@ -1142,6 +1174,7 @@ export function Sidebar({
           sideOffset={mobileViewport ? 10 : 14}
           collisionPadding={12}
           className="kova-sidebar-chat-menu"
+          data-held-chat={(heldMenu && mobileChatMenuId === conversation.id) || undefined}
           data-sidebar-menu-placement="floating"
           onInteractOutside={(event) => {
             // Releasing a touch can focus the held row after the menu opens.
@@ -1166,6 +1199,9 @@ export function Sidebar({
               );
           }}
         >
+          {heldMenu && mobileChatMenuId === conversation.id && (
+            <HeldChatPreview conversation={conversation} />
+          )}
           {onRename ? (
             <DropdownMenuItem onClick={() => beginRename(conversation)}>
               <Pencil aria-hidden="true" />
