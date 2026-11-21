@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "status": "not_benchmarked",
+  "scope": "All three original Kova foundations; combined visible customer output",
+  "totalVisibleTokensPerSecond": 120,
+  "expectedArrivalRatePerSecond": 0.05,
+  "fairShareCases": [
+    { "concurrentChats": 1, "visibleTokensPerSecondPerChat": 120 },
+    { "concurrentChats": 2, "visibleTokensPerSecondPerChat": 60 },
+    { "concurrentChats": 4, "visibleTokensPerSecondPerChat": 30 }
+  ],
+  "benchmark": {
+    "models": ["kova-argon-4.6", "kova-neon-4.6", "kova-xenon-5"],
+    "testEachModelAndMixedModels": true,
+    "startWithMode": "instant",
+    "thenTestAllSixModesAndOverlappingUltraReviews": true,
+    "inputTokenLengths": [1024, 8192],
+    "requestedVisibleOutputTokens": 512,
+    "minimumCompletedSamplesPerCase": 20,
+    "measureWarmAndColdSeparately": true,
+    "reportTimeToFirstVisibleTokenSeparately": true,
+    "tokenCounting": "Use the exact foundation tokenizer on visible delta.content; do not substitute character or word counts",
+    "excludedFromVisibleRate": ["input tokens", "hidden reasoning", "private reviewer output"],
+    "includedInCapacityAndCost": [
+      "prefill",
+      "hidden reasoning",
+      "all reviewers",
+      "retries",
+      "idle time",
+      "storage"
+    ],
+    "doNotSubstituteForSingleUserRate": [
+      "large-batch aggregate throughput",
+      "tokens per GPU across many users",
+      "artificial client animation speed"
+    ],
+    "record": [
+      "loaded checkpoint hashes",
+      "runtime image digest",
+      "GPU model/count",
+      "system RAM",
+      "quantization",
+      "context limit",
+      "per-chat decode rate",
+      "aggregate visible rate",
+      "time to first visible token",
+      "errors",
+      "fairness",
+      "complete hourly cost"
+    ]
+  },
+  "selectionRule": "Select the lowest-cost available Azure configuration only after its measured per-chat and aggregate visible rates meet every fair-share case without changing the original foundations",
+  "activationGates": [
+    "approved budget",
+    "GPU quota and capacity",
+    "license acceptance",
+    "weight integrity",
+    "quality acceptance for any quantization change",
+    "private endpoint verification",
+    "successful throughput benchmark"
+  ]
+}
