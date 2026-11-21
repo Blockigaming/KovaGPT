@@ -587,7 +587,7 @@ for (const tier of ["plus", "pro"] as const) {
     await expect(slider).toHaveAttribute("aria-valuetext", "High");
     await expect(picker).toHaveAttribute(
       "aria-label",
-      "Choose model and effort, Kova Argon 4.6 High",
+      "Choose model and effort, Kova Xenon 5 High",
     );
     await expect(picker).toContainText("High");
     await page.keyboard.press("Escape");

@@ -3,7 +3,7 @@ import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
 import "./prompt-activity.css";
 import { PromptMessage } from "./PromptMessage";
-import { formatResponseTime, StreamingStatus } from "./StreamingStatus";
+import { ChatLoadingIndicator, formatResponseTime } from "./StreamingStatus";
 import { SafeResponseAdvertisement } from "./SafeResponseAdvertisement";
 import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
@@ -22,7 +22,6 @@ import {
   Copy,
   Sparkles,
   Check,
-  ImageIcon,
   Loader2,
   Bookmark,
   Brain,
@@ -123,8 +122,6 @@ function cleanAssistantText(text: string): string {
 function ChatMessageInner({
   message,
   streaming,
-  streamingStartedAt,
-  onSkipThinking,
   onFollowUp,
   interactiveDisabledReason,
   onDraftPrompt,
@@ -150,8 +147,6 @@ function ChatMessageInner({
   showAdvertisement?: boolean;
   streaming?: boolean;
   /** Request start time survives chat navigation while the response remains active. */
-  streamingStartedAt?: number;
-  onSkipThinking?: () => void;
   /** Executes an explicit editor improvement request. */
   onFollowUp?: (prompt: string) => boolean | void;
   interactiveDisabledReason?: string;
@@ -228,12 +223,6 @@ function ChatMessageInner({
   };
   const copyFallbackReturnUrlRef = useRef<string | undefined>(undefined);
   useEffect(() => setCopyFallbackOpen(false), [principal, message.id]);
-  const localStreamingStartedAtRef = useRef<number | null>(null);
-  if (!streaming) localStreamingStartedAtRef.current = null;
-  else if (localStreamingStartedAtRef.current === null)
-    localStreamingStartedAtRef.current = Date.now();
-  const resolvedStreamingStartedAt =
-    streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
   const waitingForFirstToken = Boolean(streaming && !message.content && !message.pendingImage);
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -892,9 +881,7 @@ function ChatMessageInner({
       ) : (
         <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
           <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
-            {streaming && !waitingForFirstToken ? (
-              <StreamingStatus startedAt={resolvedStreamingStartedAt} />
-            ) : !streaming && typeof message.workedMs === "number" ? (
+            {!streaming && typeof message.workedMs === "number" ? (
               <p className="kova-response-work-time">
                 Worked for {formatResponseTime(message.workedMs / 1000)}
               </p>
@@ -918,20 +905,9 @@ function ChatMessageInner({
               data-waiting-for-response={waitingForFirstToken || undefined}
             >
               {message.pendingImage && !message.content ? (
-                <div
-                  role="status"
-                  className="flex min-h-24 items-center gap-3 rounded-xl border border-border bg-muted p-4"
-                >
-                  <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  <span>Generating image…</span>
-                </div>
+                <ChatLoadingIndicator label="Generating image" />
               ) : waitingForFirstToken ? (
-                <StreamingStatus
-                  activities={message.activities}
-                  startedAt={resolvedStreamingStartedAt}
-                  onSkipThinking={onSkipThinking}
-                />
+                <ChatLoadingIndicator label="Waiting for response" />
               ) : (
                 (() => {
                   const markdown = hasWidget ? (

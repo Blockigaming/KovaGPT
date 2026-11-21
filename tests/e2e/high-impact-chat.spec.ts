@@ -163,7 +163,9 @@ test("stopping before the first token preserves an honest response with immediat
     });
   });
   await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.getByText("Generating image…", { exact: true })).toBeVisible();
+  await expect(
+    page.locator("[data-chat-loading]").filter({ hasText: "Generating image" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
   await page.evaluate(() =>
     (
@@ -173,7 +175,9 @@ test("stopping before the first token preserves an honest response with immediat
 
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
-  await expect(page.getByText("Generating image…", { exact: true })).toHaveCount(0);
+  await expect(
+    page.locator("[data-chat-loading]").filter({ hasText: "Generating image" }),
+  ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Remove Search the web" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
@@ -286,7 +290,7 @@ test("a late stopped request cannot clear the streaming state of its retry", asy
   );
 });
 
-test("a longer first-token wait stays calm, truthful, and stoppable", async ({
+test("a longer first-token wait shows one chat loader and remains stoppable", async ({
   page,
 }, testInfo) => {
   await installAuthenticatedFixture(page);
@@ -326,14 +330,13 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Work through this carefully");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  const status = page.locator(".kova-thinking-indicator");
-  await page.clock.runFor(1_000);
-  await expect(status).toContainText(/Working for \d+s/);
-  await expect(status).toContainText("Read example.org");
-  await page.clock.runFor(8_000);
-  await expect(status).toHaveAttribute("data-wait-stage", "continued");
-  await page.clock.runFor(22_000);
-  await expect(status).toHaveAttribute("data-wait-stage", "extended");
+  const status = page.locator("[data-chat-loading]");
+  await expect(status).toHaveCount(1);
+  await expect(status).toBeVisible();
+  await expect(status).toHaveText("Waiting for response");
+  await expect(page.getByText(/^Working for/)).toHaveCount(0);
+  await page.clock.runFor(30_000);
+  await expect(status).toHaveCount(1);
 
   if (testInfo.project.name === "desktop-1440x900") {
     await page.getByRole("button", { name: "New chat", exact: true }).click();
@@ -341,11 +344,12 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
       .getByRole("button", { name: /^Open chat / })
       .first()
       .click();
-    await expect(status).toHaveAttribute("data-wait-stage", "extended");
+    await expect(status).toHaveCount(1);
   }
   await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
+  await expect(status).toHaveCount(0);
 });
 
 async function startAttachedConversation(

@@ -241,6 +241,7 @@ export function ChatInput({
   onModeChange,
   hostedModel,
   onHostedModelChange,
+  recommendedModelSelection = false,
   userTier = "free",
   canChangeAgent = true,
   showModelStatus = false,
@@ -296,7 +297,8 @@ export function ChatInput({
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
   hostedModel?: ConsumerModelId;
-  onHostedModelChange?: (model: ConsumerModelId) => void;
+  onHostedModelChange?: (model: ConsumerModelId, recommended?: boolean) => void;
+  recommendedModelSelection?: boolean;
   userTier?: Tier;
   /** Guests use the basic agent and cannot change versions or reasoning levels. */
   canChangeAgent?: boolean;
@@ -2530,6 +2532,7 @@ export function ChatInput({
               <ConsumerModelSelector
                 value={hostedModel}
                 onChange={onHostedModelChange}
+                recommendedSelection={recommendedModelSelection}
                 mode={mode}
                 onModeChange={onModeChange}
                 tier={userTier}

@@ -34,6 +34,7 @@ function fixture() {
       "@/integrations/supabase/client",
       "@/components/auth/AuthDialog",
       "@/components/auth/MfaChallengeDialog",
+      "@/components/StreamingStatus",
       "@/components/LogoutConfirmDialog",
       "@/lib/oauth-session",
       "@/lib/auth-validation-policy.mjs",

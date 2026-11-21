@@ -26,8 +26,8 @@
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
   min-height: 0;
-  padding-block-start: 6px;
-  gap: 2px;
+  padding-block: 8px;
+  gap: 4px;
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-input-region {
   min-height: 26px;
@@ -50,7 +50,9 @@
       display: grid;
       grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: var(--composer-compact-gap);
+      padding-inline: 8px;
+      column-gap: var(--composer-compact-gap);
+      row-gap: 8px;
 
       &:has(.spec400-composer-media) {
         grid-template-areas:
@@ -62,6 +64,9 @@
       }
       .spec400-input-region {
         padding-inline: 0;
+      }
+      .spec400-composer-tools {
+        align-self: center;
       }
     }
   }
@@ -145,7 +150,7 @@
   position: relative;
   display: flex;
   justify-content: space-between;
-  align-items: end;
+  align-items: center;
   column-gap: var(--composer-action-gap);
   flex: none;
   margin-top: 0;
@@ -153,12 +158,12 @@
 .spec400-composer-tools {
   grid-area: tools;
   flex: none;
-  align-self: end;
+  align-self: center;
   flex-wrap: nowrap;
 }
 .spec400-composer-trailing {
   position: relative;
-  align-items: end;
+  align-items: center;
   grid-area: trailing;
   flex: 0 1 auto;
   flex-wrap: wrap;
@@ -792,7 +797,7 @@
 .spec400-composer-dock > .spec400-chat-input {
   max-width: none;
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
   padding-inline: 4px;
   padding-top: 4px;
 }
@@ -1970,38 +1975,48 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   color: var(--foreground);
 }
 
-/* Reserve the transcript's space while the conversation loads. */
-[data-chat-transcript-loading] {
-  display: flex;
+/* Keep the loading lines aligned to the transcript reading column. */
+.kova-chat-loading[data-chat-transcript-loading] {
   flex: 1;
-  flex-direction: column;
   min-height: 0;
-  gap: 1rem;
+  padding: clamp(28px, 6dvh, 68px) 20px 16px;
   overflow: hidden;
-  padding: 1rem 1.25rem;
 }
-[data-chat-transcript-loading]::before,
-[data-chat-transcript-loading]::after {
+.kova-chat-loading-lines {
+  display: grid;
+  gap: 8px;
+  width: min(100%, var(--kova-reading-width, 768px));
+  margin-inline: auto;
+}
+.kova-chat-loading-lines::before,
+.kova-chat-loading-lines::after {
   content: "";
-  min-height: 0;
+  width: min(53%, 328px);
+  height: 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 9%, var(--background));
 }
-[data-chat-transcript-loading]::before {
-  flex: 1;
-  width: 50%;
-  max-height: 3rem;
-  margin-inline-start: auto;
-  border-radius: var(--kova-radius-message);
-  background: var(--muted);
+.kova-chat-loading-lines::after {
+  width: min(46%, 286px);
 }
-[data-chat-transcript-loading]::after {
-  flex: 2;
-  width: 75%;
-  max-height: 4rem;
-  background: repeating-linear-gradient(to bottom, var(--muted) 0 8px, transparent 8px 20px);
+@keyframes kova-chat-loading-shimmer {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -130% 0;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-  [data-chat-transcript-loading]::before,
-  [data-chat-transcript-loading]::after {
-    animation: var(--animate-pulse);
+  .kova-chat-loading-lines::before,
+  .kova-chat-loading-lines::after {
+    background-image: linear-gradient(
+      100deg,
+      transparent 22%,
+      color-mix(in srgb, var(--foreground) 9%, transparent) 50%,
+      transparent 78%
+    );
+    background-size: 240% 100%;
+    animation: kova-chat-loading-shimmer 1.8s ease-in-out infinite;
   }
 }

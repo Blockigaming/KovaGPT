@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { Brain, ChevronDown, RotateCcw, Zap } from "lucide-react";
+import { Brain, ChevronDown, RotateCcw } from "lucide-react";
 import {
   MODES,
   isModeAllowedForTier,
@@ -104,7 +104,7 @@ export function ResponsiveModelSelector({
   const options = (
     <div className="kova-effort-picker">
       <div className="kova-effort-header">
-        <Zap aria-hidden="true" className="kova-effort-icon" />
+        <span aria-hidden="true" />
         <div className="min-w-0 text-center">
           <div className="text-sm font-semibold leading-5">{modeDisplayLabel(current)}</div>
           {modelLabel && <div className="truncate text-xs text-muted-foreground">{modelLabel}</div>}
@@ -263,8 +263,8 @@ export function ResponsiveModelSelector({
             role="dialog"
             aria-label="Choose response effort"
             data-slot="model-selector-content"
-            side={topbar ? "bottom" : "top"}
-            align="start"
+            side="bottom"
+            align={topbar ? "start" : "end"}
             sideOffset={8}
             collisionPadding={12}
             className="kova-model-menu kova-effort-popover"

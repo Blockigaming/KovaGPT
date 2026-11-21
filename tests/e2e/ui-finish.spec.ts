@@ -95,6 +95,45 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   expect(b!.x).toBeGreaterThanOrEqual(0);
   expect(b!.x + b!.width).toBeLessThanOrEqual(viewport.width + 1);
 });
+test("desktop profile Help opens beside the sidebar at the account menu height", async ({
+  page,
+}) => {
+  test.skip(await usesSidebarDrawer(page), "Desktop submenu");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const expand = page.getByRole("button", { name: "Expand sidebar", exact: true });
+  if (await expand.isVisible()) await expand.click();
+  const sidebar = page.locator("#kova-primary-navigation");
+  await sidebar.getByRole("button", { name: "Account menu", exact: true }).click();
+  const account = page.locator(".kova-profile-menu");
+  const help = account.getByRole("menuitem", { name: "Help", exact: true });
+  await help.click();
+  const submenu = page.getByRole("menu", { name: "Help", exact: true });
+  await expect(submenu.getByRole("menuitem")).toHaveCount(8);
+  await expect
+    .poll(async () => {
+      const parent = (await account.boundingBox())!;
+      const flyout = (await submenu.boundingBox())!;
+      return Math.abs(parent.height - flyout.height);
+    })
+    .toBeLessThanOrEqual(1);
+  const parent = (await account.boundingBox())!;
+  const flyout = (await submenu.boundingBox())!;
+  const edge = (await sidebar.boundingBox())!;
+  const button = (await help.boundingBox())!;
+  const idealTop = button.y + (button.height - flyout.height) / 2;
+  const clampedTop = Math.max(
+    8,
+    Math.min(idealTop, page.viewportSize()!.height - 8 - flyout.height),
+  );
+  expect(flyout.x).toBeGreaterThanOrEqual(Math.max(parent.x + parent.width, edge.x + edge.width));
+  expect(Math.abs(clampedTop - flyout.y)).toBeLessThanOrEqual(2);
+  await submenu.getByRole("menuitem", { name: "Release notes" }).click();
+  await expect(page).toHaveURL(/\/changelog$/);
+});
+
 for (const tier of ["free", "plus", "pro"] as const)
   test(`${tier} settings display percentages from metered API cost`, async ({ page }) => {
     await fixture(page, "dark", true, false, tier);

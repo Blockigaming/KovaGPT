@@ -10,6 +10,8 @@ function fixture(overrides = {}) {
     value: selection.DEFAULT_CONSUMER_MODEL,
     mode: "instant",
     tier: "free",
+    recommendedSelection:
+      (overrides.value ?? selection.DEFAULT_CONSUMER_MODEL) === selection.DEFAULT_CONSUMER_MODEL,
     disabled: false,
     isLoaded: true,
     isSignedIn: true,
@@ -21,9 +23,10 @@ function fixture(overrides = {}) {
     (module) => () =>
       module.ConsumerModelSelector({
         ...config,
-        onChange(id) {
+        onChange(id, recommended = false) {
           changes.push(["model", id]);
           config.value = id;
+          config.recommendedSelection = recommended;
         },
         onModeChange(mode) {
           changes.push(["effort", mode]);
@@ -38,10 +41,10 @@ function fixture(overrides = {}) {
           modesForTier: (tier) =>
             CONSUMER_EFFORTS.filter((effort) => isModeAllowedForTier(tier, effort.id)),
         },
+        "./MobileIntelligence": { MobileIntelligence: "intelligence" },
         "@/components/auth/ClerkSafe": { useUser: () => config },
         "@/components/ui/popover": {
           Popover: "popover",
-          PopoverAnchor: "popover-anchor",
           PopoverContent: "popover-content",
           PopoverTrigger: "popover-trigger",
         },
@@ -59,13 +62,18 @@ for (const [tier, max, last] of [
   test(`${tier} picker exposes its models and range without applying a choice on render`, () => {
     const f = fixture({ tier });
     assert.deepEqual(f.changes, []);
-    assert.match(f.text(), /DefaultRecommended · Kova Argon 4\.6/);
     const slider = f.find("input", (node) => node.props.type === "range");
     assert.equal(slider.props.max, max);
     assert.equal(slider.props["aria-valuetext"], "Lite");
     slider.props.onChange({ currentTarget: { valueAsNumber: max } });
-    assert.deepEqual(f.changes, [["effort", last]]);
+    assert.deepEqual(f.changes, [
+      ["model", "kova-xenon-6.1"],
+      ["effort", last],
+    ]);
     for (const model of selection.CONSUMER_MODELS) {
+      f.render();
+      const toggle = f.find("button", (node) => node.props["aria-expanded"] === false);
+      toggle.props.onClick();
       f.render();
       const button = f.find(
         "button",
@@ -105,13 +113,17 @@ test("the trigger always names the selected Kova model, version and allowed effo
 
 test("Default applies the recommended model and Lite through the choice callbacks", async () => {
   const f = fixture({ tier: "pro", value: "kova-xenon-5", mode: "ultra" });
-  await f.click("DefaultRecommended · Kova Argon 4.6");
+  f.find(
+    "button",
+    (node) => node.props["aria-label"] === "Reset to recommended model and Lite effort",
+  ).props.onClick();
+  f.render();
   assert.deepEqual(f.changes, [
     ["model", selection.DEFAULT_CONSUMER_MODEL],
     ["effort", "instant"],
   ]);
   const checked = f.nodes().filter((node) => node.props?.["aria-pressed"] === true);
-  assert.equal(checked.length, 1);
+  assert.equal(checked.length, 0);
   assert.equal(f.find("input", (node) => node.props.type === "range").props.value, 0);
 });
 

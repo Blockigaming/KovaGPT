@@ -44,6 +44,7 @@ for (const [tier, selected, label, permitted] of [
         "aria-valuetext",
         "Lite",
       );
+      await picker.getByRole("button", { name: "Select model", exact: true }).click();
       for (const [index, id] of products.entries()) {
         const button = picker.getByTestId(`consumer-model-${id}`);
         await expect(button).toBeVisible();
@@ -51,7 +52,8 @@ for (const [tier, selected, label, permitted] of [
         else await expect(button).toBeDisabled();
       }
       await picker.getByTestId(`consumer-model-${selected}`).click();
-      await expect(picker).toHaveCount(0);
+      await expect(picker.getByRole("slider")).toBeVisible();
+      await page.keyboard.press("Escape");
       await expect(trigger).toHaveAttribute("aria-label", `Choose model and effort, ${label} Lite`);
       await expect(page.getByRole("button", { name: "Thinking", exact: true })).toHaveCount(0);
     }
@@ -144,8 +146,11 @@ test("keyboard model selection keeps the composer draft and makes no model reque
   await page.keyboard.press("Enter");
   const picker = page.getByRole("dialog", { name: "Select model", exact: true });
   await expect(picker).toBeVisible();
+  await picker.getByRole("button", { name: "Select model", exact: true }).press("Enter");
   await picker.getByTestId("consumer-model-kova-xenon-5").focus();
   await page.keyboard.press("Enter");
+  await expect(picker.getByRole("button", { name: "Select model", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await expect(composer).toHaveValue("Keep this draft while choosing Xenon.");
   expect(sends).toBe(0);
@@ -178,7 +183,9 @@ for (const [tier, count] of [
     for (const model of products) {
       await page.getByTestId("model-selector-trigger").click();
       const picker = page.getByRole("dialog", { name: "Select model", exact: true });
+      await picker.getByRole("button", { name: "Select model", exact: true }).click();
       await picker.getByTestId(`consumer-model-${model}`).click();
+      await page.keyboard.press("Escape");
       await expect(picker).toBeHidden();
       for (const [index, mode] of efforts.entries()) {
         await page.getByTestId("model-selector-trigger").click();

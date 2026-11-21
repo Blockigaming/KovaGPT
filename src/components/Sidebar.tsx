@@ -25,6 +25,13 @@ import {
   LogOut,
   Map,
   CircleHelp,
+  Bug,
+  Download,
+  FileText,
+  Info,
+  Keyboard,
+  ListChecks,
+  ShieldCheck,
   Copy as CopyIcon,
   Ellipsis,
   Pin,
@@ -50,6 +57,10 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChatProjectSubmenu } from "@/components/ChatProjectSubmenu";
@@ -1232,6 +1243,83 @@ export function Sidebar({
             : "Free"
         : "Plan unavailable";
 
+  const [helpMenuGeometry, setHelpMenuGeometry] = useState({ height: 0, alignOffset: 0 });
+  const matchAccountMenuHeight = useCallback((submenu: HTMLDivElement | null) => {
+    if (!submenu) return;
+    const triggerId = submenu.getAttribute("aria-labelledby");
+    const trigger = triggerId ? document.getElementById(triggerId) : null;
+    const accountMenu = trigger?.closest<HTMLElement>(".kova-profile-menu");
+    if (!trigger || !accountMenu) return;
+    const syncHeight = () => {
+      const height = accountMenu.offsetHeight;
+      const alignOffset = (trigger.offsetHeight - height) / 2;
+      setHelpMenuGeometry((current) =>
+        current.height === height && current.alignOffset === alignOffset
+          ? current
+          : { height, alignOffset },
+      );
+    };
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(accountMenu);
+    observer.observe(trigger);
+    return () => observer.disconnect();
+  }, []);
+
+  const renderHelpSubmenu = () => (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <CircleHelp aria-hidden="true" />
+        Help
+      </DropdownMenuSubTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent
+          alignOffset={helpMenuGeometry.alignOffset}
+          sideOffset={24}
+          style={{ height: helpMenuGeometry.height || undefined }}
+          className="kova-profile-help-menu"
+          ref={matchAccountMenuHeight}
+        >
+          <DropdownMenuItem onSelect={onOpenHelp}>
+            <CircleHelp aria-hidden="true" /> Help center
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onOpenSettings("data")}>
+            <ShieldCheck aria-hidden="true" /> Privacy center
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/changelog">
+              <ListChecks aria-hidden="true" /> Release notes
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/download">
+              <Download aria-hidden="true" /> Download apps
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onOpenSettings("shortcuts")}>
+            <Keyboard aria-hidden="true" /> Keyboard shortcuts
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link to="/terms">
+              <FileText aria-hidden="true" /> Terms of Service
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/privacy">
+              <Info aria-hidden="true" /> Privacy Policy
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/contact-support">
+              <Bug aria-hidden="true" /> Report a bug
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuSubContent>
+      </DropdownMenuPortal>
+    </DropdownMenuSub>
+  );
+
   const renderAccountMenu = (rail = false) => (
     <DropdownMenuContent
       side={rail ? "right" : "top"}
@@ -1286,15 +1374,19 @@ export function Sidebar({
         Settings
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onSelect={() => {
-          cancelPendingSelection();
-          onOpenHelp();
-        }}
-      >
-        <CircleHelp aria-hidden="true" />
-        Help
-      </DropdownMenuItem>
+      {mobileViewport ? (
+        <DropdownMenuItem
+          onSelect={() => {
+            cancelPendingSelection();
+            onOpenHelp();
+          }}
+        >
+          <CircleHelp aria-hidden="true" />
+          Help
+        </DropdownMenuItem>
+      ) : (
+        renderHelpSubmenu()
+      )}
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();

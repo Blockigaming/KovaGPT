@@ -976,15 +976,6 @@
   background: var(--accent);
 }
 
-.kova-home-loading {
-  display: grid;
-  flex: 1;
-  min-height: 300px;
-  place-items: center;
-  color: var(--muted-foreground);
-  font-size: 14px;
-}
-
 /* Protected routes show skeleton geometry during authentication, never an
    opaque overlay obscuring content that is ready to paint. */
 .kova-session-shell {
@@ -1219,13 +1210,6 @@
   align-items: start;
 }
 
-.kova-effort-icon {
-  width: 14px;
-  height: 14px;
-  margin: 7px auto;
-  color: var(--muted-foreground);
-}
-
 .kova-effort-reset {
   display: grid;
   width: 28px;
@@ -1451,16 +1435,6 @@
   .kova-consumer-effort .kova-effort-control[data-dragging="false"] .kova-consumer-effort-thumb {
     transition: left 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-}
-
-/* Keep the open effort slider stationary when a longer selection wraps the toolbar. */
-.kova-consumer-model-anchor {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: calc(2 * (var(--composer-action-size) + var(--composer-action-gap)));
-  inline-size: 0;
-  block-size: var(--composer-action-size);
-  pointer-events: none;
 }
 
 /* Keep the full model name legible and the highlight slimmer than the touch target. */

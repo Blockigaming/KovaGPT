@@ -9,7 +9,6 @@
 .kova-phone-destination,
 .kova-phone-continue-working,
 .kova-home-startup-surface,
-.kova-phone-home-placeholder,
 .spec400-inline-project-context[data-desktop-tray="true"] {
   display: none;
 }
@@ -24,16 +23,6 @@
 
   [data-kova-entry-fallback] > :is(aside, section) {
     display: none;
-  }
-
-  .kova-phone-home-placeholder {
-    display: contents;
-  }
-
-  .kova-assistant .kova-home-loading {
-    position: absolute;
-    min-height: 0;
-    clip-path: inset(50%);
   }
 
   .kova-home-composer-placeholder .spec400-composer-toolbar {
@@ -123,7 +112,7 @@
 
   .kova-assistant .kova-empty-composer .spec400-composer {
     --chat-composer-corner: 21px;
-    --composer-text-inset: 8px;
+    --composer-text-inset: 6px;
     min-height: 0 !important;
     padding-block-start: 4px;
     gap: 2px;
@@ -140,8 +129,8 @@
 
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
     --chat-composer-corner: 26px;
-    --composer-text-inset: 9px;
-    padding-block-start: 4px;
+    --composer-text-inset: 6px;
+    padding-block: 8px;
   }
 
   .kova-assistant[data-compact-chat-home] .kova-empty-composer .kova-composer-tray {

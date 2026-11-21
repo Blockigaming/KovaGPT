@@ -30,6 +30,68 @@ async function openResource(
   return inAttachMenu ? page.getByRole("button", { name: "Attach", exact: true }) : trigger;
 }
 
+test("bottom composer keeps controls clear of the rounded edges", async ({ page }) => {
+  await fixture(page, "dark", true, false, "plus");
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Ready to check composer spacing."}}]}\n\ndata: [DONE]\n\n',
+    }),
+  );
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Open a conversation");
+  await page.getByTestId("send-button").click();
+  await expect(page.getByText("Ready to check composer spacing.")).toBeVisible();
+  const frame = page.locator('[data-composer-surface="conversation"] .spec400-composer');
+  const input = frame.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(input).toBeVisible();
+
+  for (const draft of ["", "A short draft", "First line\nSecond line\nThird line"]) {
+    if (draft) await input.fill(draft);
+    const geometry = await frame.evaluate((surface) => {
+      const frame = surface.getBoundingClientRect();
+      const controls = [
+        ...surface.querySelectorAll<HTMLElement>("textarea, .spec400-composer-toolbar button"),
+      ];
+      const visible = controls
+        .map((control) => control.getBoundingClientRect())
+        .filter((rect) => rect.width > 0 && rect.height > 0);
+      const c = (r: DOMRect) => r.top + r.height / 2;
+      return {
+        clearance: Math.min(
+          ...visible.map((r) =>
+            Math.min(
+              r.left - frame.left,
+              frame.right - r.right,
+              r.top - frame.top,
+              frame.bottom - r.bottom,
+            ),
+          ),
+        ),
+        overlaps: visible.some((a, index) =>
+          visible
+            .slice(index + 1)
+            .some(
+              (b) =>
+                a.left < b.right - 1 &&
+                a.right > b.left + 1 &&
+                a.top < b.bottom - 1 &&
+                a.bottom > b.top + 1,
+            ),
+        ),
+        inlineOffset:
+          getComputedStyle(surface).display === "grid"
+            ? Math.abs(c(visible[0]) - c(visible.at(-1)!))
+            : 0,
+      };
+    });
+    expect(geometry.clearance).toBeGreaterThanOrEqual(6);
+    expect(geometry.overlaps).toBe(false);
+    expect(geometry.inlineOffset).toBeLessThanOrEqual(1);
+  }
+});
+
 test("requested: topbar, prompt insets and exact attachment actions", async ({ page }, info) => {
   await start(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });

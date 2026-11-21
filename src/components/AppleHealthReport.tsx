@@ -342,36 +342,31 @@ function HealthMetric({
           >
             {selectedReading && readingText(selectedReading)}
           </p>
-          <details>
-            <summary className="cursor-pointer text-sm text-muted-foreground">
-              Daily readings · {days.length} of {range} days
-            </summary>
-            <table className="mt-2 w-full text-left text-sm">
-              <caption className="sr-only">Daily {metric.label.toLowerCase()}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col" className="text-right">
-                    {metric.label}
-                  </th>
+          <table className="mt-2 w-full text-left text-sm">
+            <caption className="sr-only">Daily {metric.label.toLowerCase()}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col" className="text-right">
+                  {metric.label}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {days.map(({ date, value }) => (
+                <tr key={date} className="border-t border-border">
+                  <td className="py-1.5">
+                    <time dateTime={date}>{date}</time>
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">
+                    {categoryLabels || metric.unit === "clock"
+                      ? format(value)
+                      : number.format(value)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {days.map(({ date, value }) => (
-                  <tr key={date} className="border-t border-border">
-                    <td className="py-1.5">
-                      <time dateTime={date}>{date}</time>
-                    </td>
-                    <td className="py-1.5 text-right tabular-nums">
-                      {categoryLabels || metric.unit === "clock"
-                        ? format(value)
-                        : number.format(value)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </details>
+              ))}
+            </tbody>
+          </table>
         </>
       )}
     </section>

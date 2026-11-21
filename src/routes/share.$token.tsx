@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
+import { ArrowRight } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { publicShareSnapshot, type PublicChatSnapshot } from "@/lib/public-chat-share-policy.mjs";
 export const Route = createFileRoute("/share/$token")({
@@ -62,10 +63,7 @@ function SharedChatPage() {
           </button>
         </section>
       ) : !data ? (
-        <section role="status">
-          <Loader2 aria-hidden className="animate-spin" />
-          Loading shared conversation…
-        </section>
+        <ChatLoadingIndicator label="Loading shared conversation" transcript />
       ) : (
         <section>
           <p className="kova-share-eyebrow">Shared conversation · Read only</p>

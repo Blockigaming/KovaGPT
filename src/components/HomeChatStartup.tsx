@@ -1,4 +1,5 @@
 import { AudioLines, MessageCircleOff, Mic, PanelLeft, Plus, SquarePen } from "lucide-react";
+import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 import { HomeChatFrame } from "@/components/HomeChatFrame";
 
 function HomeChatPlaceholder() {
@@ -40,19 +41,6 @@ function HomeChatPlaceholder() {
   );
 }
 
-export function HomeChatContentPending() {
-  return (
-    <>
-      <p className="kova-home-loading" role="status">
-        Loading
-      </p>
-      <div className="kova-phone-home-placeholder" aria-hidden="true" inert>
-        <HomeChatPlaceholder />
-      </div>
-    </>
-  );
-}
-
 // Paint the public geometry while account authority is unresolved. This shell
 // has no account data, inputs, or active controls.
 export function HomeChatStartup() {
@@ -81,6 +69,9 @@ export function HomeChatStartup() {
               </span>
             </div>
           </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-14 z-10">
+          <ChatLoadingIndicator transcript />
         </div>
         <HomeChatPlaceholder />
       </div>

@@ -192,7 +192,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
   // Account controls follow the new seven-option menu, not the retired
   // standalone Subscriptions item. Billing remains reachable via Upgrade plan.
-  const accountMenu = page.getByRole("menu");
+  const accountMenu = page.locator(".kova-profile-menu");
   await expect(accountMenu.getByText("Plus", { exact: true })).toBeVisible();
   for (const label of [
     "Upgrade plan",
@@ -204,7 +204,11 @@ test("sidebar search and all main destinations keep honest service states", asyn
   ]) {
     await expect(accountMenu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
   }
-  await accountMenu.getByRole("menuitem", { name: "Help", exact: true }).click();
+  const help = accountMenu.getByRole("menuitem", { name: "Help", exact: true });
+  await help.click();
+  if ((await help.getAttribute("aria-haspopup")) === "menu") {
+    await page.getByRole("menuitem", { name: "Help center", exact: true }).click();
+  }
   await expect(page).toHaveURL(/\/help$/);
   await expect(
     page.getByRole("main").getByRole("heading", { name: "How can we help?" }),

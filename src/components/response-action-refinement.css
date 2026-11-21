@@ -18,13 +18,6 @@
 .kova-conversation-scroll[data-chat-transcript] {
   scrollbar-gutter: stable;
 }
-.kova-thinking-indicator {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-height: 32px;
-}
 .kova-message-actions {
   display: flex;
   align-items: center;
@@ -293,7 +286,6 @@ body .kova-response-retry-menu[role="menu"] {
   font-size: var(--kova-reading-size, 1rem);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .kova-message .prose-chat[data-waiting-for-response] > .kova-thinking-indicator,
   .kova-message[data-streaming="true"] .prose-chat:not([data-waiting-for-response]) {
     animation: kova-response-appear 160ms ease-out both;
   }
