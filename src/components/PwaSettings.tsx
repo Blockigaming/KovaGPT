@@ -18,6 +18,11 @@ import {
   subscribeInstallPrompt,
   promptPwaInstall,
 } from "@/lib/pwa/install";
+import {
+  androidTaskPushEnabled,
+  clearAndroidTaskPush,
+  enableAndroidTaskPush,
+} from "@/lib/pwa/android-device";
 import { nativeKovaPlatform, sendNativeKovaMessage } from "@/lib/kova-native";
 type Status = {
   ready: boolean;
@@ -54,10 +59,62 @@ export function PwaSettings({ ownerId }: { ownerId: string | null }) {
             </Button>
           )}
         </div>
+        {platform === "android" && ownerId && (
+          <AndroidTaskNotificationSettings key={ownerId} ownerId={ownerId} />
+        )}
       </section>
     );
   }
   return <DeviceSettings key={ownerId ?? "signed-out"} ownerId={ownerId} />;
+}
+function AndroidTaskNotificationSettings({ ownerId }: { ownerId: string }) {
+  const [enabled, setEnabled] = useState(() => androidTaskPushEnabled(ownerId));
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, ownerId)) return;
+      pending.current?.abort();
+      setEnabled(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => {
+      pending.current?.abort();
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    };
+  }, [ownerId]);
+  async function change() {
+    if (pending.current) return;
+    const controller = new AbortController();
+    pending.current = controller;
+    setBusy(true);
+    setError("");
+    try {
+      if (enabled) await clearAndroidTaskPush(ownerId);
+      else await enableAndroidTaskPush(ownerId, controller.signal);
+      if (!controller.signal.aborted) setEnabled(!enabled);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setError(error instanceof Error ? error.message : "Could not change task notifications.");
+      }
+    } finally {
+      pending.current = null;
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <Button variant="outline" disabled={busy} onClick={() => void change()}>
+        {enabled ? "Disable task notifications" : "Enable task notifications"}
+      </Button>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 function noNativeSubscription() {
   return () => {};

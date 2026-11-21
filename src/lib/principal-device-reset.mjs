@@ -39,8 +39,12 @@ export async function resetPrincipalDeviceData(userKey, options = {}) {
   }
   try {
     if (options.clearPwaData) await options.clearPwaData(userKey);
-    else if (typeof navigator !== "undefined" && "serviceWorker" in navigator)
-      await (await import("./pwa/client.ts")).clearPwaOwner(userKey);
+    else {
+      if (typeof window !== "undefined" && window.kovaNative)
+        await (await import("./pwa/android-device.ts")).clearAndroidTaskPush(userKey);
+      if (typeof navigator !== "undefined" && "serviceWorker" in navigator)
+        await (await import("./pwa/client.ts")).clearPwaOwner(userKey);
+    }
     pwa.cleared = true;
   } catch {
     pwa.failures.push("pwa_clear_failed");

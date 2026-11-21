@@ -371,6 +371,11 @@ function KovaClerkProvider({
   }, []);
 
   const signOut = useCallback(async () => {
+    if (typeof window !== "undefined" && "kovaNative" in window) {
+      await import("@/lib/pwa/android-device")
+        .then(({ clearAndroidTaskPush }) => clearAndroidTaskPush(session?.user.id ?? null))
+        .catch(() => undefined);
+    }
     // Dual mode must retire the dormant hosted-auth session first. Otherwise,
     // a reload after Kova logout could silently reveal a stale legacy account.
     if (allowLegacyFallback) {
@@ -893,6 +898,11 @@ function SupabaseClerkProvider({
     // sessions" remains a separate, explicit security action.
     const browserStorageUserId = browserStorageUserIdRef.current;
     const pendingValidationUserId = pendingValidationUserIdRef.current;
+    if (typeof window !== "undefined" && "kovaNative" in window) {
+      await import("@/lib/pwa/android-device")
+        .then(({ clearAndroidTaskPush }) => clearAndroidTaskPush(browserStorageUserId ?? null))
+        .catch(() => undefined);
+    }
     sessionValidationRef.current += 1;
     setSession(null);
     setPendingMfaSession(null);

@@ -41,6 +41,9 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.webkit.WebViewCompat;
+import androidx.webkit.JavaScriptReplyProxy;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.FirebaseMessaging;
 import androidx.webkit.WebViewFeature;
 
 import org.json.JSONException;
@@ -251,7 +254,7 @@ public final class KovaChatActivity extends FragmentActivity {
                 (view, message, origin, mainFrame, reply) -> {
                     if (!locked && mainFrame && KovaDestination.isTrusted(origin.toString())
                         && KovaDestination.isTrusted(web.getUrl())) {
-                        handleMessage(message.getData());
+                        handleMessage(message.getData(), reply);
                     }
                 });
         }
@@ -310,7 +313,7 @@ public final class KovaChatActivity extends FragmentActivity {
         callback.onReceiveValue(safe == null || safe.length == 0 ? null : safe);
     }
 
-    private void handleMessage(String raw) {
+    private void handleMessage(String raw, JavaScriptReplyProxy reply) {
         if (raw == null || raw.length() > 40_000) return;
         try {
             JSONObject message = new JSONObject(raw);
@@ -320,6 +323,20 @@ public final class KovaChatActivity extends FragmentActivity {
                     break;
                 case "device-lock":
                     authenticate(!getPreferences(MODE_PRIVATE).getBoolean(LOCK, false));
+                    break;
+                case "push-token":
+                    String requestId = message.optString("requestId");
+                    if (!requestId.matches("[a-f0-9-]{36}")) return;
+                    if (FirebaseApp.getApps(this).isEmpty()
+                        || !getSystemService(NotificationManager.class).areNotificationsEnabled()) {
+                        reply.postMessage(requestId + ":");
+                        return;
+                    }
+                    FirebaseMessaging.getInstance().getToken().addOnCompleteListener(this, result -> {
+                        if (!locked && KovaDestination.isTrusted(web.getUrl())) {
+                            reply.postMessage(requestId + ":" + (result.isSuccessful() ? result.getResult() : ""));
+                        }
+                    });
                     break;
                 case "notifications":
                     if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
