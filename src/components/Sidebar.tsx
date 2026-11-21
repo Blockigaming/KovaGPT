@@ -995,7 +995,7 @@ export function Sidebar({
   const chatRow = (conversation: Conversation) => (
     <div
       key={conversation.id}
-      className={`kova-chat-row group ${activeId === conversation.id ? "is-active" : ""}`}
+      className={`kova-chat-row group ${activeId === conversation.id ? "is-active" : ""} ${mobileChatMenuId === conversation.id ? "is-mobile-menu-open" : ""}`}
     >
       <button
         type="button"
@@ -1012,6 +1012,11 @@ export function Sidebar({
             timer: window.setTimeout(() => {
               chatHoldRef.current = null;
               heldChatRef.current = conversation.id;
+              try {
+                navigator.vibrate?.(12);
+              } catch {
+                // Haptics are optional and unavailable on some devices.
+              }
               setMobileChatMenuId(conversation.id);
             }, 500),
           };

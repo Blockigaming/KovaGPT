@@ -294,6 +294,12 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
     const composerFrame = page.locator(".spec400-composer:visible");
     await expect(composerFrame).toHaveCSS("border-radius", "20px");
     const composer = (await composerFrame.boundingBox())!;
+    const logo = page.locator(".kova-empty-chat .kova-home-welcome-logo");
+    await expect(logo).toBeVisible();
+    const logoBox = (await logo.boundingBox())!;
+    const shellBox = (await shell.boundingBox())!;
+    expect(logoBox.y).toBeGreaterThanOrEqual(shellBox.y);
+    expect(logoBox.y + logoBox.height).toBeLessThanOrEqual(composer.y);
     const keyboardGap = visibleHeight - composer.y - composer.height;
     expect(keyboardGap).toBeGreaterThanOrEqual(12);
     expect(keyboardGap).toBeLessThanOrEqual(16);
