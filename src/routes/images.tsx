@@ -36,10 +36,8 @@ import {
   Copy,
 } from "lucide-react";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
-import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { settingsSectionForTab } from "@/lib/settings-types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -404,46 +402,12 @@ function ImagesPage() {
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
-  const openSettings = useCallback(
-    (tab?: string) => {
-      // Keep Settings above the mobile drawer and preserve unsaved image work.
-      if (
-        tab !== "logout" &&
-        !window.matchMedia(SIDEBAR_DRAWER_QUERY).matches &&
-        !prompt.trim() &&
-        !editSelection &&
-        !loading &&
-        !result &&
-        !lightbox &&
-        !savingImage &&
-        aspectRatio === "1:1" &&
-        customWidth === "1536" &&
-        customHeight === "864"
-      ) {
-        void navigate({
-          to: "/settings/$section",
-          params: { section: settingsSectionForTab(tab) },
-        });
-        return;
-      }
-      settingsReturnFocusRef.current =
-        document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      setSettingsTab(tab);
-      setSettingsOpen(true);
-    },
-    [
-      navigate,
-      prompt,
-      editSelection,
-      loading,
-      result,
-      lightbox,
-      savingImage,
-      aspectRatio,
-      customWidth,
-      customHeight,
-    ],
-  );
+  const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
   useEffect(() => {
     const h = (e: Event) => openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
     window.addEventListener("kova-open-settings", h);

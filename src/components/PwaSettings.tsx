@@ -18,6 +18,7 @@ import {
   subscribeInstallPrompt,
   promptPwaInstall,
 } from "@/lib/pwa/install";
+import { nativeKovaPlatform, sendNativeKovaMessage } from "@/lib/kova-native";
 type Status = {
   ready: boolean;
   publicKey: string | null;
@@ -26,8 +27,45 @@ type Status = {
   devices: { id: string; revision: number; createdAt: string }[];
 };
 export function PwaSettings({ ownerId }: { ownerId: string | null }) {
+  const platform = useSyncExternalStore(noNativeSubscription, nativeKovaPlatform, noNativePlatform);
+  if (platform) {
+    return (
+      <section
+        className="space-y-3 rounded-lg border border-border p-4"
+        aria-label="Native app settings"
+      >
+        <h4 className="text-sm font-medium">Native app settings</h4>
+        <p className="text-xs text-muted-foreground">
+          Use your device’s authentication to lock KovaGPT when you leave the app.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => sendNativeKovaMessage({ action: "device-lock" })}
+          >
+            Change device lock
+          </Button>
+          {platform === "android" && (
+            <Button
+              variant="outline"
+              onClick={() => sendNativeKovaMessage({ action: "notifications" })}
+            >
+              Notification settings
+            </Button>
+          )}
+        </div>
+      </section>
+    );
+  }
   return <DeviceSettings key={ownerId ?? "signed-out"} ownerId={ownerId} />;
 }
+function noNativeSubscription() {
+  return () => {};
+}
+function noNativePlatform() {
+  return null;
+}
+
 function DeviceSettings({ ownerId }: { ownerId: string | null }) {
   const canInstall = useSyncExternalStore(subscribeInstallPrompt, canPromptInstall, noServerPrompt);
   const [status, setStatus] = useState<Status | null>(null),

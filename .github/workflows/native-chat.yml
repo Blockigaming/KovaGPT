@@ -1,0 +1,61 @@
+name: Native KovaGPT chat
+on:
+  pull_request:
+    paths:
+      - "ios/KovaChat*/**"
+      - "android/**"
+      - "tests/native/**"
+      - "src/lib/kova-native.ts"
+      - ".github/workflows/native-chat.yml"
+permissions:
+  contents: read
+concurrency:
+  group: native-chat-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ios-simulator:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test shortcut URLs and first-party origin checks
+        run: |
+          swiftc ios/KovaChat/KovaDestination.swift tests/native/ios/main.swift -o "$RUNNER_TEMP/kova-ios-navigation"
+          "$RUNNER_TEMP/kova-ios-navigation"
+      - name: Build KovaGPT and its WidgetKit extension without signing
+        run: |
+          xcodebuild -project ios/KovaChat.xcodeproj -scheme KovaChat \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/kova-ios" \
+            CODE_SIGNING_ALLOWED=NO build
+          test -d "$RUNNER_TEMP/kova-ios/Build/Products/Debug-iphonesimulator/KovaChat.app/PlugIns/KovaChatWidgets.appex"
+      - name: Install and launch the unsigned app in an iPhone Simulator
+        run: |
+          device="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          for name in reversed(sorted(runtimes)):
+              for device in runtimes[name]:
+                  if name.startswith("com.apple.CoreSimulator.SimRuntime.iOS-") and device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      raise SystemExit(0)
+          raise SystemExit("No iPhone simulator is installed")
+          ')"
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" "$RUNNER_TEMP/kova-ios/Build/Products/Debug-iphonesimulator/KovaChat.app"
+          xcrun simctl launch "$device" com.kovagpt.chat
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install pinned Android build tools and Gradle
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+          curl --fail --silent --show-error --location \
+            https://services.gradle.org/distributions/gradle-8.13-bin.zip -o "$RUNNER_TEMP/gradle-8.13-bin.zip"
+          echo "20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78  $RUNNER_TEMP/gradle-8.13-bin.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/gradle-8.13-bin.zip" -d "$RUNNER_TEMP/gradle"
+          echo "$RUNNER_TEMP/gradle/gradle-8.13/bin" >> "$GITHUB_PATH"
+      - name: Build the Android debug APK and run its unit tests
+        run: gradle --no-daemon -p android :app:assembleDebug :app:testDebugUnitTest

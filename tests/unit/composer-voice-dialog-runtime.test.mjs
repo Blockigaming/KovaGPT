@@ -308,6 +308,10 @@ function fixture(initial = {}, options = {}) {
       safeBrowserStorage: (area) => principalStorage.safeBrowserStorage(area, fakeWindow),
     },
     "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
+    "@/lib/kova-native": {
+      KOVA_NATIVE_AUDIO_INTERRUPTION: "kova-native-audio-interruption",
+      nativeKovaPlatform: () => options.nativePlatform ?? null,
+    },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
         const pending = deferred();
@@ -1757,6 +1761,20 @@ for (const change of [
     f.unmount();
   });
 }
+
+test("native audio interruption releases the microphone without submitting a turn", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "android" });
+  await f.ready();
+  await f.click("Start");
+  const stream = f.trackStream();
+  f.microphoneRequests[0].resolve(stream);
+  await f.flush();
+  f.dispatch({ type: "kova-native-audio-interruption" });
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.match(f.text(), /Audio was interrupted/);
+  assert.equal(f.voiceSubmissions.length, 0);
+});
 
 test("mobile Voice mutes capture, resumes it explicitly, and handles a disconnected input", async () => {
   const f = fixture({ mode: "voice" });

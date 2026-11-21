@@ -21,6 +21,7 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
+import { KOVA_NATIVE_AUDIO_INTERRUPTION, nativeKovaPlatform } from "@/lib/kova-native";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
   VOICE_PREFERENCE_KEY,
@@ -462,6 +463,16 @@ export function ComposerVoiceDialog({
     },
     [releaseResources, updatePhase],
   );
+
+  useLayoutEffect(() => {
+    if (!open || !nativeKovaPlatform()) return;
+    const interrupt = () => {
+      if (phaseRef.current !== "idle")
+        failOperation("Audio was interrupted. Start again when your microphone is available.");
+    };
+    window.addEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+    return () => window.removeEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+  }, [open, failOperation]);
 
   useLayoutEffect(() => {
     if (mode === "voice") return;

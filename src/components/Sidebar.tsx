@@ -1,3 +1,4 @@
+import { KOVA_NATIVE_BACK, nativeKovaPlatform, sendNativeKovaMessage } from "@/lib/kova-native";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { readChatDeleteIntents, subscribeChatDeleteIntents } from "@/lib/chat-delete-undo";
 import { resumePendingChatDeletions } from "@/lib/permanent-chat-delete";
@@ -772,17 +773,27 @@ export function Sidebar({
     const { CloseWatcher } = window as Window & {
       CloseWatcher?: new () => EventTarget & { destroy: () => void };
     };
-    if (!CloseWatcher) return;
-    const watcher = new CloseWatcher();
-    watcher.addEventListener("close", () => {
+    const closeDrawer = (event?: Event) => {
       if (
         document.querySelector(
           '[aria-modal="true"]:not(.kova-sidebar), [role="menu"][data-state="open"]',
         )
       )
         return;
+      event?.preventDefault();
       swipeToggleRef.current();
-    });
+    };
+    if (nativeKovaPlatform() === "android") {
+      sendNativeKovaMessage({ action: "watch-back", active: true });
+      window.addEventListener(KOVA_NATIVE_BACK, closeDrawer);
+      return () => {
+        sendNativeKovaMessage({ action: "watch-back", active: false });
+        window.removeEventListener(KOVA_NATIVE_BACK, closeDrawer);
+      };
+    }
+    if (!CloseWatcher) return;
+    const watcher = new CloseWatcher();
+    watcher.addEventListener("close", () => closeDrawer());
     return () => watcher.destroy();
   }, [
     open,
@@ -1080,7 +1091,7 @@ export function Sidebar({
               chatHoldRef.current = null;
               heldChatRef.current = conversation.id;
               try {
-                navigator.vibrate?.(12);
+                if (!sendNativeKovaMessage({ action: "haptic" })) navigator.vibrate?.(12);
               } catch {
                 // Haptics are optional and unavailable on some devices.
               }
