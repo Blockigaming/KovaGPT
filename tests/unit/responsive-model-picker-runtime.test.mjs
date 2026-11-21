@@ -92,9 +92,9 @@ function fixture(initial = {}) {
   };
 }
 
-for (const [placement, side] of [
-  ["composer", "top"],
-  ["topbar", "bottom"],
+for (const [placement, alignment] of [
+  ["composer", "end"],
+  ["topbar", "start"],
 ]) {
   test(`${placement}: desktop choices use the portalled, collision-aware shared popover`, async () => {
     const f = fixture({ placement });
@@ -104,8 +104,8 @@ for (const [placement, side] of [
     const content = f.find("popover-content");
     assert.equal(content.props.role, "dialog");
     assert.equal(content.props["aria-label"], "Choose response effort");
-    assert.equal(content.props.side, side);
-    assert.equal(content.props.align, "start");
+    assert.equal(content.props.side, "bottom");
+    assert.equal(content.props.align, alignment);
     assert.equal(content.props.collisionPadding, 12);
     assert.equal(content.props.id, f.trigger().props["aria-controls"]);
     assert.doesNotMatch(content.props.className, /absolute|bottom-full|top-full/);

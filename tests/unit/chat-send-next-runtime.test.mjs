@@ -209,6 +209,7 @@ function fixture() {
     editingMessage: null,
     mode: "instant",
     hostedModel: "kova-argon-4.6",
+    recommendedModelSelection: true,
     pendingWorkflowSkill: null,
     projectContext: null,
     pluginContext: null,

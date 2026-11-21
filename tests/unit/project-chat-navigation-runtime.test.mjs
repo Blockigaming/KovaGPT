@@ -33,6 +33,7 @@ const names = [
   "AppShell",
   "ChatInput",
   "ChatMessage",
+  "ChatLoadingIndicator",
   "Button",
   "Input",
   "Link",
