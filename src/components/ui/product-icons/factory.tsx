@@ -59,15 +59,11 @@ export function makeLoader(name: string) {
       },
       ref,
     ) {
-      // The captured SDK indicator already rotates. Do not rotate its SVG wrapper too.
+      // The arc rotates independently so the caller’s SVG transforms are preserved.
       const classes = className
         ?.split(/\s+/)
         .filter((value) => value !== "animate-spin")
         .join(" ");
-      const stroke =
-        typeof strokeWidth === "number" || /^\d+(?:\.\d+)?$/.test(String(strokeWidth))
-          ? `${strokeWidth}px`
-          : strokeWidth;
       return (
         <svg
           aria-hidden={props["aria-label"] || props["aria-labelledby"] ? undefined : true}
@@ -75,18 +71,25 @@ export function makeLoader(name: string) {
           width={width ?? size}
           height={height ?? size}
           fill="none"
+          viewBox="0 0 24 24"
           data-product-icon={name}
-          data-ui-reference="chatgpt.sdk.loading-indicator"
+          data-ui-reference="kova.loading-indicator"
           className={classes}
           {...props}
           ref={ref}
         >
-          <foreignObject width="100%" height="100%">
-            <div
-              className="kova-reference-loading-indicator"
-              style={{ "--indicator-stroke": stroke } as React.CSSProperties}
-            />
-          </foreignObject>
+          <circle
+            className="kova-reference-loading-indicator"
+            cx="12"
+            cy="12"
+            r="8"
+            pathLength="100"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray="72 28"
+            vectorEffect="non-scaling-stroke"
+          />
           {children}
         </svg>
       );

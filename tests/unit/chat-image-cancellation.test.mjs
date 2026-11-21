@@ -20,6 +20,8 @@ function fixture() {
     Response,
     ReadableStream,
     TextEncoder,
+    setInterval,
+    clearInterval,
     AbortController,
     DOMException,
     imageGenerations: (body, init) => {

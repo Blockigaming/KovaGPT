@@ -18,7 +18,7 @@ test("shared fields do not impose a blanket button shape on the full-viewport sc
 test("sidebar backdrop keeps its explicit square-corner rule without an important override", () => {
   let backdrop;
   postcss.parse(read("src/styles/sidebar-core.css")).walkRules((rule) => {
-    if (rule.selector.endsWith("button.kova-sidebar-scrim")) backdrop = rule;
+    if (rule.selector === "button.kova-sidebar-scrim") backdrop = rule;
   });
   assert.ok(backdrop);
   assert.equal(radius(backdrop).value, "0");

@@ -1789,7 +1789,7 @@ export function Sidebar({
       <button
         type="button"
         onClick={onToggle}
-        className="kova-sidebar-scrim fixed inset-0 z-30 bg-black/45 lg:hidden"
+        className="kova-sidebar-scrim lg:hidden"
         aria-label="Close navigation menu"
         data-state={open ? "open" : "closed"}
         aria-hidden={!open || !mobileViewport || workspaceSearchOpen}

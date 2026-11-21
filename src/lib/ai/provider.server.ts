@@ -185,7 +185,10 @@ function providerTarget(capability?: ProviderCapability): ProviderTarget {
           : "invalid_text_provider_selection",
     );
   }
-  if (selection === "openai") {
+  if (
+    selection === "openai" ||
+    (imageCapability && selection === "auto" && env("OPENAI_API_KEY"))
+  ) {
     return {
       provider: "openai",
       baseUrl: OPENAI_API_BASE_URL,

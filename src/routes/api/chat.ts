@@ -399,7 +399,11 @@ async function handleImageRequest(
   const cancellation = new AbortController();
   let closed = false;
   let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
-  const cleanup = () => signal.removeEventListener("abort", abort);
+  let keepalive: ReturnType<typeof setInterval> | undefined;
+  const cleanup = () => {
+    clearInterval(keepalive);
+    signal.removeEventListener("abort", abort);
+  };
   const finish = () => {
     cleanup();
     if (closed) return;
@@ -514,6 +518,7 @@ async function handleImageRequest(
           finish();
         }
       };
+      keepalive = setInterval(() => send(": keep-alive\n\n"), 15_000);
       void generate();
     },
     cancel(reason) {
