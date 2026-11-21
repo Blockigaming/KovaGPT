@@ -1,9 +1,7 @@
-import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { permanentlyDeleteChat } from "@/lib/permanent-chat-delete";
 import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
 import { useSidebarPreference } from "@/hooks/use-sidebar-preference";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
@@ -173,7 +171,9 @@ export function AppShell({
           navigate({ to: "/library" });
         },
         "open-settings": () => {
-          void navigate({ to: "/settings/$section", params: { section: "responses" } });
+          window.dispatchEvent(
+            new CustomEvent("kova-open-settings", { detail: { tab: "responses" } }),
+          );
         },
         "generate-image": () => {
           navigate({ to: "/images" });
@@ -193,23 +193,12 @@ export function AppShell({
     );
   }, [isLoaded, navigate, setSidebarOpen, userKey]);
 
-  const openSettings = useCallback(
-    (tab?: string) => {
-      if (window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) {
-        settingsReturnFocusRef.current =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSettingsTab(tab);
-        setSettingsOpen(true);
-        return;
-      }
-      void navigate({
-        to: "/settings/$section" as never,
-        params: { section: settingsSectionForTab(tab) } as never,
-        replace: pathname.startsWith("/settings/"),
-      });
-    },
-    [navigate, pathname],
-  );
+  const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
 
   useEffect(() => {
     const handleOpenSettings = (event: Event) => {
