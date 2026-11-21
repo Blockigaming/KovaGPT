@@ -207,7 +207,7 @@ function fixture({
   return { input, stripe, supabase, db, calls, sessions };
 }
 
-test("both monthly paid tiers retain their Price and use 50%-once, never new trial fields", async () => {
+test("both monthly paid tiers retain their Price and allow one optional coupon", async () => {
   for (const tier of [plan, { lookupKey: "pro_monthly", livePriceId: "price_Pro" }]) {
     const f = fixture();
     f.input.plan = tier;
@@ -218,6 +218,7 @@ test("both monthly paid tiers retain their Price and use 50%-once, never new tri
     const request = f.calls.find((call) => call.method === "checkout.create").params;
     assert.deepEqual(request.line_items, [{ price: tier.livePriceId, quantity: 1 }]);
     assert.deepEqual(request.discounts, [{ coupon: "intro50" }]);
+    assert.ok(request.discounts.length <= 1);
     assert.deepEqual(request.subscription_data, { metadata: { userId } });
     assert.equal("trial_period_days" in request.subscription_data, false);
     assert.equal("trial_end" in request.subscription_data, false);
@@ -229,7 +230,10 @@ test("both monthly paid tiers retain their Price and use 50%-once, never new tri
 });
 
 test("renewal is a once-duration Stripe contract, not a local price rewrite or subscription update", () => {
-  assert.equal(validateMonthlyIntroCoupon(coupon, coupon.id, "live", now).duration, "once");
+  assert.equal(
+    validateMonthlyIntroCoupon(coupon, coupon.id, "live", { now, price }).duration,
+    "once",
+  );
   assert.equal(validateMonthlyIntroPrice(price, plan, "live").unit_amount, 2000);
   for (const invalid of [
     { duration: "forever" },
@@ -242,7 +246,8 @@ test("renewal is a once-duration Stripe contract, not a local price rewrite or s
     { max_redemptions: 999, times_redeemed: 1 },
   ]) {
     assert.throws(
-      () => validateMonthlyIntroCoupon({ ...coupon, ...invalid }, coupon.id, "live", now),
+      () =>
+        validateMonthlyIntroCoupon({ ...coupon, ...invalid }, coupon.id, "live", { now, price }),
       /coupon_invalid/u,
     );
   }
