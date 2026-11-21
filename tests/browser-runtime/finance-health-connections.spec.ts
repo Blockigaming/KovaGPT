@@ -243,7 +243,7 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
     buffer: Buffer.from(zip),
   });
   const source = health.getByLabel("Step source");
-  await health.getByText(/^Daily readings/).click();
+  await expect(health.getByText(/^Daily readings/)).toHaveCount(0);
   await expect(health.getByRole("cell", { name: "789", exact: true })).toBeVisible();
   await source.selectOption({ label: "Watch" });
   await expect(health.getByRole("cell", { name: "123", exact: true })).toBeVisible();
@@ -253,7 +253,6 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
     health.getByText("No readings for this source in the selected range."),
   ).toBeVisible();
   await health.getByRole("slider", { name: "Date range" }).press("End");
-  await health.getByText(/^Daily readings/).click();
   await expect(health.getByRole("cell", { name: "68", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
 

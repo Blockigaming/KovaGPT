@@ -24,6 +24,7 @@ function fixture(href, mode = "dual") {
         "@/integrations/supabase/client": {},
         "@/components/auth/AuthDialog": { AuthDialog: "auth-dialog" },
         "@/components/auth/MfaChallengeDialog": {},
+        "@/components/StreamingStatus": {},
         "@/components/LogoutConfirmDialog": {},
         "@/lib/oauth-session": {},
         "@/lib/principal-browser-storage.mjs": {

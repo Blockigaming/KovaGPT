@@ -163,7 +163,9 @@ test("stopping before the first token preserves an honest response with immediat
     });
   });
   await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.getByText("Generating image…", { exact: true })).toBeVisible();
+  await expect(
+    page.locator("[data-chat-loading]").filter({ hasText: "Generating image" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
   await page.evaluate(() =>
     (
@@ -173,7 +175,9 @@ test("stopping before the first token preserves an honest response with immediat
 
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
-  await expect(page.getByText("Generating image…", { exact: true })).toHaveCount(0);
+  await expect(
+    page.locator("[data-chat-loading]").filter({ hasText: "Generating image" }),
+  ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Remove Search the web" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);

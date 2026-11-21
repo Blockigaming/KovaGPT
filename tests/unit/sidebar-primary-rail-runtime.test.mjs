@@ -133,6 +133,7 @@ function fixture(options = {}) {
   deps.searchButton = compile(`return (${variable("searchButton")});`, deps);
   deps.availableShortcuts = compile(`return (${variable("availableShortcuts")});`, deps);
   deps.railLink = compile(`return (${variable("railLink")});`, deps);
+  deps.renderHelpSubmenu = () => "profile-help-submenu";
   deps.renderAccountMenu = compile(`return (${variable("renderAccountMenu")});`, deps);
   const tree = compile(`return (${rail});`, deps);
   const find = (label) => all(tree).find((node) => node.props["aria-label"] === label);

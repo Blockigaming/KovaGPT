@@ -77,6 +77,7 @@ function fixture(initialSession = session("first-owner")) {
     },
     "@/components/auth/AuthDialog": {},
     "@/components/auth/MfaChallengeDialog": {},
+    "@/components/StreamingStatus": {},
     "@/components/LogoutConfirmDialog": {},
     "@/components/ui/dropdown-menu": {},
     "@/lib/oauth-session": { hasOAuthResponseInUrl: () => false },

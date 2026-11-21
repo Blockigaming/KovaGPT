@@ -26,8 +26,8 @@
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
   min-height: 0;
-  padding-block-start: 6px;
-  gap: 2px;
+  padding-block: 8px;
+  gap: 4px;
 }
 .spec400-chat-input[data-composer-surface="conversation"] .spec400-input-region {
   min-height: 26px;
@@ -50,7 +50,9 @@
       display: grid;
       grid-template: "tools input trailing" auto / auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: var(--composer-compact-gap);
+      padding-inline: 8px;
+      column-gap: var(--composer-compact-gap);
+      row-gap: 8px;
 
       &:has(.spec400-composer-media) {
         grid-template-areas:
@@ -62,6 +64,9 @@
       }
       .spec400-input-region {
         padding-inline: 0;
+      }
+      .spec400-composer-tools {
+        align-self: center;
       }
     }
   }
@@ -145,7 +150,7 @@
   position: relative;
   display: flex;
   justify-content: space-between;
-  align-items: end;
+  align-items: center;
   column-gap: var(--composer-action-gap);
   flex: none;
   margin-top: 0;
@@ -153,12 +158,12 @@
 .spec400-composer-tools {
   grid-area: tools;
   flex: none;
-  align-self: end;
+  align-self: center;
   flex-wrap: nowrap;
 }
 .spec400-composer-trailing {
   position: relative;
-  align-items: end;
+  align-items: center;
   grid-area: trailing;
   flex: 0 1 auto;
   flex-wrap: wrap;
@@ -792,7 +797,7 @@
 .spec400-composer-dock > .spec400-chat-input {
   max-width: none;
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
   padding-inline: 4px;
   padding-top: 4px;
 }
