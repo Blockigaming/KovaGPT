@@ -40,7 +40,7 @@ struct KovaChatWebView: UIViewRepresentable {
         if request.destination == .voice, KovaDestination.isTrusted(web.url), web.url?.path == "/" {
             coordinator.signal("kova-native-open-voice")
         } else {
-            web.load(URLRequest(url: request.destination.url))
+            web.load(URLRequest(url: request.exchangeURL ?? request.destination.url))
         }
     }
 
@@ -189,6 +189,17 @@ struct KovaChatWebView: UIViewRepresentable {
             guard action.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
             guard let url = action.request.url else { decisionHandler(.cancel); return }
             if KovaDestination.isTrusted(url) {
+                if url.path == "/api/auth/google/start",
+                   let challenge = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "native_challenge" })?.value,
+                   challenge.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil {
+                    decisionHandler(.cancel)
+                    if unlocked && action.sourceFrame.isMainFrame &&
+                        KovaDestination.isTrusted(action.sourceFrame.request.url) {
+                        UIApplication.shared.open(url)
+                    }
+                    return
+                }
                 if action.targetFrame == nil {
                     decisionHandler(.cancel)
                     web.load(action.request)

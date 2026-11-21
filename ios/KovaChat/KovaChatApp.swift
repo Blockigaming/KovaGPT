@@ -7,8 +7,25 @@ final class KovaLaunch: ObservableObject {
     struct Request {
         let id = UUID()
         let destination: KovaDestination
+        var exchangeURL: URL? = nil
     }
     @Published private(set) var request = Request(destination: .chat)
+
+    func completeGoogleSignIn(_ callback: URL) {
+        guard var parts = URLComponents(url: callback, resolvingAgainstBaseURL: false),
+              parts.scheme == "kovagpt-native", parts.host == "google",
+              parts.user == nil, parts.password == nil, parts.port == nil,
+              parts.fragment == nil, parts.percentEncodedPath == "/exchange",
+              let query = parts.queryItems, query.count == 2,
+              Set(query.map(\.name)) == ["handoff", "binding"],
+              query.allSatisfy({ ($0.value?.utf8.count ?? 0) > 0 && ($0.value?.utf8.count ?? 0) <= 4096 })
+        else { return }
+        parts.scheme = "https"
+        parts.host = "kovagpt.com"
+        parts.path = "/api/auth/google/exchange"
+        guard let url = parts.url else { return }
+        request = Request(destination: .chat, exchangeURL: url)
+    }
 
     func open(_ destination: KovaDestination) {
         request = Request(destination: destination)
@@ -24,6 +41,7 @@ struct KovaChatApp: App {
             KovaChatWindow(request: launch.request)
                 .onOpenURL { url in
                     if let destination = KovaDestination(shortcutURL: url) { launch.open(destination) }
+                    else { launch.completeGoogleSignIn(url) }
                 }
         }
     }

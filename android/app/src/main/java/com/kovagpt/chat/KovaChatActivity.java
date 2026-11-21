@@ -72,6 +72,7 @@ public final class KovaChatActivity extends FragmentActivity {
     private ValueCallback<Uri[]> pendingFiles;
     private Uri pendingPhoto;
     private KovaDestination destinationAfterUnlock;
+    private Uri googleExchangeAfterUnlock;
 
     private final OnBackPressedCallback webBack = new OnBackPressedCallback(false) {
         @Override public void handleOnBackPressed() {
@@ -162,6 +163,7 @@ public final class KovaChatActivity extends FragmentActivity {
         createNotificationChannels();
         audioManager = getSystemService(AudioManager.class);
         audioManager.registerAudioDeviceCallback(audioRoutes, null);
+        if (openGoogleExchange(getIntent().getData())) return;
         if (savedState == null || web.restoreState(savedState) == null) {
             KovaDestination initial = KovaDestination.fromShortcut(getIntent().getDataString());
             open(initial == null ? KovaDestination.CHAT : initial);
@@ -206,7 +208,16 @@ public final class KovaChatActivity extends FragmentActivity {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (!request.isForMainFrame()) return false;
                 Uri url = request.getUrl();
-                if (KovaDestination.isTrusted(url.toString())) return false;
+                if (KovaDestination.isTrusted(url.toString())) {
+                    String challenge = url.getQueryParameter("native_challenge");
+                    if ("/api/auth/google/start".equals(url.getPath()) && challenge != null
+                            && challenge.matches("[a-f0-9]{64}")) {
+                        if (!locked && KovaDestination.isTrusted(web.getUrl()))
+                            launchExternal(new Intent(Intent.ACTION_VIEW, url));
+                        return true;
+                    }
+                    return false;
+                }
                 if (!locked && "https".equals(url.getScheme()) && url.getUserInfo() == null
                     && (request.hasGesture() || "accounts.google.com".equals(url.getHost()))) {
                     launchExternal(new Intent(Intent.ACTION_VIEW, url));
@@ -386,6 +397,11 @@ public final class KovaChatActivity extends FragmentActivity {
                     verifying = false;
                     if (preference != null) getPreferences(MODE_PRIVATE).edit().putBoolean(LOCK, preference).apply();
                     setLocked(false);
+                    if (googleExchangeAfterUnlock != null) {
+                        web.loadUrl(googleExchangeAfterUnlock.toString());
+                        googleExchangeAfterUnlock = null;
+                        destinationAfterUnlock = null;
+                    }
                     if (destinationAfterUnlock != null) {
                         KovaDestination destination = destinationAfterUnlock;
                         destinationAfterUnlock = null;
@@ -445,9 +461,30 @@ public final class KovaChatActivity extends FragmentActivity {
         else web.loadUrl(destination.url);
     }
 
+    private boolean openGoogleExchange(Uri callback) {
+        if (callback == null || !"kovagpt-native".equals(callback.getScheme())
+                || !"google".equals(callback.getEncodedAuthority())
+                || !"/exchange".equals(callback.getEncodedPath()) || callback.getFragment() != null)
+            return false;
+        if (callback.getQueryParameterNames().size() != 2
+                || callback.getQueryParameters("handoff").size() != 1
+                || callback.getQueryParameters("binding").size() != 1) return false;
+        String handoff = callback.getQueryParameter("handoff");
+        String binding = callback.getQueryParameter("binding");
+        if (handoff == null || !handoff.matches("[A-Za-z0-9_-]{43,128}") || binding == null
+                || binding.isEmpty() || binding.length() > 4096) return false;
+        Uri exchange = Uri.parse(KovaDestination.ORIGIN + "/api/auth/google/exchange").buildUpon()
+                .appendQueryParameter("handoff", handoff).appendQueryParameter("binding", binding)
+                .build();
+        if (locked) googleExchangeAfterUnlock = exchange;
+        else web.loadUrl(exchange.toString());
+        return true;
+    }
+
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (openGoogleExchange(intent.getData())) return;
         KovaDestination next = KovaDestination.fromShortcut(intent.getDataString());
         if (next != null) open(next);
     }
