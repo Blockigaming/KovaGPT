@@ -1059,6 +1059,10 @@ export function Sidebar({
           if (hold && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 10)
             cancelChatHold();
         }}
+        onTouchEnd={(event) => {
+          // Suppress the synthetic tap that can land on the newly mounted overlay.
+          if (heldChatRef.current === conversation.id && event.cancelable) event.preventDefault();
+        }}
         onPointerUp={cancelChatHold}
         onPointerLeave={cancelChatHold}
         onPointerCancel={cancelChatHold}
@@ -1135,14 +1139,7 @@ export function Sidebar({
       ) : null}
       {heldMenu &&
         mobileChatMenuId === conversation.id &&
-        createPortal(
-          <div
-            aria-hidden="true"
-            className="kova-held-chat-backdrop"
-            onClick={() => setMobileChatMenuId(null)}
-          />,
-          document.body,
-        )}
+        createPortal(<div aria-hidden="true" className="kova-held-chat-backdrop" />, document.body)}
       <DropdownMenu
         modal={false}
         open={mobileViewport ? mobileChatMenuId === conversation.id : undefined}
