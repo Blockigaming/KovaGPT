@@ -223,7 +223,7 @@ test("dark: recommendations and tools open from a clear phone chat", async ({ pa
   await revealSidebar(page);
   await drawer
     .getByRole("region", { name: "Chats", exact: true })
-    .getByRole("button", { name: /Composer review chat/ })
+    .getByRole("button", { name: "Open chat Composer review chat", exact: true })
     .click();
   await expect(page.locator("#message-answer-a")).toBeVisible();
   await expect(drawer).toBeHidden();
