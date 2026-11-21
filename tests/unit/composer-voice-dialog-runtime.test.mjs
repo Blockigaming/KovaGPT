@@ -108,6 +108,7 @@ function fixture(initial = {}, options = {}) {
   const audioContexts = [];
   const storage = options.storage ?? new Map();
   const listeners = new Map();
+  const fakeDocument = Object.assign(new EventTarget(), { visibilityState: "visible" });
   const fakeWindow = {
     get localStorage() {
       if (options.storageUnavailable) throw new Error("Storage getter denied");
@@ -401,6 +402,7 @@ function fixture(initial = {}, options = {}) {
     TextEncoder,
     console,
     window: fakeWindow,
+    document: fakeDocument,
     CustomEvent: class {
       constructor(type, { detail }) {
         this.type = type;
@@ -495,6 +497,10 @@ function fixture(initial = {}, options = {}) {
     storageReads,
     dispatched,
     dispatch: (event) => fakeWindow.dispatchEvent(event),
+    setVisibility(visibility) {
+      fakeDocument.visibilityState = visibility;
+      fakeDocument.dispatchEvent(new Event("visibilitychange"));
+    },
     async chooseVoice(id) {
       const picker = nodes(tree).find((node) => node.type === "Select");
       assert.ok(picker, "Voice picker should be visible");
@@ -1761,6 +1767,33 @@ for (const change of [
     f.unmount();
   });
 }
+
+test("iOS Voice lets an active reply finish while hidden without reopening the microphone", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "ios" });
+  const { speech, sink } = await voiceReply(f);
+  f.setVisibility("hidden");
+  assert.equal(speech.init.signal.aborted, false);
+  sink.options.onEnded();
+  await f.flush();
+  f.setVisibility("visible");
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1);
+  f.unmount();
+});
+
+test("native Voice stops active microphone capture when hidden", async () => {
+  const f = fixture({ mode: "voice" }, { nativePlatform: "ios" });
+  await f.ready();
+  await f.click("Start");
+  const stream = f.trackStream();
+  f.microphoneRequests[0].resolve(stream);
+  await f.flush();
+  f.setVisibility("hidden");
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.voiceSubmissions.length, 0);
+  f.unmount();
+});
 
 test("native audio interruption releases the microphone without submitting a turn", async () => {
   const f = fixture({ mode: "voice" }, { nativePlatform: "android" });

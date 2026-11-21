@@ -470,8 +470,20 @@ export function ComposerVoiceDialog({
       if (phaseRef.current !== "idle")
         failOperation("Audio was interrupted. Start again when your microphone is available.");
     };
+    const onVisibilityChange = () => {
+      if (
+        document.visibilityState === "hidden" &&
+        (phaseRef.current === "requesting" || phaseRef.current === "recording")
+      ) {
+        failOperation("Microphone capture stopped when you left the app. Start again to continue.");
+      }
+    };
     window.addEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
-    return () => window.removeEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [open, failOperation]);
 
   useLayoutEffect(() => {
