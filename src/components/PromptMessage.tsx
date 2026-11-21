@@ -1,6 +1,6 @@
 import { LinkPreviewChip } from "@/components/LinkPreviewChip";
 import { firstLinkPreviewUrl, isOnlyLink } from "@/lib/link-preview.mjs";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Pencil } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -59,6 +59,16 @@ export function PromptMessage({
           <Copy className="kova-copy-glyph" aria-hidden="true" />
           <Check className="kova-copy-check" aria-hidden="true" />
         </button>
+        {onEdit && (
+          <button
+            type="button"
+            className="kova-prompt-edit-mobile kova-prompt-copy"
+            aria-label="Edit message"
+            onClick={onEdit}
+          >
+            <Pencil aria-hidden="true" />
+          </button>
+        )}
         <span className="sr-only" role="status">
           {copied ? "Prompt copied" : ""}
         </span>

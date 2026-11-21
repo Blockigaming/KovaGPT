@@ -4,10 +4,12 @@ export async function listenForVoiceTurn({
   signal,
   getToken,
   onListening,
+  onMicrophone,
 }: {
   signal: AbortSignal;
   getToken: () => Promise<string>;
   onListening: () => void;
+  onMicrophone?: (stream: MediaStream) => void;
 }): Promise<string> {
   if (!navigator.mediaDevices?.getUserMedia || typeof AudioWorkletNode === "undefined")
     throw new Error("Live Voice needs a browser with microphone and Web Audio support.");
@@ -24,6 +26,9 @@ export async function listenForVoiceTurn({
       audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
     });
     signal.throwIfAborted();
+    const microphone = stream.getAudioTracks()[0];
+    if (!microphone) throw new Error("No microphone was found.");
+    onMicrophone?.(stream);
     context = new AudioContext({ sampleRate: 16000 });
     const audio = context;
     if (audio.sampleRate !== 16000) throw new Error("This browser could not start live audio.");
@@ -89,7 +94,7 @@ export async function listenForVoiceTurn({
               .catch(() => fail("This browser could not start live audio."));
             break;
           case "committed_transcript":
-            if (typeof event.text === "string" && event.text.trim()) {
+            if (microphone.enabled && typeof event.text === "string" && event.text.trim()) {
               cleanup();
               resolve(event.text.trim());
             }
@@ -102,7 +107,8 @@ export async function listenForVoiceTurn({
         }
       };
       node.port.onmessage = ({ data }: MessageEvent<ArrayBuffer>) => {
-        if (connection.readyState !== WebSocket.OPEN || signal.aborted) return;
+        if (connection.readyState !== WebSocket.OPEN || signal.aborted || !microphone.enabled)
+          return;
         if (connection.bufferedAmount > 128 * 1024) {
           fail("Your connection is too slow for Live Voice. Try again.");
           return;

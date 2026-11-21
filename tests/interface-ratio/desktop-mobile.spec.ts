@@ -28,7 +28,9 @@ for (const state of states) {
     await fixture(page, "dark", true, state.saved, "plus");
     await page.goto(state.route, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    if (state.route === "/") {
+    if (state.name === "settings") {
+      await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
+    } else if (state.route === "/") {
       await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
       if (state.saved) await expect(page.getByText("A practical release checklist:")).toBeVisible();
       else await expect(page.locator(".kova-greeting h1")).toBeVisible();
@@ -66,7 +68,7 @@ for (const state of states) {
         ".kova-file-grid",
         ".spec400-plugin-grid",
         ".spec400-plugin-card",
-        ".kova-settings-page",
+        ".kova-settings-dialog",
         "main h1",
         "main h2",
         "main input",
@@ -148,7 +150,14 @@ for (const state of states) {
         ).toEqual(previous[property]);
       }
     };
-    if (info.project.name === "desktop-1440") {
+    if (info.project.name === "desktop-1440" && state.name === "settings") {
+      const popup = row(".kova-settings-dialog");
+      expect(popup.width).toBeGreaterThan(550);
+      expect(popup.width).toBeLessThan(data.viewport.width);
+      expect(popup.height).toBeGreaterThan(360);
+      expect(popup.height).toBeLessThan(data.viewport.height);
+      expect(popup.x * 2 + popup.width).toBeCloseTo(data.viewport.width, 0);
+    } else if (info.project.name === "desktop-1440") {
       for (const previous of baseline[state.name]) {
         const actual = row(previous.selector, previous.index);
         for (const [property, value] of Object.entries(previous)) {

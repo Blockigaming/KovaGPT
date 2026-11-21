@@ -25,7 +25,6 @@ import {
   LogOut,
   Map,
   CircleHelp,
-  Compass,
   Bug,
   Download,
   FileText,
@@ -72,6 +71,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useChatReplyActivity } from "@/hooks/useChatReplyActivity";
 import { useTier } from "@/hooks/useTier";
 import { archiveConversation, type Conversation } from "@/lib/chat-store";
+import { MobileDrawerShortcuts } from "@/components/MobileDrawerShortcuts";
+import { useOnline } from "@/hooks/use-online";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { toast } from "sonner";
 import { searchConversations } from "@/lib/conversation-search";
@@ -284,6 +285,7 @@ export function Sidebar({
   const accountRef = useRef(user?.id);
   accountRef.current = user?.id;
   const [searchOpen, setSearchOpen] = useState(false);
+  const online = useOnline();
   const [exploreOpen, setExploreOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Conversation | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -754,6 +756,44 @@ export function Sidebar({
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
   }, []);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !mobileViewport ||
+      searchOpen ||
+      exploreOpen ||
+      confirmDelete ||
+      renameChat ||
+      projectChat ||
+      mobileChatMenuId
+    )
+      return;
+    const { CloseWatcher } = window as Window & {
+      CloseWatcher?: new () => EventTarget & { destroy: () => void };
+    };
+    if (!CloseWatcher) return;
+    const watcher = new CloseWatcher();
+    watcher.addEventListener("close", () => {
+      if (
+        document.querySelector(
+          '[aria-modal="true"]:not(.kova-sidebar), [role="menu"][data-state="open"]',
+        )
+      )
+        return;
+      swipeToggleRef.current();
+    });
+    return () => watcher.destroy();
+  }, [
+    open,
+    mobileViewport,
+    searchOpen,
+    exploreOpen,
+    confirmDelete,
+    renameChat,
+    projectChat,
+    mobileChatMenuId,
+  ]);
 
   useEffect(() => {
     if (!open || !mobileViewport) return;
@@ -2098,45 +2138,19 @@ export function Sidebar({
             </section>
           </div>
 
-          {mobileViewport && signedIn && (
-            <nav className="kova-drawer-shortcuts" aria-label="Quick navigation">
-              <Link
-                to="/"
-                aria-current={isOn("/") ? "page" : undefined}
-                onClick={() => closeAfterMobileNavigation("/")}
-              >
-                <MessageSquare aria-hidden="true" />
-                Home
-              </Link>
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={exploreOpen}
-                onClick={() => setExploreOpen(true)}
-              >
-                <Compass aria-hidden="true" />
-                Explore
-              </button>
-              {railShortcuts
-                .filter((id) => id !== "settings")
-                .slice(0, 2)
-                .map((id) => {
-                  const item = availableShortcuts.find((option) => option.id === id);
-                  if (!item) return null;
-                  const Icon = SHORTCUT_ICONS[id];
-                  return (
-                    <Link
-                      key={id}
-                      to={item.to}
-                      aria-current={isOn(item.to) ? "page" : undefined}
-                      onClick={() => closeAfterMobileNavigation(item.to)}
-                    >
-                      <Icon aria-hidden="true" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-            </nav>
+          {mobileViewport && railOwner && (
+            <MobileDrawerShortcuts
+              key={railOwner}
+              owner={railOwner}
+              shortcuts={availableShortcuts}
+              initialPins={railShortcuts}
+              icons={SHORTCUT_ICONS}
+              exploreOpen={exploreOpen}
+              onExploreOpenChange={setExploreOpen}
+              onNavigate={closeAfterMobileNavigation}
+              onOpenSettings={() => onOpenSettings()}
+              isCurrent={isOn}
+            />
           )}
 
           <footer className="kova-sidebar-footer">
@@ -2276,49 +2290,6 @@ export function Sidebar({
           </div>
         ) : null}
       </aside>
-      {mobileViewport && exploreOpen && (
-        <MobileBottomSheet open onOpenChange={setExploreOpen} title="Explore">
-          <ul className="kova-explore-shortcuts">
-            {availableShortcuts.map((item) => {
-              const Icon = SHORTCUT_ICONS[item.id];
-              const pinned = railShortcuts.includes(item.id);
-              return (
-                <li key={item.id}>
-                  <Link
-                    to={item.to}
-                    onClick={(event) => {
-                      setExploreOpen(false);
-                      if (item.id === "settings") {
-                        event.preventDefault();
-                        onOpenSettings();
-                      } else {
-                        closeAfterMobileNavigation(item.to);
-                      }
-                    }}
-                  >
-                    <Icon aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </Link>
-                  <button
-                    type="button"
-                    aria-label={`${pinned ? "Unpin" : "Pin"} ${item.label}`}
-                    aria-pressed={pinned}
-                    onClick={() =>
-                      changeRailShortcuts(
-                        pinned
-                          ? railShortcuts.filter((id) => id !== item.id)
-                          : [item.id, ...railShortcuts],
-                      )
-                    }
-                  >
-                    <Pin aria-hidden="true" fill={pinned ? "currentColor" : "none"} />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </MobileBottomSheet>
-      )}
       {mobileViewport && confirmDelete && (
         <MobileBottomSheet
           open
@@ -2393,11 +2364,27 @@ export function Sidebar({
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search chats"
             />
+            {mobileViewport && searchQuery && (
+              <button
+                type="button"
+                className="kova-chat-search-clear"
+                aria-label="Clear chat search"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchInputRef.current?.focus({ preventScroll: true });
+                }}
+              >
+                <X aria-hidden="true" />
+              </button>
+            )}
             <button type="button" aria-label="Close chat search" onClick={closeChatSearch}>
-              <X aria-hidden="true" />
+              {mobileViewport ? <ArrowLeft aria-hidden="true" /> : <X aria-hidden="true" />}
             </button>
           </div>
           <div className="kova-chat-search-results">
+            {mobileViewport && !online && signedIn && (
+              <p role="status">Offline. Searching chats available on this device.</p>
+            )}
             {!isLoaded ? (
               <p role="status">Loading chat history…</p>
             ) : !signedIn ? (

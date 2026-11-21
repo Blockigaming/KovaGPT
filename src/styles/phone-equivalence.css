@@ -879,3 +879,26 @@
 [data-touch-image-viewer="true"] {
   touch-action: none;
 }
+
+.kova-mobile-bottom-sheet[data-sheet-size="compact"] {
+  max-height: min(calc(var(--kova-visible-height, 100dvh) * 0.68), 44rem);
+}
+.kova-explore-shortcuts li[data-pinnable] a {
+  padding-inline-end: max(12px, 2.25rem);
+}
+.kova-explore-shortcuts button {
+  inset: 0 0 auto auto;
+  inset-inline: auto 0;
+}
+@media (width < 1024px), (pointer: coarse) and (hover: none) {
+  .kova-chat-search-field input::-webkit-search-cancel-button {
+    appearance: none;
+  }
+  .kova-chat-search-field .kova-chat-search-clear svg {
+    width: 16px;
+    height: 16px;
+  }
+  .kova-chat-search-field button:last-child {
+    order: -1;
+  }
+}

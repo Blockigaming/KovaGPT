@@ -14,6 +14,7 @@ export function MobileBottomSheet({
   children,
   ariaLabel,
   restoreFocus = true,
+  expandable = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,9 +22,11 @@ export function MobileBottomSheet({
   children: ReactNode;
   ariaLabel?: string;
   restoreFocus?: boolean;
+  expandable?: boolean;
 }) {
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [dragY, setDragY] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const dragStart = useRef<number | null>(null);
   const dragDistance = useRef(0);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -42,7 +45,10 @@ export function MobileBottomSheet({
   }, []);
 
   useEffect(() => {
-    if (!open) resetDrag();
+    if (!open) {
+      resetDrag();
+      setExpanded(false);
+    }
   }, [open, resetDrag]);
 
   const onTouchStart = (event: React.TouchEvent) => {
@@ -55,14 +61,18 @@ export function MobileBottomSheet({
       resetDrag();
       return;
     }
-    const distance = Math.max(0, event.touches[0].clientY - dragStart.current);
+    const distance = event.touches[0].clientY - dragStart.current;
     dragDistance.current = distance;
-    setDragY(distance);
+    setDragY(Math.max(0, distance));
   };
   const onTouchEnd = () => {
-    const dismiss = dragDistance.current > 90;
+    const distance = dragDistance.current;
     resetDrag();
-    if (dismiss) onOpenChange(false);
+    if (expandable && distance < -65) setExpanded(true);
+    else if (distance > 90) {
+      if (expanded) setExpanded(false);
+      else onOpenChange(false);
+    }
   };
 
   return (
@@ -74,6 +84,7 @@ export function MobileBottomSheet({
           data-testid="mobile-bottom-sheet"
           className="kova-mobile-bottom-sheet"
           data-kova-bottom-sheet=""
+          data-sheet-size={expandable ? (expanded ? "expanded" : "compact") : undefined}
           onOpenAutoFocus={() => {
             previouslyFocused.current =
               document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -111,6 +122,16 @@ export function MobileBottomSheet({
               {title || ariaLabel || "Options"}
             </DialogPrimitive.Title>
             {!title && <div className="flex-1" />}
+            {expandable && (
+              <button
+                type="button"
+                className="min-h-11 min-w-11 rounded-lg px-2 text-sm"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((value) => !value)}
+              >
+                {expanded ? "Collapse" : "Expand"}
+              </button>
+            )}
             <DialogPrimitive.Close
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kova-radius-compact)] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Close sheet"

@@ -228,6 +228,12 @@ function fixture(initial = {}, options = {}) {
     emit(size = 16) {
       this.ondataavailable?.({ data: new Blob([new Uint8Array(size)], { type: this.mimeType }) });
     }
+    pause() {
+      this.state = "paused";
+    }
+    resume() {
+      this.state = "recording";
+    }
     stop() {
       this.state = "inactive";
       queueMicrotask(() => {
@@ -454,21 +460,16 @@ function fixture(initial = {}, options = {}) {
     return found.props;
   }
   function trackStream() {
-    const tracks = [
-      {
+    const tracks = [0, 1].map(() =>
+      Object.assign(new EventTarget(), {
+        enabled: true,
         stopped: 0,
         stop() {
           this.stopped++;
         },
-      },
-      {
-        stopped: 0,
-        stop() {
-          this.stopped++;
-        },
-      },
-    ];
-    return { tracks, getTracks: () => tracks };
+      }),
+    );
+    return { tracks, getTracks: () => tracks, getAudioTracks: () => tracks };
   }
   render();
   return {
@@ -1756,6 +1757,30 @@ for (const change of [
     f.unmount();
   });
 }
+
+test("mobile Voice mutes capture, resumes it explicitly, and handles a disconnected input", async () => {
+  const f = fixture({ mode: "voice" });
+  await f.ready();
+  await f.click("Start");
+  const stream = await f.acquire();
+  const recorder = f.recorders.at(-1);
+  await f.click("Mute microphone");
+  assert.equal(recorder.state, "paused");
+  assert.ok(stream.tracks.every((track) => !track.enabled));
+  assert.equal(f.control("Unmute microphone")["aria-pressed"], true);
+  assert.match(f.text(), /Microphone muted/);
+
+  await f.click("Unmute microphone");
+  assert.equal(recorder.state, "recording");
+  assert.ok(stream.tracks.every((track) => track.enabled));
+  stream.tracks[0].dispatchEvent(new Event("ended"));
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped));
+  assert.match(f.text(), /The microphone disconnected/);
+  assert.equal(f.voiceSubmissions.length, 0);
+  assert.equal(f.requests.length, 1, "An interrupted capture never starts transcription");
+  f.unmount();
+});
 
 test("Voice Stop cancels pending microphone and transcription without late submission", async () => {
   const pending = fixture({ mode: "voice" });

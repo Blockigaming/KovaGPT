@@ -229,6 +229,12 @@ export function ComposerVoiceDialog({
     gate: ReturnType<typeof createVoiceSilenceGate>;
   } | null>(null);
   const [handsFreeListening, setHandsFreeListening] = useState(false);
+  const [microphoneMuted, setMicrophoneMuted] = useState(false);
+  const microphoneMutedRef = useRef(false);
+  const resetMute = useCallback(() => {
+    microphoneMutedRef.current = false;
+    setMicrophoneMuted(false);
+  }, []);
   const requestDeadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
   const objectUrl = useRef("");
@@ -302,12 +308,13 @@ export function ComposerVoiceDialog({
     }
     stopTracks(stream.current);
     stream.current = null;
+    resetMute();
     chunks.current = [];
     audioBytes.current = 0;
     retainedRecording.current = null;
     phaseRef.current = "idle";
     releasePlayback();
-  }, [clearRecordingTimers, releasePlayback]);
+  }, [clearRecordingTimers, releasePlayback, resetMute]);
 
   const isCurrent = useCallback((scope: OperationScope) => {
     const value = current.current;
@@ -757,14 +764,29 @@ export function ComposerVoiceDialog({
     void transcribeRecording(scope, retainedRecording.current);
   };
 
+  const toggleMicrophone = () => {
+    const capture = stream.current;
+    if (!capture || phaseRef.current !== "recording") return;
+    const muted = !microphoneMutedRef.current;
+    const activeRecorder = recorder.current;
+    for (const track of capture.getAudioTracks()) track.enabled = !muted;
+    if (muted && activeRecorder?.state === "recording") activeRecorder.pause();
+    if (!muted && activeRecorder?.state === "paused") activeRecorder.resume();
+    microphoneMutedRef.current = muted;
+    setMicrophoneMuted(muted);
+  };
+
   const stopRecording = () => {
-    if (phaseRef.current !== "recording" || recorder.current?.state !== "recording") return;
+    const activeRecorder = recorder.current;
+    if (phaseRef.current !== "recording" || !activeRecorder || activeRecorder.state === "inactive")
+      return;
     updatePhase("stopping");
     clearRecordingTimers();
     setHandsFreeListening(false);
-    recorder.current.stop();
+    activeRecorder.stop();
     stopTracks(stream.current);
     stream.current = null;
+    resetMute();
   };
 
   const startRecording = async (continuing = false) => {
@@ -784,6 +806,21 @@ export function ComposerVoiceDialog({
       voiceId: selectedVoice.current,
     };
     if (!isCurrent(scope)) return;
+    const watchMicrophone = (capture: MediaStream) => {
+      stream.current = capture;
+      for (const track of capture.getAudioTracks()) {
+        track.addEventListener(
+          "ended",
+          () => {
+            if (isCurrent(scope) && stream.current === capture)
+              failOperation(
+                "The microphone disconnected. Select an available microphone and start again.",
+              );
+          },
+          { once: true },
+        );
+      }
+    };
     const realtime =
       mode === "voice" && capabilities.realtime && !realtimeFailed && canListenInRealtime();
     const canRecord =
@@ -832,6 +869,7 @@ export function ComposerVoiceDialog({
               throw new Error("Live Voice could not connect.");
             return token;
           },
+          onMicrophone: watchMicrophone,
           onListening: () => {
             startedListening = true;
             if (isCurrent(scope)) {
@@ -841,7 +879,10 @@ export function ComposerVoiceDialog({
           },
         });
         finishRequest(controller);
-        if (isCurrent(scope)) await submitVoiceTurn(scope, text, true);
+        if (!isCurrent(scope)) return;
+        stream.current = null;
+        resetMute();
+        await submitVoiceTurn(scope, text, true);
         return;
       } catch (cause) {
         if (!isCurrent(scope) || controller.signal.aborted) return;
@@ -850,6 +891,8 @@ export function ComposerVoiceDialog({
         const canUseRecordedVoice =
           canRecord && !permissionDenied && mediaError !== "NotFoundError" && fallbackAllowed;
         setHandsFreeListening(false);
+        stream.current = null;
+        resetMute();
         if (canUseRecordedVoice) setRealtimeFailed(true);
         if (!canUseRecordedVoice || startedListening) {
           failOperation(
@@ -878,7 +921,7 @@ export function ComposerVoiceDialog({
         stopTracks(acquired);
         return;
       }
-      stream.current = acquired;
+      watchMicrophone(acquired);
       const mimeType = [
         "audio/webm;codecs=opus",
         "audio/mp4",
@@ -933,7 +976,8 @@ export function ComposerVoiceDialog({
           const samples = new Float32Array(analyser.fftSize);
           const gate = createVoiceSilenceGate();
           const interval = setInterval(() => {
-            if (!isCurrent(scope) || phaseRef.current !== "recording") return;
+            if (!isCurrent(scope) || phaseRef.current !== "recording" || microphoneMutedRef.current)
+              return;
             analyser.getFloatTimeDomainData(samples);
             let total = 0;
             for (const sample of samples) total += sample * sample;
@@ -954,6 +998,11 @@ export function ComposerVoiceDialog({
         }
       }
       recordingDeadline.current = setTimeout(() => {
+        if (microphoneMutedRef.current) {
+          cancelOperation();
+          setError("The listening limit was reached while muted. Press Start to continue.");
+          return;
+        }
         if (
           mode === "voice" &&
           silenceMonitor.current &&
@@ -1154,7 +1203,9 @@ export function ComposerVoiceDialog({
         : phase === "requesting"
           ? "Waiting for microphone permission…"
           : phase === "recording"
-            ? `Recording · ${elapsed}s of 59s`
+            ? microphoneMuted
+              ? "Microphone muted"
+              : `Recording · ${elapsed}s of 59s`
             : phase === "stopping"
               ? "Finishing recording…"
               : phase === "transcribing"
@@ -1238,6 +1289,20 @@ export function ComposerVoiceDialog({
       glowStyle={glowStyle}
       mode={mode}
       status={status}
+      microphoneMuted={microphoneMuted}
+      microphoneControl={
+        mode === "voice" && phase === "recording" ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="kova-mobile-voice-mute"
+            onClick={toggleMicrophone}
+            aria-pressed={microphoneMuted}
+          >
+            {microphoneMuted ? "Unmute microphone" : "Mute microphone"}
+          </Button>
+        ) : undefined
+      }
       handsFreeListening={mode === "voice" && handsFreeListening}
       canFinishVoiceTurn={!realtimeListening}
       availability={

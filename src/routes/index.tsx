@@ -64,6 +64,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -86,6 +87,8 @@ import { MobileTopBar } from "@/components/MobileTopBar";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
 import { type Settings, DEFAULT_SETTINGS, SETTINGS_SECTIONS } from "@/lib/settings-types";
+
+import { saveStoredSettings } from "@/lib/settings-storage";
 
 const FreeOfferButton = lazy(() =>
   import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
@@ -1046,20 +1049,24 @@ function KovaGPT() {
     return () => window.removeEventListener("storage", sync);
   }, [settingsReady, userKey]);
 
-  // Persist local edits only. Hydration and cross-tab snapshots must not
-  // schedule a write that can overwrite a newer preference from another tab.
-  useEffect(() => {
-    if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
-    const generation = storageGenerationRef.current;
-    const t = setTimeout(() => {
-      if (generation !== storageGenerationRef.current) return;
-      safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
+  // Commit local edits before paint so immediately closing or reloading the
+  // Settings dialog cannot drop the last choice or echo a passive snapshot.
+  useLayoutEffect(() => {
+    if (
+      !settingsReady ||
+      !settingsState.persist ||
+      storagePrincipalRef.current !== storagePrincipal
+    )
+      return;
+    try {
+      saveStoredSettings(userKey, settings);
       window.dispatchEvent(
         new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
       );
-    }, 400);
-    return () => clearTimeout(t);
-  }, [settings, settingsReady, settingsState.persist, userKey]);
+    } catch {
+      toast.error("Preferences could not be saved on this device.");
+    }
+  }, [settings, settingsReady, settingsState.persist, storagePrincipal, userKey]);
 
   useEffect(() => {
     if (!principalReady) return;

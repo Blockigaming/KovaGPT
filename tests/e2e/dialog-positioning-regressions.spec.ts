@@ -1,7 +1,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { coreFixture } from "./core-app-fixture";
-import { dismissMobileSidebar, openCurrentSettings, usesSidebarDrawer } from "./current-ui";
+import {
+  chooseSettingsSection,
+  dismissMobileSidebar,
+  openCurrentSettings,
+  usesSidebarDrawer,
+} from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
@@ -90,12 +95,13 @@ for (const theme of ["light", "dark"] as const) {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const fullpage = page.locator(".kova-settings-page");
+    const deepLinkedDialog = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(deepLinkedDialog).toBeVisible();
     const pageColor = await page
       .locator("body")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
-    await expect(fullpage).toHaveCSS("background-color", pageColor);
-    await expect(fullpage.locator(".kova-settings-content")).toHaveCSS(
+    await expect(deepLinkedDialog).toHaveCSS("background-color", pageColor);
+    await expect(deepLinkedDialog.locator(".kova-settings-content")).toHaveCSS(
       "background-color",
       "rgba(0, 0, 0, 0)",
     );
@@ -109,6 +115,7 @@ for (const theme of ["light", "dark"] as const) {
     } else {
       await openCurrentSettings(page);
     }
+    await chooseSettingsSection(page, "General");
     await contained(page, modal);
     const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
     await expect(heading).toBeInViewport({ ratio: 1 });
@@ -132,12 +139,9 @@ for (const theme of ["light", "dark"] as const) {
     await expect(
       page.getByRole("navigation", { name: "Primary navigation", exact: true }),
     ).toBeHidden();
-    if (mobile) {
-      await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
-      await expect(page.locator(".kova-sidebar")).not.toBeInViewport();
-    } else {
-      await expect(page.locator(".kova-sidebar")).toHaveCount(0);
-    }
+    await expect(page.locator(".kova-sidebar")).toHaveAttribute("data-state", "closed");
+    await expect(page.locator(".kova-sidebar")).toHaveJSProperty("inert", true);
+    await expect(page.locator(".kova-sidebar")).toHaveCSS("visibility", "hidden");
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),
       animations: "disabled",

@@ -11,41 +11,30 @@ for (const theme of ["dark", "light"] as const) {
     await fixture(page, theme, true);
     await page.goto("/settings/memory");
     await waitForKovaHydration(page);
-    const surface = page.locator("section.kova-settings-page");
-    await expect(page.locator(".kova-topbar")).toHaveCount(0);
+    const surface = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(surface).toBeVisible();
+    await expect(page.locator(".kova-settings-page")).toHaveCount(0);
     const close = surface.getByRole("button", { name: "Close settings", exact: true });
     await expect(close).toBeVisible();
-    await expect(
-      surface.getByRole("heading", { name: "Personalization", exact: true }),
-    ).toBeVisible();
-    await expect(surface.locator(".kova-settings-page-header")).toHaveCount(0);
-    const top = (await surface.boundingBox())!.y;
-    const header = surface.locator(".kova-settings-content-header");
-    expect((await header.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-    const phone = await usesCompactSettings(page);
-    if (!phone) {
-      const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
-      expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
-      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
-      expect(
-        await surface.locator("h1").evaluate((node) => {
-          const style = getComputedStyle(node.closest(".sr-only")!);
-          return { position: style.position, clipPath: style.clipPath };
-        }),
-      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
+    const heading = surface.getByRole("heading", { name: "Personalization", exact: true });
+    await expect(heading).toHaveCount(1);
+    await expect(heading).toBeInViewport({ ratio: 1 });
+    const navigation = surface.getByRole("complementary", { name: "Settings navigation" });
+    if (!(await usesCompactSettings(page))) {
+      await expect(navigation).toBeVisible();
+      const panelBox = (await surface.boundingBox())!;
+      const navBox = (await navigation.boundingBox())!;
+      expect(navBox.height).toBeGreaterThanOrEqual(panelBox.height - 4);
+      await expect(navigation.getByRole("heading", { name: "Settings", exact: true })).toHaveCount(
+        1,
+      );
     } else {
-      const backToPreviousPage = surface.getByRole("button", { name: "Back to app" });
-      await expect(backToPreviousPage).toBeHidden();
+      await expect(navigation).toBeHidden();
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
-      await expect(backToPreviousPage).toBeHidden();
       await expect(close).toBeVisible();
-      await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
-      expect(
-        await surface.locator("h1").evaluate((node) => {
-          const style = getComputedStyle(node.closest(".sr-only")!);
-          return { position: style.position, clipPath: style.clipPath };
-        }),
-      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
+      await expect(
+        navigation.getByRole("heading", { name: "Settings", exact: true }),
+      ).toBeInViewport({ ratio: 1 });
       await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
       await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
     }

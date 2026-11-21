@@ -108,9 +108,9 @@ for (const theme of ["dark", "light"] as const) {
     );
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
-    const screen = page.locator(".kova-settings-screen");
-    const panel = page.locator("section.kova-settings-page");
-    await expect(screen).toBeVisible();
+    const panel = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(panel).toBeVisible();
+    const openedFrom = page.url();
     await expect(page.getByRole("heading", { name: "General", exact: true }).first()).toBeVisible();
     const phone = await usesCompactSettings(page);
     if (!phone) {
@@ -119,17 +119,10 @@ for (const theme of ["dark", "light"] as const) {
       await expect(page.getByRole("combobox", { name: "Send shortcut" })).toHaveCount(0);
     }
     await expect(page.getByRole("combobox", { name: "Preferred response length" })).toBeVisible();
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const screen = document.querySelector(".kova-settings-screen")!;
-          const content = document.querySelector("section.kova-settings-page")!;
-          return (
-            getComputedStyle(screen).backgroundColor === getComputedStyle(content).backgroundColor
-          );
-        }),
-      )
-      .toBe(true);
+    const color = await page
+      .locator("body")
+      .evaluate((body) => getComputedStyle(body).backgroundColor);
+    await expect(panel).toHaveCSS("background-color", color);
     if (!phone) {
       const nav = page.getByRole("complementary", { name: "Settings navigation" });
       await expect(nav).toBeVisible();
@@ -145,7 +138,7 @@ for (const theme of ["dark", "light"] as const) {
       await page.getByRole("button", { name: "Back to settings" }).click();
       await page.getByRole("tab", { name: "Appearance", exact: true }).click();
     }
-    await expect(page).toHaveURL(/\/settings\/appearance$/);
+    await expect(page).toHaveURL(openedFrom);
     await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toBeVisible();
     await panel.screenshot({
       path: info.outputPath(`settings-reference-${theme}.png`),

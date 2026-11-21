@@ -153,23 +153,24 @@ test("every primary settings destination opens its own working section", async (
   await coreFixture(page, "dark", "free", { preserveStorageOnReload: true });
   await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
-  for (const [label, route] of [
-    ["Profile", "profile"],
-    ["General", "responses"],
-    ["Personalization", "memory"],
-    ["Security and login", "security"],
-    ["Storage", "storage"],
-    ["Notifications", "notifications"],
-    ["Connections", "connections"],
-    ["Cloud Browser", "cloud-browser"],
-    ["Data controls", "privacy"],
-    ["Live Voice", "voice"],
-    ["Usage", "usage"],
-    ["Subscriptions", "billing"],
-    ["Appearance", "appearance"],
+  const openedUrl = page.url();
+  for (const label of [
+    "Profile",
+    "General",
+    "Personalization",
+    "Security and login",
+    "Storage",
+    "Notifications",
+    "Connections",
+    "Cloud Browser",
+    "Data controls",
+    "Live Voice",
+    "Usage",
+    "Subscriptions",
+    "Appearance",
   ]) {
     await chooseSettingsSection(page, label);
-    await expect(page).toHaveURL(new RegExp(`/settings/${route}$`));
+    await expect(page).toHaveURL(openedUrl);
     await expect(
       page
         .locator(".kova-settings-content-header")
