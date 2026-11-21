@@ -177,7 +177,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   assert.equal(property(mobile, "min-width"), "0");
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
   // Round the sidebar panel's outer edge while keeping its viewport edge square.
-  assert.equal(property(mobile, "border-radius"), "24px 0 0 24px");
+  assert.equal(property(mobile, "border-radius"), "0 24px 24px 0");
   const desktopFrame = sharedRules.find(
     (rule) =>
       rule.parent.type === "root" &&
