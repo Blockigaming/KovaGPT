@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { composerKeyboardInset } from "@/lib/composer-keyboard-inset.mjs";
 
 /** Expose the visible viewport while a compact text field owns the keyboard. */
@@ -8,7 +9,7 @@ export function useKeyboardViewport() {
     if (!viewport) return;
 
     const root = document.documentElement;
-    const compact = window.matchMedia("(width < 1024px)");
+    const compact = window.matchMedia(SIDEBAR_DRAWER_QUERY);
     let frame = 0;
     const update = () => {
       const focused = document.activeElement;
