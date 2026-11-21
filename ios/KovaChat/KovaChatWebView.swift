@@ -1,3 +1,4 @@
+import AuthenticationServices
 import AVFoundation
 import SwiftUI
 import WebKit
@@ -52,7 +53,7 @@ struct KovaChatWebView: UIViewRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler,
-        WKScriptMessageHandlerWithReply, AVAudioPlayerDelegate {
+        WKScriptMessageHandlerWithReply, AVAudioPlayerDelegate, ASWebAuthenticationPresentationContextProviding {
         var request: UUID?
         var unlocked = false
         var changeLock: () -> Void
@@ -60,6 +61,8 @@ struct KovaChatWebView: UIViewRepresentable {
         private var audioObservers: [NSObjectProtocol] = []
         private var reader: AVAudioPlayer?
         private var readingID: String?
+        private var googleSession: ASWebAuthenticationSession?
+        private var googleSessionID: UUID?
 
         init(changeLock: @escaping () -> Void) {
             self.changeLock = changeLock
@@ -88,6 +91,9 @@ struct KovaChatWebView: UIViewRepresentable {
         }
 
         func stop() {
+            googleSessionID = nil
+            googleSession?.cancel()
+            googleSession = nil
             stopReading()
             for observer in audioObservers { NotificationCenter.default.removeObserver(observer) }
             audioObservers.removeAll()
@@ -184,6 +190,33 @@ struct KovaChatWebView: UIViewRepresentable {
             }
         }
 
+        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+            web?.window ?? ASPresentationAnchor()
+        }
+
+        private func startGoogleSignIn(_ url: URL) {
+            guard web?.window != nil else { return }
+            let id = UUID()
+            googleSessionID = id
+            googleSession?.cancel()
+            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "kovagpt-native") {
+                [weak self] callback, _ in
+                Task { @MainActor in
+                    guard let self, googleSessionID == id else { return }
+                    googleSessionID = nil
+                    googleSession = nil
+                    if let callback { KovaLaunch.shared.completeGoogleSignIn(callback) }
+                }
+            }
+            googleSession = session
+            session.presentationContextProvider = self
+            if !session.start() {
+                googleSessionID = nil
+                googleSession = nil
+                UIApplication.shared.open(url)
+            }
+        }
+
         func webView(_ web: WKWebView, decidePolicyFor action: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             guard action.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
@@ -196,7 +229,7 @@ struct KovaChatWebView: UIViewRepresentable {
                     decisionHandler(.cancel)
                     if unlocked && action.sourceFrame.isMainFrame &&
                         KovaDestination.isTrusted(action.sourceFrame.request.url) {
-                        UIApplication.shared.open(url)
+                        startGoogleSignIn(url)
                     }
                     return
                 }
