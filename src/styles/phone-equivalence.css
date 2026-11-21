@@ -709,20 +709,22 @@
     height: 19px;
   }
   .kova-chat-search-dialog {
+    --chat-search-max-height: var(--kova-visible-height, 100dvh);
+    --chat-search-padding-top: max(12px, var(--safe-top));
+    --chat-search-padding-bottom: max(12px, var(--safe-bottom));
+    --chat-search-field-height: 48px;
+    --chat-search-border-width: 0px;
     position: fixed;
     inset: var(--kova-visible-top, 0px) 0 auto;
     width: 100%;
-    height: var(--kova-visible-height, 100dvh);
+    height: var(--chat-search-max-height);
     max-width: 100%;
-    max-height: var(--kova-visible-height, 100dvh);
     margin: 0;
-    padding: max(12px, var(--safe-top)) max(16px, var(--safe-right)) max(12px, var(--safe-bottom))
-      max(16px, var(--safe-left));
-    border: 0;
+    padding: var(--chat-search-padding-top) max(16px, var(--safe-right))
+      var(--chat-search-padding-bottom) max(16px, var(--safe-left));
     border-radius: 0;
   }
   .kova-chat-search-field {
-    min-height: 48px;
     border-radius: 14px;
   }
   .kova-chat-search-field input {

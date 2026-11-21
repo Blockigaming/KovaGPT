@@ -11,6 +11,7 @@ const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
 const chatStyles = await readFile("src/styles/spec400-chat.css", "utf8");
 const responseStyles = await readFile("src/components/response-action-refinement.css", "utf8");
 const settingsStyles = await readFile("src/styles/settings-reference.css", "utf8");
+const phoneStyles = await readFile("src/styles/phone-equivalence.css", "utf8");
 
 test("phone chrome uses safe areas, practical touch targets, and a dedicated close action", () => {
   assert.match(topbar, /kova-topbar-inner/);
@@ -51,9 +52,18 @@ test("mobile settings and bottom sheets have bounded, safe-area-aware behavior",
     settingsStyles,
     /padding: max\(24px, var\(--safe-top, 0px\)\) 20px max\(32px, var\(--safe-bottom, 0px\)\)/,
   );
-  assert.match(sheet, /max-h-\[min\(88dvh,44rem\)\]/);
-  assert.match(sheet, /pt-\[var\(--safe-top\)\]/);
-  assert.match(styles, /\[data-kova-keyboard\] \[data-kova-bottom-sheet\]\s*\{[^}]*padding-top: 0/);
+  assert.match(
+    phoneStyles,
+    /\.kova-mobile-bottom-sheet\s*\{[^}]*max-height: min\(calc\(var\(--kova-visible-height, 100dvh\) - max\(12px, var\(--safe-top\)\)\), 44rem\)/,
+  );
+  assert.match(
+    phoneStyles,
+    /\.kova-mobile-bottom-sheet\s*\{[^}]*padding-bottom: var\(--safe-bottom\)/,
+  );
+  assert.match(
+    phoneStyles,
+    /\[data-kova-keyboard\] \.kova-mobile-bottom-sheet\s*\{[^}]*padding-bottom: 0/,
+  );
   assert.match(sheet, /onTouchCancel=\{resetDrag\}/);
   assert.doesNotMatch(sheet, /navigator\.vibrate/);
 });

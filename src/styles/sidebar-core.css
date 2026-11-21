@@ -1091,27 +1091,28 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
 }
 
 .kova-chat-search-dialog {
+  --chat-search-max-height: min(560px, calc(100dvh - 40px));
+  --chat-search-padding-top: 16px;
+  --chat-search-padding-bottom: 16px;
+  --chat-search-field-height: 44px;
+  --chat-search-border-width: 1px;
   width: min(640px, calc(100vw - 40px));
-  max-height: min(560px, calc(100dvh - 40px));
+  max-height: var(--chat-search-max-height);
   margin: auto;
-  padding: 16px;
+  padding: var(--chat-search-padding-top) 16px var(--chat-search-padding-bottom);
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: var(--chat-search-border-width) solid var(--border);
   border-radius: 16px;
   background: var(--popover);
   color: var(--popover-foreground);
   box-shadow: 0 20px 64px rgb(0 0 0 / 28%);
-}
-.kova-chat-search-dialog[open] {
-  display: flex;
-  flex-direction: column;
 }
 .kova-chat-search-dialog::backdrop {
   background: rgb(0 0 0 / 42%);
 }
 .kova-chat-search-field {
   display: flex;
-  flex: none;
+  height: var(--chat-search-field-height);
   align-items: center;
   gap: 12px;
   padding-inline-start: 12px;
@@ -1143,8 +1144,12 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   flex: none;
 }
 .kova-chat-search-results {
-  flex: 1;
-  min-height: 0;
+  /* Keep the scrollport independent of Safari’s intrinsic modal flex sizing. */
+  max-height: calc(
+    var(--chat-search-max-height) - var(--chat-search-padding-top) -
+      var(--chat-search-padding-bottom) - var(--chat-search-field-height) - 2 *
+      var(--chat-search-border-width) - 12px
+  );
   margin-block-start: 12px;
   overflow-y: auto;
   overscroll-behavior: contain;
