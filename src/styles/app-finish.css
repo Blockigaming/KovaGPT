@@ -1563,8 +1563,11 @@
   color: var(--muted-foreground);
   font-size: 0.875rem;
 }
+:root {
+  --kova-reading-accent: var(--kova-message-accent, light-dark(#245eaf, #669cf0));
+}
 .prose-chat .kova-response-emphasis {
-  color: light-dark(#245eaf, #669cf0);
+  color: var(--kova-reading-accent);
 }
 @media (max-width: 1023px), (max-height: 679px) {
   .spec400-recent-work li:nth-child(n + 3) {

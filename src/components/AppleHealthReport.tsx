@@ -81,7 +81,7 @@ export function HealthTrends({
               onChange={(event) => setRange(event.currentTarget.valueAsNumber)}
               style={
                 {
-                  "--kova-health-range-track": `linear-gradient(to right, var(--color-rose-500) ${((range - 7) / (APPLE_HEALTH_HISTORY_DAYS - 7)) * 100}%, color-mix(in srgb, var(--foreground) 33%, var(--card)) 0)`,
+                  "--kova-health-range-track": `linear-gradient(to right, var(--kova-reading-accent) ${((range - 7) / (APPLE_HEALTH_HISTORY_DAYS - 7)) * 100}%, color-mix(in srgb, var(--foreground) 33%, var(--card)) 0)`,
                 } as CSSProperties
               }
               className="kova-health-range block h-11 w-full cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

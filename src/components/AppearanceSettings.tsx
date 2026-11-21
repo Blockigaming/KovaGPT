@@ -213,7 +213,7 @@ export function AppearanceSettings({
           Accent color
           <input
             type="color"
-            value={values.interfaceAccent || "#808080"}
+            value={values.interfaceAccent || "#669cf0"}
             onChange={(event) => change({ interfaceAccent: event.target.value })}
           />
         </label>
@@ -223,8 +223,9 @@ export function AppearanceSettings({
         <p
           style={{ fontSize: values.readingSize, maxWidth: values.readingWidth, lineHeight: 1.65 }}
         >
-          A clear answer starts with the useful details. Your reading preferences apply to answers
-          throughout KovaGPT.
+          A clear answer starts with the{" "}
+          <strong style={{ color: "var(--kova-reading-accent)" }}>useful details</strong>. Your
+          reading preferences apply to answers throughout KovaGPT.
         </p>
       </section>
       <div className="flex flex-wrap items-center gap-3 mt-5">
