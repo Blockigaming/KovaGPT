@@ -69,3 +69,36 @@ test("desktop settings entry and deep link remain usable", async ({ page }, info
     "true",
   );
 });
+
+test("desktop chat renders the fade, blue emphasis, and default home surfaces", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "desktop-1440x900");
+  await fixture(page, "dark", true, true, "free", {
+    savedMessages: [
+      { id: "prompt-a", role: "user", content: "Summarize the main detail." },
+      { id: "answer-a", role: "assistant", content: "Keep the **important detail** in view." },
+    ],
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const header = page.locator(".kova-desktop-topbar");
+  await expect(header).toHaveCSS("border-bottom-width", "0px");
+  await expect
+    .poll(() => header.evaluate((node) => getComputedStyle(node, "::after").backgroundImage))
+    .toMatch(/^linear-gradient\(/);
+  await expect(page.locator(".kova-response-emphasis")).toHaveCSS("color", "rgb(124, 196, 255)");
+
+  const sidebar = await revealSidebar(page);
+  await sidebar.getByRole("button", { name: "New chat", exact: true }).click();
+  const canvas = await page
+    .locator(".kova-chat-main")
+    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await expect(page.locator(".kova-empty-composer .kova-composer-tray")).toHaveCSS(
+    "background-color",
+    canvas,
+  );
+  await expect(
+    page.getByRole("region", { name: "Continue working" }).getByRole("button").first(),
+  ).toHaveCSS("background-color", canvas);
+});

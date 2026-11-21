@@ -601,8 +601,8 @@
     top: 0;
     z-index: 5;
     gap: 8px;
-    min-height: 68px;
-    padding: max(10px, var(--safe-top, 0px)) 16px 10px;
+    min-height: calc(56px + var(--safe-top, 0px));
+    padding: calc(5px + var(--safe-top, 0px)) 16px 5px;
     background: var(--background);
     border-bottom: 1px solid var(--border);
   }
@@ -690,7 +690,11 @@
     height: 44px;
   }
   [role="dialog"].kova-settings-dialog .kova-settings-content-header {
-    padding-right: 64px;
+    padding-inline: max(16px, var(--safe-left, 0px)) max(64px, var(--safe-right, 0px));
+  }
+  [role="dialog"].kova-settings-dialog:has(.kova-settings-content.mobile-content)
+    > [data-kova-dialog-close] {
+    top: calc(6px + var(--safe-top, 0px));
   }
   .kova-settings-reference [data-slot="switch"] {
     width: 48px;

@@ -16,7 +16,7 @@ const states = [
   { name: "library", route: "/library", saved: false },
   { name: "projects", route: "/projects", saved: false },
   { name: "connections", route: "/apps", saved: false },
-  { name: "settings", route: "/settings/profile", saved: false },
+  { name: "settings", route: "/?settings=profile", saved: false },
   { name: "images", route: "/images", saved: false },
   { name: "tasks", route: "/scheduled-tasks", saved: false },
 ];
@@ -200,7 +200,8 @@ for (const state of states) {
       await expect(page.getByRole("navigation", { name: "Mobile workspace" })).toHaveCount(0);
     }
     if (state.name === "conversation") {
-      unchanged(".prose-chat", ["font", "line"], 1);
+      unchanged(".prose-chat", ["font"], 1);
+      expect(row(".prose-chat", 1).line).toBe("25px");
       expect(row(".spec400-composer").radius).toBe("26px");
     }
     if (state.name === "library") {
@@ -209,16 +210,26 @@ for (const state of states) {
       unchanged(".kova-file-filters button", ["font", "line", "radius"]);
     }
     if (state.name === "connections") {
-      unchanged(".spec400-plugin-card", ["radius", "display"]);
-      expect(row(".spec400-plugin-card").padding).toBe("8px");
-      expect(row(".spec400-plugin-card").gap).toBe("8px");
-      expect(row(".spec400-plugin-grid").columns.split(" ")).toHaveLength(1);
+      const list = row(".spec400-plugin-grid");
+      const connection = row(".spec400-plugin-card");
+      // The phone catalog uses grouped rows with touch targets.
+      expect(list.display).toBe("block");
+      expect(list.radius).toBe("18px");
+      expect(connection.width).toBeCloseTo(list.width - 2, 0);
+      expect(connection.height).toBeGreaterThanOrEqual(48);
+      expect(connection.padding).toBe("10px 12px");
+      expect(connection.gap).toBe("8px");
     }
     if (state.name === "settings") {
-      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS("font-size", "24px");
-      await expect(page.locator(".kova-settings-content-header h2")).toHaveCSS(
-        "line-height",
-        "28.8px",
+      const header = page.locator(".kova-settings-content-header");
+      await expect(header.getByRole("heading", { name: "Profile", exact: true })).toHaveCSS(
+        "font-size",
+        "20px",
+      );
+      await expect(header).toHaveCSS("height", "56px");
+      await expect(header.getByRole("button", { name: "Back to settings" })).toHaveCSS(
+        "height",
+        "44px",
       );
     }
     if (state.name === "tasks") {
