@@ -302,8 +302,13 @@ if (scope === "public") {
       test(`${theme} workspace fits: ${route}`, async ({ page }, info) => {
         const errors = watchErrors(page);
         await coreFixture(page, theme, "plus");
-        await page.goto(route, { waitUntil: "domcontentloaded" });
+        // Use the dialog's canonical URL. Legacy redirects have dedicated coverage.
+        const destination = route.replace(/^\/settings\//, "/?settings=");
+        await page.goto(destination, { waitUntil: "domcontentloaded" });
         await waitForKovaHydration(page);
+        if (destination !== route) {
+          await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
+        }
         await expectContained(page, route);
         expect(errors, `${route}: client exceptions`).toEqual([]);
         if (["/", "/library", "/settings/appearance"].includes(route)) {
@@ -319,7 +324,7 @@ if (scope === "public") {
     page,
   }, info) => {
     await coreFixture(page, "dark", "plus");
-    await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
+    await page.goto("/?settings=appearance", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const size = page.getByRole("slider", {
       name: "Interface size",
