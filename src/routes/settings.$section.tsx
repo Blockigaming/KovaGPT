@@ -11,14 +11,11 @@ function SettingsPage() {
   const tab = valid ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS] : "general";
 
   useEffect(() => {
-    let active = true;
+    // Keep the continuation alive across this route's unmount: navigating to
+    // chat replaces this component before AppShell can receive the open event.
     void navigate({ to: "/", replace: true }).then(() => {
-      if (!active) return;
       window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab } }));
     });
-    return () => {
-      active = false;
-    };
   }, [navigate, tab]);
 
   return null;
