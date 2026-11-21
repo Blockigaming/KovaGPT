@@ -20,8 +20,9 @@ enum KovaDestination: String, CaseIterable {
         guard shortcutURL.scheme == "kovagpt-native", shortcutURL.host == "open",
               shortcutURL.port == nil, shortcutURL.user == nil, shortcutURL.password == nil,
               shortcutURL.query == nil, shortcutURL.fragment == nil,
-              shortcutURL.pathComponents.count == 2 else { return nil }
-        self.init(rawValue: shortcutURL.lastPathComponent)
+              let path = URLComponents(url: shortcutURL, resolvingAgainstBaseURL: false)?.percentEncodedPath,
+              let destination = Self.allCases.first(where: { path == "/" + $0.rawValue }) else { return nil }
+        self = destination
     }
 
     static func isTrusted(_ url: URL?) -> Bool {

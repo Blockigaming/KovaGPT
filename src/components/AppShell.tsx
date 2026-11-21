@@ -171,9 +171,7 @@ export function AppShell({
           navigate({ to: "/library" });
         },
         "open-settings": () => {
-          window.dispatchEvent(
-            new CustomEvent("kova-open-settings", { detail: { tab: "responses" } }),
-          );
+          window.dispatchEvent(new CustomEvent("kova-open-settings"));
         },
         "generate-image": () => {
           navigate({ to: "/images" });

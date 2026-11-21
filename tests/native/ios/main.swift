@@ -14,7 +14,8 @@ for unsafe in [
 for unsafe in [
     "kovagpt-native://open/voice?token=123", "kovagpt-native://open/voice#extra",
     "kovagpt-native://user@open/voice", "kovagpt-native://open:443/voice",
-    "kovagpt-native://open/voice/extra", "kovagpt-native://open/not-a-destination"
+    "kovagpt-native://open/voice/extra", "kovagpt-native://open/%76oice",
+    "kovagpt-native://open/not-a-destination"
 ] {
     precondition(KovaDestination(shortcutURL: URL(string: unsafe)!) == nil)
 }
