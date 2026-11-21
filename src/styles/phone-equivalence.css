@@ -203,25 +203,6 @@
     margin-block-start: 0;
   }
 
-  /* Keep Thinking beside Attach while the voice actions stay at the far edge. */
-  .kova-assistant .spec400-composer-toolbar:has(.kova-thinking-toggle) {
-    display: flex;
-    gap: 0;
-  }
-
-  .kova-assistant .spec400-composer-toolbar:has(.kova-thinking-toggle) .spec400-composer-trailing {
-    display: flex;
-    flex: 1 1 auto;
-    flex-wrap: nowrap;
-    min-width: 0;
-  }
-
-  .kova-assistant
-    .spec400-composer-toolbar:has(.kova-thinking-toggle)
-    .spec400-composer-speech-actions {
-    margin-inline-start: auto;
-  }
-
   .kova-home-composer-placeholder .spec400-composer-input {
     display: flex;
     align-items: center;
