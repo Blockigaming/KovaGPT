@@ -53,7 +53,7 @@ import java.util.Collections;
 
 public final class KovaChatActivity extends FragmentActivity {
     private static final String LOCK = "device-lock";
-    private static final String TASKS_CHANNEL = "scheduled_tasks";
+    static final String TASKS_CHANNEL = "scheduled_tasks";
     private static final String UPDATES_CHANNEL = "account_updates";
     private static final int AUTHENTICATORS =
         BiometricManager.Authenticators.BIOMETRIC_WEAK | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
