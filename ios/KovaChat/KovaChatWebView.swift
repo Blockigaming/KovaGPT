@@ -32,6 +32,7 @@ struct KovaChatWebView: UIViewRepresentable {
         let coordinator = context.coordinator
         coordinator.changeLock = changeLock
         if !unlocked && coordinator.unlocked {
+            coordinator.endBackgroundReply()
             coordinator.stopReading(notifyPage: true)
             coordinator.signal("kova-native-audio-interruption")
         }
@@ -61,6 +62,8 @@ struct KovaChatWebView: UIViewRepresentable {
         private var audioObservers: [NSObjectProtocol] = []
         private var reader: AVAudioPlayer?
         private var readingID: String?
+        private var backgroundReply: UIBackgroundTaskIdentifier = .invalid
+        private var backgroundReplyID: String?
         private var googleSession: ASWebAuthenticationSession?
         private var googleSessionID: UUID?
 
@@ -94,9 +97,33 @@ struct KovaChatWebView: UIViewRepresentable {
             googleSessionID = nil
             googleSession?.cancel()
             googleSession = nil
+            endBackgroundReply()
             stopReading()
             for observer in audioObservers { NotificationCenter.default.removeObserver(observer) }
             audioObservers.removeAll()
+        }
+
+        func endBackgroundReply() {
+            let task = backgroundReply
+            backgroundReply = .invalid
+            backgroundReplyID = nil
+            if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
+        }
+
+        private func beginBackgroundReply(_ id: String) {
+            guard UIApplication.shared.applicationState == .active, UUID(uuidString: id) != nil else { return }
+            endBackgroundReply()
+            let task = UIApplication.shared.beginBackgroundTask(withName: "Kova voice reply") {
+                [weak self] in
+                Task { @MainActor in
+                    guard let self, self.backgroundReplyID == id else { return }
+                    self.endBackgroundReply()
+                    self.signal("kova-native-audio-interruption")
+                }
+            }
+            guard task != .invalid else { return }
+            backgroundReply = task
+            backgroundReplyID = id
         }
 
         func signal(_ event: String) {
@@ -147,6 +174,7 @@ struct KovaChatWebView: UIViewRepresentable {
         }
 
         func webView(_ web: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            endBackgroundReply()
             stopReading()
         }
 
@@ -164,7 +192,7 @@ struct KovaChatWebView: UIViewRepresentable {
                 replyHandler(true, nil)
                 return
             }
-            guard unlocked, UIApplication.shared.applicationState == .active,
+            guard unlocked, UIApplication.shared.applicationState == .active || backgroundReply != .invalid,
                   value["action"] == "play", let audio = value["audio"], audio.utf8.count <= 11_184_812,
                   let data = Data(base64Encoded: audio), !data.isEmpty, data.count <= 8 * 1024 * 1024 else {
                 replyHandler(false, nil)
@@ -268,6 +296,10 @@ struct KovaChatWebView: UIViewRepresentable {
                   KovaDestination.isTrusted(message.frameInfo.request.url),
                   let value = message.body as? [String: String] else { return }
             switch value["action"] {
+            case "voice-reply-begin":
+                if let id = value["id"] { beginBackgroundReply(id) }
+            case "voice-reply-end":
+                if let id = value["id"], id == backgroundReplyID { endBackgroundReply() }
             case "haptic": UISelectionFeedbackGenerator().selectionChanged()
             case "device-lock": changeLock()
             case "share":

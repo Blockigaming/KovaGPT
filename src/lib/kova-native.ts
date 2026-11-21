@@ -5,7 +5,8 @@ export const KOVA_NATIVE_BACK = "kova-native-back";
 type NativeMessage =
   | { action: "device-lock" | "notifications" | "haptic" }
   | { action: "watch-back"; active: boolean }
-  | { action: "share"; text: string };
+  | { action: "share"; text: string }
+  | { action: "voice-reply-begin" | "voice-reply-end"; id: string };
 
 type NativeWindow = Window & {
   webkit?: { messageHandlers?: { kovaNative?: { postMessage: (message: NativeMessage) => void } } };

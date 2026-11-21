@@ -21,7 +21,11 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
-import { KOVA_NATIVE_AUDIO_INTERRUPTION, nativeKovaPlatform } from "@/lib/kova-native";
+import {
+  KOVA_NATIVE_AUDIO_INTERRUPTION,
+  nativeKovaPlatform,
+  sendNativeKovaMessage,
+} from "@/lib/kova-native";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
   VOICE_PREFERENCE_KEY,
@@ -576,6 +580,9 @@ export function ComposerVoiceDialog({
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
     updatePhase("chat");
     const controller = beginRequest(120_000);
+    const backgroundReplyID = nativeKovaPlatform() === "ios" ? crypto.randomUUID() : null;
+    if (backgroundReplyID)
+      sendNativeKovaMessage({ action: "voice-reply-begin", id: backgroundReplyID });
     let abortListener: (() => void) | undefined;
     try {
       const aborted = new Promise<never>((_resolve, reject) => {
@@ -695,6 +702,8 @@ export function ComposerVoiceDialog({
               : "This voice turn could not be completed and saved. Review the conversation in chat before trying again.",
       );
     } finally {
+      if (backgroundReplyID)
+        sendNativeKovaMessage({ action: "voice-reply-end", id: backgroundReplyID });
       if (abortListener) controller.signal.removeEventListener("abort", abortListener);
       finishRequest(controller);
     }

@@ -312,6 +312,10 @@ function fixture(initial = {}, options = {}) {
     "@/lib/kova-native": {
       KOVA_NATIVE_AUDIO_INTERRUPTION: "kova-native-audio-interruption",
       nativeKovaPlatform: () => options.nativePlatform ?? null,
+      sendNativeKovaMessage: (message) => {
+        options.nativeMessages?.push(message);
+        return true;
+      },
     },
     "@/lib/voice-recording": {
       prepareVoiceRecording(blob, { signal }) {
@@ -1769,12 +1773,18 @@ for (const change of [
 }
 
 test("iOS Voice lets an active reply finish while hidden without reopening the microphone", async () => {
-  const f = fixture({ mode: "voice" }, { nativePlatform: "ios" });
+  const nativeMessages = [];
+  const f = fixture({ mode: "voice" }, { nativePlatform: "ios", nativeMessages });
   const { speech, sink } = await voiceReply(f);
+  const lease = nativeMessages[0];
+  assert.equal(lease.action, "voice-reply-begin");
+  assert.match(lease.id, /^[a-f0-9-]{36}$/u);
   f.setVisibility("hidden");
   assert.equal(speech.init.signal.aborted, false);
   sink.options.onEnded();
   await f.flush();
+  assert.equal(nativeMessages.at(-1).action, "voice-reply-end");
+  assert.equal(nativeMessages.at(-1).id, lease.id);
   f.setVisibility("visible");
   await f.flush();
   assert.equal(f.microphoneRequests.length, 1);
