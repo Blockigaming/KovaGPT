@@ -14,6 +14,9 @@ struct KovaChatWebView: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         configuration.applicationNameForUserAgent = "KovaGPTNative/iOS"
         configuration.userContentController.add(context.coordinator, name: "kovaNative")
+        configuration.userContentController.addScriptMessageHandler(
+            context.coordinator, contentWorld: .page, name: "kovaReadAloud"
+        )
         let web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = context.coordinator
         web.uiDelegate = context.coordinator
@@ -28,6 +31,7 @@ struct KovaChatWebView: UIViewRepresentable {
         let coordinator = context.coordinator
         coordinator.changeLock = changeLock
         if !unlocked && coordinator.unlocked {
+            coordinator.stopReading(notifyPage: true)
             coordinator.signal("kova-native-audio-interruption")
         }
         coordinator.unlocked = unlocked
@@ -42,16 +46,20 @@ struct KovaChatWebView: UIViewRepresentable {
 
     static func dismantleUIView(_ web: WKWebView, coordinator: Coordinator) {
         web.configuration.userContentController.removeScriptMessageHandler(forName: "kovaNative")
+        web.configuration.userContentController.removeScriptMessageHandler(forName: "kovaReadAloud", contentWorld: .page)
         coordinator.stop()
     }
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler,
+        WKScriptMessageHandlerWithReply, AVAudioPlayerDelegate {
         var request: UUID?
         var unlocked = false
         var changeLock: () -> Void
         weak var web: WKWebView?
         private var audioObservers: [NSObjectProtocol] = []
+        private var reader: AVAudioPlayer?
+        private var readingID: String?
 
         init(changeLock: @escaping () -> Void) {
             self.changeLock = changeLock
@@ -62,18 +70,25 @@ struct KovaChatWebView: UIViewRepresentable {
             ) { [weak self] notification in
                 guard notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt ==
                     AVAudioSession.InterruptionType.began.rawValue else { return }
-                Task { @MainActor in self?.signal("kova-native-audio-interruption") }
+                Task { @MainActor in
+                    self?.stopReading(notifyPage: true)
+                    self?.signal("kova-native-audio-interruption")
+                }
             })
             audioObservers.append(center.addObserver(
                 forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
             ) { [weak self] notification in
                 guard notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ==
                     AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue else { return }
-                Task { @MainActor in self?.signal("kova-native-audio-interruption") }
+                Task { @MainActor in
+                    self?.stopReading(notifyPage: true)
+                    self?.signal("kova-native-audio-interruption")
+                }
             })
         }
 
         func stop() {
+            stopReading()
             for observer in audioObservers { NotificationCenter.default.removeObserver(observer) }
             audioObservers.removeAll()
         }
@@ -84,6 +99,89 @@ struct KovaChatWebView: UIViewRepresentable {
                 "if (location.origin === 'https://kovagpt.com') window.dispatchEvent(new Event(name));",
                 arguments: ["name": event], in: nil, in: .page
             )
+        }
+
+        func stopReading(notifyPage: Bool = false) {
+            guard let current = reader else { return }
+            let id = readingID
+            readingID = nil
+            reader = nil
+            current.delegate = nil
+            current.stop()
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            if notifyPage, let id { readingFinished(id, success: false) }
+        }
+
+        private func readingFinished(_ id: String, success: Bool) {
+            guard let web, KovaDestination.isTrusted(web.url) else { return }
+            web.callAsyncJavaScript(
+                """
+                if (location.origin === 'https://kovagpt.com') {
+                    window.dispatchEvent(new CustomEvent('kova-native-read-aloud', { detail: {id, success} }));
+                }
+                """,
+                arguments: ["id": id, "success": success], in: nil, in: .page
+            )
+        }
+
+        nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+            completeReading(ObjectIdentifier(player), success: flag)
+        }
+
+        nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+            completeReading(ObjectIdentifier(player), success: false)
+        }
+
+        private nonisolated func completeReading(_ playerID: ObjectIdentifier, success: Bool) {
+            Task { @MainActor in
+                guard let reader, ObjectIdentifier(reader) == playerID, let readingID else { return }
+                stopReading()
+                readingFinished(readingID, success: success)
+            }
+        }
+
+        func webView(_ web: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            stopReading()
+        }
+
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
+                                   replyHandler: @escaping (Any?, String?) -> Void) {
+            guard message.name == "kovaReadAloud", message.webView === web, message.frameInfo.isMainFrame,
+                  KovaDestination.isTrusted(message.frameInfo.request.url),
+                  let value = message.body as? [String: String],
+                  let id = value["id"], UUID(uuidString: id) != nil else {
+                replyHandler(false, nil)
+                return
+            }
+            if value["action"] == "stop" {
+                if id == readingID { stopReading() }
+                replyHandler(true, nil)
+                return
+            }
+            guard unlocked, UIApplication.shared.applicationState == .active,
+                  value["action"] == "play", let audio = value["audio"], audio.utf8.count <= 11_184_812,
+                  let data = Data(base64Encoded: audio), !data.isEmpty, data.count <= 8 * 1024 * 1024 else {
+                replyHandler(false, nil)
+                return
+            }
+            stopReading()
+            let session = AVAudioSession.sharedInstance()
+            do {
+                let player = try AVAudioPlayer(data: data, fileTypeHint: AVFileType.mp3.rawValue)
+                try session.setCategory(.playback, mode: .spokenAudio, options: .duckOthers)
+                try session.setActive(true)
+                player.delegate = self
+                reader = player
+                readingID = id
+                if player.play() {
+                    replyHandler(true, nil)
+                } else {
+                    stopReading()
+                    replyHandler(false, nil)
+                }
+            } catch {
+                replyHandler(false, nil)
+            }
         }
 
         func webView(_ web: WKWebView, decidePolicyFor action: WKNavigationAction,

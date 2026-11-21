@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSpeechPlayback } from "../../src/lib/speech-playback.mjs";
+import { createReadAloudSpeechSink, createSpeechPlayback } from "../../src/lib/speech-playback.mjs";
 
 const input = () => ({
   ownerId: "owner-a",
@@ -194,5 +194,57 @@ test("replacement during natural-end idle notification suppresses the old comple
   } finally {
     old.player.stop();
     next.player.stop();
+  }
+});
+
+test("iOS read aloud transfers only authenticated audio and ignores stale native completion", async () => {
+  const originalWindow = globalThis.window;
+  const nativeWindow = new EventTarget();
+  const messages = [];
+  nativeWindow.webkit = {
+    messageHandlers: {
+      kovaReadAloud: {
+        async postMessage(message) {
+          messages.push(message);
+          return true;
+        },
+      },
+    },
+  };
+  globalThis.window = nativeWindow;
+  const states = [];
+  const completed = [];
+  const player = createSpeechPlayback({
+    fetchImpl: async () => audio(),
+    createSink: createReadAloudSpeechSink,
+    onState: (...value) => states.push(value),
+    onEnded: (value) => completed.push(value),
+  });
+  try {
+    await player.start(input());
+    const first = messages[0];
+    assert.equal(first.action, "play");
+    assert.deepEqual(Array.from(Buffer.from(first.audio, "base64")), [1, 2]);
+    assert.match(first.id, /^[\da-f-]{36}$/);
+    assert.deepEqual(states.at(-1), ["playing"]);
+    player.stop();
+    assert.deepEqual(messages[1], { action: "stop", id: first.id });
+
+    await player.start({ ...input(), messageId: "assistant-b" });
+    const current = messages[2];
+    const emit = (id, success) =>
+      nativeWindow.dispatchEvent(
+        new CustomEvent("kova-native-read-aloud", { detail: { id, success } }),
+      );
+    emit(first.id, true);
+    assert.deepEqual(completed, []);
+    emit(current.id, true);
+    assert.equal(completed[0].messageId, "assistant-b");
+    assert.deepEqual(states.at(-1), ["idle"]);
+    assert.deepEqual(messages[3], { action: "stop", id: current.id });
+  } finally {
+    player.stop();
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
   }
 });

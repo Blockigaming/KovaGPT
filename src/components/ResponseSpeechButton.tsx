@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Volume2 } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
-import { createSpeechPlayback } from "@/lib/speech-playback.mjs";
+import { createReadAloudSpeechSink, createSpeechPlayback } from "@/lib/speech-playback.mjs";
 import { PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT } from "@/lib/principal-browser-storage.mjs";
 
 const errors: Record<string, string> = {
@@ -40,6 +40,7 @@ export function ResponseSpeechButton({
   useEffect(() => {
     const player = createSpeechPlayback({
       fetchImpl: authFetch,
+      createSink: createReadAloudSpeechSink,
       onState: (next: string, code?: string) => {
         setState(next);
         setError(code ? (errors[code] ?? "Read aloud failed. Try again.") : "");
