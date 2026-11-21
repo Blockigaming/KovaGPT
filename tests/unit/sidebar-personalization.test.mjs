@@ -176,8 +176,8 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   assert.equal(property(mobile, "width"), "var(--kova-sidebar-drawer-width, 260px)");
   assert.equal(property(mobile, "min-width"), "0");
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
-  // Only the right corners are rounded so the drawer fills the left edge.
-  assert.equal(property(mobile, "border-radius"), "0 24px 24px 0");
+  // Round the sidebar panel's outer edge while keeping its viewport edge square.
+  assert.equal(property(mobile, "border-radius"), "24px 0 0 24px");
   const desktopFrame = sharedRules.find(
     (rule) =>
       rule.parent.type === "root" &&

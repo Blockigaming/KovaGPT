@@ -1,51 +1,25 @@
-import { createFileRoute, useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
-import { SettingsDialog, SETTINGS_SECTIONS } from "@/components/SettingsDialog";
-import { useUser } from "@/components/auth/ClerkSafe";
-import { useNovaSettings } from "@/lib/use-nova-settings";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { SETTINGS_SECTIONS } from "@/components/SettingsDialog";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/settings/$section")({ component: SettingsPage });
+
 function SettingsPage() {
   const { section } = Route.useParams();
   const navigate = useNavigate();
-  const router = useRouter();
-  const canGoBack = useCanGoBack();
-  const { user, isLoaded } = useUser();
-  const [settings, setSettings] = useNovaSettings(user?.id ?? null, isLoaded);
   const valid = Object.prototype.hasOwnProperty.call(SETTINGS_SECTIONS, section);
   const tab = valid ? SETTINGS_SECTIONS[section as keyof typeof SETTINGS_SECTIONS] : "general";
-  return (
-    <div className="kova-settings-screen">
-      <main id="main-content" className="kova-page kova-secondary-page kova-settings-route">
-        {!valid ? (
-          <p role="status">
-            This settings section is unavailable. General settings are shown below.
-          </p>
-        ) : null}
-        <SettingsDialog
-          open
-          page
-          initialTab={tab}
-          settings={settings}
-          onChange={setSettings}
-          onClearAll={() => {
-            /* Shared storage-clear events update the surrounding shell. */
-          }}
-          onOpenChange={(open) => {
-            if (open) return;
-            if (canGoBack) router.history.back();
-            else void navigate({ to: "/", replace: true });
-          }}
-          onSectionChange={(next) =>
-            // Settings resets its content pane; router restoration must not replay the previous section.
-            void navigate({
-              to: "/settings/$section",
-              params: { section: next },
-              replace: true,
-              resetScroll: false,
-            })
-          }
-        />
-      </main>
-    </div>
-  );
+
+  useEffect(() => {
+    let active = true;
+    void navigate({ to: "/", replace: true }).then(() => {
+      if (!active) return;
+      window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab } }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [navigate, tab]);
+
+  return null;
 }

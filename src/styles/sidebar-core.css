@@ -617,7 +617,7 @@ button.kova-sidebar-scrim {
     width: var(--kova-sidebar-drawer-width, 260px);
     min-width: 0;
     max-width: calc(100vw - 24px);
-    border-radius: 0 24px 24px 0;
+    border-radius: 24px 0 0 24px;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: var(--kova-sidebar-drawer-width, 260px);

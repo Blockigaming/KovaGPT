@@ -322,12 +322,13 @@ test("Responses owns custom instructions/personality, their scope and current-ch
   assert.doesNotMatch(account, /customInstructions|PersonalitySliders|settings\.mood/);
 });
 
-test("Settings utility and narrow headings use a page-only alignment rule; preview keeps original palette and motion override", () => {
+test("Settings deep links open the modal; narrow headings keep their safe-area layout and preview keeps its palette and motion override", () => {
   const route = readFileSync("src/routes/settings.$section.tsx", "utf8");
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
-  assert.doesNotMatch(route, /<AppShell/);
-  assert.match(route, /<SettingsDialog/);
+  assert.match(route, /navigate\(\{ to: "\/", replace: true \}\)/);
+  assert.match(route, /new CustomEvent\("kova-open-settings", \{ detail: \{ tab \} \}\)/);
+  assert.doesNotMatch(route, /<SettingsDialog/);
   assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
