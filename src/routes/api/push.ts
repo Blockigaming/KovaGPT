@@ -11,6 +11,17 @@ const owner = z.string().uuid();
 const schema = z.discriminatedUnion("action", [
   z
     .object({
+      action: z.literal("subscribe_android"),
+      expectedUserId: owner,
+      token: z
+        .string()
+        .min(20)
+        .max(4096)
+        .regex(/^[A-Za-z0-9_:-]+$/u),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal("subscribe"),
       expectedUserId: owner,
       subscription: z
@@ -83,6 +94,8 @@ export const Route = createFileRoute("/api/push")({
           }
           if (data.action === "subscribe")
             return reply(await subscribePush(auth.userId, data.subscription));
+          if (data.action === "subscribe_android")
+            return reply(await subscribePush(auth.userId, data.token, true));
           if (data.action === "preferences")
             return reply(
               await setPushQuietHours(auth.userId, data.expectedRevision, data.quietHours),
