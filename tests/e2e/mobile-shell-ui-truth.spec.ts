@@ -236,7 +236,7 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
       !(await page.evaluate(() => matchMedia("(pointer: coarse) and (hover: none)").matches)),
     "drawer layout",
   );
-  await installAuthenticatedFixture(page, { preserveStorageOnReload: true });
+  await fixture(page, "dark", true, false, "free", { preserveStorageOnReload: true });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
@@ -254,7 +254,7 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   );
   await expect
     .poll(async () => (await drawer.boundingBox())?.width)
-    .toBeCloseTo(phoneLayout ? (viewport.width * 2) / 3 : 260, 0);
+    .toBeCloseTo(phoneLayout ? Math.min(viewport.width * 0.86, 360) : 260, 0);
   const mainBox = (await main.boundingBox())!;
   expect(mainBox.x).toBe(0);
   expect(mainBox.width).toBe(viewport.width);

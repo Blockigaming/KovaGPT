@@ -8,7 +8,7 @@ for (const theme of ["dark", "light"] as const) {
     page,
   }) => {
     await coreFixture(page, theme, "pro");
-    await page.goto("/settings/responses");
+    await page.goto("/?settings=responses", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const phone = await usesCompactSettings(page);
     const navigation = page.getByRole("complementary", { name: "Settings navigation" });
@@ -52,7 +52,7 @@ for (const theme of ["dark", "light"] as const) {
   test(`${theme}: Settings controls fit their cards and phone inputs avoid automatic zoom`, async ({
     page,
   }) => {
-    await coreFixture(page, theme, "pro");
+    await coreFixture(page, theme, "pro", { preserveStorageOnReload: true });
     for (const section of [
       "responses",
       "appearance",
@@ -61,7 +61,7 @@ for (const theme of ["dark", "light"] as const) {
       "notifications",
       "billing",
     ]) {
-      await page.goto(`/settings/${section}`);
+      await page.goto(`/?settings=${section}`, { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       const content = page.locator(".kova-settings-content");
       await expect(content).toBeVisible();
@@ -107,7 +107,7 @@ for (const theme of ["dark", "light"] as const) {
 
 test("every Settings destination loads from its route without clipping", async ({ page }) => {
   test.setTimeout(90000);
-  await coreFixture(page, "dark", "pro");
+  await coreFixture(page, "dark", "pro", { preserveStorageOnReload: true });
   for (const section of [
     "profile",
     "voice",
@@ -131,7 +131,7 @@ test("every Settings destination loads from its route without clipping", async (
     "location",
     "family",
   ]) {
-    await page.goto(`/settings/${section}`);
+    await page.goto(`/?settings=${section}`, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(
       page.locator('.kova-settings-content > [role="tabpanel"][data-state="active"]'),
