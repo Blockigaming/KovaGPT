@@ -1564,9 +1564,13 @@
   font-size: 0.875rem;
 }
 :root {
-  --kova-reading-accent: var(--kova-message-accent, light-dark(#245eaf, #669cf0));
+  --kova-default-reading-accent: #245eaf;
+  --kova-reading-accent: var(--kova-message-accent, var(--kova-default-reading-accent));
 }
-.prose-chat .kova-response-emphasis {
+:root.dark {
+  --kova-default-reading-accent: #7cc4ff;
+}
+.kova-response-emphasis {
   color: var(--kova-reading-accent);
 }
 @media (max-width: 1023px), (max-height: 679px) {
