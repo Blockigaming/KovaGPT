@@ -49,18 +49,18 @@ for (const theme of ["dark", "light"] as const) {
     );
   });
 
-  test(`${theme}: Settings controls fit their cards and phone inputs avoid automatic zoom`, async ({
-    page,
-  }) => {
-    await coreFixture(page, theme, "pro", { preserveStorageOnReload: true });
-    for (const section of [
-      "responses",
-      "appearance",
-      "profile",
-      "privacy",
-      "notifications",
-      "billing",
-    ]) {
+  for (const section of [
+    "responses",
+    "appearance",
+    "profile",
+    "privacy",
+    "notifications",
+    "billing",
+  ]) {
+    test(`${theme}: Settings ${section} controls fit their cards and avoid automatic zoom`, async ({
+      page,
+    }) => {
+      await coreFixture(page, theme, "pro");
       await page.goto(`/?settings=${section}`, { waitUntil: "domcontentloaded" });
       await waitForKovaHydration(page);
       const content = page.locator(".kova-settings-content");
@@ -101,36 +101,35 @@ for (const theme of ["dark", "light"] as const) {
         for (const width of widths)
           expect(Math.abs(width.control - width.row)).toBeLessThanOrEqual(1);
       }
-    }
-  });
+    });
+  }
 }
 
-test("every Settings destination loads from its route without clipping", async ({ page }) => {
-  test.setTimeout(90000);
-  await coreFixture(page, "dark", "pro", { preserveStorageOnReload: true });
-  for (const section of [
-    "profile",
-    "voice",
-    "appearance",
-    "responses",
-    "notifications",
-    "connections",
-    "cloud-browser",
-    "privacy",
-    "usage",
-    "billing",
-    "memory",
-    "security",
-    "storage",
-    "shortcuts",
-    "email",
-    "parental",
-    "report",
-    "help",
-    "about",
-    "location",
-    "family",
-  ]) {
+for (const section of [
+  "profile",
+  "voice",
+  "appearance",
+  "responses",
+  "notifications",
+  "connections",
+  "cloud-browser",
+  "privacy",
+  "usage",
+  "billing",
+  "memory",
+  "security",
+  "storage",
+  "shortcuts",
+  "email",
+  "parental",
+  "report",
+  "help",
+  "about",
+  "location",
+  "family",
+]) {
+  test(`Settings ${section} loads from its route without clipping`, async ({ page }) => {
+    await coreFixture(page, "dark", "pro");
     await page.goto(`/?settings=${section}`, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(
@@ -141,8 +140,8 @@ test("every Settings destination loads from its route without clipping", async (
     const box = (await heading.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-  }
-});
+  });
+}
 
 test("phone Library keeps sort readable beside favorites and view controls", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 768);
