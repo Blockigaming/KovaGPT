@@ -85,7 +85,7 @@ import {
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { ChatLoadingIndicator } from "@/components/StreamingStatus";
 
-import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
+import { type Settings, DEFAULT_SETTINGS, SETTINGS_SECTIONS } from "@/lib/settings-types";
 
 const FreeOfferButton = lazy(() =>
   import("@/components/FreeOfferButton").then((module) => ({ default: module.FreeOfferButton })),
@@ -228,6 +228,12 @@ type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): Record<string, unknown> & { settings?: string } => ({
+    ...search,
+    settings: typeof search.settings === "string" ? search.settings : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "KovaGPT" },
@@ -524,40 +530,30 @@ function KovaGPT() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
-  const openSettings = useCallback(
-    (tab?: string) => {
-      // Keep Settings above the mobile drawer and preserve in-memory chat work.
-      if (
-        window.matchMedia(SIDEBAR_DRAWER_QUERY).matches ||
-        attachments.length ||
-        tempChat ||
-        isStreaming ||
-        result
-      ) {
-        settingsReturnFocusRef.current =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSettingsTab(tab);
-        setSettingsOpen(true);
-        return;
-      }
-      if (principalReady) {
-        saveDraft(userKey, activeId, input);
-        if (activeId) savePendingActive(userKey, activeId);
-      }
-      void navigate({ to: "/settings/$section", params: { section: settingsSectionForTab(tab) } });
-    },
-    [
-      activeId,
-      attachments.length,
-      input,
-      isStreaming,
-      navigate,
-      principalReady,
-      result,
-      tempChat,
-      userKey,
-    ],
-  );
+  const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
+  const settingsSection = Route.useSearch({ select: (search) => search.settings });
+  useEffect(() => {
+    if (!principalReady || !settingsSection) return;
+    const tab = Object.hasOwn(SETTINGS_SECTIONS, settingsSection)
+      ? SETTINGS_SECTIONS[settingsSection as keyof typeof SETTINGS_SECTIONS]
+      : undefined;
+    openSettings(tab);
+  }, [openSettings, principalReady, settingsSection, storagePrincipal]);
+  const changeSettingsOpen = (open: boolean) => {
+    setSettingsOpen(open);
+    if (!open && settingsSection) {
+      void navigate({
+        to: "/",
+        search: ({ settings: _settings, ...search }) => search,
+        replace: true,
+      });
+    }
+  };
   // Listen for global open-settings events (fired from UserButton profile click).
   useEffect(() => {
     const h = (e: Event) => {
@@ -3263,6 +3259,10 @@ function KovaGPT() {
         onSelect={setActiveId}
         onNew={startNewChat}
         onDelete={(id) => historyAction({ kind: "delete", id })}
+        onArchived={(id) => {
+          setConversations((items) => items.filter((item) => item.id !== id));
+          if (id === activeIdRef.current) setActiveId(null);
+        }}
         onRename={(id, title) => historyAction({ kind: "rename", id, title })}
         open={sidebarOpen && !settingsOpen}
         onToggle={() => {
@@ -3271,8 +3271,6 @@ function KovaGPT() {
         }}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
-        onOpenWorkspaceSearch={openCommandPalette}
-        workspaceSearchOpen={commandOpen}
         hideGuestLogin
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {
@@ -3554,7 +3552,7 @@ function KovaGPT() {
         {settingsOpen && (
           <SettingsDialog
             open={settingsOpen}
-            onOpenChange={setSettingsOpen}
+            onOpenChange={changeSettingsOpen}
             settings={settings}
             onChange={setSettings}
             onClearAll={() => {

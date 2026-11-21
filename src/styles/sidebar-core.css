@@ -612,16 +612,19 @@ button.kova-sidebar-scrim {
 @media (width < 1024px), (pointer: coarse) and (hover: none) {
   .kova-sidebar[data-kova-core-sidebar] {
     position: fixed;
-    inset: 0 auto 0 0;
-    height: 100dvh;
+    --sidebar-motion: 240ms;
+    --kova-sidebar-drawer-width: min(86vw, 360px);
+    inset: var(--kova-visible-top, 0px) auto auto 0;
+    height: var(--kova-visible-height, 100dvh);
     margin: 0;
-    width: var(--kova-sidebar-drawer-width, 260px);
+    width: var(--kova-sidebar-drawer-width);
     min-width: 0;
     max-width: calc(100vw - 24px);
     border-radius: 0 24px 24px 0;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
-    width: var(--kova-sidebar-drawer-width, 260px);
+    --sidebar-motion: 200ms;
+    width: var(--kova-sidebar-drawer-width);
     transform: translateX(-100%);
   }
   .kova-sidebar-inner {
@@ -1085,4 +1088,95 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
 .kova-sidebar-chat-menu[data-held-chat="true"] > [role="menuitem"]:last-child {
   border-end-start-radius: 16px;
   border-end-end-radius: 16px;
+}
+
+.kova-chat-search-dialog {
+  width: min(640px, calc(100vw - 40px));
+  max-height: min(560px, calc(100dvh - 40px));
+  margin: auto;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 20px 64px rgb(0 0 0 / 28%);
+}
+.kova-chat-search-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.kova-chat-search-dialog::backdrop {
+  background: rgb(0 0 0 / 42%);
+}
+.kova-chat-search-field {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding-inline-start: 12px;
+  border-radius: 9px;
+  background: var(--muted);
+}
+.kova-chat-search-field input {
+  flex: 1;
+  min-width: 0;
+  padding-block: 10px;
+  background: transparent;
+  font: inherit;
+}
+.kova-chat-search-field button,
+.kova-chat-search-results button {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border-radius: 9px;
+}
+.kova-chat-search-field button {
+  justify-content: center;
+  width: 44px;
+}
+.kova-chat-search-field svg,
+.kova-chat-search-results svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.kova-chat-search-results {
+  flex: 1;
+  min-height: 0;
+  margin-block-start: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.kova-chat-search-results :is(h2, p) {
+  padding: 8px 12px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.kova-chat-search-results button {
+  width: 100%;
+  gap: 12px;
+  padding: 8px 12px;
+  text-align: start;
+}
+.kova-chat-search-dialog button:hover {
+  background: var(--accent);
+}
+.kova-chat-search-results button > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.kova-chat-search-results :is(strong, small) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-chat-search-results strong {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.kova-chat-search-results small {
+  color: var(--muted-foreground);
 }

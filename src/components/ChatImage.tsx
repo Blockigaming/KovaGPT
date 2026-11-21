@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { useMobileImageGestures } from "@/hooks/use-mobile-image-gestures";
 import { useLayout } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import {
@@ -99,6 +100,10 @@ export function ChatImage({
   const [actualSize, setActualSize] = useState(false);
   previewOpenRef.current = previewMarker === marker;
   const { isMobile } = useLayout();
+  const gestures = useMobileImageGestures(zoom ?? 100, (next) => {
+    setActualSize(false);
+    setZoom(next > 100 ? next : null);
+  });
   const [touchMenu, setTouchMenu] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuOpenRef = useRef(false);
@@ -423,6 +428,8 @@ export function ChatImage({
           </div>
           <div
             className="kova-preview-image-stage"
+            {...(isMobile ? gestures : {})}
+            data-touch-image-viewer={isMobile || undefined}
             data-actual-size={actualSize || undefined}
             data-zoomed={zoom !== null || undefined}
           >

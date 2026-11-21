@@ -1,6 +1,5 @@
 import { supportsImageEdits, supportsCustomImageSizes } from "./image-size-policy.mjs";
 import { imageModel } from "@/lib/ai/provider.server";
-import { selectModelForMode } from "@/lib/ai/registry.server";
 import { replaceControlCharacters } from "@/lib/sanitize-text";
 
 import { getAiProviderConfig } from "@/lib/ai/provider.server";
@@ -49,12 +48,12 @@ export function normalizeImageSettings(input: unknown): ImageGenerationSettings 
 export function imageProviderPayload(settings: ImageGenerationSettings) {
   if (settings.operation !== "generate" || settings.parentImageId || settings.maskAssetId)
     throw new ImageInputError("Source images require the authenticated image-edit transport.");
-  return imageRequestFields(settings, selectModelForMode("image").model.modelId || imageModel());
+  return imageRequestFields(settings, imageModel());
 }
 export function imageEditProviderPayload(settings: ImageGenerationSettings) {
   if (!imageEditingEnabled() || settings.operation !== "edit" || !settings.parentImageId)
     throw new ImageInputError("Image editing is not enabled.", 503);
-  return imageRequestFields(settings, selectModelForMode("image").model.modelId || imageModel());
+  return imageRequestFields(settings, imageModel());
 }
 
 export function imageResultMetadata(

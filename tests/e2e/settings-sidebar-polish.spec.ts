@@ -99,7 +99,7 @@ test("sidebar keeps separate desktop and phone preferences across Library and re
   await expect(page.locator("#library-title")).toBeVisible();
 });
 
-test("desktop Settings width is editable and Back restores the originating page", async ({
+test("desktop Settings opens at its home and closes over the originating page", async ({
   page,
 }, info) => {
   test.skip(info.project.name !== "desktop-1440x900");
@@ -109,9 +109,15 @@ test("desktop Settings width is editable and Back restores the originating page"
   const previousUrl = page.url();
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
-  await expect(page).toHaveURL(/\/settings\/appearance$/);
-  const settings = page.locator(".kova-settings-page");
+  await expect(page).toHaveURL(previousUrl);
+  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
+  await expect(settings).toBeVisible();
   const navigation = settings.getByRole("complementary", { name: "Settings navigation" });
+  await expect(navigation.getByRole("tab", { name: "General", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await navigation.getByRole("tab", { name: "Appearance", exact: true }).click();
   const width = settings.getByRole("slider", { name: "Settings sidebar width" });
   await expect(width).toHaveAttribute("aria-valuenow", "280");
   await expect(navigation).toHaveCSS("width", "280px");
@@ -136,9 +142,10 @@ test("desktop Settings width is editable and Back restores the originating page"
   });
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await navigation.getByRole("tab", { name: "Profile", exact: true }).click();
-  await expect(page).toHaveURL(/\/settings\/profile$/);
+  await expect(page).toHaveURL(previousUrl);
   await expect.poll(() => pane.evaluate((element) => element.scrollTop)).toBe(0);
-  await settings.getByRole("button", { name: "Back to app", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(settings).toBeHidden();
   await expect(page).toHaveURL(previousUrl);
 });
 

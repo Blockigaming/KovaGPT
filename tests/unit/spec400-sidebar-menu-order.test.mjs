@@ -4,11 +4,10 @@ import test from "node:test";
 
 const source = readFileSync("src/components/Sidebar.tsx", "utf8");
 
-test("pinned chats do not consume the eight recent chat slots", () => {
-  assert.match(source, /pinned\.slice\(0, 8\)\.map\(chatRow\)/);
-  assert.match(source, /recents\.slice\(0, 8\)\.map\(chatRow\)/);
-  assert.doesNotMatch(source, /8 - pinned\.length/);
-  assert.match(source, /filtered\.length > 0 \? \([\s\S]*?View all chats/);
+test("the scrollable history includes all pinned and recent chats", () => {
+  assert.match(source, /pinned\.map\(chatRow\)/);
+  assert.match(source, /recents\.map\(chatRow\)/);
+  assert.doesNotMatch(source, /View all chats/);
 });
 
 test("account menu uses the specified order and a separate destructive group", () => {

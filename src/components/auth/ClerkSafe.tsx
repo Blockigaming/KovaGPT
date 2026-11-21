@@ -1159,11 +1159,7 @@ export function UserButton(_props?: {
           <DropdownMenuItem
             onClick={() => {
               if (typeof window !== "undefined") {
-                window.dispatchEvent(
-                  new CustomEvent("kova-open-settings", {
-                    detail: { tab: "general" },
-                  }),
-                );
+                window.dispatchEvent(new CustomEvent("kova-open-settings"));
               }
             }}
           >

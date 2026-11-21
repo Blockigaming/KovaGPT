@@ -9,6 +9,7 @@ export type ConversationSearchResult = {
 export function searchConversations(
   conversations: Conversation[],
   input: string,
+  { matchAny = false }: { matchAny?: boolean } = {},
 ): ConversationSearchResult[] {
   const tokens = input.trim().match(/(?:[^\s"]+|"[^"]*")+/g) ?? [];
   let pinned: boolean | null = null;
@@ -37,10 +38,14 @@ export function searchConversations(
       const title = conversation.title.toLowerCase();
       const messages = conversation.messages.map((message) => message.content).join("\n");
       const content = messages.toLowerCase();
+      const matches = (term: (typeof terms)[number]) =>
+        title.includes(term.value) || (!term.titleOnly && content.includes(term.value));
+      const words = terms.filter((term) => !term.titleOnly);
       if (
-        terms.some(
-          (term) => !(term.titleOnly ? title : `${title}\n${content}`).includes(term.value),
-        )
+        matchAny
+          ? terms.some((term) => term.titleOnly && !matches(term)) ||
+            (words.length > 0 && !words.some(matches))
+          : !terms.every(matches)
       )
         return [];
       const first = terms.find((term) => !term.titleOnly && content.includes(term.value));
@@ -55,8 +60,7 @@ export function searchConversations(
           snippet,
           score:
             terms.reduce(
-              (score, term) =>
-                score + (title.includes(term.value) ? 4 : content.includes(term.value) ? 1 : 0),
+              (score, term) => score + (title.includes(term.value) ? 4 : matches(term) ? 1 : 0),
               0,
             ) + (conversation.pinned ? 1 : 0),
         },

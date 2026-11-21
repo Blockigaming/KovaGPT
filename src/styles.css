@@ -1647,11 +1647,6 @@ body {
 
 /* Portaled compact overlays follow the visible viewport while typing. */
 @media (width < 1024px) {
-  :root[data-kova-keyboard] [data-kova-bottom-sheet] {
-    max-height: min(calc(var(--kova-visible-height, 100dvh) * 0.88), 44rem);
-    padding-top: 0;
-  }
-
   :root[data-kova-keyboard] [data-slot="command-palette-overlay"] {
     top: var(--kova-visible-top, 0px);
     bottom: auto;

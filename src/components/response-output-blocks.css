@@ -424,7 +424,7 @@ body .prose-chat .kova-table-scroll:focus-visible {
 }
 
 .kova-image-view-scroll[data-zoomed="true"] > [data-chat-image] {
-  width: 200%;
+  width: var(--image-zoom-width, 200%);
   max-width: none;
 }
 
@@ -440,6 +440,8 @@ body .prose-chat .kova-table-scroll:focus-visible {
 
   [data-kova-response-image-view] {
     inset: 0;
+    background: #111;
+    color: #fff;
     width: 100%;
     max-width: none;
     height: 100dvh;
@@ -460,6 +462,10 @@ body .prose-chat .kova-table-scroll:focus-visible {
 
   [data-kova-response-image-view] h2 {
     padding-inline-end: 44px;
+  }
+
+  [data-kova-response-image-view] .kova-image-view-scroll {
+    touch-action: none;
   }
 
   [data-kova-response-image-view] img {

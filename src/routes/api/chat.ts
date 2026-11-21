@@ -1,3 +1,10 @@
+import {
+  chatScheduledTaskTool,
+  chatScheduleInstructions,
+  createChatScheduledTask,
+  scheduledTaskRequestText,
+} from "@/lib/chat-scheduled-task.server";
+import type { Activity } from "@/lib/chat-store";
 import { READ_ONLY_PLUGIN_TOOLS } from "@/lib/composer-plugin-usage.mjs";
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { MEMORY_TIERS } from "@/lib/memory-tier-policy.mjs";
@@ -816,8 +823,22 @@ export const Route = createFileRoute("/api/chat")({
 
             // Detect image-generation intent on the latest user message
             const lastText = lastUser?.content?.trim() ?? "";
-            const explicitBrowser = !clientTool && requestsChatBrowser(lastText);
+            const scheduleRequest =
+              auth?.emailVerified &&
+              !capture &&
+              !temporary &&
+              !clientTool &&
+              !ingress.kova &&
+              !ingress.skill &&
+              !connectorId &&
+              !ingress.voice &&
+              !currentAttachments.length
+                ? scheduledTaskRequestText(messages, lastText)
+                : null;
+            const explicitBrowser =
+              !scheduleRequest && !clientTool && requestsChatBrowser(lastText);
             let isImageRequest =
+              !scheduleRequest &&
               !explicitBrowser &&
               !explicitHostedTool &&
               lastText.length > 0 &&
@@ -1343,6 +1364,7 @@ export const Route = createFileRoute("/api/chat")({
             let webBlock = "";
             let webSources: KovaSource[] = [];
             if (
+              !scheduleRequest &&
               !explicitHostedTool &&
               !lockdownBlocksNetwork &&
               (!customKova || customKova.allows("web")) &&
@@ -1676,7 +1698,8 @@ export const Route = createFileRoute("/api/chat")({
                     ADAPTIVE_INSTRUCTION +
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
-                    "\nUse Markdown bold sparingly for important terms and key results in written answers.\n" +
+                    "\nUse Markdown bold around important terms, figures, and conclusions so the reader can scan them. Emphasize short phrases within a sentence. Never claim that a task was scheduled without a successful tool result.\n" +
+                    (scheduleRequest ? chatScheduleInstructions + "\n" : "") +
                     (useRichResponseCatalog ? FINAL_CHART_INSTRUCTION : COMPACT_CHART_INSTRUCTION) +
                     GENERATIVE_UI_INSTRUCTIONS +
                     "\n\n" +
@@ -1773,6 +1796,7 @@ export const Route = createFileRoute("/api/chat")({
               );
             const selectedHostedTool = explicitHostedTool ? clientTool : null;
             const googleContext =
+              !scheduleRequest &&
               !explicitBrowser &&
               !selectedHostedTool &&
               auth &&
@@ -1788,6 +1812,7 @@ export const Route = createFileRoute("/api/chat")({
                   )) ?? null)
                 : null;
             const connectedContext =
+              !scheduleRequest &&
               !explicitBrowser &&
               !selectedHostedTool &&
               auth &&
@@ -1809,14 +1834,16 @@ export const Route = createFileRoute("/api/chat")({
             const permittedTools = customKova
               ? customKova.filterTools(connectionTools)
               : connectionTools;
-            const availableTools = connectorId
-              ? permittedTools.filter(({ function: { name } }) =>
-                  selectedConnectorIds.some(
-                    (id) =>
-                      READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
-                  ),
-                )
-              : permittedTools;
+            const availableTools = scheduleRequest
+              ? [chatScheduledTaskTool]
+              : connectorId
+                ? permittedTools.filter(({ function: { name } }) =>
+                    selectedConnectorIds.some(
+                      (id) =>
+                        READ_ONLY_PLUGIN_TOOLS[name] === id || CONNECTION_FLOWS[id]?.tool === name,
+                    ),
+                  )
+                : permittedTools;
             const googleBinding = googleContext?.binding ?? undefined;
             let enableTools = availableTools.length > 0;
 
@@ -1831,51 +1858,62 @@ export const Route = createFileRoute("/api/chat")({
             // instructions, and the user's current text request. The complete
             // conversation and resource bodies return only for the final call,
             // where no connector tools are available.
-            let toolPlanningMessages: ChatMsg[] = workflowSkill
+            let toolPlanningMessages: ChatMsg[] = scheduleRequest
               ? [
                   {
                     role: "system",
                     content:
-                      (freeConnectorRequest
-                        ? FREE_CONNECTOR_PLANNING_INSTRUCTION
-                        : m.systemPrompt) +
-                      TONE_INSTRUCTION +
-                      ADAPTIVE_INSTRUCTION +
-                      UNRESTRICTED_INSTRUCTION +
-                      ACCURACY_INSTRUCTION +
-                      CHART_INSTRUCTION +
-                      CREATOR_INSTRUCTION +
-                      (customKova?.block ?? "") +
-                      workflowSkill.toolPlanningBlock +
-                      toolInstruction +
-                      (callerTier === "plus" || callerTier === "pro"
-                        ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
-                        : "") +
-                      `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
-                      buildCurrentDateInstruction(timezone, locale) +
-                      modelIdentityInstructions,
+                      chatScheduleInstructions +
+                      `\nCurrent instant: ${new Date().toISOString()}.` +
+                      `\nApp time zone: ${timezone ?? "unknown, ask the user"}.`,
                   },
-                  { role: "user", content: lastText },
+                  { role: "user", content: scheduleRequest },
                 ]
-              : freeConnectorRequest
+              : workflowSkill
                 ? [
                     {
                       role: "system",
                       content:
-                        FREE_CONNECTOR_PLANNING_INSTRUCTION +
-                        buildUserContextBlock(personalContext ?? {}) +
-                        personalityBlock +
-                        memoryBlock +
-                        (conversationSummary?.block ?? "") +
-                        projectBlock +
-                        chatWorkspaceBlock +
+                        (freeConnectorRequest
+                          ? FREE_CONNECTOR_PLANNING_INSTRUCTION
+                          : m.systemPrompt) +
+                        TONE_INSTRUCTION +
+                        ADAPTIVE_INSTRUCTION +
+                        UNRESTRICTED_INSTRUCTION +
+                        ACCURACY_INSTRUCTION +
+                        CHART_INSTRUCTION +
+                        CREATOR_INSTRUCTION +
                         (customKova?.block ?? "") +
-                        webBlock +
-                        toolInstruction,
+                        workflowSkill.toolPlanningBlock +
+                        toolInstruction +
+                        (callerTier === "plus" || callerTier === "pro"
+                          ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                          : "") +
+                        `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                        buildCurrentDateInstruction(timezone, locale) +
+                        modelIdentityInstructions,
                     },
-                    ...finalMessages.slice(1),
+                    { role: "user", content: lastText },
                   ]
-                : finalMessages;
+                : freeConnectorRequest
+                  ? [
+                      {
+                        role: "system",
+                        content:
+                          FREE_CONNECTOR_PLANNING_INSTRUCTION +
+                          buildUserContextBlock(personalContext ?? {}) +
+                          personalityBlock +
+                          memoryBlock +
+                          (conversationSummary?.block ?? "") +
+                          projectBlock +
+                          chatWorkspaceBlock +
+                          (customKova?.block ?? "") +
+                          webBlock +
+                          toolInstruction,
+                      },
+                      ...finalMessages.slice(1),
+                    ]
+                  : finalMessages;
 
             const productModel = [...OPENAI_TEXT_MODELS, ...KOVA_HOSTED_TEXT_MODELS].find(
               (entry) => entry.id === model,
@@ -1898,7 +1936,7 @@ export const Route = createFileRoute("/api/chat")({
               tools: availableTools,
             });
             let outputCeiling = Number(body.max_completion_tokens);
-            const paidToolHopLimit = 3;
+            const paidToolHopLimit = scheduleRequest ? 1 : 3;
             let maximumProviderCalls = enableTools ? paidToolHopLimit + 1 : 1;
             let estimatedCost =
               estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
@@ -2210,11 +2248,11 @@ export const Route = createFileRoute("/api/chat")({
                   hostedInternalUsage[key] += usage[key];
               },
             };
-            const activityEvents: Array<{
-              tool: string;
-              label: string;
-              status?: "done" | "failed";
-            }> = [];
+            const activityEvents: Array<
+              Pick<Activity, "tool" | "label" | "taskReceipt" | "taskFailure"> & {
+                status?: "done" | "failed";
+              }
+            > = [];
             if (webSources.length) {
               const activity = createToolActivityEvent(
                 "search_web",
@@ -2262,6 +2300,7 @@ export const Route = createFileRoute("/api/chat")({
                 }
               };
 
+              let scheduledTaskAttempt: ReturnType<typeof createChatScheduledTask> | undefined;
               for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
                 // Per-hop abort: user disconnect OR 25s timeout, whichever first.
                 const hopCtl = new AbortController();
@@ -2422,8 +2461,7 @@ export const Route = createFileRoute("/api/chat")({
                             enc.encode(
                               sseEvent({
                                 kind: "activity",
-                                tool: a.tool,
-                                label: a.label,
+                                ...a,
                                 status: a.status ?? "done",
                               }),
                             ),
@@ -2526,6 +2564,38 @@ export const Route = createFileRoute("/api/chat")({
                         : {};
                     } catch {
                       /* keep empty */
+                    }
+                    if (tc.function.name === chatScheduledTaskTool.function.name && auth) {
+                      if (!scheduledTaskAttempt) {
+                        scheduledTaskAttempt = createChatScheduledTask({
+                          request,
+                          userId: auth.userId,
+                          turnId: idempotencyKey,
+                          args: parsedArgs,
+                        }).then((result) => {
+                          activityEvents.push({
+                            tool: "scheduled_task",
+                            label:
+                              result.status === "created"
+                                ? "Scheduled task created"
+                                : "Task creation",
+                            status: result.status === "created" ? "done" : "failed",
+                            ...(result.status === "created" ? { taskReceipt: result.receipt } : {}),
+                            ...(result.status === "not-created"
+                              ? {
+                                  taskFailure: {
+                                    operation: "not-created",
+                                    source: "confirmed-result",
+                                    reason: result.reason,
+                                  },
+                                }
+                              : {}),
+                          });
+                          return result;
+                        });
+                      }
+                      const result = await scheduledTaskAttempt;
+                      return { role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) };
                     }
                     const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? tc.function.name;
                     // Dedup identical (name+args) within this request.
@@ -2641,7 +2711,10 @@ export const Route = createFileRoute("/api/chat")({
               // planning is finished. Tool results remain, but untrusted resource
               // bodies never participate in deciding which connector reads to run.
               messages:
-                workflowSkill || freeConnectorBudget || (connectorId && !enableTools)
+                workflowSkill ||
+                freeConnectorBudget ||
+                scheduleRequest ||
+                (connectorId && !enableTools)
                   ? [...finalMessages, ...finalToolMessages]
                   : workingMessages,
               stream: true,
@@ -2825,8 +2898,7 @@ export const Route = createFileRoute("/api/chat")({
                         enc.encode(
                           sseEvent({
                             kind: "activity",
-                            tool: a.tool,
-                            label: a.label,
+                            ...a,
                             status: a.status ?? "done",
                           }),
                         ),
@@ -3047,8 +3119,7 @@ export const Route = createFileRoute("/api/chat")({
                     enc.encode(
                       sseEvent({
                         kind: "activity",
-                        tool: a.tool,
-                        label: a.label,
+                        ...a,
                         status: a.status ?? "done",
                       }),
                     ),

@@ -25,6 +25,7 @@ import {
   LogOut,
   Map,
   CircleHelp,
+  Compass,
   Bug,
   Download,
   FileText,
@@ -70,7 +71,9 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChatReplyActivity } from "@/hooks/useChatReplyActivity";
 import { useTier } from "@/hooks/useTier";
-import type { Conversation } from "@/lib/chat-store";
+import { archiveConversation, type Conversation } from "@/lib/chat-store";
+import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { toast } from "sonner";
 import { searchConversations } from "@/lib/conversation-search";
 import {
   isPrincipalBrowserStorageClearedEvent,
@@ -148,6 +151,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onArchived,
   deleteReady = true,
   onRename,
   onShare,
@@ -157,8 +161,6 @@ export function Sidebar({
   onToggle,
   onOpenSettings,
   onOpenHelp,
-  onOpenWorkspaceSearch,
-  workspaceSearchOpen: externalWorkspaceSearchOpen = false,
   hideGuestLogin = false,
   mapsReleaseApproved = false,
   compactOnly = false,
@@ -169,6 +171,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onArchived?: (id: string) => void;
   deleteReady?: boolean;
   onRename?: (id: string, title: string) => void | boolean | Promise<void | boolean>;
   onShare?: (id: string) => void;
@@ -178,8 +181,6 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
-  onOpenWorkspaceSearch?: (trigger?: HTMLElement) => void;
-  workspaceSearchOpen?: boolean;
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
   compactOnly?: boolean;
@@ -283,10 +284,10 @@ export function Sidebar({
   const accountRef = useRef(user?.id);
   accountRef.current = user?.id;
   const [searchOpen, setSearchOpen] = useState(false);
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Conversation | null>(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const localSearchOpen = searchOpen && !onOpenWorkspaceSearch;
-  const workspaceSearchOpen = externalWorkspaceSearchOpen || localSearchOpen;
   const searchDialogRef = useRef<HTMLDialogElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -299,10 +300,12 @@ export function Sidebar({
     if (searchOwnerRef.current === user?.id) return;
     searchOwnerRef.current = user?.id;
     closeChatSearch();
+    setConfirmDelete(null);
+    setExploreOpen(false);
   }, [user?.id, closeChatSearch]);
   useLayoutEffect(() => {
     const dialog = searchDialogRef.current;
-    if (!localSearchOpen || !dialog) return;
+    if (!searchOpen || !dialog) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     if (!dialog.open) dialog.showModal();
@@ -316,7 +319,7 @@ export function Sidebar({
           target.focus({ preventScroll: true });
       });
     };
-  }, [localSearchOpen]);
+  }, [searchOpen]);
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [projectChat, setProjectChat] = useState<Conversation | null>(null);
@@ -528,13 +531,9 @@ export function Sidebar({
   const changeRailShortcuts = (shortcuts: readonly SidebarShortcutId[]) =>
     changeLayout({ shortcuts: [...shortcuts] });
   const openChatSearch = (event?: { currentTarget: HTMLElement }) => {
-    if (onOpenWorkspaceSearch) {
-      cancelPendingSelection();
-      onOpenWorkspaceSearch(event?.currentTarget);
-    } else {
-      if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
-      setSearchOpen((value) => !value);
-    }
+    cancelPendingSelection();
+    if (event?.currentTarget) searchReturnFocusRef.current = event.currentTarget;
+    setSearchOpen(true);
   };
   const searchButton = (rail = false) => {
     const button = (
@@ -545,7 +544,7 @@ export function Sidebar({
         }
         aria-label="Search chats"
         aria-haspopup="dialog"
-        aria-expanded={onOpenWorkspaceSearch ? workspaceSearchOpen : searchOpen}
+        aria-expanded={searchOpen}
         onClick={openChatSearch}
       >
         <SearchGlyph aria-hidden="true" />
@@ -743,11 +742,6 @@ export function Sidebar({
 
   useEffect(() => {
     const openSearch = () => {
-      if (onOpenWorkspaceSearch) {
-        cancelPendingSelection();
-        onOpenWorkspaceSearch();
-        return;
-      }
       if (searchDialogRef.current?.open) {
         searchInputRef.current?.focus({ preventScroll: true });
         return;
@@ -759,7 +753,7 @@ export function Sidebar({
     };
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
-  }, [onOpenWorkspaceSearch, cancelPendingSelection]);
+  }, []);
 
   useEffect(() => {
     if (!open || !mobileViewport) return;
@@ -1009,17 +1003,17 @@ export function Sidebar({
     </RailTooltip>
   );
 
-  const query = localSearchOpen ? searchQuery.trim() : "";
+  const query = searchOpen ? searchQuery.trim() : "";
   const savedConversations = signedIn
     ? conversations.filter((chat) => !pendingDeleteIds.has(chat.id))
     : [];
-  const filtered = query
-    ? searchConversations(savedConversations, query).map((result) => result.conversation)
-    : savedConversations;
-  const pinned = filtered
+  const searchResults = query
+    ? searchConversations(savedConversations, query, { matchAny: true })
+    : null;
+  const pinned = savedConversations
     .filter((conversation) => conversation.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered
+  const recents = savedConversations
     .filter((conversation) => !conversation.pinned)
     .sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -1051,7 +1045,7 @@ export function Sidebar({
                 // Haptics are optional and unavailable on some devices.
               }
               setMobileChatMenuId(conversation.id);
-            }, 500),
+            }, 400),
           };
         }}
         onPointerMove={(event) => {
@@ -1225,11 +1219,37 @@ export function Sidebar({
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSeparator />
+          {mobileViewport && onArchived && railOwner ? (
+            <DropdownMenuItem
+              disabled={!deleteReady}
+              onSelect={() => {
+                const owner = railOwner;
+                const context = chatActionContextRef.current;
+                archiveReturnFocusRef.current = { id: conversation.id, context };
+                void Promise.resolve(archiveConversation(owner, conversation))
+                  .then((saved) => {
+                    if (accountRef.current !== owner) return;
+                    if (!saved) throw new Error("archive_failed");
+                    onArchived(conversation.id);
+                    toast.success("Chat archived");
+                  })
+                  .catch(() => {
+                    if (accountRef.current === owner)
+                      toast.error("Could not archive this chat. Try again.");
+                  });
+              }}
+            >
+              <Archive aria-hidden="true" />
+              Archive
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             className="text-destructive"
             disabled={!deleteReady}
             title={!deleteReady ? "Chat history is not ready to save changes yet." : undefined}
-            onClick={() => onDelete(conversation.id)}
+            onClick={() =>
+              mobileViewport ? setConfirmDelete(conversation) : onDelete(conversation.id)
+            }
           >
             <Trash2 />
             Delete
@@ -1400,7 +1420,7 @@ export function Sidebar({
       <DropdownMenuItem
         onSelect={() => {
           cancelPendingSelection();
-          onOpenSettings("appearance");
+          onOpenSettings();
         }}
       >
         <SettingsIcon aria-hidden="true" />
@@ -1792,8 +1812,8 @@ export function Sidebar({
         className="kova-sidebar-scrim lg:hidden"
         aria-label="Close navigation menu"
         data-state={open ? "open" : "closed"}
-        aria-hidden={!open || !mobileViewport || workspaceSearchOpen}
-        disabled={!open || workspaceSearchOpen}
+        aria-hidden={!open || !mobileViewport || searchOpen}
+        disabled={!open || searchOpen}
         tabIndex={-1}
       />
 
@@ -1808,8 +1828,8 @@ export function Sidebar({
             data-kova-signed-in=""
             data-kova-refined-sidebar=""
             data-state={collapsed ? "open" : "closed"}
-            aria-hidden={!collapsed || workspaceSearchOpen}
-            inert={!collapsed || workspaceSearchOpen}
+            aria-hidden={!collapsed || searchOpen}
+            inert={!collapsed || searchOpen}
           >
             <div className="kova-rail-header">
               <RailTooltip label={compactOnly ? "Back to chat" : "Expand sidebar"}>
@@ -1915,9 +1935,9 @@ export function Sidebar({
         data-ui-reference="chatgpt-sidebar"
         aria-label="Primary navigation"
         data-state={open ? "open" : "closed"}
-        aria-modal={open && mobileViewport && !workspaceSearchOpen ? true : undefined}
-        aria-hidden={collapsed || workspaceSearchOpen ? true : undefined}
-        inert={collapsed || workspaceSearchOpen ? true : undefined}
+        aria-modal={open && mobileViewport && !searchOpen ? true : undefined}
+        aria-hidden={collapsed || searchOpen ? true : undefined}
+        inert={collapsed || searchOpen ? true : undefined}
         role={open && mobileViewport ? "dialog" : "navigation"}
       >
         <div className="kova-sidebar-inner">
@@ -1981,7 +2001,7 @@ export function Sidebar({
                   className="kova-nav-row"
                   aria-label="Search chats"
                   aria-haspopup="dialog"
-                  aria-expanded={workspaceSearchOpen}
+                  aria-expanded={searchOpen}
                   onClick={openChatSearch}
                 >
                   <span className="kova-sidebar-icon" aria-hidden="true">
@@ -2051,7 +2071,7 @@ export function Sidebar({
                   <h2 id="sidebar-pinned-heading" tabIndex={-1}>
                     Pinned
                   </h2>
-                  {pinned.slice(0, 8).map(chatRow)}
+                  {pinned.map(chatRow)}
                 </div>
               ) : null}
               {recents.length > 0 || pinned.length === 0 ? (
@@ -2063,23 +2083,8 @@ export function Sidebar({
                   >
                     Recent chats
                   </h2>
-                  {recents.slice(0, 8).map(chatRow)}
+                  {recents.map(chatRow)}
                 </div>
-              ) : null}
-              {filtered.length > 0 ? (
-                <button
-                  className="kova-nav-row"
-                  type="button"
-                  onClick={(event) => {
-                    if (onOpenWorkspaceSearch) onOpenWorkspaceSearch(event.currentTarget);
-                    else {
-                      searchReturnFocusRef.current = event.currentTarget;
-                      setSearchOpen(true);
-                    }
-                  }}
-                >
-                  View all chats
-                </button>
               ) : null}
               {savedConversations.length === 0 ? (
                 <p className="kova-sidebar-empty">
@@ -2090,11 +2095,49 @@ export function Sidebar({
                       : "Log in to view saved chats."}
                 </p>
               ) : null}
-              {query && savedConversations.length > 0 && filtered.length === 0 ? (
-                <p className="kova-sidebar-empty">No matches</p>
-              ) : null}
             </section>
           </div>
+
+          {mobileViewport && signedIn && (
+            <nav className="kova-drawer-shortcuts" aria-label="Quick navigation">
+              <Link
+                to="/"
+                aria-current={isOn("/") ? "page" : undefined}
+                onClick={() => closeAfterMobileNavigation("/")}
+              >
+                <MessageSquare aria-hidden="true" />
+                Home
+              </Link>
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={exploreOpen}
+                onClick={() => setExploreOpen(true)}
+              >
+                <Compass aria-hidden="true" />
+                Explore
+              </button>
+              {railShortcuts
+                .filter((id) => id !== "settings")
+                .slice(0, 2)
+                .map((id) => {
+                  const item = availableShortcuts.find((option) => option.id === id);
+                  if (!item) return null;
+                  const Icon = SHORTCUT_ICONS[id];
+                  return (
+                    <Link
+                      key={id}
+                      to={item.to}
+                      aria-current={isOn(item.to) ? "page" : undefined}
+                      onClick={() => closeAfterMobileNavigation(item.to)}
+                    >
+                      <Icon aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+            </nav>
+          )}
 
           <footer className="kova-sidebar-footer">
             {signedIn ? (
@@ -2139,7 +2182,7 @@ export function Sidebar({
                     aria-label="Settings"
                     onClick={() => {
                       closeAfterMobileNavigation();
-                      onOpenSettings("general");
+                      onOpenSettings();
                     }}
                   >
                     {icon(SettingsGlyph)}
@@ -2233,18 +2276,90 @@ export function Sidebar({
           </div>
         ) : null}
       </aside>
-      {localSearchOpen ? (
+      {mobileViewport && exploreOpen && (
+        <MobileBottomSheet open onOpenChange={setExploreOpen} title="Explore">
+          <ul className="kova-explore-shortcuts">
+            {availableShortcuts.map((item) => {
+              const Icon = SHORTCUT_ICONS[item.id];
+              const pinned = railShortcuts.includes(item.id);
+              return (
+                <li key={item.id}>
+                  <Link
+                    to={item.to}
+                    onClick={(event) => {
+                      setExploreOpen(false);
+                      if (item.id === "settings") {
+                        event.preventDefault();
+                        onOpenSettings();
+                      } else {
+                        closeAfterMobileNavigation(item.to);
+                      }
+                    }}
+                  >
+                    <Icon aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    aria-label={`${pinned ? "Unpin" : "Pin"} ${item.label}`}
+                    aria-pressed={pinned}
+                    onClick={() =>
+                      changeRailShortcuts(
+                        pinned
+                          ? railShortcuts.filter((id) => id !== item.id)
+                          : [item.id, ...railShortcuts],
+                      )
+                    }
+                  >
+                    <Pin aria-hidden="true" fill={pinned ? "currentColor" : "none"} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </MobileBottomSheet>
+      )}
+      {mobileViewport && confirmDelete && (
+        <MobileBottomSheet
+          open
+          onOpenChange={(open) => {
+            if (!open) setConfirmDelete(null);
+          }}
+          title="Delete chat?"
+        >
+          <p className="mb-4 break-words">
+            “{confirmDelete.title}” will be removed from your chat history.
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => setConfirmDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="min-h-11"
+              onClick={() => {
+                const id = confirmDelete.id;
+                setConfirmDelete(null);
+                onDelete(id);
+              }}
+            >
+              Delete chat
+            </Button>
+          </div>
+        </MobileBottomSheet>
+      )}
+      {searchOpen ? (
         <dialog
           ref={searchDialogRef}
           aria-label="Search chats"
           aria-modal="true"
-          aria-describedby="sidebar-chat-search-description"
-          className="pointer-events-auto m-auto overflow-hidden rounded-[var(--kova-radius-panel)] border-0 bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/45"
-          style={{
-            width: "min(36rem, calc(100vw - 2rem))",
-            maxHeight:
-              "min(80dvh, calc(100dvh - max(1rem, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
-          }}
+          className="kova-chat-search-dialog"
           onKeyDownCapture={(event) => {
             if (event.key !== "Escape") return;
             event.preventDefault();
@@ -2268,72 +2383,60 @@ export function Sidebar({
               closeChatSearch();
           }}
         >
-          <div className="flex min-h-0 max-h-[inherit] flex-col p-5">
-            <div className="flex shrink-0 items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Search chats</h2>
-              <button
-                type="button"
-                aria-label="Close chat search"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-accent"
-                onClick={closeChatSearch}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            <p
-              id="sidebar-chat-search-description"
-              className="shrink-0 text-sm text-muted-foreground"
-            >
-              Find a saved chat by title or message.
-            </p>
-            <label className="sr-only" htmlFor="sidebar-chat-search">
-              Search chats
-            </label>
+          <div className="kova-chat-search-field">
+            <SearchGlyph aria-hidden="true" />
             <input
-              id="sidebar-chat-search"
               ref={searchInputRef}
+              type="search"
+              aria-label="Search chats"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search chats"
-              className="kova-sidebar-search my-4 w-full shrink-0"
             />
-            <div
-              className="min-h-0 overflow-y-auto overscroll-contain"
-              style={{ maxHeight: "min(24rem, 50dvh)" }}
-            >
-              {!isLoaded ? (
-                <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
-                  Loading chat history…
-                </p>
-              ) : !signedIn ? (
-                <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
-                  Log in to search saved chats.
-                </p>
-              ) : filtered.length === 0 ? (
-                <p role="status" className="px-3 py-4 text-sm text-muted-foreground">
-                  No chats found.
-                </p>
-              ) : (
-                <ul aria-label="Chat search results" className="space-y-1">
-                  {filtered.map((conversation) => (
+            <button type="button" aria-label="Close chat search" onClick={closeChatSearch}>
+              <X aria-hidden="true" />
+            </button>
+          </div>
+          <div className="kova-chat-search-results">
+            {!isLoaded ? (
+              <p role="status">Loading chat history…</p>
+            ) : !signedIn ? (
+              <p role="status">Log in to search saved chats.</p>
+            ) : (searchResults ?? savedConversations).length === 0 ? (
+              <p role="status">{query ? "No chats found." : "No saved chats yet."}</p>
+            ) : (
+              <>
+                <h2>{query ? "Results" : "Recent chats"}</h2>
+                <ul aria-label="Chat search results">
+                  {(
+                    searchResults ??
+                    [...savedConversations]
+                      .sort((a, b) => b.updatedAt - a.updatedAt)
+                      .map((conversation) => ({ conversation, snippet: "" }))
+                  ).map(({ conversation, snippet }) => (
                     <li key={conversation.id}>
                       <button
                         type="button"
                         aria-label={`Open chat ${conversation.title}`}
-                        className="min-h-11 w-full break-words rounded-xl px-3 py-2 text-left text-sm hover:bg-accent"
                         onClick={() => {
+                          searchReturnFocusRef.current = null;
                           closeChatSearch();
                           cancelPendingSelection();
+                          closeAfterMobileNavigation("/");
                           onSelect(conversation.id);
                         }}
                       >
-                        {conversation.title}
+                        <MessageSquare aria-hidden="true" />
+                        <span>
+                          <strong>{conversation.title}</strong>
+                          {snippet ? <small>{snippet}</small> : null}
+                        </span>
                       </button>
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </dialog>
       ) : null}

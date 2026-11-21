@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Bookmark, Download, Check } from "lucide-react";
 import { ExpandViewIcon } from "./ui/ExpandViewIcon";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { ChatImage, type ChatImageActions } from "./ChatImage";
 import { ResponseSpriteExport } from "./ResponseSpriteExport";
+import { useMobileImageGestures } from "@/hooks/use-mobile-image-gestures";
 import { downloadChatImage } from "@/lib/chat-image-actions";
 
 export function ResponseImage({
@@ -19,7 +20,9 @@ export function ResponseImage({
 }) {
   const [full, setFull] = useState(false);
   const [spriteOpen, setSpriteOpen] = useState(false);
-  const [zoomed, setZoomed] = useState(false);
+  const [zoom, setZoom] = useState(100);
+  const zoomed = zoom > 100;
+  const gestures = useMobileImageGestures(zoom, setZoom);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -143,7 +146,7 @@ export function ResponseImage({
           open
           onOpenChange={(open) => {
             setFull(open);
-            if (!open) setZoomed(false);
+            if (!open) setZoom(100);
           }}
         >
           <DialogContent
@@ -161,13 +164,15 @@ export function ResponseImage({
               type="button"
               className="kova-image-zoom"
               aria-pressed={zoomed}
-              onClick={() => setZoomed((value) => !value)}
+              onClick={() => setZoom((value) => (value > 100 ? 100 : 200))}
             >
               Zoom image
             </button>
             <div
               className="kova-image-view-scroll"
               data-zoomed={zoomed}
+              {...gestures}
+              style={{ "--image-zoom-width": `${zoom}%` } as CSSProperties}
               role="region"
               aria-label="Image preview"
               tabIndex={zoomed ? 0 : undefined}
@@ -179,7 +184,7 @@ export function ResponseImage({
                 enablePreview={false}
                 imageClassName="max-h-[70dvh] w-auto max-w-full object-contain"
                 onHide={() => {
-                  setZoomed(false);
+                  setZoom(100);
                   setFull(false);
                 }}
               />

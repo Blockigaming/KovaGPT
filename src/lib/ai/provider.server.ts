@@ -79,6 +79,7 @@ type SafeLogDetails = Record<string, SafeLogValue>;
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_IMAGE_TIMEOUT_MS = 120_000;
 const DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS = 5_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";
@@ -327,7 +328,10 @@ export function getAiProviderConfig(capability?: ProviderCapability): ProviderCo
     deepModel: modelForPolicy("deep").id,
     imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-2.5-flare",
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
-    timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
+    timeoutMs:
+      capability === "image_generation"
+        ? parseTimeout(env("KOVA_IMAGE_TIMEOUT_MS") ?? String(DEFAULT_IMAGE_TIMEOUT_MS))
+        : parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
     configured: target.auth !== "missing",
   };
@@ -479,7 +483,7 @@ export function utilityModel() {
 }
 
 export function imageModel() {
-  return getAiProviderConfig().imageModel;
+  return getAiProviderConfig("image_generation").imageModel;
 }
 
 export function embeddingModel() {

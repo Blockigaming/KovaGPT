@@ -1552,3 +1552,12 @@
     display: none;
   }
 }
+
+@media (min-width: 1024px) {
+  .kova-assistant :is(.kova-empty-composer .kova-composer-tray, .kova-desktop-recent-work button) {
+    background: var(--assistant-canvas);
+  }
+  .kova-assistant .kova-desktop-recent-work button:hover {
+    background: var(--accent);
+  }
+}
