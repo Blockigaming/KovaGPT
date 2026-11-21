@@ -91,7 +91,7 @@ test("all 184 UI icon exports render and retain every pinned upstream SVG path",
     assert.match(html, /^<svg\b/, row.symbol);
     assert.match(html, new RegExp(`data-product-icon="${row.symbol}"`), row.symbol);
     if (row.kind === "source-css-indicator-proposal") {
-      assert.match(html, /<foreignObject width="100%" height="100%">/);
+      assert.doesNotMatch(html, /<foreignObject/);
       assert.match(html, /kova-reference-loading-indicator/);
       continue;
     }
@@ -171,25 +171,20 @@ test("source paint survives legacy fill=none and stroke props, with true filled-
   assert.match(circle, /viewBox="0 0 24 24"/);
 });
 
-test("loading adapters use the captured CSS indicator once and respect reduced motion", () => {
+test("loading adapters rotate a native SVG arc once and respect reduced motion", () => {
   for (const name of ["Loader2", "LoaderCircle"]) {
     const svg = svgElement(name, {
       className: "h-4 animate-spin motion-reduce:animate-none",
       strokeWidth: 3,
     });
     assert.equal(svg.props.className, "h-4 motion-reduce:animate-none");
-    assert.equal(
-      svg.props.viewBox,
-      undefined,
-      "CSS-pixel stroke stays the same at every rendered size",
-    );
-    const foreign = React.Children.toArray(svg.props.children).find(
-      (node) => node.type === "foreignObject",
-    );
-    assert.equal(foreign.props.children.props.style["--indicator-stroke"], "3px");
+    assert.equal(svg.props.viewBox, "0 0 24 24");
+    const arc = React.Children.toArray(svg.props.children).find((node) => node.type === "circle");
+    assert.equal(arc.props.strokeWidth, 3);
+    assert.equal(arc.props.vectorEffect, "non-scaling-stroke");
   }
   const css = readFileSync("src/components/ui/product-icons.css", "utf8");
-  assert.match(css, /mask-image:\s*conic-gradient/);
+  assert.match(css, /transform-origin: 12px 12px/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /0\.8s/);
   const config = ts.createSourceFile(

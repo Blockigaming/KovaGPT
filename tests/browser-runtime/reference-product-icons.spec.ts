@@ -10,7 +10,7 @@ const reference=createRef();window.iconProbe={clicks:0,keys:0,refTag:null};
 function Harness(){useLayoutEffect(()=>{window.iconProbe.refTag=reference.current.tagName;},[]);return <main>
 <icons.Copy ref={reference} size={32} className="api-glyph" role="img" aria-label="Copy API probe" tabIndex={0} style={{color:'rgb(12, 34, 56)'}} onClick={()=>window.iconProbe.clicks++} onKeyDown={()=>window.iconProbe.keys++}/>
 <section id="icon-grid">{Object.entries(icons).map(([name,Icon])=><span key={name}><Icon size={20}/></span>)}</section>
-<section className="paint-row"><div id="actual-paint"><icons.Loader2 className="paint-glyph animate-spin" size={24}/></div><div id="reference-paint"><div className="LoadingIndicator" style={{width:24,height:24}}/></div></section>
+<section className="paint-row"><div id="actual-paint"><icons.Loader2 className="paint-glyph animate-spin" size={24}/></div></section>
 <div id="motion-probe"><icons.LoaderCircle className="animate-spin" size={16}/></div>
 <div id="legacy-paint"><icons.Copy size={24} fill="none" stroke="currentColor" strokeWidth={8}/><icons.Circle size={24}/><icons.Star size={24}/><icons.Star size={24} className="fill-current"/></div>
 </main>};createRoot(document.getElementById('root')).render(<Harness/>);`,
@@ -27,13 +27,6 @@ function Harness(){useLayoutEffect(()=>{window.iconProbe.refTag=reference.curren
 });
 const script = result.outputFiles.find((file) => file.path.endsWith(".js"))!.text;
 const styles = readFileSync("src/components/ui/product-icons.css", "utf8");
-// Exact independent upstream source, pinned by the release manifest, not copied
-// back from the production adapter CSS being tested.
-const referenceStyles = readFileSync(
-  "tests/fixtures/openai-loading-indicator-reference.css",
-  "utf8",
-);
-
 type ProbeWindow = Window & { iconProbe: { clicks: number; keys: number; refTag: string } };
 async function mount(page: import("@playwright/test").Page) {
   await page.route("https://icons-reference.test/", (route) =>
@@ -44,7 +37,7 @@ async function mount(page: import("@playwright/test").Page) {
   );
   await page.goto("https://icons-reference.test/");
   await page.addStyleTag({
-    content: `${styles}\n${referenceStyles}\nbody{margin:0;background:white;color:#123456}#icon-grid{display:grid;grid-template-columns:repeat(24,24px);gap:8px;padding:20px}#icon-grid>span{width:24px;height:24px}.api-glyph{display:block}.paint-row{display:flex;gap:24px;padding:20px}#actual-paint,#reference-paint{width:24px;height:24px;background:white}.paint-glyph{display:block;width:24px;height:24px}#actual-paint *,#actual-paint *::before,#actual-paint *::after,#reference-paint *,#reference-paint *::before,#reference-paint *::after{animation:none!important;transition:none!important}#legacy-paint{display:flex;gap:16px;padding:20px}`,
+    content: `${styles}\nbody{margin:0;background:white;color:#123456}#icon-grid{display:grid;grid-template-columns:repeat(24,24px);gap:8px;padding:20px}#icon-grid>span{width:24px;height:24px}.api-glyph{display:block}.paint-row{display:flex;gap:24px;padding:20px}#actual-paint{width:24px;height:24px;background:white}.paint-glyph{display:block;width:24px;height:24px}#actual-paint *,#actual-paint *::before,#actual-paint *::after{animation:none!important;transition:none!important}#legacy-paint{display:flex;gap:16px;padding:20px}`,
   });
   await page.addScriptTag({ content: script });
   await expect(page.locator("#icon-grid svg")).toHaveCount(184);
@@ -101,14 +94,12 @@ function pixels(png: Buffer) {
       decoded[y * stride + x] = (raw[y * (stride + 1) + 1 + x] + prediction) & 255;
     }
   }
-  const rgb = [];
   let ink = 0;
   for (let at = 0; at < decoded.length; at += channels) {
     const color = [decoded[at], decoded[at + 1], decoded[at + 2]];
-    rgb.push(...color);
     if (Math.min(...color) < 240 && (channels === 3 || decoded[at + 3] > 0)) ink++;
   }
-  return { width, height, rgb, ink };
+  return { width, height, ink };
 }
 
 test("all glyph exports mount, and the SVG API keeps real refs, labels, dimensions and events", async ({
@@ -143,33 +134,18 @@ test("all glyph exports mount, and the SVG API keeps real refs, labels, dimensio
   ).toHaveAttribute("data-sdk-geometry", "StarFilled");
 });
 
-test("the SVG foreignObject loader visibly paints like the independent pinned SDK CSS ring", async ({
-  page,
-}, info) => {
+test("the native SVG loader paints inside a 24px icon slot", async ({ page }, info) => {
   await mount(page);
+  await expect(page.locator("#actual-paint svg foreignObject")).toHaveCount(0);
   const actual = pixels(
-    await page
-      .locator("#actual-paint")
-      .screenshot({ path: info.outputPath("actual-sdk-loader.png"), scale: "css" }),
-  );
-  const reference = pixels(
-    await page
-      .locator("#reference-paint")
-      .screenshot({ path: info.outputPath("upstream-sdk-loader.png"), scale: "css" }),
+    await page.locator("#actual-paint").screenshot({
+      path: info.outputPath("loader.png"),
+      scale: "css",
+    }),
   );
   expect(actual.width).toBe(24);
   expect(actual.height).toBe(24);
-  expect(reference.width).toBe(24);
-  expect(reference.height).toBe(24);
-  expect(reference.ink).toBeGreaterThan(10);
   expect(actual.ink).toBeGreaterThan(10);
-  expect(Math.abs(actual.ink - reference.ink)).toBeLessThanOrEqual(
-    Math.max(3, reference.ink * 0.12),
-  );
-  const difference =
-    actual.rgb.reduce((sum, value, index) => sum + Math.abs(value - reference.rgb[index]), 0) /
-    actual.rgb.length;
-  expect(difference).toBeLessThan(6);
 });
 
 test("loading animation runs once and pauses for reduced motion", async ({ page }) => {

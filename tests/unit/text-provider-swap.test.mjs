@@ -203,12 +203,13 @@ test("provider switch cannot override disabled generation", async () => {
   await assert.rejects(api.developerResponses({ model: "gpt-5.6-luna" }));
   assert.equal(calls, 0);
 });
-test("text selection does not move image or embedding traffic from Azure", async () => {
+test("explicit Azure image routing stays independent of OpenAI text", async () => {
   const calls = [];
   const api = loadProvider(
     {
       ...azure,
       KOVA_TEXT_PROVIDER: "openai",
+      KOVA_IMAGE_PROVIDER: "azure_openai",
       AZURE_OPENAI_DEPLOYMENT_IMAGE: "image-alias",
       AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "embedding-alias",
     },
@@ -227,31 +228,34 @@ test("text selection does not move image or embedding traffic from Azure", async
   assert.equal(JSON.parse(calls[0].init.body).model, "image-alias");
   assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
 });
-test("explicit image selection uses OpenAI without changing text or embedding endpoints", async () => {
-  const calls = [];
-  const api = loadProvider(
-    {
-      ...azure,
-      KOVA_IMAGE_PROVIDER: "openai",
-      AZURE_OPENAI_DEPLOYMENT_IMAGE: "missing-image-alias",
-      AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "embedding-alias",
-    },
-    async (url, init) => {
-      calls.push({ url, init });
-      return new Response('{"data":[]}');
-    },
-  );
-  await api.imageGenerations({ model: "gpt-image-2.5-flare", prompt: "fixture" });
-  await api.embeddings({ model: "text-embedding-3-small", input: "fixture" });
-  assert.equal(calls[0].url, "https://api.openai.com/v1/images/generations");
-  assert.equal(calls[0].init.headers.get("authorization"), "Bearer openai-fixture");
-  assert.equal(calls[0].init.headers.has("api-key"), false);
-  assert.equal(JSON.parse(calls[0].init.body).model, "gpt-image-2.5-flare");
-  assert.equal(calls[1].url, "https://fixture.openai.azure.com/openai/v1/embeddings");
-  assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
-  assert.equal(api.getAiProviderConfig().provider, "azure_openai");
-  assert.doesNotMatch(JSON.stringify(api.logs), /openai-fixture|azure-fixture/);
-});
+for (const selection of ["openai", "auto"]) {
+  test(`image routing uses OpenAI with ${selection} selection without changing text or embeddings`, async () => {
+    const calls = [];
+    const api = loadProvider(
+      {
+        ...azure,
+        KOVA_IMAGE_PROVIDER: selection,
+        AZURE_OPENAI_DEPLOYMENT_IMAGE: "missing-image-alias",
+        AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "embedding-alias",
+      },
+      async (url, init) => {
+        calls.push({ url, init });
+        return new Response('{"data":[]}');
+      },
+    );
+    await api.imageGenerations({ model: "gpt-image-2.5-flare", prompt: "fixture" });
+    await api.embeddings({ model: "text-embedding-3-small", input: "fixture" });
+    assert.equal(calls[0].url, "https://api.openai.com/v1/images/generations");
+    assert.equal(calls[0].init.headers.get("authorization"), "Bearer openai-fixture");
+    assert.equal(calls[0].init.headers.has("api-key"), false);
+    assert.equal(JSON.parse(calls[0].init.body).model, "gpt-image-2.5-flare");
+    assert.equal(calls[1].url, "https://fixture.openai.azure.com/openai/v1/embeddings");
+    assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
+    assert.equal(api.getAiProviderConfig().provider, "azure_openai");
+    assert.doesNotMatch(JSON.stringify(api.logs), /openai-fixture|azure-fixture/);
+  });
+}
+
 test("embedding auto preserves Azure, while explicit OpenAI ignores its stale endpoint and alias", async () => {
   const calls = [];
   const auto = loadProvider(
