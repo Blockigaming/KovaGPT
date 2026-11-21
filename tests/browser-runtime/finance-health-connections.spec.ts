@@ -217,7 +217,9 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
   });
   await boot(page);
   const health = page.getByRole("region", { name: "A new way to manage your health", exact: true });
-  await expect(health.getByText("Sample data", { exact: true })).toHaveCount(0);
+  await expect(health.getByText("Example data", { exact: true })).toBeVisible();
+  await expect(health.getByRole("table", { name: "Daily steps" }).getByRole("row")).toHaveCount(8);
+  await expect(health.getByText(/^Daily readings/)).toHaveCount(0);
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
   const zip = zipSync({
@@ -261,7 +263,10 @@ test("the Connections Health tab opens an Apple Health ZIP locally for the signe
     state.owner = "00000000-0000-4000-8000-000000000006";
     state.renderPanels();
   });
-  await expect(health.getByRole("table")).toHaveCount(0);
+  await expect(health.getByText("Example data", { exact: true })).toBeVisible();
+  await expect(health.getByRole("table", { name: "Daily steps" })).toBeVisible();
+  await expect(health.getByRole("cell", { name: "123", exact: true })).toHaveCount(0);
+  await expect(health.getByRole("cell", { name: "789", exact: true })).toHaveCount(0);
   await page.evaluate(() => {
     const state = window as StateWindow;
     state.owner = null;
