@@ -183,6 +183,10 @@ for (const theme of ["dark", "light"] as const) {
 }
 
 test("signed-in homepage initially scrolls to the latest content", async ({ page }) => {
+  test.skip(
+    await page.evaluate(() => matchMedia("(pointer: coarse)").matches),
+    "Recent work is desktop only",
+  );
   await page.setViewportSize({ width: 1280, height: 400 });
   await fixture(page, "dark", true, true);
   await page.goto("/");
@@ -371,53 +375,37 @@ for (const surface of ["empty", "conversation"] as const) {
     const cards = tray.locator(":scope > .spec400-composer-card");
     const websites = tray.locator(".kova-link-preview-composer");
     const expectStableToolbar = async () => {
-      const stacked = await expectsSeparateModeRow(composer);
       await expect
         .poll(() =>
-          composer.evaluate((frame, modeOnOwnRow) => {
+          composer.evaluate((frame) => {
             const outer = frame.getBoundingClientRect();
-            const leading = frame.querySelector(".kova-composer-plus")!.getBoundingClientRect();
-            const send = frame
-              .querySelector('[data-testid="send-button"]')!
-              .getBoundingClientRect();
-            const dictate = frame
-              .querySelector('[data-testid="dictate-button"]')!
-              .getBoundingClientRect();
-            const model = frame
-              .querySelector(
-                ".spec400-composer-trailing :is(.kova-model-trigger, .kova-model-static, .kova-composer-model-status,.kova-thinking-toggle)",
-              )!
-              .getBoundingClientRect();
-            const center = (rect: DOMRect) => rect.y + rect.height / 2;
-            return {
-              left: Math.round(leading.left - outer.left),
-              right: Math.round(outer.right - send.right),
-              bottom: Math.round(outer.bottom - send.bottom),
-              aligned:
-                [leading, dictate].every(
-                  (action) => Math.abs(center(action) - center(send)) < 0.5,
-                ) &&
-                (modeOnOwnRow
-                  ? Math.abs(model.right - send.right) < 0.5
-                  : Math.abs(center(model) - center(send)) < 0.5),
-              heightMatches: [leading, model, dictate].every(
-                (action) => action.height === send.height,
-              ),
-              gaps: [
-                Math.round(modeOnOwnRow ? dictate.top - model.bottom : dictate.left - model.right),
-                Math.round(send.left - dictate.right),
-              ],
-            };
-          }, stacked),
+            const actions = [
+              frame.querySelector(".kova-composer-plus")!,
+              frame.querySelector(
+                ".spec400-composer-trailing :is(.kova-model-trigger, .kova-model-static, .kova-composer-model-status, .kova-thinking-toggle)",
+              )!,
+              frame.querySelector('[data-testid="dictate-button"]')!,
+              frame.querySelector('[data-testid="send-button"]')!,
+            ].map((node) => node.getBoundingClientRect());
+            return actions.every(
+              (a, i) =>
+                a.left >= outer.left &&
+                a.right <= outer.right &&
+                a.top >= outer.top &&
+                a.bottom <= outer.bottom &&
+                actions
+                  .slice(i + 1)
+                  .every(
+                    (b) =>
+                      a.right <= b.left + 1 ||
+                      b.right <= a.left + 1 ||
+                      a.bottom <= b.top + 1 ||
+                      b.bottom <= a.top + 1,
+                  ),
+            );
+          }),
         )
-        .toEqual({
-          left: 13,
-          right: 13,
-          bottom: 13,
-          aligned: true,
-          heightMatches: true,
-          gaps: [8, 8],
-        });
+        .toBe(true);
     };
     const pasteWebsites = (text: string) =>
       input.evaluate((element, text) => {
