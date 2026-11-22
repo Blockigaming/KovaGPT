@@ -79,14 +79,17 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
   const conversation = await composer.evaluate(
     (node) => node.closest('[data-composer-surface="conversation"]') !== null,
   );
-  const phone = await page.evaluate(
+  // Compact phone corners belong to the native app shell; the website keeps
+  // the desktop composer on every screen.
+  const phoneApp = await page.evaluate(
     () =>
+      document.documentElement.dataset.kovaSurface === "app" &&
       matchMedia("(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)")
         .matches,
   );
   await expect(composer).toHaveCSS(
     "border-radius",
-    phone ? (conversation ? "26px" : "21px") : "34px",
+    phoneApp ? (conversation ? "26px" : "21px") : "34px",
   );
   const singleRow = conversation && compactDesktop;
   await expect(composer).toHaveCSS("display", singleRow ? "grid" : "flex");
@@ -95,7 +98,7 @@ async function expectRestingComposer(page: Page, composer = page.locator(".spec4
     await height.toBeLessThanOrEqual(
       singleRow ? 62 : (await expectsSeparateModeRow(composer)) ? 144 : 92,
     );
-  else await height.toBeGreaterThanOrEqual(phone ? 88 : 128);
+  else await height.toBeGreaterThanOrEqual(phoneApp ? 88 : 128);
   const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
   if (singleRow) return compactDesktop;

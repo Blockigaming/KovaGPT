@@ -192,9 +192,8 @@ body .kova-assistant textarea.font-mono {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
 }
 
-/* The phone app names the page in its top bar; the website keeps the desktop heading. */
 @media (max-width: 767px) {
-  :root[data-kova-surface="app"] .kova-library-page #library-title {
+  .kova-library-page #library-title {
     position: absolute !important;
     width: 1px !important;
     height: 1px !important;

@@ -750,13 +750,9 @@ body .spec400-library-inspector[data-kova-dialog-surface] {
   body .spec400-library-inspector[data-kova-dialog-surface] {
     width: 100% !important;
   }
-  /* The phone app names the page in its top bar; the website keeps the heading. */
-  :root[data-kova-surface="app"]
-    :is(
-      .spec400-projects #projects-title,
-      .spec400-schedules #scheduled-tasks-title,
-      .spec400-plugins #apps-title
-    ) {
+  .spec400-projects #projects-title,
+  .spec400-schedules #scheduled-tasks-title,
+  .spec400-plugins #apps-title {
     position: absolute !important;
     width: 1px !important;
     height: 1px !important;

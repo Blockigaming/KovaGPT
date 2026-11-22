@@ -8,7 +8,7 @@ export async function expectsSeparateModeRow(composer: Locator) {
     const styles = getComputedStyle(container);
     const contentWidth =
       container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-    return contentWidth < 22.5 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return contentWidth < 20 * parseFloat(getComputedStyle(document.documentElement).fontSize);
   });
 }
 
