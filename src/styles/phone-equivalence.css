@@ -15,6 +15,23 @@
 
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
   :root {
+    --background: #ffffff;
+    --foreground: #111111;
+    --secondary: #f7f7f8;
+    --sidebar: #f7f7f8;
+    --card: #f3f3f3;
+    --popover: #f3f3f3;
+    --composer-background: #efefef;
+    --surface-composer: var(--composer-background);
+    --muted: #f3f3f3;
+    --muted-foreground: #666666;
+    --accent: #e4e4e4;
+    --sidebar-hover: #e4e4e4;
+    --sidebar-active: #e5e5e5;
+    --border: #dadada;
+    --destructive: #d92d20;
+    --status-success: #248a3d;
+    --surface-scrim: rgb(0 0 0 / 42%);
     --kova-phone-space-0: 0px;
     --kova-phone-space-2: 2px;
     --kova-phone-space-4: 4px;
@@ -31,6 +48,33 @@
     --kova-phone-space-40: 40px;
     --kova-phone-space-48: 48px;
     --kova-phone-space-64: 64px;
+  }
+
+  :root.dark {
+    --background: #111111;
+    --foreground: #ffffff;
+    --secondary: #171717;
+    --sidebar: #171717;
+    --card: #212121;
+    --popover: #212121;
+    --composer-background: #2a2a2a;
+    --muted: #212121;
+    --muted-foreground: #b4b4b4;
+    --accent: #333333;
+    --sidebar-hover: #333333;
+    --sidebar-active: #353535;
+    --border: #424242;
+    --destructive: #ff453a;
+    --status-success: #30d158;
+  }
+
+  :root :is(.kova-sidebar, .kova-sidebar-rail)[data-kova-signed-in] {
+    --sidebar: var(--secondary);
+    --sidebar-active: var(--kova-phone-sidebar-active, #e5e5e5);
+  }
+
+  :root.dark {
+    --kova-phone-sidebar-active: #353535;
   }
 
   /* Paint the same phone frame before hydration and during the route chunk

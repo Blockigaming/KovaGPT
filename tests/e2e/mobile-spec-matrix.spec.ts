@@ -91,6 +91,20 @@ for (const [width, height] of viewports) {
         element.style.fontSize = "20px";
       }, theme);
 
+      if (width < 768) {
+        const palette = await html.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return [
+            styles.getPropertyValue("--background").trim(),
+            styles.getPropertyValue("--sidebar").trim(),
+            styles.getPropertyValue("--composer-background").trim(),
+          ];
+        });
+        expect(palette).toEqual(
+          theme === "dark" ? ["#111111", "#171717", "#2a2a2a"] : ["#ffffff", "#f7f7f8", "#efefef"],
+        );
+      }
+
       const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
       await expect(composer).toBeVisible();
       await composer.fill("First line\nA second line for this draft.");
