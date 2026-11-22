@@ -35,6 +35,8 @@
     --sidebar-active: #e5e5e5;
     --border: #dadada;
     --destructive: #d92d20;
+    --destructive-foreground: #ffffff;
+    --kova-phone-danger-text: #b92318;
     --status-success: #248a3d;
     --surface-scrim: rgb(0 0 0 / 42%);
     --kova-phone-space-0: 0px;
@@ -72,6 +74,8 @@
     --sidebar-active: #353535;
     --border: #424242;
     --destructive: #ff453a;
+    --destructive-foreground: #111111;
+    --kova-phone-danger-text: #ff7069;
     --status-success: #30d158;
   }
 
@@ -82,6 +86,15 @@
 
   :root.dark {
     --kova-phone-sidebar-active: #353535;
+  }
+
+  /* Use separate ink for warning labels on raised and pressed surfaces. */
+  .text-destructive {
+    color: var(--kova-phone-danger-text);
+  }
+
+  [data-slot="button"][data-variant="destructive"]:is(:hover, :active) {
+    background-color: var(--kova-phone-danger-text);
   }
 
   /* Paint the same phone frame before hydration and during the route chunk

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readableTextColor } from "../../src/lib/appearance-preferences.mjs";
 import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
@@ -114,6 +115,38 @@ for (const { width, height, textSize } of typographyCases) {
         expect(palette).toEqual(
           theme === "dark" ? ["#111111", "#171717", "#2a2a2a"] : ["#ffffff", "#f7f7f8", "#efefef"],
         );
+      }
+
+      if (width === 320 && textSize === 20) {
+        const colors = await html.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return Object.fromEntries(
+            [
+              "--composer-background",
+              "--kova-phone-placeholder",
+              "--destructive",
+              "--destructive-foreground",
+              "--kova-phone-danger-text",
+              "--sidebar-active",
+            ].map((token) => [
+              token,
+              styles
+                .getPropertyValue(token)
+                .trim()
+                .replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i, "#$1$1$2$2$3$3"),
+            ]),
+          );
+        });
+        for (const [surface, ink] of [
+          ["--composer-background", "--kova-phone-placeholder"],
+          ["--destructive", "--destructive-foreground"],
+          ["--kova-phone-danger-text", "--destructive-foreground"],
+          ["--sidebar-active", "--kova-phone-danger-text"],
+        ]) {
+          expect(colors[surface]).toMatch(/^#[0-9a-f]{6}$/i);
+          expect(colors[ink]).toMatch(/^#[0-9a-f]{6}$/i);
+          expect(readableTextColor(colors[surface], colors[ink]), ink).toBe(colors[ink]);
+        }
       }
 
       const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
