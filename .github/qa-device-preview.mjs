@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createServer, request } from "node:http";
+import { createReadStream, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const digest = process.env.KOVA_QA_CODE_SHA256 ?? "";
@@ -58,6 +59,17 @@ const json = (outgoing, value) => {
 createServer((incoming, outgoing) => {
   const url = new URL(incoming.url, "http://127.0.0.1");
   const path = url.pathname;
+  const download = path.match(/^\/_qa\/([a-f0-9]{64})\/android\.apk$/);
+  if (incoming.method === "GET" && download && codeMatches(download[1])) {
+    const apk = process.env.KOVA_QA_APK_PATH;
+    outgoing.writeHead(200, {
+      ...lockedHeaders,
+      "content-type": "application/vnd.android.package-archive",
+      "content-disposition": 'attachment; filename="kova-744-device-qa.apk"',
+      "content-length": statSync(apk).size,
+    });
+    return createReadStream(apk).pipe(outgoing);
+  }
   const enrollment = path.match(/^\/_qa\/([a-f0-9]{64})$/);
   if (incoming.method === "GET" && enrollment && codeMatches(enrollment[1])) {
     outgoing.writeHead(303, {

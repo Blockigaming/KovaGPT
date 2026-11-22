@@ -7,7 +7,7 @@ permissions:
 jobs:
   preview:
     runs-on: ubuntu-24.04
-    timeout-minutes: 27
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -19,19 +19,53 @@ jobs:
       - name: Build the unmodified pull request revision
         run: |
           mkdir "$RUNNER_TEMP/kova-device"
-          git archive 9fe7b90e83e8ec30cf48052840169ac8723f1f80 | tar -x -C "$RUNNER_TEMP/kova-device"
+          git archive 778416f80eb02e5f94ddd2d6010a43aefed31546 | tar -x -C "$RUNNER_TEMP/kova-device"
           cd "$RUNNER_TEMP/kova-device"
           npm ci --ignore-scripts --no-audit --no-fund
-          KOVA_BUILD_SHA=9fe7b90e83e8ec30cf48052840169ac8723f1f80 VITE_KOVA_AUTH_MODE=kova npm run build:azure
+          KOVA_BUILD_SHA=778416f80eb02e5f94ddd2d6010a43aefed31546 VITE_KOVA_AUTH_MODE=kova npm run build:azure
+      - name: Install pinned Android build tools and Gradle
+        run: |
+          android_sdk="$RUNNER_TEMP/kova-sdk"
+          command_line_zip="$RUNNER_TEMP/android-command-line-tools.zip"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://dl.google.com/android/repository/commandlinetools-linux-16111833_latest.zip \
+            -o "$command_line_zip"
+          echo "e025545c62a8e64c7559119566a569fb1dec5f60  $command_line_zip" | sha1sum --check
+          mkdir -p "$android_sdk/cmdline-tools"
+          unzip -q "$command_line_zip" -d "$RUNNER_TEMP/kova-android-cli"
+          mv "$RUNNER_TEMP/kova-android-cli/cmdline-tools" "$android_sdk/cmdline-tools/latest"
+          if [ -n "${JAVA_HOME_21_X64:-}" ]; then
+            export JAVA_HOME="$JAVA_HOME_21_X64"
+            echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+            echo "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+          fi
+          export ANDROID_HOME="$android_sdk"
+          sdkmanager="$android_sdk/cmdline-tools/latest/bin/sdkmanager"
+          (set +o pipefail; yes | "$sdkmanager" --licenses >/dev/null)
+          "$sdkmanager" 'platforms;android-36' 'build-tools;35.0.0'
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          curl --fail --silent --show-error --location \
+            https://services.gradle.org/distributions/gradle-8.13-bin.zip -o "$RUNNER_TEMP/gradle-8.13-bin.zip"
+          echo "20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78  $RUNNER_TEMP/gradle-8.13-bin.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/gradle-8.13-bin.zip" -d "$RUNNER_TEMP/gradle"
+          echo "$RUNNER_TEMP/gradle/gradle-8.13/bin" >> "$GITHUB_PATH"
+      - name: Build an isolated Android copy for native device checks
+        run: |
+          cd "$RUNNER_TEMP/kova-device"
+          python3 "$GITHUB_WORKSPACE/.github/qa-android-overlay.py"
+          gradle --no-daemon -p android :app:assembleDebug
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
       - name: Start short-lived synthetic preview
         env:
-          KOVA_QA_CODE_SHA256: 1d61350e625f00e092861f7e92ee8e798acff7f0fe22fd01f0c45ba5ca7c7b15
+          KOVA_QA_CODE_SHA256: e94e2b10adb0464f0699042702512f199f4286eab47c0f22d52696a322343987
         run: |
           curl --fail --show-error --silent --location --retry 2 --output "$RUNNER_TEMP/cloudflared" https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-linux-amd64
           echo "97bb3b02d23a5980fc9c15a1a270e692da1923f103f920d5b16d4931d5ab55e7  $RUNNER_TEMP/cloudflared" | sha256sum -c
           chmod 700 "$RUNNER_TEMP/cloudflared"
           cp .github/qa-device-preview.mjs "$RUNNER_TEMP/kova-device-gate.mjs"
           cd "$RUNNER_TEMP/kova-device"
+          export KOVA_QA_APK_PATH="$PWD/android/app/build/outputs/apk/debug/app-debug.apk"
           node "$RUNNER_TEMP/kova-device-gate.mjs" > "$RUNNER_TEMP/gate.log" 2>&1 &
           node scripts/azure/local-preview.mjs --duration-ms=1200000 > "$RUNNER_TEMP/preview.log" 2>&1 &
           "$RUNNER_TEMP/cloudflared" tunnel --protocol http2 --no-autoupdate --url http://127.0.0.1:4190 > "$RUNNER_TEMP/tunnel.log" 2>&1 &
