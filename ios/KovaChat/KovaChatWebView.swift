@@ -75,6 +75,9 @@ struct KovaChatWebView: UIViewRepresentable {
         private var dictationMuted = false
         private var reader: AVAudioPlayer?
         private var readingID: String?
+        private var readingAllowsContinuation = false
+        private var continuationDeadline: TimeInterval = 0
+        private var recordedReplyID: String?
         private var backgroundReply: UIBackgroundTaskIdentifier = .invalid
         private var backgroundReplyID: String?
         private var googleSession: ASWebAuthenticationSession?
@@ -130,6 +133,8 @@ struct KovaChatWebView: UIViewRepresentable {
             let task = backgroundReply
             backgroundReply = .invalid
             backgroundReplyID = nil
+            recordedReplyID = nil
+            continuationDeadline = 0
             if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
         }
 
@@ -149,6 +154,7 @@ struct KovaChatWebView: UIViewRepresentable {
             guard task != .invalid else { return false }
             backgroundReply = task
             backgroundReplyID = id
+            if completingNativeRecording { recordedReplyID = id }
             return true
         }
 
@@ -164,6 +170,7 @@ struct KovaChatWebView: UIViewRepresentable {
             guard let current = reader else { return }
             let id = readingID
             readingID = nil
+            readingAllowsContinuation = false
             reader = nil
             current.delegate = nil
             current.stop()
@@ -194,6 +201,11 @@ struct KovaChatWebView: UIViewRepresentable {
         private nonisolated func completeReading(_ playerID: ObjectIdentifier, success: Bool) {
             Task { @MainActor in
                 guard let reader, ObjectIdentifier(reader) == playerID, let readingID else { return }
+                let shouldContinue = success && readingAllowsContinuation &&
+                    UIApplication.shared.applicationState == .background && unlocked
+                if shouldContinue && beginBackgroundReply(readingID, completingNativeRecording: true) {
+                    continuationDeadline = ProcessInfo.processInfo.systemUptime + 3
+                }
                 stopReading()
                 readingFinished(readingID, success: success)
             }
@@ -239,10 +251,22 @@ struct KovaChatWebView: UIViewRepresentable {
         }
 
         private func startDictation(_ id: String, handsFree: Bool, reply: @escaping (Any?, String?) -> Void) {
-            guard UIApplication.shared.applicationState == .active, unlocked, dictationID == nil else {
-                reply(false, nil)
+            guard unlocked, dictationID == nil else { reply(false, nil); return }
+            if UIApplication.shared.applicationState == .background {
+                guard handsFree,
+                      ProcessInfo.processInfo.systemUptime < continuationDeadline,
+                      AVAudioApplication.shared.recordPermission == .granted else {
+                    reply(false, nil)
+                    return
+                }
+                continuationDeadline = 0
+                dictationID = id
+                let started = startRecorder(id, handsFree: true)
+                endBackgroundReply()
+                reply(started, nil)
                 return
             }
+            guard UIApplication.shared.applicationState == .active else { reply(false, nil); return }
             dictationID = id
             AVAudioApplication.requestRecordPermission { [weak self] granted in
                 Task { @MainActor in
@@ -252,40 +276,40 @@ struct KovaChatWebView: UIViewRepresentable {
                         reply(false, nil)
                         return
                     }
-                    self.stopReading(notifyPage: true)
-                    let audio = AVAudioSession.sharedInstance()
-                    let url = FileManager.default.temporaryDirectory
-                        .appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
-                    do {
-                        try audio.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
-                        try audio.setActive(true)
-                        let recorder = try AVAudioRecorder(url: url, settings: [
-                            AVFormatIDKey: kAudioFormatLinearPCM,
-                            AVSampleRateKey: 16000,
-                            AVNumberOfChannelsKey: 1,
-                            AVLinearPCMBitDepthKey: 16,
-                            AVLinearPCMIsBigEndianKey: false,
-                            AVLinearPCMIsFloatKey: false
-                        ])
-                        self.dictation = recorder
-                        recorder.delegate = self
-                        guard recorder.record(forDuration: 59) else {
-                            self.cancelDictation()
-                            reply(false, nil)
-                            return
-                        }
-                        if handsFree {
-                            recorder.isMeteringEnabled = true
-                            self.startVoiceMeter(id)
-                        }
-                        reply(true, nil)
-                    } catch {
-                        self.cancelDictation()
-                        try? FileManager.default.removeItem(at: url)
-                        try? audio.setActive(false, options: .notifyOthersOnDeactivation)
-                        reply(false, nil)
-                    }
+                    reply(self.startRecorder(id, handsFree: handsFree), nil)
                 }
+            }
+        }
+
+        private func startRecorder(_ id: String, handsFree: Bool) -> Bool {
+            stopReading(notifyPage: true)
+            let audio = AVAudioSession.sharedInstance()
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
+            do {
+                try audio.setCategory(.playAndRecord, mode: handsFree ? .voiceChat : .default, options: .defaultToSpeaker)
+                try audio.setActive(true)
+                let recorder = try AVAudioRecorder(url: url, settings: [
+                    AVFormatIDKey: kAudioFormatLinearPCM,
+                    AVSampleRateKey: 16000,
+                    AVNumberOfChannelsKey: 1,
+                    AVLinearPCMBitDepthKey: 16,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsFloatKey: false
+                ])
+                dictation = recorder
+                recorder.delegate = self
+                guard recorder.record(forDuration: 59) else { cancelDictation(); return false }
+                if handsFree {
+                    recorder.isMeteringEnabled = true
+                    startVoiceMeter(id)
+                }
+                return true
+            } catch {
+                cancelDictation()
+                try? FileManager.default.removeItem(at: url)
+                try? audio.setActive(false, options: .notifyOthersOnDeactivation)
+                return false
             }
         }
 
@@ -408,6 +432,7 @@ struct KovaChatWebView: UIViewRepresentable {
                 player.delegate = self
                 reader = player
                 readingID = id
+                readingAllowsContinuation = recordedReplyID != nil
                 if player.play() {
                     replyHandler(true, nil)
                 } else {

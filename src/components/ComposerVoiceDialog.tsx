@@ -600,12 +600,18 @@ export function ComposerVoiceDialog({
     requestDeadline.current = null;
   };
 
-  const submitVoiceTurn = async (scope: OperationScope, text: string, realtime = false) => {
+  const submitVoiceTurn = async (
+    scope: OperationScope,
+    text: string,
+    realtime = false,
+    nativeRecordedTurn = false,
+  ) => {
     const submit = current.current.onVoiceSubmit;
     if (!isCurrent(scope) || !voiceSessionActive.current || !submit) return;
     updatePhase("chat");
     const controller = beginRequest(120_000);
-    const backgroundReplyID = nativeKovaPlatform() === "ios" ? crypto.randomUUID() : null;
+    const backgroundReplyID =
+      nativeKovaPlatform() === "ios" && !nativeRecordedTurn ? crypto.randomUUID() : null;
     if (backgroundReplyID)
       sendNativeKovaMessage({ action: "voice-reply-begin", id: backgroundReplyID });
     let abortListener: (() => void) | undefined;
@@ -659,6 +665,7 @@ export function ComposerVoiceDialog({
           // cannot request another microphone turn.
           if (
             nativeKovaPlatform() &&
+            !nativeRecordedTurn &&
             (nativeBackgrounded.current || document.visibilityState !== "visible")
           ) {
             voiceSessionActive.current = false;
@@ -737,7 +744,11 @@ export function ComposerVoiceDialog({
     }
   };
 
-  const transcribeRecording = async (scope: OperationScope, original: Blob) => {
+  const transcribeRecording = async (
+    scope: OperationScope,
+    original: Blob,
+    nativeRecordedTurn = false,
+  ) => {
     if (!isCurrent(scope)) return;
     retainedRecording.current = original;
     setCanRetryRecording(false);
@@ -774,7 +785,7 @@ export function ComposerVoiceDialog({
       if (current.current.mode === "voice" && voiceSessionActive.current) {
         setTranscript(result.text.trim());
         setHasTranscript(true);
-        await submitVoiceTurn(scope, result.text.trim());
+        await submitVoiceTurn(scope, result.text.trim(), false, nativeRecordedTurn);
       } else if (current.current.mode === "dictate") {
         // Dictation behaves like typing: insert into the current composer draft
         // without a second transcript review or an automatic Send action.
@@ -925,7 +936,11 @@ export function ComposerVoiceDialog({
     };
     const native = nativeDictationHandler();
     const realtime =
-      mode === "voice" && capabilities.realtime && !realtimeFailed && canListenInRealtime();
+      mode === "voice" &&
+      !(native && continuing && document.visibilityState === "hidden") &&
+      capabilities.realtime &&
+      !realtimeFailed &&
+      canListenInRealtime();
     const canRecord =
       typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
     if (!native && !realtime && !canRecord) {
@@ -1046,12 +1061,14 @@ export function ComposerVoiceDialog({
             const bytes = Uint8Array.from(atob(result.audio), (character) =>
               character.charCodeAt(0),
             );
-            void transcribeRecording(scope, new Blob([bytes], { type: "audio/wav" })).finally(
-              () => {
-                if (result.backgroundProcessing)
-                  sendNativeKovaMessage({ action: "voice-reply-end", id: active.id });
-              },
-            );
+            void transcribeRecording(
+              scope,
+              new Blob([bytes], { type: "audio/wav" }),
+              result.backgroundProcessing === true,
+            ).finally(() => {
+              if (result.backgroundProcessing)
+                sendNativeKovaMessage({ action: "voice-reply-end", id: active.id });
+            });
           };
           document.addEventListener("visibilitychange", deliver, { signal });
           deliver();
