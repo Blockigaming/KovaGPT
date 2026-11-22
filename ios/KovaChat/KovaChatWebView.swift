@@ -68,6 +68,11 @@ struct KovaChatWebView: UIViewRepresentable {
         private var audioObservers: [NSObjectProtocol] = []
         private var dictation: AVAudioRecorder?
         private var dictationID: String?
+        private var dictationTimer: Timer?
+        private var speechBegan: TimeInterval?
+        private var lastSpeech: TimeInterval?
+        private var heardSpeech = false
+        private var dictationMuted = false
         private var reader: AVAudioPlayer?
         private var readingID: String?
         private var backgroundReply: UIBackgroundTaskIdentifier = .invalid
@@ -216,6 +221,12 @@ struct KovaChatWebView: UIViewRepresentable {
 
         func cancelDictation() {
             dictationID = nil
+            dictationTimer?.invalidate()
+            dictationTimer = nil
+            speechBegan = nil
+            lastSpeech = nil
+            heardSpeech = false
+            dictationMuted = false
             guard let recorder = dictation else { return }
             dictation = nil
             recorder.delegate = nil
@@ -224,7 +235,7 @@ struct KovaChatWebView: UIViewRepresentable {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
 
-        private func startDictation(_ id: String, reply: @escaping (Any?, String?) -> Void) {
+        private func startDictation(_ id: String, handsFree: Bool, reply: @escaping (Any?, String?) -> Void) {
             guard UIApplication.shared.applicationState == .active, unlocked, dictationID == nil else {
                 reply(false, nil)
                 return
@@ -258,6 +269,10 @@ struct KovaChatWebView: UIViewRepresentable {
                             reply(false, nil)
                             return
                         }
+                        if handsFree {
+                            recorder.isMeteringEnabled = true
+                            self.startVoiceMeter(id)
+                        }
                         reply(true, nil)
                     } catch {
                         self.cancelDictation()
@@ -266,6 +281,34 @@ struct KovaChatWebView: UIViewRepresentable {
                         reply(false, nil)
                     }
                 }
+            }
+        }
+
+        private func startVoiceMeter(_ id: String) {
+            let deadline = ProcessInfo.processInfo.systemUptime + 59
+            dictationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) {
+                [weak self] _ in
+                Task { @MainActor in self?.checkVoiceMeter(id, deadline: deadline) }
+            }
+        }
+
+        private func checkVoiceMeter(_ id: String, deadline: TimeInterval) {
+            guard dictationID == id, let recorder = dictation else { return }
+            let now = ProcessInfo.processInfo.systemUptime
+            if now >= deadline {
+                recorder.stop()
+                return
+            }
+            guard recorder.isRecording, !dictationMuted else { return }
+            recorder.updateMeters()
+            if recorder.averagePower(forChannel: 0) >= -35 {
+                if speechBegan == nil { speechBegan = now }
+                lastSpeech = now
+                if let speechBegan, now - speechBegan >= 0.18 { heardSpeech = true }
+            } else if !heardSpeech {
+                speechBegan = nil
+            } else if let lastSpeech, now - lastSpeech >= 1.15 {
+                recorder.stop()
             }
         }
 
@@ -301,7 +344,26 @@ struct KovaChatWebView: UIViewRepresentable {
             }
             if message.name == "kovaDictation" {
                 switch value["action"] {
-                case "start": startDictation(id, reply: replyHandler)
+                case "start", "start-voice":
+                    startDictation(id, handsFree: value["action"] == "start-voice", reply: replyHandler)
+                case "mute":
+                    guard id == dictationID, let recorder = dictation, recorder.isRecording else {
+                        replyHandler(false, nil)
+                        return
+                    }
+                    recorder.pause()
+                    dictationMuted = true
+                    speechBegan = nil
+                    lastSpeech = nil
+                    replyHandler(true, nil)
+                case "unmute":
+                    guard id == dictationID, let recorder = dictation, dictationMuted else {
+                        replyHandler(false, nil)
+                        return
+                    }
+                    let resumed = recorder.record()
+                    dictationMuted = !resumed
+                    replyHandler(resumed, nil)
                 case "finish":
                     if id == dictationID { dictation?.stop() }
                     replyHandler(id == dictationID, nil)

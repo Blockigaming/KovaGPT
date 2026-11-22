@@ -828,6 +828,23 @@ export function ComposerVoiceDialog({
   };
 
   const toggleMicrophone = () => {
+    const native = nativeRecording.current;
+    if (native && phaseRef.current === "recording") {
+      const muted = !microphoneMutedRef.current;
+      microphoneMutedRef.current = muted;
+      setMicrophoneMuted(muted);
+      void nativeDictationHandler()
+        ?.postMessage({ action: muted ? "mute" : "unmute", id: native.id })
+        .then((ok) => {
+          if (!ok && nativeRecording.current === native)
+            failOperation("The microphone could not change state. Start Voice again.");
+        })
+        .catch(() => {
+          if (nativeRecording.current === native)
+            failOperation("The microphone could not change state. Start Voice again.");
+        });
+      return;
+    }
     const capture = stream.current;
     if (!capture || phaseRef.current !== "recording") return;
     const muted = !microphoneMutedRef.current;
@@ -900,7 +917,7 @@ export function ComposerVoiceDialog({
         );
       }
     };
-    const native = mode !== "voice" ? nativeDictationHandler() : undefined;
+    const native = nativeDictationHandler();
     const realtime =
       mode === "voice" && capabilities.realtime && !realtimeFailed && canListenInRealtime();
     const canRecord =
@@ -920,56 +937,6 @@ export function ComposerVoiceDialog({
     setError("");
     setElapsed(0);
     updatePhase("requesting");
-    if (native) {
-      const active = { id: crypto.randomUUID(), listeners: new AbortController() };
-      nativeRecording.current = active;
-      const { signal } = active.listeners;
-      let completed = false;
-      window.addEventListener(
-        "kova-native-dictation",
-        (event) => {
-          const result = (event as CustomEvent<{ id?: string; audio?: string }>).detail;
-          if (result?.id !== active.id || nativeRecording.current !== active || !isCurrent(scope))
-            return;
-          completed = true;
-          clearRecordingTimers();
-          updatePhase("stopping");
-          const deliver = () => {
-            if (document.visibilityState === "hidden") return;
-            active.listeners.abort();
-            nativeRecording.current = null;
-            if (!result.audio) {
-              failOperation("No audio was recorded. Check your microphone and try again.");
-              return;
-            }
-            const bytes = Uint8Array.from(atob(result.audio), (character) =>
-              character.charCodeAt(0),
-            );
-            void transcribeRecording(scope, new Blob([bytes], { type: "audio/mp4" }));
-          };
-          document.addEventListener("visibilitychange", deliver, { signal });
-          deliver();
-        },
-        { signal },
-      );
-      const started = await native
-        .postMessage({ action: "start", id: active.id })
-        .catch(() => false);
-      if (!isCurrent(scope) || nativeRecording.current !== active || completed) return;
-      if (!started) {
-        failOperation(
-          "The microphone could not start. Check KovaGPT’s microphone permission in Settings.",
-        );
-        return;
-      }
-      updatePhase("recording");
-      const began = Date.now();
-      recordingClock.current = setInterval(
-        () => setElapsed(Math.min(59, Math.floor((Date.now() - began) / 1000))),
-        250,
-      );
-      return;
-    }
     if (realtime) {
       const controller = new AbortController();
       request.current = controller;
@@ -1019,7 +986,10 @@ export function ComposerVoiceDialog({
         const mediaError = cause instanceof Error ? cause.name : "";
         const permissionDenied = mediaError === "NotAllowedError" || mediaError === "SecurityError";
         const canUseRecordedVoice =
-          canRecord && !permissionDenied && mediaError !== "NotFoundError" && fallbackAllowed;
+          (canRecord || !!native) &&
+          !permissionDenied &&
+          mediaError !== "NotFoundError" &&
+          fallbackAllowed;
         setHandsFreeListening(false);
         stream.current = null;
         resetMute();
@@ -1041,6 +1011,57 @@ export function ComposerVoiceDialog({
       } finally {
         finishRequest(controller);
       }
+    }
+    if (native) {
+      const active = { id: crypto.randomUUID(), listeners: new AbortController() };
+      nativeRecording.current = active;
+      const { signal } = active.listeners;
+      let completed = false;
+      window.addEventListener(
+        "kova-native-dictation",
+        (event) => {
+          const result = (event as CustomEvent<{ id?: string; audio?: string }>).detail;
+          if (result?.id !== active.id || nativeRecording.current !== active || !isCurrent(scope))
+            return;
+          completed = true;
+          resetMute();
+          clearRecordingTimers();
+          updatePhase("stopping");
+          const deliver = () => {
+            if (document.visibilityState === "hidden") return;
+            active.listeners.abort();
+            nativeRecording.current = null;
+            if (!result.audio) {
+              failOperation("No audio was recorded. Check your microphone and try again.");
+              return;
+            }
+            const bytes = Uint8Array.from(atob(result.audio), (character) =>
+              character.charCodeAt(0),
+            );
+            void transcribeRecording(scope, new Blob([bytes], { type: "audio/mp4" }));
+          };
+          document.addEventListener("visibilitychange", deliver, { signal });
+          deliver();
+        },
+        { signal },
+      );
+      const started = await native
+        .postMessage({ action: mode === "voice" ? "start-voice" : "start", id: active.id })
+        .catch(() => false);
+      if (!isCurrent(scope) || nativeRecording.current !== active || completed) return;
+      if (!started) {
+        failOperation(
+          "The microphone could not start. Check KovaGPT’s microphone permission in Settings.",
+        );
+        return;
+      }
+      updatePhase("recording");
+      const began = Date.now();
+      recordingClock.current = setInterval(
+        () => setElapsed(Math.min(59, Math.floor((Date.now() - began) / 1000))),
+        250,
+      );
+      return;
     }
     let acquired: MediaStream | null = null;
     try {
@@ -1403,6 +1424,7 @@ export function ComposerVoiceDialog({
       } as CSSProperties)
     : undefined;
   const realtimeListening =
+    !nativeRecording.current &&
     phase === "recording" &&
     mode === "voice" &&
     capabilities?.realtime &&

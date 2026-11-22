@@ -34,7 +34,10 @@ export function sendNativeKovaMessage(message: NativeMessage) {
 }
 
 type NativeDictationHandler = {
-  postMessage: (message: { action: "start" | "finish" | "cancel"; id: string }) => Promise<boolean>;
+  postMessage: (message: {
+    action: "start" | "start-voice" | "finish" | "cancel" | "mute" | "unmute";
+    id: string;
+  }) => Promise<boolean>;
 };
 
 export function nativeDictationHandler(): NativeDictationHandler | undefined {
