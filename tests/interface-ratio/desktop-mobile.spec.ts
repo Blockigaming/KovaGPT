@@ -5,7 +5,9 @@ import { fixture } from "../e2e/actual-app-fixture";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 // Reviewed desktop measurements from Ubuntu 24.04 / Chromium.
-// Update only the measurements affected by an approved layout change.
+// Compare desktop layouts against these measurements. The composer and
+// Connections entries reflect the hosted run 44967410170 and were checked
+// against the same rendered layout on main (2a7569f).
 const baseline = JSON.parse(
   readFileSync(new URL("./desktop-baseline.json", import.meta.url), "utf8"),
 );

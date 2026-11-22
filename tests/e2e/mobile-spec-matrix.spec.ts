@@ -25,9 +25,16 @@ test.beforeEach(async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
-for (const [width, height] of viewports) {
+const typographyCases = [
+  ...viewports.map(([width, height]) => ({ width, height, textSize: 20 })),
+  { width: 320, height: 568, textSize: 32 },
+];
+
+for (const { width, height, textSize } of typographyCases) {
   for (const theme of ["light", "dark"] as const) {
-    test(`chat fits ${width}×${height} in ${theme} with enlarged text`, async ({ page }) => {
+    test(`chat fits ${width}×${height} in ${theme} with ${textSize}px native text`, async ({
+      page,
+    }) => {
       test.setTimeout(60_000);
       await fixture(page, theme);
       await page.setViewportSize({ width, height });
@@ -86,10 +93,13 @@ for (const [width, height] of viewports) {
       await waitForKovaHydration(page);
 
       const html = page.locator("html");
-      await html.evaluate((element, mode) => {
-        element.classList.toggle("dark", mode === "dark");
-        element.style.setProperty("--kova-native-font-size", "20px");
-      }, theme);
+      await html.evaluate(
+        (element, { theme, textSize }) => {
+          element.classList.toggle("dark", theme === "dark");
+          element.style.setProperty("--kova-native-font-size", `${textSize}px`);
+        },
+        { theme, textSize },
+      );
 
       if (width < 768) {
         const palette = await html.evaluate((element) => {
@@ -109,8 +119,8 @@ for (const [width, height] of viewports) {
       const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
       await expect(composer).toBeVisible();
       if (width < 768) {
-        await expect(composer).toHaveCSS("font-size", "20px");
-        await expect(composer).toHaveCSS("line-height", "30px");
+        await expect(composer).toHaveCSS("font-size", `${textSize}px`);
+        await expect(composer).toHaveCSS("line-height", `${textSize * 1.5}px`);
         await expect(composer).toHaveCSS("unicode-bidi", "plaintext");
       }
       await composer.fill("First line\nA second line for this draft.");
@@ -349,5 +359,14 @@ test("phone controls clear the safe areas as the available height changes", asyn
   await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(1.5);
   await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
   await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    ...screen,
+    width: 844,
+    screenWidth: 844,
+    height: 600,
+  });
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#121212");
+  await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height: 844 });
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#111111");
   await expect(composer).toHaveValue("A draft that should stay in place");
 });
