@@ -363,7 +363,10 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
               node={{ fill: colors[0] }}
               link={{ stroke: colors[0], strokeOpacity: 0.35 }}
             >
-              <Tooltip />
+              <Tooltip
+                trigger={tooltipTrigger}
+                isAnimationActive={tooltipTrigger === "click" ? false : undefined}
+              />
             </Sankey>
           </ResponsiveContainer>
         </div>
@@ -389,9 +392,11 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
               {intervals ? (
                 <BarChart data={intervals}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="label" fontSize={12} />
+                  <XAxis dataKey="label" fontSize={12} minTickGap={isMobile ? 16 : 5} />
                   <YAxis domain={["auto", "auto"]} fontSize={12} />
                   <Tooltip
+                    trigger={tooltipTrigger}
+                    isAnimationActive={tooltipTrigger === "click" ? false : undefined}
                     formatter={(value: number | number[], name, item) => {
                       if (type === "waterfall" && item.payload)
                         return [String(item.payload.detail), "Change"];
@@ -425,9 +430,11 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
               ) : type === "histogram" ? (
                 <BarChart data={histogram} barCategoryGap={2}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="range" fontSize={11} />
+                  <XAxis dataKey="range" fontSize={11} minTickGap={isMobile ? 16 : 5} />
                   <YAxis allowDecimals={false} fontSize={12} />
                   <Tooltip
+                    trigger={tooltipTrigger}
+                    isAnimationActive={tooltipTrigger === "click" ? false : undefined}
                     labelFormatter={(label, payload) => {
                       const bin = payload[0]?.payload;
                       return bin
