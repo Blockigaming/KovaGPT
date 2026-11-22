@@ -115,7 +115,7 @@ function fixture() {
     },
     "./connection-flows.mjs": flows,
     "./oauth-providers.server": {
-      configuredGranolaProvider: () => (state.configured ? { id: "granola" } : null),
+      configuredKeyProviders: () => (state.configured ? [{ id: "granola" }] : []),
       configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
       OAUTH_PROVIDERS: {
         gamma: {

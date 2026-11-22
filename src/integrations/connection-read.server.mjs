@@ -43,7 +43,22 @@ export function connectionReadRequest(id, query, token, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
   let url;
   let body;
-  if (id === "gamma") {
+  if (id === "hyperframes-heygen") {
+    if (!/^[!-~]{8,512}$/u.test(token)) throw new Error("invalid_hyperframes_key");
+    delete headers.Authorization;
+    headers["X-Api-Key"] = token;
+    url = new URL("https://api.heygen.com/v3/hyperframes/renders");
+    url.searchParams.set("limit", "10");
+  } else if (id === "stripe") {
+    headers["Stripe-Version"] = "2026-11-18.endive";
+    if (query.toLowerCase() === "recent") {
+      url = new URL("https://api.stripe.com/v1/charges");
+      url.searchParams.set("limit", "10");
+    } else {
+      if (!/^ch_[a-zA-Z0-9]{1,128}$/u.test(query)) throw new Error("invalid_connection_query");
+      url = new URL(`https://api.stripe.com/v1/charges/${query}`);
+    }
+  } else if (id === "gamma") {
     url = new URL("https://public-api.gamma.app/v1.0/gammas");
     url.searchParams.set("limit", "10");
     if (query.toLowerCase() !== "recent") {
@@ -216,6 +231,52 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     };
   }
   let rows = data.value;
+  if (id === "hyperframes-heygen") {
+    if (!Array.isArray(data.data) || data.error) throw new Error("invalid_connection_response");
+    const filter = query.trim().toLowerCase();
+    rows = data.data.slice(0, 10).flatMap((render) => {
+      if (typeof render?.render_id !== "string" || !render.render_id) return [];
+      const title = str(render.title, 300);
+      if (filter !== "recent" && !title.toLowerCase().includes(filter)) return [];
+      return [
+        {
+          id: str(render.render_id, 128),
+          name: title || "Untitled render",
+          description: str(render.status, 40),
+        },
+      ];
+    });
+  }
+  if (id === "stripe") {
+    if (query.trim().toLowerCase() === "recent") {
+      if (data.object !== "list" || data.url !== "/v1/charges" || !Array.isArray(data.data))
+        throw new Error("invalid_connection_response");
+      rows = data.data;
+    } else {
+      if (data.object !== "charge" || data.id !== query.trim())
+        throw new Error("invalid_connection_response");
+      rows = [data];
+    }
+    rows = rows.slice(0, 10).flatMap((charge) => {
+      if (
+        charge?.object !== "charge" ||
+        typeof charge.id !== "string" ||
+        !/^ch_[a-zA-Z0-9]{1,128}$/u.test(charge.id) ||
+        !Number.isSafeInteger(charge.amount) ||
+        charge.amount < 0 ||
+        !/^[a-z]{3}$/u.test(charge.currency) ||
+        !["succeeded", "failed", "pending"].includes(charge.status)
+      )
+        return [];
+      return [
+        {
+          id: charge.id,
+          name: charge.id,
+          description: `${charge.amount} in ${charge.currency.toUpperCase()} minor units · ${charge.status}`,
+        },
+      ];
+    });
+  }
   if (id === "gamma") {
     if (!Array.isArray(data.data)) throw new Error("invalid_connection_response");
     rows = data.data.flatMap((item) => {

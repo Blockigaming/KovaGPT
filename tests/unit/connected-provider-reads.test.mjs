@@ -135,6 +135,8 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "public-api.gamma.app",
     "bigquery.googleapis.com",
     "api.hubapi.com",
+    "api.stripe.com",
+    "api.heygen.com",
     "api.notion.com",
     "api.linear.app",
     "slack.com",
@@ -152,15 +154,22 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
       id,
       id === "figma"
         ? "https://www.figma.com/design/Abc123/title"
-        : id === "google-bigquery"
-          ? "example-project"
-          : "a&?$top=999' https://evil.example",
+        : id === "stripe"
+          ? "recent"
+          : id === "google-bigquery"
+            ? "example-project"
+            : "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : token,
       { calendlyUser: "https://api.calendly.com/users/test-user" },
     );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
-    assert.equal(req.init.headers.Authorization, `Bearer ${token}`);
+    if (id === "hyperframes-heygen") {
+      assert.equal(req.init.headers["X-Api-Key"], token);
+      assert.equal(req.init.headers.Authorization, undefined);
+    } else {
+      assert.equal(req.init.headers.Authorization, `Bearer ${token}`);
+    }
     assert.equal(req.init.redirect, "error");
     assert.ok(req.init.signal instanceof AbortSignal);
   }
@@ -918,5 +927,130 @@ test("Gamma document lookup uses its workspace read grant and returns only metad
   assert.throws(
     () => selectRefreshTokens("gamma", { access_token: "example", expires_in: 3600 }),
     /refresh_token_missing/,
+  );
+});
+
+test("Stripe limits charge reads to the fixed API and excludes customer and payment details", async () => {
+  assert.throws(
+    () => connectionReadRequest("stripe", "ch_demo/../customers", "key"),
+    /invalid_connection_query/,
+  );
+  const charge = {
+    id: "ch_Demo",
+    object: "charge",
+    amount: 1100,
+    currency: "usd",
+    status: "succeeded",
+    billing_details: { email: "private" },
+    receipt_url: "private",
+  };
+  const result = await readConnection("stripe", "recent", "access", async (url, init) => {
+    assert.equal(url, "https://api.stripe.com/v1/charges?limit=10");
+    assert.equal(init.method, "GET");
+    return Response.json({ object: "list", url: "/v1/charges", data: [charge] });
+  });
+  assert.deepEqual(result.results, [
+    { id: "ch_Demo", title: "ch_Demo", url: null, snippet: "1100 in USD minor units · succeeded" },
+  ]);
+  assert.equal(
+    connectionReadRequest("stripe", "ch_Demo", "access").url,
+    "https://api.stripe.com/v1/charges/ch_Demo",
+  );
+  await assert.rejects(
+    readConnection("stripe", "ch_Other", "access", async () => Response.json(charge)),
+    /invalid_connection_response/,
+  );
+  await assert.rejects(
+    readConnection("stripe", "recent", "access", async () => new Response(null, { status: 403 })),
+    /connection_permission_required/,
+  );
+});
+
+test("Stripe Apps exchanges keep the developer key in HTTP Basic and bind the rotated grant to the account and mode", () => {
+  const config = {
+    providerId: "stripe",
+    clientId: "ca_Fixture",
+    clientSecret: "sk_test_Fixture",
+  };
+  const exchange = oauthTokenRequest({
+    ...config,
+    code: "fixture-code",
+    redirectUri: "https://kovagpt.com/callback",
+  });
+  assert.deepEqual(Object.fromEntries(exchange.body), {
+    grant_type: "authorization_code",
+    code: "fixture-code",
+  });
+  assert.equal(
+    exchange.headers.Authorization,
+    "Basic " + Buffer.from("sk_test_Fixture:").toString("base64"),
+  );
+  const response = {
+    access_token: "access",
+    refresh_token: "rotated",
+    token_type: "bearer",
+    livemode: false,
+    stripe_user_id: "acct_Fixture",
+    scope: "stripe_apps",
+  };
+  assert.deepEqual(selectRefreshTokens("stripe", response), {
+    access_token: "access",
+    refresh_token: "rotated",
+    expires_in: 3600,
+    scope: "stripe_apps",
+    provider_account_id: "test:acct_Fixture",
+  });
+  assert.throws(
+    () => selectRefreshTokens("stripe", { ...response, scope: "read_write" }),
+    /oauth_scope_verification_failed/,
+  );
+});
+
+test("HyperFrames lists only permitted render names and statuses without returning signed media links", async () => {
+  const account = {
+    provider_id: "hyperframes-heygen",
+    status: "connected",
+    token_expires_at: null,
+  };
+  assert.equal(canReadConnection({ ...account, granted_scopes: [] }, "hyperframes-heygen"), false);
+  assert.equal(
+    canReadConnection({ ...account, granted_scopes: ["hyperframes:read"] }, "hyperframes-heygen"),
+    true,
+  );
+  const result = await readConnection(
+    "hyperframes-heygen",
+    "Trailer",
+    "fixture-only",
+    async (url, init) => {
+      assert.equal(url, "https://api.heygen.com/v3/hyperframes/renders?limit=10");
+      assert.equal(init.method, "GET");
+      assert.equal(init.headers["X-Api-Key"], "fixture-only");
+      assert.equal(init.headers.Authorization, undefined);
+      return Response.json({
+        data: [
+          {
+            render_id: "hfr_fixture",
+            title: "Demo Trailer",
+            status: "completed",
+            video_url: "private",
+            failure_message: "private",
+          },
+          { render_id: "hfr_second", title: "Other", status: "queued" },
+        ],
+        next_token: "private",
+      });
+    },
+  );
+  assert.deepEqual(result.results, [
+    { id: "hfr_fixture", title: "Demo Trailer", snippet: "completed", url: null },
+  ]);
+  await assert.rejects(
+    readConnection(
+      "hyperframes-heygen",
+      "recent",
+      "fixture-only",
+      async () => new Response(null, { status: 403 }),
+    ),
+    /connection_permission_required/,
   );
 });

@@ -195,7 +195,7 @@ vm.runInNewContext(
     accountColumns: "offline-fixture-columns",
     assertLockdownAllows: async () => {},
     configuredOAuthProviders: () => [{ id: "linear" }],
-    configuredGranolaProvider: () => null,
+    configuredKeyProviders: () => [],
     CONNECTION_FLOWS,
     canReadConnection,
     githubChatTools: { getContext: async () => ({ tools: [tool] }) },

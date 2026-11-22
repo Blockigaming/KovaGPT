@@ -7,14 +7,14 @@ import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 const owner = "00000000-0000-4000-8000-000000000005";
 const key = "grn_fixture_only";
-const request = () =>
+const request = (provider) =>
   new Request("https://kovagpt.com/api/integrations/accounts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider: "granola", apiKey: key, owner_id: "different-user" }),
+    body: JSON.stringify({ provider, apiKey: key, owner_id: "different-user" }),
   });
 
-function fixture() {
+function fixture(provider = "granola") {
   const state = { session: true, writes: [], reads: 0, encryption: 0 };
   const db = {
     from(table) {
@@ -74,7 +74,10 @@ function fixture() {
               },
       },
       "@/integrations/oauth-providers.server": {
-        configuredGranolaProvider: () => ({ id: "granola", requiredScopes: [GRANOLA_NOTE_READ] }),
+        configuredKeyProviders: () => [
+          { id: "granola", name: "Granola", requiredScopes: [GRANOLA_NOTE_READ] },
+          { id: "hyperframes-heygen", name: "HyperFrames", requiredScopes: ["hyperframes:read"] },
+        ],
       },
       "@/lib/bounded-json.server.mjs": boundedJson,
       "@/lib/lockdown-policy.mjs": lockdown,
@@ -89,8 +92,8 @@ function fixture() {
         },
       },
       "@/integrations/connection-read.server.mjs": {
-        readConnection: async (provider, query, token) => {
-          assert.equal(provider, "granola");
+        readConnection: async (requestedProvider, query, token) => {
+          assert.equal(requestedProvider, provider);
           assert.equal(query, "recent");
           assert.equal(token, key);
           state.reads++;
@@ -100,7 +103,7 @@ function fixture() {
     },
     { Response, Error },
   );
-  return { state, post: () => Route.server.handlers.POST({ request: request() }) };
+  return { state, post: () => Route.server.handlers.POST({ request: request(provider) }) };
 }
 
 test("Granola stores only an encrypted, owner-bound key after a provider read", async () => {
@@ -157,4 +160,13 @@ test("Granola requires authentication and rate-limit admission before calling th
   limited.state.limited = true;
   assert.equal((await limited.post()).status, 429);
   assert.equal(limited.state.reads, 0);
+});
+
+test("HyperFrames uses the shared key setup with its own provider binding", async () => {
+  const { state, post } = fixture("hyperframes-heygen");
+  assert.equal((await post()).status, 200);
+  assert.equal(state.reads, 1);
+  assert.equal(state.writes[0][1].provider_id, "hyperframes-heygen");
+  assert.equal(state.writes[0][1].access_token_ciphertext, "encrypted-fixture");
+  assert.equal(state.writes[0][1].granted_scopes[0], "hyperframes:read");
 });

@@ -12,6 +12,8 @@ export function oauthTokenRequest({
   verifier,
 }) {
   if (!clientId || !clientSecret) throw new Error("provider_not_configured");
+  if (providerId === "stripe")
+    return stripeAppTokenRequest(clientSecret, { grant_type: "authorization_code", code });
   const fields = { grant_type: "authorization_code", code, redirect_uri: redirectUri };
   if (providerId === "notion") {
     return {
@@ -47,6 +49,20 @@ export function oauthTokenRequest({
   };
 }
 
+function stripeAppTokenRequest(secret, fields) {
+  return {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${Buffer.from(`${secret}:`).toString("base64")}`,
+    },
+    body: new URLSearchParams(fields),
+    redirect: "error",
+    signal: AbortSignal.timeout(15_000),
+  };
+}
+
 // Slack returns a bot token at the top level. Message search must use the
 // explicitly granted user token under authed_user, never the bot credential.
 export function selectOAuthTokens(providerId, payload) {
@@ -60,6 +76,26 @@ export function selectOAuthTokens(providerId, payload) {
     (providerId === "slack" && tokens.token_type !== "user")
   )
     throw new Error("oauth_access_token_missing");
+  if (providerId === "stripe") {
+    if (
+      tokens.scope !== "stripe_apps" ||
+      tokens.token_type !== "bearer" ||
+      typeof tokens.livemode !== "boolean" ||
+      typeof tokens.stripe_user_id !== "string" ||
+      !/^acct_[A-Za-z0-9]{1,128}$/u.test(tokens.stripe_user_id)
+    )
+      throw new Error("oauth_scope_verification_failed");
+    if (typeof tokens.refresh_token !== "string" || !tokens.refresh_token)
+      throw new Error("oauth_refresh_token_missing");
+    return {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      // Stripe Apps documents a one-hour lifetime and omits expires_in.
+      expires_in: 3600,
+      scope: tokens.scope,
+      provider_account_id: `${tokens.livemode ? "live" : "test"}:${tokens.stripe_user_id}`,
+    };
+  }
   let declaredScopes = tokens.scope;
   if (providerId === "hubspot") {
     declaredScopes =
@@ -95,6 +131,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       "oura",
       "whoop",
       "salesforce",
+      "stripe",
       "notion",
       "box",
       "canva",
@@ -107,6 +144,11 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
   )
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
+  if (providerId === "stripe")
+    return stripeAppTokenRequest(clientSecret, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
   if (providerId === "notion")
     return {
       method: "POST",

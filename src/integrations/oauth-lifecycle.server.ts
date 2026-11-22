@@ -9,7 +9,7 @@ import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { oauthTokenRequest, selectOAuthTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
-import { hasConnectionScopes } from "./connection-flows.mjs";
+import { CONNECTION_FLOWS, hasConnectionScopes } from "./connection-flows.mjs";
 import { confirmedHealthScopes } from "@/health/health-read.server.mjs";
 import {
   packSalesforceCredential,
@@ -95,7 +95,8 @@ export async function beginOAuth(input: {
     response_type: "code",
     state,
   });
-  if (scopes.length)
+  if (provider.id === "stripe") params.delete("response_type");
+  if (scopes.length && provider.id !== "stripe")
     params.set(
       provider.id === "slack" ? "user_scope" : "scope",
       scopes.join(["slack", "linear"].includes(provider.id) ? "," : " "),
@@ -207,6 +208,12 @@ export async function completeOAuth(input: {
       ))
   )
     throw new Error("oauth_scope_verification_failed");
+  if (provider.id === "stripe") {
+    const secret = process.env[provider.clientSecretEnv];
+    const expectedMode = secret?.startsWith("sk_live_") ? "live:" : "test:";
+    if (!tokens.provider_account_id?.startsWith(expectedMode))
+      throw new Error("oauth_profile_identity_mismatch");
+  }
   await assertLockdownAllows(db, record.owner_id, "connector_write");
   let profile: Record<string, unknown> = { verifiedAccountId: tokens.provider_account_id };
   if (provider.profileEndpoint) {
@@ -219,6 +226,7 @@ export async function completeOAuth(input: {
         Accept: "application/json",
         "User-Agent": "KovaGPT/1.0",
         ...(provider.id === "notion" ? { "Notion-Version": "2022-06-28" } : {}),
+        ...(provider.id === "stripe" ? { "Stripe-Version": "2026-11-18.endive" } : {}),
         ...(provider.id === "linear" ? { "Content-Type": "application/json" } : {}),
       },
       body:
@@ -234,6 +242,11 @@ export async function completeOAuth(input: {
     (provider.id === "linear" && Array.isArray(profile.errors) && profile.errors.length)
   )
     throw new Error("oauth_profile_failed");
+  if (provider.id === "stripe") {
+    if (profile.object !== "list" || profile.url !== "/v1/charges" || !Array.isArray(profile.data))
+      throw new Error("oauth_profile_failed");
+    profile = { verifiedAccountId: tokens.provider_account_id };
+  }
   const providerAccountId = provider.profileId(profile);
   if (!providerAccountId) throw new Error("oauth_profile_identity_missing");
   if (provider.id === "calendly" && tokens.provider_account_id !== providerAccountId)
@@ -405,7 +418,8 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .maybeSingle();
   if (!account) throw new Error("linked_account_not_found");
   const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
-  if (!provider && account.provider_id !== "granola")
+  const keyFlow = CONNECTION_FLOWS[account.provider_id];
+  if (!provider && keyFlow?.authentication !== "api-key")
     throw new Error("unsupported_linked_account_provider");
   const providerRevoked = provider ? await revokeOAuthCredential(provider, account) : false;
   const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
@@ -436,7 +450,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .eq("owner_id", ownerId);
   if (!provider) {
     purge
-      .eq("provider_id", "granola")
+      .eq("provider_id", account.provider_id)
       .eq("updated_at", account.updated_at)
       .eq("access_token_ciphertext", account.access_token_ciphertext)
       .is("workspace_id", null)
@@ -453,7 +467,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     provider_id: account.provider_id,
     event_type: "disconnect",
     result: providerRevoked ? "success" : "failure",
-    safe_summary: `Disconnected ${provider?.name ?? "Granola"} account`,
+    safe_summary: `Disconnected ${provider?.name ?? keyFlow?.label} account`,
   });
   if (auditError) {
     console.error("[oauth-disconnect] audit insert failed", {

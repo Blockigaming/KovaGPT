@@ -96,9 +96,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "hyperframes-heygen",
     label: "HyperFrames by HeyGen",
-    description: "Planned HyperFrames by HeyGen integration.",
+    description: "Read recent HyperFrames render titles and statuses from HeyGen.",
     category: "Social & Media",
-    status: "planned",
+    status: "setup_required",
     domain: "heygen.com",
   },
   {
@@ -624,9 +624,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "stripe",
     label: "Stripe",
-    description: "Read payment summaries.",
+    description: "Read recent Stripe payment amounts, currencies, and statuses.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "stripe.com",
   },
   {
@@ -3104,7 +3104,7 @@ export function connectorConnectFlow(
   if (item.status !== "live" && item.status !== "setup_required") return null;
   if (GOOGLE_CONNECT_IDS.has(item.id)) return "google-oauth";
   if (item.id === "github") return "github-app";
-  if (item.id === "granola") return "provider-key";
+  if (CONNECTION_FLOWS[item.id]?.authentication === "api-key") return "provider-key";
   if (CONNECTION_FLOWS[item.id]) return "provider-oauth";
   return null;
 }

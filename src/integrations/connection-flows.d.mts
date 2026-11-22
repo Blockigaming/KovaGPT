@@ -1,5 +1,6 @@
 export type ConnectionFlow = {
   provider: string;
+  authentication?: "api-key";
   scopes: string[];
   tool: string;
   label: string;

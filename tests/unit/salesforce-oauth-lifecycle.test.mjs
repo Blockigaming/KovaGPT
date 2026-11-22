@@ -166,6 +166,8 @@ function fixture() {
   const lifecycle = compile("src/integrations/oauth-lifecycle.server.ts", modules, {
     process: {
       env: {
+        STRIPE_APPS_OAUTH_CLIENT_ID: "ca_Fixture",
+        STRIPE_APPS_OAUTH_API_KEY: "sk_test_Fixture",
         SALESFORCE_OAUTH_CLIENT_ID: "client-test",
         SALESFORCE_OAUTH_CLIENT_SECRET: "secret-test",
         CALENDLY_OAUTH_CLIENT_ID: "client-test",
@@ -364,4 +366,37 @@ test("Gamma starts authorization with the API audience, read-only scope and PKCE
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
   assert.match(url.searchParams.get("code_challenge"), /^[a-zA-Z0-9_-]{43}$/u);
   assert.equal(url.searchParams.has("client_secret"), false);
+});
+
+test("Stripe validates the mode and actual charge permissions before saving an app grant", async () => {
+  const request = new Request("https://kovagpt.com/api/integrations/oauth/callback/stripe");
+  for (const failure of [null, "mode", "permission"]) {
+    const f = fixture();
+    f.state.oauth.provider_id = "stripe";
+    f.state.oauth.requested_scopes = ["stripe_apps"];
+    f.state.tokens = {
+      access_token: "stripe-access-fixture",
+      refresh_token: "stripe-refresh-fixture",
+      token_type: "bearer",
+      livemode: failure === "mode",
+      stripe_user_id: "acct_Fixture",
+      scope: "stripe_apps",
+    };
+    f.state.profile =
+      failure === "permission" ? { error: {} } : { object: "list", url: "/v1/charges", data: [] };
+    f.state.profileEndpoint = "https://api.stripe.com/v1/charges?limit=1";
+    const complete = () => f.completeOAuth({ ...callback, providerId: "stripe", request });
+    if (failure === "mode") {
+      await assert.rejects(complete(), /oauth_profile_identity_mismatch/);
+      assert.equal(f.state.calls.length, 1);
+    } else if (failure === "permission") {
+      await assert.rejects(complete(), /oauth_profile_failed/);
+    } else {
+      await complete();
+      assert.equal(f.state.account.provider_account_id, "test:acct_Fixture");
+      assert.equal(f.state.account.account_label, "Stripe test account");
+      assert.equal(f.state.account.access_token_ciphertext, "encrypted:stripe-access-fixture");
+    }
+    if (failure) assert.equal(f.state.account.provider_id, "salesforce");
+  }
 });

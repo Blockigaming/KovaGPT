@@ -12,6 +12,14 @@ export function calendlyUserUri(value) {
 export const GRANOLA_NOTE_READ = "granola:notes:list";
 
 export const CONNECTION_FLOWS = {
+  stripe: {
+    provider: "stripe",
+    scopes: ["stripe_apps"],
+    tool: "stripe_read_charges",
+    label: "Stripe",
+    description:
+      "Read payment amounts, currencies and statuses. Use 'recent' to list recent charges or enter an exact Stripe charge ID.",
+  },
   gamma: {
     provider: "gamma",
     scopes: ["gamma:read"],
@@ -20,8 +28,18 @@ export const CONNECTION_FLOWS = {
     description:
       "Find Gamma document titles and links in the selected workspace. Enter at least three characters or 'recent' to list recent documents.",
   },
+  "hyperframes-heygen": {
+    provider: "hyperframes-heygen",
+    authentication: "api-key",
+    scopes: ["hyperframes:read"],
+    tool: "hyperframes_list_renders",
+    label: "HyperFrames by HeyGen",
+    description:
+      "Find recent HyperFrames render titles and statuses. Enter a title fragment or 'recent'.",
+  },
   granola: {
     provider: "granola",
+    authentication: "api-key",
     scopes: [GRANOLA_NOTE_READ],
     tool: "granola_search_notes",
     label: "Granola",
@@ -197,6 +215,7 @@ export function safeConnectionLink(value) {
 
 export function connectionAuthorizationUrl(provider, value) {
   const endpoints = {
+    stripe: "https://marketplace.stripe.com/oauth/v2/authorize",
     gamma: "https://auth.gamma.app/oauth/authorize",
     box: "https://account.box.com/api/oauth2/authorize",
     canva: "https://www.canva.com/api/oauth/authorize",

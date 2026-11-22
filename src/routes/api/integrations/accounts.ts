@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import {
-  configuredGranolaProvider,
+  configuredKeyProviders,
   configuredOAuthProviders,
 } from "@/integrations/oauth-providers.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/api/integrations/accounts")({
                 requiredScopes,
                 optionalScopes,
               })),
-              ...[configuredGranolaProvider()].filter(Boolean),
+              ...configuredKeyProviders(),
             ],
             accounts: data ?? [],
           },
@@ -55,14 +55,16 @@ export const Route = createFileRoute("/api/integrations/accounts")({
         if (auth instanceof Response) return auth;
         const fail = (error: string, status: number) =>
           Response.json({ error }, { status, headers: noStore });
-        const provider = configuredGranolaProvider();
-        if (!provider) return fail("provider_not_configured", 503);
         try {
           if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json")
             return fail("expected_json", 415);
           const body = await readBoundedJsonObject(request, 1024, request.signal);
-          if (body.provider !== provider.id || typeof body.apiKey !== "string")
+          if (typeof body.provider !== "string" || typeof body.apiKey !== "string")
             return fail("invalid_connection_credential", 400);
+          const provider = configuredKeyProviders().find(
+            (candidate) => candidate.id === body.provider,
+          );
+          if (!provider) return fail("provider_not_configured", 503);
           const apiKey = body.apiKey.trim();
           await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
           const limit = await consumeApplicationRateLimit({
@@ -101,7 +103,7 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             owner_id: auth.userId,
             provider_id: provider.id,
             provider_account_id: providerAccountId,
-            account_label: "Granola personal API key",
+            account_label: `${provider.name} API key`,
             status: "connected",
             granted_scopes: provider.requiredScopes,
             access_token_ciphertext: ciphertext,
@@ -131,7 +133,7 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             owner_id: auth.userId,
             linked_account_id: saved.data.id,
             scopes: provider.requiredScopes,
-            purpose: "Read note metadata using the supplied Granola API key",
+            purpose: `Read ${provider.name} metadata using the supplied API key`,
             decision: "granted",
           });
           await db.from("integration_audit_events").insert({
@@ -140,7 +142,7 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             provider_id: provider.id,
             event_type: "connect",
             result: "success",
-            safe_summary: "Connected Granola API key",
+            safe_summary: `Connected ${provider.name} API key`,
           });
           return Response.json({ ok: true }, { headers: noStore });
         } catch (error) {
@@ -148,7 +150,8 @@ export const Route = createFileRoute("/api/integrations/accounts")({
           const lockdown = lockdownErrorResponse(error);
           if (lockdown) return lockdown;
           const code = error instanceof Error ? error.message : "";
-          if (code === "invalid_granola_key") return fail("invalid_connection_credential", 400);
+          if (["invalid_granola_key", "invalid_hyperframes_key"].includes(code))
+            return fail("invalid_connection_credential", 400);
           if (
             ["connection_reauthorization_required", "connection_permission_required"].includes(code)
           )

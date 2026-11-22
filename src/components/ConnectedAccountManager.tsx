@@ -56,7 +56,7 @@ export function ConnectedAccountManager({
   const [result, setResult] = useState<ConnectionReadResult | null>(null);
   const [disconnect, setDisconnect] = useState<ConnectedAccount | null>(null);
   const active = useRef(true);
-  const granolaKey = useRef<HTMLInputElement>(null);
+  const keyInput = useRef<HTMLInputElement>(null);
   const readAccount = useServerFn(searchConnectedAccount);
   const refreshAccess = useServerFn(refreshConnectedAccess);
   useEffect(() => {
@@ -67,6 +67,7 @@ export function ConnectedAccountManager({
   }, []);
   if (!flow) return null;
   const accounts = connectionAccounts(data?.accounts ?? [], operationId);
+  const usesApiKey = flow.authentication === "api-key";
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
   const start = async (existingAccountId?: string) => {
@@ -93,8 +94,8 @@ export function ConnectedAccountManager({
       if (active.current) setBusy(false);
     }
   };
-  const linkGranola = async () => {
-    const field = granolaKey.current;
+  const linkApiKey = async () => {
+    const field = keyInput.current;
     const apiKey = field?.value.trim();
     if (busy || loading || error || !configured || !field || !apiKey) return;
     field.value = "";
@@ -104,23 +105,23 @@ export function ConnectedAccountManager({
       const response = await fetchWithTimeoutAuthenticated("/api/integrations/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "granola", apiKey }),
+        body: JSON.stringify({ provider: flow.provider, apiKey }),
       });
       if (!response.ok) {
         if (active.current)
           toast.error(
             response.status === 403
-              ? "Granola read access could not be authorized. Check the key’s permissions and Lockdown Mode."
-              : "Could not connect Granola. Check the key and try again.",
+              ? `Could not authorize ${flow.label} read access. Check the key’s permissions and Lockdown Mode.`
+              : `Could not connect ${flow.label}. Check the key and try again.`,
           );
         return;
       }
       if (active.current) {
         await reload();
-        if (active.current) toast.success("Granola note list access verified.");
+        if (active.current) toast.success(`${flow.label} read access verified.`);
       }
     } catch {
-      if (active.current) toast.error("Could not connect Granola. Try again.");
+      if (active.current) toast.error(`Could not connect ${flow.label}. Try again.`);
     } finally {
       if (active.current) setBusy(false);
     }
@@ -164,8 +165,8 @@ export function ConnectedAccountManager({
         toast.success(
           body.providerRevoked
             ? "Account disconnected and provider access revoked."
-            : id === "granola"
-              ? "Granola key removed from Kova. Revoke it in Granola to disable the key."
+            : usesApiKey
+              ? `Key removed from Kova. Revoke it in ${flow.label} to disable the key.`
               : "Account disconnected locally. Provider revocation may still be pending.",
         );
     } catch {
@@ -227,6 +228,11 @@ export function ConnectedAccountManager({
         </div>
       )}
       <p>{flow.description}</p>
+      {id === "hyperframes-heygen" && (
+        <p className="text-sm text-muted-foreground">
+          Use a restricted HeyGen key with HyperFrames read access.
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">Kova provides read access for this operation.</p>
       {loading && <p role="status">Checking accounts…</p>}
       {error && (
@@ -236,19 +242,19 @@ export function ConnectedAccountManager({
         <p role="status">Connection setup is incomplete in this deployment.</p>
       )}
       <div className="flex flex-wrap gap-2 mt-3">
-        {id === "granola" ? (
+        {usesApiKey ? (
           configured && (
             <form
               className="flex flex-wrap items-end gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                void linkGranola();
+                void linkApiKey();
               }}
             >
               <label>
-                Granola personal API key
+                {flow.label} API key
                 <Input
-                  ref={granolaKey}
+                  ref={keyInput}
                   type="password"
                   autoComplete="off"
                   autoCapitalize="none"
@@ -259,7 +265,7 @@ export function ConnectedAccountManager({
                 />
               </label>
               <Button type="submit" disabled={busy || loading || error}>
-                {busy ? "Working…" : accounts.length ? "Replace key" : "Connect Granola"}
+                {busy ? "Working…" : accounts.length ? "Replace key" : `Connect ${flow.label}`}
               </Button>
             </form>
           )
@@ -357,7 +363,7 @@ export function ConnectedAccountManager({
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {id !== "granola" && (
+                  {!usesApiKey && (
                     <Button
                       variant="outline"
                       disabled={!configured || busy || loading || error}

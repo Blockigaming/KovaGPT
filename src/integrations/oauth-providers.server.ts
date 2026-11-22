@@ -1,7 +1,8 @@
-import { BIGQUERY_READ_SCOPE, GRANOLA_NOTE_READ, calendlyUserUri } from "./connection-flows.mjs";
+import { BIGQUERY_READ_SCOPE, CONNECTION_FLOWS, calendlyUserUri } from "./connection-flows.mjs";
 import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
 
 export type OAuthProviderId =
+  | "stripe"
   | "gamma"
   | "calendly"
   | "google-bigquery"
@@ -39,6 +40,21 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 const teamUser = (value: unknown) =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  stripe: {
+    id: "stripe",
+    name: "Stripe",
+    authorizationEndpoint: "https://marketplace.stripe.com/oauth/v2/authorize",
+    tokenEndpoint: "https://api.stripe.com/v1/oauth/token",
+    clientIdEnv: "STRIPE_APPS_OAUTH_CLIENT_ID",
+    clientSecretEnv: "STRIPE_APPS_OAUTH_API_KEY",
+    requiredScopes: ["stripe_apps"],
+    optionalScopes: [],
+    usesPkce: false,
+    profileEndpoint: "https://api.stripe.com/v1/charges?limit=1",
+    profileId: (v) => text(v.verifiedAccountId),
+    profileLabel: (v) =>
+      text(v.verifiedAccountId).startsWith("test:") ? "Stripe test account" : "Stripe live account",
+  },
   gamma: {
     id: "gamma",
     name: "Gamma",
@@ -313,15 +329,24 @@ function credentialVaultConfigured() {
   return Boolean(key && Buffer.from(key, "base64").length === 32);
 }
 
-export function configuredGranolaProvider() {
-  return credentialVaultConfigured()
-    ? { id: "granola", name: "Granola", requiredScopes: [GRANOLA_NOTE_READ], optionalScopes: [] }
-    : null;
+export function configuredKeyProviders() {
+  if (!credentialVaultConfigured()) return [];
+  return Object.values(CONNECTION_FLOWS)
+    .filter((flow) => flow.authentication === "api-key")
+    .map(({ provider, label, scopes }) => ({
+      id: provider,
+      name: label,
+      requiredScopes: scopes,
+      optionalScopes: [],
+    }));
 }
 
 export function configuredOAuthProviders() {
   if (!credentialVaultConfigured()) return [];
-  return Object.values(OAUTH_PROVIDERS).filter(
-    (provider) => process.env[provider.clientIdEnv] && process.env[provider.clientSecretEnv],
-  );
+  return Object.values(OAUTH_PROVIDERS).filter((provider) => {
+    const id = process.env[provider.clientIdEnv];
+    const secret = process.env[provider.clientSecretEnv];
+    if (!id || !secret) return false;
+    return provider.id !== "stripe" || /^sk_(test|live)_[A-Za-z0-9]+$/u.test(secret);
+  });
 }

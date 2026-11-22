@@ -5,7 +5,7 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import type { ToolDef } from "@/lib/google-tools.server";
 import { CONNECTION_FLOWS, canReadConnection, type ConnectedAccount } from "./connection-flows.mjs";
 import {
-  configuredGranolaProvider,
+  configuredKeyProviders,
   configuredOAuthProviders,
   OAUTH_PROVIDERS,
   type OAuthProviderId,
@@ -128,6 +128,7 @@ export async function refreshExpiringConnection(
       "oura",
       "whoop",
       "salesforce",
+      "stripe",
       "notion",
       "box",
       "canva",
@@ -200,7 +201,7 @@ export async function refreshExpiringConnection(
     }
     const tokens = selectRefreshTokens(provider.id, await readProviderJsonObject(response, 64_000));
     if (
-      ["hubspot", "calendly"].includes(provider.id) &&
+      ["hubspot", "calendly", "stripe"].includes(provider.id) &&
       (tokens.provider_account_id !== row.provider_account_id || !tokens.scope)
     )
       throw new Error("refresh_binding_changed");
@@ -271,7 +272,7 @@ export async function refreshExpiringConnection(
 export async function getConnectedToolContext(ownerId: string): Promise<ConnectedToolContext> {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
   const configured = new Set<string>(configuredOAuthProviders().map((provider) => provider.id));
-  if (configuredGranolaProvider()) configured.add("granola");
+  for (const { id } of configuredKeyProviders()) configured.add(id);
   const { data, error } = await db
     .from("integration_linked_accounts")
     .select(accountColumns)
@@ -358,8 +359,8 @@ export async function runConnectionAccountSearch(
   );
   if (!bound) throw new Error("connection_account_not_allowed");
   const providerConfigured = () =>
-    flow.provider === "granola"
-      ? Boolean(configuredGranolaProvider())
+    flow.authentication === "api-key"
+      ? configuredKeyProviders().some((provider) => provider.id === flow.provider)
       : configuredOAuthProviders().some((provider) => provider.id === flow.provider);
   if (!providerConfigured()) throw new Error("connection_changed_or_expired");
   const limit = await consumeApplicationRateLimit({

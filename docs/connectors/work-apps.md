@@ -42,6 +42,22 @@ Register the exact callbacks above in the providers' developer portals. Canva ne
 
 [Calendly scopes](https://developer.calendly.com/docs/authentication/scopes) · [BigQuery datasets list](https://docs.cloud.google.com/bigquery/docs/reference/rest/v2/datasets/list) · [HubSpot CRM search](https://developers.hubspot.com/docs/api-reference/latest/crm/search-the-crm)
 
+## Stripe acceptance
+
+Create a public Stripe App with OAuth and only the `charge_read` permission. Set its callback to `https://kovagpt.com/api/integrations/oauth/callback/stripe`. Use the Stripe App Marketplace client ID and the matching developer API key in `STRIPE_APPS_OAUTH_CLIENT_ID` and `STRIPE_APPS_OAUTH_API_KEY`. Use a matched external-test client ID and test key in staging. The app must be accepted and published by Stripe for public installation.
+
+Authorize a dedicated Stripe test account. In Kova, check `recent` and a known test charge ID. Confirm that a grant without charge access fails the connection and that a test credential cannot replace a live credential. Disconnect removes the grant from Kova. Remove the app in Stripe to revoke the provider's access. Kova returns payment amounts in Stripe minor units and status. This integration has no payment or refund write operation.
+
+[Stripe Apps OAuth](https://docs.stripe.com/stripe-apps/api-authentication/oauth) · [Stripe App permissions](https://docs.stripe.com/stripe-apps/reference/permissions)
+
+## HyperFrames acceptance
+
+Create a dedicated restricted HeyGen API key with `hyperframes:read` and enter it under **Connections → HyperFrames by HeyGen**. Kova tests the key against the render list before storing it encrypted. The Connections and chat read returns up to ten recent render names and statuses. Creation, deletion and signed media download links are outside this adapter.
+
+Verify a known render appears with a read grant and that revoking the key in HeyGen blocks a subsequent read. Use Disconnect in Kova to remove the local key.
+
+[HyperFrames render list](https://developers.heygen.com/reference/list-hyperframes-renders) · [HeyGen API key scopes](https://developers.heygen.com/docs/api-key-permissions)
+
 ## Gamma acceptance
 
 Register one confidential Gamma OAuth client with `client_secret_post` and callback `https://kovagpt.com/api/integrations/oauth/callback/gamma`. Store the returned credentials under `GAMMA_OAUTH_CLIENT_ID` and `GAMMA_OAUTH_CLIENT_SECRET`. Kova requests `gamma:read` for the public API and verifies the selected user and workspace with Gamma before storing the grant. Authorization and refresh never request the `generate` scope.
