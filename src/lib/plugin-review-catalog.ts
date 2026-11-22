@@ -209,6 +209,9 @@ export const MASTER_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
     (id) => !LAUNCH_PLUGIN_REVIEW_CATALOG.some((item) => item.connector.id === id),
   ).map((id) => {
     const review = entry(id, []);
+    if (id === "excalidraw")
+      review.availabilityNote =
+        "Exchange .excalidraw files through Kova chat. File access starts when you select a scene.";
     if (id === "plaid")
       review.availabilityNote =
         "Bank connection setup is managed in Finances. Production approval and an eligible account are required.";

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { Pencil, Eraser, Undo2, Redo2, Trash2 } from "lucide-react";
+import { serializeExcalidrawDrawing } from "@/lib/excalidraw-scene.mjs";
 import {
   Dialog,
   DialogContent,
@@ -167,6 +168,16 @@ export function ComposerDrawingDialog({
         if (mounted.current) setBusy(false);
       }
     }
+  };
+  const downloadExcalidraw = () => {
+    if (attaching.current || strokes.current.length === 0) return;
+    const source = serializeExcalidrawDrawing(strokes.current, BACKGROUND);
+    const url = URL.createObjectURL(new Blob([source], { type: "application/json" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filenameRef.current.replace(/\.png$/u, ".excalidraw");
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const history = (direction: "undo" | "redo") => {
     if (attaching.current) return;
@@ -377,6 +388,14 @@ export function ComposerDrawingDialog({
               disabled={busy}
             >
               Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={downloadExcalidraw}
+              disabled={busy || strokes.current.length === 0}
+            >
+              Download Excalidraw file
             </Button>
             <Button
               type="button"

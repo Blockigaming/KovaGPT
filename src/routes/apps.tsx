@@ -95,6 +95,7 @@ const WORKING_IDS = new Set<string>([
   "google-calendar",
   "github",
   "plaid",
+  "excalidraw",
   ...Object.keys(CONNECTION_FLOWS),
 ]);
 
@@ -121,6 +122,7 @@ export const Route = createFileRoute("/apps")({
 });
 
 type ConnState =
+  | "local_files"
   | "idle"
   | "connecting"
   | "connected"
@@ -209,6 +211,7 @@ function AppLogo({ id }: { id: string }) {
 
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   const labels: Record<ConnState, string> = {
+    local_files: "File exchange",
     idle: "Not connected",
     connecting: "Connecting…",
     connected: "Connected",
@@ -261,15 +264,17 @@ function AppCard({
   const reconnect = ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state);
   const action = !configured
     ? "Coming soon"
-    : state === "temporarily_unavailable"
-      ? "Unavailable"
-      : state === "connected"
-        ? "Connected"
-        : reconnect
-          ? "Reconnect"
-          : pending
-            ? "Checking…"
-            : "Connect";
+    : state === "local_files"
+      ? "Details"
+      : state === "temporarily_unavailable"
+        ? "Unavailable"
+        : state === "connected"
+          ? "Connected"
+          : reconnect
+            ? "Reconnect"
+            : pending
+              ? "Checking…"
+              : "Connect";
   return (
     <li className="spec400-plugin-card" data-plugin-id={item.id}>
       <div className="spec400-plugin-card-heading">
@@ -1349,6 +1354,7 @@ function AppsPage() {
   };
 
   const stateOf = (id: string): ConnState => {
+    if (id === "excalidraw") return "local_files";
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
       if (visibleGoogleLoading || googleBusy) return "syncing";
@@ -1805,6 +1811,15 @@ function AppsPage() {
                     loadError={githubLoadError}
                     reload={refreshGitHub}
                   />
+                ) : visibleSelectedApp.id === "excalidraw" ? (
+                  <section className="spec400-plugin-detail-section">
+                    <h3>Use Excalidraw files in chat</h3>
+                    <p>
+                      Attach a .excalidraw file to share the diagram’s text and layout summary. To
+                      export a Kova sketch, open Drawing and choose Download Excalidraw file.
+                    </p>
+                    <Button onClick={() => void navigate({ to: "/" })}>Open chat</Button>
+                  </section>
                 ) : CONNECTION_FLOWS[visibleSelectedApp.id] ? (
                   <ConnectedAccountManager
                     key={`${principal}:${visibleSelectedApp.id}`}

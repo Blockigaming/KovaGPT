@@ -64,7 +64,8 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "excalidraw",
     label: "Excalidraw",
-    description: "Planned Excalidraw integration for diagrams.",
+    description:
+      "Attach an Excalidraw scene to chat or export a Kova sketch for editing in Excalidraw.",
     category: "Productivity",
     status: "planned",
     domain: "excalidraw.com",

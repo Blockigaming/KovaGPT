@@ -87,6 +87,14 @@ These adapters verify their read against the provider before saving credentials 
 
 [Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
 
+## Excalidraw acceptance
+
+Select a version 2 `.excalidraw` file in the chat attachment picker. The attachment contains a summary of up to 100 visible diagram elements and their text and positions. Embedded images, links and application state stay outside the summary. In Kova’s Drawing dialog, draw a sketch and choose **Download Excalidraw file**. Open the downloaded file in Excalidraw and verify that the strokes are editable.
+
+The user chooses files and initiates each download. This adapter exchanges files locally and has no Excalidraw cloud account binding.
+
+[Excalidraw scene file format](https://docs.excalidraw.com/docs/codebase/json-schema)
+
 ## Salesforce registration and session renewal
 
 Create an External Client App for a new Salesforce registration. Salesforce restricts creation of older Connected Apps beginning with Spring '26. Register the exact callback above and enable authorization-code OAuth with PKCE S256. The adapter uses production `login.salesforce.com` authorization. Sandbox-specific sign-in is not exposed.

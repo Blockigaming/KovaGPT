@@ -54,7 +54,8 @@ A catalog entry alone never enables OAuth, provider calls, account access, tradi
 | Work-app reads with provider setup and consent       | Box, Calendly, Canva, Figma, Gamma, GitHub, BigQuery, HubSpot, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack, Stripe |
 | User credential and provider acceptance              | eToro, Granola, HyperFrames by HeyGen, Meltwater, Mixpanel, Vercel                                                                                                              |
 | Finance or health setup and consent                  | Plaid, Oura, WHOOP                                                                                                                                                              |
-| Provider adapters still needed                       | Excalidraw, Interactive Brokers, S&P Global, Tana, Webull, Wix                                                                                                                  |
+| Diagram file exchange                                | Excalidraw                                                                                                                                                                      |
+| Provider adapters still needed                       | Interactive Brokers, S&P Global, Tana, Webull, Wix                                                                                                                              |
 | MCP registration and tool authorization still needed | Custom MCP connectors                                                                                                                                                           |
 | Native clients and on-device consent still needed    | Apple Health, Android Health Connect                                                                                                                                            |
 
