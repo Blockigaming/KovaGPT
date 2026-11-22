@@ -100,6 +100,11 @@ export async function beginOAuth(input: {
       provider.id === "slack" ? "user_scope" : "scope",
       scopes.join(["slack", "linear"].includes(provider.id) ? "," : " "),
     );
+  if (provider.id === "hubspot") {
+    params.set("scope", provider.requiredScopes.join(" "));
+    const optional = scopes.filter((scope) => provider.optionalScopes.includes(scope));
+    if (optional.length) params.set("optional_scope", optional.join(" "));
+  }
   if (provider.id === "microsoft") params.set("response_mode", "query");
   if (loginHint) params.set("login_hint", loginHint);
   if (provider.id === "google-bigquery") {

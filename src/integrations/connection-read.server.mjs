@@ -60,6 +60,15 @@ export function connectionReadRequest(id, query, token, options = {}) {
       "fields",
       "kind,datasets(datasetReference,friendlyName,location),nextPageToken,unreachable",
     );
+  } else if (id === "hubspot-contacts") {
+    url = new URL("https://api.hubapi.com/crm/objects/2026-09/contacts/search");
+    body = JSON.stringify({
+      filterGroups: ["firstname", "lastname"].map((propertyName) => ({
+        filters: [{ propertyName, operator: "EQ", value: query }],
+      })),
+      properties: ["firstname", "lastname"],
+      limit: 10,
+    });
   } else if (id === "hubspot") {
     url = new URL("https://api.hubapi.com/crm/objects/2026-09/companies/search");
     body = JSON.stringify({ query, properties: ["name", "domain"], limit: 10 });
@@ -237,6 +246,15 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
         },
       ];
     });
+  }
+  if (id === "hubspot-contacts") {
+    if (!Array.isArray(data.results)) throw new Error("invalid_connection_response");
+    rows = data.results.map((contact) => ({
+      id: str(contact?.id, 80),
+      name: [str(contact?.properties?.firstname, 150), str(contact?.properties?.lastname, 150)]
+        .filter(Boolean)
+        .join(" "),
+    }));
   }
   if (id === "hubspot") {
     if (!Array.isArray(data.results)) throw new Error("invalid_connection_response");

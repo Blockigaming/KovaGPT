@@ -76,7 +76,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientIdEnv: "HUBSPOT_OAUTH_CLIENT_ID",
     clientSecretEnv: "HUBSPOT_OAUTH_CLIENT_SECRET",
     requiredScopes: ["crm.objects.companies.read"],
-    optionalScopes: [],
+    optionalScopes: ["crm.objects.contacts.read"],
     usesPkce: false,
     profileId: (v) => text(v.verifiedAccountId),
     profileLabel: (v) => `HubSpot portal ${text(v.verifiedAccountId)}`,

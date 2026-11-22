@@ -795,3 +795,35 @@ test("provider errors or malformed response bodies do not verify connector reads
   );
   assert.deepEqual(empty.results, []);
 });
+
+test("HubSpot contact lookup needs a separate grant and only returns names", async () => {
+  const account = {
+    provider_id: "hubspot",
+    status: "connected",
+    token_expires_at: null,
+    granted_scopes: ["crm.objects.companies.read"],
+  };
+  assert.equal(canReadConnection(account, "hubspot-contacts"), false);
+  account.granted_scopes.push("crm.objects.contacts.read");
+  assert.equal(canReadConnection(account, "hubspot-contacts"), true);
+  const result = await readConnection("hubspot-contacts", "Demo", "fixture", async (url, init) => {
+    assert.equal(url, "https://api.hubapi.com/crm/objects/2026-09/contacts/search");
+    const body = JSON.parse(init.body);
+    assert.deepEqual(body.properties, ["firstname", "lastname"]);
+    assert.equal(body.limit, 10);
+    assert.equal(body.query, undefined);
+    assert.deepEqual(
+      body.filterGroups.map(({ filters }) => filters[0]),
+      [
+        { propertyName: "firstname", operator: "EQ", value: "Demo" },
+        { propertyName: "lastname", operator: "EQ", value: "Demo" },
+      ],
+    );
+    return Response.json({
+      results: [
+        { id: "12", properties: { firstname: "Demo", lastname: "User", email: "private" } },
+      ],
+    });
+  });
+  assert.deepEqual(result.results, [{ id: "12", title: "Demo User", url: null, snippet: "" }]);
+});

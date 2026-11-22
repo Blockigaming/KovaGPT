@@ -33,6 +33,13 @@ export const CONNECTION_FLOWS = {
     label: "HubSpot",
     description: "Search names and domains of companies in the connected HubSpot account.",
   },
+  "hubspot-contacts": {
+    provider: "hubspot",
+    scopes: ["crm.objects.contacts.read"],
+    tool: "hubspot_search_contacts",
+    label: "HubSpot contacts",
+    description: "Search contact names by first or last name in the connected HubSpot portal.",
+  },
   canva: {
     provider: "canva",
     scopes: ["design:meta:read"],

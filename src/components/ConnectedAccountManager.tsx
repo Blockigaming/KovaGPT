@@ -40,7 +40,13 @@ export function ConnectedAccountManager({
   reload: () => Promise<boolean>;
 }) {
   const [teamsMessages, setTeamsMessages] = useState(initiallySearchTeamsMessages);
-  const operationId = id === "ms-teams" && teamsMessages ? "ms-teams-messages" : id;
+  const [hubspotContacts, setHubspotContacts] = useState(false);
+  const operationId =
+    id === "hubspot" && hubspotContacts
+      ? "hubspot-contacts"
+      : id === "ms-teams" && teamsMessages
+        ? "ms-teams-messages"
+        : id;
   const flow = CONNECTION_FLOWS[operationId];
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -72,7 +78,7 @@ export function ConnectedAccountManager({
         body: JSON.stringify({
           provider: flow.provider,
           optionalScopes: flow.scopes,
-          returnPath: `/apps?connection_view=${operationId}`,
+          returnPath: `/apps?connection_view=${id === "hubspot" ? id : operationId}`,
           existingAccountId,
         }),
       });
@@ -159,6 +165,28 @@ export function ConnectedAccountManager({
             <SelectContent>
               <SelectItem value="teams">Joined teams</SelectItem>
               <SelectItem value="messages">Chat messages</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {id === "hubspot" && (
+        <div className="my-3 space-y-2">
+          <label htmlFor="hubspot-record-type">HubSpot records</label>
+          <Select
+            value={hubspotContacts ? "contacts" : "companies"}
+            onValueChange={(value) => {
+              setHubspotContacts(value === "contacts");
+              setQuery("");
+              setResult(null);
+            }}
+            disabled={busy}
+          >
+            <SelectTrigger id="hubspot-record-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="companies">Companies</SelectItem>
+              <SelectItem value="contacts">Contacts</SelectItem>
             </SelectContent>
           </Select>
         </div>
