@@ -280,18 +280,10 @@ test("canonical reference styles own shell and composer contracts without retire
   const send = declarations(composerStyles, ".spec400-send-button");
   for (const key of ["width", "height", "min-width", "min-height"]) assert.equal(send[key], "36px");
   assert.equal(send["border-radius"], "50%");
-  const phone = declarations(
-    composerStyles,
-    ".spec400-composer",
-    "(max-width: 1023px), (any-pointer: coarse)",
-  );
+  const phone = declarations(composerStyles, ".spec400-composer", "(width < 1024px)");
   assert.equal(phone.display, "flex");
   assert.equal(phone["flex-direction"], "column");
-  const touchSend = declarations(
-    composerStyles,
-    ".spec400-send-button",
-    "(max-width: 1023px), (any-pointer: coarse)",
-  );
+  const touchSend = declarations(composerStyles, ".spec400-send-button", "(width < 1024px)");
   for (const key of ["width", "height", "min-width", "min-height"])
     assert.equal(touchSend[key], "44px");
 
@@ -299,11 +291,7 @@ test("canonical reference styles own shell and composer contracts without retire
   const actionSelector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const compactAction = declarations(responseStyles, actionSelector);
-  const touchAction = declarations(
-    responseStyles,
-    actionSelector,
-    "(any-pointer: coarse), (max-width: 1023px)",
-  );
+  const touchAction = declarations(responseStyles, actionSelector, "(width < 1024px)");
   for (const key of ["width", "height", "min-width", "min-height"]) {
     assert.equal(compactAction[key], "28px");
     assert.equal(touchAction[key], "44px");

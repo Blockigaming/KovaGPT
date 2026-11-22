@@ -113,7 +113,7 @@ const DialogContent = React.forwardRef<
           <DialogPrimitive.Close
             data-kova-dialog-close=""
             data-ui-reference="chatgpt.button.icon"
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground ring-offset-background cursor-pointer transition-colors duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground ring-offset-background cursor-pointer transition-colors duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [@media(max-width:1023px)_and_(pointer:coarse)]:h-11 [@media(max-width:1023px)_and_(pointer:coarse)]:w-11"
           >
             <X className="h-[18px] w-[18px]" />
             <span className="sr-only">{closeLabel}</span>
@@ -145,7 +145,7 @@ DialogHeader.displayName = "DialogHeader";
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "mt-1 flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-9 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal [@media(pointer:coarse)]:[&>button]:min-h-11",
+      "mt-1 flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-9 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal [@media(max-width:1023px)_and_(pointer:coarse)]:[&>button]:min-h-11",
       className,
     )}
     {...props}

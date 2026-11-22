@@ -13,9 +13,7 @@ import { fixture, functionNames, owner, chatA } from "./actual-app-fixture";
 
 async function geometry(page: Page) {
   const composer = page.locator(".spec400-composer");
-  const coarseLayout = await page.evaluate(
-    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
-  );
+  const coarseLayout = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   const targetSize = coarseLayout ? 44 : 36;
   const send = composer.getByTestId("send-button");
   const voice = composer.getByTestId("voice-button");
@@ -76,7 +74,9 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
   const menu = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this draft");
-  const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
+  const coarsePointer = await page.evaluate(
+    () => matchMedia("(width < 1024px) and (any-pointer: coarse)").matches,
+  );
   const attachmentActions = [
     "Add photos & files",
     "Add from Library",
@@ -628,9 +628,7 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   await input.fill("A draft stays editable");
   await expect(page.getByTestId("voice-button")).toBeHidden();
   await expect(page.getByTestId("send-button")).toBeVisible();
-  const touchLayout = await page.evaluate(
-    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
-  );
+  const touchLayout = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   const sendTarget = await page.getByTestId("send-button").boundingBox();
   expect(sendTarget!.width).toBe(touchLayout ? 44 : 36);
   expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);

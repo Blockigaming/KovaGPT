@@ -22,7 +22,7 @@ const RadioGroupItem = React.forwardRef<
       data-ui-reference="chatgpt.radio-group"
       ref={ref}
       className={cn(
-        "relative aspect-square h-4 w-4 rounded-full border border-input bg-transparent text-primary shadow-none cursor-pointer transition-colors duration-150 hover:border-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary before:absolute before:inset-0 before:content-[''] [@media(pointer:coarse)]:before:-inset-3.5",
+        "relative aspect-square h-4 w-4 rounded-full border border-input bg-transparent text-primary shadow-none cursor-pointer transition-colors duration-150 hover:border-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary before:absolute before:inset-0 before:content-[''] [@media(max-width:1023px)_and_(pointer:coarse)]:before:-inset-3.5",
         className,
       )}
       {...props}

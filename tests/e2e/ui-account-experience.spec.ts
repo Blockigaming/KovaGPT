@@ -124,7 +124,7 @@ test("secondary-page chat menus include Rename, Pin, Share, project choices, and
   await options.click();
   await expect(options).toHaveAttribute("aria-expanded", "true");
   const projectMenu = page.getByRole("menuitem", { name: "Move to project", exact: true });
-  if (await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches))
+  if (await page.evaluate(() => matchMedia("(width < 1024px) and (any-pointer: coarse)").matches))
     await projectMenu.click();
   else await projectMenu.hover();
   await expect(page.getByRole("menuitem", { name: "New project", exact: true })).toBeVisible();

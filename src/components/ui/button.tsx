@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "kova-button font-[family-name:var(--font-ui)] inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-sm font-medium leading-5 cursor-pointer transition-[background-color,color,border-color,box-shadow,opacity] duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] ease-[ease] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none [@media(pointer:coarse)]:min-h-11 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0",
+  "kova-button font-[family-name:var(--font-ui)] inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-sm font-medium leading-5 cursor-pointer transition-[background-color,color,border-color,box-shadow,opacity] duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] ease-[ease] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -21,7 +21,7 @@ const buttonVariants = cva(
         default: "h-9 px-[15.96px] py-0",
         sm: "h-8 px-[15.96px] py-0 text-sm",
         lg: "h-10 px-[18.62px] py-0",
-        icon: "h-9 w-9 p-0 [@media(pointer:coarse)]:min-w-11",
+        icon: "h-9 w-9 p-0 [@media(max-width:1023px)_and_(pointer:coarse)]:min-w-11",
         prominent: "h-11 w-full px-[18.62px] py-0 text-base [&_svg]:size-5",
       },
     },

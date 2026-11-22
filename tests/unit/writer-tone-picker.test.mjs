@@ -323,7 +323,7 @@ test("tone and Rewrite delegate control geometry to the shared themed primitives
     );
   assert.match(
     readFileSync("src/components/ui/command.tsx", "utf8"),
-    /\[@media\(pointer:coarse\)\]:min-h-11/,
+    /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/,
   );
   f.unmount();
 });

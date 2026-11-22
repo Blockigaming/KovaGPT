@@ -104,7 +104,7 @@ test("shortcut controls expose loading state and canonical coarse 44px touch tar
     "utf8",
   );
   assert.match(buttonSource, /sm: "h-8 /);
-  assert.match(buttonSource, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(buttonSource, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
   assert.match(shortcutPanel, /className=\{`min-h-11 text-xs[^`]*`\}/);
   assert.match(shortcutPanel, /aria-label=/);
   assert.match(shortcutPanel, /Stop recording/);

@@ -607,7 +607,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-project-directory-display-options .kova-project-sort,
   .kova-project-directory .kova-project-filters button,
   .kova-project-directory .kova-file-view-toggle button {

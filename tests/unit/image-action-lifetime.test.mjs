@@ -170,5 +170,5 @@ test("image-edit fields keep full-width rounded phone geometry and 44px controls
     "utf8",
   );
   assert.match(sharedSelect, /rounded-full/);
-  assert.match(sharedSelect, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(sharedSelect, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
 });

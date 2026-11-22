@@ -219,8 +219,11 @@ test("Project inline rows and shared controls retain at least 44px coarse-pointe
   assert.match(knowledge, /border-radius: 0/);
   assert.ok(iconButtons.length > 0, "Inline icon actions use the shared semantic Button");
   const button = readFileSync("src/components/ui/button.tsx", "utf8");
-  assert.match(button, /icon: "h-9 w-9 p-0 \[@media\(pointer:coarse\)\]:min-w-11"/);
-  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(
+    button,
+    /icon: "h-9 w-9 p-0 \[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-w-11"/,
+  );
+  assert.match(button, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
   assert.equal(memberRoleTriggers.length, 1);
   assert.deepEqual(
     memberRoleTriggers[0],
@@ -229,5 +232,5 @@ test("Project inline rows and shared controls retain at least 44px coarse-pointe
   );
   const select = readFileSync("src/components/ui/select.tsx", "utf8");
   assert.match(select, /flex min-h-9 w-full/);
-  assert.match(select, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(select, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
 });

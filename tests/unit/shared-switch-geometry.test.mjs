@@ -48,8 +48,8 @@ for (const checked of [false, true]) {
     for (const token of [
       "h-8",
       "w-8",
-      "[@media(pointer:coarse)]:min-h-11",
-      "[@media(pointer:coarse)]:min-w-11",
+      "[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
+      "[@media(max-width:1023px)_and_(pointer:coarse)]:min-w-11",
       "shrink-0",
       "items-center",
       "justify-center",
@@ -169,8 +169,8 @@ test("Settings delegates switch geometry to its real Radix target without pseudo
     const sheet = postcss.parse(read(path));
     sheet.walkRules((rule) => assert.doesNotMatch(rule.selector, /\[role=["']switch["']\]/));
   }
-  assert.ok(source.includes("[@media(pointer:coarse)]:min-h-11"));
-  assert.ok(source.includes("[@media(pointer:coarse)]:min-w-11"));
+  assert.ok(source.includes("[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11"));
+  assert.ok(source.includes("[@media(max-width:1023px)_and_(pointer:coarse)]:min-w-11"));
   assert.doesNotMatch(source, /before:|after:|max-h-5|min-h-5/);
 });
 

@@ -27,7 +27,7 @@
   font-size: 14px;
   font-weight: 500;
 }
-@media (max-width: 1023px), (any-pointer: coarse) {
+@media (width < 1024px) {
   .kova-conversation-share,
   .kova-conversation-icon {
     min-width: 44px;
@@ -516,7 +516,7 @@
   margin-top: 4px;
 }
 
-@media (max-width: 1023px), (any-pointer: coarse) {
+@media (width < 1024px) {
   .kova-conversation-menu [role="menuitem"],
   .kova-conversation-submenu [role="menuitem"] {
     min-height: 44px;
@@ -714,7 +714,7 @@
   padding-top: 0;
 }
 
-@media (any-pointer: coarse) {
+@media (width < 1024px) and (any-pointer: coarse) {
   .kova-activity-add,
   .kova-activity-inventory .kova-activity-section-toggle {
     min-height: 44px;

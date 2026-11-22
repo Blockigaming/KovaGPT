@@ -197,7 +197,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-tool-page :where(details > summary) {
     min-height: 44px;
   }

@@ -126,7 +126,7 @@ test("shared buttons retain the pinned reference hierarchy and larger coarse-poi
   assert.match(source, /lg: "h-10 /);
   assert.match(source, /icon: "h-9 w-9 /);
   assert.match(source, /prominent: "h-11 w-full /);
-  assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(source, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
   assert.match(source, /gap-1\.5/);
   assert.match(source, /destructive: "bg-destructive text-destructive-foreground/);
 });
@@ -135,7 +135,7 @@ test("listbox and menu rows use the source 32px density with 44px coarse-pointer
   for (const name of ["select", "dropdown-menu", "context-menu", "command"]) {
     const source = read(`src/components/ui/${name}.tsx`);
     assert.match(source, /min-h-8/);
-    assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
+    assert.match(source, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
     assert.match(source, /rounded-xl/);
   }
   const options = rules("src/styles/spec400-system.css", 'body [role="option"]');
@@ -174,10 +174,7 @@ test("sidebar geometry has one owner and keeps compact desktop rows separate fro
   );
   assert.equal(declarations(row, "border-radius")[0].value, "8px");
   assert.match(css, /--sidebar-row-height: 36px/);
-  assert.match(
-    css,
-    /@media \(pointer: coarse\), \(max-width: 1023px\)[\s\S]*--sidebar-row-height: 44px/,
-  );
+  assert.match(css, /@media \(width < 1024px\)[\s\S]*--sidebar-row-height: 44px/);
   assert.match(css, /\.kova-sidebar-primary[\s\S]*?padding: 8px/);
 });
 

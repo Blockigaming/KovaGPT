@@ -13,13 +13,7 @@ import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-/**
- * Adaptive model selector with a stable trigger element.
- *
- * The interaction mode is detected after hydration. Keeping the trigger in
- * the same React position prevents a keyboard-focused desktop trigger from
- * being replaced when a touch-capable 1024px device is detected.
- */
+/** Select the sheet or popover from layout width and keep its trigger stable. */
 export function ResponsiveModelSelector({
   mode,
   onChange,
@@ -35,11 +29,11 @@ export function ResponsiveModelSelector({
   modelLabel?: string;
   placement?: "composer" | "topbar";
 }) {
-  const { isDesktop, interaction } = useLayout();
+  const { isDesktop } = useLayout();
   const { isSignedIn, isLoaded } = useUser();
   // Guests remain on Default; every signed-in plan has its exact server-enforced choices.
   const locked = !isLoaded || !isSignedIn;
-  const useSheet = !isDesktop || interaction === "touch";
+  const useSheet = !isDesktop;
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);

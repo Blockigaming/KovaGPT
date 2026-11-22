@@ -135,7 +135,10 @@ test("settings bounds the workspace below its sidebar breakpoint and Work uses s
   const source = read("src/components/WorkExecutionPanel.tsx");
   assert.doesNotMatch(source, /ml-2 rounded border bg-background p-1/);
   assert.match(source, /import \{ Button \} from "@\/components\/ui\/button"/);
-  assert.match(read("src/components/ui/button.tsx"), /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(
+    read("src/components/ui/button.tsx"),
+    /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/,
+  );
 });
 
 test("phone Projects places description before a single primary/templates action row", () => {

@@ -751,7 +751,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   [role="dialog"].kova-settings-dialog > [data-kova-dialog-close],
   .kova-settings-route section.kova-settings-page .kova-settings-page-control {
     width: 44px;

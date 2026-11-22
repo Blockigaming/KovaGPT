@@ -22,7 +22,9 @@ for (const theme of ["light", "dark"] as const) {
     await expect(send).toBeHidden();
     const desktop =
       page.viewportSize()!.width >= 1024 &&
-      !(await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches));
+      !(await page.evaluate(
+        () => matchMedia("(width < 1024px) and (any-pointer: coarse)").matches,
+      ));
     await expect(composer).toHaveCSS("display", "flex");
     const compactHeight = (await composer.boundingBox())!.height;
     const phone = await page.evaluate(

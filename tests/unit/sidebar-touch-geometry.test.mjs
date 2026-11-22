@@ -6,7 +6,7 @@ import postcss from "postcss";
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const sidebarCss = postcss.parse(read("src/styles/sidebar-core.css"));
 const responseCss = postcss.parse(read("src/components/response-action-refinement.css"));
-const touchQuery = "(pointer: coarse), (max-width: 1023px)";
+const touchQuery = "(width < 1024px)";
 const normalize = (value) => value.replace(/\s+/g, " ").trim();
 const rulesFor = (sheet, selector) => {
   const matches = [];
@@ -86,7 +86,7 @@ test("response actions use 28px desktop density and 44px touch targets inside a 
   const selector =
     ":is(.kova-assistant, .kova-project-chat) .kova-message-actions.kova-response-action-bar button.kova-message-icon-action";
   const desktop = ruleFor(responseCss, selector);
-  const touch = ruleFor(responseCss, selector, "(any-pointer: coarse), (max-width: 1023px)");
+  const touch = ruleFor(responseCss, selector, "(width < 1024px)");
   for (const property of ["width", "height", "min-width", "min-height", "flex-basis"]) {
     assert.equal(declaration(desktop, property).value, "28px");
     assert.equal(declaration(touch, property).value, "44px");
@@ -107,7 +107,10 @@ test("help clear control, count and support action preserve space under text pre
   const help = read("src/routes/help.tsx");
   assert.match(help, /<Button\s+variant="ghost"\s+size="icon"[\s\S]*?aria-label="Clear search"/);
   assert.match(help, /absolute right-1\.5 top-1\/2 -translate-y-1\/2/);
-  assert.match(read("src/components/ui/button.tsx"), /\[@media\(pointer:coarse\)\]:min-w-11/);
+  assert.match(
+    read("src/components/ui/button.tsx"),
+    /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-w-11/,
+  );
   assert.match(help, /h-12 rounded-xl border-border bg-muted pl-12 pr-14/);
   assert.match(help, /id="answers-heading" className="min-w-0 text-xl font-semibold"/);
   assert.match(

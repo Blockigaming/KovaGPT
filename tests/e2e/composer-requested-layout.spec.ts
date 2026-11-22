@@ -114,8 +114,7 @@ test("requested: topbar, prompt insets and exact attachment actions", async ({ p
   );
   const insetComposer = await page.evaluate(
     () =>
-      matchMedia("(width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none)")
-        .matches,
+      matchMedia("(768px <= width < 1024px) and (height > 500px) and (pointer: coarse)").matches,
   );
   if (phoneComposer) expect(inset.x).toBeCloseTo(19, 0);
   else {

@@ -119,7 +119,7 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
     if (
       rule.parent.type === "atrule" &&
       rule.parent.name === "media" &&
-      rule.parent.params === "(pointer: coarse), (max-width: 1023px)"
+      rule.parent.params === "(width < 1024px)"
     )
       coarseOptions.push(
         Object.fromEntries(

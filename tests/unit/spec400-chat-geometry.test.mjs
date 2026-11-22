@@ -39,7 +39,7 @@ test("the two-row ChatGPT composer has one authoritative desktop and touch geome
   );
   const empty = declarations('.spec400-chat-input[data-composer-surface="empty"]');
   assert.equal(empty["padding-bottom"].value, "0");
-  const mobile = declarations(".spec400-composer", "(max-width: 1023px), (any-pointer: coarse)");
+  const mobile = declarations(".spec400-composer", "(width < 1024px)");
   assert.equal(mobile.display.value, "flex");
   assert.equal(mobile["flex-direction"].value, "column");
   assert.equal(mobile["min-height"].value, "136px");

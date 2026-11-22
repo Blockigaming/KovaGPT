@@ -15,7 +15,7 @@
     --layout-page-gutter: 20px;
   }
 }
-@media (pointer: coarse), (max-width: 767px) {
+@media (width < 768px) {
   :root {
     --layout-control: 44px;
   }
@@ -380,7 +380,7 @@
   max-width: 100%;
   border-radius: var(--kova-radius-input);
 }
-@media (pointer: coarse), (max-width: 767px) {
+@media (width < 768px) {
   .kova-adapted-controls
     :is(
       button:not([role="switch"]),
@@ -941,7 +941,7 @@ input.kova-image-adjustment-range:disabled {
   background: var(--background);
 }
 
-@media (pointer: coarse), (max-width: 767px) {
+@media (width < 768px) {
   .kova-core-page.kova-file-directory
     .kova-library-utilities.spec400-library-secondary
     > details

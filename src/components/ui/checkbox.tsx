@@ -13,7 +13,7 @@ const Checkbox = React.forwardRef<
     data-ui-reference="chatgpt.checkbox"
     ref={ref}
     className={cn(
-      "relative grid place-content-center peer group/checkbox h-[18px] w-[18px] shrink-0 rounded-[4px] border border-input bg-transparent shadow-none cursor-pointer transition-colors duration-150 hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground before:absolute before:inset-0 before:content-[''] [@media(pointer:coarse)]:before:-inset-[13px]",
+      "relative grid place-content-center peer group/checkbox h-[18px] w-[18px] shrink-0 rounded-[4px] border border-input bg-transparent shadow-none cursor-pointer transition-colors duration-150 hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground before:absolute before:inset-0 before:content-[''] [@media(max-width:1023px)_and_(pointer:coarse)]:before:-inset-[13px]",
       className,
     )}
     {...props}

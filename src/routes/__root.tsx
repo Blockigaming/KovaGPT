@@ -227,7 +227,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { charSet: "utf-8" },
         {
           name: "viewport",
-          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+          // Give phone and tablet browsers the desktop layout viewport. Leaving
+          // initial-scale unset lets them fit the page and retain pinch zoom.
+          content: "width=1280, viewport-fit=cover",
         },
         {
           httpEquiv: "Accept-CH",

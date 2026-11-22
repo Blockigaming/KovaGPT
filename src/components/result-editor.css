@@ -128,7 +128,7 @@
   min-height: 32px;
   border-radius: 8px;
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-result-toolbar button,
   .kova-result-secondary-toolbar button,
   .kova-result-heading > button,

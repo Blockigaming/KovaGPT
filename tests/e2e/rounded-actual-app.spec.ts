@@ -182,7 +182,7 @@ for (const theme of ["light", "dark"] as const) {
         contained: target.left >= group.left && target.right <= group.right,
         width: target.width,
         height: target.height,
-        coarsePointer: matchMedia("(pointer: coarse)").matches,
+        coarsePointer: matchMedia("(width < 1024px) and (pointer: coarse)").matches,
       };
     });
     // The screenshot-style General card has intentional horizontal padding.

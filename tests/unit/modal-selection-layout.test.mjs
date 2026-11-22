@@ -41,7 +41,7 @@ test("alert content has explicit scrollable height limits on both legacy and dyn
     for (const token of [
       "h-auto",
       "min-h-9",
-      "[@media(pointer:coarse)]:min-h-11",
+      "[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
       "max-w-full",
       "whitespace-normal",
       "ref={ref}",

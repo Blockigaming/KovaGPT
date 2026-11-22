@@ -60,11 +60,11 @@ export default defineConfig({
     { name: "tablet-1024x768", use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     {
       name: "phone-390x844",
-      use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+      use: { viewport: { width: 390, height: 844 }, hasTouch: true },
     },
     {
       name: "phone-320x700",
-      use: { viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true },
+      use: { viewport: { width: 320, height: 700 }, hasTouch: true },
     },
   ],
 });
