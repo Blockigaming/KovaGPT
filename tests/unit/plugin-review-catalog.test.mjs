@@ -61,21 +61,23 @@ test("launch review includes exactly 12 providers, preserving original catalog i
   assert.equal(original.getConnector("sharepoint").status, "setup_required");
 });
 
-test("master directory contains the 31 requested services and seven retained services exactly once", () => {
+test("master directory contains the 31 requested services and eight retained services exactly once", () => {
   assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 31);
-  assert.equal(master.MASTER_CONNECTORS.length, 38);
+  assert.equal(master.MASTER_CONNECTORS.length, 39);
   const ids = review.MASTER_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id);
   assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS].sort());
-  assert.equal(new Set(ids).size, 38);
+  assert.equal(new Set(ids).size, 39);
+  assert.ok(ids.includes("whoop"));
   for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     assert.equal(item.connector, original.getConnector(item.connector.id));
+    assert.equal(item.availability, "implemented", item.connector.id);
+    assert.ok(
+      item.permissions.some(
+        ({ access, verification }) => access === "read" && verification === "source_contract",
+      ),
+      item.connector.id,
+    );
     if (!expected.includes(item.connector.id)) {
-      if (item.connector.id === "outlook-calendar") {
-        assert.equal(item.availability, "implemented");
-        assert.equal(item.permissions.length, 1);
-        assert.equal(item.permissions[0].verification, "source_contract");
-        assert.equal(item.permissions[0].access, "read");
-      } else assert.deepEqual(item.permissions, []);
       assert.equal(item.brandAsset.status, "generic_placeholder");
       assert.equal(item.brandAsset.src, "");
       assert.equal(item.connector.status === "live", false);
@@ -114,7 +116,7 @@ test("planned provider permissions are explicitly unconfirmed and carry no inven
 });
 
 test("source-backed capabilities name existing local code and never imply granted authorization", () => {
-  for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
+  for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
     for (const permission of item.permissions.filter(
       (permission) => permission.verification === "source_contract",
     )) {

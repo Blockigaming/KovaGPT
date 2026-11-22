@@ -40,8 +40,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: bash scripts/ci/install-playwright-browsers.sh chromium
-      - name: Verify Apple and Android health permission handling in the dashboard
+      - name: Verify connector permissions in the Health dashboard
         run: >-
           npx --no-install playwright test tests/browser-runtime/finance-health-connections.spec.ts
           --config=playwright.browser.config.ts --project=chromium
-          --grep 'native Apple Health|Android Health Connect'
+          --grep 'native Apple Health|Android Health Connect|Oura refreshes|WHOOP shows'

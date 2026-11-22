@@ -69,8 +69,8 @@ function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewE
   const connector = getConnector(id);
   if (!connector) throw new Error(`Missing launch review connector: ${id}`);
   const implemented =
-    ["gmail", "google-calendar", "google-drive", "github", "plaid"].includes(id) ||
-    Boolean(CONNECTION_FLOWS[id]);
+    permissions.some(({ verification }) => verification === "source_contract") ||
+    Object.hasOwn(CONNECTION_FLOWS, id);
   return {
     connector,
     availability: implemented ? "implemented" : "planned",
@@ -202,26 +202,85 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
   ]),
 ];
 
+const dedicatedConnections: Record<
+  string,
+  { note: string; permissions: PluginReviewPermission[] }
+> = {
+  plaid: {
+    note: "Manage bank access in Finances. Connection requires an eligible account and production setup.",
+    permissions: [
+      supported(
+        "read",
+        "Read balances and recent transactions for selected bank accounts",
+        "src/components/BankConnectionsPanel.tsx",
+        "src/routes/api/finances/manage.ts",
+      ),
+    ],
+  },
+  oura: {
+    note: "Manage Oura in Health. Connection requires Oura developer credentials and account consent.",
+    permissions: [
+      supported(
+        "read",
+        "Read Oura trends for the categories you authorize",
+        "src/health/health-accounts.server.ts",
+        "src/components/HealthConnectionsPanel.tsx",
+      ),
+    ],
+  },
+  whoop: {
+    note: "Manage WHOOP in Health. Connection requires WHOOP developer credentials and account consent.",
+    permissions: [
+      supported(
+        "read",
+        "Read WHOOP sleep, recovery, strain, and resting heart rate with your approval",
+        "src/health/health-read.server.mjs",
+        "src/components/HealthConnectionsPanel.tsx",
+      ),
+    ],
+  },
+  "apple-health": {
+    note: "The native mobile companion reads Apple Health with iPhone permissions. Availability depends on a signed app install.",
+    permissions: [
+      supported(
+        "read",
+        "Show approved Apple Health trends on your device",
+        "ios/KovaHealth/KovaHealthApp.swift",
+      ),
+    ],
+  },
+  "android-health-connect": {
+    note: "The native mobile companion reads Health Connect with Android permissions. Availability depends on a signed app install.",
+    permissions: [
+      supported(
+        "read",
+        "Show approved Android steps, sleep and heart rate on your device",
+        "android/app/src/main/java/com/kovagpt/health/HealthReport.kt",
+      ),
+    ],
+  },
+  excalidraw: {
+    note: "Exchange .excalidraw files through Kova chat. File access starts when you select a scene.",
+    permissions: [
+      supported("read", "Import a diagram you select", "src/lib/excalidraw-scene.mjs"),
+      supported(
+        "write",
+        "Download your sketch as an editable local diagram",
+        "src/components/ComposerDrawingDialog.tsx",
+      ),
+    ],
+  },
+};
+
 /** Complete approved directory; runtime configuration and grants remain authoritative. */
 export const MASTER_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
   ...LAUNCH_PLUGIN_REVIEW_CATALOG,
   ...MASTER_CONNECTOR_IDS.filter(
     (id) => !LAUNCH_PLUGIN_REVIEW_CATALOG.some((item) => item.connector.id === id),
   ).map((id) => {
-    const review = entry(id, []);
-    if (id === "excalidraw")
-      review.availabilityNote =
-        "Exchange .excalidraw files through Kova chat. File access starts when you select a scene.";
-    if (id === "plaid")
-      review.availabilityNote =
-        "Bank connection setup is managed in Finances. Production approval and an eligible account are required.";
-    if (["oura", "whoop"].includes(id))
-      review.availabilityNote =
-        "Health connection setup is managed in Health. Eligible developer credentials and account consent are required.";
-    if (["apple-health", "android-health-connect"].includes(id))
-      review.availabilityNote =
-        "Requires a native mobile implementation and on-device health permissions. Web OAuth is unavailable.";
-    return review;
+    const dedicated = dedicatedConnections[id];
+    const review = entry(id, dedicated?.permissions ?? []);
+    return dedicated ? { ...review, availabilityNote: dedicated.note } : review;
   }),
 ];
 

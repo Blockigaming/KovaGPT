@@ -23,6 +23,7 @@ const mocks: Record<string, string> = {
       if(window.delayRead)return new Promise(resolve=>window.resolveRead=()=>resolve(Response.json(window.financeSnapshot)));
       return Response.json(window.financeSnapshot);
     }
+    if(url==='/api/health-data/read'&&!body.mode)return Response.json({provider:'whoop',fetchedAt:'2026-11-22T20:00:00.000Z',summaries:[{metric:'sleep',date:'2026-11-21',score:93},{metric:'recovery',date:'2026-11-21',score:11}],missing:['recovery','activity'],limited:false});
     if(url==='/api/health-data/read')return Response.json({asOf:'2026-11-20',fetchedAt:new Date().toISOString(),metrics:{'daily_sleep.score':[{name:'Oura',days:[{date:'2026-11-20',value:87}]}]},missing:[],unavailable:[],limited:false});
     if(url.endsWith('/disconnect')){window.healthStatus.accounts=[];return Response.json({providerRevoked:true})}
     return Response.json({error:'unavailable'},{status:503});
@@ -78,7 +79,7 @@ type StateWindow = Window & {
 };
 async function boot(
   page: import("@playwright/test").Page,
-  options: { health?: boolean; configured?: boolean; connection?: boolean } = {},
+  options: { health?: boolean; whoop?: boolean; configured?: boolean; connection?: boolean } = {},
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-sensitive-fixture.test/")
@@ -89,7 +90,7 @@ async function boot(
       : route.abort(),
   );
   await page.goto("https://kova-sensitive-fixture.test/apps");
-  await page.evaluate(({ health, configured, connection }) => {
+  await page.evaluate(({ health, whoop, configured, connection }) => {
     Object.assign(window, {
       owner: "00000000-0000-4000-8000-000000000001",
       operations: [],
@@ -124,17 +125,32 @@ async function boot(
         limited: false,
       },
       healthStatus: {
-        configuredProviders: health ? [{ id: "oura" }] : [],
-        accounts: health
-          ? [
-              {
-                id: "00000000-0000-4000-8000-000000000003",
-                provider_id: "oura",
-                status: "connected",
-                granted_scopes: ["daily"],
-              },
-            ]
-          : [],
+        configuredProviders: [
+          ...(health ? [{ id: "oura" }] : []),
+          ...(whoop ? [{ id: "whoop" }] : []),
+        ],
+        accounts: [
+          ...(health
+            ? [
+                {
+                  id: "00000000-0000-4000-8000-000000000003",
+                  provider_id: "oura",
+                  status: "connected",
+                  granted_scopes: ["daily"],
+                },
+              ]
+            : []),
+          ...(whoop
+            ? [
+                {
+                  id: "00000000-0000-4000-8000-000000000005",
+                  provider_id: "whoop",
+                  status: "connected",
+                  granted_scopes: ["read:sleep"],
+                },
+              ]
+            : []),
+        ],
       },
       Plaid: {
         create: (options: { token: string; onSuccess: (token: string) => void }) => {
@@ -348,7 +364,8 @@ test("unconfigured finance and health stay disabled and never fetch private data
   await page.getByRole("button", { name: "Connect Health", exact: true }).click();
   const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
   await expect(chooser.getByRole("button", { name: /Oura/ })).toBeDisabled();
-  await expect(chooser.getByText("Coming soon", { exact: true })).toBeVisible();
+  await expect(chooser.getByRole("button", { name: /WHOOP/ })).toBeDisabled();
+  await expect(chooser.getByText("Requires iPhone app")).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Oura", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
@@ -432,6 +449,34 @@ test("Oura refreshes automatically in the unified health dashboard", async ({ pa
     [
       "/api/health-data/read",
       { accountId: "00000000-0000-4000-8000-000000000003", mode: "analytics" },
+      "00000000-0000-4000-8000-000000000001",
+    ],
+  ]);
+});
+test("WHOOP shows only authorized readings and disconnect clears the dashboard", async ({
+  page,
+}) => {
+  await boot(page, { whoop: true });
+  await expect(page.getByText("93 %", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("11 %", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Connect Health", exact: true }).click();
+  const chooser = page.getByRole("dialog", { name: "Connect Health", exact: true });
+  await chooser.getByRole("button", { name: /WHOOP/ }).click();
+  const management = page.getByRole("region", { name: "WHOOP", exact: true });
+  await expect(management.getByRole("button", { name: "Review WHOOP permissions" })).toBeVisible();
+  await management.getByText("Connection options", { exact: true }).click();
+  await management.getByRole("button", { name: "Disconnect WHOOP", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Disconnect WHOOP" }).click();
+  await expect(page.getByText("93 %", { exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([
+    [
+      "/api/health-data/read",
+      { accountId: "00000000-0000-4000-8000-000000000005" },
+      "00000000-0000-4000-8000-000000000001",
+    ],
+    [
+      "/api/integrations/oauth/disconnect",
+      { accountId: "00000000-0000-4000-8000-000000000005" },
       "00000000-0000-4000-8000-000000000001",
     ],
   ]);

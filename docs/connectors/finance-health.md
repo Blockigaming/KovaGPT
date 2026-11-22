@@ -41,6 +41,8 @@ The Oura dashboard loads automatically after OAuth approval when its tab is visi
 
 WHOOP's v2 revocation endpoint is supported. Oura disconnection removes local credentials and clearly reports that remote revocation still needs the provider's account settings.
 
+Choose WHOOP in Connections → Health to authorize it or manage an existing grant. The dashboard reads authorized sleep performance, recovery, strain, and resting heart rate for the recent seven-day window. Each point comes from the provider's bounded summary response. Verify the chart with consent for a single category, then revoke it and check that the previous readings clear after refresh. WHOOP remains read-only in Kova.
+
 ## Apple Health
 
 Open Connections → Health → Apple Health in the KovaGPT iPhone app. Connect Apple Health once and choose which data to share in the system sheet. On later visits, the app resumes the approved connection for the same KovaGPT account and refreshes its daily summaries as HealthKit reports changes while the tab is open. The app preserves Apple data on the device. Connection options disconnects automatic updates or opens an optional local export from Files. Exports stay in the current browser page and keep device sources separate.

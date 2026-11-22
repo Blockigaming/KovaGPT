@@ -160,6 +160,14 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     domain: "ouraring.com",
   },
   {
+    id: "whoop",
+    label: "WHOOP",
+    description: "View approved WHOOP sleep, recovery, strain, and resting heart rate in Health.",
+    category: "Productivity",
+    status: "setup_required",
+    domain: "whoop.com",
+  },
+  {
     id: "apple-health",
     label: "Apple Health",
     description: "Read approved HealthKit trends on the KovaGPT Health iOS app.",

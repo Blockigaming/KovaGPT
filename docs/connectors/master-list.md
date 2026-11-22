@@ -1,6 +1,6 @@
 # KovaGPT connector master list
 
-The Apps directory includes the 31 requested services and seven retained services. WHOOP is also tracked in Health. Existing catalog IDs remain stable. Outlook Mail uses `outlook`.
+The Connections directory includes the 31 requested services and eight retained services. Health includes WHOOP, Oura, Apple Health, and Android Health Connect. Existing catalog IDs remain stable. Outlook Mail uses `outlook`.
 
 Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service directory remains available for compatibility, but does not expand the approved master scope.
 

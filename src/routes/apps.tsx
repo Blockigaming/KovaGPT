@@ -100,6 +100,8 @@ const WORKING_IDS = new Set<string>([
 ]);
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
+const NATIVE_HEALTH_IDS = new Set(["apple-health", "android-health-connect"]);
+const CLOUD_HEALTH_IDS = new Set(["oura", "whoop"]);
 const PLUGIN_CATEGORIES = [
   ...new Set(MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector.category)),
 ].sort();
@@ -123,6 +125,7 @@ export const Route = createFileRoute("/apps")({
 
 type ConnState =
   | "local_files"
+  | "native_app"
   | "idle"
   | "connecting"
   | "connected"
@@ -212,6 +215,7 @@ function AppLogo({ id }: { id: string }) {
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   const labels: Record<ConnState, string> = {
     local_files: "File exchange",
+    native_app: "Native app required",
     idle: "Not connected",
     connecting: "Connecting…",
     connected: "Connected",
@@ -264,7 +268,7 @@ function AppCard({
   const reconnect = ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state);
   const action = !configured
     ? "Coming soon"
-    : state === "local_files"
+    : state === "local_files" || state === "native_app"
       ? "Details"
       : state === "temporarily_unavailable"
         ? "Unavailable"
@@ -1343,6 +1347,11 @@ function AppsPage() {
 
   const configuredOf = (id: string) => {
     if (id === "github") return visibleGithubData?.configured !== false;
+    if (NATIVE_HEALTH_IDS.has(id)) return true;
+    if (CLOUD_HEALTH_IDS.has(id))
+      return (
+        otherConnections.data?.configuredProviders.some((provider) => provider.id === id) === true
+      );
     const flow = CONNECTION_FLOWS[id];
     if (flow)
       return (
@@ -1355,6 +1364,7 @@ function AppsPage() {
 
   const stateOf = (id: string): ConnState => {
     if (id === "excalidraw") return "local_files";
+    if (NATIVE_HEALTH_IDS.has(id)) return "native_app";
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
       if (visibleGoogleLoading || googleBusy) return "syncing";
@@ -1376,6 +1386,21 @@ function AppsPage() {
       if (visibleGithubData.accounts.some((account) => account.status === "connected"))
         return "connected";
       return "idle";
+    }
+    if (CLOUD_HEALTH_IDS.has(id)) {
+      if (otherConnections.loading) return "syncing";
+      if (otherConnections.error || !configuredOf(id)) return "temporarily_unavailable";
+      const accounts =
+        otherConnections.data?.accounts.filter((account) => account.provider_id === id) ?? [];
+      if (
+        accounts.some(
+          (account) =>
+            account.status === "connected" &&
+            (!account.token_expires_at || Date.parse(account.token_expires_at) > Date.now()),
+        )
+      )
+        return "connected";
+      return accounts.length ? "reauthorize" : "idle";
     }
     if (CONNECTION_FLOWS[id]) {
       if (otherConnections.loading) return "syncing";
@@ -1412,6 +1437,12 @@ function AppsPage() {
       );
     if (id === "github")
       return !!visibleGithubData?.accounts.some((account) => account.status !== "disconnected");
+    if (CLOUD_HEALTH_IDS.has(id))
+      return (
+        otherConnections.data?.accounts.some(
+          (account) => account.provider_id === id && account.status !== "revoked",
+        ) === true
+      );
     if (CONNECTION_FLOWS[id])
       return connectionAccounts(otherConnections.data?.accounts ?? [], id).some(
         (account) =>
@@ -1583,7 +1614,7 @@ function AppsPage() {
                         ))}
                       </ul>
                       <p className="spec400-plugin-notice">{selectedReview.availabilityNote}</p>
-                      {!CONFIGURED_CONNECTORS.has(visibleSelectedApp.id) && (
+                      {getPluginReview(visibleSelectedApp.id)?.availability === "planned" && (
                         <p className="spec400-plugin-notice">
                           This plugin is coming soon. Its listed capabilities are proposals. No
                           account is connected and no permissions have been requested.
@@ -1811,6 +1842,25 @@ function AppsPage() {
                     loadError={githubLoadError}
                     reload={refreshGitHub}
                   />
+                ) : NATIVE_HEALTH_IDS.has(visibleSelectedApp.id) ||
+                  CLOUD_HEALTH_IDS.has(visibleSelectedApp.id) ||
+                  visibleSelectedApp.id === "plaid" ? (
+                  <Button
+                    onClick={() => {
+                      const id = visibleSelectedApp.id;
+                      const view = id === "plaid" ? "finances" : "health";
+                      const params = new URLSearchParams(searchString);
+                      params.delete("plugin");
+                      params.set("connection_view", view);
+                      if (CLOUD_HEALTH_IDS.has(id)) params.set("health_provider", id);
+                      else params.delete("health_provider");
+                      setSelectedApp(null);
+                      setConnectionGroup(view);
+                      void navigate({ search: Object.fromEntries(params) as never, replace: true });
+                    }}
+                  >
+                    {visibleSelectedApp.id === "plaid" ? "Open Finances" : "Open Health"}
+                  </Button>
                 ) : visibleSelectedApp.id === "excalidraw" ? (
                   <section className="spec400-plugin-detail-section">
                     <h3>Use Excalidraw files in chat</h3>
@@ -2034,6 +2084,7 @@ function AppsPage() {
                 <HealthConnectionsPanel
                   key={`health:${userKey ?? "guest"}`}
                   visible={connectionGroup === "health"}
+                  requestedProvider={new URLSearchParams(searchString).get("health_provider")}
                   ownerId={isSignedIn ? userKey : null}
                   data={otherConnections.data}
                   loading={otherConnections.loading}

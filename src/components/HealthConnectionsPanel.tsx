@@ -11,12 +11,14 @@ import { Activity, Heart } from "lucide-react";
 import { APPLE_HEALTH_METRICS } from "@/health/apple-health-metrics.mjs";
 import type { AppleHealthAnalytics } from "@/health/apple-health-export.mjs";
 import { NativeHealthReport, HealthTrends } from "@/components/AppleHealthReport";
-import { useNativeHealthLive, type NativeHealthLive } from "@/health/use-apple-health-live";
+import { useNativeHealthLive } from "@/health/use-apple-health-live";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { connectionAuthorizationUrl } from "@/integrations/connection-flows.mjs";
-import { OURA_METRICS, OURA_SCOPES } from "@/health/oura-metrics.mjs";
+import { OURA_METRICS } from "@/health/oura-metrics.mjs";
 import type { OuraAnalytics } from "@/health/oura-analytics.server.mjs";
+import { HEALTH_PROVIDERS, type HealthProviderId } from "@/health/providers.mjs";
+import { WHOOP_METRICS, whoopDashboardReport } from "@/health/whoop-dashboard.mjs";
 import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
 const exampleDays = ["10", "11", "12", "13", "14", "15", "16"];
@@ -41,15 +43,18 @@ const exampleHealth: AppleHealthAnalytics = {
 
 const refreshInterval = 5 * 60_000;
 
-function OuraDashboard({
+function CloudHealthDashboard({
+  provider,
   ownerId,
   accountId,
   onReport,
 }: {
+  provider: HealthProviderId;
   ownerId: string;
   accountId: string;
   onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
+  const label = HEALTH_PROVIDERS[provider].label;
   const [report, setReport] = useState<OuraAnalytics | null>(null);
   const [message, setMessage] = useState("");
   useEffect(() => {
@@ -71,27 +76,37 @@ function OuraDashboard({
           {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Kova-Expected-Owner": ownerId },
-            body: JSON.stringify({ accountId, mode: "analytics" }),
+            body: JSON.stringify(
+              provider === "oura" ? { accountId, mode: "analytics" } : { accountId },
+            ),
             signal: controller.signal,
           },
           42_000,
         );
         const body = await response.json();
         if (controller.signal.aborted) return;
-        if (!response.ok || !body.metrics || !Array.isArray(body.missing)) {
+        const next =
+          response.ok &&
+          body &&
+          (provider === "whoop"
+            ? whoopDashboardReport(body)
+            : body.metrics && Array.isArray(body.missing) && Array.isArray(body.unavailable)
+              ? body
+              : null);
+        if (!next) {
           if ([401, 403, 404, 409].includes(response.status)) setReport(null);
           setMessage(
             response.status === 401 || response.status === 403
-              ? "Reconnect Oura to continue syncing."
-              : "Oura could not refresh. We’ll try again while this tab is open.",
+              ? `Reconnect ${label} to continue syncing.`
+              : `${label} could not refresh. We’ll try again while this tab is open.`,
           );
           return;
         }
-        setReport(body);
+        setReport(next);
         setMessage("");
       } catch {
         if (!controller.signal.aborted)
-          setMessage("Oura could not refresh. We’ll try again while this tab is open.");
+          setMessage(`${label} could not refresh. We’ll try again while this tab is open.`);
       } finally {
         inFlight = false;
       }
@@ -105,7 +120,7 @@ function OuraDashboard({
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [accountId, ownerId]);
+  }, [accountId, label, ownerId, provider]);
 
   useEffect(() => {
     onReport(report);
@@ -121,7 +136,7 @@ function OuraDashboard({
       )}
       {!report && !message && (
         <p role="status" className="text-sm text-muted-foreground">
-          Syncing Oura…
+          Syncing {label}…
         </p>
       )}
       {report && (
@@ -132,20 +147,20 @@ function OuraDashboard({
               hour: "numeric",
               minute: "2-digit",
             })}{" "}
-            · Refreshes as Oura syncs new readings
+            · Refreshes as {label} syncs new readings
           </p>
           {report.missing.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              Review Oura permissions to include more metrics.
+              Review {label} permissions to include more metrics.
             </p>
           )}
           {(report.limited || report.unavailable.length > 0) && (
             <p className="text-sm text-muted-foreground">
-              Some Oura readings are temporarily unavailable.
+              Some {label} readings are temporarily unavailable.
             </p>
           )}
           {!Object.keys(report.metrics).length && (
-            <p className="text-sm text-muted-foreground">Waiting for readings from Oura.</p>
+            <p className="text-sm text-muted-foreground">Waiting for readings from {label}.</p>
           )}
         </>
       )}
@@ -153,7 +168,9 @@ function OuraDashboard({
   );
 }
 
-function OuraConnections({
+function CloudHealthConnection({
+  provider,
+  showManagement,
   ownerId,
   data,
   loading,
@@ -161,32 +178,28 @@ function OuraConnections({
   reload,
   visible,
   onReport,
-  setChooserOpen,
-  nativeHealth,
-  selectNativeHealth,
 }: {
+  provider: HealthProviderId;
+  showManagement: boolean;
   ownerId: string | null;
   data: AccountStatus | null;
   loading: boolean;
   error: boolean;
   reload: () => Promise<boolean>;
   visible: boolean;
-  setChooserOpen: (open: boolean) => void;
-  nativeHealth: NativeHealthLive;
-  selectNativeHealth: () => void;
   onReport: (report: AppleHealthAnalytics | null) => void;
 }) {
-  const [showManagement, setShowManagement] = useState(false);
+  const { label, scopes } = HEALTH_PROVIDERS[provider];
   const [pending, setPending] = useState(false);
   const [disconnect, setDisconnect] = useState<string | null>(null);
   const [selected, setSelected] = useState("");
   const [message, setMessage] = useState("");
-  const configured = data?.configuredProviders.some(({ id }) => id === "oura") === true;
-  const accounts = data?.accounts.filter(({ provider_id }) => provider_id === "oura") ?? [];
+  const configured = data?.configuredProviders.some(({ id }) => id === provider) === true;
+  const accounts = data?.accounts.filter(({ provider_id }) => provider_id === provider) ?? [];
   const account = accounts.find(({ id }) => id === selected) ?? accounts[0];
   const connected = account?.status === "connected";
   const needsPermissions =
-    connected && OURA_SCOPES.some((scope) => !account.granted_scopes.includes(scope));
+    connected && scopes.some((scope) => !account.granted_scopes.includes(scope));
 
   const request = (url: string, body: object) =>
     fetchWithTimeoutAuthenticated(
@@ -206,12 +219,13 @@ function OuraConnections({
     try {
       if (action === "connect") {
         const response = await request("/api/integrations/oauth/start", {
-          provider: "oura",
-          optionalScopes: OURA_SCOPES,
-          returnPath: "/apps?connection_view=health&health_provider=oura",
+          provider,
+          optionalScopes: scopes,
+          existingAccountId: account?.id,
+          returnPath: `/apps?connection_view=health&health_provider=${provider}`,
         });
         const body = await response.json();
-        const url = connectionAuthorizationUrl("oura", body.url);
+        const url = connectionAuthorizationUrl(provider, body.url);
         if (!response.ok || !url) throw new Error();
         window.location.assign(url);
         return;
@@ -224,15 +238,15 @@ function OuraConnections({
       await reload();
       setMessage(
         body.providerRevoked
-          ? "Oura disconnected."
-          : "Oura disconnected from Kova. You can revoke access in Oura’s account settings.",
+          ? `${label} disconnected.`
+          : `${label} disconnected from Kova. You can revoke access in ${label} account settings.`,
       );
       setDisconnect(null);
     } catch {
       setMessage(
         action === "connect"
-          ? "Oura could not connect. Try again."
-          : "Oura could not disconnect. Try again.",
+          ? `${label} could not connect. Try again.`
+          : `${label} could not disconnect. Try again.`,
       );
     } finally {
       setPending(false);
@@ -240,167 +254,109 @@ function OuraConnections({
   }
 
   return (
-    <>
-      <DialogContent className="max-w-sm rounded-3xl">
-        <DialogTitle>Connect Health</DialogTitle>
-        <DialogDescription>Choose where your health data comes from.</DialogDescription>
-        <div className="grid gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 text-left"
-            disabled={pending || loading || error || !ownerId || !configured}
-            onClick={() => {
-              if (connected) {
-                setShowManagement(true);
-                setChooserOpen(false);
-              } else void update("connect");
-            }}
+    <section
+      hidden={!showManagement}
+      className="space-y-4"
+      aria-labelledby={`${provider}-health-title`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id={`${provider}-health-title`} className="text-lg font-semibold">
+          {label}
+        </h3>
+        {accounts.length > 1 && (
+          <select
+            aria-label={`${label} account`}
+            value={account?.id}
+            onChange={(event) => setSelected(event.currentTarget.value)}
           >
-            <span className="flex items-center gap-2">
-              <Activity className="size-4" aria-hidden="true" />
-              Oura
-            </span>
-            {configured ? (connected ? "Connected" : "Connect") : "Unavailable"}
-          </Button>
-          {[
-            { platform: "apple", label: "Apple Health" },
-            { platform: "android", label: "Android Health Connect" },
-          ].map(({ platform, label }) => {
-            const name = (
-              <span className="flex items-center gap-2 font-medium">
-                <Heart className="size-4 text-rose-500" aria-hidden="true" />
-                {label}
-              </span>
-            );
-            return nativeHealth.platform === platform && ownerId ? (
+            {accounts.map(({ id }, index) => (
+              <option key={id} value={id}>
+                Account {index + 1}
+              </option>
+            ))}
+          </select>
+        )}
+        {account && (
+          <details className="relative text-sm">
+            <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
+            <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
               <Button
-                key={platform}
-                type="button"
-                variant="outline"
-                className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 text-left"
-                onClick={selectNativeHealth}
+                variant="ghost"
+                className="justify-start"
+                disabled={pending || !configured}
+                onClick={() => void update("connect")}
               >
-                {name}
-                {nativeHealth.report
-                  ? "Connected"
-                  : nativeHealth.connected || nativeHealth.pending
-                    ? "Manage"
-                    : "Connect"}
+                Reconnect {label}
               </Button>
-            ) : (
-              <div
-                key={platform}
-                className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm"
+              <Button
+                variant="ghost"
+                className="justify-start"
+                disabled={pending}
+                onClick={() => setDisconnect(account.id)}
               >
-                {name}
-                <span className="text-muted-foreground">
-                  {platform === "android" ? "Requires Android app" : "Coming soon"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        {message && (
-          <p role="status" className="text-sm text-muted-foreground">
-            {message}
-          </p>
+                Disconnect {label}
+              </Button>
+            </div>
+          </details>
         )}
-      </DialogContent>
-      <section hidden={!showManagement} className="space-y-4" aria-labelledby="oura-health-title">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="oura-health-title" className="text-lg font-semibold">
-            Oura
-          </h3>
-          {accounts.length > 1 && (
-            <select
-              aria-label="Oura account"
-              value={account?.id}
-              onChange={(event) => setSelected(event.currentTarget.value)}
-            >
-              {accounts.map(({ id }, index) => (
-                <option key={id} value={id}>
-                  Account {index + 1}
-                </option>
-              ))}
-            </select>
-          )}
-          {account && (
-            <details className="relative text-sm">
-              <summary className="cursor-pointer text-muted-foreground">Connection options</summary>
-              <div className="absolute top-full right-0 z-10 mt-2 grid min-w-52 gap-1 rounded-xl border border-border bg-popover p-1.5 shadow-md">
-                <Button
-                  variant="ghost"
-                  className="justify-start"
-                  disabled={pending || !configured}
-                  onClick={() => void update("connect")}
-                >
-                  Reconnect Oura
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="justify-start"
-                  disabled={pending}
-                  onClick={() => setDisconnect(account.id)}
-                >
-                  Disconnect Oura
-                </Button>
-              </div>
-            </details>
-          )}
-        </div>
-        {message && (
-          <p role="status" className="text-sm text-muted-foreground">
-            {message}
-          </p>
-        )}
-        {loading && (
-          <p role="status" className="text-sm text-muted-foreground">
-            Checking Oura connection…
-          </p>
-        )}
-        {error && (
-          <p role="status" className="text-sm text-muted-foreground">
-            Oura connection status is unavailable.
-          </p>
-        )}
-        {ownerId && !loading && !error && !configured && (
-          <p className="text-sm text-muted-foreground">Coming soon</p>
-        )}
-        {ownerId && !loading && !error && configured && (!connected || needsPermissions) && (
-          <Button
-            variant={connected ? "outline" : "default"}
-            disabled={pending}
-            onClick={() => void update("connect")}
-          >
-            {connected ? "Review Oura permissions" : account ? "Reconnect Oura" : "Connect Oura"}
-          </Button>
-        )}
-        {visible && ownerId && configured && connected && (
-          <OuraDashboard
-            key={ownerId + ":" + account.id}
-            ownerId={ownerId}
-            accountId={account.id}
-            onReport={onReport}
-          />
-        )}
-        <ConfirmActionDialog
-          open={disconnect !== null}
-          onOpenChange={(open) => !pending && !open && setDisconnect(null)}
-          title="Disconnect Oura?"
-          description="This removes the Oura connection from Kova."
-          confirmLabel="Disconnect Oura"
+      </div>
+      {message && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {message}
+        </p>
+      )}
+      {loading && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Checking {label} connection…
+        </p>
+      )}
+      {error && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {label} connection status is unavailable.
+        </p>
+      )}
+      {ownerId && !loading && !error && !configured && (
+        <p className="text-sm text-muted-foreground">Setup required</p>
+      )}
+      {ownerId && !loading && !error && configured && (!connected || needsPermissions) && (
+        <Button
+          variant={connected ? "outline" : "default"}
           disabled={pending}
-          onConfirm={() => void update("disconnect")}
+          onClick={() => void update("connect")}
+        >
+          {connected
+            ? `Review ${label} permissions`
+            : account
+              ? `Reconnect ${label}`
+              : `Connect ${label}`}
+        </Button>
+      )}
+      {visible && ownerId && !loading && !error && configured && connected && (
+        <CloudHealthDashboard
+          key={`${ownerId}:${account.id}:${account.granted_scopes.join(",")}`}
+          provider={provider}
+          ownerId={ownerId}
+          accountId={account.id}
+          onReport={onReport}
         />
-      </section>
-    </>
+      )}
+      <ConfirmActionDialog
+        open={disconnect !== null}
+        onOpenChange={(open) => !pending && !open && setDisconnect(null)}
+        title={`Disconnect ${label}?`}
+        description={`This removes the ${label} connection from Kova.`}
+        confirmLabel={`Disconnect ${label}`}
+        disabled={pending}
+        onConfirm={() => void update("disconnect")}
+      />
+    </section>
   );
 }
 
 export function HealthConnectionsPanel({
   ownerId,
   visible = true,
+  requestedProvider,
   data,
   loading,
   error,
@@ -408,6 +364,7 @@ export function HealthConnectionsPanel({
 }: {
   ownerId: string | null;
   visible?: boolean;
+  requestedProvider?: string | null;
   data: AccountStatus | null;
   loading: boolean;
   error: boolean;
@@ -417,9 +374,15 @@ export function HealthConnectionsPanel({
   const nativeHealth = useNativeHealthLive(visible ? ownerId : null);
   const [nativeOpen, setNativeOpen] = useState(false);
   const [oura, setOura] = useState<AppleHealthAnalytics | null>(null);
+  const [whoop, setWhoop] = useState<AppleHealthAnalytics | null>(null);
+  const [activeProvider, setActiveProvider] = useState<HealthProviderId | null>(null);
+  useEffect(() => {
+    if (visible && (requestedProvider === "oura" || requestedProvider === "whoop"))
+      setActiveProvider(requestedProvider);
+  }, [requestedProvider, visible]);
   const [chooserOpen, setChooserOpen] = useState(false);
-  const metrics = { ...native?.metrics, ...oura?.metrics };
-  const asOf = [native?.asOf, oura?.asOf].filter(Boolean).sort().at(-1);
+  const metrics = { ...native?.metrics, ...oura?.metrics, ...whoop?.metrics };
+  const asOf = [native?.asOf, oura?.asOf, whoop?.asOf].filter(Boolean).sort().at(-1);
   const report = asOf && Object.keys(metrics).length ? { asOf, metrics } : null;
   return (
     <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
@@ -454,25 +417,96 @@ export function HealthConnectionsPanel({
           <HealthTrends
             key={report ? "connected" : "example"}
             report={report ?? exampleHealth}
-            catalog={[...APPLE_HEALTH_METRICS, ...OURA_METRICS]}
+            catalog={[...APPLE_HEALTH_METRICS, ...OURA_METRICS, ...WHOOP_METRICS]}
           />
         </section>
-        <OuraConnections
-          ownerId={ownerId}
-          data={data}
-          loading={loading}
-          error={error}
-          reload={reload}
-          visible={visible}
-          onReport={setOura}
-          setChooserOpen={setChooserOpen}
-          nativeHealth={nativeHealth}
-          selectNativeHealth={() => {
-            setChooserOpen(false);
-            setNativeOpen(true);
-            if (!nativeHealth.pending && !nativeHealth.connected) nativeHealth.start();
-          }}
-        />
+        <DialogContent className="max-w-sm rounded-3xl">
+          <DialogTitle>Connect Health</DialogTitle>
+          <DialogDescription>Choose where your health data comes from.</DialogDescription>
+          <div className="grid gap-2">
+            {(["oura", "whoop"] as const).map((provider) => {
+              const { label } = HEALTH_PROVIDERS[provider];
+              const configured = data?.configuredProviders.some(({ id }) => id === provider);
+              const connected = data?.accounts.some(
+                (account) => account.provider_id === provider && account.status === "connected",
+              );
+              return (
+                <Button
+                  key={provider}
+                  type="button"
+                  variant="outline"
+                  className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 text-left"
+                  disabled={loading || error || !ownerId || !configured}
+                  onClick={() => {
+                    setActiveProvider(provider);
+                    setChooserOpen(false);
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Activity className="size-4" aria-hidden="true" />
+                    {label}
+                  </span>
+                  {configured ? (connected ? "Manage" : "Set up") : "Unavailable"}
+                </Button>
+              );
+            })}
+            {[
+              { platform: "apple", label: "Apple Health" },
+              { platform: "android", label: "Android Health Connect" },
+            ].map(({ platform, label }) => {
+              const name = (
+                <span className="flex items-center gap-2 font-medium">
+                  <Heart className="size-4 text-rose-500" aria-hidden="true" />
+                  {label}
+                </span>
+              );
+              return nativeHealth.platform === platform && ownerId ? (
+                <Button
+                  key={platform}
+                  type="button"
+                  variant="outline"
+                  className="h-auto min-h-12 w-full justify-between rounded-xl px-3 py-2 text-left"
+                  onClick={() => {
+                    setChooserOpen(false);
+                    setNativeOpen(true);
+                    if (!nativeHealth.pending && !nativeHealth.connected) nativeHealth.start();
+                  }}
+                >
+                  {name}
+                  {nativeHealth.report
+                    ? "Connected"
+                    : nativeHealth.connected || nativeHealth.pending
+                      ? "Manage"
+                      : "Connect"}
+                </Button>
+              ) : (
+                <div
+                  key={platform}
+                  className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm"
+                >
+                  {name}
+                  <span className="text-muted-foreground">
+                    {platform === "android" ? "Requires Android app" : "Requires iPhone app"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+        {(["oura", "whoop"] as const).map((provider) => (
+          <CloudHealthConnection
+            key={provider}
+            provider={provider}
+            showManagement={activeProvider === provider}
+            ownerId={ownerId}
+            data={data}
+            loading={loading}
+            error={error}
+            reload={reload}
+            visible={visible}
+            onReport={provider === "oura" ? setOura : setWhoop}
+          />
+        ))}
         {nativeHealth.platform && ownerId && (
           <details
             className="border-t border-border pt-3"
