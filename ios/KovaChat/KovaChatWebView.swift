@@ -59,6 +59,7 @@ struct KovaChatWebView: UIViewRepresentable {
         var unlocked = false
         var changeLock: () -> Void
         weak var web: WKWebView?
+        private var textSizeObserver: NSObjectProtocol?
         private var audioObservers: [NSObjectProtocol] = []
         private var reader: AVAudioPlayer?
         private var readingID: String?
@@ -71,6 +72,11 @@ struct KovaChatWebView: UIViewRepresentable {
             self.changeLock = changeLock
             super.init()
             let center = NotificationCenter.default
+            textSizeObserver = center.addObserver(
+                forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in self?.applyDynamicType() }
+            }
             audioObservers.append(center.addObserver(
                 forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
             ) { [weak self] notification in
@@ -94,6 +100,8 @@ struct KovaChatWebView: UIViewRepresentable {
         }
 
         func stop() {
+            if let textSizeObserver { NotificationCenter.default.removeObserver(textSizeObserver) }
+            textSizeObserver = nil
             googleSessionID = nil
             googleSession?.cancel()
             googleSession = nil
@@ -171,6 +179,23 @@ struct KovaChatWebView: UIViewRepresentable {
                 stopReading()
                 readingFinished(readingID, success: success)
             }
+        }
+
+        private func applyDynamicType() {
+            guard let web, KovaDestination.isTrusted(web.url) else { return }
+            let size = UIFontMetrics(forTextStyle: .body).scaledValue(for: 16)
+            web.callAsyncJavaScript(
+                """
+                if (location.origin === 'https://kovagpt.com') {
+                    document.documentElement.style.setProperty('--kova-native-font-size', size + 'px');
+                }
+                """,
+                arguments: ["size": Double(size)], in: nil, in: .page
+            )
+        }
+
+        func webView(_ web: WKWebView, didFinish navigation: WKNavigation!) {
+            applyDynamicType()
         }
 
         func webView(_ web: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {

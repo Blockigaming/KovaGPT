@@ -1772,7 +1772,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     border: 0;
     padding: 20px 8px;
     font-family: inherit;
-    font-size: var(--kova-reading-size, 16px);
+    font-size: var(--kova-reading-size, 1rem);
     line-height: 1.7;
   }
 
