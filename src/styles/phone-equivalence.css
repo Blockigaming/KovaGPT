@@ -14,6 +14,25 @@
 }
 
 @media (width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse) {
+  :root {
+    --kova-phone-space-0: 0px;
+    --kova-phone-space-2: 2px;
+    --kova-phone-space-4: 4px;
+    --kova-phone-space-6: 6px;
+    --kova-phone-space-8: 8px;
+    --kova-phone-space-10: 10px;
+    --kova-phone-space-12: 12px;
+    --kova-phone-space-14: 14px;
+    --kova-phone-space-16: 16px;
+    --kova-phone-space-20: 20px;
+    --kova-phone-space-24: 24px;
+    --kova-phone-space-28: 28px;
+    --kova-phone-space-32: 32px;
+    --kova-phone-space-40: 40px;
+    --kova-phone-space-48: 48px;
+    --kova-phone-space-64: 64px;
+  }
+
   /* Paint the same phone frame before hydration and during the route chunk
      load. The default account placeholder remains in place at larger widths. */
   dialog[data-kova-entry-pending]:not([open]),
@@ -37,7 +56,7 @@
   .kova-assistant[data-ui="modern"],
   .kova-phone-workspace,
   .kova-images-workspace {
-    --phone-gutter: 16px;
+    --phone-gutter: var(--kova-phone-space-16);
   }
 
   /* Hash targets must not move while native anchor scrolling measures them.
@@ -62,7 +81,7 @@
 
   .kova-assistant .kova-empty-chat .kova-greeting {
     align-items: center;
-    margin-block: 0 24px;
+    margin-block: var(--kova-phone-space-0) var(--kova-phone-space-24);
   }
 
   .kova-greeting .kova-home-greeting-text {
@@ -114,8 +133,8 @@
     --chat-composer-corner: 21px;
     --composer-text-inset: 6px;
     min-height: 0 !important;
-    padding-block-start: 4px;
-    gap: 2px;
+    padding-block-start: var(--kova-phone-space-4);
+    gap: var(--kova-phone-space-2);
     border-radius: var(--chat-composer-corner);
   }
 
