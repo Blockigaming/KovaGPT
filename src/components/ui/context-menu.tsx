@@ -29,7 +29,7 @@ const ContextMenuSubTrigger = React.forwardRef<
     data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "flex min-h-8 min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm leading-5 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+      "flex min-h-8 min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
       inset && "pl-8",
       className,
     )}
@@ -92,7 +92,7 @@ const ContextMenuItem = React.forwardRef<
     data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm leading-5 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-xl px-2 py-1.5 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       inset && "pl-8",
       className,
     )}
@@ -110,7 +110,7 @@ const ContextMenuCheckboxItem = React.forwardRef<
     data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center rounded-xl py-1.5 pl-8 pr-2 text-sm leading-5 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center rounded-xl py-1.5 pl-8 pr-2 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     checked={checked}
@@ -135,7 +135,7 @@ const ContextMenuRadioItem = React.forwardRef<
     data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center rounded-xl py-1.5 pl-8 pr-2 text-sm leading-5 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center rounded-xl py-1.5 pl-8 pr-2 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}

@@ -120,7 +120,7 @@ input[type="radio"]:not([aria-hidden="true"]):disabled {
   color: var(--muted-foreground);
   opacity: 1;
 }
-@media (width < 1024px) and (pointer: coarse) {
+@media (pointer: coarse) {
   label:has(input[type="checkbox"]:not([aria-hidden="true"])),
   label:has(input[type="radio"]:not([aria-hidden="true"])) {
     min-height: 44px;
@@ -129,7 +129,7 @@ input[type="radio"]:not([aria-hidden="true"]):disabled {
     gap: 8px;
   }
 }
-@media (width < 1024px) and (pointer: coarse) {
+@media (pointer: coarse) {
   .work-action,
   .work-small,
   .work-icon {

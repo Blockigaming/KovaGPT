@@ -325,7 +325,7 @@ test("confirmation actions inherit shared pill geometry, 36px/44px targets and o
   const primitive = readFileSync("src/components/ui/button.tsx", "utf8");
   assert.match(primitive, /rounded-full/);
   assert.match(primitive, /default: "h-9 px-\[15\.96px\] py-0"/);
-  assert.match(primitive, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
+  assert.match(primitive, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(primitive, /\[&_svg\]:size-\[18px\]/);
   assert.deepEqual(
     b.buttons().map((button) => button.props.variant),

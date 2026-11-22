@@ -22,7 +22,7 @@ const toasterStyle = {
 
 // The same small ChatGPT pill geometry as Button, overriding native toast actions.
 const toastButtonClassName =
-  "group-[.toast]:!h-8 group-[.toast]:!rounded-full group-[.toast]:!px-[15.96px] group-[.toast]:!text-sm group-[.toast]:!font-medium group-[.toast]:!leading-5 group-[.toast]:!transition-[background-color,color,border-color,box-shadow,opacity] group-[.toast]:!duration-150 group-[.toast]:!ease-[ease] group-[.toast]:focus-visible:!outline-none group-[.toast]:focus-visible:!ring-2 group-[.toast]:focus-visible:!ring-ring group-[.toast]:focus-visible:!ring-offset-2 group-[.toast]:focus-visible:!ring-offset-background [@media(max-width:1023px)_and_(pointer:coarse)]:!min-h-11";
+  "group-[.toast]:!h-8 group-[.toast]:!rounded-full group-[.toast]:!px-[15.96px] group-[.toast]:!text-sm group-[.toast]:!font-medium group-[.toast]:!leading-5 group-[.toast]:!transition-[background-color,color,border-color,box-shadow,opacity] group-[.toast]:!duration-150 group-[.toast]:!ease-[ease] group-[.toast]:focus-visible:!outline-none group-[.toast]:focus-visible:!ring-2 group-[.toast]:focus-visible:!ring-ring group-[.toast]:focus-visible:!ring-offset-2 group-[.toast]:focus-visible:!ring-offset-background [@media(pointer:coarse)]:!min-h-11";
 
 const Toaster = ({ style, ...props }: ToasterProps) => {
   const { isDesktop } = useLayout();

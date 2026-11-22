@@ -67,7 +67,7 @@ const SheetContent = React.forwardRef<
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >
-      <SheetPrimitive.Close className="absolute right-3 top-[max(.75rem,var(--safe-top))] flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground [@media(max-width:1023px)_and_(pointer:coarse)]:h-11 [@media(max-width:1023px)_and_(pointer:coarse)]:w-11 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+      <SheetPrimitive.Close className="absolute right-3 top-[max(.75rem,var(--safe-top))] flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
         <X className="h-5 w-5" />
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
@@ -95,7 +95,7 @@ SheetHeader.displayName = "SheetHeader";
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-9 [@media(max-width:1023px)_and_(pointer:coarse)]:[&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
+      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-9 [@media(pointer:coarse)]:[&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
       className,
     )}
     {...props}

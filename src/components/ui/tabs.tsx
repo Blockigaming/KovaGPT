@@ -14,7 +14,7 @@ const TabsList = React.forwardRef<
     data-ui-reference="chatgpt.segmented-control"
     ref={ref}
     className={cn(
-      "font-[family-name:var(--font-ui)] inline-flex h-9 max-w-full items-center justify-start gap-0.5 overflow-x-auto rounded-[8px] bg-muted p-0.5 text-sm font-semibold text-muted-foreground [@media(max-width:1023px)_and_(pointer:coarse)]:h-12",
+      "font-[family-name:var(--font-ui)] inline-flex h-9 max-w-full items-center justify-start gap-0.5 overflow-x-auto rounded-[8px] bg-muted p-0.5 text-sm font-semibold text-muted-foreground [@media(pointer:coarse)]:h-12",
       className,
     )}
     {...props}
@@ -31,7 +31,7 @@ const TabsTrigger = React.forwardRef<
     data-ui-reference="chatgpt.segmented-control.option"
     ref={ref}
     className={cn(
-      "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-[6px] px-3 py-0 text-sm font-semibold leading-5 ring-offset-background cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_4px_-1px_rgb(0_0_0/20%)] [@media(max-width:1023px)_and_(pointer:coarse)]:h-11",
+      "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-[6px] px-3 py-0 text-sm font-semibold leading-5 ring-offset-background cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_4px_-1px_rgb(0_0_0/20%)] [@media(pointer:coarse)]:h-11",
       className,
     )}
     {...props}

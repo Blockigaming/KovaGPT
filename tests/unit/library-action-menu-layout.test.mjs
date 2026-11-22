@@ -122,7 +122,7 @@ test("Library actions inherit the shared SDK menu gutter and 32px/44px pointer g
     "rounded-xl",
     "px-2",
     "py-1.5",
-    "[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
+    "[@media(pointer:coarse)]:min-h-11",
     "[&>svg]:size-[18px]",
     "[&>svg]:shrink-0",
   ]) {

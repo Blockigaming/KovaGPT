@@ -68,6 +68,6 @@ test("phone footer actions wrap while keeping sticky save and the dialog padding
   assert.equal(button.flex.value, "none");
   assert.match(
     readFileSync("src/components/ui/button.tsx", "utf8"),
-    /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/,
+    /\[@media\(pointer:coarse\)\]:min-h-11/,
   );
 });

@@ -9,7 +9,7 @@ test("dropdown actions use SDK18px icons,6px menu inset and32px desktop/44px coa
   assert.match(source, /bg-popover p-1\.5/);
   assert.match(source, /min-h-8/);
   assert.match(source, /rounded-xl px-2 py-1\.5/);
-  assert.match(source, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
+  assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(read("src/styles/visual-tokens.css"), /--kova-radius-menu: 16px/);
 });
 test("sidebar uses pinned filled SDK glyphs and plugin status retains its20px Lucide icons", () => {

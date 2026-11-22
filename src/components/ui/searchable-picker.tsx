@@ -54,7 +54,7 @@ export function SearchablePickerList({
             onSelect={() => {
               if (!disabled && !option.disabled) onValueChange(option.value);
             }}
-            className="min-h-8 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11"
+            className="min-h-8 [@media(pointer:coarse)]:min-h-11"
           >
             <span className="min-w-0 flex-1">
               <span className="block break-words">{option.label}</span>
@@ -176,7 +176,7 @@ export function SearchablePicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "font-[family-name:var(--font-ui)] flex h-9 min-w-0 items-center justify-between gap-2 rounded-[8px] border border-input bg-transparent px-3 text-left text-base font-medium md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
+            "font-[family-name:var(--font-ui)] flex h-9 min-w-0 items-center justify-between gap-2 rounded-[8px] border border-input bg-transparent px-3 text-left text-base font-medium md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:min-h-11",
             className,
           )}
         >

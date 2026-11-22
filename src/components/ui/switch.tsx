@@ -11,7 +11,7 @@ const Switch = React.forwardRef<
     data-slot="switch"
     data-ui-reference="chatgpt.switch"
     className={cn(
-      "peer group/switch inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11 [@media(max-width:1023px)_and_(pointer:coarse)]:min-w-11",
+      "peer group/switch inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11",
       className,
     )}
     {...props}

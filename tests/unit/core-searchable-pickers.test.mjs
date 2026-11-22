@@ -542,11 +542,8 @@ test("searchable selectors retain the reference row density and coarse-pointer t
   const picker = source(pickerPath);
   assert.match(command, /min-h-8/);
   assert.match(command, /rounded-xl/);
-  assert.match(command, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
-  assert.match(
-    picker,
-    /className="min-h-8 \[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11"/,
-  );
+  assert.match(command, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(picker, /className="min-h-8 \[@media\(pointer:coarse\)\]:min-h-11"/);
   const css = source("src/styles/spec400-system.css");
   assert.doesNotMatch(css, /body \[role="option"\][^{]*\{[^}]*min-height:\s*44px/s);
 });

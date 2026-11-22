@@ -621,11 +621,8 @@ test("Move to project uses the shared icon Button with searchable eligible desti
   assert.equal(trigger.props.size, "icon");
   assert.equal(trigger.props.variant, "ghost");
   const button = readFileSync("src/components/ui/button.tsx", "utf8");
-  assert.match(
-    button,
-    /icon: "h-9 w-9 p-0 \[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-w-11"/,
-  );
-  assert.match(button, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
+  assert.match(button, /icon: "h-9 w-9 p-0 \[@media\(pointer:coarse\)\]:min-w-11"/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
   f.open();
   await f.finishList([
     ...destinations(8),

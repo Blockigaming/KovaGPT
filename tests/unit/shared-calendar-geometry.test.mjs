@@ -56,8 +56,8 @@ test("calendar navigation uses ordinary icon targets while the header reserves t
       "h-9",
       "w-9",
       "p-0",
-      "[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
-      "[@media(max-width:1023px)_and_(pointer:coarse)]:min-w-11",
+      "[@media(pointer:coarse)]:min-h-11",
+      "[@media(pointer:coarse)]:min-w-11",
     ])
       assert.ok(classes(nav).includes(token), token);
     assert.equal(attribute(nav, "type"), "button");
@@ -80,7 +80,7 @@ test("calendar dropdown headers keep the nav height and bounded-month disabled s
   assert.equal(attribute(previous, "aria-disabled"), "true");
   assert.equal(attribute(previous, "tabindex"), "-1");
   assert.ok(classes(previous).includes("h-9"));
-  assert.ok(classes(previous).includes("[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11"));
+  assert.ok(classes(previous).includes("[@media(pointer:coarse)]:min-h-11"));
   assert.ok(tags(html, "select").length >= 2, "The actual month/year selectors remain present");
 });
 

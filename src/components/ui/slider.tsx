@@ -17,7 +17,7 @@ const Slider = React.forwardRef<
     data-ui-reference="chatgpt.slider"
     ref={ref}
     className={cn(
-      "relative flex min-h-8 w-full touch-none select-none items-center data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
+      "relative flex min-h-8 w-full touch-none select-none items-center data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}
@@ -30,7 +30,7 @@ const Slider = React.forwardRef<
     </SliderPrimitive.Track>
     <SliderPrimitive.Thumb
       data-slot="slider-thumb"
-      className="flex h-8 w-8 cursor-grab items-center justify-center rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50 [@media(max-width:1023px)_and_(pointer:coarse)]:h-11 [@media(max-width:1023px)_and_(pointer:coarse)]:w-11"
+      className="flex h-8 w-8 cursor-grab items-center justify-center rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
       {...thumbProps}
     >
       <span

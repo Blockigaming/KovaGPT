@@ -103,7 +103,7 @@ const AlertDialogAction = React.forwardRef<
     ref={ref}
     className={cn(
       buttonVariants(),
-      "h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
+      "h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}
@@ -121,7 +121,7 @@ const AlertDialogCancel = React.forwardRef<
     ref={ref}
     className={cn(
       buttonVariants({ variant: "outline" }),
-      "h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center [@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11",
+      "h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}

@@ -51,7 +51,7 @@ test("Result recovery uses the shared 36px desktop and 44px touch Button geometr
   assert.match(source, /import \{ Button \} from "@\/components\/ui\/button"/);
   const primitive = readFileSync("src/components/ui/button.tsx", "utf8");
   assert.match(primitive, /default: "h-9 /);
-  assert.ok(primitive.includes("[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11"));
+  assert.ok(primitive.includes("[@media(pointer:coarse)]:min-h-11"));
   assert.match(primitive, /rounded-full/);
 });
 

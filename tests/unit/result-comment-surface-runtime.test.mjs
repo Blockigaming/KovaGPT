@@ -102,7 +102,7 @@ test("durable comment has persistent associated label, retained focus and origin
   assert.equal(add.props.variant, "default");
   const primitive = readFileSync("src/components/ui/button.tsx", "utf8");
   assert.match(primitive, /default: "h-9 /);
-  assert.ok(primitive.includes("[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11"));
+  assert.ok(primitive.includes("[@media(pointer:coarse)]:min-h-11"));
   add.props.onClick();
   add.props.onClick();
   assert.deepEqual(f.focus, ["input", "input"]);

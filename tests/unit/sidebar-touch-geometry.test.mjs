@@ -107,10 +107,7 @@ test("help clear control, count and support action preserve space under text pre
   const help = read("src/routes/help.tsx");
   assert.match(help, /<Button\s+variant="ghost"\s+size="icon"[\s\S]*?aria-label="Clear search"/);
   assert.match(help, /absolute right-1\.5 top-1\/2 -translate-y-1\/2/);
-  assert.match(
-    read("src/components/ui/button.tsx"),
-    /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-w-11/,
-  );
+  assert.match(read("src/components/ui/button.tsx"), /\[@media\(pointer:coarse\)\]:min-w-11/);
   assert.match(help, /h-12 rounded-xl border-border bg-muted pl-12 pr-14/);
   assert.match(help, /id="answers-heading" className="min-w-0 text-xl font-semibold"/);
   assert.match(

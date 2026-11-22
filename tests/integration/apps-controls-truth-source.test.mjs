@@ -77,6 +77,6 @@ test("Connector management keeps destructive state until the server confirms suc
   assert.match(apps, /import \{ Button \} from "@\/components\/ui\/button"/);
   assert.match(button, /data-ui-reference="chatgpt\.button\.pill"/);
   assert.match(button, /default: "h-9 px-\[15\.96px\] py-0"/);
-  assert.match(button, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(apps, /className="flex min-h-11 min-w-11 items-center justify-center"/);
 });

@@ -6,13 +6,13 @@ test("shared buttons and dialog Close follow SDK icon sizes and retain coarse ta
   const button = read("ui/button");
   assert.ok(button.includes("[&_svg]:size-[18px]"));
   assert.ok(button.includes("[&_svg]:size-5"), "The prominent button has a 20px icon");
-  assert.ok(button.includes("[@media(max-width:1023px)_and_(pointer:coarse)]:min-h-11"));
+  assert.ok(button.includes("[@media(pointer:coarse)]:min-h-11"));
   const dialog = read("ui/dialog");
   for (const token of [
     '<X className="h-[18px] w-[18px]"',
     "h-8 w-8",
-    "[@media(max-width:1023px)_and_(pointer:coarse)]:h-11",
-    "[@media(max-width:1023px)_and_(pointer:coarse)]:w-11",
+    "[@media(pointer:coarse)]:h-11",
+    "[@media(pointer:coarse)]:w-11",
   ])
     assert.ok(dialog.includes(token), token);
 });

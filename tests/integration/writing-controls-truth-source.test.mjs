@@ -40,7 +40,7 @@ test("writing copy and download controls expose failure states and safe URL life
   );
   assert.match(writeRoute, /import \{ Button \} from "@\/components\/ui\/button"/);
   assert.ok((writeRoute.match(/<Button\b/g) ?? []).length >= 12);
-  assert.match(sharedButton, /\[@media\(max-width:1023px\)_and_\(pointer:coarse\)\]:min-h-11/);
+  assert.match(sharedButton, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(writeRoute, /aria-busy=\{!documentReady\}/);
   assert.match(writeRoute, /Loading document/);
 });
