@@ -56,9 +56,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "etoro",
     label: "eToro",
-    description: "Planned eToro connection. Account eligibility and API access are unverified.",
+    description: "Read real-account portfolio value, cash balance, and unrealized P&L.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "etoro.com",
   },
   {
@@ -113,9 +113,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "meltwater",
     label: "Meltwater",
-    description: "Planned Meltwater connection for media intelligence.",
+    description: "Find saved media searches by name.",
     category: "Social & Media",
-    status: "planned",
+    status: "setup_required",
     domain: "meltwater.com",
   },
   {
@@ -616,9 +616,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "vercel",
     label: "Vercel",
-    description: "Read deployments.",
+    description: "Read deployment names and statuses in a linked Vercel team.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "vercel.com",
   },
   {
@@ -2072,9 +2072,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "mixpanel",
     label: "Mixpanel",
-    description: "Reference analytics events, cohorts, and funnels.",
+    description: "Find saved cohort names and aggregate counts in an authorized project.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "mixpanel.com",
   },
   {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { prepareKeyCredential } from "../../src/integrations/key-connection-credential.server.mjs";
 import {
   CONNECTION_FLOWS,
   canReadConnection,
@@ -128,6 +129,10 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
   const hosts = new Set([
     "graph.microsoft.com",
     "api.box.com",
+    "api.meltwater.com",
+    "api.vercel.com",
+    "public-api.etoro.com",
+    "eu.mixpanel.com",
     "api.canva.com",
     "api.figma.com",
     "api.calendly.com",
@@ -148,13 +153,24 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     user_id: "005000000000001",
     urls: { query: "https://fixture.my.salesforce.com/services/data/v67.0/query" },
   });
+  const credentials = {
+    vercel: prepareKeyCredential("vercel", { apiKey: "fake-token", teamId: "team_fixture" }).token,
+    mixpanel: prepareKeyCredential("mixpanel", {
+      apiKey: "fake-token",
+      region: "eu",
+      username: "fixture",
+      projectId: "42",
+    }).token,
+    etoro: prepareKeyCredential("etoro", { apiKey: "fake-token", userKey: "fixture-user-key" })
+      .token,
+  };
   for (const id of Object.keys(CONNECTION_FLOWS)) {
-    const token = id === "granola" ? "grn_test_only" : "fake-token";
+    const token = credentials[id] ?? (id === "granola" ? "grn_test_only" : "fake-token");
     const req = connectionReadRequest(
       id,
       id === "figma"
         ? "https://www.figma.com/design/Abc123/title"
-        : id === "stripe"
+        : ["stripe", "vercel", "etoro"].includes(id)
           ? "recent"
           : id === "google-bigquery"
             ? "example-project"
@@ -167,8 +183,23 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     if (id === "hyperframes-heygen") {
       assert.equal(req.init.headers["X-Api-Key"], token);
       assert.equal(req.init.headers.Authorization, undefined);
+    } else if (id === "meltwater") {
+      assert.equal(req.init.headers.apikey, "fake-token");
+      assert.equal(req.init.headers.Authorization, undefined);
+    } else if (id === "etoro") {
+      assert.equal(req.init.headers["x-api-key"], "fake-token");
+      assert.equal(req.init.headers["x-user-key"], "fixture-user-key");
+      assert.equal(req.init.headers.Authorization, undefined);
+    } else if (id === "mixpanel") {
+      assert.equal(
+        req.init.headers.Authorization,
+        "Basic " + Buffer.from("fixture:fake-token").toString("base64"),
+      );
     } else {
-      assert.equal(req.init.headers.Authorization, `Bearer ${token}`);
+      assert.equal(
+        req.init.headers.Authorization,
+        `Bearer ${id === "vercel" ? "fake-token" : token}`,
+      );
     }
     assert.equal(req.init.redirect, "error");
     assert.ok(req.init.signal instanceof AbortSignal);
@@ -1053,4 +1084,118 @@ test("HyperFrames lists only permitted render names and statuses without returni
     ),
     /connection_permission_required/,
   );
+});
+
+test("Meltwater returns saved-search metadata and omits the search query, with no provider writes", async () => {
+  const reply = await readConnection("meltwater", "Training", "fake-token", async (url, init) => {
+    assert.equal(url, "https://api.meltwater.com/v3/searches");
+    assert.equal(init.method, "GET");
+    assert.equal(init.headers.apikey, "fake-token");
+    return Response.json({
+      searches: [
+        { id: 1, name: "Training news", updated: "2026-11-19T00:00:00Z", query: "private" },
+        { id: 2, name: "Other", query: "private" },
+      ],
+    });
+  });
+  assert.deepEqual(reply.results, [
+    { id: "1", title: "Training news", snippet: "2026-11-19T00:00:00Z", url: null },
+  ]);
+});
+
+test("Vercel keeps the selected team server-bound and rejects URL or team injection in the query", async () => {
+  const { token } = prepareKeyCredential("vercel", { apiKey: "fake-token", teamId: "team_demo" });
+  assert.throws(
+    () => connectionReadRequest("vercel", "prj_demo&teamId=team_other", token),
+    /invalid_connection_query/,
+  );
+  const reply = await readConnection("vercel", "prj_demo", token, async (target, init) => {
+    const url = new URL(target);
+    assert.equal(
+      url.href,
+      "https://api.vercel.com/v7/deployments?teamId=team_demo&limit=10&projectId=prj_demo",
+    );
+    assert.equal(init.headers.Authorization, "Bearer fake-token");
+    return Response.json({
+      deployments: [
+        {
+          uid: "dpl_one",
+          name: "web",
+          readyState: "READY",
+          target: "production",
+          url: "private",
+          meta: { secret: "private" },
+        },
+      ],
+    });
+  });
+  assert.deepEqual(reply.results, [
+    { id: "dpl_one", title: "web", snippet: "READY · production", url: null },
+  ]);
+});
+
+test("Mixpanel uses the stored region, project and Data View, and filters out mismatched cohort records", async () => {
+  const input = {
+    apiKey: "fake-token",
+    username: "fixture",
+    region: "eu",
+    projectId: "42",
+    workspaceId: "110",
+  };
+  assert.throws(
+    () => prepareKeyCredential("mixpanel", { ...input, region: "eu.example.com" }),
+    /invalid_connection_credential/,
+  );
+  assert.throws(
+    () => prepareKeyCredential("mixpanel", { ...input, username: "user:pass" }),
+    /invalid_connection_credential/,
+  );
+  const { token } = prepareKeyCredential("mixpanel", input);
+  const reply = await readConnection("mixpanel", "recent", token, async (url, init) => {
+    assert.equal(
+      url,
+      "https://eu.mixpanel.com/api/query/cohorts/list?project_id=42&workspace_id=110",
+    );
+    assert.equal(init.method, "POST");
+    assert.equal(init.body, undefined);
+    assert.equal(
+      init.headers.Authorization,
+      "Basic " + Buffer.from("fixture:fake-token").toString("base64"),
+    );
+    return Response.json([
+      { id: 1, name: "Training cohort", count: 5, description: "private", project_id: 42 },
+      { id: 2, name: "Other account", count: 100, project_id: 43 },
+    ]);
+  });
+  assert.deepEqual(reply.results, [
+    { id: "1", title: "Training cohort", snippet: "5 users", url: null },
+  ]);
+});
+
+test("eToro uses both keys only for the real account portfolio read and selects aggregate values", async () => {
+  const { token } = prepareKeyCredential("etoro", {
+    apiKey: "fake-token",
+    userKey: "fixture-user-key",
+  });
+  assert.throws(
+    () => connectionReadRequest("etoro", "place order", token),
+    /invalid_connection_query/,
+  );
+  const reply = await readConnection("etoro", "portfolio", token, async (url, init) => {
+    assert.equal(url, "https://public-api.etoro.com/api/v1/trading/info/aggregate-portfolio");
+    assert.equal(init.method, "GET");
+    assert.equal(init.headers["x-api-key"], "fake-token");
+    assert.equal(init.headers["x-user-key"], "fixture-user-key");
+    assert.match(init.headers["x-request-id"], /^[a-f0-9-]{36}$/u);
+    return Response.json({
+      accountCurrency: "USD",
+      accountTotals: { accountTotalValue: 102.5, accountBalance: 40, accountCurrentPnl: -1.5 },
+      instrumentAggregates: [{ name: "private" }],
+    });
+  });
+  assert.deepEqual(
+    reply.results.map(({ snippet }) => snippet),
+    ["102.5 USD", "40 USD", "-1.5 USD"],
+  );
+  assert.doesNotMatch(JSON.stringify(reply), /private|fixture-user-key/);
 });

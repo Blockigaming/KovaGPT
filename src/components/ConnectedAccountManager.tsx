@@ -24,6 +24,19 @@ import type { ConnectionReadResult } from "@/integrations/connection-read.server
 import { toast } from "sonner";
 import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
+const KEY_CONNECTION_FIELDS: Record<
+  string,
+  { field: string; label: string; secret?: boolean; optional?: boolean }[]
+> = {
+  vercel: [{ field: "teamId", label: "Vercel team ID" }],
+  mixpanel: [
+    { field: "username", label: "Service account username" },
+    { field: "projectId", label: "Project ID" },
+    { field: "workspaceId", label: "Workspace ID for Data Views", optional: true },
+  ],
+  etoro: [{ field: "userKey", label: "eToro real-account read key", secret: true }],
+};
+
 export function ConnectedAccountManager({
   id,
   initiallySearchTeamsMessages = false,
@@ -94,18 +107,27 @@ export function ConnectedAccountManager({
       if (active.current) setBusy(false);
     }
   };
-  const linkApiKey = async () => {
+  const linkApiKey = async (form: HTMLFormElement) => {
     const field = keyInput.current;
     const apiKey = field?.value.trim();
     if (busy || loading || error || !configured || !field || !apiKey) return;
+    const credentials = Object.fromEntries(
+      Array.from(
+        form.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-credential-field]"),
+      ).map((input) => [input.dataset.credentialField!, input.value]),
+    );
     field.value = "";
+    for (const input of form.querySelectorAll<HTMLInputElement>(
+      '[data-credential-field][type="password"]',
+    ))
+      input.value = "";
     setBusy(true);
     setResult(null);
     try {
       const response = await fetchWithTimeoutAuthenticated("/api/integrations/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: flow.provider, apiKey }),
+        body: JSON.stringify({ ...credentials, provider: flow.provider, apiKey }),
       });
       if (!response.ok) {
         if (active.current)
@@ -248,11 +270,51 @@ export function ConnectedAccountManager({
               className="flex flex-wrap items-end gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                void linkApiKey();
+                void linkApiKey(event.currentTarget);
               }}
             >
+              {KEY_CONNECTION_FIELDS[id]?.map(({ field, label, secret, optional }) => (
+                <label key={field}>
+                  {label}
+                  <Input
+                    data-credential-field={field}
+                    type={secret ? "password" : "text"}
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    required={!optional}
+                    maxLength={secret ? 512 : 200}
+                    disabled={busy || loading || error}
+                  />
+                </label>
+              ))}
+              {id === "mixpanel" && (
+                <label className="flex flex-col">
+                  Data region
+                  <select
+                    className="h-9 rounded-lg border border-input bg-background px-2"
+                    data-credential-field="region"
+                    required
+                    defaultValue=""
+                    disabled={busy || loading || error}
+                  >
+                    <option value="" disabled>
+                      Choose a region
+                    </option>
+                    <option value="us">United States</option>
+                    <option value="eu">European Union</option>
+                    <option value="in">India</option>
+                  </select>
+                </label>
+              )}
               <label>
-                {flow.label} API key
+                {id === "vercel"
+                  ? "Vercel access token"
+                  : id === "mixpanel"
+                    ? "Mixpanel service account secret"
+                    : id === "etoro"
+                      ? "eToro public API key"
+                      : `${flow.label} API key`}
                 <Input
                   ref={keyInput}
                   type="password"
@@ -265,7 +327,7 @@ export function ConnectedAccountManager({
                 />
               </label>
               <Button type="submit" disabled={busy || loading || error}>
-                {busy ? "Working…" : accounts.length ? "Replace key" : `Connect ${flow.label}`}
+                {busy ? "Working…" : accounts.length ? "Save credentials" : `Connect ${flow.label}`}
               </Button>
             </form>
           )

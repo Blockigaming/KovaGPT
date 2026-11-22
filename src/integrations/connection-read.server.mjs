@@ -1,5 +1,7 @@
-import { readProviderJsonObject } from "../lib/provider-response.server.mjs";
+import { readProviderJsonObject, readProviderText } from "../lib/provider-response.server.mjs";
 import { CONNECTION_FLOWS, calendlyUserUri, safeConnectionLink } from "./connection-flows.mjs";
+import { randomUUID } from "node:crypto";
+import { MIXPANEL_ORIGINS, unpackKeyCredential } from "./key-connection-credential.server.mjs";
 import { salesforceReadRequest, salesforceReadResult } from "./salesforce-read.server.mjs";
 
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
@@ -43,7 +45,37 @@ export function connectionReadRequest(id, query, token, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
   let url;
   let body;
-  if (id === "hyperframes-heygen") {
+  if (id === "meltwater") {
+    if (!/^[!-~]{8,512}$/u.test(token)) throw new Error("invalid_connection_credential");
+    delete headers.Authorization;
+    headers.apikey = token;
+    url = new URL("https://api.meltwater.com/v3/searches");
+  } else if (id === "vercel") {
+    const { apiKey, teamId } = unpackKeyCredential(id, token);
+    headers.Authorization = `Bearer ${apiKey}`;
+    url = new URL("https://api.vercel.com/v7/deployments");
+    url.searchParams.set("teamId", teamId);
+    url.searchParams.set("limit", "10");
+    if (query.toLowerCase() !== "recent") {
+      if (!/^prj_[A-Za-z0-9]{1,128}$/u.test(query)) throw new Error("invalid_connection_query");
+      url.searchParams.set("projectId", query);
+    }
+  } else if (id === "mixpanel") {
+    const { apiKey, username, projectId, workspaceId, region } = unpackKeyCredential(id, token);
+    url = new URL("/api/query/cohorts/list", MIXPANEL_ORIGINS[region]);
+    url.searchParams.set("project_id", projectId);
+    if (workspaceId) url.searchParams.set("workspace_id", workspaceId);
+    headers.Authorization = `Basic ${Buffer.from(`${username}:${apiKey}`).toString("base64")}`;
+  } else if (id === "etoro") {
+    if (!["recent", "portfolio"].includes(query.toLowerCase()))
+      throw new Error("invalid_connection_query");
+    const { apiKey, userKey } = unpackKeyCredential(id, token);
+    delete headers.Authorization;
+    headers["x-api-key"] = apiKey;
+    headers["x-user-key"] = userKey;
+    headers["x-request-id"] = randomUUID();
+    url = new URL("https://public-api.etoro.com/api/v1/trading/info/aggregate-portfolio");
+  } else if (id === "hyperframes-heygen") {
     if (!/^[!-~]{8,512}$/u.test(token)) throw new Error("invalid_hyperframes_key");
     delete headers.Authorization;
     headers["X-Api-Key"] = token;
@@ -164,7 +196,7 @@ export function connectionReadRequest(id, query, token, options = {}) {
   return {
     url: url.href,
     init: {
-      method: body ? "POST" : "GET",
+      method: body || id === "mixpanel" ? "POST" : "GET",
       headers,
       ...(body ? { body } : {}),
       redirect: "error",
@@ -188,7 +220,10 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
             : "connection_read_failed",
     );
   }
-  const data = await readProviderJsonObject(response, 512_000);
+  const data =
+    id === "mixpanel"
+      ? { cohorts: JSON.parse(await readProviderText(response, 512_000)) }
+      : await readProviderJsonObject(response, 512_000);
   if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
@@ -231,6 +266,82 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     };
   }
   let rows = data.value;
+  if (id === "meltwater") {
+    if (!Array.isArray(data.searches) || data.error) throw new Error("invalid_connection_response");
+    const filter = query.trim().toLowerCase();
+    rows = data.searches.flatMap((search) => {
+      if (!Number.isSafeInteger(search?.id) || typeof search.name !== "string") return [];
+      if (filter !== "recent" && !search.name.toLowerCase().includes(filter)) return [];
+      return [
+        {
+          id: String(search.id),
+          name: str(search.name, 300),
+          description: str(search.updated, 64),
+        },
+      ];
+    });
+  }
+  if (id === "vercel") {
+    if (!Array.isArray(data.deployments) || data.error)
+      throw new Error("invalid_connection_response");
+    rows = data.deployments.slice(0, 10).flatMap((deployment) => {
+      if (typeof deployment?.uid !== "string" || typeof deployment.name !== "string") return [];
+      return [
+        {
+          id: str(deployment.uid, 128),
+          name: str(deployment.name, 300),
+          description: [
+            str(deployment.readyState ?? deployment.state, 40),
+            str(deployment.target, 40),
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        },
+      ];
+    });
+  }
+  if (id === "mixpanel") {
+    if (!Array.isArray(data.cohorts)) throw new Error("invalid_connection_response");
+    const { projectId } = unpackKeyCredential(id, token);
+    const filter = query.trim().toLowerCase();
+    rows = data.cohorts.flatMap((cohort) => {
+      if (
+        String(cohort?.project_id) !== projectId ||
+        !Number.isSafeInteger(cohort.id) ||
+        typeof cohort.name !== "string"
+      )
+        return [];
+      if (filter !== "recent" && !cohort.name.toLowerCase().includes(filter)) return [];
+      return [
+        {
+          id: String(cohort.id),
+          name: str(cohort.name, 300),
+          description:
+            Number.isSafeInteger(cohort.count) && cohort.count >= 0 ? `${cohort.count} users` : "",
+        },
+      ];
+    });
+  }
+  if (id === "etoro") {
+    const currency = data.accountCurrency;
+    const fields = [
+      ["accountTotalValue", "Portfolio value"],
+      ["accountBalance", "Cash balance"],
+      ["accountCurrentPnl", "Unrealized P&L"],
+    ];
+    if (
+      typeof currency !== "string" ||
+      !/^[A-Z]{3}$/u.test(currency) ||
+      !data.accountTotals ||
+      fields.some(([key]) => !Number.isFinite(data.accountTotals[key]))
+    )
+      throw new Error("invalid_connection_response");
+    rows = fields.map(([key, name]) => ({
+      id: key,
+      name,
+      description: `${data.accountTotals[key]} ${currency}`,
+    }));
+  }
   if (id === "hyperframes-heygen") {
     if (!Array.isArray(data.data) || data.error) throw new Error("invalid_connection_response");
     const filter = query.trim().toLowerCase();

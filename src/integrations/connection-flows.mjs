@@ -12,6 +12,41 @@ export function calendlyUserUri(value) {
 export const GRANOLA_NOTE_READ = "granola:notes:list";
 
 export const CONNECTION_FLOWS = {
+  meltwater: {
+    provider: "meltwater",
+    authentication: "api-key",
+    scopes: ["meltwater:searches:list"],
+    tool: "meltwater_list_saved_searches",
+    label: "Meltwater",
+    description: "Find saved media searches by name or enter 'recent' to list them.",
+  },
+  vercel: {
+    provider: "vercel",
+    authentication: "api-key",
+    scopes: ["vercel:deployments:list"],
+    tool: "vercel_list_deployments",
+    label: "Vercel",
+    description:
+      "List recent deployments in the linked Vercel team. Use 'recent' or an exact project ID.",
+  },
+  mixpanel: {
+    provider: "mixpanel",
+    authentication: "api-key",
+    scopes: ["mixpanel:cohorts:list"],
+    tool: "mixpanel_list_cohorts",
+    label: "Mixpanel",
+    description:
+      "Find saved cohort names and counts in the linked Mixpanel project. Enter a name fragment or 'recent'.",
+  },
+  etoro: {
+    provider: "etoro",
+    authentication: "api-key",
+    scopes: ["etoro:portfolio:read"],
+    tool: "etoro_read_portfolio_summary",
+    label: "eToro",
+    description:
+      "Read reported balance, portfolio value, and unrealized P&L. Use 'portfolio' for the linked real account.",
+  },
   stripe: {
     provider: "stripe",
     scopes: ["stripe_apps"],

@@ -74,6 +74,19 @@ Verify that a known note appears and an excluded note does not. Revoke the key i
 
 [Granola API access and revocation](https://docs.granola.ai/help-center/sharing/integrations/granola-api)
 
+## Meltwater, Vercel, Mixpanel, and eToro acceptance
+
+| Provider  | Credential and test                                                                                                                                                                | Kova read                                                           |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Meltwater | Create a dedicated token in Account → Meltwater API. Test with a known saved search.                                                                                               | Saved search names and last-updated dates.                          |
+| Vercel    | Use a dedicated access token for a test team and enter its team ID. Search using a known project ID, then try a project from a different team.                                     | Up to ten deployment names, states and targets for the linked team. |
+| Mixpanel  | Use a minimum-privilege service account and specify its project, data region, and workspace ID if the project uses Data Views. Verify a known cohort and deny a different project. | Up to ten saved cohort names and aggregate counts.                  |
+| eToro     | Use public and user keys from a real account with the Read permission. Confirm the values in eToro and try a demo-only key to verify rejection.                                    | Provider-reported portfolio value, cash balance and unrealized P&L. |
+
+These adapters verify their read against the provider before saving credentials and never send provider writes. Kova removes the locally stored credential on disconnect. Revoke the dedicated key, token, or service account with its provider to invalidate it. Vercel and Mixpanel binding details are saved alongside the encrypted credential.
+
+[Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
+
 ## Salesforce registration and session renewal
 
 Create an External Client App for a new Salesforce registration. Salesforce restricts creation of older Connected Apps beginning with Spring '26. Register the exact callback above and enable authorization-code OAuth with PKCE S256. The adapter uses production `login.salesforce.com` authorization. Sandbox-specific sign-in is not exposed.

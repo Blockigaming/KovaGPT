@@ -1,20 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as boundedJson from "../../src/lib/bounded-json.server.mjs";
+import * as keyCredentials from "../../src/integrations/key-connection-credential.server.mjs";
 import * as lockdown from "../../src/lib/lockdown-policy.mjs";
 import { GRANOLA_NOTE_READ } from "../../src/integrations/connection-flows.mjs";
 import { loadUiModule } from "../helpers/ui-state-harness.mjs";
 
 const owner = "00000000-0000-4000-8000-000000000005";
 const key = "grn_fixture_only";
-const request = (provider) =>
+const request = (provider, binding) =>
   new Request("https://kovagpt.com/api/integrations/accounts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider, apiKey: key, owner_id: "different-user" }),
+    body: JSON.stringify({ ...binding, provider, apiKey: key, owner_id: "different-user" }),
   });
 
-function fixture(provider = "granola") {
+function fixture(provider = "granola", binding = {}) {
+  const expectedToken = keyCredentials.prepareKeyCredential(provider, {
+    ...binding,
+    apiKey: key,
+  }).token;
   const state = { session: true, writes: [], reads: 0, encryption: 0 };
   const db = {
     from(table) {
@@ -77,6 +82,7 @@ function fixture(provider = "granola") {
         configuredKeyProviders: () => [
           { id: "granola", name: "Granola", requiredScopes: [GRANOLA_NOTE_READ] },
           { id: "hyperframes-heygen", name: "HyperFrames", requiredScopes: ["hyperframes:read"] },
+          { id: "mixpanel", name: "Mixpanel", requiredScopes: ["mixpanel:cohorts:list"] },
         ],
       },
       "@/lib/bounded-json.server.mjs": boundedJson,
@@ -86,16 +92,17 @@ function fixture(provider = "granola") {
       },
       "@/integrations/credential-vault.server": {
         encryptCredential: async (value) => {
-          assert.equal(value, key);
+          assert.equal(value, expectedToken);
           state.encryption++;
           return "encrypted-fixture";
         },
       },
+      "@/integrations/key-connection-credential.server.mjs": keyCredentials,
       "@/integrations/connection-read.server.mjs": {
         readConnection: async (requestedProvider, query, token) => {
           assert.equal(requestedProvider, provider);
           assert.equal(query, "recent");
-          assert.equal(token, key);
+          assert.equal(token, expectedToken);
           state.reads++;
           await state.onRead?.();
         },
@@ -103,7 +110,7 @@ function fixture(provider = "granola") {
     },
     { Response, Error },
   );
-  return { state, post: () => Route.server.handlers.POST({ request: request(provider) }) };
+  return { state, post: () => Route.server.handlers.POST({ request: request(provider, binding) }) };
 }
 
 test("Granola stores only an encrypted, owner-bound key after a provider read", async () => {
@@ -169,4 +176,17 @@ test("HyperFrames uses the shared key setup with its own provider binding", asyn
   assert.equal(state.writes[0][1].provider_id, "hyperframes-heygen");
   assert.equal(state.writes[0][1].access_token_ciphertext, "encrypted-fixture");
   assert.equal(state.writes[0][1].granted_scopes[0], "hyperframes:read");
+});
+
+test("Mixpanel binds a saved project, region and workspace to the encrypted credential", async () => {
+  const binding = { username: "fixture", region: "in", projectId: "12", workspaceId: "34" };
+  const { state, post } = fixture("mixpanel", binding);
+  const response = await post();
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
+  assert.equal(state.encryption, 1);
+  assert.equal(state.writes[0][1].provider_account_id, "in:12:34");
+  assert.equal(state.writes[0][1].access_token_ciphertext, "encrypted-fixture");
+  assert.equal(JSON.stringify(state.writes).includes(`"username"`), false);
+  assert.equal(JSON.stringify(state.writes).includes(key), false);
 });

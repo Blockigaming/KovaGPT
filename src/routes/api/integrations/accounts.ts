@@ -10,6 +10,7 @@ import { readBoundedJsonObject, BoundedJsonError } from "@/lib/bounded-json.serv
 import { assertLockdownAllows, lockdownErrorResponse } from "@/lib/lockdown-policy.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { encryptCredential } from "@/integrations/credential-vault.server";
+import { prepareKeyCredential } from "@/integrations/key-connection-credential.server.mjs";
 import { readConnection } from "@/integrations/connection-read.server.mjs";
 
 const noStore = { "Cache-Control": "no-store" };
@@ -58,14 +59,14 @@ export const Route = createFileRoute("/api/integrations/accounts")({
         try {
           if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json")
             return fail("expected_json", 415);
-          const body = await readBoundedJsonObject(request, 1024, request.signal);
+          const body = await readBoundedJsonObject(request, 4096, request.signal);
           if (typeof body.provider !== "string" || typeof body.apiKey !== "string")
             return fail("invalid_connection_credential", 400);
           const provider = configuredKeyProviders().find(
             (candidate) => candidate.id === body.provider,
           );
           if (!provider) return fail("provider_not_configured", 503);
-          const apiKey = body.apiKey.trim();
+          const { token, accountId, labelSuffix } = prepareKeyCredential(provider.id, body);
           await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
           const limit = await consumeApplicationRateLimit({
             identity: `user:${auth.userId}`,
@@ -82,19 +83,21 @@ export const Route = createFileRoute("/api/integrations/accounts")({
             );
 
           const db = auth.supabaseAdmin as unknown as SupabaseClient<ConnectorDatabase>;
-          const providerAccountId = "personal-api-key";
+          const accountLabel = labelSuffix
+            ? `${provider.name} · ${labelSuffix}`
+            : `${provider.name} API key`;
           const lookup = () =>
             db
               .from("integration_linked_accounts")
               .select("id,updated_at,access_token_ciphertext")
               .eq("owner_id", auth.userId)
               .eq("provider_id", provider.id)
-              .eq("provider_account_id", providerAccountId)
+              .eq("provider_account_id", accountId)
               .is("workspace_id", null);
           const previous = await lookup().maybeSingle();
           if (previous.error) return fail("accounts_unavailable", 503);
-          await readConnection(provider.id, "recent", apiKey);
-          const ciphertext = await encryptCredential(apiKey);
+          await readConnection(provider.id, "recent", token);
+          const ciphertext = await encryptCredential(token);
           if (auth.revalidateSession && !(await auth.revalidateSession()))
             return fail("connection_session_changed", 401);
           await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
@@ -102,8 +105,8 @@ export const Route = createFileRoute("/api/integrations/accounts")({
           const row = {
             owner_id: auth.userId,
             provider_id: provider.id,
-            provider_account_id: providerAccountId,
-            account_label: `${provider.name} API key`,
+            provider_account_id: accountId,
+            account_label: accountLabel,
             status: "connected",
             granted_scopes: provider.requiredScopes,
             access_token_ciphertext: ciphertext,
@@ -150,7 +153,13 @@ export const Route = createFileRoute("/api/integrations/accounts")({
           const lockdown = lockdownErrorResponse(error);
           if (lockdown) return lockdown;
           const code = error instanceof Error ? error.message : "";
-          if (["invalid_granola_key", "invalid_hyperframes_key"].includes(code))
+          if (
+            [
+              "invalid_connection_credential",
+              "invalid_granola_key",
+              "invalid_hyperframes_key",
+            ].includes(code)
+          )
             return fail("invalid_connection_credential", 400);
           if (
             ["connection_reauthorization_required", "connection_permission_required"].includes(code)
