@@ -8,7 +8,7 @@ jobs:
   layouts:
     runs-on: ubuntu-24.04
     container: mcr.microsoft.com/playwright:v1.56.0-noble
-    timeout-minutes: 18
+    timeout-minutes: 15
     env:
       HOME: /root
       GIT_CONFIG_COUNT: "1"
@@ -23,19 +23,8 @@ jobs:
           node-version: 24
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Compile the exact draft 744 web application
-        run: VITE_KOVA_AUTH_MODE=kova KOVA_BUILD_SHA=778416f80eb02e5f94ddd2d6010a43aefed31546 npm run build:azure
+        run: KOVA_BUILD_SHA=778416f80eb02e5f94ddd2d6010a43aefed31546 npm run build:azure
       - name: Verify the installed browsers
         run: bash scripts/ci/install-playwright-browsers.sh chromium webkit
-      - name: Measure browser chrome, resizing, text scaling and draft storage
-        env:
-          KOVA_CODE_AUDIT_HEAD: 778416f80eb02e5f94ddd2d6010a43aefed31546
-        run: |
-          set -e
-          node scripts/azure/local-preview.mjs --duration-ms=240000 >/tmp/kova-preview.log 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 25); do
-            if curl -fsS http://127.0.0.1:4189/api/version; then break; fi
-            sleep 1
-          done
-          node .github/qa-part1-code-audit.mjs
+      - name: Test viewport transitions, large text, and WebKit storage
+        run: npx --no-install playwright test --config=playwright.qa-part1-proof.config.ts
