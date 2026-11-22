@@ -178,7 +178,10 @@ function fixture() {
     process: { env },
     fetch: async (url, init) => {
       state.calls.push([url, init]);
-      if (url.endsWith("/revoke")) return new Response(null, { status: state.revokeStatus ?? 200 });
+      if (url.endsWith("/revoke")) {
+        state.onRevoke?.();
+        return new Response(null, { status: state.revokeStatus ?? 200 });
+      }
       if (url.endsWith("/token")) return Response.json(state.tokens);
       assert.equal(url, state.profileEndpoint);
       return Response.json(state.profile);
@@ -392,6 +395,9 @@ test("Tana's public client uses the production callback and rejects mismatched i
   Object.assign(f.state.account, {
     provider_id: "tana",
     refresh_token_ciphertext: "encrypted:refresh-test",
+    workspace_id: null,
+    deleted_at: null,
+    updated_at: "old",
   });
   assert.deepEqual(await f.disconnectOAuth("owner-one", "account-one"), { providerRevoked: true });
   const [[url, init]] = f.state.calls;
@@ -401,6 +407,26 @@ test("Tana's public client uses the production callback and rejects mismatched i
     client_id: client.client_id,
   });
   assert.equal(init.redirect, "error");
+});
+
+test("a Tana disconnect cannot erase a newer grant created while revocation is in flight", async () => {
+  const f = fixture();
+  Object.assign(f.state.account, {
+    provider_id: "tana",
+    workspace_id: null,
+    deleted_at: null,
+    updated_at: "old",
+  });
+  f.state.onRevoke = () =>
+    Object.assign(f.state.account, {
+      access_token_ciphertext: "encrypted:new-grant",
+      updated_at: "new",
+    });
+  await assert.rejects(
+    f.disconnectOAuth("owner-one", "account-one"),
+    /linked_account_purge_failed/,
+  );
+  assert.equal(f.state.account.access_token_ciphertext, "encrypted:new-grant");
 });
 
 test("Stripe validates the mode and actual charge permissions before saving an app grant", async () => {

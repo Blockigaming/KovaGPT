@@ -501,7 +501,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     })
     .eq("id", account.id)
     .eq("owner_id", ownerId);
-  if (!provider) {
+  if (!provider || provider.id === "tana") {
     purge
       .eq("provider_id", account.provider_id)
       .eq("updated_at", account.updated_at)
