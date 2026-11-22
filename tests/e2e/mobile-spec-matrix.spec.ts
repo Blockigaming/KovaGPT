@@ -107,6 +107,11 @@ for (const [width, height] of viewports) {
 
       const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
       await expect(composer).toBeVisible();
+      if (width < 768) {
+        await expect(composer).toHaveCSS("font-size", "20px");
+        await expect(composer).toHaveCSS("line-height", "30px");
+        await expect(composer).toHaveCSS("unicode-bidi", "plaintext");
+      }
       await composer.fill("First line\nA second line for this draft.");
       const send = page.getByRole("button", { name: "Send message" });
       await send.scrollIntoViewIfNeeded();

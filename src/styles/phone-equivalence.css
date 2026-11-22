@@ -264,6 +264,17 @@
     min-height: 32px;
   }
 
+  .kova-assistant .spec400-chat-input .spec400-composer-input {
+    font-size: max(16px, 1rem) !important;
+    line-height: 1.5 !important;
+    unicode-bidi: plaintext;
+  }
+
+  .kova-assistant .prose-chat :is(p, li, blockquote, h1, h2, h3, h4),
+  .kova-assistant .kova-user-message {
+    unicode-bidi: plaintext;
+  }
+
   .kova-assistant .kova-empty-composer .spec400-composer-input {
     min-height: 32px !important;
     padding: 6px 0 0 !important;
@@ -518,7 +529,7 @@
   }
 
   .kova-assistant .kova-assistant-message .prose-chat {
-    font-size: var(--kova-reading-size, 16px);
+    font-size: max(1rem, var(--kova-reading-size, 16px));
     line-height: 1.75;
   }
 
@@ -761,6 +772,7 @@
     overflow-y: auto;
     padding: 6px;
     font-size: 0.9375rem;
+    line-height: 1.375rem;
   }
   .kova-sidebar-chat-menu [role="menuitem"] {
     min-height: 48px;
