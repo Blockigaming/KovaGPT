@@ -1,0 +1,55 @@
+name: Temporary device verification
+on:
+  push:
+    branches: [codex/device-qa-854865c-nov22]
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Build the unmodified pull request revision
+        run: |
+          mkdir "$RUNNER_TEMP/kova-device"
+          git archive 854865c5ab117c51f0150791028be6d3e26b2355 | tar -x -C "$RUNNER_TEMP/kova-device"
+          cd "$RUNNER_TEMP/kova-device"
+          npm ci --ignore-scripts --no-audit --no-fund
+          KOVA_BUILD_SHA=854865c5ab117c51f0150791028be6d3e26b2355 npm run build:azure
+      - name: Start short-lived synthetic preview
+        env:
+          KOVA_QA_CODE_SHA256: 1d61350e625f00e092861f7e92ee8e798acff7f0fe22fd01f0c45ba5ca7c7b15
+        run: |
+          curl --fail --show-error --silent --location --retry 2 --output "$RUNNER_TEMP/cloudflared" https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-linux-amd64
+          echo "97bb3b02d23a5980fc9c15a1a270e692da1923f103f920d5b16d4931d5ab55e7  $RUNNER_TEMP/cloudflared" | sha256sum -c
+          chmod 700 "$RUNNER_TEMP/cloudflared"
+          node .github/qa-device-preview.mjs > "$RUNNER_TEMP/gate.log" 2>&1 &
+          cd "$RUNNER_TEMP/kova-device"
+          node scripts/azure/local-preview.mjs --duration-ms=1200000 > "$RUNNER_TEMP/preview.log" 2>&1 &
+          "$RUNNER_TEMP/cloudflared" tunnel --protocol http2 --no-autoupdate --url http://127.0.0.1:4190 > "$RUNNER_TEMP/tunnel.log" 2>&1 &
+          for attempt in $(seq 1 35); do
+            endpoint="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$RUNNER_TEMP/tunnel.log" | head -1 || true)"
+            if [ -n "$endpoint" ]; then
+              if [ "$(curl --max-time 4 -s -o /dev/null -w '%{http_code}' "$endpoint/api/version" || true)" = 404 ]; then
+                printf '%s\n' "$endpoint" > "$RUNNER_TEMP/kova-endpoint.txt"
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          tail -15 "$RUNNER_TEMP/tunnel.log"
+          exit 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: kova-device-preview-endpoint
+          path: ${{ runner.temp }}/kova-endpoint.txt
+          retention-days: 1
+      - name: Keep the isolated device preview available
+        run: sleep 900
