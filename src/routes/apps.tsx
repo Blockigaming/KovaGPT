@@ -71,6 +71,7 @@ import {
   startGoogleConnect,
   disconnectGoogleAccount,
   selectGoogleAccount,
+  type GoogleAccountStatus,
   type GoogleStatus,
 } from "@/lib/google-client";
 import {
@@ -129,6 +130,20 @@ type ConnState =
   | "permission_incomplete"
   | "syncing"
   | "temporarily_unavailable";
+
+function googleServiceAccess(id: string, account: GoogleAccountStatus | null) {
+  const scopes = account?.connected ? account.has : undefined;
+  switch (id) {
+    case "gmail":
+      return { read: Boolean(scopes?.gmail), write: Boolean(scopes?.gmailWrite) };
+    case "google-calendar":
+      return { read: Boolean(scopes?.calendar), write: Boolean(scopes?.calendarWrite) };
+    case "google-drive":
+      return { read: Boolean(scopes?.drive) };
+    default:
+      return {};
+  }
+}
 
 type AppActivity = { app: string; action: string; at: string };
 const MAX_APP_ACTIVITY = 50;
@@ -1218,10 +1233,10 @@ function AppsPage() {
 
   const handleConnect = async (item: ConnectorItem) => {
     if (isGoogleId(item.id)) {
+      const state = stateOf(item.id);
       const existing =
-        visibleGoogleStatus?.state === "reauthorization_required" ||
-        visibleGoogleStatus?.state === "permission_incomplete"
-          ? (visibleGoogleStatus.selectedConnectionId ?? undefined)
+        state === "reauthorize" || state === "permission_incomplete"
+          ? (visibleGoogleStatus?.selectedConnectionId ?? undefined)
           : undefined;
       await connectGoogle(existing, item.id);
       return;
@@ -1232,10 +1247,7 @@ function AppsPage() {
   const isGoogleConnected = (id: string): boolean => {
     if (!visibleGoogleStatus?.connected) return false;
     if (id === "google") return true;
-    if (id === "gmail") return !!visibleGoogleStatus.has?.gmail;
-    if (id === "google-calendar") return !!visibleGoogleStatus.has?.calendar;
-    if (id === "google-drive") return !!visibleGoogleStatus.has?.drive;
-    return false;
+    return googleServiceAccess(id, visibleGoogleStatus).read === true;
   };
 
   const refreshGitHub = useCallback(
@@ -1340,9 +1352,9 @@ function AppsPage() {
       if (visibleGoogleStatus?.state === "temporarily_unavailable")
         return "temporarily_unavailable";
       if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
-      if (visibleGoogleStatus?.state === "permission_incomplete") return "permission_incomplete";
-      if (isGoogleConnected(id)) return "connected";
-      if (visibleGoogleStatus?.connected) return "permission_incomplete";
+      const { read, write } = googleServiceAccess(id, visibleGoogleStatus);
+      if (read && write !== false) return "connected";
+      if (read || write) return "permission_incomplete";
       return "idle";
     }
     if (id === "github") {
@@ -1562,9 +1574,9 @@ function AppsPage() {
                         This connection requests your Google profile and email, plus only{" "}
                         {visibleSelectedApp.label} permissions:
                         {visibleSelectedApp.id === "gmail"
-                          ? " read email, manage drafts, and send email."
+                          ? " read email, create drafts, and send email after confirmation."
                           : visibleSelectedApp.id === "google-calendar"
-                            ? " read and edit calendar events."
+                            ? " read events and create events after confirmation."
                             : " read Drive files."}
                         Other Google services require their own Connect action. Previously approved
                         services remain connected.
@@ -1627,7 +1639,7 @@ function AppsPage() {
                         was revoked. Reconnect to restore access.
                       </p>
                     )}
-                    {visibleGoogleStatus?.state === "permission_incomplete" && (
+                    {stateOf(visibleSelectedApp.id) === "permission_incomplete" && (
                       <p role="status">
                         Some requested permissions are missing. Reconnect and review the required
                         access.
@@ -1635,84 +1647,99 @@ function AppsPage() {
                     )}
                     {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
                       <ul className="spec400-plugin-account-list">
-                        {visibleGoogleStatus!.accounts!.map((account) => (
-                          <li key={account.id}>
-                            <div className="spec400-plugin-account-heading">
-                              <strong>{account.email || "Google account"}</strong>
-                              <span>
-                                {account.id === visibleGoogleStatus?.selectedConnectionId
-                                  ? "Selected for new requests · "
-                                  : ""}
-                                {account.state.replaceAll("_", " ")}
-                              </span>
-                            </div>
-                            <details className="spec400-plugin-scope-list">
-                              <summary>Current permission scope</summary>
-                              {account.scopes?.length ? (
-                                <ul>
-                                  {account.scopes.map((scope) => (
-                                    <li key={scope}>{scope}</li>
-                                  ))}
-                                </ul>
-                              ) : (
+                        {visibleGoogleStatus!.accounts!.map((account) => {
+                          const { read, write } = googleServiceAccess(
+                            visibleSelectedApp.id,
+                            account,
+                          );
+                          return (
+                            <li key={account.id}>
+                              <div className="spec400-plugin-account-heading">
+                                <strong>{account.email || "Google account"}</strong>
+                                <span>
+                                  {account.id === visibleGoogleStatus?.selectedConnectionId
+                                    ? "Selected for new requests · "
+                                    : ""}
+                                  {account.connected
+                                    ? "Google authorization active"
+                                    : account.state.replaceAll("_", " ")}
+                                </span>
+                              </div>
+                              {account.connected && read !== undefined && (
                                 <p>
-                                  No scopes reported. Refresh the account status before relying on
-                                  access.
+                                  Read {read ? "granted" : "not granted"}
+                                  {write !== undefined &&
+                                    ` · Write ${write ? "granted" : "not granted"}`}
                                 </p>
                               )}
-                            </details>
-                            <div className="spec400-plugin-actions">
-                              <Button
-                                variant="outline"
-                                className="spec400-plugin-use-account"
-                                disabled={
-                                  googleBusy ||
-                                  visibleGoogleLoading ||
-                                  !account.connected ||
-                                  account.id === visibleGoogleStatus?.selectedConnectionId
-                                }
-                                onClick={() => void changeGoogleAccount("select", account.id)}
-                                aria-label={`Use ${account.email || "Google account"} for new requests`}
-                              >
-                                Use account
-                              </Button>
-                              <Button
-                                variant="outline"
-                                disabled={
-                                  googleBusy ||
-                                  visibleGoogleLoading ||
-                                  (visibleSelectedApp.id === "gmail" &&
-                                    (tierStatus !== "ready" || tier === "free"))
-                                }
-                                onClick={() =>
-                                  void connectGoogle(account.id, visibleSelectedApp.id)
-                                }
-                                aria-label={`Reconnect ${account.email || "Google account"}`}
-                              >
-                                Reconnect
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                disabled={googleBusy || visibleGoogleLoading}
-                                onClick={(event) => {
-                                  googleDisconnectReturnRef.current = {
-                                    trigger: event.currentTarget,
-                                    url: window.location.href,
-                                    principal: principalRef.current,
-                                    generation: generationRef.current,
-                                  };
-                                  setPendingGoogleDisconnect({
-                                    id: account.id,
-                                    email: account.email || "Google account",
-                                  });
-                                }}
-                                aria-label={`Disconnect ${account.email || "Google account"}`}
-                              >
-                                Disconnect
-                              </Button>
-                            </div>
-                          </li>
-                        ))}
+                              <details className="spec400-plugin-scope-list">
+                                <summary>Current permission scope</summary>
+                                {account.scopes?.length ? (
+                                  <ul>
+                                    {account.scopes.map((scope) => (
+                                      <li key={scope}>{scope}</li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p>
+                                    No scopes reported. Refresh the account status before relying on
+                                    access.
+                                  </p>
+                                )}
+                              </details>
+                              <div className="spec400-plugin-actions">
+                                <Button
+                                  variant="outline"
+                                  className="spec400-plugin-use-account"
+                                  disabled={
+                                    googleBusy ||
+                                    visibleGoogleLoading ||
+                                    !account.connected ||
+                                    account.id === visibleGoogleStatus?.selectedConnectionId
+                                  }
+                                  onClick={() => void changeGoogleAccount("select", account.id)}
+                                  aria-label={`Use ${account.email || "Google account"} for new requests`}
+                                >
+                                  Use account
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  disabled={
+                                    googleBusy ||
+                                    visibleGoogleLoading ||
+                                    (visibleSelectedApp.id === "gmail" &&
+                                      (tierStatus !== "ready" || tier === "free"))
+                                  }
+                                  onClick={() =>
+                                    void connectGoogle(account.id, visibleSelectedApp.id)
+                                  }
+                                  aria-label={`Reconnect ${account.email || "Google account"}`}
+                                >
+                                  Reconnect
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  disabled={googleBusy || visibleGoogleLoading}
+                                  onClick={(event) => {
+                                    googleDisconnectReturnRef.current = {
+                                      trigger: event.currentTarget,
+                                      url: window.location.href,
+                                      principal: principalRef.current,
+                                      generation: generationRef.current,
+                                    };
+                                    setPendingGoogleDisconnect({
+                                      id: account.id,
+                                      email: account.email || "Google account",
+                                    });
+                                  }}
+                                  aria-label={`Disconnect ${account.email || "Google account"}`}
+                                >
+                                  Disconnect
+                                </Button>
+                              </div>
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : !visibleGoogleLoading &&
                       visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
@@ -1732,8 +1759,9 @@ function AppsPage() {
                         }
                         onClick={() => void handleConnect(visibleSelectedApp)}
                       >
-                        {visibleGoogleStatus?.state === "reauthorization_required" ||
-                        visibleGoogleStatus?.state === "permission_incomplete"
+                        {["reauthorize", "permission_incomplete"].includes(
+                          stateOf(visibleSelectedApp.id),
+                        )
                           ? "Reconnect"
                           : (visibleGoogleStatus?.accounts?.length ?? 0) > 0
                             ? "Connect another account"
@@ -1746,7 +1774,7 @@ function AppsPage() {
                       >
                         Refresh status
                       </Button>
-                      {stateOf(visibleSelectedApp.id) === "connected" && (
+                      {isGoogleConnected(visibleSelectedApp.id) && (
                         <Button variant="ghost" onClick={() => handleUseInChat(visibleSelectedApp)}>
                           Use in chat
                         </Button>

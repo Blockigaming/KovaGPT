@@ -313,7 +313,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "notion",
     label: "Notion",
-    description: "Read and update Notion pages.",
+    description: "Find Notion pages you share with Kova by title.",
     category: "Notes & Docs",
     status: "setup_required",
     domain: "notion.so",
@@ -385,7 +385,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "ms-teams",
     label: "Microsoft Teams",
-    description: "Read Teams chats.",
+    description: "Find teams you have joined. Requires a work or school account.",
     category: "Communication",
     status: "setup_required",
     domain: "teams.microsoft.com",

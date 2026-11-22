@@ -521,7 +521,7 @@ export function CommandPalette({
       ref={dialogRef}
       data-kova-shell-overlay=""
       data-slot="command-palette-overlay"
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-[var(--surface-scrim)] px-[max(1rem,var(--safe-left),var(--safe-right))] [--kova-palette-bottom:max(1rem,var(--safe-bottom))] [--kova-palette-top:max(1rem,var(--safe-top))] pb-[var(--kova-palette-bottom)] pt-[var(--kova-palette-top)] [font-family:var(--font-ui,var(--font-sans))]"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-[var(--modal-scrim,var(--surface-scrim))] px-[max(1rem,var(--safe-left),var(--safe-right))] [--kova-palette-bottom:max(1rem,var(--safe-bottom))] [--kova-palette-top:max(1rem,var(--safe-top))] pb-[var(--kova-palette-bottom)] pt-[var(--kova-palette-top)] [font-family:var(--font-ui,var(--font-sans))]"
       role="dialog"
       aria-modal="true"
       aria-label="Search workspace, chats, and actions"

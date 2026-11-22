@@ -4,7 +4,7 @@
 
 export type ThemeMode = "light" | "dark" | "system";
 
-export const DEFAULT_THEME_COLOR = "#121212";
+export const DEFAULT_THEME_COLOR = "#191919";
 export const LIGHT_THEME_COLOR = "#ffffff";
 
 const STORAGE_KEY = "kova-theme-mode";
