@@ -187,6 +187,8 @@ function KovaClerkProvider({
   ).current;
 
   const purgeOwnerlessStateFor = useCallback((userId: string | null) => {
+    // Unscoped cleanup leaves account drafts and history intact. A scoped
+    // reset here would discard the mounted workspace on focus and visibility.
     const result = purgeUnscopedPrivateBrowserStorage(userId);
     const failureCount = result.local.failures.length + result.session.failures.length;
     if (failureCount > 0) {
@@ -194,7 +196,6 @@ function KovaClerkProvider({
         failureCount,
       });
     }
-    dispatchPrincipalBrowserStorageCleared(userId);
   }, []);
 
   const toSession = useCallback((principal: KovaBrowserPrincipal): Session => {

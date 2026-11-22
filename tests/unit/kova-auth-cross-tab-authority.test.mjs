@@ -46,11 +46,11 @@ function fixture() {
     jsxs: (type, props, key) => ({ type, props, key }),
   };
   modules["@/lib/principal-browser-storage.mjs"] = {
-    purgeUnscopedPrivateBrowserStorage: () => ({
-      local: { failures: [] },
-      session: { failures: [] },
-    }),
-    dispatchPrincipalBrowserStorageCleared: () => {},
+    purgeUnscopedPrivateBrowserStorage: (id) => {
+      calls.push(["purge-unscoped", id]);
+      return { local: { failures: [] }, session: { failures: [] } };
+    },
+    dispatchPrincipalBrowserStorageCleared: (id) => calls.push(["reset-workspace", id]),
   };
   modules["@/lib/kova-auth-browser"] = {
     KOVA_AUTH_CHANGE_KEY: "kova:auth-change",
@@ -184,6 +184,7 @@ for (const trigger of ["focus", "pageshow", "storage", "visibilitychange"]) {
     await f.flush();
     const originalKey = f.tree.key;
     assert.equal(originalKey, "owner");
+    const beforeRefresh = f.calls.length;
     const result = f.next();
     f.event(
       trigger,
@@ -200,6 +201,8 @@ for (const trigger of ["focus", "pageshow", "storage", "visibilitychange"]) {
     await f.flush();
     assert.equal(f.tree.key, originalKey);
     assert.equal(f.tree.props.value.user.id, "owner");
+    assert.ok(f.calls.slice(beforeRefresh).some(([event]) => event === "purge-unscoped"));
+    assert.ok(!f.calls.slice(beforeRefresh).some(([event]) => event === "reset-workspace"));
     assert.equal(
       f.nodes().some((node) => node.props.inert),
       false,

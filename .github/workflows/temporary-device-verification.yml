@@ -19,10 +19,10 @@ jobs:
       - name: Build the unmodified pull request revision
         run: |
           mkdir "$RUNNER_TEMP/kova-device"
-          git archive 854865c5ab117c51f0150791028be6d3e26b2355 | tar -x -C "$RUNNER_TEMP/kova-device"
+          git archive 9fe7b90e83e8ec30cf48052840169ac8723f1f80 | tar -x -C "$RUNNER_TEMP/kova-device"
           cd "$RUNNER_TEMP/kova-device"
           npm ci --ignore-scripts --no-audit --no-fund
-          KOVA_BUILD_SHA=854865c5ab117c51f0150791028be6d3e26b2355 VITE_KOVA_AUTH_MODE=kova npm run build:azure
+          KOVA_BUILD_SHA=9fe7b90e83e8ec30cf48052840169ac8723f1f80 VITE_KOVA_AUTH_MODE=kova npm run build:azure
       - name: Start short-lived synthetic preview
         env:
           KOVA_QA_CODE_SHA256: 1d61350e625f00e092861f7e92ee8e798acff7f0fe22fd01f0c45ba5ca7c7b15
