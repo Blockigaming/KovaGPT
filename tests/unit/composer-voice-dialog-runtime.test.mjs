@@ -1,3 +1,4 @@
+import * as voicePcm from "../../src/lib/voice-pcm.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -309,8 +310,10 @@ function fixture(initial = {}, options = {}) {
       safeBrowserStorage: (area) => principalStorage.safeBrowserStorage(area, fakeWindow),
     },
     "@/lib/voice/speech-pause.mjs": { createVoiceSilenceGate },
+    "@/lib/voice-pcm.mjs": voicePcm,
     "@/lib/kova-native": {
       KOVA_NATIVE_AUDIO_INTERRUPTION: "kova-native-audio-interruption",
+      nativeDictationHandler: () => undefined,
       nativeKovaPlatform: () => options.nativePlatform ?? null,
       sendNativeKovaMessage: (message) => {
         options.nativeMessages?.push(message);

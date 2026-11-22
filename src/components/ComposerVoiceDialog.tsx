@@ -27,6 +27,7 @@ import {
   nativeKovaPlatform,
   sendNativeKovaMessage,
 } from "@/lib/kova-native";
+import { canonicalizeNativeVoiceWav } from "@/lib/voice-pcm.mjs";
 import { prepareVoiceRecording } from "@/lib/voice-recording";
 import {
   VOICE_PREFERENCE_KEY,
@@ -743,7 +744,12 @@ export function ComposerVoiceDialog({
     updatePhase("transcribing");
     const controller = beginRequest();
     try {
-      const audio = await prepareVoiceRecording(original, { signal: controller.signal });
+      const audio =
+        original.type === "audio/wav"
+          ? new Blob([canonicalizeNativeVoiceWav(new Uint8Array(await original.arrayBuffer()))], {
+              type: "audio/wav",
+            })
+          : await prepareVoiceRecording(original, { signal: controller.signal });
       if (!isCurrent(scope)) return;
       const body = new FormData();
       body.append("action", "stt");
@@ -1020,7 +1026,9 @@ export function ComposerVoiceDialog({
       window.addEventListener(
         "kova-native-dictation",
         (event) => {
-          const result = (event as CustomEvent<{ id?: string; audio?: string }>).detail;
+          const result = (
+            event as CustomEvent<{ id?: string; audio?: string; backgroundProcessing?: boolean }>
+          ).detail;
           if (result?.id !== active.id || nativeRecording.current !== active || !isCurrent(scope))
             return;
           completed = true;
@@ -1028,7 +1036,7 @@ export function ComposerVoiceDialog({
           clearRecordingTimers();
           updatePhase("stopping");
           const deliver = () => {
-            if (document.visibilityState === "hidden") return;
+            if (!result.backgroundProcessing && document.visibilityState === "hidden") return;
             active.listeners.abort();
             nativeRecording.current = null;
             if (!result.audio) {
@@ -1038,7 +1046,12 @@ export function ComposerVoiceDialog({
             const bytes = Uint8Array.from(atob(result.audio), (character) =>
               character.charCodeAt(0),
             );
-            void transcribeRecording(scope, new Blob([bytes], { type: "audio/mp4" }));
+            void transcribeRecording(scope, new Blob([bytes], { type: "audio/wav" })).finally(
+              () => {
+                if (result.backgroundProcessing)
+                  sendNativeKovaMessage({ action: "voice-reply-end", id: active.id });
+              },
+            );
           };
           document.addEventListener("visibilitychange", deliver, { signal });
           deliver();

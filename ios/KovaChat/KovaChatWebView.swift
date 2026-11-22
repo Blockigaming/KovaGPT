@@ -133,8 +133,10 @@ struct KovaChatWebView: UIViewRepresentable {
             if task != .invalid { UIApplication.shared.endBackgroundTask(task) }
         }
 
-        private func beginBackgroundReply(_ id: String) {
-            guard UIApplication.shared.applicationState == .active, UUID(uuidString: id) != nil else { return }
+        @discardableResult
+        private func beginBackgroundReply(_ id: String, completingNativeRecording: Bool = false) -> Bool {
+            guard (completingNativeRecording || UIApplication.shared.applicationState == .active),
+                  UUID(uuidString: id) != nil else { return false }
             endBackgroundReply()
             let task = UIApplication.shared.beginBackgroundTask(withName: "Kova voice reply") {
                 [weak self] in
@@ -144,9 +146,10 @@ struct KovaChatWebView: UIViewRepresentable {
                     self.signal("kova-native-audio-interruption")
                 }
             }
-            guard task != .invalid else { return }
+            guard task != .invalid else { return false }
             backgroundReply = task
             backgroundReplyID = id
+            return true
         }
 
         func signal(_ event: String) {
@@ -252,15 +255,17 @@ struct KovaChatWebView: UIViewRepresentable {
                     self.stopReading(notifyPage: true)
                     let audio = AVAudioSession.sharedInstance()
                     let url = FileManager.default.temporaryDirectory
-                        .appendingPathComponent(UUID().uuidString).appendingPathExtension("m4a")
+                        .appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
                     do {
                         try audio.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
                         try audio.setActive(true)
                         let recorder = try AVAudioRecorder(url: url, settings: [
-                            AVFormatIDKey: kAudioFormatMPEG4AAC,
-                            AVSampleRateKey: 24000,
+                            AVFormatIDKey: kAudioFormatLinearPCM,
+                            AVSampleRateKey: 16000,
                             AVNumberOfChannelsKey: 1,
-                            AVEncoderBitRateKey: 64000
+                            AVLinearPCMBitDepthKey: 16,
+                            AVLinearPCMIsBigEndianKey: false,
+                            AVLinearPCMIsFloatKey: false
                         ])
                         self.dictation = recorder
                         recorder.delegate = self
@@ -318,17 +323,24 @@ struct KovaChatWebView: UIViewRepresentable {
                 guard let current = self.dictation, ObjectIdentifier(current) == recorderID,
                       let id = self.dictationID else { return }
                 let file = flag ? try? Data(contentsOf: current.url) : nil
+                let audio = file.flatMap {
+                    !$0.isEmpty && $0.count <= 2 * 1024 * 1024 ? $0.base64EncodedString() : nil
+                } ?? ""
+                let backgroundProcessing = !audio.isEmpty && self.dictationTimer != nil &&
+                    self.beginBackgroundReply(id, completingNativeRecording: true)
                 self.cancelDictation()
-                guard let web = self.web, self.unlocked, KovaDestination.isTrusted(web.url) else { return }
+                guard let web = self.web, self.unlocked, KovaDestination.isTrusted(web.url) else {
+                    if backgroundProcessing { self.endBackgroundReply() }
+                    return
+                }
                 web.callAsyncJavaScript(
                     """
                     if (location.origin === 'https://kovagpt.com') {
-                        window.dispatchEvent(new CustomEvent('kova-native-dictation', { detail: {id, audio} }));
+                        window.dispatchEvent(new CustomEvent('kova-native-dictation', { detail: {id, audio, backgroundProcessing} }));
                     }
                     """,
-                    arguments: ["id": id, "audio": file.flatMap {
-                        !$0.isEmpty && $0.count <= 1024 * 1024 ? $0.base64EncodedString() : nil
-                    } ?? ""], in: nil, in: .page
+                    arguments: ["id": id, "audio": audio, "backgroundProcessing": backgroundProcessing],
+                    in: nil, in: .page
                 )
             }
         }

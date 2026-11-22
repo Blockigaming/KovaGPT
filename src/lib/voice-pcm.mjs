@@ -39,6 +39,34 @@ export function inspectVoicePcm(bytes) {
     samples: dataBytes / 2,
   };
 }
+// AVAudioRecorder can place metadata chunks before the PCM data. Preserve
+// its samples and rebuild the fixed-width header required by the voice API.
+export function canonicalizeNativeVoiceWav(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength < 44 || bytes.byteLength > 2 * 1024 * 1024)
+    throw new Error("invalid_pcm_size");
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (tag(view, 0) !== "RIFF" || tag(view, 8) !== "WAVE") throw new Error("invalid_pcm_format");
+  let format;
+  let samples;
+  for (let offset = 12; offset + 8 <= bytes.byteLength;) {
+    const length = view.getUint32(offset + 4, true);
+    const end = offset + 8 + length;
+    if (end > bytes.byteLength) throw new Error("invalid_pcm_size");
+    const name = tag(view, offset);
+    if (name === "fmt " && length === 16) format = bytes.subarray(offset, end);
+    if (name === "data") samples = bytes.subarray(offset, end);
+    offset = end + (length % 2);
+  }
+  if (!format || !samples) throw new Error("invalid_pcm_format");
+  const wav = new Uint8Array(12 + format.length + samples.length);
+  wav.set(bytes.subarray(0, 12));
+  wav.set(format, 12);
+  wav.set(samples, 12 + format.length);
+  new DataView(wav.buffer).setUint32(4, wav.byteLength - 8, true);
+  inspectVoicePcm(wav);
+  return wav;
+}
+
 export function encodeVoicePcm(channels, sampleRate) {
   if (
     !Array.isArray(channels) ||

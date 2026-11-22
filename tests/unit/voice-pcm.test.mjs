@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { encodeVoicePcm, inspectVoicePcm, MAX_PCM_WAV_BYTES } from "../../src/lib/voice-pcm.mjs";
+import {
+  canonicalizeNativeVoiceWav,
+  encodeVoicePcm,
+  inspectVoicePcm,
+  MAX_PCM_WAV_BYTES,
+} from "../../src/lib/voice-pcm.mjs";
 const canonical = () => encodeVoicePcm([new Float32Array(16000)], 16000);
 test("canonical silence has duration derived from exact PCM bytes", () => {
   const bytes = canonical();
@@ -77,4 +82,18 @@ test("reject excessive channels, sample rates, non-finite samples, unequal frame
   assert.throws(() => encodeVoicePcm([new Float32Array(16000)], 384000));
   assert.throws(() => encodeVoicePcm([new Float32Array(16000), new Float32Array(8000)], 16000));
   assert.throws(() => encodeVoicePcm([new Float32Array(16000).fill(NaN)], 16000));
+});
+
+test("native PCM metadata is removed without modifying sample bytes", () => {
+  const clean = canonical();
+  const metadata = Uint8Array.of(74, 85, 78, 75, 3, 0, 0, 0, 1, 2, 3, 0);
+  const native = new Uint8Array(clean.length + metadata.length);
+  native.set(clean.subarray(0, 36));
+  native.set(metadata, 36);
+  native.set(clean.subarray(36), 36 + metadata.length);
+  const header = new DataView(native.buffer);
+  header.setUint32(4, native.length - 8, true);
+  assert.deepEqual(canonicalizeNativeVoiceWav(native), clean);
+  header.setUint32(40, native.length, true);
+  assert.throws(() => canonicalizeNativeVoiceWav(native), /invalid_pcm_size/);
 });
