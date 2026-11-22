@@ -690,7 +690,7 @@
     height: 44px;
   }
   [role="dialog"].kova-settings-dialog .kova-settings-content-header {
-    padding-inline: max(16px, var(--safe-left, 0px)) max(64px, var(--safe-right, 0px));
+    padding-inline: max(16px, var(--safe-left, 0px)) max(64px, calc(var(--safe-right, 0px) + 52px));
   }
   [role="dialog"].kova-settings-dialog:has(.kova-settings-content.mobile-content)
     > [data-kova-dialog-close] {
