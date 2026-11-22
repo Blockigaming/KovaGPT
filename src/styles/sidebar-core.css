@@ -964,8 +964,9 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
   display: contents;
 }
 
+/* Phone-app destination chips. The website keeps the desktop row list. */
 @media (width < 768px) {
-  .kova-sidebar-destinations:not(:empty) {
+  :root[data-kova-surface="app"] .kova-sidebar-destinations:not(:empty) {
     display: flex;
     gap: 6px;
     overflow-x: auto;
@@ -974,7 +975,7 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
     scroll-padding-inline: 3px;
   }
 
-  .kova-sidebar-destinations > .kova-nav-row {
+  :root[data-kova-surface="app"] .kova-sidebar-destinations > .kova-nav-row {
     flex: 0 0 auto;
     width: auto;
     border: 1px solid var(--border);

@@ -1485,9 +1485,9 @@
   min-height: var(--composer-action-size);
 }
 
-/* Reserve a common mode row when the composer cannot comfortably fit a full
+/* Reserve a common mode row only when the composer cannot fit a full
    model name and three touch targets, including before the account loads. */
-@container chat-composer (width < 22.5rem) {
+@container chat-composer (width < 20rem) {
   .spec400-composer
     .spec400-composer-toolbar:has(
       :is(.kova-consumer-model-trigger, .kova-thinking-toggle, .kova-home-model-placeholder)

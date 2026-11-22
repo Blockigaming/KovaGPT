@@ -227,9 +227,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { charSet: "utf-8" },
         {
           name: "viewport",
-          // Give phone and tablet browsers the desktop layout viewport. Leaving
-          // initial-scale unset lets them fit the page and retain pinch zoom.
-          content: "width=1280, viewport-fit=cover",
+          // The website serves the desktop experience on every device and
+          // reflows it to the real screen width; it is not zoomed out from a
+          // fixed desktop canvas. Pinch zoom stays available.
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
         },
         {
           httpEquiv: "Accept-CH",
@@ -312,7 +313,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-kova-hydration="pending"
+      data-kova-surface="web"
+      aria-busy="true"
+    >
       <head>
         <HeadContent />
         <meta name="theme-color" content={DEFAULT_THEME_COLOR} suppressHydrationWarning />
