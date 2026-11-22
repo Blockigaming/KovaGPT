@@ -105,6 +105,59 @@ test("crossing the phone and tablet boundaries preserves the draft and model men
 });
 
 for (const theme of ["light", "dark"] as const) {
+  test(`${theme}: mobile chrome resize and live text scaling preserve the draft and controls`, async ({
+    page,
+  }, info) => {
+    test.skip(!["phone-320", "phone-390", "landscape-844"].includes(info.project.name));
+    const { width, height } = page.viewportSize()!;
+    const portrait = height > width;
+    const safe = portrait
+      ? { top: 44, right: 0, bottom: 34, left: 0 }
+      : { top: 0, right: 47, bottom: 21, left: 47 };
+    await fixture(page, theme, true, true, "plus");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    const html = page.locator("html");
+    await html.evaluate((root, insets) => {
+      for (const [edge, value] of Object.entries(insets)) {
+        root.style.setProperty(`--safe-${edge}`, `${value}px`);
+      }
+    }, safe);
+    const shell = page.locator('.kova-assistant[data-ui="modern"]');
+    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const send = page.getByRole("button", { name: "Send message", exact: true });
+    const open = page.getByRole("button", { name: "Open menu", exact: true });
+    const draft = "The same draft should survive browser controls and text size changes.";
+    await input.fill(draft);
+    await input.blur();
+    const themeColor = page.locator('meta[name="theme-color"]');
+    const color = (await themeColor.getAttribute("content"))!;
+    expect(color).toMatch(/^#[0-9a-f]{6}$/i);
+    const background = await shell.evaluate((node) => getComputedStyle(node).backgroundColor);
+
+    // Resize the browser before and after applying the value from the native text bridge.
+    for (const [availableHeight, size] of [
+      [height - 108, 32],
+      [height, 32],
+      [height, 16],
+    ]) {
+      await page.setViewportSize({ width, height: availableHeight });
+      await html.evaluate((root, size) => {
+        root.style.setProperty("--kova-native-font-size", `${size}px`);
+      }, size);
+      await expect(html).toHaveCSS("font-size", `${size}px`);
+      await expect(shell).toHaveCSS("height", `${availableHeight}px`);
+      await expect(shell).toHaveCSS("background-color", background);
+      await expect(themeColor).toHaveAttribute("content", color);
+      await expect(html).not.toHaveAttribute("data-kova-keyboard");
+      await expect(input).toHaveValue(draft);
+      await expectReachable(open, safe.top, availableHeight);
+      await expectReachable(input, safe.top, availableHeight - safe.bottom);
+      await expectReachable(send, safe.top, availableHeight - safe.bottom);
+      expect(await html.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    }
+  });
+
   test(`${theme}: saved reading sizes reach the rendered answer after reload`, async ({ page }) => {
     await coreFixture(page, theme, "plus", { preserveStorageOnReload: true });
     for (const [label, size] of [

@@ -133,10 +133,17 @@
   /* Keep the phone header compact and reserve the top safe area separately. */
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) {
     min-height: calc(56px + var(--safe-top, 0px));
+    padding-top: var(--safe-top);
   }
 
   .kova-assistant .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
     min-height: 55px;
+  }
+
+  .kova-assistant .kova-topbar:not(.kova-desktop-topbar) button.kova-action {
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
 
   .kova-assistant[data-compact-chat-home] .kova-topbar:not(.kova-desktop-topbar) {
@@ -694,9 +701,11 @@
 
 /* A small split window can be shorter than the combined draft and action rows.
    Let attachments and draft text scroll together while the buttons stay visible. */
-@media (width <= 360px) and (height <= 420px) {
+@media (width <= 360px) and (height <= 420px),
+  (width < 1024px) and (height <= 320px) and (pointer: coarse) {
   .kova-assistant [data-chat-history-migration] {
-    max-block-size: max(44px, 14dvh);
+    min-block-size: 44px;
+    max-block-size: max(44px, 16dvh);
   }
 
   .kova-assistant .spec400-composer-dock {
