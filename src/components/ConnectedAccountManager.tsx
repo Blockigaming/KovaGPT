@@ -228,15 +228,21 @@ export function ConnectedAccountManager({
             </div>
           )}
           <label className="block mt-4">
-            Search {flow.label}
+            {id === "figma" ? "Figma file" : `Search ${flow.label}`}
             <Input
               value={query}
-              maxLength={300}
+              maxLength={id === "canva" ? 255 : 300}
               onChange={(event) => {
                 setQuery(event.target.value);
                 setResult(null);
               }}
-              placeholder={id === "notion" ? "Enter a title or page ID" : "Enter a search"}
+              placeholder={
+                id === "notion"
+                  ? "Enter a title or page ID"
+                  : id === "figma"
+                    ? "Enter a design link or file key"
+                    : "Enter a search"
+              }
             />
           </label>
           <ul className="space-y-3 mt-3">
@@ -271,7 +277,7 @@ export function ConnectedAccountManager({
                       void search(account.id);
                     }}
                   >
-                    Search this account
+                    {id === "figma" ? "Read this file" : "Search this account"}
                   </Button>
                   <Button
                     variant="ghost"

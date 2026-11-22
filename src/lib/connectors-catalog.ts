@@ -1449,9 +1449,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "figma",
     label: "Figma",
-    description: "Reference design files, comments, and prototypes.",
+    description: "Read design metadata from a Figma link or file key.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "figma.com",
   },
   {
@@ -1465,9 +1465,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "canva",
     label: "Canva",
-    description: "Reference designs, brand assets, and presentations.",
+    description: "Search and reference Canva design metadata.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "canva.com",
   },
   {

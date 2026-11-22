@@ -105,7 +105,7 @@ export async function beginOAuth(input: {
   if (provider.id === "notion") params.set("owner", "user");
   if (verifier) {
     params.set("code_challenge", await challenge(verifier));
-    params.set("code_challenge_method", "S256");
+    params.set("code_challenge_method", provider.id === "canva" ? "s256" : "S256");
   }
   return {
     url: `${provider.authorizationEndpoint}?${params}`,
@@ -170,9 +170,9 @@ export async function completeOAuth(input: {
     provider.id,
     await readProviderJsonObject(tokenResponse, 64_000),
   );
-  if (["oura", "whoop", "box"].includes(provider.id) && !tokens.expires_in)
+  if (["oura", "whoop", "box", "canva", "figma"].includes(provider.id) && !tokens.expires_in)
     throw new Error("oauth_token_expiry_missing");
-  if (provider.id === "box" && !tokens.refresh_token)
+  if (["box", "canva", "figma"].includes(provider.id) && !tokens.refresh_token)
     throw new Error("oauth_refresh_token_missing");
   if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
     throw new Error("oauth_scope_verification_failed");

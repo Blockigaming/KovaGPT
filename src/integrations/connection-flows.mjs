@@ -1,6 +1,20 @@
 // Client-safe descriptions of implemented read operations. Deployment readiness
 // and the user's granted scopes are checked separately on the server.
 export const CONNECTION_FLOWS = {
+  canva: {
+    provider: "canva",
+    scopes: ["design:meta:read"],
+    tool: "canva_search",
+    label: "Canva",
+    description: "Search accessible Canva designs by title and return design metadata.",
+  },
+  figma: {
+    provider: "figma",
+    scopes: ["file_metadata:read"],
+    tool: "figma_get_file",
+    label: "Figma",
+    description: "Read Figma file metadata for a supplied Figma design URL or file key.",
+  },
   box: {
     provider: "box",
     scopes: ["root_readonly"],
@@ -127,6 +141,8 @@ export function safeConnectionLink(value) {
 export function connectionAuthorizationUrl(provider, value) {
   const endpoints = {
     box: "https://account.box.com/api/oauth2/authorize",
+    canva: "https://www.canva.com/api/oauth/authorize",
+    figma: "https://www.figma.com/oauth",
     microsoft: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     notion: "https://api.notion.com/v1/oauth/authorize",
     linear: "https://linear.app/oauth/authorize",

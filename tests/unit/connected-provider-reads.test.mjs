@@ -13,6 +13,7 @@ import {
 import { packSalesforceCredential } from "../../src/integrations/salesforce-credential.server.mjs";
 import {
   selectOAuthTokens,
+  oauthTokenRequest,
   oauthRefreshRequest,
   selectRefreshTokens,
 } from "../../src/integrations/oauth-token-request.server.mjs";
@@ -127,6 +128,8 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
   const hosts = new Set([
     "graph.microsoft.com",
     "api.box.com",
+    "api.canva.com",
+    "api.figma.com",
     "api.notion.com",
     "api.linear.app",
     "slack.com",
@@ -141,7 +144,9 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
   for (const id of Object.keys(CONNECTION_FLOWS)) {
     const req = connectionReadRequest(
       id,
-      "a&?$top=999' https://evil.example",
+      id === "figma"
+        ? "https://www.figma.com/design/Abc123/title"
+        : "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : "fake-token",
     );
     assert.equal(new URL(req.url).protocol, "https:");
@@ -511,5 +516,92 @@ test("Notion reads bounded Markdown for an exact page ID and reports partial con
       }),
     ),
     /invalid_connection_response/,
+  );
+});
+
+test("Canva search uses metadata-only authorization and filters returned links", async () => {
+  const account = {
+    provider_id: "canva",
+    status: "connected",
+    token_expires_at: null,
+    granted_scopes: ["design:meta:read"],
+  };
+  assert.equal(canReadConnection(account, "canva"), true);
+  assert.equal(canReadConnection({ ...account, granted_scopes: [] }, "canva"), false);
+  const result = await readConnection("canva", "draft & review", "fixture", async (target) => {
+    assert.equal(new URL(target).searchParams.get("query"), "draft & review");
+    return Response.json({
+      items: [
+        {
+          id: "demo",
+          title: "Draft",
+          owner: { user_id: "private" },
+          urls: { view_url: "https://www.canva.com/design/demo/view", edit_url: "private" },
+        },
+        { id: "other", title: "Review", urls: { view_url: "https://example.invalid/private" } },
+      ],
+      continuation: "private",
+    });
+  });
+  assert.equal(result.results[0].url, "https://www.canva.com/design/demo/view");
+  assert.equal(result.results[1].url, null);
+  assert.doesNotMatch(JSON.stringify(result), /private/);
+});
+
+test("Figma extracts only a design file key and returns bounded metadata", async () => {
+  const result = await readConnection(
+    "figma",
+    "https://www.figma.com/design/Abc123/Prototype?node-id=1-2",
+    "fixture",
+    async (target) => {
+      assert.equal(target, "https://api.figma.com/v1/files/Abc123/meta");
+      return Response.json({
+        file: {
+          name: "Prototype",
+          url: "https://www.figma.com/design/Abc123",
+          creator: { email: "private" },
+          thumbnail_url: "private",
+        },
+      });
+    },
+  );
+  assert.equal(result.results[0].title, "Prototype");
+  assert.doesNotMatch(JSON.stringify(result), /private/);
+  for (const input of [
+    "https://example.invalid/design/Abc123",
+    "https://www.figma.com/design/../private",
+    "https://www.figma.com/design/Abc%2F123",
+  ])
+    assert.throws(() => connectionReadRequest("figma", input, "fixture"), /invalid_figma_file/);
+});
+
+test("Canva and Figma exchanges use basic client authentication with provider-specific refresh", () => {
+  const credentials = { clientId: "client", clientSecret: "secret" };
+  for (const providerId of ["canva", "figma"]) {
+    const req = oauthTokenRequest({
+      providerId,
+      ...credentials,
+      code: "fixture-code",
+      redirectUri: "https://kovagpt.com/callback",
+      verifier: "fixture-verifier",
+    });
+    assert.equal(
+      req.headers.Authorization,
+      "Basic " + Buffer.from("client:secret").toString("base64"),
+    );
+    assert.equal(req.body.get("client_secret"), null);
+    assert.equal(req.body.get("code_verifier"), "fixture-verifier");
+    const refresh = oauthRefreshRequest({ providerId, ...credentials, refreshToken: "old" });
+    assert.equal(refresh.headers.Authorization, req.headers.Authorization);
+    assert.equal(refresh.body.get("grant_type"), providerId === "canva" ? "refresh_token" : null);
+    assert.equal(refresh.body.get("refresh_token"), "old");
+  }
+  assert.throws(
+    () => selectRefreshTokens("canva", { access_token: "new", expires_in: 3600 }),
+    /refresh_token_missing/,
+  );
+  assert.equal(
+    selectRefreshTokens("figma", { access_token: "new", expires_in: 3600 }).access_token,
+    "new",
   );
 });

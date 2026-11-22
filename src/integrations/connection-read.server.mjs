@@ -5,6 +5,25 @@ import { salesforceReadRequest, salesforceReadResult } from "./salesforce-read.s
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
 const notionPageId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
+const figmaFileKey = /^[a-zA-Z0-9]{1,64}$/u;
+
+function getFigmaFileKey(query) {
+  if (figmaFileKey.test(query)) return query;
+  const link = safeConnectionLink(query);
+  if (link) {
+    const url = new URL(link);
+    if (["https://www.figma.com", "https://figma.com"].includes(url.origin)) {
+      const [, type, key] = url.pathname.split("/");
+      if (
+        ["design", "file", "board", "proto", "slides"].includes(type) &&
+        figmaFileKey.test(key ?? "")
+      )
+        return key;
+    }
+  }
+  throw new Error("invalid_figma_file");
+}
+
 const title = (page) => {
   const property = Object.values(page.properties ?? {}).find((value) => value?.type === "title");
   return str(
@@ -24,7 +43,13 @@ export function connectionReadRequest(id, query, token, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
   let url;
   let body;
-  if (id === "box") {
+  if (id === "canva") {
+    if (query.length > 255) throw new Error("invalid_connection_query");
+    url = new URL("https://api.canva.com/rest/v1/designs");
+    url.searchParams.set("query", query);
+  } else if (id === "figma") {
+    url = new URL(`https://api.figma.com/v1/files/${getFigmaFileKey(query)}/meta`);
+  } else if (id === "box") {
     url = new URL("https://api.box.com/2.0/search");
     url.searchParams.set("query", query);
     url.searchParams.set("type", "file");
@@ -131,7 +156,27 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
         snippet.length < data.markdown.length,
     };
   }
+  if (id === "figma") {
+    if (!data.file || typeof data.file.name !== "string")
+      throw new Error("invalid_connection_response");
+    const key = getFigmaFileKey(query.trim());
+    return {
+      service: "Figma",
+      results: [
+        {
+          id: key,
+          title: str(data.file.name, 300),
+          url: safeConnectionLink(data.file.url),
+          snippet: [str(data.file.editorType, 60), str(data.file.last_touched_at, 80)]
+            .filter(Boolean)
+            .join(" · "),
+        },
+      ],
+      limited: false,
+    };
+  }
   let rows = data.value;
+  if (id === "canva") rows = data.items;
   if (id === "box") rows = data.entries;
   if (id === "notion") rows = data.results;
   if (id === "linear") rows = data.data?.issues?.nodes;
@@ -156,7 +201,12 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
       !["microsoft.graph.chatMessage", "#microsoft.graph.chatMessage"].includes(row["@odata.type"])
     )
       continue;
-    let url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink;
+    let url =
+      id === "canva" ? row.urls?.view_url : (row.webLink ?? row.webUrl ?? row.url ?? row.permalink);
+    if (id === "canva") {
+      const link = safeConnectionLink(url);
+      url = link && new URL(link).origin === "https://www.canva.com" ? link : null;
+    }
     if (id === "box") {
       if (row.type !== "file" || typeof row.id !== "string" || !/^\d{1,32}$/u.test(row.id))
         continue;

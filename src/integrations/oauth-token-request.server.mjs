@@ -23,13 +23,22 @@ export function oauthTokenRequest({
       body: JSON.stringify(fields),
     };
   }
-  const body = new URLSearchParams({ ...fields, client_id: clientId, client_secret: clientSecret });
+  const basicClientAuth = providerId === "figma" || providerId === "canva";
+  const body = new URLSearchParams({
+    ...fields,
+    ...(basicClientAuth ? {} : { client_id: clientId, client_secret: clientSecret }),
+  });
   if (verifier) body.set("code_verifier", verifier);
   return {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
+      ...(basicClientAuth
+        ? {
+            Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+          }
+        : {}),
       ...(["oura", "whoop"].includes(providerId) ? { "User-Agent": "KovaGPT/1.0" } : {}),
     },
     body,
@@ -61,9 +70,18 @@ export function selectOAuthTokens(providerId, payload) {
 
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
   if (
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion", "box"].includes(
-      providerId,
-    )
+    ![
+      "microsoft",
+      "linear",
+      "slack",
+      "oura",
+      "whoop",
+      "salesforce",
+      "notion",
+      "box",
+      "canva",
+      "figma",
+    ].includes(providerId)
   )
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
@@ -80,17 +98,22 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       redirect: "error",
       signal: AbortSignal.timeout(15_000),
     };
+  const basicClientAuth = providerId === "figma" || providerId === "canva";
   return {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
       "User-Agent": "KovaGPT/1.0",
+      ...(basicClientAuth
+        ? {
+            Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+          }
+        : {}),
     },
     body: new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: clientId,
-      client_secret: clientSecret,
+      ...(providerId === "figma" ? {} : { grant_type: "refresh_token" }),
+      ...(basicClientAuth ? {} : { client_id: clientId, client_secret: clientSecret }),
       refresh_token: refreshToken,
       ...(providerId === "whoop" ? { scope: "offline" } : {}),
     }),
@@ -107,7 +130,7 @@ export function selectRefreshTokens(providerId, payload) {
   // a claimed refresh instead of inventing a lifetime for those tokens.
   if (!tokens.expires_in && !["salesforce", "notion"].includes(providerId))
     throw new Error("refresh_expiry_missing");
-  if (["notion", "box"].includes(providerId) && !tokens.refresh_token)
+  if (["notion", "box", "canva"].includes(providerId) && !tokens.refresh_token)
     throw new Error("refresh_token_missing");
   return tokens;
 }

@@ -1,6 +1,8 @@
 import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
 
 export type OAuthProviderId =
+  | "canva"
+  | "figma"
   | "microsoft"
   | "github"
   | "slack"
@@ -16,6 +18,7 @@ export type OAuthProviderAdapter = {
   name: string;
   authorizationEndpoint: string;
   tokenEndpoint: string;
+  refreshEndpoint?: string;
   revocationEndpoint?: string;
   clientIdEnv: string;
   clientSecretEnv: string;
@@ -28,7 +31,41 @@ export type OAuthProviderAdapter = {
 };
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
+const teamUser = (value: unknown) =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  canva: {
+    id: "canva",
+    name: "Canva",
+    authorizationEndpoint: "https://www.canva.com/api/oauth/authorize",
+    tokenEndpoint: "https://api.canva.com/rest/v1/oauth/token",
+    clientIdEnv: "CANVA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CANVA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["design:meta:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.canva.com/rest/v1/users/me",
+    profileId: (v) => {
+      const { team_id, user_id } = teamUser(v.team_user);
+      return text(team_id) && text(user_id) ? `${team_id}:${user_id}` : "";
+    },
+    profileLabel: () => "Canva account",
+  },
+  figma: {
+    id: "figma",
+    name: "Figma",
+    authorizationEndpoint: "https://www.figma.com/oauth",
+    tokenEndpoint: "https://api.figma.com/v1/oauth/token",
+    refreshEndpoint: "https://api.figma.com/v1/oauth/refresh",
+    clientIdEnv: "FIGMA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "FIGMA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["current_user:read", "file_metadata:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.figma.com/v1/me",
+    profileId: (v) => text(v.id),
+    profileLabel: (v) => text(v.handle) || "Figma account",
+  },
   salesforce: {
     id: "salesforce",
     name: "Salesforce",

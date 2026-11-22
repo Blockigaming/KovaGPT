@@ -2,7 +2,7 @@
 
 The Connections page exposes work apps when their server configuration is available. Implemented operations are enabled only when the server configuration and the current user's provider consent are valid. Provider registration, credentials, owner consent and a successful real read must all be verified before describing a connection as live.
 
-Google and GitHub use their dedicated connection flows. Microsoft covers Outlook, OneDrive, SharePoint and Teams. Box, Notion, Linear, Slack and Salesforce use the shared OAuth account lifecycle. Credentials belong in the deployment's server secret manager.
+Google and GitHub use their dedicated connection flows. Microsoft covers Outlook, OneDrive, SharePoint and Teams. Box, Canva, Figma, Notion, Linear, Slack and Salesforce use the shared OAuth account lifecycle. Credentials belong in the deployment's server secret manager.
 
 | Provider   | Callback                                                         | Server credentials                                             | Implemented operation                                                                                                                                           |
 | ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -12,6 +12,8 @@ Google and GitHub use their dedicated connection flows. Microsoft covers Outlook
 | Slack      | `https://kovagpt.com/api/integrations/oauth/callback/slack`      | `SLACK_OAUTH_CLIENT_ID`, `SLACK_OAUTH_CLIENT_SECRET`           | Message search with the user's `search:read` token                                                                                                              |
 | Salesforce | `https://kovagpt.com/api/integrations/oauth/callback/salesforce` | `SALESFORCE_OAUTH_CLIENT_ID`, `SALESFORCE_OAUTH_CLIENT_SECRET` | Name search over an explicitly selected Account, Contact or Opportunity record type                                                                             |
 | Box        | `https://kovagpt.com/api/integrations/oauth/callback/box`        | `BOX_OAUTH_CLIENT_ID`, `BOX_OAUTH_CLIENT_SECRET`               | File metadata search for files the authorized Box user can access                                                                                               |
+| Canva      | `https://kovagpt.com/api/integrations/oauth/callback/canva`      | `CANVA_OAUTH_CLIENT_ID`, `CANVA_OAUTH_CLIENT_SECRET`           | Design metadata search                                                                                                                                          |
+| Figma      | `https://kovagpt.com/api/integrations/oauth/callback/figma`      | `FIGMA_OAUTH_CLIENT_ID`, `FIGMA_OAUTH_CLIENT_SECRET`           | File metadata by design link or file key                                                                                                                        |
 
 Provider settings can require administrator consent, workspace installation, public distribution approval, verification or account eligibility. Configuring an app for one workspace does not prove it can be installed by other workspaces.
 
@@ -22,6 +24,12 @@ Provider settings can require administrator consent, workspace installation, pub
 - **Notion** uses the pages shared during authorization and the integration's Read content capability. Search by title, then read the page ID returned by the search. For acceptance, verify that sharing a different set of pages changes what Kova can read. A bounded response can omit some content, and the request leaves transcript inclusion off.
 
 [Box file search](https://developer.box.com/reference/get-search) · [Microsoft Teams message search](https://learn.microsoft.com/en-us/graph/search-concept-chat-messages) · [Notion page Markdown reads](https://developers.notion.com/reference/retrieve-page-markdown)
+
+## Canva and Figma acceptance
+
+Register the exact callbacks above in the providers' developer portals. Canva needs `design:meta:read`. Verify a unique design title and its view link from the account that authorized the app. Figma needs `current_user:read` and `file_metadata:read`. Verify metadata for a known design link, then verify denial for a file that account cannot access. A public Figma app requires provider review before general distribution.
+
+[Canva design search](https://www.canva.dev/docs/apps/rest-apis/reference/designs/list-designs/) · [Figma OAuth setup](https://developers.figma.com/docs/rest-api/oauth-apps/)
 
 ## Salesforce registration and session renewal
 
