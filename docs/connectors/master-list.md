@@ -43,25 +43,26 @@ Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service dire
 | Plaid                                         | `plaid`                  | Finances; production/security approval required |
 | Oura                                          | `oura`                   | Health; eligible developer accounts required    |
 | WHOOP                                         | `whoop`                  | Health; eligible developer accounts required    |
-| Apple Health                                  | `apple-health`           | Native mobile implementation required           |
-| Android Health Connect                        | `android-health-connect` | Native mobile implementation required           |
+| Apple Health                                  | `apple-health`           | iOS companion, signing and device consent       |
+| Android Health Connect                        | `android-health-connect` | Android companion, signing and device consent   |
 
 A catalog entry alone never enables OAuth, provider calls, account access, trading, payments, or billing. Production configuration, provider eligibility, a working adapter, explicit account consent, token refresh and an end-to-end read must be verified before a connector is called live. New entries have no invented permission contracts. Generic local icons are used when verified brand assets are unavailable.
 
-| Rollout dependency                                   | Providers                                                                                                                                                                       |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dedicated Google flows                               | Gmail, Google Drive, Google Calendar                                                                                                                                            |
-| Work-app reads with provider setup and consent       | Box, Calendly, Canva, Figma, Gamma, GitHub, BigQuery, HubSpot, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack, Stripe |
-| User credential and provider acceptance              | eToro, Granola, HyperFrames by HeyGen, Meltwater, Mixpanel, Vercel                                                                                                              |
-| Finance or health setup and consent                  | Plaid, Oura, WHOOP                                                                                                                                                              |
-| Diagram file exchange                                | Excalidraw                                                                                                                                                                      |
-| Provider adapters still needed                       | Interactive Brokers, S&P Global, Tana, Webull, Wix                                                                                                                              |
-| MCP registration and tool authorization still needed | Custom MCP connectors                                                                                                                                                           |
-| Native clients and on-device consent still needed    | Apple Health, Android Health Connect                                                                                                                                            |
+| Rollout dependency                                    | Providers                                                                                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dedicated Google flows                                | Gmail, Google Drive, Google Calendar                                                                                                                                            |
+| Work-app reads with provider setup and consent        | Box, Calendly, Canva, Figma, Gamma, GitHub, BigQuery, HubSpot, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack, Stripe |
+| User credential and provider acceptance               | eToro, Granola, HyperFrames by HeyGen, Meltwater, Mixpanel, Vercel                                                                                                              |
+| Finance or health setup and consent                   | Plaid, Oura, WHOOP                                                                                                                                                              |
+| Diagram file exchange                                 | Excalidraw                                                                                                                                                                      |
+| Dedicated account credentials and provider acceptance | Interactive Brokers, S&P Global, Webull, Wix                                                                                                                                    |
+| Registered OAuth client and workspace consent         | Tana                                                                                                                                                                            |
+| Approved server configuration and user bearer token   | Custom MCP connectors                                                                                                                                                           |
+| Signing, distribution and on-device acceptance        | Apple Health, Android Health Connect                                                                                                                                            |
 
 For the current work-app operations and acceptance checks, see [Work app connections](work-apps.md). Each operation needs its own permission verification. A read test verifies the tested read only. Availability of a provider write scope does not by itself implement or verify a Kova write operation.
 
-Custom MCP means bring your own server. Registration, per-server authentication, tool review, network protections and account isolation must be implemented before enabling arbitrary servers.
+Custom MCP connects deployment-approved HTTPS servers using user-supplied bearer credentials. Each server registration identifies a reviewed read tool. Changing the endpoint or tool requires a new connection. See [Custom MCP acceptance](work-apps.md#custom-mcp-acceptance).
 
 The existing launch review preview still covers its original 12 providers. The production Apps directory uses the complete master catalog. Bank and health entries point out their dedicated setup requirements; adding them does not create a web OAuth flow.
 

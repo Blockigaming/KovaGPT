@@ -87,6 +87,48 @@ These adapters verify their read against the provider before saving credentials 
 
 [Meltwater saved searches](https://developer.meltwater.com/docs/meltwater-api/listening/manage-searches/) · [Vercel deployment API](https://vercel.com/docs/rest-api/deployments/list-deployments) · [Mixpanel cohorts API](https://docs.mixpanel.com/reference/cohorts-list) · [eToro API](https://builders.etoro.com/reference)
 
+## IBKR, S&P Global, Webull and Wix acceptance
+
+| Provider            | Setup                                                                                                                                                                                                                                     | Read to verify                                                                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Interactive Brokers | Enable Flex Web Service in Client Portal. Use an XML Activity Flex query limited to the intended accounts and the Open Positions section. Include Symbol, Currency and Quantity. Enter the query ID and Flex token in Connections.        | Compare symbol, currency and quantity against the selected statement. Confirm revoked or expired tokens fail. IBKR generates the report asynchronously and throttles requests. |
+| S&P Global          | Confirm that the account's Capital IQ contract permits Kova's use of the Kensho company match API. Set `KOVA_SP_GLOBAL_ENABLED=true` after license review. Use a dedicated Capital IQ API username and password.                          | Find a known company and verify its identifier, industry and country. Confirm an account without company-match access fails setup.                                             |
+| Webull              | Use credentials issued to an eligible OpenAPI app. Choose Sandbox or Production explicitly. For accounts that require a verified access token, obtain it through Webull's own verification flow and enter it with the app key and secret. | Compare authorized account types. Test expired access and a credential for the other environment.                                                                              |
+| Wix                 | Generate a client secret for an eligible self-managed Wix Headless project. Enter its client ID and secret.                                                                                                                               | Compare the authorized site's business name and locale. Try a revoked secret and confirm that switching the project requires a new credential.                                 |
+
+Connect performs a provider read before saving the credential. Chat and Connections use the saved account binding. These operations provide read access. Revoke the provider credential in its issuing portal if it should stop working outside Kova.
+
+[IBKR Flex Web Service](https://www.interactivebrokers.com/docs/web-api/flex-web-service/) · [S&P Capital IQ developer guide](https://www.support.marketplace.spglobal.com/content/dam/spglobal/mi/en/documents/marketplace/api/guides/spglobalapidevelopersguide.pdf) · [Webull signed requests](https://developer.webull.com/apis/docs/authentication/signature/) · [Wix Headless client credentials](https://dev.wix.com/docs/go-headless/authentication/admin/make-admin-api-calls-with-client-credentials)
+
+## Tana acceptance
+
+Register a client for Tana's hosted MCP service and the callback `https://kovagpt.com/api/integrations/oauth/callback/tana`. Configure `TANA_MCP_CLIENT_ID` and the authorization and token URLs from the provider's registration using `TANA_MCP_AUTHORIZATION_ENDPOINT` and `TANA_MCP_TOKEN_ENDPOINT`. Kova accepts HTTPS authorization and token URLs on Tana-controlled domains. Set `TANA_MCP_TOKEN_AUTH_METHOD` to the registered token authentication method, and store `TANA_MCP_CLIENT_SECRET` in the deployment's secret manager for confidential clients.
+
+Kova uses PKCE S256, binds the OAuth exchange to `https://home.tana.inc/mcp` and checks the `searchItems` tool before saving the user's grant. Only the most recently authorized Tana account is linked per Kova user. Test two Kova accounts against different Tana workspaces, a known private note, token renewal when the provider returns a refresh token, and revocation in Tana. Kova exposes the search tool. Tana manages approval for its workspace changes separately.
+
+[Tana hosted MCP](https://tana.inc/learn/features/mcp)
+
+## Custom MCP acceptance
+
+Review the server's ownership, its return data, and a read-only tool that accepts a single string query with no additional required arguments. Configure the approved endpoint and exact tool name in the server environment using this JSON format.
+
+```json
+[
+  {
+    "id": "docs",
+    "url": "https://docs.example.com/mcp",
+    "tool": "search_docs",
+    "queryField": "query"
+  }
+]
+```
+
+Set that JSON as `KOVA_MCP_READ_SERVERS`. The server must support Streamable HTTP with an MCP handshake version from 2025, an HTTPS endpoint with a public IPv4 DNS record, a per-user bearer token, and the MCP `readOnlyHint` annotation on the reviewed tool. Verify that the approved tool accepts the probe query `recent` before adding the server. In Connections enter the approved server ID and a restricted bearer token issued by that server. Kova verifies the listed schema and calls only the configured tool. Returned tool text is treated as source data.
+
+Verify connection and successful reads with the intended role, missing permission and revocation, reconnect after an endpoint or tool change, and isolation between two Kova accounts. Confirm that an unapproved ID and tools that no longer declare read access fail before invocation.
+
+[MCP Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) · [MCP tool definitions](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+
 ## Excalidraw acceptance
 
 Select a version 2 `.excalidraw` file in the chat attachment picker. The attachment contains a summary of up to 100 visible diagram elements and their text and positions. Embedded images, links and application state stay outside the summary. In Kova’s Drawing dialog, draw a sketch and choose **Download Excalidraw file**. Open the downloaded file in Excalidraw and verify that the strokes are editable.

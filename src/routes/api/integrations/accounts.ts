@@ -96,11 +96,17 @@ export const Route = createFileRoute("/api/integrations/accounts")({
               .is("workspace_id", null);
           const previous = await lookup().maybeSingle();
           if (previous.error) return fail("accounts_unavailable", 503);
-          await readConnection(provider.id, "recent", token);
+          const checkConsent = async () => {
+            if (auth.revalidateSession && !(await auth.revalidateSession()))
+              throw new Error("connection_session_changed");
+            await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
+          };
+          const probeQuery = provider.id === "sp-global" ? "Facebook" : "recent";
+          await readConnection(provider.id, probeQuery, token, undefined, {
+            beforeRequest: checkConsent,
+          });
           const ciphertext = await encryptCredential(token);
-          if (auth.revalidateSession && !(await auth.revalidateSession()))
-            return fail("connection_session_changed", 401);
-          await assertLockdownAllows(auth.supabaseAdmin, auth.userId, "connector_write");
+          await checkConsent();
           const now = new Date().toISOString();
           const row = {
             owner_id: auth.userId,
@@ -166,6 +172,8 @@ export const Route = createFileRoute("/api/integrations/accounts")({
           )
             return fail("connection_credential_rejected", 403);
           if (code === "connection_rate_limited") return fail(code, 429);
+          if (code === "connection_report_pending") return fail(code, 503);
+          if (code === "connection_session_changed") return fail(code, 401);
           return fail("connection_setup_failed", 502);
         }
       },

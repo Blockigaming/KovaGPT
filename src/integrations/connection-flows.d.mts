@@ -25,3 +25,5 @@ export function connectionAccounts<T extends ConnectedAccount>(accounts: T[], id
 export function canReadConnection(account: ConnectedAccount, id: string, now?: number): boolean;
 export function safeConnectionLink(value: unknown): string | null;
 export function connectionAuthorizationUrl(provider: string, value: unknown): string | null;
+export const TANA_MCP_RESOURCE: string;
+export function tanaOAuthEndpoint(value: unknown, kind: "authorize" | "token"): string | null;

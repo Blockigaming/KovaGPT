@@ -353,6 +353,74 @@ test("unconfigured finance and health stay disabled and never fetch private data
   await expect(page.getByRole("button", { name: "Connect WHOOP", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
 });
+test("Android Health Connect confirms a native read and clears the dashboard when permission is lost", async ({
+  page,
+}) => {
+  type HealthCommand = { action: string; id: string; owner?: string };
+  await page.addInitScript(() => {
+    const commands: HealthCommand[] = [];
+    Object.assign(window, {
+      androidHealthCommands: commands,
+      kovaAndroidHealth: {
+        postMessage(raw: string) {
+          const message: HealthCommand = JSON.parse(raw);
+          commands.push(message);
+          if (message.action === "resume")
+            queueMicrotask(() =>
+              window.dispatchEvent(
+                new CustomEvent("kova-health-update-v1", {
+                  detail: { id: message.id, state: "not_connected" },
+                }),
+              ),
+            );
+        },
+      },
+    });
+  });
+  await boot(page);
+  await page.getByRole("button", { name: "Connect Health", exact: true }).click();
+  const choice = page.getByRole("button", { name: "Android Health Connect Connect", exact: true });
+  await expect(choice).toBeVisible();
+  await choice.click();
+  const health = page.getByRole("region", { name: "Health Connect", exact: true });
+  await expect(health.getByRole("status")).toHaveText("Connecting to Health Connect…");
+  const emit = (detail: Record<string, unknown>, matches = true) =>
+    page.evaluate(
+      ({ detail, matches }) => {
+        const commands = (window as Window & { androidHealthCommands: HealthCommand[] })
+          .androidHealthCommands;
+        const start = commands.find((command) => command.action === "start");
+        if (!start || start.owner !== "00000000-0000-4000-8000-000000000001")
+          throw new Error("Missing owner binding");
+        window.dispatchEvent(
+          new CustomEvent("kova-health-update-v1", {
+            detail: { ...detail, id: matches ? start.id : "another-user" },
+          }),
+        );
+      },
+      { detail, matches },
+    );
+  const reading = {
+    report: {
+      asOf: "2026-11-20",
+      metrics: {
+        StepCount: [{ date: "2026-11-20", value: 432 }],
+        FlightsClimbed: [{ date: "2026-11-20", value: 999 }],
+      },
+    },
+  };
+  await emit(reading, false);
+  await expect(page.getByText("432 steps", { exact: true })).toHaveCount(0);
+  await emit(reading);
+  await expect(page.getByText("432 steps", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Flights climbed", exact: true })).toHaveCount(0);
+  await emit({ state: "permission_required" });
+  await expect(health.getByRole("status")).toHaveText(
+    "Allow at least one read permission in Health Connect to connect.",
+  );
+  await expect(page.getByText("432 steps", { exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => (window as StateWindow).operations)).toEqual([]);
+});
 test("Oura refreshes automatically in the unified health dashboard", async ({ page }) => {
   await boot(page, { health: true });
   await expect(page.getByRole("tab", { name: "Oura", exact: true })).toHaveCount(0);

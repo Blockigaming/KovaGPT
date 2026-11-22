@@ -35,6 +35,25 @@ const KEY_CONNECTION_FIELDS: Record<
     { field: "workspaceId", label: "Workspace ID for Data Views", optional: true },
   ],
   etoro: [{ field: "userKey", label: "eToro real-account read key", secret: true }],
+  "interactive-brokers": [{ field: "queryId", label: "Activity Flex query ID" }],
+  "sp-global": [{ field: "username", label: "Capital IQ API username" }],
+  webull: [
+    { field: "appKey", label: "Webull app key" },
+    { field: "accessToken", label: "Webull access token", secret: true, optional: true },
+  ],
+  wix: [{ field: "clientId", label: "Wix Headless client ID" }],
+  "custom-mcp": [{ field: "serverId", label: "Approved server ID" }],
+};
+
+const KEY_CREDENTIAL_LABELS: Record<string, string> = {
+  vercel: "Vercel access token",
+  mixpanel: "Mixpanel service account secret",
+  etoro: "eToro public API key",
+  "interactive-brokers": "Flex Web Service token",
+  "sp-global": "Capital IQ API password",
+  webull: "Webull app secret",
+  wix: "Wix Headless client secret",
+  "custom-mcp": "MCP bearer token",
 };
 
 export function ConnectedAccountManager({
@@ -134,7 +153,9 @@ export function ConnectedAccountManager({
           toast.error(
             response.status === 403
               ? `Could not authorize ${flow.label} read access. Check the key’s permissions and Lockdown Mode.`
-              : `Could not connect ${flow.label}. Check the key and try again.`,
+              : response.status === 503 && id === "interactive-brokers"
+                ? "IBKR is still preparing the report or is temporarily unavailable. Try again shortly."
+                : `Could not connect ${flow.label}. Check the key and try again.`,
           );
         return;
       }
@@ -255,6 +276,12 @@ export function ConnectedAccountManager({
           Use a restricted HeyGen key with HyperFrames read access.
         </p>
       )}
+      {id === "interactive-brokers" && (
+        <p className="text-sm text-muted-foreground">
+          Use an XML Activity Flex report with the Open Positions section. Include Symbol, Currency
+          and Quantity and select only the accounts you want Kova to read.
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">Kova provides read access for this operation.</p>
       {loading && <p role="status">Checking accounts…</p>}
       {error && (
@@ -307,14 +334,26 @@ export function ConnectedAccountManager({
                   </select>
                 </label>
               )}
+              {id === "webull" && (
+                <label className="flex flex-col">
+                  OpenAPI environment
+                  <select
+                    className="h-9 rounded-lg border border-input bg-background px-2"
+                    data-credential-field="environment"
+                    required
+                    defaultValue=""
+                    disabled={busy || loading || error}
+                  >
+                    <option value="" disabled>
+                      Choose an environment
+                    </option>
+                    <option value="production">Production</option>
+                    <option value="sandbox">Sandbox</option>
+                  </select>
+                </label>
+              )}
               <label>
-                {id === "vercel"
-                  ? "Vercel access token"
-                  : id === "mixpanel"
-                    ? "Mixpanel service account secret"
-                    : id === "etoro"
-                      ? "eToro public API key"
-                      : `${flow.label} API key`}
+                {KEY_CREDENTIAL_LABELS[id] ?? `${flow.label} API key`}
                 <Input
                   ref={keyInput}
                   type="password"

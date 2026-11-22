@@ -42,6 +42,7 @@ struct HealthConnectionsView: UIViewRepresentable {
     private var changedTypes: Set<String> = []
     private var latest: LiveHealthAnalytics?
     private var activation: NSObjectProtocol?
+    private var deactivation: NSObjectProtocol?
 
     private func trusted(_ url: URL?) -> Bool {
         url?.scheme == "https" && url?.host == "kovagpt.com" && url?.user == nil &&
@@ -125,7 +126,7 @@ struct HealthConnectionsView: UIViewRepresentable {
     }
 
     private func authorize(_ session: UUID) async {
-        guard id == session, healthPage(webView?.url) else { stop(); return }
+        guard id == session, healthPage(webView?.url) else { return }
         let types = LiveHealthAnalytics.sampleTypes
         do {
             try await store.requestAuthorization(toShare: [], read: Set(types.map { $0 as HKObjectType }))
@@ -156,6 +157,11 @@ struct HealthConnectionsView: UIViewRepresentable {
         ) { [weak self] _ in
             Task { @MainActor in self?.scheduleRead() }
         }
+        deactivation = NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.pauseRead() }
+        }
         scheduleRead()
     }
 
@@ -177,7 +183,7 @@ struct HealthConnectionsView: UIViewRepresentable {
                 let report = await LiveHealthAnalytics.read(from: store, changing: changed, previous: latest)
                 guard !Task.isCancelled, id == session else { return }
                 latest = report
-                if healthPage(webView?.url),
+                if UIApplication.shared.applicationState == .active, healthPage(webView?.url),
                    let data = try? JSONEncoder().encode(report),
                    let value = try? JSONSerialization.jsonObject(with: data) {
                     send(["report": value], session: session)
@@ -185,6 +191,14 @@ struct HealthConnectionsView: UIViewRepresentable {
             } while needsFullRead || !changedTypes.isEmpty
             refresh = nil
         }
+    }
+
+    private func pauseRead() {
+        guard let id, UIApplication.shared.applicationState != .active else { return }
+        refresh?.cancel()
+        refresh = nil
+        latest = nil
+        send(["state": "paused"], session: id)
     }
 
     private func sendError(_ session: UUID) {
@@ -220,5 +234,7 @@ struct HealthConnectionsView: UIViewRepresentable {
         observers.removeAll()
         if let activation { NotificationCenter.default.removeObserver(activation) }
         activation = nil
+        if let deactivation { NotificationCenter.default.removeObserver(deactivation) }
+        deactivation = nil
     }
 }

@@ -47,9 +47,19 @@ Open Connections → Health → Apple Health in the KovaGPT iPhone app. Connect 
 
 The dashboard groups readings such as sleep stages, activity, workouts, mobility, vitals, hearing, nutrition, mindfulness, and supported symptom and cycle logs. Available data depends on the device, iOS version, and granted permissions. Clinical records and raw ECG waveforms need separate handling and are outside this dashboard. The native app requires signing and physical-device testing before distribution.
 
+Verify a permitted category with known data, then disable it in Apple Health and reopen the app. Check that the previous readings clear and that categories without readable data do not report verified access. Disconnect from Kova and reopen under a different Kova account. The iOS build workflow checks an unsigned simulator build. Physical-device acceptance requires an appropriately signed install and known HealthKit data.
+
+## Android Health Connect
+
+The Android companion is in `android/`. Build it using JDK 17, Android SDK 35 and Gradle 8.11.1, or run the Android Health Connect build on GitHub. For a local debug build run `gradle -p android :app:assembleDebug`. Sign a release through the Android distribution process and complete the Health Connect permissions declaration for the app.
+
+Open the Android companion, sign into Kova, and choose Connections → Health → Android Health Connect. Approve the categories you want. The app requests read permissions for steps, sleep, and heart rate. It rechecks grants before each foreground refresh and shows daily aggregates for up to 29 days. The summaries are delivered to the on-device health dashboard for the authorized Kova user. Disconnection clears that user's local opt-in. Use Android Health Connect settings to revoke the app's platform grant.
+
+Verify on Android 14 or newer and on a supported device using the Health Connect app. Seed known samples, grant only one category, and verify that only that category appears. Revoke access, switch Kova accounts, background and foreground the companion, and disconnect. An APK build or simulated browser bridge check does not verify real device permission handling.
+
 ## Other health services
 
-Oura and WHOOP are the implemented web adapters in this change. Other wearables and medical-record services require their own supported APIs, app registrations, approval and consent. Apple HealthKit and Android Health Connect require a mobile application and platform permissions; website OAuth keys alone do not provide access.
+Oura and WHOOP use web authorization. Apple HealthKit and Android Health Connect use their native companion targets and on-device permissions. Other wearables and medical-record services require their own supported APIs, app registrations, approval and consent.
 
 ## Acceptance
 

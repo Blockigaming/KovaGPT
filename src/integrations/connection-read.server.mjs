@@ -3,6 +3,8 @@ import { CONNECTION_FLOWS, calendlyUserUri, safeConnectionLink } from "./connect
 import { randomUUID } from "node:crypto";
 import { MIXPANEL_ORIGINS, unpackKeyCredential } from "./key-connection-credential.server.mjs";
 import { salesforceReadRequest, salesforceReadResult } from "./salesforce-read.server.mjs";
+import { isAccountProviderRead, readAccountProvider } from "./account-provider-read.server.mjs";
+import { readMcpConnection } from "./mcp-provider-read.server.mjs";
 
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
 const notionPageId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -206,6 +208,14 @@ export function connectionReadRequest(id, query, token, options = {}) {
 }
 
 export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
+  if (id === "tana" || id === "custom-mcp")
+    return readMcpConnection(id, query, token, fetchImpl, options.beforeRequest);
+  if (isAccountProviderRead(id)) {
+    return readAccountProvider(id, query, token, async (url, init) => {
+      await options.beforeRequest?.();
+      return fetchImpl(url, init);
+    });
+  }
   const request = connectionReadRequest(id, query, token, options);
   const response = await fetchImpl(request.url, request.init);
   if (!response.ok) {

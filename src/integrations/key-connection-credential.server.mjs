@@ -1,3 +1,5 @@
+import { approvedMcpServers } from "./approved-mcp-servers.server.mjs";
+
 // Credential bindings stay encrypted alongside their secrets. Chat inputs
 // cannot switch a linked credential to a different team, project, or region.
 export const MIXPANEL_ORIGINS = Object.freeze({
@@ -5,11 +7,19 @@ export const MIXPANEL_ORIGINS = Object.freeze({
   eu: "https://eu.mixpanel.com",
   in: "https://in.mixpanel.com",
 });
+export const WEBULL_ORIGINS = Object.freeze({
+  production: "https://api.webull.com",
+  sandbox: "https://api.sandbox.webull.com",
+});
+
+const numericId = /^[1-9][0-9]{0,19}$/u;
+const clientIdentifier = /^[A-Za-z0-9_-]{8,200}$/u;
 
 export function prepareKeyCredential(provider, input) {
   const field = (name) => (typeof input?.[name] === "string" ? input[name].trim() : "");
   const apiKey = field("apiKey");
-  if (!/^[!-~]{8,512}$/u.test(apiKey)) throw new Error("invalid_connection_credential");
+  const secretPattern = provider === "sp-global" ? /^[ -~]{8,512}$/u : /^[!-~]{8,512}$/u;
+  if (!secretPattern.test(apiKey)) throw new Error("invalid_connection_credential");
 
   let binding;
   let accountId = "personal-api-key";
@@ -42,6 +52,46 @@ export function prepareKeyCredential(provider, input) {
     if (!/^[!-~]{8,512}$/u.test(userKey)) throw new Error("invalid_connection_credential");
     binding = { userKey };
     labelSuffix = "real portfolio";
+  } else if (provider === "interactive-brokers") {
+    const queryId = field("queryId");
+    if (!numericId.test(queryId) || !/^[0-9]{8,100}$/u.test(apiKey))
+      throw new Error("invalid_connection_credential");
+    binding = { queryId };
+    accountId = queryId;
+    labelSuffix = `Flex query ending ${queryId.slice(-4)}`;
+  } else if (provider === "sp-global") {
+    const username = field("username");
+    if (!/^[A-Za-z0-9@._+\-]{1,200}$/u.test(username))
+      throw new Error("invalid_connection_credential");
+    binding = { username };
+    labelSuffix = "Capital IQ API";
+  } else if (provider === "webull") {
+    const appKey = field("appKey");
+    const environment = field("environment");
+    const accessToken = field("accessToken");
+    if (
+      !clientIdentifier.test(appKey) ||
+      !Object.hasOwn(WEBULL_ORIGINS, environment) ||
+      (accessToken && !/^[!-~]{8,512}$/u.test(accessToken))
+    )
+      throw new Error("invalid_connection_credential");
+    binding = { appKey, environment, accessToken };
+    accountId = environment;
+    labelSuffix = environment;
+  } else if (provider === "wix") {
+    const clientId = field("clientId");
+    if (!clientIdentifier.test(clientId)) throw new Error("invalid_connection_credential");
+    binding = { clientId };
+    accountId = clientId;
+    labelSuffix = `project ending ${clientId.slice(-6)}`;
+  } else if (provider === "custom-mcp") {
+    const serverId = field("serverId");
+    const server = approvedMcpServers().get(serverId);
+    if (!server || !/^[A-Za-z0-9._~+\/=-]{8,512}$/u.test(apiKey))
+      throw new Error("invalid_connection_credential");
+    binding = { serverId, bindingHash: server.fingerprint };
+    accountId = serverId;
+    labelSuffix = serverId;
   }
   return {
     token: binding ? JSON.stringify({ apiKey, ...binding }) : apiKey,
@@ -57,5 +107,8 @@ export function unpackKeyCredential(provider, token) {
   } catch {
     throw new Error("invalid_connection_credential");
   }
-  return JSON.parse(prepareKeyCredential(provider, value).token);
+  const validated = JSON.parse(prepareKeyCredential(provider, value).token);
+  if (provider === "custom-mcp" && validated.bindingHash !== value.bindingHash)
+    throw new Error("connection_changed_or_expired");
+  return validated;
 }

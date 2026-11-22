@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KovaGPT Health</string>
+    <string name="health_connect_title">Connect Health Connect</string>
+    <string name="health_connect_privacy">Kova reads the steps, sleep and heart-rate data you allow to show daily trends on this device. Readings stay on your device. You can change access for KovaGPT Health in Android Health Connect settings.</string>
+    <string name="health_connect_continue">Continue</string>
+    <string name="health_connect_unavailable">Update Health Connect or install it from Google Play, then try again.</string>
+</resources>

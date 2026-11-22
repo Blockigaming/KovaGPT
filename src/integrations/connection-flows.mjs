@@ -1,6 +1,29 @@
 // Client-safe descriptions of implemented read operations. Deployment readiness
 // and the user's granted scopes are checked separately on the server.
 export const BIGQUERY_READ_SCOPE = "https://www.googleapis.com/auth/bigquery.readonly";
+export const TANA_MCP_RESOURCE = "https://home.tana.inc/mcp";
+
+export function tanaOAuthEndpoint(value, kind) {
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === "https:" &&
+      (url.hostname === "tana.inc" || url.hostname.endsWith(".tana.inc")) &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      !url.hash &&
+      (kind === "authorize"
+        ? /\/authorize\/?$/u.test(url.pathname)
+        : /\/token\/?$/u.test(url.pathname)) &&
+      (kind === "authorize" || !url.search)
+    )
+      return url.href;
+  } catch {
+    // Invalid configuration stays disabled.
+  }
+  return null;
+}
 
 export function calendlyUserUri(value) {
   return typeof value === "string" &&
@@ -12,6 +35,55 @@ export function calendlyUserUri(value) {
 export const GRANOLA_NOTE_READ = "granola:notes:list";
 
 export const CONNECTION_FLOWS = {
+  tana: {
+    provider: "tana",
+    scopes: ["tana:mcp:search"],
+    tool: "tana_search_items",
+    label: "Tana",
+    description: "Search notes and workspace items authorized in the linked Tana account.",
+  },
+  "custom-mcp": {
+    provider: "custom-mcp",
+    authentication: "api-key",
+    scopes: ["mcp:reviewed-tool:read"],
+    tool: "custom_mcp_read",
+    label: "Custom MCP",
+    description: "Send one text query to the reviewed read tool on the selected MCP server.",
+  },
+  "interactive-brokers": {
+    provider: "interactive-brokers",
+    authentication: "api-key",
+    scopes: ["ibkr:flex:positions:read"],
+    tool: "ibkr_read_flex_positions",
+    label: "Interactive Brokers",
+    description:
+      "Read the symbol, currency and quantity of open positions in your selected Activity Flex report. Use 'positions'.",
+  },
+  "sp-global": {
+    provider: "sp-global",
+    authentication: "api-key",
+    scopes: ["spglobal:company:read"],
+    tool: "sp_global_match_company",
+    label: "S&P Global",
+    description: "Match a company name to a Capital IQ company and read its industry and country.",
+  },
+  webull: {
+    provider: "webull",
+    authentication: "api-key",
+    scopes: ["webull:accounts:list"],
+    tool: "webull_list_accounts",
+    label: "Webull",
+    description: "List account types authorized for the linked OpenAPI app. Use 'accounts'.",
+  },
+  wix: {
+    provider: "wix",
+    authentication: "api-key",
+    scopes: ["wix:site:properties:read"],
+    tool: "wix_read_site_properties",
+    label: "Wix",
+    description:
+      "Read the linked Wix Headless project's site business name and locale. Use 'site'.",
+  },
   meltwater: {
     provider: "meltwater",
     authentication: "api-key",
@@ -249,6 +321,7 @@ export function safeConnectionLink(value) {
 }
 
 export function connectionAuthorizationUrl(provider, value) {
+  if (provider === "tana") return tanaOAuthEndpoint(value, "authorize");
   const endpoints = {
     stripe: "https://marketplace.stripe.com/oauth/v2/authorize",
     gamma: "https://auth.gamma.app/oauth/authorize",

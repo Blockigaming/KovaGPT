@@ -12,6 +12,7 @@ import {
   readConnection,
 } from "../../src/integrations/connection-read.server.mjs";
 import { packSalesforceCredential } from "../../src/integrations/salesforce-credential.server.mjs";
+import { isAccountProviderRead } from "../../src/integrations/account-provider-read.server.mjs";
 import {
   selectOAuthTokens,
   oauthTokenRequest,
@@ -165,6 +166,8 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
       .token,
   };
   for (const id of Object.keys(CONNECTION_FLOWS)) {
+    // Account adapters with multi-step requests have transport-level fixtures of their own.
+    if (isAccountProviderRead(id) || ["tana", "custom-mcp"].includes(id)) continue;
     const token = credentials[id] ?? (id === "granola" ? "grn_test_only" : "fake-token");
     const req = connectionReadRequest(
       id,

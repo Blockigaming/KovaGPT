@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as flows from "../../src/integrations/connection-flows.mjs";
+import * as mcpReads from "../../src/integrations/mcp-provider-read.server.mjs";
 import * as salesforceCredentials from "../../src/integrations/salesforce-credential.server.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "../../src/lib/provider-response.server.mjs";
@@ -114,6 +115,7 @@ function fixture() {
       consumeApplicationRateLimit: async () => ({ allowed: state.allowRate, status: "limited" }),
     },
     "./connection-flows.mjs": flows,
+    "./mcp-provider-read.server.mjs": mcpReads,
     "./oauth-providers.server": {
       configuredKeyProviders: () => (state.configured ? [{ id: "granola" }] : []),
       configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
@@ -238,9 +240,7 @@ test("Calendly chat relies on the stored provider identity and discards output a
   assert.equal(JSON.stringify(context).includes(user), false);
   const args = { account_id: f.state.row.id, query: "upcoming", calendlyUser: "attacker-supplied" };
   await f.runConnectedTool("owner-a", "calendly_search_events", args, context);
-  assert.deepEqual(f.calls.find(([operation]) => operation === "read").at(-1), {
-    calendlyUser: user,
-  });
+  assert.equal(f.calls.find(([operation]) => operation === "read").at(-1).calendlyUser, user);
   f.state.onRead = () => {
     f.state.row.provider_account_id = "https://api.calendly.com/users/different-user";
   };
@@ -610,7 +610,7 @@ test("Salesforce refreshes only after a rejected read and pins the renewed ident
     salesforceCredentials.unpackSalesforceCredential(reads[1][3]).access_token,
     "renewed-token",
   );
-  assert.deepEqual(reads[1][4], { recordType: "opportunities" });
+  assert.equal(reads[1][4].recordType, "opportunities");
   assert.equal(context.accounts[0].updated_at, f.state.row.updated_at);
   assert.equal("access_token_ciphertext" in context.accounts[0], false);
 });

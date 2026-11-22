@@ -48,9 +48,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "tana",
     label: "Tana",
-    description: "Planned connection for structured notes, tasks and workspace context.",
+    description: "Search notes and workspace items using your Tana authorization.",
     category: "Notes & Docs",
-    status: "planned",
+    status: "setup_required",
     domain: "tana.inc",
   },
   {
@@ -105,10 +105,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "interactive-brokers",
     label: "Interactive Brokers (IBKR)",
-    description:
-      "Planned Interactive Brokers connection. Account eligibility and API access are unverified.",
+    description: "Read open positions from your selected Activity Flex report.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "interactivebrokers.com",
   },
   {
@@ -122,9 +121,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "sp-global",
     label: "S&P Global",
-    description: "Planned S&P Global connection. Licensed data access must be verified.",
+    description: "Find companies by name with licensed S&P Capital IQ API access.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "spglobal.com",
   },
   {
@@ -138,18 +137,17 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "webull",
     label: "Webull",
-    description: "Planned Webull connection. Account eligibility and API access are unverified.",
+    description: "List account types available to your Webull OpenAPI app.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "webull.com",
   },
   {
     id: "custom-mcp",
     label: "Custom MCP connectors",
-    description:
-      "Bring your own MCP server. Server registration, authentication and tool review are not implemented yet.",
+    description: "Connect an approved MCP server and query its reviewed read tool.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "",
   },
   {
@@ -164,7 +162,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "apple-health",
     label: "Apple Health",
-    description: "Requires native iOS HealthKit implementation and on-device permission.",
+    description: "Read approved HealthKit trends on the KovaGPT Health iOS app.",
     category: "Productivity",
     status: "planned",
     domain: "apple.com",
@@ -172,7 +170,8 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "android-health-connect",
     label: "Android Health Connect",
-    description: "Requires native Android Health Connect implementation and on-device permission.",
+    description:
+      "Read approved steps, sleep, and heart-rate trends on the KovaGPT Health Android app.",
     category: "Productivity",
     status: "planned",
     domain: "android.com",
@@ -2721,9 +2720,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "wix",
     label: "Wix",
-    description: "Planned Wix integration for website context.",
+    description: "Read the business name and locale from your Wix Headless project.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "wix.com",
   },
   {

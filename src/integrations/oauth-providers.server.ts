@@ -1,7 +1,14 @@
-import { BIGQUERY_READ_SCOPE, CONNECTION_FLOWS, calendlyUserUri } from "./connection-flows.mjs";
+import {
+  BIGQUERY_READ_SCOPE,
+  CONNECTION_FLOWS,
+  calendlyUserUri,
+  tanaOAuthEndpoint,
+} from "./connection-flows.mjs";
+import { approvedMcpServers } from "./approved-mcp-servers.server.mjs";
 import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
 
 export type OAuthProviderId =
+  | "tana"
   | "stripe"
   | "gamma"
   | "calendly"
@@ -31,6 +38,7 @@ export type OAuthProviderAdapter = {
   requiredScopes: string[];
   optionalScopes: string[];
   usesPkce: boolean;
+  tokenClientAuth?: "client_secret_post" | "client_secret_basic" | "none";
   profileEndpoint?: string;
   profileId: (value: Record<string, unknown>) => string;
   profileLabel: (value: Record<string, unknown>) => string;
@@ -40,6 +48,28 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 const teamUser = (value: unknown) =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  tana: {
+    id: "tana",
+    name: "Tana",
+    get authorizationEndpoint() {
+      const endpoint = tanaOAuthEndpoint(process.env.TANA_MCP_AUTHORIZATION_ENDPOINT, "authorize");
+      return endpoint && !new URL(endpoint).search ? endpoint : "";
+    },
+    get tokenEndpoint() {
+      return tanaOAuthEndpoint(process.env.TANA_MCP_TOKEN_ENDPOINT, "token") ?? "";
+    },
+    get tokenClientAuth() {
+      const method = process.env.TANA_MCP_TOKEN_AUTH_METHOD;
+      return method === "none" || method === "client_secret_basic" ? method : "client_secret_post";
+    },
+    clientIdEnv: "TANA_MCP_CLIENT_ID",
+    clientSecretEnv: "TANA_MCP_CLIENT_SECRET",
+    requiredScopes: CONNECTION_FLOWS.tana.scopes,
+    optionalScopes: [],
+    usesPkce: true,
+    profileId: () => "tana-mcp",
+    profileLabel: () => "Tana account",
+  },
   stripe: {
     id: "stripe",
     name: "Stripe",
@@ -333,6 +363,10 @@ export function configuredKeyProviders() {
   if (!credentialVaultConfigured()) return [];
   return Object.values(CONNECTION_FLOWS)
     .filter((flow) => flow.authentication === "api-key")
+    .filter(
+      (flow) => flow.provider !== "sp-global" || process.env.KOVA_SP_GLOBAL_ENABLED === "true",
+    )
+    .filter((flow) => flow.provider !== "custom-mcp" || approvedMcpServers().size > 0)
     .map(({ provider, label, scopes }) => ({
       id: provider,
       name: label,
@@ -346,7 +380,9 @@ export function configuredOAuthProviders() {
   return Object.values(OAUTH_PROVIDERS).filter((provider) => {
     const id = process.env[provider.clientIdEnv];
     const secret = process.env[provider.clientSecretEnv];
-    if (!id || !secret) return false;
-    return provider.id !== "stripe" || /^sk_(test|live)_[A-Za-z0-9]+$/u.test(secret);
+    if (!id || (!secret && provider.tokenClientAuth !== "none")) return false;
+    if (provider.id === "tana")
+      return Boolean(provider.authorizationEndpoint && provider.tokenEndpoint);
+    return provider.id !== "stripe" || /^sk_(test|live)_[A-Za-z0-9]+$/u.test(secret ?? "");
   });
 }

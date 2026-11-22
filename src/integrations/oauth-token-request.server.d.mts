@@ -5,6 +5,7 @@ export function oauthTokenRequest(input: {
   code: string;
   redirectUri: string;
   verifier?: string;
+  tokenClientAuth?: "client_secret_post" | "client_secret_basic" | "none";
 }): RequestInit;
 export function selectOAuthTokens(
   providerId: string,
@@ -21,6 +22,7 @@ export function oauthRefreshRequest(input: {
   clientId: string | undefined;
   clientSecret: string | undefined;
   refreshToken: string;
+  tokenClientAuth?: "client_secret_post" | "client_secret_basic" | "none";
 }): RequestInit;
 export function selectRefreshTokens(
   providerId: string,

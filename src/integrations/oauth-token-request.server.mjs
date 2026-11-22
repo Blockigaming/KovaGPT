@@ -1,4 +1,4 @@
-import { calendlyUserUri } from "./connection-flows.mjs";
+import { calendlyUserUri, TANA_MCP_RESOURCE } from "./connection-flows.mjs";
 
 // Notion's token endpoint uses HTTP Basic client authentication and a JSON
 // payload, unlike the form-encoded exchanges used by the other adapters.
@@ -10,7 +10,17 @@ export function oauthTokenRequest({
   code,
   redirectUri,
   verifier,
+  tokenClientAuth,
 }) {
+  if (providerId === "tana") {
+    if (!verifier) throw new Error("oauth_pkce_verifier_missing");
+    return tanaTokenRequest(clientId, clientSecret, tokenClientAuth, {
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: verifier,
+    });
+  }
   if (!clientId || !clientSecret) throw new Error("provider_not_configured");
   if (providerId === "stripe")
     return stripeAppTokenRequest(clientSecret, { grant_type: "authorization_code", code });
@@ -46,6 +56,33 @@ export function oauthTokenRequest({
       ...(["oura", "whoop"].includes(providerId) ? { "User-Agent": "KovaGPT/1.0" } : {}),
     },
     body,
+  };
+}
+
+function tanaTokenRequest(clientId, secret, method, fields) {
+  if (!clientId || (method !== "none" && !secret)) throw new Error("provider_not_configured");
+  const basic = method === "client_secret_basic";
+  const encode = (value) => new URLSearchParams({ _: value }).toString().slice(2);
+  return {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...(basic
+        ? {
+            Authorization:
+              "Basic " + Buffer.from(encode(clientId) + ":" + encode(secret)).toString("base64"),
+          }
+        : {}),
+    },
+    body: new URLSearchParams({
+      ...fields,
+      resource: TANA_MCP_RESOURCE,
+      ...(basic ? {} : { client_id: clientId }),
+      ...(basic || method === "none" ? {} : { client_secret: secret }),
+    }),
+    redirect: "error",
+    signal: AbortSignal.timeout(15_000),
   };
 }
 
@@ -96,6 +133,8 @@ export function selectOAuthTokens(providerId, payload) {
       provider_account_id: `${tokens.livemode ? "live" : "test"}:${tokens.stripe_user_id}`,
     };
   }
+  if (providerId === "tana" && String(tokens.token_type).toLowerCase() !== "bearer")
+    throw new Error("oauth_access_token_missing");
   let declaredScopes = tokens.scope;
   if (providerId === "hubspot") {
     declaredScopes =
@@ -122,7 +161,20 @@ export function selectOAuthTokens(providerId, payload) {
   };
 }
 
-export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
+export function oauthRefreshRequest({
+  providerId,
+  clientId,
+  clientSecret,
+  refreshToken,
+  tokenClientAuth,
+}) {
+  if (providerId === "tana") {
+    if (!refreshToken) throw new Error("refresh_not_configured");
+    return tanaTokenRequest(clientId, clientSecret, tokenClientAuth, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
+  }
   if (
     ![
       "microsoft",
@@ -192,7 +244,7 @@ export function selectRefreshTokens(providerId, payload) {
   const tokens = selectOAuthTokens(providerId === "slack" ? "refresh" : providerId, payload);
   // Salesforce and Notion may omit expires_in. A rejected API read triggers
   // a claimed refresh instead of inventing a lifetime for those tokens.
-  if (!tokens.expires_in && !["salesforce", "notion"].includes(providerId))
+  if (!tokens.expires_in && !["salesforce", "notion", "tana"].includes(providerId))
     throw new Error("refresh_expiry_missing");
   if (["notion", "box", "canva", "calendly", "gamma"].includes(providerId) && !tokens.refresh_token)
     throw new Error("refresh_token_missing");

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import { OURA_SCOPES } from "../../src/health/oura-metrics.mjs";
+import * as approvedMcp from "../../src/integrations/approved-mcp-servers.server.mjs";
+import * as mcpReads from "../../src/integrations/mcp-provider-read.server.mjs";
 import * as credentials from "../../src/integrations/salesforce-credential.server.mjs";
 import * as connectionFlows from "../../src/integrations/connection-flows.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
@@ -124,6 +126,7 @@ function fixture() {
     "src/integrations/oauth-providers.server.ts",
     {
       "./connection-flows.mjs": connectionFlows,
+      "./approved-mcp-servers.server.mjs": approvedMcp,
       "@/health/oura-metrics.mjs": { OURA_SCOPES },
     },
     {
@@ -155,6 +158,7 @@ function fixture() {
     },
     "./oauth-token-request.server.mjs": tokenRequests,
     "./connection-flows.mjs": connectionFlows,
+    "./mcp-provider-read.server.mjs": mcpReads,
     "@/lib/provider-response.server.mjs": { readProviderJsonObject },
     "@/health/health-read.server.mjs": {
       confirmedHealthScopes: () => {

@@ -12,6 +12,7 @@ import {
 } from "./oauth-providers.server";
 import { decryptCredential, encryptCredential } from "./credential-vault.server";
 import { readConnection } from "./connection-read.server.mjs";
+import { verifyTanaRead } from "./mcp-provider-read.server.mjs";
 import { oauthRefreshRequest, selectRefreshTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
@@ -118,7 +119,7 @@ export async function refreshExpiringConnection(
   if (
     error ||
     !row ||
-    (!(forceRejectedRead && ["salesforce", "notion"].includes(row.provider_id)) &&
+    (!(forceRejectedRead && ["salesforce", "notion", "tana"].includes(row.provider_id)) &&
       (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
     !row.refresh_token_ciphertext ||
     ![
@@ -135,6 +136,7 @@ export async function refreshExpiringConnection(
       "figma",
       "calendly",
       "gamma",
+      "tana",
       "google-bigquery",
       "hubspot",
     ].includes(row.provider_id)
@@ -193,6 +195,7 @@ export async function refreshExpiringConnection(
         clientId: process.env[provider.clientIdEnv],
         clientSecret: process.env[provider.clientSecretEnv],
         refreshToken,
+        ...(provider.id === "tana" ? { tokenClientAuth: provider.tokenClientAuth } : {}),
       }),
     );
     if (!response.ok) {
@@ -224,6 +227,10 @@ export async function refreshExpiringConnection(
       if (identity !== row.provider_account_id) throw new Error("refresh_binding_changed");
       await ensureRefreshLease();
     }
+    if (provider.id === "tana") {
+      await verifyTanaRead(tokens.access_token, fetch, ensureRefreshLease);
+      await ensureRefreshLease();
+    }
     const packed = oldSalesforceCredential
       ? await renewSalesforceCredential(
           oldSalesforceCredential,
@@ -235,7 +242,11 @@ export async function refreshExpiringConnection(
     const newCiphertext = await encryptCredential(packed);
     await ensureRefreshLease();
     const scopes =
-      tokens.scope === undefined ? row.granted_scopes : tokens.scope.split(/[ ,]+/).filter(Boolean);
+      provider.id === "tana"
+        ? provider.requiredScopes
+        : tokens.scope === undefined
+          ? row.granted_scopes
+          : tokens.scope.split(/[ ,]+/).filter(Boolean);
     const { data: renewed, error: updateError } = await db
       .from("integration_linked_accounts")
       .update({
@@ -261,7 +272,7 @@ export async function refreshExpiringConnection(
       .maybeSingle();
     return updateError || !renewed
       ? null
-      : forceRejectedRead && ["salesforce", "notion"].includes(provider.id)
+      : forceRejectedRead && ["salesforce", "notion", "tana"].includes(provider.id)
         ? { ...renewed, renewalCiphertext: newCiphertext }
         : renewed;
   } catch {
@@ -409,6 +420,7 @@ export async function runConnectionAccountSearch(
   let token = await decryptCredential(account.access_token_ciphertext);
   await ensureCurrentBinding();
   const options = {
+    beforeRequest: ensureCurrentBinding,
     ...(id === "salesforce"
       ? { recordType: args.record_type as SalesforceRecordType | undefined }
       : {}),
@@ -419,7 +431,7 @@ export async function runConnectionAccountSearch(
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
   } catch (error) {
     if (
-      !["salesforce", "notion"].includes(id) ||
+      !["salesforce", "notion", "tana"].includes(id) ||
       !(error instanceof Error) ||
       error.message !== "connection_reauthorization_required"
     )

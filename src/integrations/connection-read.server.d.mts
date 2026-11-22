@@ -6,6 +6,7 @@ export type ConnectionReadResult = {
 type ConnectionReadOptions = {
   recordType?: "accounts" | "contacts" | "opportunities";
   calendlyUser?: string;
+  beforeRequest?: () => Promise<void>;
 };
 export function connectionReadRequest(
   id: string,

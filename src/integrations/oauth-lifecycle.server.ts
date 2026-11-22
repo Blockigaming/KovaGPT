@@ -9,7 +9,8 @@ import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { oauthTokenRequest, selectOAuthTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
-import { CONNECTION_FLOWS, hasConnectionScopes } from "./connection-flows.mjs";
+import { CONNECTION_FLOWS, hasConnectionScopes, TANA_MCP_RESOURCE } from "./connection-flows.mjs";
+import { verifyTanaRead } from "./mcp-provider-read.server.mjs";
 import { confirmedHealthScopes } from "@/health/health-read.server.mjs";
 import {
   packSalesforceCredential,
@@ -96,7 +97,7 @@ export async function beginOAuth(input: {
     state,
   });
   if (provider.id === "stripe") params.delete("response_type");
-  if (scopes.length && provider.id !== "stripe")
+  if (scopes.length && !["stripe", "tana"].includes(provider.id))
     params.set(
       provider.id === "slack" ? "user_scope" : "scope",
       scopes.join(["slack", "linear"].includes(provider.id) ? "," : " "),
@@ -107,6 +108,7 @@ export async function beginOAuth(input: {
     if (optional.length) params.set("optional_scope", optional.join(" "));
   }
   if (provider.id === "gamma") params.set("resource", "https://public-api.gamma.app");
+  if (provider.id === "tana") params.set("resource", TANA_MCP_RESOURCE);
   if (provider.id === "microsoft") params.set("response_mode", "query");
   if (loginHint) params.set("login_hint", loginHint);
   if (provider.id === "google-bigquery") {
@@ -137,6 +139,8 @@ export async function completeOAuth(input: {
   browserNonce: string;
 }) {
   const provider = OAUTH_PROVIDERS[input.providerId];
+  if (provider.id === "tana" && !configuredOAuthProviders().some(({ id }) => id === provider.id))
+    throw new Error("provider_not_configured");
   const db = admin();
   const { data: record } = await db
     .from("integration_oauth_states")
@@ -168,6 +172,7 @@ export async function completeOAuth(input: {
     redirectUri,
     clientId: process.env[provider.clientIdEnv],
     clientSecret: process.env[provider.clientSecretEnv],
+    ...(provider.id === "tana" ? { tokenClientAuth: provider.tokenClientAuth } : {}),
     verifier: record.pkce_verifier_ciphertext
       ? await decryptCredential(record.pkce_verifier_ciphertext)
       : undefined,
@@ -215,6 +220,11 @@ export async function completeOAuth(input: {
       throw new Error("oauth_profile_identity_mismatch");
   }
   await assertLockdownAllows(db, record.owner_id, "connector_write");
+  if (provider.id === "tana") {
+    await verifyTanaRead(tokens.access_token, fetch, () =>
+      assertLockdownAllows(db, record.owner_id, "connector_write"),
+    );
+  }
   let profile: Record<string, unknown> = { verifiedAccountId: tokens.provider_account_id };
   if (provider.profileEndpoint) {
     const profileResponse = await fetch(provider.profileEndpoint, {
@@ -260,7 +270,9 @@ export async function completeOAuth(input: {
         fetch,
         () => assertLockdownAllows(db, record.owner_id, "connector_write"),
       )
-    : (tokens.scope ?? record.requested_scopes.join(" ")).split(/[ ,]+/).filter(Boolean);
+    : provider.id === "tana"
+      ? [...provider.requiredScopes]
+      : (tokens.scope ?? record.requested_scopes.join(" ")).split(/[ ,]+/).filter(Boolean);
   await assertLockdownAllows(db, record.owner_id, "connector_write");
   const { data: account, error } = await db
     .from("integration_linked_accounts")
