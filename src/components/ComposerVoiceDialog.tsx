@@ -924,12 +924,14 @@ export function ComposerVoiceDialog({
       const active = { id: crypto.randomUUID(), listeners: new AbortController() };
       nativeRecording.current = active;
       const { signal } = active.listeners;
+      let completed = false;
       window.addEventListener(
         "kova-native-dictation",
         (event) => {
           const result = (event as CustomEvent<{ id?: string; audio?: string }>).detail;
           if (result?.id !== active.id || nativeRecording.current !== active || !isCurrent(scope))
             return;
+          completed = true;
           clearRecordingTimers();
           updatePhase("stopping");
           const deliver = () => {
@@ -953,12 +955,7 @@ export function ComposerVoiceDialog({
       const started = await native
         .postMessage({ action: "start", id: active.id })
         .catch(() => false);
-      if (
-        !isCurrent(scope) ||
-        nativeRecording.current !== active ||
-        phaseRef.current !== "requesting"
-      )
-        return;
+      if (!isCurrent(scope) || nativeRecording.current !== active || completed) return;
       if (!started) {
         failOperation(
           "The microphone could not start. Check KovaGPT’s microphone permission in Settings.",
