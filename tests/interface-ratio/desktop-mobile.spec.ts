@@ -189,7 +189,7 @@ for (const state of states) {
       const logo = await welcomeLogo.boundingBox();
       expect(logo!.width).toBeCloseTo(expectedSize, 1);
       expect(logo!.height).toBeCloseTo(expectedSize, 1);
-      expect(row(".spec400-composer").radius).toBe("21px");
+      expect(row(".spec400-composer").radius).toBe("24px");
       unchanged(".spec400-composer-input", ["font"]);
       expect(row(".spec400-composer-input").line).toBe("24px");
       expect(
@@ -205,7 +205,7 @@ for (const state of states) {
     if (state.name === "conversation") {
       unchanged(".prose-chat", ["font"], 1);
       expect(row(".prose-chat", 1).line).toBe("25px");
-      expect(row(".spec400-composer").radius).toBe("26px");
+      expect(row(".spec400-composer").radius).toBe("24px");
     }
     if (state.name === "library") {
       unchanged(".kova-file-filters", ["padding", "radius"]);

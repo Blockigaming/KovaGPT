@@ -292,7 +292,7 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
   await expect.poll(async () => (await shell.boundingBox())?.height).toBe(visibleHeight);
   if (compactPhone) {
     const composerFrame = page.locator(".spec400-composer:visible");
-    await expect(composerFrame).toHaveCSS("border-radius", "20px");
+    await expect(composerFrame).toHaveCSS("border-radius", "24px");
     const composer = (await composerFrame.boundingBox())!;
     const logo = page.locator(".kova-empty-chat .kova-home-welcome-logo");
     await expect(logo).toBeVisible();
@@ -301,8 +301,7 @@ test("a reduced visual viewport keeps the mobile composer reachable", async ({ p
     expect(logoBox.y).toBeGreaterThanOrEqual(shellBox.y);
     expect(logoBox.y + logoBox.height).toBeLessThanOrEqual(composer.y);
     const keyboardGap = visibleHeight - composer.y - composer.height;
-    expect(keyboardGap).toBeGreaterThanOrEqual(12);
-    expect(keyboardGap).toBeLessThanOrEqual(16);
+    expect(keyboardGap).toBeCloseTo(8, 0);
   }
   const send = page.getByRole("button", { name: "Send message" });
   const sendBox = (await send.boundingBox())!;

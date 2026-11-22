@@ -10,12 +10,15 @@ on:
       - src/components/HomeChat*.tsx
       - src/components/ChatInput.tsx
       - src/components/Sidebar.tsx
+      - src/components/ChatHistorySync.tsx
+      - src/components/SettingsDialog.tsx
       - src/components/auth/ClerkSafe.tsx
       - src/routes/__root.tsx
       - src/routes/index.tsx
       - src/styles/app-finish.css
       - src/styles/phone-layout.css
       - src/styles/phone-equivalence.css
+      - src/styles/settings-reference.css
       - src/styles.css
       - tests/e2e/mobile-shell-ui-truth.spec.ts
       - tests/e2e/ui-quality.spec.ts
@@ -135,7 +138,7 @@ jobs:
       - name: Verify keyboard, rotation and reading preferences
         run: >-
           npx --no-install playwright test --config=playwright.interface-ratio.config.ts
-          --project=phone-320 --project=phone-390 --project=landscape-844
+          --project=phone-320 --project=phone-390 --project=landscape-844 --project=tablet-768
       - name: Record source revision
         if: always()
         run: |

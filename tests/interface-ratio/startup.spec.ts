@@ -20,7 +20,7 @@ function checkOpeningLayout(
   { width, height }: { width: number; height: number },
 ) {
   if (width >= 768) return;
-  expect(first.composer.width).toBeCloseTo(width - 32, 0);
+  expect(first.composer.width).toBeCloseTo(width - 24, 0);
   expect(height - first.composer.y - first.composer.height).toBeLessThanOrEqual(24);
   const center = first.heading.y + first.heading.height / 2;
   const freeSpaceCenter = (first.header.y + first.header.height + first.composer.y) / 2;

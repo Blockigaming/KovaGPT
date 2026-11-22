@@ -21,8 +21,11 @@ async function open() {
       );
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = request.onblocked = () =>
+    request.onerror = () => reject(new Error("chat_history_device_unavailable"));
+    request.onblocked = () => {
+      request.onsuccess = () => request.result.close();
       reject(new Error("chat_history_device_unavailable"));
+    };
   });
 }
 function completion(tx) {
@@ -46,8 +49,8 @@ export async function loadChatHistoryDevice(ownerId) {
     const [meta, rows] = await Promise.all([
       result(tx.objectStore("meta").get(ownerId)),
       result(tx.objectStore("records").index("ownerId").getAll(IDBKeyRange.only(ownerId), 10001)),
+      done,
     ]);
-    await done;
     if (!meta) return null;
     if (rows.length > 10000) throw new Error("chat_history_device_unavailable");
     return { ...meta, records: Object.fromEntries(rows.map(({ id, record }) => [id, record])) };

@@ -123,6 +123,22 @@
     --phone-gutter: var(--kova-phone-space-16);
   }
 
+  .kova-assistant[data-ui="modern"] {
+    --phone-composer-gutter: var(--kova-phone-space-12);
+    --phone-composer-bottom: max(14px, calc(var(--safe-bottom) + 6px));
+    --phone-composer-radius: 24px;
+  }
+
+  .kova-assistant .kova-empty-chat {
+    padding-inline: max(var(--phone-composer-gutter), var(--safe-left))
+      max(var(--phone-composer-gutter), var(--safe-right));
+  }
+
+  .kova-assistant .spec400-composer-dock {
+    padding-inline: calc(max(var(--phone-composer-gutter), var(--safe-left)) - 4px)
+      calc(max(var(--phone-composer-gutter), var(--safe-right)) - 4px);
+  }
+
   /* Hash targets must not move while native anchor scrolling measures them.
      The reveal animation on a section and its parent otherwise shifts the
      final heading under the sticky public header. */
@@ -201,7 +217,7 @@
   }
 
   .kova-assistant .kova-empty-composer .spec400-composer {
-    --chat-composer-corner: 21px;
+    --chat-composer-corner: var(--phone-composer-radius);
     --composer-text-inset: 6px;
     min-height: 0 !important;
     padding-block-start: var(--kova-phone-space-4);
@@ -210,15 +226,15 @@
   }
 
   .kova-assistant[data-compact-chat-home] .kova-empty-composer {
-    padding-block-end: calc(max(8px, var(--safe-bottom)) + 6px);
+    padding-block-end: var(--phone-composer-bottom);
   }
 
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] {
-    padding-block-end: calc(max(6px, var(--safe-bottom)) + 6px);
+    padding-block-end: var(--phone-composer-bottom);
   }
 
   .kova-assistant .spec400-chat-input[data-composer-surface="conversation"] .spec400-composer {
-    --chat-composer-corner: 26px;
+    --chat-composer-corner: var(--phone-composer-radius);
     --composer-text-inset: 6px;
     padding-block: 8px;
   }
@@ -364,7 +380,7 @@
   .kova-assistant[data-keyboard-open="true"] .kova-empty-composer {
     flex: 0 1 auto;
     margin-block-start: auto;
-    padding-block: 2px 12px;
+    padding-block: 2px 8px;
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-chat-input {
@@ -377,7 +393,7 @@
   }
 
   .kova-assistant[data-keyboard-open="true"] .spec400-composer-dock > .spec400-chat-input {
-    padding-block-end: 10px;
+    padding-block-end: 8px;
   }
 
   .kova-assistant[data-keyboard-open="true"]
@@ -389,7 +405,6 @@
     min-height: calc(var(--keyboard-content-min) + 50px + var(--composer-action-inset)) !important;
     padding-block-start: 2px;
     gap: 2px;
-    border-radius: 20px;
     overflow: hidden;
   }
 
@@ -845,9 +860,15 @@
   }
   .kova-chat-search-field {
     border-radius: 14px;
+    padding-inline-start: 2px;
+  }
+  .kova-chat-search-field button {
+    flex: 0 0 44px;
   }
   .kova-chat-search-field input {
-    font-size: 1rem;
+    padding-block: 3px;
+    font-size: max(16px, 1rem);
+    line-height: 1.25;
   }
   .kova-chat-search-results button {
     min-height: 56px;
@@ -1018,8 +1039,5 @@
   .kova-chat-search-field .kova-chat-search-clear svg {
     width: 16px;
     height: 16px;
-  }
-  .kova-chat-search-field button:last-child {
-    order: -1;
   }
 }

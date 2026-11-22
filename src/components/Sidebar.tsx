@@ -1064,6 +1064,11 @@ export function Sidebar({
   const searchResults = query
     ? searchConversations(savedConversations, query, { matchAny: true })
     : null;
+  const searchClose = (
+    <button type="button" aria-label="Close chat search" onClick={closeChatSearch}>
+      {mobileViewport ? <ArrowLeft aria-hidden="true" /> : <X aria-hidden="true" />}
+    </button>
+  );
   const pinned = savedConversations
     .filter((conversation) => conversation.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
@@ -2369,6 +2374,7 @@ export function Sidebar({
           }}
         >
           <div className="kova-chat-search-field">
+            {mobileViewport && searchClose}
             <SearchGlyph aria-hidden="true" />
             <input
               ref={searchInputRef}
@@ -2391,10 +2397,13 @@ export function Sidebar({
                 <X aria-hidden="true" />
               </button>
             )}
-            <button type="button" aria-label="Close chat search" onClick={closeChatSearch}>
-              {mobileViewport ? <ArrowLeft aria-hidden="true" /> : <X aria-hidden="true" />}
-            </button>
+            {!mobileViewport && searchClose}
           </div>
+          {isLoaded && signedIn && searchResults && (
+            <span className="sr-only" role="status">
+              {searchResults.length} matching {searchResults.length === 1 ? "chat" : "chats"}
+            </span>
+          )}
           <div className="kova-chat-search-results">
             {mobileViewport && !online && signedIn && (
               <p role="status">Offline. Searching chats available on this device.</p>

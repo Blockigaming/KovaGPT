@@ -1,7 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { fixture } from "../e2e/actual-app-fixture";
+import { waitForCommittedChat } from "../e2e/chat-history-commit";
 import { coreFixture } from "../e2e/core-app-fixture";
-import { usesSidebarDrawer } from "../e2e/current-ui";
+import { revealSidebar, usesSidebarDrawer } from "../e2e/current-ui";
 import { waitForKovaHydration } from "../e2e/hydration";
 
 async function expectReachable(control: Locator, top: number, bottom: number) {
@@ -64,6 +65,78 @@ async function simulateKeyboard(page: Page, height: number, top: number) {
   await expect(page.locator("html")).toHaveAttribute("data-kova-keyboard");
 }
 
+test("a transient history storage failure recovers without reloading or losing the draft", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "phone-390");
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await fixture(page, "dark", true, true);
+  await page.addInitScript(() => {
+    const open = indexedDB.open.bind(indexedDB);
+    let failOnce = true;
+    indexedDB.open = (name, version) => {
+      if (name === "kovagpt-chat-history-v1" && failOnce) {
+        failOnce = false;
+        throw new DOMException("Storage temporarily unavailable", "UnknownError");
+      }
+      return version === undefined ? open(name) : open(name, version);
+    };
+  });
+  await page.route("**/api/chat", (route) =>
+    route.fulfill({
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Recovered chat reply"}}]}\n\ndata: [DONE]\n\n',
+    }),
+  );
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  const draft = "Keep this draft across a browser storage retry.";
+  const retry = page.getByRole("button", { name: "Retry chat sync", exact: true });
+  await expect(retry).toBeEnabled();
+  await input.fill(draft);
+  const send = page.getByRole("button", { name: "Send message", exact: true });
+  await expect(send).toBeDisabled();
+  await retry.click();
+  await expect(retry).toBeHidden();
+  await expect(input).toHaveValue(draft);
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(page.getByText("Recovered chat reply", { exact: true })).toBeVisible();
+  await waitForCommittedChat(page, draft);
+  expect(errors).toEqual([]);
+});
+
+test("chat search keeps the back button and message matches reachable above the keyboard", async ({
+  page,
+}, info) => {
+  test.skip(!["phone-320", "phone-390", "landscape-844"].includes(info.project.name));
+  await fixture(page, "dark", true, true);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const drawer = await revealSidebar(page);
+  const trigger = drawer.getByRole("button", { name: "Search chats", exact: true });
+  await trigger.click();
+  const search = page.getByRole("dialog", { name: "Search chats", exact: true });
+  const field = search.getByRole("searchbox");
+  const back = search.getByRole("button", { name: "Close chat search", exact: true });
+  await expect(field).toBeFocused();
+  const height = Math.min(330, page.viewportSize()!.height - 140);
+  await simulateKeyboard(page, height, 12);
+  await field.fill("practical release unrelatedword");
+  await expect(search.getByText("1 matching chat", { exact: true })).toBeAttached();
+  const match = search.getByRole("button", { name: "Open chat Composer review chat", exact: true });
+  await expect(match).toContainText("practical release checklist");
+  await expectReachable(back, 12, 12 + height);
+  await expectReachable(field, 12, 12 + height);
+  await expectReachable(match, 12, 12 + height);
+  await back.click();
+  await expect(search).toBeHidden();
+  await expect(drawer).toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
 test("crossing the phone and tablet boundaries preserves the draft and model menu", async ({
   page,
 }, info) => {
@@ -102,6 +175,26 @@ test("crossing the phone and tablet boundaries preserves the draft and model men
       await page.locator("html").evaluate((el) => el.scrollWidth - el.clientWidth),
     ).toBeLessThanOrEqual(1);
   }
+});
+
+test("tablet Settings remains inside the visible viewport when searching", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "tablet-768");
+  await fixture(page, "dark", true, true);
+  await page.goto("/?settings=appearance", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const settings = page.getByRole("dialog", { name: "Settings", exact: true });
+  const field = settings.getByPlaceholder("Search settings");
+  const close = settings.getByRole("button", { name: "Close settings", exact: true });
+  await field.fill("appearance");
+  await simulateKeyboard(page, 360, 24);
+  await expectReachable(field, 24, 384);
+  await expectReachable(close, 24, 384);
+  await expect(settings.getByRole("tab", { name: "Appearance", exact: true })).toBeVisible();
+  await close.click();
+  await expect(settings).toBeHidden();
+  await expect(page.locator("html")).not.toHaveAttribute("data-kova-keyboard");
 });
 
 for (const theme of ["light", "dark"] as const) {
