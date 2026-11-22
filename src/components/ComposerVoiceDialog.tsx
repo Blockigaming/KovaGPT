@@ -485,6 +485,20 @@ export function ComposerVoiceDialog({
   );
 
   useLayoutEffect(() => {
+    if (!navigator.userAgent?.includes("KovaGPTNative/CarPlay") || mode !== "voice") return;
+    const state = error
+      ? "ended"
+      : phase === "recording"
+        ? "listening"
+        : phase === "speaking"
+          ? "speaking"
+          : phase === "stopping" || phase === "transcribing" || phase === "chat"
+            ? "working"
+            : null;
+    if (state) sendNativeKovaMessage({ action: "carplay-voice-state", state });
+  }, [mode, phase, error]);
+
+  useLayoutEffect(() => {
     if (!open || !nativeKovaPlatform()) return;
     const interrupt = () => {
       if (phaseRef.current !== "idle")
@@ -961,7 +975,7 @@ export function ComposerVoiceDialog({
     const native = nativeDictationHandler();
     const realtime =
       mode === "voice" &&
-      !navigator.userAgent.includes("KovaGPTNative/CarPlay") &&
+      !navigator.userAgent?.includes("KovaGPTNative/CarPlay") &&
       !(native && continuing && document.visibilityState === "hidden") &&
       capabilities.realtime &&
       !realtimeFailed &&

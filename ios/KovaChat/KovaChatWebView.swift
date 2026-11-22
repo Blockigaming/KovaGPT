@@ -66,7 +66,7 @@ struct KovaChatWebView: UIViewRepresentable {
         var request: UUID?
         var unlocked = false
         var carPlay = false
-        var onCarPlayCapture: (() -> Void)?
+        var onCarPlayState: ((String) -> Void)?
         var changeLock: () -> Void
         weak var web: WKWebView?
         private var textSizeObserver: NSObjectProtocol?
@@ -106,6 +106,7 @@ struct KovaChatWebView: UIViewRepresentable {
                     self?.cancelDictation()
                     self?.stopReading(notifyPage: true)
                     self?.signal("kova-native-audio-interruption")
+                    self?.onCarPlayState?("ended")
                 }
             })
             audioObservers.append(center.addObserver(
@@ -117,6 +118,7 @@ struct KovaChatWebView: UIViewRepresentable {
                     self?.cancelDictation()
                     self?.stopReading(notifyPage: true)
                     self?.signal("kova-native-audio-interruption")
+                    self?.onCarPlayState?("ended")
                 }
             })
         }
@@ -154,6 +156,7 @@ struct KovaChatWebView: UIViewRepresentable {
                     guard let self, self.backgroundReplyID == id else { return }
                     self.endBackgroundReply()
                     self.signal("kova-native-audio-interruption")
+                    self.onCarPlayState?("ended")
                 }
             }
             guard task != .invalid else { return false }
@@ -310,7 +313,7 @@ struct KovaChatWebView: UIViewRepresentable {
                     recorder.isMeteringEnabled = true
                     startVoiceMeter(id)
                 }
-                onCarPlayCapture?()
+                onCarPlayState?("listening")
                 return true
             } catch {
                 cancelDictation()
@@ -532,6 +535,16 @@ struct KovaChatWebView: UIViewRepresentable {
             guard unlocked, message.webView === web, message.frameInfo.isMainFrame,
                   KovaDestination.isTrusted(message.frameInfo.request.url),
                   let value = message.body as? [String: String] else { return }
+            if carPlay {
+                switch value["action"] {
+                case "carplay-voice-state":
+                    if let state = value["state"] { onCarPlayState?(state) }
+                case "voice-reply-end":
+                    if let id = value["id"], id == backgroundReplyID { endBackgroundReply() }
+                default: break
+                }
+                return
+            }
             switch value["action"] {
             case "voice-reply-begin":
                 if let id = value["id"] { beginBackgroundReply(id) }
@@ -565,6 +578,7 @@ final class KovaCarPlayScene: UIResponder, CPTemplateApplicationSceneDelegate {
     private var web: WKWebView?
     private var coordinator: KovaChatWebView.Coordinator?
     private var timeout: Task<Void, Never>?
+    private var statusItem: CPListItem?
 
     func templateApplicationScene(_ scene: CPTemplateApplicationScene, didConnect controller: CPInterfaceController) {
         interface = controller
@@ -579,6 +593,7 @@ final class KovaCarPlayScene: UIResponder, CPTemplateApplicationSceneDelegate {
     private func render(note: String? = nil) {
         let active = web != nil
         let item = CPListItem(text: active ? "Stop Voice" : "Start Voice", detailText: note)
+        statusItem = item
         item.handler = { [weak self] _, completion in
             defer { completion() }
             guard let self else { return }
@@ -600,14 +615,23 @@ final class KovaCarPlayScene: UIResponder, CPTemplateApplicationSceneDelegate {
         let coordinator = KovaChatWebView.Coordinator(changeLock: {})
         coordinator.carPlay = true
         coordinator.unlocked = true
-        coordinator.onCarPlayCapture = { [weak self] in
-            self?.timeout?.cancel()
-            self?.timeout = nil
+        coordinator.onCarPlayState = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case "listening":
+                self.timeout?.cancel()
+                self.timeout = nil
+                self.statusItem?.setDetailText("Listening")
+            case "working": self.statusItem?.setDetailText("Preparing reply")
+            case "speaking": self.statusItem?.setDetailText("Speaking")
+            case "ended": self.stop(note: "Voice ended. Tap Start Voice to try again.")
+            default: break
+            }
         }
         let web = KovaChatWebView.makeWebView(coordinator: coordinator)
         self.coordinator = coordinator
         self.web = web
-        render()
+        render(note: "Connecting")
         web.load(URLRequest(url: KovaDestination.voice.url))
         timeout = Task { @MainActor [weak self] in
             do { try await Task.sleep(for: .seconds(20)) } catch { return }

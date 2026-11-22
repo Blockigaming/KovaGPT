@@ -6,6 +6,7 @@ type NativeMessage =
   | { action: "device-lock" | "notifications" | "haptic" }
   | { action: "watch-back"; active: boolean }
   | { action: "share"; text: string }
+  | { action: "carplay-voice-state"; state: "listening" | "working" | "speaking" | "ended" }
   | {
       action:
         "voice-reply-begin" | "voice-reply-end" | "android-voice-start" | "android-voice-stop";
