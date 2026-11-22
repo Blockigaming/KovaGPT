@@ -126,6 +126,7 @@ test("authorization redirects reject other origins, paths, schemes, and URL cred
 test("all service requests use fixed HTTPS endpoints, bounded queries and no redirects", () => {
   const hosts = new Set([
     "graph.microsoft.com",
+    "api.box.com",
     "api.notion.com",
     "api.linear.app",
     "slack.com",
@@ -369,4 +370,146 @@ test("multibyte provider text stays within the UTF8 tool budget with complete JS
   assert.ok(new TextEncoder().encode(JSON.stringify(result)).byteLength <= 24000);
   assert.ok(result.results.length > 0 && result.results.length < 10);
   assert.ok(result.results.every((row) => row.id && row.title && row.snippet));
+});
+
+test("Box uses its own read grant, returns only file metadata, and rotates refresh tokens", async () => {
+  const account = {
+    provider_id: "box",
+    status: "connected",
+    token_expires_at: null,
+    granted_scopes: ["root_readonly"],
+  };
+  assert.equal(canReadConnection(account, "box"), true);
+  assert.equal(canReadConnection({ ...account, granted_scopes: ["Mail.Read"] }, "box"), false);
+  assert.equal(canReadConnection({ ...account, status: "revoked" }, "box"), false);
+  const authorize = "https://account.box.com/api/oauth2/authorize?scope=root_readonly";
+  assert.equal(connectionAuthorizationUrl("box", authorize), authorize);
+  assert.equal(connectionAuthorizationUrl("box", "https://account.box.com/api/oauth2/token"), null);
+  const result = await readConnection("box", "a&limit=50", "fixture", async (target, init) => {
+    const url = new URL(target);
+    assert.equal(url.origin + url.pathname, "https://api.box.com/2.0/search");
+    assert.equal(url.searchParams.get("query"), "a&limit=50");
+    assert.equal(url.searchParams.get("limit"), "10");
+    assert.equal(init.method, "GET");
+    return Response.json({
+      entries: [
+        { type: "file", id: "123", name: "Brief", description: "Summary", download_url: "private" },
+        { type: "folder", id: "456" },
+        { type: "file", id: "123?redirect=evil" },
+      ],
+    });
+  });
+  assert.deepEqual(result.results, [
+    { id: "123", title: "Brief", snippet: "Summary", url: "https://app.box.com/file/123" },
+  ]);
+  const refresh = oauthRefreshRequest({
+    providerId: "box",
+    clientId: "app",
+    clientSecret: "fixture-secret",
+    refreshToken: "old-refresh",
+  });
+  assert.equal(refresh.body.get("refresh_token"), "old-refresh");
+  assert.equal(refresh.redirect, "error");
+  const token = { access_token: "new-access", expires_in: 3600 };
+  assert.throws(() => selectRefreshTokens("box", token), /refresh_token_missing/);
+  assert.equal(
+    selectRefreshTokens("box", { ...token, refresh_token: "new-refresh" }).refresh_token,
+    "new-refresh",
+  );
+});
+
+test("Teams message search requires a dedicated grant and returns only bounded message matches", async () => {
+  const account = {
+    provider_id: "microsoft",
+    status: "connected",
+    token_expires_at: null,
+  };
+  assert.equal(
+    canReadConnection({ ...account, granted_scopes: ["Team.ReadBasic.All"] }, "ms-teams-messages"),
+    false,
+  );
+  assert.equal(
+    canReadConnection({ ...account, granted_scopes: ["Mail.Read"] }, "ms-teams-messages"),
+    false,
+  );
+  assert.equal(
+    canReadConnection(
+      { ...account, granted_scopes: ["https://graph.microsoft.com/Chat.Read"] },
+      "ms-teams-messages",
+    ),
+    true,
+  );
+  const result = await readConnection("ms-teams-messages", "demo", "fixture", async (url, init) => {
+    assert.equal(url, "https://graph.microsoft.com/v1.0/search/query");
+    assert.deepEqual(JSON.parse(init.body), {
+      requests: [
+        { entityTypes: ["chatMessage"], query: { queryString: "demo" }, from: 0, size: 10 },
+      ],
+    });
+    return Response.json({
+      value: [
+        {
+          hitsContainers: [
+            {
+              hits: [
+                {
+                  summary: "demo snippet",
+                  resource: {
+                    "@odata.type": "microsoft.graph.chatMessage",
+                    id: "42",
+                    subject: "",
+                    from: { emailAddress: { name: "Casey", address: "private@example.invalid" } },
+                    webLink: "https://outlook.office365.com/owa/?ItemID=42",
+                  },
+                },
+                { resource: { "@odata.type": "#microsoft.graph.message", id: "other" } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+  assert.deepEqual(result.results, [
+    {
+      id: "42",
+      title: "Casey",
+      snippet: "demo snippet",
+      url: "https://outlook.office365.com/owa/?ItemID=42",
+    },
+  ]);
+});
+
+test("Notion reads bounded Markdown for an exact page ID and reports partial content", async () => {
+  const id = "b55c9c91-384d-452b-81db-d1ef79372b75";
+  const result = await readConnection("notion", id, "fixture", async (target, init) => {
+    const url = new URL(target);
+    assert.equal(url.origin + url.pathname, `https://api.notion.com/v1/pages/${id}/markdown`);
+    assert.equal(url.searchParams.get("include_transcript"), null);
+    assert.equal(init.headers["Notion-Version"], "2026-03-11");
+    assert.equal(init.method, "GET");
+    return Response.json({
+      object: "page_markdown",
+      id,
+      markdown: "x".repeat(3600),
+      truncated: false,
+      unknown_block_ids: [],
+    });
+  });
+  assert.equal(result.limited, true);
+  assert.equal(result.results[0].snippet.length, 3500);
+  await assert.rejects(
+    readConnection("notion", id, "fixture", async () => new Response(null, { status: 403 })),
+    /connection_permission_required/,
+  );
+  await assert.rejects(
+    readConnection("notion", id, "fixture", async () =>
+      Response.json({
+        object: "page_markdown",
+        id: "different-page",
+        markdown: "private",
+      }),
+    ),
+    /invalid_connection_response/,
+  );
 });

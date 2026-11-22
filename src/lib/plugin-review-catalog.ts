@@ -85,7 +85,10 @@ function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewE
             "src/integrations/connection-read.server.mjs",
             "src/integrations/connected-tools.server.ts",
           ),
-          ...permissions.filter((permission) => permission.access === "write"),
+          ...permissions.filter(
+            (permission) =>
+              permission.verification === "source_contract" || permission.access === "write",
+          ),
         ]
       : permissions,
     brandAsset: {
@@ -153,11 +156,15 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
     ),
   ]),
   entry("ms-teams", [
-    proposed("read", "Proposed: read selected Teams conversations; scope unconfirmed"),
+    supported(
+      "read",
+      CONNECTION_FLOWS["ms-teams-messages"].description,
+      "src/integrations/connection-read.server.mjs",
+      "src/integrations/connected-tools.server.ts",
+    ),
     proposed("write", "Proposed: send a Teams message after review; scope unconfirmed"),
   ]),
   entry("notion", [
-    proposed("read", "Proposed: read explicitly shared Notion pages; scope unconfirmed"),
     proposed(
       "write",
       "Proposed: create or edit shared Notion pages after review; scope unconfirmed",

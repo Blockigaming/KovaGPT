@@ -61,7 +61,9 @@ export function selectOAuthTokens(providerId, payload) {
 
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
   if (
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion"].includes(providerId)
+    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion", "box"].includes(
+      providerId,
+    )
   )
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
@@ -105,6 +107,7 @@ export function selectRefreshTokens(providerId, payload) {
   // a claimed refresh instead of inventing a lifetime for those tokens.
   if (!tokens.expires_in && !["salesforce", "notion"].includes(providerId))
     throw new Error("refresh_expiry_missing");
-  if (providerId === "notion" && !tokens.refresh_token) throw new Error("refresh_token_missing");
+  if (["notion", "box"].includes(providerId) && !tokens.refresh_token)
+    throw new Error("refresh_token_missing");
   return tokens;
 }

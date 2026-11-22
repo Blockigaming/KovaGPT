@@ -843,6 +843,7 @@ function AppsPage() {
   const userKey = user?.id ?? null;
   const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const [teamsMessagesAfterConsent, setTeamsMessagesAfterConsent] = useState(false);
   const otherConnections = useConnectedAccounts(principal, Boolean(isLoaded && isSignedIn));
   const refreshOtherConnections = otherConnections.reload;
   const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
@@ -1316,10 +1317,14 @@ function AppsPage() {
     const id = url.searchParams.get("connection_view");
     if (id && Object.hasOwn(CONNECTION_FLOWS, id)) {
       url.searchParams.delete("connection_view");
+      const messages = id === "ms-teams-messages";
       const item = MASTER_PLUGIN_REVIEW_CATALOG.find(
-        (entry) => entry.connector.id === id,
+        (entry) => entry.connector.id === (messages ? "ms-teams" : id),
       )?.connector;
-      if (item) setSelectedApp(item);
+      if (item) {
+        setTeamsMessagesAfterConsent(messages);
+        setSelectedApp(item);
+      }
     }
     if (url.searchParams.has("integration_error"))
       toast.error(
@@ -1370,7 +1375,14 @@ function AppsPage() {
       if (otherConnections.loading) return "syncing";
       if (otherConnections.error || !configuredOf(id)) return "temporarily_unavailable";
       const accounts = connectionAccounts(otherConnections.data?.accounts ?? [], id);
-      if (accounts.some((account) => canReadConnection(account, id))) return "connected";
+      if (
+        accounts.some(
+          (account) =>
+            canReadConnection(account, id) ||
+            (id === "ms-teams" && canReadConnection(account, "ms-teams-messages")),
+        )
+      )
+        return "connected";
       if (
         accounts.some(
           (account) =>
@@ -1398,7 +1410,12 @@ function AppsPage() {
       return connectionAccounts(otherConnections.data?.accounts ?? [], id).some(
         (account) =>
           account.status !== "revoked" &&
-          hasConnectionScopes(account.granted_scopes, CONNECTION_FLOWS[id].scopes),
+          (hasConnectionScopes(account.granted_scopes, CONNECTION_FLOWS[id].scopes) ||
+            (id === "ms-teams" &&
+              hasConnectionScopes(
+                account.granted_scopes,
+                CONNECTION_FLOWS["ms-teams-messages"].scopes,
+              ))),
       );
     return false;
   };
@@ -1411,7 +1428,7 @@ function AppsPage() {
     "slack",
     "outlook",
     "outlook-calendar",
-    "microsoft-teams",
+    "ms-teams",
     "onedrive",
     "figma",
     "canva",
@@ -1792,6 +1809,7 @@ function AppsPage() {
                   <ConnectedAccountManager
                     key={`${principal}:${visibleSelectedApp.id}`}
                     id={visibleSelectedApp.id}
+                    initiallySearchTeamsMessages={teamsMessagesAfterConsent}
                     data={otherConnections.data}
                     loading={otherConnections.loading}
                     error={otherConnections.error}

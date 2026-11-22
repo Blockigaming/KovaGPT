@@ -57,9 +57,13 @@ export async function beginOAuth(input: {
     if (error || !existing) throw new Error("linked_account_not_found");
     // Request the union from the provider when adding another service. Do not
     // copy old scope claims onto a new, narrower access token.
-    previousScopes = (existing.granted_scopes as string[]).filter((scope) =>
-      provider.optionalScopes.includes(scope),
-    );
+    previousScopes = (existing.granted_scopes as string[])
+      .map((scope) =>
+        provider.id === "microsoft"
+          ? scope.replace(/^https:\/\/graph\.microsoft\.com\//u, "")
+          : scope,
+      )
+      .filter((scope) => provider.optionalScopes.includes(scope));
     if (provider.id === "microsoft" && typeof existing.account_label === "string")
       loginHint = existing.account_label;
   }
@@ -166,8 +170,10 @@ export async function completeOAuth(input: {
     provider.id,
     await readProviderJsonObject(tokenResponse, 64_000),
   );
-  if (["oura", "whoop"].includes(provider.id) && !tokens.expires_in)
+  if (["oura", "whoop", "box"].includes(provider.id) && !tokens.expires_in)
     throw new Error("oauth_token_expiry_missing");
+  if (provider.id === "box" && !tokens.refresh_token)
+    throw new Error("oauth_refresh_token_missing");
   if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
     throw new Error("oauth_scope_verification_failed");
   await assertLockdownAllows(db, record.owner_id, "connector_write");
@@ -274,7 +280,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   if (!provider) throw new Error("unsupported_linked_account_provider");
   const clientId = process.env[provider.clientIdEnv];
   const clientSecret = process.env[provider.clientSecretEnv];
-  const revocationCiphertext = ["github", "slack", "whoop"].includes(provider.id)
+  const revocationCiphertext = ["github", "slack", "whoop", "box"].includes(provider.id)
     ? account.access_token_ciphertext
     : (account.refresh_token_ciphertext ?? account.access_token_ciphertext);
   let token: string | null = null;
@@ -296,7 +302,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   const canAttemptRevocation =
     Boolean(provider.revocationEndpoint && token) &&
     ["github", "slack", "linear", "dropbox", "box", "whoop", "salesforce"].includes(provider.id) &&
-    (provider.id !== "github" || Boolean(clientId && clientSecret));
+    (!["github", "box"].includes(provider.id) || Boolean(clientId && clientSecret));
   if (provider.revocationEndpoint && token && canAttemptRevocation) {
     try {
       const endpoint =
@@ -315,7 +321,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
         headers: {
-          ...(provider.id !== "salesforce"
+          ...(!["salesforce", "box"].includes(provider.id)
             ? { Authorization: githubAuthorization ?? `Bearer ${token}` }
             : {}),
           "Content-Type":

@@ -281,9 +281,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "box",
     label: "Box",
-    description: "Reference files from Box.",
+    description: "Search files you can access in Box.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "box.com",
   },
   {
@@ -313,7 +313,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "notion",
     label: "Notion",
-    description: "Find Notion pages you share with Kova by title.",
+    description: "Search and read Notion pages you share with Kova.",
     category: "Notes & Docs",
     status: "setup_required",
     domain: "notion.so",
@@ -385,7 +385,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "ms-teams",
     label: "Microsoft Teams",
-    description: "Find teams you have joined. Requires a work or school account.",
+    description: "Find joined teams and search chat messages with separate permission.",
     category: "Communication",
     status: "setup_required",
     domain: "teams.microsoft.com",
