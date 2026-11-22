@@ -8,7 +8,14 @@ export async function expectsSeparateModeRow(composer: Locator) {
     const styles = getComputedStyle(container);
     const contentWidth =
       container.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-    return contentWidth < 20 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    // A model name needs 22.5rem beside the actions; the Thinking toggle fits down to 20rem.
+    const thinkingOnly =
+      frame.querySelector(".kova-thinking-toggle") !== null &&
+      frame.querySelector(".kova-consumer-model-trigger, .kova-home-model-placeholder") === null;
+    const threshold = thinkingOnly ? 20 : 22.5;
+    return (
+      contentWidth < threshold * parseFloat(getComputedStyle(document.documentElement).fontSize)
+    );
   });
 }
 
