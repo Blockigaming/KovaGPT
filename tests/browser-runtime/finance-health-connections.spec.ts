@@ -379,7 +379,9 @@ test("Android Health Connect confirms a native read and clears the dashboard whe
   });
   await boot(page);
   await page.getByRole("button", { name: "Connect Health", exact: true }).click();
-  const choice = page.getByRole("button", { name: "Android Health Connect Connect", exact: true });
+  const choice = page
+    .getByRole("dialog", { name: "Connect Health", exact: true })
+    .getByRole("button", { name: /^Android Health Connect/u });
   await expect(choice).toBeVisible();
   await choice.click();
   const health = page.getByRole("region", { name: "Health Connect", exact: true });

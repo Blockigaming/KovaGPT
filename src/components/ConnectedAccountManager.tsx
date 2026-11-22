@@ -143,11 +143,15 @@ export function ConnectedAccountManager({
     setBusy(true);
     setResult(null);
     try {
-      const response = await fetchWithTimeoutAuthenticated("/api/integrations/accounts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...credentials, provider: flow.provider, apiKey }),
-      });
+      const response = await fetchWithTimeoutAuthenticated(
+        "/api/integrations/accounts",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...credentials, provider: flow.provider, apiKey }),
+        },
+        25_000,
+      );
       if (!response.ok) {
         if (active.current)
           toast.error(
