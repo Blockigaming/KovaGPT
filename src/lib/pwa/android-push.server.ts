@@ -4,7 +4,7 @@ import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 
 const tokenUrl = "https://oauth2.googleapis.com/token";
 const scope = "https://www.googleapis.com/auth/firebase.messaging";
-const registrationTokenPattern = /^[A-Za-z0-9_:\-]{20,2048}$/u;
+const registrationTokenPattern = /^[A-Za-z0-9_:-]{20,2048}$/u;
 
 export function normalizeAndroidPushToken(value: unknown): string {
   if (typeof value !== "string" || !registrationTokenPattern.test(value)) {
@@ -57,7 +57,7 @@ export async function sendAndroidTaskPush(
   }
   const bytes = await readResponseBytesBounded(authorization, 8192, { signal: deadline });
   const { access_token: accessToken } = JSON.parse(new TextDecoder().decode(bytes));
-  if (typeof accessToken !== "string" || !/^[A-Za-z0-9._~+\/-]+={0,2}$/u.test(accessToken)) {
+  if (typeof accessToken !== "string" || !/^[A-Za-z0-9._~+/-]+={0,2}$/u.test(accessToken)) {
     return "retry";
   }
   await assertCurrent();
