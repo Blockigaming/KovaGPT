@@ -35,7 +35,7 @@
 .spec400-chat-input[data-composer-surface="conversation"] {
   padding-bottom: max(6px, env(safe-area-inset-bottom));
 }
-@media (min-width: 1024px) and (pointer: fine) {
+@media (width >= 1024px) {
   @container chat-composer (min-width: 34rem) {
     .spec400-chat-input[data-composer-surface="conversation"]
       .spec400-composer:not(
@@ -134,17 +134,6 @@
 .spec400-composer-trailing [data-testid="send-button"] svg {
   width: 20px;
   height: 20px;
-}
-@media (any-pointer: coarse), (max-width: 1023px) {
-  .spec400-composer {
-    --composer-action-size: 44px;
-  }
-  .spec400-composer-trailing .spec400-primary-voice svg,
-  .spec400-composer-trailing [data-testid="stop-button"] svg,
-  .spec400-composer-trailing [data-testid="send-button"] svg {
-    width: 22px;
-    height: 22px;
-  }
 }
 .spec400-composer-toolbar {
   position: relative;
@@ -637,14 +626,21 @@
   color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
-@media (max-width: 1023px), (any-pointer: coarse) {
+@media (width < 1024px) {
   .spec400-composer {
+    --composer-action-size: 44px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     min-height: 136px;
     padding-block-start: 12px;
     gap: 8px;
+  }
+  .spec400-composer-trailing .spec400-primary-voice svg,
+  .spec400-composer-trailing [data-testid="stop-button"] svg,
+  .spec400-composer-trailing [data-testid="send-button"] svg {
+    width: 22px;
+    height: 22px;
   }
   .spec400-composer-toolbar {
     display: flex;
@@ -921,7 +917,7 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     );
   }
 
-  @media (min-width: 1024px) and (pointer: fine) {
+  @media (width >= 1024px) {
     > [data-kind="image"] {
       margin-block-end: 8px;
     }

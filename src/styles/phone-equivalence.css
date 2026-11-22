@@ -616,7 +616,7 @@
   }
 }
 
-@media (width >= 768px) and (height > 500px) and (pointer: coarse) and (hover: none) {
+@media (768px <= width < 1024px) and (height > 500px) and (pointer: coarse) {
   .kova-assistant[data-compact-chat-home] section.kova-empty-chat > .kova-empty-chat-content {
     flex: 1 1 auto;
     justify-content: center;
@@ -628,7 +628,7 @@
   }
 }
 
-@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+@media (width < 1024px) {
   .kova-desktop-recent-work {
     display: none;
   }

@@ -107,6 +107,8 @@
     opacity: 1;
     pointer-events: auto;
   }
+}
+@media (width < 1024px) {
   .kova-prompt-copy {
     min-width: 44px;
     min-height: 44px;

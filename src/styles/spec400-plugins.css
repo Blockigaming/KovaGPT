@@ -467,7 +467,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .spec400-plugin-actions button {
     min-height: 44px;
   }

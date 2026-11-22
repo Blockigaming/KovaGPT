@@ -132,7 +132,7 @@
   text-underline-offset: 3px;
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-image-actions button[aria-busy="true"] .kova-image-busy-label {
     position: absolute;
     width: 1px;

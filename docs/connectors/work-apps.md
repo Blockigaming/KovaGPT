@@ -1,18 +1,35 @@
 # Work app connections
 
-The Connections page lists twelve work apps. Implemented operations are enabled only when the server configuration and the current user's provider consent are valid. Provider registration, credentials, owner consent and a successful real read must all be verified before describing a connection as live.
+The Connections page exposes work apps when their server configuration is available. Implemented operations are enabled only when the server configuration and the current user's provider consent are valid. Provider registration, credentials, owner consent and a successful real read must all be verified before describing a connection as live.
 
-Google and GitHub use their dedicated connection flows. Microsoft covers Outlook, OneDrive, SharePoint and Teams. Notion, Linear, Slack and Salesforce use the shared OAuth account lifecycle. Credentials belong in the deployment's server secret manager.
+Google and GitHub use their dedicated connection flows. Microsoft covers Outlook, OneDrive, SharePoint and Teams. Box, Canva, Figma, Notion, Linear, Slack and Salesforce use the shared OAuth account lifecycle. Credentials belong in the deployment's server secret manager.
 
-| Provider   | Callback                                                         | Server credentials                                             | Implemented operation                                                                                |
-| ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Microsoft  | `https://kovagpt.com/api/integrations/oauth/callback/microsoft`  | `MICROSOFT_OAUTH_CLIENT_ID`, `MICROSOFT_OAUTH_CLIENT_SECRET`   | Outlook message search, OneDrive file search, accessible SharePoint site search, joined Teams lookup |
-| Notion     | `https://kovagpt.com/api/integrations/oauth/callback/notion`     | `NOTION_OAUTH_CLIENT_ID`, `NOTION_OAUTH_CLIENT_SECRET`         | Page title search over pages shared with the integration                                             |
-| Linear     | `https://kovagpt.com/api/integrations/oauth/callback/linear`     | `LINEAR_OAUTH_CLIENT_ID`, `LINEAR_OAUTH_CLIENT_SECRET`         | Issue title search with the `read` scope                                                             |
-| Slack      | `https://kovagpt.com/api/integrations/oauth/callback/slack`      | `SLACK_OAUTH_CLIENT_ID`, `SLACK_OAUTH_CLIENT_SECRET`           | Message search with the user's `search:read` token                                                   |
-| Salesforce | `https://kovagpt.com/api/integrations/oauth/callback/salesforce` | `SALESFORCE_OAUTH_CLIENT_ID`, `SALESFORCE_OAUTH_CLIENT_SECRET` | Name search over an explicitly selected Account, Contact or Opportunity record type                  |
+| Provider   | Callback                                                         | Server credentials                                             | Implemented operation                                                                                                                                           |
+| ---------- | ---------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Microsoft  | `https://kovagpt.com/api/integrations/oauth/callback/microsoft`  | `MICROSOFT_OAUTH_CLIENT_ID`, `MICROSOFT_OAUTH_CLIENT_SECRET`   | Outlook message search, OneDrive file search, basic calendar event search, accessible SharePoint site search, joined Teams lookup and Teams chat message search |
+| Notion     | `https://kovagpt.com/api/integrations/oauth/callback/notion`     | `NOTION_OAUTH_CLIENT_ID`, `NOTION_OAUTH_CLIENT_SECRET`         | Title search and bounded Markdown reads for shared pages                                                                                                        |
+| Linear     | `https://kovagpt.com/api/integrations/oauth/callback/linear`     | `LINEAR_OAUTH_CLIENT_ID`, `LINEAR_OAUTH_CLIENT_SECRET`         | Issue title search with the `read` scope                                                                                                                        |
+| Slack      | `https://kovagpt.com/api/integrations/oauth/callback/slack`      | `SLACK_OAUTH_CLIENT_ID`, `SLACK_OAUTH_CLIENT_SECRET`           | Message search with the user's `search:read` token                                                                                                              |
+| Salesforce | `https://kovagpt.com/api/integrations/oauth/callback/salesforce` | `SALESFORCE_OAUTH_CLIENT_ID`, `SALESFORCE_OAUTH_CLIENT_SECRET` | Name search over an explicitly selected Account, Contact or Opportunity record type                                                                             |
+| Box        | `https://kovagpt.com/api/integrations/oauth/callback/box`        | `BOX_OAUTH_CLIENT_ID`, `BOX_OAUTH_CLIENT_SECRET`               | File metadata search for files the authorized Box user can access                                                                                               |
+| Canva      | `https://kovagpt.com/api/integrations/oauth/callback/canva`      | `CANVA_OAUTH_CLIENT_ID`, `CANVA_OAUTH_CLIENT_SECRET`           | Design metadata search                                                                                                                                          |
+| Figma      | `https://kovagpt.com/api/integrations/oauth/callback/figma`      | `FIGMA_OAUTH_CLIENT_ID`, `FIGMA_OAUTH_CLIENT_SECRET`           | File metadata by design link or file key                                                                                                                        |
 
 Provider settings can require administrator consent, workspace installation, public distribution approval, verification or account eligibility. Configuring an app for one workspace does not prove it can be installed by other workspaces.
+
+## Box, Teams, and Notion acceptance
+
+- **Box** uses a Box OAuth 2.0 Platform App with `root_readonly`. Register its callback above and configure both server secrets. Search for a uniquely named fixture file, then verify token renewal and disconnect. Kova returns file metadata and links.
+- **Microsoft Teams** uses a work or school account. Joined team lookup requests `Team.ReadBasic.All`. Choose **Chat messages** under **Teams access** to request delegated `Chat.Read`. Search for a test phrase in a conversation that account can access. Verify that the account cannot search messages after granting only joined-team access.
+- **Notion** uses the pages shared during authorization and the integration's Read content capability. Search by title, then read the page ID returned by the search. For acceptance, verify that sharing a different set of pages changes what Kova can read. A bounded response can omit some content, and the request leaves transcript inclusion off.
+
+[Box file search](https://developer.box.com/reference/get-search) · [Microsoft Teams message search](https://learn.microsoft.com/en-us/graph/search-concept-chat-messages) · [Notion page Markdown reads](https://developers.notion.com/reference/retrieve-page-markdown)
+
+## Canva and Figma acceptance
+
+Register the exact callbacks above in the providers' developer portals. Canva needs `design:meta:read`. Verify a unique design title and its view link from the account that authorized the app. Figma needs `current_user:read` and `file_metadata:read`. Verify metadata for a known design link, then verify denial for a file that account cannot access. A public Figma app requires provider review before general distribution.
+
+[Canva design search](https://www.canva.dev/docs/apps/rest-apis/reference/designs/list-designs/) · [Figma OAuth setup](https://developers.figma.com/docs/rest-api/oauth-apps/)
 
 ## Salesforce registration and session renewal
 

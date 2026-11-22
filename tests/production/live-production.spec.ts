@@ -48,7 +48,7 @@ test("production headers protect the app without disabling same-origin location"
 test("anonymous workspace navigation and focus recovery work in production", async ({ page }) => {
   const failures = watchRuntimeFailures(page);
   await page.goto("/", { waitUntil: "networkidle" });
-  const mobile = page.viewportSize()!.width < 1024;
+  const mobile = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   const menu = page.getByRole("button", { name: "Open menu" });
   if (mobile) {
     await menu.focus();

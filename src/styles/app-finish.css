@@ -1515,7 +1515,7 @@
   }
 }
 
-@media (pointer: coarse), (max-width: 767px) {
+@media (width < 768px) {
   .kova-consumer-model-menu .kova-consumer-model-option {
     min-height: 44px;
   }

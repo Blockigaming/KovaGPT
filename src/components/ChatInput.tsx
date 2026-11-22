@@ -705,7 +705,7 @@ export function ChatInput({
           parseFloat(metrics.paddingBottom),
       );
       const composer = el.closest<HTMLElement>(".spec400-composer");
-      if (composer && surface === "conversation" && !isMobileLayout && !isCoarsePointer) {
+      if (composer && surface === "conversation" && !isMobileLayout) {
         // Measure against the compact text slot even while the draft is expanded.
         // Measuring only the current wider row would repeatedly expand/collapse
         // drafts that fit one wide line but not the compact input slot.
@@ -774,7 +774,7 @@ export function ChatInput({
       observer.disconnect();
       if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
     };
-  }, [value, isLoaded, user?.id, isMobileLayout, isCoarsePointer, surface]);
+  }, [value, isLoaded, user?.id, isMobileLayout, surface]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
   useEffect(() => {

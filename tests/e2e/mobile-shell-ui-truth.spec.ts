@@ -201,7 +201,9 @@ test.describe("mobile shell UI truth", () => {
     const close = page.getByRole("button", { name: "Close command palette" });
     const closeBox = await close.boundingBox();
     expect(closeBox?.width).toBeGreaterThanOrEqual(44);
-    const coarsePointer = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+    const coarsePointer = await page.evaluate(
+      () => matchMedia("(width < 1024px) and (pointer: coarse)").matches,
+    );
     expect(closeBox?.height).toBe(coarsePointer ? 44 : 36);
 
     const panel = palette.locator(":scope > div").first();
@@ -233,7 +235,9 @@ test("compact chat starts closed and keeps its canvas in place behind the drawer
   const viewport = page.viewportSize()!;
   test.skip(
     viewport.width >= 1024 &&
-      !(await page.evaluate(() => matchMedia("(pointer: coarse) and (hover: none)").matches)),
+      !(await page.evaluate(
+        () => matchMedia("(width < 1024px) and (pointer: coarse) and (hover: none)").matches,
+      )),
     "drawer layout",
   );
   await installAuthenticatedFixture(page, { preserveStorageOnReload: true });

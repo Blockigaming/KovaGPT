@@ -1,6 +1,27 @@
 // Client-safe descriptions of implemented read operations. Deployment readiness
 // and the user's granted scopes are checked separately on the server.
 export const CONNECTION_FLOWS = {
+  canva: {
+    provider: "canva",
+    scopes: ["design:meta:read"],
+    tool: "canva_search",
+    label: "Canva",
+    description: "Search accessible Canva designs by title and return design metadata.",
+  },
+  figma: {
+    provider: "figma",
+    scopes: ["file_metadata:read"],
+    tool: "figma_get_file",
+    label: "Figma",
+    description: "Read Figma file metadata for a supplied Figma design URL or file key.",
+  },
+  box: {
+    provider: "box",
+    scopes: ["root_readonly"],
+    tool: "box_search",
+    label: "Box",
+    description: "Search Box files you can access. Returns file names, descriptions and links.",
+  },
   salesforce: {
     provider: "salesforce",
     scopes: ["api"],
@@ -43,15 +64,22 @@ export const CONNECTION_FLOWS = {
     scopes: ["Team.ReadBasic.All"],
     tool: "teams_search",
     label: "Microsoft Teams",
-    description:
-      "Find teams you have joined. Requires a work or school account; message search is not available.",
+    description: "Find teams you have joined. Requires a work or school account.",
+  },
+  "ms-teams-messages": {
+    provider: "microsoft",
+    scopes: ["Chat.Read"],
+    tool: "teams_message_search",
+    label: "Teams chat messages",
+    description: "Search Teams chat messages visible to the connected work or school account.",
   },
   notion: {
     provider: "notion",
     scopes: [],
     tool: "notion_search",
     label: "Notion",
-    description: "Find Notion pages by title among pages you explicitly share.",
+    description:
+      "Find shared Notion pages by title, or pass the page ID returned by a previous search to read its Markdown content.",
   },
   linear: {
     provider: "linear",
@@ -76,6 +104,8 @@ export function hasConnectionScopes(scopes, required) {
   return required.every(
     (scope) =>
       granted.has(scope) ||
+      (scope === "root_readonly" && granted.has("root_readwrite")) ||
+      (scope === "Chat.Read" && granted.has("Chat.ReadWrite")) ||
       (scope === "Files.Read" && granted.has("Files.Read.All")) ||
       (scope === "Calendars.ReadBasic" &&
         (granted.has("Calendars.Read") || granted.has("Calendars.ReadWrite"))),
@@ -110,6 +140,9 @@ export function safeConnectionLink(value) {
 
 export function connectionAuthorizationUrl(provider, value) {
   const endpoints = {
+    box: "https://account.box.com/api/oauth2/authorize",
+    canva: "https://www.canva.com/api/oauth/authorize",
+    figma: "https://www.figma.com/oauth",
     microsoft: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     notion: "https://api.notion.com/v1/oauth/authorize",
     linear: "https://linear.app/oauth/authorize",

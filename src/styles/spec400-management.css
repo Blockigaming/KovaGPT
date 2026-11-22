@@ -972,7 +972,7 @@ html[data-kova-density="compact"]
   border-radius: var(--kova-radius-card);
   background: var(--background);
 }
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .spec400-primary,
   .kova-assistant-tabs input {
     min-height: 44px;

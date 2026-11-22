@@ -33,9 +33,7 @@ test("phone Attach uses the same anchored menu with phone upload options", () =>
 });
 
 test("phone composer stays touch-sized and grows for multiline text or attachments", () => {
-  const phone = chatStyles.slice(
-    chatStyles.indexOf("@media (max-width: 1023px), (any-pointer: coarse)"),
-  );
+  const phone = chatStyles.slice(chatStyles.indexOf("@media (width < 1024px)"));
   assert.match(phone, /\.spec400-composer\s*\{[^}]*display: flex;[^}]*min-height: 136px/);
   assert.match(phone, /\.spec400-composer-input\s*\{\s*min-height: 26px;\s*max-height: 144px/);
   assert.match(phone, /\.spec400-send-button\s*\{\s*min-width: 44px;\s*width: 44px/);

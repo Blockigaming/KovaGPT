@@ -25,10 +25,7 @@ test("context menus retain bounded widths and compact SDK rows with coarse targe
   const header = readFileSync("src/components/conversation-header.css", "utf8");
   assert.match(header, /\.kova-conversation-menu \{\s*width: 256px/);
   assert.match(header, /min-height: 32px;\s*padding: 6px 8px;\s*gap: 6px/);
-  assert.match(
-    header,
-    /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*min-height: 44px/,
-  );
+  assert.match(header, /@media \(width < 1024px\)[\s\S]*min-height: 44px/);
   const shared = readFileSync("src/components/ui/dropdown-menu.tsx", "utf8");
   for (const token of ["min-h-8", "rounded-xl", "px-2 py-1.5", "[@media(pointer:coarse)]:min-h-11"])
     assert.ok(shared.includes(token));

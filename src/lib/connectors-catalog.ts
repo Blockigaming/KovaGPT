@@ -281,9 +281,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "box",
     label: "Box",
-    description: "Reference files from Box.",
+    description: "Search files you can access in Box.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "box.com",
   },
   {
@@ -313,7 +313,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "notion",
     label: "Notion",
-    description: "Read and update Notion pages.",
+    description: "Search and read Notion pages you share with Kova.",
     category: "Notes & Docs",
     status: "setup_required",
     domain: "notion.so",
@@ -385,7 +385,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "ms-teams",
     label: "Microsoft Teams",
-    description: "Read Teams chats.",
+    description: "Find joined teams and search chat messages with separate permission.",
     category: "Communication",
     status: "setup_required",
     domain: "teams.microsoft.com",
@@ -1449,9 +1449,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "figma",
     label: "Figma",
-    description: "Reference design files, comments, and prototypes.",
+    description: "Read design metadata from a Figma link or file key.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "figma.com",
   },
   {
@@ -1465,9 +1465,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "canva",
     label: "Canva",
-    description: "Reference designs, brand assets, and presentations.",
+    description: "Search and reference Canva design metadata.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "canva.com",
   },
   {

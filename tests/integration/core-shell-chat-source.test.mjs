@@ -58,10 +58,7 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /data-state=\{open \? "open" : "closed"\}/);
   assert.match(tokens, /--kova-sidebar-drawer-width: 260px;/);
   assert.equal(
-    sidebarRule(
-      ".kova-sidebar[data-kova-core-sidebar]",
-      "(width < 1024px), (pointer: coarse) and (hover: none)",
-    ).width,
+    sidebarRule(".kova-sidebar[data-kova-core-sidebar]", "(width < 1024px)").width,
     "var(--kova-sidebar-drawer-width, 260px)",
   );
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);

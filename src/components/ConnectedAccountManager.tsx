@@ -26,18 +26,22 @@ import type { AccountStatus } from "@/hooks/use-connected-accounts";
 
 export function ConnectedAccountManager({
   id,
+  initiallySearchTeamsMessages = false,
   data,
   loading,
   error,
   reload,
 }: {
   id: string;
+  initiallySearchTeamsMessages?: boolean;
   data: AccountStatus | null;
   loading: boolean;
   error: boolean;
   reload: () => Promise<boolean>;
 }) {
-  const flow = CONNECTION_FLOWS[id];
+  const [teamsMessages, setTeamsMessages] = useState(initiallySearchTeamsMessages);
+  const operationId = id === "ms-teams" && teamsMessages ? "ms-teams-messages" : id;
+  const flow = CONNECTION_FLOWS[operationId];
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
   const [recordType, setRecordType] = useState<"accounts" | "contacts" | "opportunities">(
@@ -55,7 +59,7 @@ export function ConnectedAccountManager({
     };
   }, []);
   if (!flow) return null;
-  const accounts = connectionAccounts(data?.accounts ?? [], id);
+  const accounts = connectionAccounts(data?.accounts ?? [], operationId);
   const configured =
     data?.configuredProviders.some((provider) => provider.id === flow.provider) === true;
   const start = async (existingAccountId?: string) => {
@@ -68,7 +72,7 @@ export function ConnectedAccountManager({
         body: JSON.stringify({
           provider: flow.provider,
           optionalScopes: flow.scopes,
-          returnPath: `/apps?connection_view=${id}`,
+          returnPath: `/apps?connection_view=${operationId}`,
           existingAccountId,
         }),
       });
@@ -89,7 +93,7 @@ export function ConnectedAccountManager({
     try {
       const next = await readAccount({
         data: {
-          connectionId: id,
+          connectionId: operationId,
           accountId,
           query,
           ...(id === "salesforce" ? { recordType } : {}),
@@ -137,7 +141,30 @@ export function ConnectedAccountManager({
   return (
     <section className="spec400-plugin-detail-section" aria-label={`${flow.label} accounts`}>
       <h3>Accounts</h3>
+      {id === "ms-teams" && (
+        <div className="my-3 space-y-2">
+          <label htmlFor="teams-search-type">Teams access</label>
+          <Select
+            value={teamsMessages ? "messages" : "teams"}
+            onValueChange={(value) => {
+              setTeamsMessages(value === "messages");
+              setQuery("");
+              setResult(null);
+            }}
+            disabled={busy}
+          >
+            <SelectTrigger id="teams-search-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="teams">Joined teams</SelectItem>
+              <SelectItem value="messages">Chat messages</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <p>{flow.description}</p>
+      <p className="text-sm text-muted-foreground">Kova provides read access for this operation.</p>
       {loading && <p role="status">Checking accounts…</p>}
       {error && (
         <p role="status">Account status is unavailable. Refresh before taking an action.</p>
@@ -201,15 +228,21 @@ export function ConnectedAccountManager({
             </div>
           )}
           <label className="block mt-4">
-            Search {flow.label}
+            {id === "figma" ? "Figma file" : `Search ${flow.label}`}
             <Input
               value={query}
-              maxLength={300}
+              maxLength={id === "canva" ? 255 : 300}
               onChange={(event) => {
                 setQuery(event.target.value);
                 setResult(null);
               }}
-              placeholder="Enter a search"
+              placeholder={
+                id === "notion"
+                  ? "Enter a title or page ID"
+                  : id === "figma"
+                    ? "Enter a design link or file key"
+                    : "Enter a search"
+              }
             />
           </label>
           <ul className="space-y-3 mt-3">
@@ -217,7 +250,7 @@ export function ConnectedAccountManager({
               <li key={account.id} className="rounded-xl border p-3">
                 <p>{account.account_label ?? flow.label}</p>
                 <p className="text-sm text-muted-foreground">
-                  {canReadConnection(account, id)
+                  {canReadConnection(account, operationId)
                     ? "Account authorized. Search to verify access."
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
@@ -234,13 +267,17 @@ export function ConnectedAccountManager({
                   <Button
                     variant="outline"
                     disabled={
-                      busy || loading || error || !canReadConnection(account, id) || !query.trim()
+                      busy ||
+                      loading ||
+                      error ||
+                      !canReadConnection(account, operationId) ||
+                      !query.trim()
                     }
                     onClick={() => {
                       void search(account.id);
                     }}
                   >
-                    Search this account
+                    {id === "figma" ? "Read this file" : "Search this account"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -261,7 +298,7 @@ export function ConnectedAccountManager({
             {result.results.length
               ? "Results from the connected service"
               : "No matching results returned."}{" "}
-            Up to 10 results.
+            {result.limited ? " Results may be incomplete." : ""}
           </p>
           <ul className="space-y-3 mt-2">
             {result.results.map((item, index) => (

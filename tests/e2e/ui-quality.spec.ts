@@ -60,9 +60,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
   await expect(send).toBeHidden();
   await expect(send).toBeDisabled();
   await expect(page.getByRole("button", { name: "Voice", exact: true })).toBeVisible();
-  const coarseComposer = await page.evaluate(
-    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
-  );
+  const coarseComposer = await page.evaluate(() => matchMedia("(width < 1024px)").matches);
   await expect(composer).toHaveCSS("outline-style", "none");
 
   await focusComposerByKeyboard(page);
@@ -109,7 +107,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
         input: bounds(".spec400-composer-input"),
         modeOnOwnRow:
           getComputedStyle(element.querySelector(".spec400-composer-toolbar")!).display === "grid",
-        coarse: matchMedia("(any-pointer: coarse)").matches,
+        coarse: matchMedia("(width < 1024px) and (any-pointer: coarse)").matches,
         phone: matchMedia(
           "(width < 768px), (width < 1024px) and (height <= 500px) and (pointer: coarse)",
         ).matches,

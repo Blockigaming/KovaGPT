@@ -646,7 +646,7 @@ test("composer action disc uses a compact desktop control and full phone target"
   assert.match(css, /\.spec400-composer \{[^}]*--composer-action-size: 36px;/);
   assert.match(
     css,
-    /@media \(any-pointer: coarse\), \(max-width: 1023px\) \{\s*\.spec400-composer \{\s*--composer-action-size: 44px;/,
+    /@media \(width < 1024px\) \{\s*\.spec400-composer \{\s*--composer-action-size: 44px;/,
   );
   const sharedAction = css.match(
     /\.spec400-composer-trailing \.spec400-primary-voice,\s*\.spec400-composer-trailing \[data-testid="stop-button"\],\s*\.spec400-composer-trailing \[data-testid="send-button"\] \{([^}]*)\}/,
@@ -657,7 +657,7 @@ test("composer action disc uses a compact desktop control and full phone target"
   }
   assert.match(
     css,
-    /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,
+    /@media \(width < 1024px\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,
   );
   assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
   assert.doesNotMatch(css, /border: 4px solid transparent !important/);

@@ -135,7 +135,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (width < 1024px) and (pointer: coarse) {
   .kova-browser-workspace-close {
     inline-size: 44px;
     block-size: 44px;
