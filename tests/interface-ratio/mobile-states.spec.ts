@@ -146,7 +146,9 @@ for (const theme of ["light", "dark"] as const) {
         root.style.setProperty("--kova-native-font-size", `${size}px`);
       }, size);
       await expect(html).toHaveCSS("font-size", `${size}px`);
-      await expect(shell).toHaveCSS("height", `${availableHeight}px`);
+      await expect
+        .poll(async () => (await shell.boundingBox())?.height)
+        .toBeCloseTo(availableHeight, 0);
       await expect(shell).toHaveCSS("background-color", background);
       await expect(themeColor).toHaveAttribute("content", color);
       await expect(html).not.toHaveAttribute("data-kova-keyboard");
