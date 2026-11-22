@@ -1,7 +1,7 @@
 import type { HomeChatAction } from "@/lib/home-chat-history-actions";
 import { SIDEBAR_DRAWER_QUERY } from "@/lib/sidebar-viewport";
 import { useRecentChatLibrary } from "@/hooks/use-recent-chat-library";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ComponentType, LazyExoticComponent } from "react";
 import { announceBackgroundChatReply } from "@/lib/chat-reply-activity";
 import {
   resolveConsumerModelChoice,
@@ -101,7 +101,41 @@ const ConversationHeaderActions = lazy(() =>
 const CommandPalette = lazy(() =>
   import("@/components/CommandPalette").then((module) => ({ default: module.CommandPalette })),
 );
-const ActiveChatTranscript = lazy(() =>
+/**
+ * A lazy component whose chunk can be fetched before it first renders. Once the
+ * chunk has loaded, React receives an already-settled thenable, so the first
+ * send from Home swaps straight to the transcript instead of suspending the
+ * whole pane behind the loading placeholder while the chunk downloads.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors React.lazy's own bound
+function preloadableLazy<C extends ComponentType<any>>(
+  load: () => Promise<{ default: C }>,
+): [LazyExoticComponent<C>, () => Promise<unknown>] {
+  let loaded: { default: C } | undefined;
+  let pending: Promise<{ default: C }> | undefined;
+  const preload = () =>
+    (pending ??= load().then(
+      (module) => (loaded = module),
+      (error: unknown) => {
+        pending = undefined;
+        throw error;
+      },
+    ));
+  const component = lazy(() => {
+    const ready = loaded;
+    if (!ready) return preload();
+    const settled = {
+      then(onFulfilled: (value: { default: C }) => unknown) {
+        onFulfilled(ready);
+        return settled;
+      },
+    };
+    return settled as unknown as Promise<{ default: C }>;
+  });
+  return [component, preload];
+}
+
+const [ActiveChatTranscript, preloadActiveChatTranscript] = preloadableLazy(() =>
   import("@/components/ActiveChatTranscript").then((module) => ({
     default: module.ActiveChatTranscript,
   })),
@@ -2617,6 +2651,29 @@ function KovaGPT() {
     },
     [],
   );
+
+  // Fetch the transcript chunk before the first send so Home never flashes the
+  // loading placeholder in place of the message the person just sent.
+  const hasComposerText = input.trim().length > 0;
+  useEffect(() => {
+    if (!isSignedIn) return;
+    if (hasComposerText) {
+      void preloadActiveChatTranscript().catch(() => undefined);
+      return;
+    }
+    const idle = window.requestIdleCallback
+      ? window.requestIdleCallback(
+          () => void preloadActiveChatTranscript().catch(() => undefined),
+          {
+            timeout: 2500,
+          },
+        )
+      : window.setTimeout(() => void preloadActiveChatTranscript().catch(() => undefined), 1200);
+    return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+    };
+  }, [isSignedIn, hasComposerText]);
 
   useEffect(() => {
     const next = nextPromptRef.current;

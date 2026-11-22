@@ -396,6 +396,11 @@
     padding-block-end: 8px;
   }
 
+  /* Home already reserves the 8px keyboard gap on its wrapper. */
+  .kova-assistant[data-keyboard-open="true"] .kova-empty-composer > .spec400-chat-input {
+    padding-block-end: 0;
+  }
+
   .kova-assistant[data-keyboard-open="true"]
     .spec400-chat-input[data-composer-surface]
     .spec400-composer {
