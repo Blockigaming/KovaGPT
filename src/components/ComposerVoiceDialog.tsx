@@ -222,6 +222,7 @@ export function ComposerVoiceDialog({
   const phaseRef = useRef<Phase>("idle");
   const nativeBackgrounded = useRef(false);
   const recorder = useRef<MediaRecorder | null>(null);
+  const androidVoice = useRef<{ id: string; running: boolean } | null>(null);
   const nativeRecording = useRef<{ id: string; listeners: AbortController } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -303,6 +304,9 @@ export function ComposerVoiceDialog({
     if (requestDeadline.current !== null) clearTimeout(requestDeadline.current);
     requestDeadline.current = null;
     clearRecordingTimers();
+    const android = androidVoice.current;
+    androidVoice.current = null;
+    if (android) sendNativeKovaMessage({ action: "android-voice-stop", id: android.id });
     const native = nativeRecording.current;
     nativeRecording.current = null;
     if (native) {
@@ -487,7 +491,7 @@ export function ComposerVoiceDialog({
         failOperation("Audio was interrupted. Start again when your microphone is available.");
     };
     const stopHiddenCapture = () => {
-      if (nativeRecording.current) return;
+      if (nativeRecording.current || androidVoice.current?.running) return;
       if (phaseRef.current === "requesting" || phaseRef.current === "recording") {
         failOperation("Microphone capture stopped when you left the app. Start again to continue.");
       }
@@ -502,18 +506,32 @@ export function ComposerVoiceDialog({
     const onForeground = () => {
       nativeBackgrounded.current = false;
     };
+    const onAndroidVoiceService = (event: Event) => {
+      const service = androidVoice.current;
+      const detail = (event as CustomEvent<{ id?: string; running?: boolean }>).detail;
+      if (!service || detail?.id !== service.id) return;
+      if (detail.running) {
+        service.running = true;
+      } else if (service.running) {
+        cancelOperation();
+      } else {
+        androidVoice.current = null;
+      }
+    };
+    window.addEventListener("kova-android-voice-service", onAndroidVoiceService);
     window.addEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
     window.addEventListener("kova-native-background", onBackground);
     window.addEventListener("kova-native-foreground", onForeground);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       nativeBackgrounded.current = false;
+      window.removeEventListener("kova-android-voice-service", onAndroidVoiceService);
       window.removeEventListener(KOVA_NATIVE_AUDIO_INTERRUPTION, interrupt);
       window.removeEventListener("kova-native-background", onBackground);
       window.removeEventListener("kova-native-foreground", onForeground);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [open, failOperation]);
+  }, [open, cancelOperation, failOperation]);
 
   useLayoutEffect(() => {
     if (mode === "voice") return;
@@ -666,6 +684,7 @@ export function ComposerVoiceDialog({
           if (
             nativeKovaPlatform() &&
             !nativeRecordedTurn &&
+            !androidVoice.current?.running &&
             (nativeBackgrounded.current || document.visibilityState !== "visible")
           ) {
             voiceSessionActive.current = false;
@@ -921,6 +940,11 @@ export function ComposerVoiceDialog({
     if (!isCurrent(scope)) return;
     const watchMicrophone = (capture: MediaStream) => {
       stream.current = capture;
+      if (mode === "voice" && nativeKovaPlatform() === "android" && !androidVoice.current) {
+        const id = crypto.randomUUID();
+        androidVoice.current = { id, running: false };
+        sendNativeKovaMessage({ action: "android-voice-start", id });
+      }
       for (const track of capture.getAudioTracks()) {
         track.addEventListener(
           "ended",

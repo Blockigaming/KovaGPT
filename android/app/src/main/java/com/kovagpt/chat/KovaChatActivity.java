@@ -3,7 +3,10 @@ package com.kovagpt.chat;
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ActivityNotFoundException;
 import android.content.res.Configuration;
 import android.content.pm.PackageManager;
@@ -67,6 +70,20 @@ public final class KovaChatActivity extends FragmentActivity {
     private AudioManager audioManager;
     private boolean locked;
     private boolean verifying;
+    private boolean visible;
+    private String voiceServiceId;
+    private final BroadcastReceiver voiceServiceState = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            String id = intent.getStringExtra(KovaVoiceService.ID);
+            if (id == null || !id.equals(voiceServiceId)) return;
+            boolean running = intent.getBooleanExtra(KovaVoiceService.RUNNING, false);
+            if (!running) voiceServiceId = null;
+            if (web == null || locked || !KovaDestination.isTrusted(web.getUrl())) return;
+            web.evaluateJavascript("if(location.origin==='https://kovagpt.com') "
+                + "window.dispatchEvent(new CustomEvent('kova-android-voice-service',{detail:{id:"
+                + JSONObject.quote(id) + ",running:" + running + "}}));", null);
+        }
+    };
     private boolean webWatchesBack;
     private PermissionRequest pendingMicrophone;
     private ValueCallback<Uri[]> pendingFiles;
@@ -96,6 +113,7 @@ public final class KovaChatActivity extends FragmentActivity {
                 if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET || type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
                     || type == AudioDeviceInfo.TYPE_USB_HEADSET || type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
                     || type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || type == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                    stopVoiceService();
                     signal("kova-native-audio-interruption");
                     return;
                 }
@@ -163,6 +181,8 @@ public final class KovaChatActivity extends FragmentActivity {
         createNotificationChannels();
         audioManager = getSystemService(AudioManager.class);
         audioManager.registerAudioDeviceCallback(audioRoutes, null);
+        ContextCompat.registerReceiver(this, voiceServiceState,
+            new IntentFilter(KovaVoiceService.STATE), ContextCompat.RECEIVER_NOT_EXPORTED);
         if (openGoogleExchange(getIntent().getData())) return;
         if (savedState == null || web.restoreState(savedState) == null) {
             KovaDestination initial = KovaDestination.fromShortcut(getIntent().getDataString());
@@ -225,6 +245,7 @@ public final class KovaChatActivity extends FragmentActivity {
                 return true;
             }
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                stopVoiceService();
                 webWatchesBack = false;
                 if (pendingMicrophone != null) {
                     pendingMicrophone.deny();
@@ -329,6 +350,23 @@ public final class KovaChatActivity extends FragmentActivity {
         try {
             JSONObject message = new JSONObject(raw);
             switch (message.optString("action")) {
+                case "android-voice-start":
+                    String voiceId = message.optString("id");
+                    if (visible && !locked && voiceServiceId == null
+                        && voiceId.matches("[a-f0-9-]{36}")
+                        && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        try {
+                            voiceServiceId = voiceId;
+                            ContextCompat.startForegroundService(this,
+                                new Intent(this, KovaVoiceService.class).putExtra(KovaVoiceService.ID, voiceId));
+                        } catch (RuntimeException unavailable) {
+                            voiceServiceId = null;
+                        }
+                    }
+                    break;
+                case "android-voice-stop":
+                    if (message.optString("id").equals(voiceServiceId)) stopVoiceService();
+                    break;
                 case "haptic":
                     web.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                     break;
@@ -419,6 +457,7 @@ public final class KovaChatActivity extends FragmentActivity {
     }
 
     private void setLocked(boolean value) {
+        if (value) stopVoiceService();
         locked = value;
         presentLock();
     }
@@ -493,12 +532,21 @@ public final class KovaChatActivity extends FragmentActivity {
         web.getSettings().setTextZoom(Math.round(configuration.fontScale * 100));
         updateSystemBars((View) web.getParent());
     }
+    private void stopVoiceService() {
+        if (voiceServiceId == null) return;
+        voiceServiceId = null;
+        stopService(new Intent(this, KovaVoiceService.class));
+    }
+
     @Override protected void onStart() {
         super.onStart();
+        visible = true;
         if (web != null) signal("kova-native-foreground");
     }
     @Override protected void onStop() {
+        visible = false;
         if (!verifying && getPreferences(MODE_PRIVATE).getBoolean(LOCK, false)) {
+            stopVoiceService();
             signal("kova-native-audio-interruption");
             setLocked(true);
         } else {
@@ -511,6 +559,8 @@ public final class KovaChatActivity extends FragmentActivity {
         super.onSaveInstanceState(state);
     }
     @Override protected void onDestroy() {
+        stopVoiceService();
+        unregisterReceiver(voiceServiceState);
         audioManager.unregisterAudioDeviceCallback(audioRoutes);
         completeFiles(null);
         if (pendingMicrophone != null) pendingMicrophone.deny();

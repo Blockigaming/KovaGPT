@@ -6,7 +6,11 @@ type NativeMessage =
   | { action: "device-lock" | "notifications" | "haptic" }
   | { action: "watch-back"; active: boolean }
   | { action: "share"; text: string }
-  | { action: "voice-reply-begin" | "voice-reply-end"; id: string };
+  | {
+      action:
+        "voice-reply-begin" | "voice-reply-end" | "android-voice-start" | "android-voice-stop";
+      id: string;
+    };
 
 type NativeWindow = Window & {
   webkit?: { messageHandlers?: { kovaNative?: { postMessage: (message: NativeMessage) => void } } };

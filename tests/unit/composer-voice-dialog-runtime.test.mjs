@@ -1805,6 +1805,28 @@ test("Android background lifecycle keeps a submitted reply and prevents micropho
   f.unmount();
 });
 
+test("Android Voice continues while its foreground service runs and stops with its notification", async () => {
+  const nativeMessages = [];
+  const f = fixture({ mode: "voice" }, { nativePlatform: "android", nativeMessages });
+  const { sink } = await voiceReply(f);
+  const service = nativeMessages.find((message) => message.action === "android-voice-start");
+  assert.ok(service);
+  f.dispatch({ type: "kova-android-voice-service", detail: { id: service.id, running: true } });
+  f.dispatch({ type: "kova-native-background" });
+  f.setVisibility("hidden");
+  sink.options.onEnded();
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 2);
+  const stream = f.trackStream();
+  f.microphoneRequests[1].resolve(stream);
+  await f.flush();
+  f.dispatch({ type: "kova-android-voice-service", detail: { id: service.id, running: false } });
+  await f.flush();
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.voiceSubmissions.length, 1);
+  f.unmount();
+});
+
 test("native Voice stops active microphone capture when hidden", async () => {
   const f = fixture({ mode: "voice" }, { nativePlatform: "ios" });
   await f.ready();
