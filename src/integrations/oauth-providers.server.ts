@@ -1,7 +1,8 @@
-import { BIGQUERY_READ_SCOPE, calendlyUserUri } from "./connection-flows.mjs";
+import { BIGQUERY_READ_SCOPE, GRANOLA_NOTE_READ, calendlyUserUri } from "./connection-flows.mjs";
 import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
 
 export type OAuthProviderId =
+  | "gamma"
   | "calendly"
   | "google-bigquery"
   | "hubspot"
@@ -38,6 +39,25 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 const teamUser = (value: unknown) =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  gamma: {
+    id: "gamma",
+    name: "Gamma",
+    authorizationEndpoint: "https://auth.gamma.app/oauth/authorize",
+    tokenEndpoint: "https://auth.gamma.app/oauth/token",
+    clientIdEnv: "GAMMA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "GAMMA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["gamma:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://public-api.gamma.app/v1.0/me",
+    profileId: (v) => {
+      const userId = text(v.userId);
+      const workspaceId = text(v.workspaceId);
+      const id = /^[a-zA-Z0-9_-]{1,128}$/u;
+      return id.test(userId) && id.test(workspaceId) ? `${workspaceId}:${userId}` : "";
+    },
+    profileLabel: (v) => text(v.workspaceName).slice(0, 120) || "Gamma workspace",
+  },
   calendly: {
     id: "calendly",
     name: "Calendly",
@@ -288,9 +308,19 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
   },
 };
 
-export function configuredOAuthProviders() {
+function credentialVaultConfigured() {
   const key = process.env.CONNECTOR_TOKEN_ENCRYPTION_KEY;
-  if (!key || Buffer.from(key, "base64").length !== 32) return [];
+  return Boolean(key && Buffer.from(key, "base64").length === 32);
+}
+
+export function configuredGranolaProvider() {
+  return credentialVaultConfigured()
+    ? { id: "granola", name: "Granola", requiredScopes: [GRANOLA_NOTE_READ], optionalScopes: [] }
+    : null;
+}
+
+export function configuredOAuthProviders() {
+  if (!credentialVaultConfigured()) return [];
   return Object.values(OAUTH_PROVIDERS).filter(
     (provider) => process.env[provider.clientIdEnv] && process.env[provider.clientSecretEnv],
   );

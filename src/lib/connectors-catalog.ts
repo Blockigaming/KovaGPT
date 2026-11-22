@@ -40,9 +40,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "granola",
     label: "Granola",
-    description: "Planned connection for meeting notes and shared context.",
+    description: "Search recent meeting note titles and dates allowed by your Granola API key.",
     category: "Notes & Docs",
-    status: "planned",
+    status: "setup_required",
     domain: "granola.ai",
   },
   {
@@ -72,9 +72,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "gamma",
     label: "Gamma",
-    description: "Planned Gamma integration for presentations and documents.",
+    description: "Find document titles and links in the Gamma workspace you authorize.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "gamma.app",
   },
   {
@@ -3100,10 +3100,11 @@ export const GOOGLE_CONNECT_IDS: ReadonlySet<string> = new Set([
 /** The connect mechanism actually implemented for an entry, if any. */
 export function connectorConnectFlow(
   item: ConnectorItem,
-): "google-oauth" | "github-app" | "provider-oauth" | null {
+): "google-oauth" | "github-app" | "provider-oauth" | "provider-key" | null {
   if (item.status !== "live" && item.status !== "setup_required") return null;
   if (GOOGLE_CONNECT_IDS.has(item.id)) return "google-oauth";
   if (item.id === "github") return "github-app";
+  if (item.id === "granola") return "provider-key";
   if (CONNECTION_FLOWS[item.id]) return "provider-oauth";
   return null;
 }

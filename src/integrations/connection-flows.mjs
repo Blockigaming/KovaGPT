@@ -9,7 +9,25 @@ export function calendlyUserUri(value) {
     : "";
 }
 
+export const GRANOLA_NOTE_READ = "granola:notes:list";
+
 export const CONNECTION_FLOWS = {
+  gamma: {
+    provider: "gamma",
+    scopes: ["gamma:read"],
+    tool: "gamma_search_documents",
+    label: "Gamma",
+    description:
+      "Find Gamma document titles and links in the selected workspace. Enter at least three characters or 'recent' to list recent documents.",
+  },
+  granola: {
+    provider: "granola",
+    scopes: [GRANOLA_NOTE_READ],
+    tool: "granola_search_notes",
+    label: "Granola",
+    description:
+      "Find recent meeting note titles and dates visible to the connected Granola key. Use a title fragment or 'recent' to list notes.",
+  },
   calendly: {
     provider: "calendly",
     scopes: ["users:read", "scheduled_events:read"],
@@ -179,6 +197,7 @@ export function safeConnectionLink(value) {
 
 export function connectionAuthorizationUrl(provider, value) {
   const endpoints = {
+    gamma: "https://auth.gamma.app/oauth/authorize",
     box: "https://account.box.com/api/oauth2/authorize",
     canva: "https://www.canva.com/api/oauth/authorize",
     figma: "https://www.figma.com/oauth",

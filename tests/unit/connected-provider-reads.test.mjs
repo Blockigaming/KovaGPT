@@ -131,6 +131,8 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "api.canva.com",
     "api.figma.com",
     "api.calendly.com",
+    "public-api.granola.ai",
+    "public-api.gamma.app",
     "bigquery.googleapis.com",
     "api.hubapi.com",
     "api.notion.com",
@@ -145,6 +147,7 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     urls: { query: "https://fixture.my.salesforce.com/services/data/v67.0/query" },
   });
   for (const id of Object.keys(CONNECTION_FLOWS)) {
+    const token = id === "granola" ? "grn_test_only" : "fake-token";
     const req = connectionReadRequest(
       id,
       id === "figma"
@@ -152,12 +155,12 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
         : id === "google-bigquery"
           ? "example-project"
           : "a&?$top=999' https://evil.example",
-      id === "salesforce" ? salesforceToken : "fake-token",
+      id === "salesforce" ? salesforceToken : token,
       { calendlyUser: "https://api.calendly.com/users/test-user" },
     );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
-    assert.equal(req.init.headers.Authorization, "Bearer fake-token");
+    assert.equal(req.init.headers.Authorization, `Bearer ${token}`);
     assert.equal(req.init.redirect, "error");
     assert.ok(req.init.signal instanceof AbortSignal);
   }
@@ -826,4 +829,94 @@ test("HubSpot contact lookup needs a separate grant and only returns names", asy
     });
   });
   assert.deepEqual(result.results, [{ id: "12", title: "Demo User", url: null, snippet: "" }]);
+});
+
+test("Granola uses a single bounded note list and filters titles without sharing note contents", async () => {
+  const key = "grn_fixture_key";
+  assert.throws(() => connectionReadRequest("granola", "recent", "invalid"), /invalid_granola_key/);
+  const result = await readConnection("granola", "Weekly", key, async (url, request) => {
+    assert.equal(url, "https://public-api.granola.ai/v1/notes?page_size=25");
+    assert.equal(request.method, "GET");
+    assert.equal(request.redirect, "error");
+    assert.equal(request.headers.Authorization, `Bearer ${key}`);
+    return Response.json({
+      notes: [
+        {
+          id: "not_AbC123xYz789Qw",
+          object: "note",
+          title: "Weekly meeting",
+          created_at: "2026-11-20T14:00:00Z",
+          owner: { email: "private" },
+          transcript: "private",
+        },
+        { id: "not_ZbC123xYz789Qw", object: "note", title: "Other meeting" },
+      ],
+      cursor: "private",
+    });
+  });
+  assert.deepEqual(result.results, [
+    {
+      id: "not_AbC123xYz789Qw",
+      title: "Weekly meeting",
+      url: null,
+      snippet: "2026-11-20T14:00:00Z",
+    },
+  ]);
+  assert.equal(result.limited, true);
+  await assert.rejects(
+    readConnection("granola", "recent", key, async () => new Response(null, { status: 401 })),
+    /connection_reauthorization_required/,
+  );
+  await assert.rejects(
+    readConnection("granola", "recent", key, async () => Response.json({ value: [] })),
+    /invalid_connection_response/,
+  );
+});
+
+test("Gamma document lookup uses its workspace read grant and returns only metadata", async () => {
+  const account = { provider_id: "gamma", status: "connected", token_expires_at: null };
+  assert.equal(canReadConnection({ ...account, granted_scopes: [] }, "gamma"), false);
+  assert.equal(canReadConnection({ ...account, granted_scopes: ["gamma:read"] }, "gamma"), true);
+  assert.equal(
+    connectionReadRequest("gamma", "recent", "token").url,
+    "https://public-api.gamma.app/v1.0/gammas?limit=10",
+  );
+  const result = await readConnection(
+    "gamma",
+    "Demo & report",
+    "token",
+    async (target, request) => {
+      const url = new URL(target);
+      assert.equal(url.origin + url.pathname, "https://public-api.gamma.app/v1.0/gammas");
+      assert.equal(url.searchParams.get("query"), "Demo & report");
+      assert.equal(url.searchParams.get("limit"), "10");
+      assert.equal(request.method, "GET");
+      return Response.json({
+        data: [
+          {
+            id: "demo",
+            title: "Demo",
+            url: "https://gamma.app/docs/demo",
+            updatedTime: "2026-11-22T10:00:00Z",
+            thumbnailUrl: "private",
+          },
+          { id: "other", title: "Other", url: "https://example.invalid/private" },
+        ],
+        nextCursor: "private",
+      });
+    },
+  );
+  assert.deepEqual(result.results, [
+    {
+      id: "demo",
+      title: "Demo",
+      url: "https://gamma.app/docs/demo",
+      snippet: "2026-11-22T10:00:00Z",
+    },
+    { id: "other", title: "Other", url: null, snippet: "" },
+  ]);
+  assert.throws(
+    () => selectRefreshTokens("gamma", { access_token: "example", expires_in: 3600 }),
+    /refresh_token_missing/,
+  );
 });

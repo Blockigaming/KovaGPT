@@ -115,8 +115,17 @@ function fixture() {
     },
     "./connection-flows.mjs": flows,
     "./oauth-providers.server": {
+      configuredGranolaProvider: () => (state.configured ? { id: "granola" } : null),
       configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
       OAUTH_PROVIDERS: {
+        gamma: {
+          id: "gamma",
+          tokenEndpoint: "https://auth.gamma.app/oauth/token",
+          clientIdEnv: "TEST_ID",
+          clientSecretEnv: "TEST_SECRET",
+          profileEndpoint: "https://public-api.gamma.app/v1.0/me",
+          profileId: ({ userId, workspaceId }) => `${workspaceId}:${userId}`,
+        },
         notion: {
           id: "notion",
           tokenEndpoint: "https://api.notion.com/v1/oauth/token",
@@ -890,5 +899,43 @@ test("forced Notion renewal cannot access another owner, workspace or deleted ac
     );
     assert.equal(f.state.decrypts, 0);
     assert.equal(f.state.refreshCalls ?? 0, 0);
+  }
+});
+
+test("Gamma persists a rotated credential only for the same user and workspace", async () => {
+  for (const workspaceId of ["workspace_2", "unexpected_workspace"]) {
+    const f = fixture();
+    Object.assign(f.state.row, {
+      provider_id: "gamma",
+      provider_account_id: "workspace_2:user_1",
+      granted_scopes: ["gamma:read"],
+      refresh_token_ciphertext: "encrypted:old-refresh",
+      token_expires_at: new Date(Date.now() + 1000).toISOString(),
+    });
+    f.state.onFetch = (url, init) => {
+      if (url === "https://auth.gamma.app/oauth/token") {
+        assert.equal(init.body.get("refresh_token"), "old-refresh");
+        return Response.json({
+          access_token: "renewed",
+          refresh_token: "rotated",
+          scope: "gamma:read",
+          expires_in: 3600,
+        });
+      }
+      assert.equal(url, "https://public-api.gamma.app/v1.0/me");
+      assert.equal(init.headers.Authorization, "Bearer renewed");
+      return Response.json({ userId: "user_1", workspaceId });
+    };
+    const { id, updated_at } = f.state.row;
+    const refreshed = await f.refreshExpiringConnection("owner-a", id, updated_at);
+    if (workspaceId === "workspace_2") {
+      assert.ok(refreshed);
+      assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated");
+      assert.equal(f.state.row.access_token_ciphertext, "encrypted:renewed");
+    } else {
+      assert.equal(refreshed, null);
+      assert.equal(f.state.row.status, "expired");
+      assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:old-refresh");
+    }
   }
 });

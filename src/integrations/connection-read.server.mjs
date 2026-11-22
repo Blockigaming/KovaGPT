@@ -43,7 +43,18 @@ export function connectionReadRequest(id, query, token, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
   let url;
   let body;
-  if (id === "calendly") {
+  if (id === "gamma") {
+    url = new URL("https://public-api.gamma.app/v1.0/gammas");
+    url.searchParams.set("limit", "10");
+    if (query.toLowerCase() !== "recent") {
+      if (query.length < 3) throw new Error("invalid_connection_query");
+      url.searchParams.set("query", query);
+    }
+  } else if (id === "granola") {
+    if (!/^grn_[A-Za-z0-9_-]{8,508}$/u.test(token)) throw new Error("invalid_granola_key");
+    url = new URL("https://public-api.granola.ai/v1/notes");
+    url.searchParams.set("page_size", "25");
+  } else if (id === "calendly") {
     const user = calendlyUserUri(options.calendlyUser);
     if (!user) throw new Error("invalid_calendly_account");
     url = new URL("https://api.calendly.com/scheduled_events");
@@ -205,6 +216,43 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     };
   }
   let rows = data.value;
+  if (id === "gamma") {
+    if (!Array.isArray(data.data)) throw new Error("invalid_connection_response");
+    rows = data.data.flatMap((item) => {
+      if (typeof item?.id !== "string" || !item.id) return [];
+      const link = safeConnectionLink(item.url);
+      const url = link && new URL(link).origin === "https://gamma.app" ? link : null;
+      return [
+        {
+          id: str(item.id, 80),
+          name: str(item.title, 300) || "Untitled Gamma",
+          url,
+          description: str(item.updatedTime, 64),
+        },
+      ];
+    });
+  }
+  if (id === "granola") {
+    if (!Array.isArray(data.notes)) throw new Error("invalid_connection_response");
+    const filter = query.trim().toLowerCase();
+    rows = data.notes.flatMap((note) => {
+      if (
+        note?.object !== "note" ||
+        typeof note.id !== "string" ||
+        !/^not_[a-zA-Z0-9]{14}$/u.test(note.id)
+      )
+        return [];
+      const title = str(note.title, 300);
+      if (filter !== "recent" && !title.toLowerCase().includes(filter)) return [];
+      return [
+        {
+          id: note.id,
+          name: title || "Untitled meeting note",
+          description: str(note.created_at, 64),
+        },
+      ];
+    });
+  }
   if (id === "calendly") {
     if (!Array.isArray(data.collection)) throw new Error("invalid_connection_response");
     const filter = query.trim().toLowerCase();

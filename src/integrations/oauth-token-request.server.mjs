@@ -100,6 +100,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       "canva",
       "figma",
       "calendly",
+      "gamma",
       "google-bigquery",
       "hubspot",
     ].includes(providerId)
@@ -151,7 +152,7 @@ export function selectRefreshTokens(providerId, payload) {
   // a claimed refresh instead of inventing a lifetime for those tokens.
   if (!tokens.expires_in && !["salesforce", "notion"].includes(providerId))
     throw new Error("refresh_expiry_missing");
-  if (["notion", "box", "canva", "calendly"].includes(providerId) && !tokens.refresh_token)
+  if (["notion", "box", "canva", "calendly", "gamma"].includes(providerId) && !tokens.refresh_token)
     throw new Error("refresh_token_missing");
   return tokens;
 }

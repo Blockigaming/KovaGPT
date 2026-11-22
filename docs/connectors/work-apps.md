@@ -42,6 +42,22 @@ Register the exact callbacks above in the providers' developer portals. Canva ne
 
 [Calendly scopes](https://developer.calendly.com/docs/authentication/scopes) · [BigQuery datasets list](https://docs.cloud.google.com/bigquery/docs/reference/rest/v2/datasets/list) · [HubSpot CRM search](https://developers.hubspot.com/docs/api-reference/latest/crm/search-the-crm)
 
+## Gamma acceptance
+
+Register one confidential Gamma OAuth client with `client_secret_post` and callback `https://kovagpt.com/api/integrations/oauth/callback/gamma`. Store the returned credentials under `GAMMA_OAUTH_CLIENT_ID` and `GAMMA_OAUTH_CLIENT_SECRET`. Kova requests `gamma:read` for the public API and verifies the selected user and workspace with Gamma before storing the grant. Authorization and refresh never request the `generate` scope.
+
+Search for a known document title or enter `recent`. Kova returns up to ten document titles, Gamma links and last-modified dates. Verify that documents from a workspace you did not authorize are excluded. Verify token renewal keeps the same workspace and that Kova disconnect removes the local grant. Gamma document creation and edits are still pending.
+
+[Gamma OAuth](https://developers.gamma.app/get-started/authenticate-with-oauth) · [Gamma API index](https://developers.gamma.app/llms.txt)
+
+## Granola acceptance
+
+In the Granola desktop app, create a dedicated personal API key under **Settings → Connectors → API keys**. Grant only the notes access needed for your test. In KovaGPT, open **Connections → Granola** and enter that key. Kova verifies the key against Granola before storing it encrypted. One personal key can be linked per Kova account. Kova searches titles within the first page of 25 visible notes, returns up to ten titles and dates, and has no Granola write operation.
+
+Verify that a known note appears and an excluded note does not. Revoke the key in Granola and verify the read fails. Disconnect in Kova to remove the stored key. Granola manages revocation in its own settings.
+
+[Granola API access and revocation](https://docs.granola.ai/help-center/sharing/integrations/granola-api)
+
 ## Salesforce registration and session renewal
 
 Create an External Client App for a new Salesforce registration. Salesforce restricts creation of older Connected Apps beginning with Spring '26. Register the exact callback above and enable authorization-code OAuth with PKCE S256. The adapter uses production `login.salesforce.com` authorization. Sandbox-specific sign-in is not exposed.

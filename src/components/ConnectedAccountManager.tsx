@@ -56,6 +56,7 @@ export function ConnectedAccountManager({
   const [result, setResult] = useState<ConnectionReadResult | null>(null);
   const [disconnect, setDisconnect] = useState<ConnectedAccount | null>(null);
   const active = useRef(true);
+  const granolaKey = useRef<HTMLInputElement>(null);
   const readAccount = useServerFn(searchConnectedAccount);
   const refreshAccess = useServerFn(refreshConnectedAccess);
   useEffect(() => {
@@ -88,6 +89,38 @@ export function ConnectedAccountManager({
       if (active.current) window.location.assign(url);
     } catch {
       if (active.current) toast.error("Could not start this connection. Refresh and try again.");
+    } finally {
+      if (active.current) setBusy(false);
+    }
+  };
+  const linkGranola = async () => {
+    const field = granolaKey.current;
+    const apiKey = field?.value.trim();
+    if (busy || loading || error || !configured || !field || !apiKey) return;
+    field.value = "";
+    setBusy(true);
+    setResult(null);
+    try {
+      const response = await fetchWithTimeoutAuthenticated("/api/integrations/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "granola", apiKey }),
+      });
+      if (!response.ok) {
+        if (active.current)
+          toast.error(
+            response.status === 403
+              ? "Granola read access could not be authorized. Check the key’s permissions and Lockdown Mode."
+              : "Could not connect Granola. Check the key and try again.",
+          );
+        return;
+      }
+      if (active.current) {
+        await reload();
+        if (active.current) toast.success("Granola note list access verified.");
+      }
+    } catch {
+      if (active.current) toast.error("Could not connect Granola. Try again.");
     } finally {
       if (active.current) setBusy(false);
     }
@@ -131,7 +164,9 @@ export function ConnectedAccountManager({
         toast.success(
           body.providerRevoked
             ? "Account disconnected and provider access revoked."
-            : "Account disconnected locally. Provider revocation may still be pending.",
+            : id === "granola"
+              ? "Granola key removed from Kova. Revoke it in Granola to disable the key."
+              : "Account disconnected locally. Provider revocation may still be pending.",
         );
     } catch {
       if (active.current)
@@ -201,14 +236,43 @@ export function ConnectedAccountManager({
         <p role="status">Connection setup is incomplete in this deployment.</p>
       )}
       <div className="flex flex-wrap gap-2 mt-3">
-        <Button
-          onClick={() => {
-            void start();
-          }}
-          disabled={!configured || loading || error || busy}
-        >
-          {busy ? "Working…" : accounts.length ? "Connect or update permissions" : "Connect"}
-        </Button>
+        {id === "granola" ? (
+          configured && (
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void linkGranola();
+              }}
+            >
+              <label>
+                Granola personal API key
+                <Input
+                  ref={granolaKey}
+                  type="password"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  maxLength={512}
+                  disabled={busy || loading || error}
+                />
+              </label>
+              <Button type="submit" disabled={busy || loading || error}>
+                {busy ? "Working…" : accounts.length ? "Replace key" : "Connect Granola"}
+              </Button>
+            </form>
+          )
+        ) : (
+          <Button
+            onClick={() => {
+              void start();
+            }}
+            disabled={!configured || loading || error || busy}
+          >
+            {busy ? "Working…" : accounts.length ? "Connect or update permissions" : "Connect"}
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={() => {
@@ -277,7 +341,9 @@ export function ConnectedAccountManager({
                       ? "Enter a Google Cloud project ID"
                       : id === "calendly"
                         ? "Enter a meeting title or upcoming"
-                        : "Enter a search"
+                        : id === "granola"
+                          ? "Enter a note title or recent"
+                          : "Enter a search"
               }
             />
           </label>
@@ -291,15 +357,17 @@ export function ConnectedAccountManager({
                     : "Reconnect to renew access or grant this service’s read permission."}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <Button
-                    variant="outline"
-                    disabled={!configured || busy || loading || error}
-                    onClick={() => {
-                      void start(account.id);
-                    }}
-                  >
-                    Reconnect or add read access
-                  </Button>
+                  {id !== "granola" && (
+                    <Button
+                      variant="outline"
+                      disabled={!configured || busy || loading || error}
+                      onClick={() => {
+                        void start(account.id);
+                      }}
+                    >
+                      Reconnect or add read access
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     disabled={

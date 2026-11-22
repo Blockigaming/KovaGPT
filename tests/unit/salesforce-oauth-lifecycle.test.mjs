@@ -126,7 +126,15 @@ function fixture() {
       "./connection-flows.mjs": connectionFlows,
       "@/health/oura-metrics.mjs": { OURA_SCOPES },
     },
-    { process: { env: {} } },
+    {
+      process: {
+        env: {
+          CONNECTOR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32).toString("base64"),
+          GAMMA_OAUTH_CLIENT_ID: "client-test",
+          GAMMA_OAUTH_CLIENT_SECRET: "secret-test",
+        },
+      },
+    },
   );
   const modules = {
     "@supabase/supabase-js": { createClient: () => db },
@@ -164,6 +172,8 @@ function fixture() {
         CALENDLY_OAUTH_CLIENT_SECRET: "secret-test",
         BIGQUERY_OAUTH_CLIENT_ID: "client-test",
         BIGQUERY_OAUTH_CLIENT_SECRET: "secret-test",
+        GAMMA_OAUTH_CLIENT_ID: "client-test",
+        GAMMA_OAUTH_CLIENT_SECRET: "secret-test",
         HUBSPOT_OAUTH_CLIENT_ID: "client-test",
         HUBSPOT_OAUTH_CLIENT_SECRET: "secret-test",
       },
@@ -190,6 +200,14 @@ test("new work-app callbacks store only a confirmed grant for the bound provider
   const calendlyUser = "https://api.calendly.com/users/linked-user";
   const bigqueryScope = connectionFlows.BIGQUERY_READ_SCOPE;
   const fixtures = [
+    {
+      providerId: "gamma",
+      tokens: { scope: "gamma:read" },
+      profile: { userId: "user_1", workspaceId: "workspace_2", workspaceName: "Fixture workspace" },
+      profileEndpoint: "https://public-api.gamma.app/v1.0/me",
+      accountId: "workspace_2:user_1",
+      scopes: ["gamma:read"],
+    },
     {
       providerId: "calendly",
       tokens: { owner: calendlyUser, scope: "users:read scheduled_events:read" },
@@ -314,4 +332,36 @@ test("failed Salesforce remote revocation remains pending while local credential
     f.state.inserts.find(([table]) => table === "integration_deletion_requests")[1].status,
     "pending",
   );
+});
+
+test("Granola disconnect erases the owner's local key without a remote request", async () => {
+  const f = fixture();
+  Object.assign(f.state.account, {
+    provider_id: "granola",
+    workspace_id: null,
+    updated_at: "old",
+    deleted_at: null,
+  });
+  await assert.rejects(f.disconnectOAuth("other-owner", "account-one"), /linked_account_not_found/);
+  assert.deepEqual(await f.disconnectOAuth("owner-one", "account-one"), { providerRevoked: false });
+  assert.equal(f.state.calls.length, 0);
+  assert.equal(f.state.account.access_token_ciphertext, "deleted");
+  assert.equal(f.state.account.status, "revoked");
+});
+
+test("Gamma starts authorization with the API audience, read-only scope and PKCE", async () => {
+  const f = fixture();
+  const result = await f.beginOAuth({
+    ...callback,
+    ownerId: "owner-one",
+    providerId: "gamma",
+    optionalScopes: ["generate"],
+  });
+  const url = new URL(result.url);
+  assert.equal(url.origin, "https://auth.gamma.app");
+  assert.equal(url.searchParams.get("resource"), "https://public-api.gamma.app");
+  assert.equal(url.searchParams.get("scope"), "gamma:read");
+  assert.equal(url.searchParams.get("code_challenge_method"), "S256");
+  assert.match(url.searchParams.get("code_challenge"), /^[a-zA-Z0-9_-]{43}$/u);
+  assert.equal(url.searchParams.has("client_secret"), false);
 });

@@ -15,6 +15,7 @@ export type ConnectedAccount = {
   deleted_at?: string | null;
   updated_at?: string;
 };
+export const GRANOLA_NOTE_READ: string;
 export const BIGQUERY_READ_SCOPE: string;
 export function calendlyUserUri(value: unknown): string;
 export const CONNECTION_FLOWS: Record<string, ConnectionFlow>;

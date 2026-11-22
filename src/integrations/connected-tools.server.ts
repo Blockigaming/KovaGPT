@@ -5,6 +5,7 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import type { ToolDef } from "@/lib/google-tools.server";
 import { CONNECTION_FLOWS, canReadConnection, type ConnectedAccount } from "./connection-flows.mjs";
 import {
+  configuredGranolaProvider,
   configuredOAuthProviders,
   OAUTH_PROVIDERS,
   type OAuthProviderId,
@@ -37,6 +38,9 @@ type AccountRow = BoundAccount & {
   workspace_id: string | null;
   deleted_at: string | null;
   created_at: string;
+  health_checked_at: string | null;
+  last_success_at: string | null;
+  last_error_code: string | null;
   access_token_ciphertext: string;
   refresh_token_ciphertext: string | null;
 };
@@ -49,13 +53,31 @@ type AuditRow = {
   result: string;
   safe_summary: string;
 };
-type ConnectorDatabase = {
+type ConsentRow = {
+  id: string;
+  owner_id: string;
+  linked_account_id: string;
+  scopes: string[];
+  purpose: string;
+  decision: string;
+};
+export type ConnectorDatabase = {
   public: {
     Tables: {
       integration_linked_accounts: {
         Row: AccountRow;
-        Insert: AccountRow;
+        Insert: Pick<
+          AccountRow,
+          "owner_id" | "provider_id" | "provider_account_id" | "access_token_ciphertext"
+        > &
+          Partial<AccountRow>;
         Update: Partial<AccountRow>;
+        Relationships: [];
+      };
+      integration_consents: {
+        Row: ConsentRow;
+        Insert: Omit<ConsentRow, "id">;
+        Update: Partial<ConsentRow>;
         Relationships: [];
       };
       integration_audit_events: {
@@ -111,6 +133,7 @@ export async function refreshExpiringConnection(
       "canva",
       "figma",
       "calendly",
+      "gamma",
       "google-bigquery",
       "hubspot",
     ].includes(row.provider_id)
@@ -182,6 +205,24 @@ export async function refreshExpiringConnection(
     )
       throw new Error("refresh_binding_changed");
     await ensureRefreshLease();
+    if (provider.id === "gamma") {
+      const scopes =
+        tokens.scope === undefined ? row.granted_scopes : tokens.scope.trim().split(/\s+/u);
+      if (scopes.length !== 1 || scopes[0] !== "gamma:read" || !provider.profileEndpoint)
+        throw new Error("refresh_scope_changed");
+      const profile = await fetch(provider.profileEndpoint, {
+        redirect: "error",
+        signal: AbortSignal.timeout(12_000),
+        headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: "application/json" },
+      });
+      if (!profile.ok) {
+        await profile.body?.cancel();
+        throw new Error("refresh_binding_changed");
+      }
+      const identity = provider.profileId(await readProviderJsonObject(profile, 64_000));
+      if (identity !== row.provider_account_id) throw new Error("refresh_binding_changed");
+      await ensureRefreshLease();
+    }
     const packed = oldSalesforceCredential
       ? await renewSalesforceCredential(
           oldSalesforceCredential,
@@ -230,6 +271,7 @@ export async function refreshExpiringConnection(
 export async function getConnectedToolContext(ownerId: string): Promise<ConnectedToolContext> {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
   const configured = new Set<string>(configuredOAuthProviders().map((provider) => provider.id));
+  if (configuredGranolaProvider()) configured.add("granola");
   const { data, error } = await db
     .from("integration_linked_accounts")
     .select(accountColumns)
@@ -316,7 +358,9 @@ export async function runConnectionAccountSearch(
   );
   if (!bound) throw new Error("connection_account_not_allowed");
   const providerConfigured = () =>
-    configuredOAuthProviders().some((provider) => provider.id === flow.provider);
+    flow.provider === "granola"
+      ? Boolean(configuredGranolaProvider())
+      : configuredOAuthProviders().some((provider) => provider.id === flow.provider);
   if (!providerConfigured()) throw new Error("connection_changed_or_expired");
   const limit = await consumeApplicationRateLimit({
     identity: `user:${ownerId}`,

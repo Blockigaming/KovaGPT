@@ -105,6 +105,7 @@ export async function beginOAuth(input: {
     const optional = scopes.filter((scope) => provider.optionalScopes.includes(scope));
     if (optional.length) params.set("optional_scope", optional.join(" "));
   }
+  if (provider.id === "gamma") params.set("resource", "https://public-api.gamma.app");
   if (provider.id === "microsoft") params.set("response_mode", "query");
   if (loginHint) params.set("login_hint", loginHint);
   if (provider.id === "google-bigquery") {
@@ -180,7 +181,9 @@ export async function completeOAuth(input: {
     provider.id,
     await readProviderJsonObject(tokenResponse, 64_000),
   );
-  const needsExplicitScopes = ["calendly", "google-bigquery", "hubspot"].includes(provider.id);
+  const needsExplicitScopes = ["calendly", "google-bigquery", "hubspot", "gamma"].includes(
+    provider.id,
+  );
   if (
     (needsExplicitScopes || ["oura", "whoop", "box", "canva", "figma"].includes(provider.id)) &&
     !tokens.expires_in
@@ -191,6 +194,8 @@ export async function completeOAuth(input: {
     !tokens.refresh_token
   )
     throw new Error("oauth_refresh_token_missing");
+  if (provider.id === "gamma" && tokens.scope?.trim() !== "gamma:read")
+    throw new Error("oauth_scope_verification_failed");
   if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
     throw new Error("oauth_scope_verification_failed");
   if (
@@ -295,17 +300,15 @@ export async function completeOAuth(input: {
   return { account, returnPath: record.return_path as string };
 }
 
-export async function disconnectOAuth(ownerId: string, accountId: string) {
-  const db = admin();
-  const { data: account } = await db
-    .from("integration_linked_accounts")
-    .select("*")
-    .eq("id", accountId)
-    .eq("owner_id", ownerId)
-    .maybeSingle();
-  if (!account) throw new Error("linked_account_not_found");
-  const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
-  if (!provider) throw new Error("unsupported_linked_account_provider");
+async function revokeOAuthCredential(
+  provider: (typeof OAUTH_PROVIDERS)[OAuthProviderId],
+  account: {
+    owner_id: string;
+    access_token_ciphertext: string;
+    refresh_token_ciphertext?: string | null;
+  },
+) {
+  const ownerId = account.owner_id;
   const clientId = process.env[provider.clientIdEnv];
   const clientSecret = process.env[provider.clientSecretEnv];
   const revocationCiphertext = ["github", "slack", "whoop", "box"].includes(provider.id)
@@ -389,6 +392,22 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
       providerRevoked = false;
     }
   }
+  return providerRevoked;
+}
+
+export async function disconnectOAuth(ownerId: string, accountId: string) {
+  const db = admin();
+  const { data: account } = await db
+    .from("integration_linked_accounts")
+    .select("*")
+    .eq("id", accountId)
+    .eq("owner_id", ownerId)
+    .maybeSingle();
+  if (!account) throw new Error("linked_account_not_found");
+  const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
+  if (!provider && account.provider_id !== "granola")
+    throw new Error("unsupported_linked_account_provider");
+  const providerRevoked = provider ? await revokeOAuthCredential(provider, account) : false;
   const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
@@ -404,16 +423,26 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .in("status", ["queued", "leased", "running", "retry_wait"]);
   if (syncCancellationError) throw new Error("linked_account_sync_cancellation_failed");
 
-  const { data: purgedAccount, error: credentialDeletionError } = await db
+  const purge = db
     .from("integration_linked_accounts")
     .update({
       status: "revoked",
       access_token_ciphertext: "deleted",
       refresh_token_ciphertext: null,
       deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq("id", account.id)
-    .eq("owner_id", ownerId)
+    .eq("owner_id", ownerId);
+  if (!provider) {
+    purge
+      .eq("provider_id", "granola")
+      .eq("updated_at", account.updated_at)
+      .eq("access_token_ciphertext", account.access_token_ciphertext)
+      .is("workspace_id", null)
+      .is("deleted_at", null);
+  }
+  const { data: purgedAccount, error: credentialDeletionError } = await purge
     .select("id")
     .maybeSingle();
   if (credentialDeletionError || !purgedAccount) throw new Error("linked_account_purge_failed");
@@ -421,14 +450,14 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   const { error: auditError } = await db.from("integration_audit_events").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
-    provider_id: provider.id,
+    provider_id: account.provider_id,
     event_type: "disconnect",
     result: providerRevoked ? "success" : "failure",
-    safe_summary: `Disconnected ${provider.name} account`,
+    safe_summary: `Disconnected ${provider?.name ?? "Granola"} account`,
   });
   if (auditError) {
     console.error("[oauth-disconnect] audit insert failed", {
-      providerId: provider.id,
+      providerId: account.provider_id,
       ownerId,
     });
   }
