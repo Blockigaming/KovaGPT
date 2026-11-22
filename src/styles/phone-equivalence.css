@@ -720,7 +720,7 @@
   .kova-assistant .spec400-composer-dock .spec400-composer-content {
     display: flex;
     flex-direction: column;
-    min-block-size: 32px;
+    min-block-size: var(--chat-input-line, 26px);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
