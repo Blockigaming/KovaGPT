@@ -266,3 +266,39 @@ for (const [width, height] of viewports) {
     expect(bounds.right).toBeLessThanOrEqual(bounds.viewport);
   });
 }
+
+test("tabletop posture keeps the composer above the hinge and preserves the draft as it unfolds", async ({
+  page,
+}) => {
+  await fixture(page, "dark");
+  const session = await page.context().newCDPSession(page);
+  const screen = {
+    width: 700,
+    height: 900,
+    screenWidth: 700,
+    screenHeight: 900,
+    deviceScaleFactor: 2,
+    mobile: true,
+  };
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    ...screen,
+    displayFeature: { orientation: "horizontal", offset: 440, maskLength: 20 },
+    devicePosture: { type: "folded" },
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("Keep this draft when the screen unfolds");
+  const bounds = await composer.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(440);
+
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    ...screen,
+    devicePosture: { type: "continuous" },
+  });
+  await expect
+    .poll(() => page.evaluate(() => matchMedia("(vertical-viewport-segments: 2)").matches))
+    .toBe(false);
+  await expect(composer).toHaveValue("Keep this draft when the screen unfolds");
+});
