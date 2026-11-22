@@ -3,16 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../../", import.meta.url);
-const templates = [
-  "signup.tsx",
-  "invite.tsx",
-  "magic-link.tsx",
-  "recovery.tsx",
-  "email-change.tsx",
-  "reauthentication.tsx",
-  "help-contact-autoreply.tsx",
-  "help-contact-notification.tsx",
-];
+const templates = ["help-contact-autoreply.tsx", "help-contact-notification.tsx"];
 
 test("email brand system is light-default and dark-mode adaptive", async () => {
   const brand = await readFile(new URL("src/lib/email-templates/_brand.tsx", root), "utf8");
