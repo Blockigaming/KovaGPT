@@ -56,7 +56,7 @@ A catalog entry alone never enables OAuth, provider calls, account access, tradi
 | Finance or health setup and consent                   | Plaid, Oura, WHOOP                                                                                                                                                              |
 | Diagram file exchange                                 | Excalidraw                                                                                                                                                                      |
 | Dedicated account credentials and provider acceptance | Interactive Brokers, S&P Global, Webull, Wix                                                                                                                                    |
-| Registered OAuth client and workspace consent         | Tana                                                                                                                                                                            |
+| Hosted OAuth client and workspace consent             | Tana                                                                                                                                                                            |
 | Approved server configuration and user bearer token   | Custom MCP connectors                                                                                                                                                           |
 | Signing, distribution and on-device acceptance        | Apple Health, Android Health Connect                                                                                                                                            |
 

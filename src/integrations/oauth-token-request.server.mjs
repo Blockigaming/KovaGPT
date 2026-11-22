@@ -14,8 +14,9 @@ export function oauthTokenRequest({
 }) {
   if (providerId === "tana") {
     if (!verifier) throw new Error("oauth_pkce_verifier_missing");
-    return tanaTokenRequest(clientId, clientSecret, tokenClientAuth, {
+    return tanaOAuthForm(clientId, clientSecret, tokenClientAuth, {
       grant_type: "authorization_code",
+      resource: TANA_MCP_RESOURCE,
       code,
       redirect_uri: redirectUri,
       code_verifier: verifier,
@@ -59,7 +60,7 @@ export function oauthTokenRequest({
   };
 }
 
-function tanaTokenRequest(clientId, secret, method, fields) {
+function tanaOAuthForm(clientId, secret, method, fields) {
   if (!clientId || (method !== "none" && !secret)) throw new Error("provider_not_configured");
   const basic = method === "client_secret_basic";
   const encode = (value) => new URLSearchParams({ _: value }).toString().slice(2);
@@ -77,13 +78,16 @@ function tanaTokenRequest(clientId, secret, method, fields) {
     },
     body: new URLSearchParams({
       ...fields,
-      resource: TANA_MCP_RESOURCE,
       ...(basic ? {} : { client_id: clientId }),
       ...(basic || method === "none" ? {} : { client_secret: secret }),
     }),
     redirect: "error",
     signal: AbortSignal.timeout(15_000),
   };
+}
+
+export function tanaRevocationRequest({ clientId, clientSecret, tokenClientAuth, token }) {
+  return tanaOAuthForm(clientId, clientSecret, tokenClientAuth, { token });
 }
 
 function stripeAppTokenRequest(secret, fields) {
@@ -170,8 +174,9 @@ export function oauthRefreshRequest({
 }) {
   if (providerId === "tana") {
     if (!refreshToken) throw new Error("refresh_not_configured");
-    return tanaTokenRequest(clientId, clientSecret, tokenClientAuth, {
+    return tanaOAuthForm(clientId, clientSecret, tokenClientAuth, {
       grant_type: "refresh_token",
+      resource: TANA_MCP_RESOURCE,
       refresh_token: refreshToken,
     });
   }

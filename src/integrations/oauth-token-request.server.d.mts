@@ -28,3 +28,9 @@ export function selectRefreshTokens(
   providerId: string,
   payload: unknown,
 ): ReturnType<typeof selectOAuthTokens>;
+export function tanaRevocationRequest(input: {
+  clientId: string | undefined;
+  clientSecret: string | undefined;
+  tokenClientAuth?: "client_secret_post" | "client_secret_basic" | "none";
+  token: string;
+}): RequestInit;

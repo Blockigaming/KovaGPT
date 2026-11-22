@@ -7,6 +7,7 @@ import { CONNECTION_FLOWS, canReadConnection, type ConnectedAccount } from "./co
 import {
   configuredKeyProviders,
   configuredOAuthProviders,
+  oauthClientId,
   OAUTH_PROVIDERS,
   type OAuthProviderId,
 } from "./oauth-providers.server";
@@ -192,7 +193,7 @@ export async function refreshExpiringConnection(
         : (provider.refreshEndpoint ?? provider.tokenEndpoint),
       oauthRefreshRequest({
         providerId: provider.id,
-        clientId: process.env[provider.clientIdEnv],
+        clientId: oauthClientId(provider),
         clientSecret: process.env[provider.clientSecretEnv],
         refreshToken,
         ...(provider.id === "tana" ? { tokenClientAuth: provider.tokenClientAuth } : {}),

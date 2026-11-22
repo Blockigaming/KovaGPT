@@ -51,7 +51,7 @@ Verify a permitted category with known data, then disable it in Apple Health and
 
 ## Android Health Connect
 
-The Android companion is in `android/`. Build it using JDK 17, Android SDK 35 and Gradle 8.11.1, or run the Android Health Connect build on GitHub. For a local debug build run `gradle -p android :app:assembleDebug`. Sign a release through the Android distribution process and complete the Health Connect permissions declaration for the app.
+The Android companion is in `android/`. Build it using JDK 17, Android SDK 36 and Gradle 8.11.1, or run the Android Health Connect build on GitHub. For a local debug build run `gradle -p android :app:assembleDebug`. Sign a release through the Android distribution process and complete the Health Connect permissions declaration for the app.
 
 Open the Android companion, sign into Kova, and choose Connections → Health → Android Health Connect. Approve the categories you want. The app requests read permissions for steps, sleep, and heart rate. It rechecks grants before each foreground refresh and shows daily aggregates for up to 29 days. The summaries are delivered to the on-device health dashboard for the authorized Kova user. Disconnection clears that user's local opt-in. Use Android Health Connect settings to revoke the app's platform grant.
 

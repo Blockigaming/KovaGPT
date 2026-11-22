@@ -122,6 +122,21 @@ function fixture() {
       return chain;
     },
   };
+  const env = {
+    CONNECTOR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32).toString("base64"),
+    STRIPE_APPS_OAUTH_CLIENT_ID: "ca_Fixture",
+    STRIPE_APPS_OAUTH_API_KEY: "sk_test_Fixture",
+    SALESFORCE_OAUTH_CLIENT_ID: "client-test",
+    SALESFORCE_OAUTH_CLIENT_SECRET: "secret-test",
+    CALENDLY_OAUTH_CLIENT_ID: "client-test",
+    CALENDLY_OAUTH_CLIENT_SECRET: "secret-test",
+    BIGQUERY_OAUTH_CLIENT_ID: "client-test",
+    BIGQUERY_OAUTH_CLIENT_SECRET: "secret-test",
+    GAMMA_OAUTH_CLIENT_ID: "client-test",
+    GAMMA_OAUTH_CLIENT_SECRET: "secret-test",
+    HUBSPOT_OAUTH_CLIENT_ID: "client-test",
+    HUBSPOT_OAUTH_CLIENT_SECRET: "secret-test",
+  };
   const providers = compile(
     "src/integrations/oauth-providers.server.ts",
     {
@@ -129,15 +144,7 @@ function fixture() {
       "./approved-mcp-servers.server.mjs": approvedMcp,
       "@/health/oura-metrics.mjs": { OURA_SCOPES },
     },
-    {
-      process: {
-        env: {
-          CONNECTOR_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32).toString("base64"),
-          GAMMA_OAUTH_CLIENT_ID: "client-test",
-          GAMMA_OAUTH_CLIENT_SECRET: "secret-test",
-        },
-      },
-    },
+    { process: { env } },
   );
   const modules = {
     "@supabase/supabase-js": { createClient: () => db },
@@ -168,22 +175,7 @@ function fixture() {
     "./salesforce-credential.server.mjs": credentials,
   };
   const lifecycle = compile("src/integrations/oauth-lifecycle.server.ts", modules, {
-    process: {
-      env: {
-        STRIPE_APPS_OAUTH_CLIENT_ID: "ca_Fixture",
-        STRIPE_APPS_OAUTH_API_KEY: "sk_test_Fixture",
-        SALESFORCE_OAUTH_CLIENT_ID: "client-test",
-        SALESFORCE_OAUTH_CLIENT_SECRET: "secret-test",
-        CALENDLY_OAUTH_CLIENT_ID: "client-test",
-        CALENDLY_OAUTH_CLIENT_SECRET: "secret-test",
-        BIGQUERY_OAUTH_CLIENT_ID: "client-test",
-        BIGQUERY_OAUTH_CLIENT_SECRET: "secret-test",
-        GAMMA_OAUTH_CLIENT_ID: "client-test",
-        GAMMA_OAUTH_CLIENT_SECRET: "secret-test",
-        HUBSPOT_OAUTH_CLIENT_ID: "client-test",
-        HUBSPOT_OAUTH_CLIENT_SECRET: "secret-test",
-      },
-    },
+    process: { env },
     fetch: async (url, init) => {
       state.calls.push([url, init]);
       if (url.endsWith("/revoke")) return new Response(null, { status: state.revokeStatus ?? 200 });
@@ -370,6 +362,45 @@ test("Gamma starts authorization with the API audience, read-only scope and PKCE
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
   assert.match(url.searchParams.get("code_challenge"), /^[a-zA-Z0-9_-]{43}$/u);
   assert.equal(url.searchParams.has("client_secret"), false);
+});
+
+test("Tana's public client uses the production callback and rejects mismatched issuers", async () => {
+  const f = fixture();
+  const request = new Request("https://kovagpt.com/api/integrations/oauth/callback/tana");
+  const client = JSON.parse(readFileSync("public/.well-known/tana-mcp-client.json", "utf8"));
+  const args = { ...callback, ownerId: "owner-one", providerId: "tana", request };
+  const launch = new URL((await f.beginOAuth(args)).url);
+  assert.equal(launch.origin + launch.pathname, connectionFlows.TANA_MCP_AUTHORIZE_ENDPOINT);
+  assert.equal(launch.searchParams.get("client_id"), client.client_id);
+  assert.deepEqual(client.redirect_uris, [launch.searchParams.get("redirect_uri")]);
+  assert.equal(launch.searchParams.get("resource"), connectionFlows.TANA_MCP_RESOURCE);
+  assert.equal(launch.searchParams.get("scope"), client.scope);
+  assert.equal(launch.searchParams.get("code_challenge_method"), "S256");
+  assert.equal(client.token_endpoint_auth_method, "none");
+  await assert.rejects(
+    f.beginOAuth({
+      ...args,
+      request: new Request("https://other.example/api/integrations/oauth/start"),
+    }),
+    /provider_not_configured/,
+  );
+  await assert.rejects(
+    f.completeOAuth({ ...args, issuer: "https://home.tana.inc" }),
+    /oauth_issuer_mismatch/,
+  );
+  assert.deepEqual(f.state.calls, []);
+  Object.assign(f.state.account, {
+    provider_id: "tana",
+    refresh_token_ciphertext: "encrypted:refresh-test",
+  });
+  assert.deepEqual(await f.disconnectOAuth("owner-one", "account-one"), { providerRevoked: true });
+  const [[url, init]] = f.state.calls;
+  assert.equal(url, "https://login.tana.inc/oauth2/revoke");
+  assert.deepEqual(Object.fromEntries(init.body), {
+    token: "refresh-test",
+    client_id: client.client_id,
+  });
+  assert.equal(init.redirect, "error");
 });
 
 test("Stripe validates the mode and actual charge permissions before saving an app grant", async () => {

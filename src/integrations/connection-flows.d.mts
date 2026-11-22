@@ -26,4 +26,6 @@ export function canReadConnection(account: ConnectedAccount, id: string, now?: n
 export function safeConnectionLink(value: unknown): string | null;
 export function connectionAuthorizationUrl(provider: string, value: unknown): string | null;
 export const TANA_MCP_RESOURCE: string;
-export function tanaOAuthEndpoint(value: unknown, kind: "authorize" | "token"): string | null;
+export const TANA_MCP_ISSUER: string;
+export const TANA_MCP_AUTHORIZE_ENDPOINT: string;
+export const TANA_MCP_HOSTED_CLIENT_ID: string;

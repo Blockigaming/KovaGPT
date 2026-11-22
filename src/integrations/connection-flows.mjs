@@ -2,28 +2,9 @@
 // and the user's granted scopes are checked separately on the server.
 export const BIGQUERY_READ_SCOPE = "https://www.googleapis.com/auth/bigquery.readonly";
 export const TANA_MCP_RESOURCE = "https://home.tana.inc/mcp";
-
-export function tanaOAuthEndpoint(value, kind) {
-  try {
-    const url = new URL(value);
-    if (
-      url.protocol === "https:" &&
-      (url.hostname === "tana.inc" || url.hostname.endsWith(".tana.inc")) &&
-      !url.port &&
-      !url.username &&
-      !url.password &&
-      !url.hash &&
-      (kind === "authorize"
-        ? /\/authorize\/?$/u.test(url.pathname)
-        : /\/token\/?$/u.test(url.pathname)) &&
-      (kind === "authorize" || !url.search)
-    )
-      return url.href;
-  } catch {
-    // Invalid configuration stays disabled.
-  }
-  return null;
-}
+export const TANA_MCP_ISSUER = "https://login.tana.inc";
+export const TANA_MCP_AUTHORIZE_ENDPOINT = `${TANA_MCP_ISSUER}/oauth2/authorize`;
+export const TANA_MCP_HOSTED_CLIENT_ID = "https://kovagpt.com/.well-known/tana-mcp-client.json";
 
 export function calendlyUserUri(value) {
   return typeof value === "string" &&
@@ -321,8 +302,8 @@ export function safeConnectionLink(value) {
 }
 
 export function connectionAuthorizationUrl(provider, value) {
-  if (provider === "tana") return tanaOAuthEndpoint(value, "authorize");
   const endpoints = {
+    tana: TANA_MCP_AUTHORIZE_ENDPOINT,
     stripe: "https://marketplace.stripe.com/oauth/v2/authorize",
     gamma: "https://auth.gamma.app/oauth/authorize",
     box: "https://account.box.com/api/oauth2/authorize",

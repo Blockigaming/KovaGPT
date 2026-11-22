@@ -303,8 +303,9 @@ function mockMcp(expectedEndpoint, tool, queryField, value, annotation = true) {
 }
 
 test("Tana uses PKCE and sends the MCP resource on token issuance and renewal", () => {
-  const auth = "https://home.tana.inc/oauth/authorize?resource=test";
+  const auth = "https://login.tana.inc/oauth2/authorize?resource=test";
   assert.equal(connectionAuthorizationUrl("tana", auth), auth);
+  assert.equal(connectionAuthorizationUrl("tana", "https://home.tana.inc/oauth2/authorize"), null);
   assert.equal(
     connectionAuthorizationUrl("tana", "https://home.tana.inc.evil.test/oauth/authorize"),
     null,

@@ -38,12 +38,14 @@ export const Route = createFileRoute("/api/integrations/accounts")({
         return Response.json(
           {
             configuredProviders: [
-              ...configuredOAuthProviders().map(({ id, name, requiredScopes, optionalScopes }) => ({
-                id,
-                name,
-                requiredScopes,
-                optionalScopes,
-              })),
+              ...configuredOAuthProviders(new URL(request.url).origin).map(
+                ({ id, name, requiredScopes, optionalScopes }) => ({
+                  id,
+                  name,
+                  requiredScopes,
+                  optionalScopes,
+                }),
+              ),
               ...configuredKeyProviders(),
             ],
             accounts: data ?? [],

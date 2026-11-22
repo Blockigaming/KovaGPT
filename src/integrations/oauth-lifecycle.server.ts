@@ -3,13 +3,23 @@ import { decryptCredential, encryptCredential, sha256 } from "./credential-vault
 import {
   OAUTH_PROVIDERS,
   configuredOAuthProviders,
+  oauthClientId,
   type OAuthProviderId,
 } from "./oauth-providers.server";
 import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
-import { oauthTokenRequest, selectOAuthTokens } from "./oauth-token-request.server.mjs";
+import {
+  oauthTokenRequest,
+  selectOAuthTokens,
+  tanaRevocationRequest,
+} from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
-import { CONNECTION_FLOWS, hasConnectionScopes, TANA_MCP_RESOURCE } from "./connection-flows.mjs";
+import {
+  CONNECTION_FLOWS,
+  hasConnectionScopes,
+  TANA_MCP_ISSUER,
+  TANA_MCP_RESOURCE,
+} from "./connection-flows.mjs";
 import { verifyTanaRead } from "./mcp-provider-read.server.mjs";
 import { confirmedHealthScopes } from "@/health/health-read.server.mjs";
 import {
@@ -40,8 +50,12 @@ export async function beginOAuth(input: {
 }) {
   await assertLockdownAllows(admin(), input.ownerId, "connector_write");
   const provider = OAUTH_PROVIDERS[input.providerId];
-  const clientId = process.env[provider.clientIdEnv];
-  if (!clientId || !configuredOAuthProviders().some((candidate) => candidate.id === provider.id))
+  const origin = new URL(input.request.url).origin;
+  const clientId = oauthClientId(provider, origin);
+  if (
+    !clientId ||
+    !configuredOAuthProviders(origin).some((candidate) => candidate.id === provider.id)
+  )
     throw new Error("provider_not_configured");
   const state = random();
   const verifier = provider.usesPkce ? random(48) : undefined;
@@ -76,7 +90,7 @@ export async function beginOAuth(input: {
       ...(input.optionalScopes ?? []).filter((scope) => provider.optionalScopes.includes(scope)),
     ]),
   ];
-  const redirectUri = `${new URL(input.request.url).origin}/api/integrations/oauth/callback/${provider.id}`;
+  const redirectUri = `${origin}/api/integrations/oauth/callback/${provider.id}`;
   const { error } = await admin()
     .from("integration_oauth_states")
     .insert({
@@ -108,7 +122,11 @@ export async function beginOAuth(input: {
     if (optional.length) params.set("optional_scope", optional.join(" "));
   }
   if (provider.id === "gamma") params.set("resource", "https://public-api.gamma.app");
-  if (provider.id === "tana") params.set("resource", TANA_MCP_RESOURCE);
+  if (provider.id === "tana") {
+    params.set("resource", TANA_MCP_RESOURCE);
+    params.set("scope", "openid offline_access");
+    params.set("prompt", "consent");
+  }
   if (provider.id === "microsoft") params.set("response_mode", "query");
   if (loginHint) params.set("login_hint", loginHint);
   if (provider.id === "google-bigquery") {
@@ -137,10 +155,15 @@ export async function completeOAuth(input: {
   state: string;
   request: Request;
   browserNonce: string;
+  issuer?: string;
 }) {
   const provider = OAUTH_PROVIDERS[input.providerId];
-  if (provider.id === "tana" && !configuredOAuthProviders().some(({ id }) => id === provider.id))
-    throw new Error("provider_not_configured");
+  const origin = new URL(input.request.url).origin;
+  if (provider.id === "tana") {
+    if (!configuredOAuthProviders(origin).some(({ id }) => id === provider.id))
+      throw new Error("provider_not_configured");
+    if (input.issuer !== TANA_MCP_ISSUER) throw new Error("oauth_issuer_mismatch");
+  }
   const db = admin();
   const { data: record } = await db
     .from("integration_oauth_states")
@@ -165,12 +188,12 @@ export async function completeOAuth(input: {
     .select("id")
     .maybeSingle();
   if (!consumed.data) throw new Error("oauth_state_replayed");
-  const redirectUri = `${new URL(input.request.url).origin}/api/integrations/oauth/callback/${provider.id}`;
+  const redirectUri = `${origin}/api/integrations/oauth/callback/${provider.id}`;
   const tokenRequest = oauthTokenRequest({
     providerId: provider.id,
     code: input.code,
     redirectUri,
-    clientId: process.env[provider.clientIdEnv],
+    clientId: oauthClientId(provider, origin),
     clientSecret: process.env[provider.clientSecretEnv],
     ...(provider.id === "tana" ? { tokenClientAuth: provider.tokenClientAuth } : {}),
     verifier: record.pkce_verifier_ciphertext
@@ -334,7 +357,7 @@ async function revokeOAuthCredential(
   },
 ) {
   const ownerId = account.owner_id;
-  const clientId = process.env[provider.clientIdEnv];
+  const clientId = oauthClientId(provider);
   const clientSecret = process.env[provider.clientSecretEnv];
   const revocationCiphertext = ["github", "slack", "whoop", "box"].includes(provider.id)
     ? account.access_token_ciphertext
@@ -349,6 +372,24 @@ async function revokeOAuthCredential(
       providerId: provider.id,
       ownerId,
     });
+  }
+
+  if (provider.id === "tana" && provider.revocationEndpoint && token) {
+    try {
+      const response = await fetch(
+        provider.revocationEndpoint,
+        tanaRevocationRequest({
+          clientId,
+          clientSecret,
+          tokenClientAuth: provider.tokenClientAuth,
+          token,
+        }),
+      );
+      await response.body?.cancel().catch(() => undefined);
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   // Only a confirmed provider response counts as remote revocation. Providers

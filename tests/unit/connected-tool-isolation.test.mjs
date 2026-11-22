@@ -117,6 +117,7 @@ function fixture() {
     "./connection-flows.mjs": flows,
     "./mcp-provider-read.server.mjs": mcpReads,
     "./oauth-providers.server": {
+      oauthClientId: () => "fake-client",
       configuredKeyProviders: () => (state.configured ? [{ id: "granola" }] : []),
       configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
       OAUTH_PROVIDERS: {

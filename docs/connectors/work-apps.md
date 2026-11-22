@@ -102,11 +102,11 @@ Connect performs a provider read before saving the credential. Chat and Connecti
 
 ## Tana acceptance
 
-Register a client for Tana's hosted MCP service and the callback `https://kovagpt.com/api/integrations/oauth/callback/tana`. Configure `TANA_MCP_CLIENT_ID` and the authorization and token URLs from the provider's registration using `TANA_MCP_AUTHORIZATION_ENDPOINT` and `TANA_MCP_TOKEN_ENDPOINT`. Kova accepts HTTPS authorization and token URLs on Tana-controlled domains. Set `TANA_MCP_TOKEN_AUTH_METHOD` to the registered token authentication method, and store `TANA_MCP_CLIENT_SECRET` in the deployment's secret manager for confidential clients.
+Tana supports OAuth Client ID Metadata Documents. On `https://kovagpt.com`, Kova uses `https://kovagpt.com/.well-known/tana-mcp-client.json` as its public client ID. Check that the OAuth server can retrieve that JSON and that it lists the exact callback `https://kovagpt.com/api/integrations/oauth/callback/tana`. A separate test deployment can use a registered Tana client with its own exact callback. Configure that client with `TANA_MCP_CLIENT_ID` and `TANA_MCP_TOKEN_AUTH_METHOD`, plus `TANA_MCP_CLIENT_SECRET` for a confidential client.
 
 Kova uses PKCE S256, binds the OAuth exchange to `https://home.tana.inc/mcp` and checks the `searchItems` tool before saving the user's grant. Only the most recently authorized Tana account is linked per Kova user. Test two Kova accounts against different Tana workspaces, a known private note, token renewal when the provider returns a refresh token, and revocation in Tana. Kova exposes the search tool. Tana manages approval for its workspace changes separately.
 
-[Tana hosted MCP](https://tana.inc/learn/features/mcp)
+[Tana hosted MCP](https://tana.inc/learn/features/mcp) · [MCP resource metadata](https://home.tana.inc/.well-known/oauth-protected-resource/mcp) · [Tana OAuth server metadata](https://login.tana.inc/.well-known/oauth-authorization-server)
 
 ## Custom MCP acceptance
 
