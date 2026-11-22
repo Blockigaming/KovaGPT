@@ -961,6 +961,7 @@ export function ComposerVoiceDialog({
     const native = nativeDictationHandler();
     const realtime =
       mode === "voice" &&
+      !navigator.userAgent.includes("KovaGPTNative/CarPlay") &&
       !(native && continuing && document.visibilityState === "hidden") &&
       capabilities.realtime &&
       !realtimeFailed &&

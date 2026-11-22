@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CarPlay
 import AVFoundation
 import SwiftUI
 import WebKit
@@ -10,24 +11,26 @@ struct KovaChatWebView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(changeLock: changeLock) }
 
-    func makeUIView(context: Context) -> WKWebView {
+    func makeUIView(context: Context) -> WKWebView { Self.makeWebView(coordinator: context.coordinator) }
+
+    static func makeWebView(coordinator: Coordinator) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.allowsInlineMediaPlayback = true
-        configuration.applicationNameForUserAgent = "KovaGPTNative/iOS"
-        configuration.userContentController.add(context.coordinator, name: "kovaNative")
+        configuration.applicationNameForUserAgent = coordinator.carPlay ? "KovaGPTNative/CarPlay" : "KovaGPTNative/iOS"
+        configuration.userContentController.add(coordinator, name: "kovaNative")
         configuration.userContentController.addScriptMessageHandler(
-            context.coordinator, contentWorld: .page, name: "kovaReadAloud"
+            coordinator, contentWorld: .page, name: "kovaReadAloud"
         )
         configuration.userContentController.addScriptMessageHandler(
-            context.coordinator, contentWorld: .page, name: "kovaDictation"
+            coordinator, contentWorld: .page, name: "kovaDictation"
         )
-        let web = WKWebView(frame: .zero, configuration: configuration)
-        web.navigationDelegate = context.coordinator
-        web.uiDelegate = context.coordinator
+        let web = WKWebView(frame: CGRect(x: 0, y: 0, width: 390, height: 844), configuration: configuration)
+        web.navigationDelegate = coordinator
+        web.uiDelegate = coordinator
         web.allowsBackForwardNavigationGestures = true
         web.scrollView.contentInsetAdjustmentBehavior = .never
         web.isOpaque = false
-        context.coordinator.web = web
+        coordinator.web = web
         return web
     }
 
@@ -62,6 +65,8 @@ struct KovaChatWebView: UIViewRepresentable {
         WKScriptMessageHandlerWithReply, AVAudioPlayerDelegate, AVAudioRecorderDelegate, ASWebAuthenticationPresentationContextProviding {
         var request: UUID?
         var unlocked = false
+        var carPlay = false
+        var onCarPlayCapture: (() -> Void)?
         var changeLock: () -> Void
         weak var web: WKWebView?
         private var textSizeObserver: NSObjectProtocol?
@@ -252,9 +257,10 @@ struct KovaChatWebView: UIViewRepresentable {
 
         private func startDictation(_ id: String, handsFree: Bool, reply: @escaping (Any?, String?) -> Void) {
             guard unlocked, dictationID == nil else { reply(false, nil); return }
-            if UIApplication.shared.applicationState == .background {
+            if carPlay || UIApplication.shared.applicationState == .background {
                 guard handsFree,
-                      ProcessInfo.processInfo.systemUptime < continuationDeadline,
+                      (carPlay || ProcessInfo.processInfo.systemUptime < continuationDeadline),
+                      (!carPlay || !UserDefaults.standard.bool(forKey: "kova.device-lock")),
                       AVAudioApplication.shared.recordPermission == .granted else {
                     reply(false, nil)
                     return
@@ -304,6 +310,7 @@ struct KovaChatWebView: UIViewRepresentable {
                     recorder.isMeteringEnabled = true
                     startVoiceMeter(id)
                 }
+                onCarPlayCapture?()
                 return true
             } catch {
                 cancelDictation()
@@ -417,7 +424,7 @@ struct KovaChatWebView: UIViewRepresentable {
                 return
             }
             guard unlocked, dictationID == nil,
-                  UIApplication.shared.applicationState == .active || backgroundReply != .invalid,
+                  carPlay || UIApplication.shared.applicationState == .active || backgroundReply != .invalid,
                   value["action"] == "play", let audio = value["audio"], audio.utf8.count <= 11_184_812,
                   let data = Data(base64Encoded: audio), !data.isEmpty, data.count <= 8 * 1024 * 1024 else {
                 replyHandler(false, nil)
@@ -473,6 +480,10 @@ struct KovaChatWebView: UIViewRepresentable {
 
         func webView(_ web: WKWebView, decidePolicyFor action: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if carPlay {
+                decisionHandler(KovaDestination.isTrusted(action.request.url) ? .allow : .cancel)
+                return
+            }
             guard action.targetFrame?.isMainFrame != false else { decisionHandler(.allow); return }
             guard let url = action.request.url else { decisionHandler(.cancel); return }
             if KovaDestination.isTrusted(url) {
@@ -543,5 +554,77 @@ struct KovaChatWebView: UIViewRepresentable {
             default: break
             }
         }
+    }
+}
+
+// Keeps the CarPlay display voice-only. The web view shares the phone app's
+// sign-in and uses the same owner-bound transcription and saved reply flow.
+@MainActor
+final class KovaCarPlayScene: UIResponder, CPTemplateApplicationSceneDelegate {
+    private var interface: CPInterfaceController?
+    private var web: WKWebView?
+    private var coordinator: KovaChatWebView.Coordinator?
+    private var timeout: Task<Void, Never>?
+
+    func templateApplicationScene(_ scene: CPTemplateApplicationScene, didConnect controller: CPInterfaceController) {
+        interface = controller
+        render()
+    }
+
+    func templateApplicationScene(_ scene: CPTemplateApplicationScene, didDisconnect controller: CPInterfaceController) {
+        interface = nil
+        stop()
+    }
+
+    private func render(note: String? = nil) {
+        let active = web != nil
+        let item = CPListItem(text: active ? "Stop Voice" : "Start Voice", detailText: note)
+        item.handler = { [weak self] _, completion in
+            defer { completion() }
+            guard let self else { return }
+            if self.web != nil { self.stop() }
+            else { self.start() }
+        }
+        interface?.setRootTemplate(
+            CPListTemplate(title: "KovaGPT", sections: [CPListSection(items: [item])]),
+            animated: false, completion: nil
+        )
+    }
+
+    private func start() {
+        guard #available(iOS 26.4, *), !UserDefaults.standard.bool(forKey: "kova.device-lock"),
+              AVAudioApplication.shared.recordPermission == .granted else {
+            render(note: "Set up Voice on your iPhone while parked.")
+            return
+        }
+        let coordinator = KovaChatWebView.Coordinator(changeLock: {})
+        coordinator.carPlay = true
+        coordinator.unlocked = true
+        coordinator.onCarPlayCapture = { [weak self] in
+            self?.timeout?.cancel()
+            self?.timeout = nil
+        }
+        let web = KovaChatWebView.makeWebView(coordinator: coordinator)
+        self.coordinator = coordinator
+        self.web = web
+        render()
+        web.load(URLRequest(url: KovaDestination.voice.url))
+        timeout = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .seconds(20)) } catch { return }
+            self?.stop(note: "Open KovaGPT on your iPhone while parked.")
+        }
+    }
+
+    private func stop(note: String? = nil) {
+        timeout?.cancel()
+        timeout = nil
+        if let web, let coordinator {
+            coordinator.signal("kova-native-audio-interruption")
+            web.stopLoading()
+            KovaChatWebView.dismantleUIView(web, coordinator: coordinator)
+        }
+        coordinator = nil
+        web = nil
+        render(note: note)
     }
 }
