@@ -93,19 +93,16 @@ for (const [width, height] of viewports) {
 
       if (width < 768) {
         const palette = await html.evaluate((element) => {
-          const sample = document.createElement("span");
-          element.append(sample);
-          const palette = ["--background", "--sidebar", "--composer-background"].map((token) => {
-            sample.style.color = `var(${token})`;
-            return getComputedStyle(sample).color;
-          });
-          sample.remove();
-          return palette;
+          const styles = getComputedStyle(element);
+          return ["--background", "--sidebar", "--composer-background"].map((token) =>
+            styles
+              .getPropertyValue(token)
+              .trim()
+              .replace(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i, "#$1$1$2$2$3$3"),
+          );
         });
         expect(palette).toEqual(
-          theme === "dark"
-            ? ["rgb(17, 17, 17)", "rgb(23, 23, 23)", "rgb(42, 42, 42)"]
-            : ["rgb(255, 255, 255)", "rgb(247, 247, 248)", "rgb(239, 239, 239)"],
+          theme === "dark" ? ["#111111", "#171717", "#2a2a2a"] : ["#ffffff", "#f7f7f8", "#efefef"],
         );
       }
 
