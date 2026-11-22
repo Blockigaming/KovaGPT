@@ -102,6 +102,7 @@ test("explicit analysis keeps image-intent heuristics and automatic web search f
     "lastUser",
     "clientTool",
     "detectImageIntent",
+    "scheduleRequest",
     `${source.slice(imageStart, imageEnd)} return isImageRequest;`,
   );
   let imageDetections = 0;
@@ -121,5 +122,20 @@ test("explicit analysis keeps image-intent heuristics and automatic web search f
     imageSelection(false, true, "Create an image", {}, undefined, () => true),
     false,
   );
-  assert.match(source, /if \(\s*!explicitHostedTool &&\s*!lockdownBlocksNetwork &&/);
+  assert.equal(
+    imageSelection(
+      false,
+      false,
+      "Create an image",
+      {},
+      undefined,
+      () => true,
+      "Remind me tomorrow",
+    ),
+    false,
+  );
+  assert.match(
+    source,
+    /if \(\s*!scheduleRequest &&\s*!explicitHostedTool &&\s*!lockdownBlocksNetwork &&/,
+  );
 });

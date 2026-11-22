@@ -119,6 +119,8 @@ for (const [width, mobileViewport, open] of [
   test(`workspace Search uses the actual ${width}px viewport with stale mobile=${mobileViewport}, open=${open}`, () => {
     const events = [];
     const toggle = () => events.push("close");
+    const searchReturnFocusRef = { current: null };
+    const trigger = { id: "sidebar-search" };
     const activate = workspaceSearchCallback({
       window: {
         matchMedia: (query) => {
@@ -131,12 +133,14 @@ for (const [width, mobileViewport, open] of [
       onToggle: toggle,
       swipeToggleRef: { current: toggle },
       cancelPendingSelection: () => events.push("cancel-pending-selection"),
-      onOpenWorkspaceSearch: () => events.push("search"),
+      searchReturnFocusRef,
+      setSearchOpen: (value) => events.push(["search", value]),
     });
-    activate();
+    activate({ currentTarget: trigger });
+    assert.equal(searchReturnFocusRef.current, trigger);
     assert.deepEqual(
       events,
-      ["cancel-pending-selection", "search"],
+      ["cancel-pending-selection", ["search", true]],
       "Search preserves the chosen sidebar state at every breakpoint",
     );
   });

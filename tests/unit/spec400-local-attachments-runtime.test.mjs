@@ -1,5 +1,6 @@
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -94,6 +95,13 @@ function fixture(
   };
   const react = {
     useImperativeHandle() {},
+    useCallback(callback, dependencies) {
+      const index = cursor++;
+      const previous = hooks[index];
+      if (!previous || dependencies.some((value, i) => !Object.is(value, previous.dependencies[i])))
+        hooks[index] = { callback, dependencies };
+      return hooks[index].callback;
+    },
     useRef(value) {
       const index = cursor++;
       hooks[index] ??= { current: value };
@@ -145,6 +153,7 @@ function fixture(
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
     "@/lib/composer-keyboard-inset.mjs": keyboardInset,
+    "@/lib/kova-native": kovaNative,
     "@/lib/document-extraction/pdf-metadata.mjs": pdfMetadata,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
@@ -267,7 +276,7 @@ function fixture(
     },
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
-      await button(label).onClick();
+      await button(label).onClick({ detail: 1 });
       await flush();
     },
     async account(next) {

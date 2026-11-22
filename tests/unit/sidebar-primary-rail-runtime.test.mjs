@@ -91,6 +91,7 @@ function fixture(options = {}) {
       calls.push(["local-search", typeof value === "function" ? value(false) : value]),
     searchOpen: false,
     workspaceSearchOpen: false,
+    searchReturnFocusRef: { current: null },
     cancelPendingSelection: () => {},
     closeAfterMobileNavigation: () => {},
     onOpenSettings: (tab) => calls.push(["settings", tab]),
@@ -128,6 +129,7 @@ function fixture(options = {}) {
     SHORTCUT_ICONS: Object.fromEntries(SIDEBAR_ITEMS.map(({ id }) => [id, `icon:${id}`])),
     ...options,
   };
+  deps.navigationCovered = deps.searchOpen || deps.workspaceSearchOpen;
   deps.layout = { ...DEFAULT_SIDEBAR_LAYOUT, shortcuts: deps.railShortcuts, ...options.layout };
   deps.openChatSearch = compile(`return (${variable("openChatSearch")});`, deps);
   deps.searchButton = compile(`return (${variable("searchButton")});`, deps);
@@ -296,9 +298,9 @@ test("New chat, Search, customization and Settings invoke their existing callbac
   settings.props.onSelect();
   assert.deepEqual(f.calls, [
     ["new"],
-    ["search"],
+    ["local-search", true],
     ["customize", opener],
-    ["settings", "appearance"],
+    ["settings", undefined],
   ]);
 });
 

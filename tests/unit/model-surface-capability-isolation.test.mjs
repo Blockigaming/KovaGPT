@@ -41,6 +41,7 @@ function actualModule(path, bindings, expose, suffix = "") {
 
 const azure = {
   KOVA_TEXT_PROVIDER: "openai",
+  KOVA_IMAGE_PROVIDER: "azure_openai",
   OPENAI_API_KEY: "synthetic-openai-not-a-key",
   AZURE_OPENAI_ENDPOINT: "https://synthetic-primary.openai.azure.com",
   AZURE_OPENAI_API_KEY: "synthetic-primary-not-a-key",
@@ -85,6 +86,17 @@ test("mixed-provider configuration reports the image and embedding targets actua
     "https://synthetic-primary.openai.azure.com/openai/v1",
   );
   assert.equal(api.calls.length, 0);
+});
+
+test("automatic image routing uses the existing OpenAI key with both providers configured", async () => {
+  const api = provider({ ...azure, KOVA_IMAGE_PROVIDER: undefined });
+  assert.equal(api.getAiProviderConfig("image_generation").provider, "openai");
+  assert.equal(api.getAiProviderConfig("embeddings").provider, "azure_openai");
+  await (await api.imageGenerations({ model: "gpt-image-1", prompt: "Synthetic square" })).text();
+  assert.equal(api.calls.length, 1);
+  assert.equal(api.calls[0].url, "https://api.openai.com/v1/images/generations");
+  assert.equal(api.calls[0].init.headers.get("authorization"), `Bearer ${azure.OPENAI_API_KEY}`);
+  assert.equal(api.calls[0].init.headers.has("api-key"), false);
 });
 
 test("missing OpenAI text credentials do not disable separately configured Azure media", async () => {

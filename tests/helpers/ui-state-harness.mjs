@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 import { fixtureElement, nativeControlModules } from "./native-control-bindings.mjs";
 
 export const jsxRuntime = {
@@ -29,6 +30,7 @@ export function loadUiModule(path, dependencies, globals = {}) {
     require(id) {
       if (id === "react/jsx-runtime") return jsxRuntime;
       if (Object.hasOwn(dependencies, id)) return dependencies[id];
+      if (id === "@/lib/kova-native") return kovaNative;
       if (Object.hasOwn(nativeControlModules, id)) return nativeControlModules[id];
       throw new Error(`Unexpected dependency ${id} in ${path}`);
     },

@@ -1,5 +1,6 @@
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import * as keyboardInset from "../../src/lib/composer-keyboard-inset.mjs";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import assert from "node:assert/strict";
@@ -83,6 +84,13 @@ function fixture(
   };
   const react = {
     useImperativeHandle() {},
+    useCallback(callback, dependencies) {
+      const index = cursor++;
+      const previous = hooks[index];
+      if (!previous || dependencies.some((value, i) => !Object.is(value, previous.dependencies[i])))
+        hooks[index] = { callback, dependencies };
+      return hooks[index].callback;
+    },
     useRef(value) {
       const index = cursor++;
       hooks[index] ??= { current: value };
@@ -142,6 +150,7 @@ function fixture(
     },
     "@/lib/composer-local-attachments.mjs": localAttachments,
     "@/lib/composer-keyboard-inset.mjs": keyboardInset,
+    "@/lib/kova-native": kovaNative,
     "@/lib/composer-preferences": { useSharedSendOnEnter: () => true },
     "@/lib/limits": {
       tryUseUpload: (limit) => {
@@ -263,7 +272,7 @@ function fixture(
     offer: () => nodes(tree).find((node) => node.type === "ComposerPasteOffer")?.props,
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
-      await button(label).onClick();
+      await button(label).onClick({ detail: 1 });
       await flush();
     },
     async update(next) {
@@ -716,7 +725,7 @@ test("removing a file also blocks a stale Send callback and queued file analysis
   );
   const staleSend = f.button("Send message").onClick;
   await f.click("Remove Data.csv");
-  staleSend();
+  staleSend({ detail: 1 });
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   assert.match(text(f.nodes()), /Attach a text file/);
@@ -735,7 +744,7 @@ test("stale analysis Send callbacks cannot run for a replacement account", async
   const f = fixture({ selectedTool: "data_analysis" }, { isLoaded: true, user: { id: "owner-a" } });
   const staleSend = f.button("Send message").onClick;
   await f.account({ isLoaded: true, user: { id: "owner-b" } });
-  staleSend();
+  staleSend({ detail: 1 });
   await f.flush();
   assert.deepEqual(f.submittedTools, []);
   await f.click("Send message");

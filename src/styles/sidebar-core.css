@@ -1081,13 +1081,13 @@ body .kova-profile-menu [role="menuitem"]:focus-visible {
 .kova-sidebar-chat-menu[data-held-chat="true"] > [role="menuitem"]:focus {
   background-color: var(--accent);
 }
-.kova-held-chat-preview + [role="menuitem"] {
-  border-start-start-radius: 16px !important;
-  border-start-end-radius: 16px !important;
+.kova-sidebar-chat-menu[data-held-chat="true"] > .kova-held-chat-preview + [role="menuitem"] {
+  border-start-start-radius: var(--kova-radius-menu);
+  border-start-end-radius: var(--kova-radius-menu);
 }
 .kova-sidebar-chat-menu[data-held-chat="true"] > [role="menuitem"]:last-child {
-  border-end-start-radius: 16px;
-  border-end-end-radius: 16px;
+  border-end-start-radius: var(--kova-radius-menu);
+  border-end-end-radius: var(--kova-radius-menu);
 }
 
 .kova-chat-search-dialog {

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import * as kovaNative from "../../src/lib/kova-native.ts";
 
 const compile = (path) =>
   ts.transpileModule(readFileSync(path, "utf8"), {
@@ -190,6 +191,12 @@ function pwaFixture(options = {}) {
     pwaSource,
     "PwaSettings",
     {
+      "@/lib/kova-native": kovaNative,
+      "@/lib/pwa/android-device": {
+        androidTaskPushEnabled: async () => assert.fail("Unexpected native device status"),
+        clearAndroidTaskPush: async () => assert.fail("Unexpected native device disable"),
+        enableAndroidTaskPush: async () => assert.fail("Unexpected native device enable"),
+      },
       "@/lib/pwa/install": {
         subscribeInstallPrompt: () => () => {},
         canPromptInstall: () => false,

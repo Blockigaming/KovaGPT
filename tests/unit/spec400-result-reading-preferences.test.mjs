@@ -100,7 +100,7 @@ function fixture() {
     applyThemeMode: (mode) => themes.push(mode),
     loadThemeMode: () => "light",
     settingsOpen: true,
-    setSettingsOpen() {},
+    changeSettingsOpen() {},
     openHelp() {},
     settingsTab: "appearance",
     settingsReturnFocusRef: { current: null },

@@ -269,9 +269,9 @@ test("same-menu focus does not cancel restoration, but later focus stays authori
   assert.deepEqual(f.calls, [["toggle", "chat"]]);
 });
 
-test("pin recovery preserves row limits and gives both fallback headings a programmatic focus target", () => {
-  assert.match(source, /pinned\.slice\(0, 8\)\.map\(chatRow\)/);
-  assert.match(source, /recents\.slice\(0, 8\)\.map\(chatRow\)/);
+test("pin recovery renders all rows and gives both fallback headings a programmatic focus target", () => {
+  assert.match(source, /pinned\.map\(chatRow\)/);
+  assert.match(source, /recents\.map\(chatRow\)/);
   assert.match(source, /id="sidebar-pinned-heading" tabIndex=\{-1\}/);
   assert.match(source, /id="sidebar-chats-heading"\s+tabIndex=\{-1\}/);
   assert.match(source, /onClick=\{\(event\) => beginPin\(conversation, event.currentTarget\)\}/);

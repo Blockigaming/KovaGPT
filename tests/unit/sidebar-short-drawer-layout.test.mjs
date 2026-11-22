@@ -137,6 +137,6 @@ test("history and navigation precede the account footer without duplicate Help",
     "kova-sidebar-footer",
   ]);
   assert.doesNotMatch(source, /className="kova-sidebar-help"/);
-  assert.match(source, /pinned\.slice\(0, 8\)\.map\(chatRow\)/);
-  assert.match(source, /recents\.slice\(0, 8\)\.map\(chatRow\)/);
+  assert.match(source, /pinned\.map\(chatRow\)/);
+  assert.match(source, /recents\.map\(chatRow\)/);
 });

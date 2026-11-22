@@ -1,14 +1,14 @@
 import * as linkPreview from "../../src/lib/link-preview.mjs";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { loadUiModule, elements, text } from "../helpers/ui-state-harness.mjs";
 
 const icon = (name) => Symbol(name);
 const icons = Object.fromEntries(
-  ["CalendarDays", "FileText", "Globe", "Loader2", "Mail", "Copy", "Check"].map((name) => [
-    name,
-    icon(name),
-  ]),
+  ["CalendarDays", "FileText", "Globe", "Loader2", "Mail", "Copy", "Check", "Pencil"].map(
+    (name) => [name, icon(name)],
+  ),
 );
 const menus = Object.fromEntries(
   ["ContextMenu", "ContextMenuTrigger", "ContextMenuContent", "ContextMenuItem"].map((name) => [
@@ -93,7 +93,7 @@ test("sent prompts expose one inline copy button and retain exact text", () => {
     onEdit() {},
     onBranch() {},
   });
-  const controls = buttons(tree);
+  const controls = buttons(tree).filter((button) => button.props["aria-label"] === "Copy prompt");
   assert.equal(controls.length, 1);
   assert.equal(controls[0].props["aria-label"], "Copy prompt");
   controls[0].props.onClick();
@@ -109,7 +109,7 @@ test("successful copy switches the same control to the checkmark state", () => {
   assert.match(text(tree), /Prompt copied/);
 });
 
-test("edit and branch remain context menu actions without inline buttons", () => {
+test("edit and branch remain context menu actions and edit also has a mobile shortcut", () => {
   let edit = 0;
   let branch = 0;
   const tree = PromptMessage({
@@ -124,5 +124,20 @@ test("edit and branch remain context menu actions without inline buttons", () =>
   items.find((item) => text(item).startsWith("Branch from")).props.onSelect();
   assert.equal(edit, 1);
   assert.equal(branch, 1);
-  assert.equal(buttons(tree).length, 1);
+  const editShortcut = buttons(tree).find(
+    (button) => button.props["aria-label"] === "Edit message",
+  );
+  assert.match(editShortcut.props.className, /kova-prompt-edit-mobile/);
+  editShortcut.props.onClick();
+  assert.equal(edit, 2);
+  assert.deepEqual(
+    buttons(tree).map((button) => button.props["aria-label"]),
+    ["Copy prompt", "Edit message"],
+  );
+  const css = readFileSync("src/components/prompt-activity.css", "utf8");
+  assert.match(css, /\.kova-prompt-edit-mobile\s*\{\s*display: none/);
+  assert.match(
+    css,
+    /@media \(width < 1024px\), \(pointer: coarse\) and \(hover: none\)[\s\S]*?\.kova-prompt-edit-mobile\s*\{\s*display: inline-flex/,
+  );
 });

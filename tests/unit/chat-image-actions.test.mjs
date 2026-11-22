@@ -222,10 +222,14 @@ function menuFixture(mobile = false) {
     focus = [];
   const errors = [],
     added = [];
+  const gestures = loadUiModule("src/hooks/use-mobile-image-gestures.ts", {
+    react: hooks.react,
+  });
   const image = loadUiModule(
     "src/components/ChatImage.tsx",
     {
       react: { ...hooks.react, useMemo: (factory) => factory() },
+      "@/hooks/use-mobile-image-gestures": gestures,
       "@/hooks/use-mobile": { useLayout: () => ({ isMobile: mobile }) },
       "lucide-react": Object.fromEntries(
         [
