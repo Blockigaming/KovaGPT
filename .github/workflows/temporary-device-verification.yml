@@ -58,7 +58,7 @@ jobs:
           test -s android/app/build/outputs/apk/debug/app-debug.apk
       - name: Start short-lived synthetic preview
         env:
-          KOVA_QA_CODE_SHA256: e94e2b10adb0464f0699042702512f199f4286eab47c0f22d52696a322343987
+          KOVA_QA_CODE_SHA256: 12712cd57c786e993d9c7bb35205e9aac694a0658b2da0e1f9927d166441fcff
         run: |
           curl --fail --show-error --silent --location --retry 2 --output "$RUNNER_TEMP/cloudflared" https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-linux-amd64
           echo "97bb3b02d23a5980fc9c15a1a270e692da1923f103f920d5b16d4931d5ab55e7  $RUNNER_TEMP/cloudflared" | sha256sum -c
