@@ -679,6 +679,7 @@ test("BigQuery lists bounded dataset metadata for the exact requested project", 
       assert.equal(url.searchParams.get("maxResults"), "10");
       assert.equal(init.method, "GET");
       return Response.json({
+        kind: "bigquery#datasetList",
         datasets: [
           {
             datasetReference: { projectId: "example-project", datasetId: "demo_data" },
@@ -773,4 +774,24 @@ test("Calendly uses PKCE with Basic client auth and HubSpot carries the granted 
   });
   assert.equal(invalid.scope, undefined);
   assert.equal(invalid.provider_account_id, undefined);
+});
+
+test("provider errors or malformed response bodies do not verify connector reads", async () => {
+  const options = { calendlyUser: "https://api.calendly.com/users/fixture-user" };
+  for (const id of ["calendly", "google-bigquery", "hubspot"]) {
+    for (const [response, error] of [
+      [Response.json({ value: [] }), /invalid_connection_response/],
+      [new Response(null, { status: 403 }), /connection_permission_required/],
+      [new Response(null, { status: 401 }), /connection_reauthorization_required/],
+    ]) {
+      await assert.rejects(
+        readConnection(id, "example-project", "fixture", async () => response, options),
+        error,
+      );
+    }
+  }
+  const empty = await readConnection("google-bigquery", "example-project", "fixture", async () =>
+    Response.json({ kind: "bigquery#datasetList" }),
+  );
+  assert.deepEqual(empty.results, []);
 });

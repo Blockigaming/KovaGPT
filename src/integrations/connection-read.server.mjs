@@ -58,7 +58,7 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("maxResults", "10");
     url.searchParams.set(
       "fields",
-      "datasets(datasetReference,friendlyName,location),nextPageToken,unreachable",
+      "kind,datasets(datasetReference,friendlyName,location),nextPageToken,unreachable",
     );
   } else if (id === "hubspot") {
     url = new URL("https://api.hubapi.com/crm/objects/2026-09/companies/search");
@@ -196,7 +196,8 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     };
   }
   let rows = data.value;
-  if (id === "calendly" && Array.isArray(data.collection)) {
+  if (id === "calendly") {
+    if (!Array.isArray(data.collection)) throw new Error("invalid_connection_response");
     const filter = query.trim().toLowerCase();
     rows = data.collection
       .filter(
@@ -212,7 +213,12 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
           .join(" to "),
       }));
   }
-  if (id === "google-bigquery" && Array.isArray(data.datasets ?? [])) {
+  if (id === "google-bigquery") {
+    if (
+      data.kind !== "bigquery#datasetList" ||
+      (data.datasets !== undefined && !Array.isArray(data.datasets))
+    )
+      throw new Error("invalid_connection_response");
     const project = query.trim();
     rows = (data.datasets ?? []).flatMap((dataset) => {
       const ref = dataset?.datasetReference;
@@ -232,7 +238,8 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
       ];
     });
   }
-  if (id === "hubspot" && Array.isArray(data.results)) {
+  if (id === "hubspot") {
+    if (!Array.isArray(data.results)) throw new Error("invalid_connection_response");
     rows = data.results.map((company) => ({
       id: str(company?.id, 80),
       name: str(company?.properties?.name, 300),
