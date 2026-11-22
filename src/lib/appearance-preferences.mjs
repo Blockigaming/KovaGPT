@@ -130,7 +130,7 @@ export function applyReadingPreferences(root, settings) {
       root.style.setProperty(`--${key}`, values.interfaceColors[key]);
     else root.style.removeProperty(`--${key}`);
   }
-  root.style.fontSize = `${(16 * values.interfaceSize) / 100}px`;
+  root.style.setProperty("--kova-interface-scale", String(values.interfaceSize / 100));
   root.style.setProperty("--kova-settings-navigation-width", `${values.settingsNavigationWidth}px`);
   for (const token of ["--primary", "--ring", "--kova-message-accent"]) {
     if (values.interfaceAccent) root.style.setProperty(token, values.interfaceAccent);

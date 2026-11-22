@@ -188,7 +188,8 @@ for (const state of states) {
       expect(logo!.width).toBeCloseTo(expectedSize, 1);
       expect(logo!.height).toBeCloseTo(expectedSize, 1);
       expect(row(".spec400-composer").radius).toBe("21px");
-      unchanged(".spec400-composer-input", ["font", "line"]);
+      unchanged(".spec400-composer-input", ["font"]);
+      expect(row(".spec400-composer-input").line).toBe("24px");
       expect(
         row(".spec400-composer-input").height / desktop(".spec400-composer-input").height,
       ).toBeCloseTo(0.47, 2);
@@ -233,12 +234,12 @@ for (const state of states) {
       );
     }
     if (state.name === "tasks") {
-      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "24px");
-      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "28.8px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("font-size", "26px");
+      await expect(page.locator("#scheduled-tasks-title")).toHaveCSS("line-height", "32px");
     }
     if (["library", "projects", "connections", "images"].includes(state.name)) {
       unchanged(".kova-page-title", ["weight"]);
-      expect(row(".kova-page-title").font).toBe("24px");
+      expect(row(".kova-page-title").font).toBe("26px");
       expect(row(".kova-page-title").height).toBeGreaterThan(20);
     }
   });

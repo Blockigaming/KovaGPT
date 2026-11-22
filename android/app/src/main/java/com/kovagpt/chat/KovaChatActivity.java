@@ -219,6 +219,9 @@ public final class KovaChatActivity extends FragmentActivity {
         android.webkit.WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setUseWideViewPort(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);

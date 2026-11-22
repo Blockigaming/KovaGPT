@@ -88,7 +88,7 @@ for (const [width, height] of viewports) {
       const html = page.locator("html");
       await html.evaluate((element, mode) => {
         element.classList.toggle("dark", mode === "dark");
-        element.style.fontSize = "20px";
+        element.style.setProperty("--kova-native-font-size", "20px");
       }, theme);
 
       if (width < 768) {
@@ -301,4 +301,53 @@ test("tabletop posture keeps the composer above the hinge and preserves the draf
     .poll(() => page.evaluate(() => matchMedia("(vertical-viewport-segments: 2)").matches))
     .toBe(false);
   await expect(composer).toHaveValue("Keep this draft when the screen unfolds");
+});
+
+test("phone controls clear the safe areas as the available height changes", async ({ page }) => {
+  await fixture(page, "dark");
+  const session = await page.context().newCDPSession(page);
+  const screen = {
+    width: 390,
+    screenWidth: 390,
+    screenHeight: 844,
+    deviceScaleFactor: 3,
+    mobile: true,
+  };
+  await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height: 844 });
+  await session.send("Emulation.setSafeAreaInsetsOverride", {
+    insets: { top: 44, right: 24, bottom: 34, left: 28 },
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  const shell = page.locator('.kova-assistant[data-ui="modern"]');
+  const header = shell.locator(".kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner");
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("A draft that should stay in place");
+  await composer.blur();
+  const send = page.getByRole("button", { name: "Send message" });
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#111111");
+
+  for (const height of [844, 736, 844]) {
+    await session.send("Emulation.setDeviceMetricsOverride", { ...screen, height });
+    await expect(shell).toHaveCSS("height", `${height}px`);
+    await expect.poll(async () => (await header.boundingBox())?.y).toBeGreaterThanOrEqual(44);
+    await expect
+      .poll(async () => {
+        const bounds = await send.boundingBox();
+        return bounds ? bounds.y + bounds.height : Infinity;
+      })
+      .toBeLessThanOrEqual(height - 34);
+    const bounds = await composer.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(28);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(screen.width - 24);
+    await expect(composer).toHaveValue("A draft that should stay in place");
+    await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  }
+
+  await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1.5 });
+  await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(1.5);
+  await expect(shell).not.toHaveAttribute("data-keyboard-open", "true");
+  await session.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+  await expect(composer).toHaveValue("A draft that should stay in place");
 });

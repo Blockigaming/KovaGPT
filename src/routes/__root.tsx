@@ -55,8 +55,14 @@ const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
     window.matchMedia?.("(prefers-color-scheme: dark)").matches);
   const phone = window.matchMedia?.("${PHONE_THEME_QUERY}").matches;
   const darkColor = phone ? "${PHONE_DARK_THEME_COLOR}" : "${DEFAULT_THEME_COLOR}";
-  document.querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", isDark ? darkColor : "${LIGHT_THEME_COLOR}");
+  // Own the metadata outside React, which hydrates hoisted tags by content.
+  let chrome = document.querySelector('meta[name="theme-color"]');
+  if (!chrome) {
+    chrome = document.createElement("meta");
+    chrome.name = "theme-color";
+    document.head.append(chrome);
+  }
+  chrome.content = isDark ? darkColor : "${LIGHT_THEME_COLOR}";
   if (!isDark) return;
 
   const changed = [];
@@ -323,7 +329,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
       <head>
         <HeadContent />
-        <meta name="theme-color" content={DEFAULT_THEME_COLOR} suppressHydrationWarning />
         <ScriptOnce>{EARLY_THEME_BOOTSTRAP}</ScriptOnce>
       </head>
       <body>

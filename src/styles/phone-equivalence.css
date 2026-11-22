@@ -25,6 +25,11 @@
     --surface-composer: var(--composer-background);
     --muted: #f3f3f3;
     --muted-foreground: #666666;
+    --kova-phone-text-tertiary: #929292;
+    --kova-phone-placeholder: #666666;
+    --text-disabled: var(--muted-foreground);
+    --surface-selected: var(--sidebar-active);
+    --surface-hover: var(--sidebar-hover);
     --accent: #e4e4e4;
     --sidebar-hover: #e4e4e4;
     --sidebar-active: #e5e5e5;
@@ -60,6 +65,8 @@
     --composer-background: #2a2a2a;
     --muted: #212121;
     --muted-foreground: #b4b4b4;
+    --kova-phone-text-tertiary: #858585;
+    --kova-phone-placeholder: #9a9a9a;
     --accent: #333333;
     --sidebar-hover: #333333;
     --sidebar-active: #353535;
@@ -268,6 +275,16 @@
     font-size: max(16px, 1rem) !important;
     line-height: 1.5 !important;
     unicode-bidi: plaintext;
+  }
+
+  .kova-assistant .spec400-composer-input::placeholder,
+  .spec400-expanded-textarea::placeholder {
+    color: var(--kova-phone-placeholder);
+  }
+
+  .kova-assistant .prose-chat pre {
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
   }
 
   .kova-assistant .prose-chat :is(p, li, blockquote, h1, h2, h3, h4),
@@ -580,8 +597,8 @@
   .kova-phone-workspace
     main
     :is(#library-title, #projects-title, #scheduled-tasks-title, #apps-title) {
-    font-size: 24px;
-    line-height: 1.2;
+    font-size: 1.625rem;
+    line-height: 2rem;
   }
 
   .kova-phone-workspace[data-ui="modern"] .kova-app-content main:is(.kova-page, .kova-tool-page) {
@@ -610,8 +627,8 @@
   }
 
   .kova-images-workspace [data-ui-reference="chatgpt.images.gallery"] #images-title {
-    font-size: 24px;
-    line-height: 1.2;
+    font-size: 1.625rem;
+    line-height: 2rem;
   }
 
   .kova-settings-route
@@ -619,8 +636,13 @@
     .kova-settings-content
     .kova-settings-content-header
     h2 {
-    font-size: 24px;
-    line-height: 1.2;
+    font-size: 1.625rem;
+    line-height: 2rem;
+  }
+
+  .kova-phone-workspace :is(main.kova-page, main.kova-tool-page) h2:not(.kova-page-title) {
+    font-size: 1.1875rem;
+    line-height: 1.625rem;
   }
 
   /* Library: toolbar reflows, tabs scroll, grid loses columns. Its controls,
@@ -647,8 +669,8 @@
     min-height: 44px;
     padding: 8px 16px;
     border-radius: 999px;
-    font-size: 14px;
-    line-height: 20px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   .kova-phone-workspace .kova-core-page.kova-file-directory .kova-grid.kova-file-grid {
