@@ -32,3 +32,14 @@ export function sendNativeKovaMessage(message: NativeMessage) {
     return false;
   }
 }
+
+type NativeDictationHandler = {
+  postMessage: (message: { action: "start" | "finish" | "cancel"; id: string }) => Promise<boolean>;
+};
+
+export function nativeDictationHandler(): NativeDictationHandler | undefined {
+  const native = window as Window & {
+    webkit?: { messageHandlers?: { kovaDictation?: NativeDictationHandler } };
+  };
+  return native.webkit?.messageHandlers?.kovaDictation;
+}

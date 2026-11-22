@@ -23,6 +23,7 @@ import {
 import { authFetch } from "@/lib/auth-fetch";
 import {
   KOVA_NATIVE_AUDIO_INTERRUPTION,
+  nativeDictationHandler,
   nativeKovaPlatform,
   sendNativeKovaMessage,
 } from "@/lib/kova-native";
@@ -220,6 +221,7 @@ export function ComposerVoiceDialog({
   const phaseRef = useRef<Phase>("idle");
   const nativeBackgrounded = useRef(false);
   const recorder = useRef<MediaRecorder | null>(null);
+  const nativeRecording = useRef<{ id: string; listeners: AbortController } | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const chunks = useRef<Blob[]>([]);
   const audioBytes = useRef(0);
@@ -300,6 +302,14 @@ export function ComposerVoiceDialog({
     if (requestDeadline.current !== null) clearTimeout(requestDeadline.current);
     requestDeadline.current = null;
     clearRecordingTimers();
+    const native = nativeRecording.current;
+    nativeRecording.current = null;
+    if (native) {
+      native.listeners.abort();
+      void nativeDictationHandler()
+        ?.postMessage({ action: "cancel", id: native.id })
+        .catch(() => {});
+    }
     const activeRecorder = recorder.current;
     recorder.current = null;
     if (activeRecorder) {
@@ -476,6 +486,7 @@ export function ComposerVoiceDialog({
         failOperation("Audio was interrupted. Start again when your microphone is available.");
     };
     const stopHiddenCapture = () => {
+      if (nativeRecording.current) return;
       if (phaseRef.current === "requesting" || phaseRef.current === "recording") {
         failOperation("Microphone capture stopped when you left the app. Start again to continue.");
       }
@@ -829,6 +840,22 @@ export function ComposerVoiceDialog({
   };
 
   const stopRecording = () => {
+    const native = nativeRecording.current;
+    if (native && phaseRef.current === "recording") {
+      updatePhase("stopping");
+      clearRecordingTimers();
+      void nativeDictationHandler()
+        ?.postMessage({ action: "finish", id: native.id })
+        .then((finished) => {
+          if (!finished && nativeRecording.current === native)
+            failOperation("The microphone recording ended. Please try again.");
+        })
+        .catch(() => {
+          if (nativeRecording.current === native)
+            failOperation("The microphone recording ended. Please try again.");
+        });
+      return;
+    }
     const activeRecorder = recorder.current;
     if (phaseRef.current !== "recording" || !activeRecorder || activeRecorder.state === "inactive")
       return;
@@ -873,11 +900,12 @@ export function ComposerVoiceDialog({
         );
       }
     };
+    const native = mode !== "voice" ? nativeDictationHandler() : undefined;
     const realtime =
       mode === "voice" && capabilities.realtime && !realtimeFailed && canListenInRealtime();
     const canRecord =
       typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
-    if (!realtime && !canRecord) {
+    if (!native && !realtime && !canRecord) {
       setError(
         "This browser does not support microphone recording. Try a supported browser on a secure connection, or keep typing.",
       );
@@ -892,6 +920,59 @@ export function ComposerVoiceDialog({
     setError("");
     setElapsed(0);
     updatePhase("requesting");
+    if (native) {
+      const active = { id: crypto.randomUUID(), listeners: new AbortController() };
+      nativeRecording.current = active;
+      const { signal } = active.listeners;
+      window.addEventListener(
+        "kova-native-dictation",
+        (event) => {
+          const result = (event as CustomEvent<{ id?: string; audio?: string }>).detail;
+          if (result?.id !== active.id || nativeRecording.current !== active || !isCurrent(scope))
+            return;
+          clearRecordingTimers();
+          updatePhase("stopping");
+          const deliver = () => {
+            if (document.visibilityState === "hidden") return;
+            active.listeners.abort();
+            nativeRecording.current = null;
+            if (!result.audio) {
+              failOperation("No audio was recorded. Check your microphone and try again.");
+              return;
+            }
+            const bytes = Uint8Array.from(atob(result.audio), (character) =>
+              character.charCodeAt(0),
+            );
+            void transcribeRecording(scope, new Blob([bytes], { type: "audio/mp4" }));
+          };
+          document.addEventListener("visibilitychange", deliver, { signal });
+          deliver();
+        },
+        { signal },
+      );
+      const started = await native
+        .postMessage({ action: "start", id: active.id })
+        .catch(() => false);
+      if (
+        !isCurrent(scope) ||
+        nativeRecording.current !== active ||
+        phaseRef.current !== "requesting"
+      )
+        return;
+      if (!started) {
+        failOperation(
+          "The microphone could not start. Check KovaGPT’s microphone permission in Settings.",
+        );
+        return;
+      }
+      updatePhase("recording");
+      const began = Date.now();
+      recordingClock.current = setInterval(
+        () => setElapsed(Math.min(59, Math.floor((Date.now() - began) / 1000))),
+        250,
+      );
+      return;
+    }
     if (realtime) {
       const controller = new AbortController();
       request.current = controller;

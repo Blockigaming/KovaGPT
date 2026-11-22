@@ -18,6 +18,9 @@ struct KovaChatWebView: UIViewRepresentable {
         configuration.userContentController.addScriptMessageHandler(
             context.coordinator, contentWorld: .page, name: "kovaReadAloud"
         )
+        configuration.userContentController.addScriptMessageHandler(
+            context.coordinator, contentWorld: .page, name: "kovaDictation"
+        )
         let web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = context.coordinator
         web.uiDelegate = context.coordinator
@@ -32,6 +35,7 @@ struct KovaChatWebView: UIViewRepresentable {
         let coordinator = context.coordinator
         coordinator.changeLock = changeLock
         if !unlocked && coordinator.unlocked {
+            coordinator.cancelDictation()
             coordinator.endBackgroundReply()
             coordinator.stopReading(notifyPage: true)
             coordinator.signal("kova-native-audio-interruption")
@@ -49,18 +53,21 @@ struct KovaChatWebView: UIViewRepresentable {
     static func dismantleUIView(_ web: WKWebView, coordinator: Coordinator) {
         web.configuration.userContentController.removeScriptMessageHandler(forName: "kovaNative")
         web.configuration.userContentController.removeScriptMessageHandler(forName: "kovaReadAloud", contentWorld: .page)
+        web.configuration.userContentController.removeScriptMessageHandler(forName: "kovaDictation", contentWorld: .page)
         coordinator.stop()
     }
 
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler,
-        WKScriptMessageHandlerWithReply, AVAudioPlayerDelegate, ASWebAuthenticationPresentationContextProviding {
+        WKScriptMessageHandlerWithReply, AVAudioPlayerDelegate, AVAudioRecorderDelegate, ASWebAuthenticationPresentationContextProviding {
         var request: UUID?
         var unlocked = false
         var changeLock: () -> Void
         weak var web: WKWebView?
         private var textSizeObserver: NSObjectProtocol?
         private var audioObservers: [NSObjectProtocol] = []
+        private var dictation: AVAudioRecorder?
+        private var dictationID: String?
         private var reader: AVAudioPlayer?
         private var readingID: String?
         private var backgroundReply: UIBackgroundTaskIdentifier = .invalid
@@ -83,6 +90,7 @@ struct KovaChatWebView: UIViewRepresentable {
                 guard notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt ==
                     AVAudioSession.InterruptionType.began.rawValue else { return }
                 Task { @MainActor in
+                    self?.cancelDictation()
                     self?.stopReading(notifyPage: true)
                     self?.signal("kova-native-audio-interruption")
                 }
@@ -93,6 +101,7 @@ struct KovaChatWebView: UIViewRepresentable {
                 guard notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ==
                     AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue else { return }
                 Task { @MainActor in
+                    self?.cancelDictation()
                     self?.stopReading(notifyPage: true)
                     self?.signal("kova-native-audio-interruption")
                 }
@@ -105,6 +114,7 @@ struct KovaChatWebView: UIViewRepresentable {
             googleSessionID = nil
             googleSession?.cancel()
             googleSession = nil
+            cancelDictation()
             endBackgroundReply()
             stopReading()
             for observer in audioObservers { NotificationCenter.default.removeObserver(observer) }
@@ -199,25 +209,117 @@ struct KovaChatWebView: UIViewRepresentable {
         }
 
         func webView(_ web: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            cancelDictation()
             endBackgroundReply()
             stopReading()
         }
 
+        func cancelDictation() {
+            dictationID = nil
+            guard let recorder = dictation else { return }
+            dictation = nil
+            recorder.delegate = nil
+            recorder.stop()
+            try? FileManager.default.removeItem(at: recorder.url)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
+
+        private func startDictation(_ id: String, reply: @escaping (Any?, String?) -> Void) {
+            guard UIApplication.shared.applicationState == .active, unlocked, dictationID == nil else {
+                reply(false, nil)
+                return
+            }
+            dictationID = id
+            AVAudioApplication.requestRecordPermission { [weak self] granted in
+                Task { @MainActor in
+                    guard let self, self.dictationID == id else { reply(false, nil); return }
+                    guard granted, self.unlocked, UIApplication.shared.applicationState == .active else {
+                        self.cancelDictation()
+                        reply(false, nil)
+                        return
+                    }
+                    self.stopReading(notifyPage: true)
+                    let audio = AVAudioSession.sharedInstance()
+                    let url = FileManager.default.temporaryDirectory
+                        .appendingPathComponent(UUID().uuidString).appendingPathExtension("m4a")
+                    do {
+                        try audio.setCategory(.playAndRecord, mode: .default, options: .defaultToSpeaker)
+                        try audio.setActive(true)
+                        let recorder = try AVAudioRecorder(url: url, settings: [
+                            AVFormatIDKey: kAudioFormatMPEG4AAC,
+                            AVSampleRateKey: 24000,
+                            AVNumberOfChannelsKey: 1,
+                            AVEncoderBitRateKey: 64000
+                        ])
+                        self.dictation = recorder
+                        recorder.delegate = self
+                        guard recorder.record(forDuration: 59) else {
+                            self.cancelDictation()
+                            reply(false, nil)
+                            return
+                        }
+                        reply(true, nil)
+                    } catch {
+                        self.cancelDictation()
+                        try? FileManager.default.removeItem(at: url)
+                        try? audio.setActive(false, options: .notifyOthersOnDeactivation)
+                        reply(false, nil)
+                    }
+                }
+            }
+        }
+
+        nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+            let recorderID = ObjectIdentifier(recorder)
+            Task { @MainActor in
+                guard let current = self.dictation, ObjectIdentifier(current) == recorderID,
+                      let id = self.dictationID else { return }
+                let file = flag ? try? Data(contentsOf: current.url) : nil
+                self.cancelDictation()
+                guard let web = self.web, self.unlocked, KovaDestination.isTrusted(web.url) else { return }
+                web.callAsyncJavaScript(
+                    """
+                    if (location.origin === 'https://kovagpt.com') {
+                        window.dispatchEvent(new CustomEvent('kova-native-dictation', { detail: {id, audio} }));
+                    }
+                    """,
+                    arguments: ["id": id, "audio": file.flatMap {
+                        !$0.isEmpty && $0.count <= 1024 * 1024 ? $0.base64EncodedString() : nil
+                    } ?? ""], in: nil, in: .page
+                )
+            }
+        }
+
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
                                    replyHandler: @escaping (Any?, String?) -> Void) {
-            guard message.name == "kovaReadAloud", message.webView === web, message.frameInfo.isMainFrame,
+            guard message.webView === web, message.frameInfo.isMainFrame,
                   KovaDestination.isTrusted(message.frameInfo.request.url),
                   let value = message.body as? [String: String],
                   let id = value["id"], UUID(uuidString: id) != nil else {
                 replyHandler(false, nil)
                 return
             }
+            if message.name == "kovaDictation" {
+                switch value["action"] {
+                case "start": startDictation(id, reply: replyHandler)
+                case "finish":
+                    if id == dictationID { dictation?.stop() }
+                    replyHandler(id == dictationID, nil)
+                case "cancel":
+                    if id == dictationID { cancelDictation() }
+                    replyHandler(true, nil)
+                default: replyHandler(false, nil)
+                }
+                return
+            }
+            guard message.name == "kovaReadAloud" else { replyHandler(false, nil); return }
             if value["action"] == "stop" {
                 if id == readingID { stopReading() }
                 replyHandler(true, nil)
                 return
             }
-            guard unlocked, UIApplication.shared.applicationState == .active || backgroundReply != .invalid,
+            guard unlocked, dictationID == nil,
+                  UIApplication.shared.applicationState == .active || backgroundReply != .invalid,
                   value["action"] == "play", let audio = value["audio"], audio.utf8.count <= 11_184_812,
                   let data = Data(base64Encoded: audio), !data.isEmpty, data.count <= 8 * 1024 * 1024 else {
                 replyHandler(false, nil)
