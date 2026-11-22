@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { OURA_SCOPES } from "../../src/health/oura-metrics.mjs";
 import * as credentials from "../../src/integrations/salesforce-credential.server.mjs";
+import * as connectionFlows from "../../src/integrations/connection-flows.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "../../src/lib/provider-response.server.mjs";
 
@@ -39,6 +41,7 @@ function fixture() {
   };
   const state = {
     profile,
+    profileEndpoint: credentials.SALESFORCE_PROFILE_ENDPOINT,
     account,
     calls: [],
     inserts: [],
@@ -119,7 +122,10 @@ function fixture() {
   };
   const providers = compile(
     "src/integrations/oauth-providers.server.ts",
-    {},
+    {
+      "./connection-flows.mjs": connectionFlows,
+      "@/health/oura-metrics.mjs": { OURA_SCOPES },
+    },
     { process: { env: {} } },
   );
   const modules = {
@@ -140,6 +146,7 @@ function fixture() {
       },
     },
     "./oauth-token-request.server.mjs": tokenRequests,
+    "./connection-flows.mjs": connectionFlows,
     "@/lib/provider-response.server.mjs": { readProviderJsonObject },
     "@/health/health-read.server.mjs": {
       confirmedHealthScopes: () => {
@@ -153,13 +160,19 @@ function fixture() {
       env: {
         SALESFORCE_OAUTH_CLIENT_ID: "client-test",
         SALESFORCE_OAUTH_CLIENT_SECRET: "secret-test",
+        CALENDLY_OAUTH_CLIENT_ID: "client-test",
+        CALENDLY_OAUTH_CLIENT_SECRET: "secret-test",
+        BIGQUERY_OAUTH_CLIENT_ID: "client-test",
+        BIGQUERY_OAUTH_CLIENT_SECRET: "secret-test",
+        HUBSPOT_OAUTH_CLIENT_ID: "client-test",
+        HUBSPOT_OAUTH_CLIENT_SECRET: "secret-test",
       },
     },
     fetch: async (url, init) => {
       state.calls.push([url, init]);
       if (url.endsWith("/revoke")) return new Response(null, { status: state.revokeStatus ?? 200 });
       if (url.endsWith("/token")) return Response.json(state.tokens);
-      assert.equal(url, credentials.SALESFORCE_PROFILE_ENDPOINT);
+      assert.equal(url, state.profileEndpoint);
       return Response.json(state.profile);
     },
   });
@@ -172,6 +185,67 @@ const callback = {
   browserNonce: "nonce",
   request: new Request("https://kovagpt.com/api/integrations/oauth/callback/salesforce"),
 };
+
+test("new work-app callbacks store only a confirmed grant for the bound provider account", async () => {
+  const calendlyUser = "https://api.calendly.com/users/linked-user";
+  const bigqueryScope = connectionFlows.BIGQUERY_READ_SCOPE;
+  const fixtures = [
+    {
+      providerId: "calendly",
+      tokens: { owner: calendlyUser, scope: "users:read scheduled_events:read" },
+      profile: { resource: { uri: calendlyUser, name: "Linked user" } },
+      profileEndpoint: "https://api.calendly.com/users/me",
+      accountId: calendlyUser,
+      scopes: ["users:read", "scheduled_events:read"],
+    },
+    {
+      providerId: "google-bigquery",
+      tokens: { scope: `openid https://www.googleapis.com/auth/userinfo.email ${bigqueryScope}` },
+      profile: { sub: "google-user" },
+      profileEndpoint: "https://openidconnect.googleapis.com/v1/userinfo",
+      accountId: "google-user",
+      scopes: ["openid", "https://www.googleapis.com/auth/userinfo.email", bigqueryScope],
+    },
+    {
+      providerId: "hubspot",
+      tokens: { hub_id: 123, scopes: ["crm.objects.companies.read"] },
+      accountId: "123",
+      scopes: ["crm.objects.companies.read"],
+    },
+  ];
+  for (const entry of fixtures) {
+    const f = fixture();
+    const { providerId, tokens, profile, profileEndpoint, accountId, scopes } = entry;
+    f.state.oauth.provider_id = providerId;
+    f.state.oauth.requested_scopes = scopes;
+    f.state.profile = profile;
+    f.state.profileEndpoint = profileEndpoint;
+    f.state.tokens = {
+      access_token: "access-test",
+      refresh_token: "refresh-test",
+      expires_in: 1800,
+      ...tokens,
+    };
+    const request = new Request(
+      `https://kovagpt.com/api/integrations/oauth/callback/${providerId}`,
+    );
+    await f.completeOAuth({ ...callback, providerId, request });
+    assert.equal(f.state.account.provider_account_id, accountId);
+    assert.equal(f.state.account.access_token_ciphertext, "encrypted:access-test");
+    assert.deepEqual(f.state.account.granted_scopes, scopes);
+    assert.equal(f.state.calls.length, profileEndpoint ? 2 : 1);
+
+    f.state.oauth.consumed_at = null;
+    delete f.state.tokens.scope;
+    delete f.state.tokens.scopes;
+    const before = f.state.account;
+    await assert.rejects(
+      f.completeOAuth({ ...callback, providerId, request }),
+      /oauth_scope_verification_failed/,
+    );
+    assert.equal(f.state.account, before);
+  }
+});
 
 test("Salesforce OAuth callback encrypts the verified organization binding without a fabricated expiry", async () => {
   const f = fixture();

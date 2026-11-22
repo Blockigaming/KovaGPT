@@ -33,6 +33,7 @@ const accountColumns =
 // generated application Database type. No schema change is required.
 type AccountRow = BoundAccount & {
   owner_id: string;
+  provider_account_id: string;
   workspace_id: string | null;
   deleted_at: string | null;
   created_at: string;
@@ -109,6 +110,9 @@ export async function refreshExpiringConnection(
       "box",
       "canva",
       "figma",
+      "calendly",
+      "google-bigquery",
+      "hubspot",
     ].includes(row.provider_id)
   )
     return null;
@@ -172,6 +176,11 @@ export async function refreshExpiringConnection(
       throw new Error("refresh_failed");
     }
     const tokens = selectRefreshTokens(provider.id, await readProviderJsonObject(response, 64_000));
+    if (
+      ["hubspot", "calendly"].includes(provider.id) &&
+      (tokens.provider_account_id !== row.provider_account_id || !tokens.scope)
+    )
+      throw new Error("refresh_binding_changed");
     await ensureRefreshLease();
     const packed = oldSalesforceCredential
       ? await renewSalesforceCredential(
@@ -322,7 +331,7 @@ export async function runConnectionAccountSearch(
   const lookup = () =>
     db
       .from("integration_linked_accounts")
-      .select(`${accountColumns},access_token_ciphertext,deleted_at`)
+      .select(`${accountColumns},provider_account_id,access_token_ciphertext,deleted_at`)
       .eq("id", bound.id)
       .eq("owner_id", ownerId)
       .eq("provider_id", flow.provider)
@@ -339,15 +348,7 @@ export async function runConnectionAccountSearch(
     throw new Error("connection_changed_or_expired");
   let account = original;
   const ensureCurrentBinding = async () => {
-    const { data: current, error: currentError } = await db
-      .from("integration_linked_accounts")
-      .select(`${accountColumns},access_token_ciphertext,deleted_at`)
-      .eq("id", bound.id)
-      .eq("owner_id", ownerId)
-      .eq("provider_id", flow.provider)
-      .is("workspace_id", null)
-      .is("deleted_at", null)
-      .maybeSingle();
+    const { data: current, error: currentError } = await lookup();
     await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
     if (
       currentError ||
@@ -355,14 +356,19 @@ export async function runConnectionAccountSearch(
       !providerConfigured() ||
       !canReadConnection(current, id) ||
       current.updated_at !== account.updated_at ||
+      current.provider_account_id !== account.provider_account_id ||
       current.access_token_ciphertext !== account.access_token_ciphertext
     )
       throw new Error("connection_changed_or_expired");
   };
   let token = await decryptCredential(account.access_token_ciphertext);
   await ensureCurrentBinding();
-  const options =
-    id === "salesforce" ? { recordType: args.record_type as SalesforceRecordType | undefined } : {};
+  const options = {
+    ...(id === "salesforce"
+      ? { recordType: args.record_type as SalesforceRecordType | undefined }
+      : {}),
+    ...(id === "calendly" ? { calendlyUser: account.provider_account_id } : {}),
+  };
   let result;
   try {
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);

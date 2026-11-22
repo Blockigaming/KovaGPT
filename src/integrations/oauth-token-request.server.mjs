@@ -1,3 +1,5 @@
+import { calendlyUserUri } from "./connection-flows.mjs";
+
 // Notion's token endpoint uses HTTP Basic client authentication and a JSON
 // payload, unlike the form-encoded exchanges used by the other adapters.
 // https://developers.notion.com/reference/create-a-token
@@ -23,7 +25,7 @@ export function oauthTokenRequest({
       body: JSON.stringify(fields),
     };
   }
-  const basicClientAuth = providerId === "figma" || providerId === "canva";
+  const basicClientAuth = ["figma", "canva", "calendly"].includes(providerId);
   const body = new URLSearchParams({
     ...fields,
     ...(basicClientAuth ? {} : { client_id: clientId, client_secret: clientSecret }),
@@ -58,13 +60,29 @@ export function selectOAuthTokens(providerId, payload) {
     (providerId === "slack" && tokens.token_type !== "user")
   )
     throw new Error("oauth_access_token_missing");
+  let declaredScopes = tokens.scope;
+  if (providerId === "hubspot") {
+    declaredScopes =
+      Array.isArray(tokens.scopes) &&
+      tokens.scopes.every((value) => typeof value === "string" && /^[\w.:-]+$/u.test(value))
+        ? tokens.scopes.join(" ")
+        : undefined;
+  }
+  const hubId = tokens.hub_id;
+  const accountId =
+    providerId === "hubspot" && Number.isSafeInteger(hubId) && hubId > 0
+      ? String(hubId)
+      : providerId === "calendly"
+        ? calendlyUserUri(tokens.owner)
+        : "";
   return {
     access_token: tokens.access_token,
+    ...(accountId ? { provider_account_id: accountId } : {}),
     ...(typeof tokens.refresh_token === "string" ? { refresh_token: tokens.refresh_token } : {}),
     ...(Number.isFinite(tokens.expires_in) && tokens.expires_in > 0
       ? { expires_in: tokens.expires_in }
       : {}),
-    ...(typeof tokens.scope === "string" ? { scope: tokens.scope } : {}),
+    ...(typeof declaredScopes === "string" ? { scope: declaredScopes } : {}),
   };
 }
 
@@ -81,6 +99,9 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       "box",
       "canva",
       "figma",
+      "calendly",
+      "google-bigquery",
+      "hubspot",
     ].includes(providerId)
   )
     throw new Error("refresh_not_supported");
@@ -98,7 +119,7 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
       redirect: "error",
       signal: AbortSignal.timeout(15_000),
     };
-  const basicClientAuth = providerId === "figma" || providerId === "canva";
+  const basicClientAuth = ["figma", "canva", "calendly"].includes(providerId);
   return {
     method: "POST",
     headers: {
@@ -125,12 +146,12 @@ export function oauthRefreshRequest({ providerId, clientId, clientSecret, refres
 export function selectRefreshTokens(providerId, payload) {
   if (providerId === "slack" && payload?.token_type !== "user")
     throw new Error("oauth_access_token_missing");
-  const tokens = selectOAuthTokens("refresh", payload);
+  const tokens = selectOAuthTokens(providerId === "slack" ? "refresh" : providerId, payload);
   // Salesforce and Notion may omit expires_in. A rejected API read triggers
   // a claimed refresh instead of inventing a lifetime for those tokens.
   if (!tokens.expires_in && !["salesforce", "notion"].includes(providerId))
     throw new Error("refresh_expiry_missing");
-  if (["notion", "box", "canva"].includes(providerId) && !tokens.refresh_token)
+  if (["notion", "box", "canva", "calendly"].includes(providerId) && !tokens.refresh_token)
     throw new Error("refresh_token_missing");
   return tokens;
 }

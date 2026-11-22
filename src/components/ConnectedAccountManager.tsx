@@ -228,7 +228,11 @@ export function ConnectedAccountManager({
             </div>
           )}
           <label className="block mt-4">
-            {id === "figma" ? "Figma file" : `Search ${flow.label}`}
+            {id === "figma"
+              ? "Figma file"
+              : id === "google-bigquery"
+                ? "Google Cloud project ID"
+                : `Search ${flow.label}`}
             <Input
               value={query}
               maxLength={id === "canva" ? 255 : 300}
@@ -241,7 +245,11 @@ export function ConnectedAccountManager({
                   ? "Enter a title or page ID"
                   : id === "figma"
                     ? "Enter a design link or file key"
-                    : "Enter a search"
+                    : id === "google-bigquery"
+                      ? "Enter a Google Cloud project ID"
+                      : id === "calendly"
+                        ? "Enter a meeting title or upcoming"
+                        : "Enter a search"
               }
             />
           </label>
@@ -277,7 +285,11 @@ export function ConnectedAccountManager({
                       void search(account.id);
                     }}
                   >
-                    {id === "figma" ? "Read this file" : "Search this account"}
+                    {id === "figma"
+                      ? "Read this file"
+                      : id === "google-bigquery"
+                        ? "List datasets"
+                        : "Search this account"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -295,9 +307,8 @@ export function ConnectedAccountManager({
       {result && (
         <div className="mt-4" role="status">
           <p>
-            {result.results.length
-              ? "Results from the connected service"
-              : "No matching results returned."}{" "}
+            Read access verified for this request.
+            {result.results.length === 0 && " No matching results returned."}
             {result.limited ? " Results may be incomplete." : ""}
           </p>
           <ul className="space-y-3 mt-2">

@@ -1,5 +1,5 @@
 import { readProviderJsonObject } from "../lib/provider-response.server.mjs";
-import { CONNECTION_FLOWS, safeConnectionLink } from "./connection-flows.mjs";
+import { CONNECTION_FLOWS, calendlyUserUri, safeConnectionLink } from "./connection-flows.mjs";
 import { salesforceReadRequest, salesforceReadResult } from "./salesforce-read.server.mjs";
 
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
@@ -43,7 +43,27 @@ export function connectionReadRequest(id, query, token, options = {}) {
   const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
   let url;
   let body;
-  if (id === "canva") {
+  if (id === "calendly") {
+    const user = calendlyUserUri(options.calendlyUser);
+    if (!user) throw new Error("invalid_calendly_account");
+    url = new URL("https://api.calendly.com/scheduled_events");
+    url.searchParams.set("user", user);
+    url.searchParams.set("status", "active");
+    url.searchParams.set("min_start_time", new Date().toISOString());
+    url.searchParams.set("sort", "start_time:asc");
+    url.searchParams.set("count", "25");
+  } else if (id === "google-bigquery") {
+    if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/u.test(query)) throw new Error("invalid_bigquery_project");
+    url = new URL(`https://bigquery.googleapis.com/bigquery/v2/projects/${query}/datasets`);
+    url.searchParams.set("maxResults", "10");
+    url.searchParams.set(
+      "fields",
+      "datasets(datasetReference,friendlyName,location),nextPageToken,unreachable",
+    );
+  } else if (id === "hubspot") {
+    url = new URL("https://api.hubapi.com/crm/objects/2026-09/companies/search");
+    body = JSON.stringify({ query, properties: ["name", "domain"], limit: 10 });
+  } else if (id === "canva") {
     if (query.length > 255) throw new Error("invalid_connection_query");
     url = new URL("https://api.canva.com/rest/v1/designs");
     url.searchParams.set("query", query);
@@ -176,6 +196,49 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
     };
   }
   let rows = data.value;
+  if (id === "calendly" && Array.isArray(data.collection)) {
+    const filter = query.trim().toLowerCase();
+    rows = data.collection
+      .filter(
+        (event) =>
+          event?.status === "active" &&
+          (filter === "upcoming" || str(event.name).toLowerCase().includes(filter)),
+      )
+      .map((event) => ({
+        id: str(event.uri, 300),
+        name: str(event.name, 300),
+        description: [str(event.start_time, 64), str(event.end_time, 64)]
+          .filter(Boolean)
+          .join(" to "),
+      }));
+  }
+  if (id === "google-bigquery" && Array.isArray(data.datasets ?? [])) {
+    const project = query.trim();
+    rows = (data.datasets ?? []).flatMap((dataset) => {
+      const ref = dataset?.datasetReference;
+      if (
+        !ref ||
+        ref.projectId !== project ||
+        typeof ref.datasetId !== "string" ||
+        !/^[a-zA-Z0-9_]{1,1024}$/u.test(ref.datasetId)
+      )
+        return [];
+      return [
+        {
+          id: str(ref.datasetId, 300),
+          name: str(dataset.friendlyName || ref.datasetId, 300),
+          description: str(dataset.location, 80),
+        },
+      ];
+    });
+  }
+  if (id === "hubspot" && Array.isArray(data.results)) {
+    rows = data.results.map((company) => ({
+      id: str(company?.id, 80),
+      name: str(company?.properties?.name, 300),
+      description: str(company?.properties?.domain, 253),
+    }));
+  }
   if (id === "canva") rows = data.items;
   if (id === "box") rows = data.entries;
   if (id === "notion") rows = data.results;

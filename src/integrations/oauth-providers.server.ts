@@ -1,6 +1,10 @@
+import { BIGQUERY_READ_SCOPE, calendlyUserUri } from "./connection-flows.mjs";
 import { OURA_SCOPES } from "@/health/oura-metrics.mjs";
 
 export type OAuthProviderId =
+  | "calendly"
+  | "google-bigquery"
+  | "hubspot"
   | "canva"
   | "figma"
   | "microsoft"
@@ -25,7 +29,7 @@ export type OAuthProviderAdapter = {
   requiredScopes: string[];
   optionalScopes: string[];
   usesPkce: boolean;
-  profileEndpoint: string;
+  profileEndpoint?: string;
   profileId: (value: Record<string, unknown>) => string;
   profileLabel: (value: Record<string, unknown>) => string;
 };
@@ -34,6 +38,49 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 const teamUser = (value: unknown) =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  calendly: {
+    id: "calendly",
+    name: "Calendly",
+    authorizationEndpoint: "https://auth.calendly.com/oauth/authorize",
+    tokenEndpoint: "https://auth.calendly.com/oauth/token",
+    revocationEndpoint: "https://auth.calendly.com/oauth/revoke",
+    clientIdEnv: "CALENDLY_OAUTH_CLIENT_ID",
+    clientSecretEnv: "CALENDLY_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["users:read", "scheduled_events:read"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://api.calendly.com/users/me",
+    profileId: (v) => calendlyUserUri(teamUser(v.resource).uri),
+    profileLabel: (v) => text(teamUser(v.resource).name) || "Calendly account",
+  },
+  "google-bigquery": {
+    id: "google-bigquery",
+    name: "Google Cloud BigQuery",
+    authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenEndpoint: "https://oauth2.googleapis.com/token",
+    revocationEndpoint: "https://oauth2.googleapis.com/revoke",
+    clientIdEnv: "BIGQUERY_OAUTH_CLIENT_ID",
+    clientSecretEnv: "BIGQUERY_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["openid", "email", BIGQUERY_READ_SCOPE],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://openidconnect.googleapis.com/v1/userinfo",
+    profileId: (v) => text(v.sub),
+    profileLabel: (v) => (v.email_verified === true ? text(v.email) : "") || "Google Cloud account",
+  },
+  hubspot: {
+    id: "hubspot",
+    name: "HubSpot",
+    authorizationEndpoint: "https://app.hubspot.com/oauth/authorize",
+    tokenEndpoint: "https://api.hubspot.com/oauth/2026-09/token",
+    clientIdEnv: "HUBSPOT_OAUTH_CLIENT_ID",
+    clientSecretEnv: "HUBSPOT_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["crm.objects.companies.read"],
+    optionalScopes: [],
+    usesPkce: false,
+    profileId: (v) => text(v.verifiedAccountId),
+    profileLabel: (v) => `HubSpot portal ${text(v.verifiedAccountId)}`,
+  },
   canva: {
     id: "canva",
     name: "Canva",

@@ -15,6 +15,8 @@ export type ConnectedAccount = {
   deleted_at?: string | null;
   updated_at?: string;
 };
+export const BIGQUERY_READ_SCOPE: string;
+export function calendlyUserUri(value: unknown): string;
 export const CONNECTION_FLOWS: Record<string, ConnectionFlow>;
 export function hasConnectionScopes(scopes: string[], required: string[]): boolean;
 export function connectionAccounts<T extends ConnectedAccount>(accounts: T[], id: string): T[];

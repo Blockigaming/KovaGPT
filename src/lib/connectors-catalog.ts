@@ -80,18 +80,17 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "google-bigquery",
     label: "Google Cloud BigQuery",
-    description:
-      "Planned BigQuery connection. Dataset access and billing must be configured separately.",
+    description: "List dataset metadata in an authorized Google Cloud project.",
     category: "Development",
-    status: "planned",
+    status: "setup_required",
     domain: "cloud.google.com",
   },
   {
     id: "hubspot",
     label: "HubSpot",
-    description: "Planned HubSpot connection for CRM context.",
+    description: "Search authorized CRM company names and domains.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "hubspot.com",
   },
   {
@@ -1689,9 +1688,9 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   {
     id: "calendly",
     label: "Calendly",
-    description: "Reference scheduled meetings and event links.",
+    description: "Find upcoming meetings and their times in your Calendly account.",
     category: "Calendar",
-    status: "planned",
+    status: "setup_required",
     domain: "calendly.com",
   },
   {

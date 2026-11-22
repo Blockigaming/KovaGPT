@@ -1,6 +1,6 @@
 # KovaGPT connector master list
 
-The approved scope is the 31 services requested on November 1, 2026, plus six previously requested services. This is a scope inventory, not a claim that every service is connected or deployed. The Apps directory includes all 37. Existing catalog IDs remain stable; Outlook Mail uses `outlook`.
+The Apps directory includes the 31 requested services and seven retained services. WHOOP is also tracked in Health. Existing catalog IDs remain stable. Outlook Mail uses `outlook`.
 
 Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service directory remains available for compatibility, but does not expand the approved master scope.
 
@@ -37,6 +37,8 @@ Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service dire
 | Webull                                        | `webull`                 | Apps                                            |
 | Wix                                           | `wix`                    | Apps                                            |
 | Custom MCP connectors (bring your own server) | `custom-mcp`             | Apps                                            |
+| Granola                                       | `granola`                | Apps                                            |
+| Tana                                          | `tana`                   | Apps                                            |
 | Slack                                         | `slack`                  | Apps                                            |
 | Plaid                                         | `plaid`                  | Finances; production/security approval required |
 | Oura                                          | `oura`                   | Health; eligible developer accounts required    |
@@ -45,6 +47,17 @@ Canonical metadata: `src/lib/connector-master-list.mjs`. The legacy service dire
 | Android Health Connect                        | `android-health-connect` | Native mobile implementation required           |
 
 A catalog entry alone never enables OAuth, provider calls, account access, trading, payments, or billing. Production configuration, provider eligibility, a working adapter, explicit account consent, token refresh and an end-to-end read must be verified before a connector is called live. New entries have no invented permission contracts. Generic local icons are used when verified brand assets are unavailable.
+
+| Rollout dependency                                   | Providers                                                                                                                                                        |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dedicated Google flows                               | Gmail, Google Drive, Google Calendar                                                                                                                             |
+| Work-app reads with provider setup and consent       | Box, Calendly, Canva, Figma, GitHub, BigQuery, HubSpot, Linear, Microsoft Teams, Notion, OneDrive, Outlook Mail, Outlook Calendar, Salesforce, SharePoint, Slack |
+| Finance or health setup and consent                  | Plaid, Oura, WHOOP                                                                                                                                               |
+| Provider adapters still needed                       | eToro, Excalidraw, Gamma, Granola, HyperFrames by HeyGen, Interactive Brokers, Meltwater, Mixpanel, S&P Global, Stripe, Tana, Vercel, Webull, Wix                |
+| MCP registration and tool authorization still needed | Custom MCP connectors                                                                                                                                            |
+| Native clients and on-device consent still needed    | Apple Health, Android Health Connect                                                                                                                             |
+
+For the current work-app operations and acceptance checks, see [Work app connections](work-apps.md). Each operation needs its own permission verification. A read test verifies the tested read only. Availability of a provider write scope does not by itself implement or verify a Kova write operation.
 
 Custom MCP means bring your own server. Registration, per-server authentication, tool review, network protections and account isolation must be implemented before enabling arbitrary servers.
 

@@ -214,6 +214,33 @@ test("calendar tools bind to the selected Microsoft account and discard results 
   assert.equal(f.state.reads, 2);
 });
 
+test("Calendly chat relies on the stored provider identity and discards output after the binding changes", async () => {
+  const f = fixture();
+  const user = "https://api.calendly.com/users/linked-user";
+  Object.assign(f.state.row, {
+    provider_id: "calendly",
+    provider_account_id: user,
+    granted_scopes: ["users:read"],
+  });
+  assert.deepEqual((await f.getConnectedToolContext("owner-a")).tools, []);
+  f.state.row.granted_scopes.push("scheduled_events:read");
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.equal(context.tools[0].function.name, "calendly_search_events");
+  assert.equal(JSON.stringify(context).includes(user), false);
+  const args = { account_id: f.state.row.id, query: "upcoming", calendlyUser: "attacker-supplied" };
+  await f.runConnectedTool("owner-a", "calendly_search_events", args, context);
+  assert.deepEqual(f.calls.find(([operation]) => operation === "read").at(-1), {
+    calendlyUser: user,
+  });
+  f.state.onRead = () => {
+    f.state.row.provider_account_id = "https://api.calendly.com/users/different-user";
+  };
+  await assert.rejects(
+    f.runConnectedTool("owner-a", "calendly_search_events", args, context),
+    /connection_changed_or_expired/,
+  );
+});
+
 test("chat merges GitHub repository tools and dispatches through its pinned context", async () => {
   const f = fixture();
   f.state.githubContext = {

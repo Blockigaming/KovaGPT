@@ -130,6 +130,9 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
     "api.box.com",
     "api.canva.com",
     "api.figma.com",
+    "api.calendly.com",
+    "bigquery.googleapis.com",
+    "api.hubapi.com",
     "api.notion.com",
     "api.linear.app",
     "slack.com",
@@ -146,8 +149,11 @@ test("all service requests use fixed HTTPS endpoints, bounded queries and no red
       id,
       id === "figma"
         ? "https://www.figma.com/design/Abc123/title"
-        : "a&?$top=999' https://evil.example",
+        : id === "google-bigquery"
+          ? "example-project"
+          : "a&?$top=999' https://evil.example",
       id === "salesforce" ? salesforceToken : "fake-token",
+      { calendlyUser: "https://api.calendly.com/users/test-user" },
     );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
@@ -604,4 +610,167 @@ test("Canva and Figma exchanges use basic client authentication with provider-sp
     selectRefreshTokens("figma", { access_token: "new", expires_in: 3600 }).access_token,
     "new",
   );
+});
+
+test("Calendly searches upcoming meetings only for the linked provider account", async () => {
+  const calendlyUser = "https://api.calendly.com/users/fixture-user";
+  const result = await readConnection(
+    "calendly",
+    "Demo",
+    "fixture",
+    async (target, init) => {
+      const url = new URL(target);
+      assert.equal(url.origin + url.pathname, "https://api.calendly.com/scheduled_events");
+      assert.equal(url.searchParams.get("user"), calendlyUser);
+      assert.equal(url.searchParams.has("organization"), false);
+      assert.equal(url.searchParams.get("status"), "active");
+      assert.equal(init.method, "GET");
+      return Response.json({
+        collection: [
+          {
+            uri: "https://api.calendly.com/scheduled_events/one",
+            name: "Demo",
+            status: "active",
+            start_time: "2026-12-15T12:00:00Z",
+            end_time: "2026-12-15T12:30:00Z",
+            location: { join_url: "private" },
+          },
+          { name: "Demo cancelled", status: "canceled" },
+          { name: "Planning", status: "active" },
+        ],
+        pagination: { next_page: "private" },
+      });
+    },
+    { calendlyUser },
+  );
+  assert.deepEqual(result.results, [
+    {
+      id: "https://api.calendly.com/scheduled_events/one",
+      title: "Demo",
+      snippet: "2026-12-15T12:00:00Z to 2026-12-15T12:30:00Z",
+      url: null,
+    },
+  ]);
+  assert.throws(
+    () =>
+      connectionReadRequest("calendly", "upcoming", "fixture", {
+        calendlyUser: "https://api.calendly.com.evil.example/users/fixture-user",
+      }),
+    /invalid_calendly_account/,
+  );
+});
+
+test("BigQuery lists bounded dataset metadata for the exact requested project", async () => {
+  for (const query of ["../datasets", "good-project/../x", "https://example.invalid", "a%2fb"])
+    assert.throws(
+      () => connectionReadRequest("google-bigquery", query, "fixture"),
+      /invalid_bigquery_project/,
+    );
+  const result = await readConnection(
+    "google-bigquery",
+    "example-project",
+    "fixture",
+    async (target, init) => {
+      const url = new URL(target);
+      assert.equal(
+        url.origin + url.pathname,
+        "https://bigquery.googleapis.com/bigquery/v2/projects/example-project/datasets",
+      );
+      assert.equal(url.searchParams.get("maxResults"), "10");
+      assert.equal(init.method, "GET");
+      return Response.json({
+        datasets: [
+          {
+            datasetReference: { projectId: "example-project", datasetId: "demo_data" },
+            location: "US",
+            access: ["private"],
+          },
+          { datasetReference: { projectId: "other-project", datasetId: "private_data" } },
+        ],
+        nextPageToken: "private",
+      });
+    },
+  );
+  assert.deepEqual(result.results, [
+    { id: "demo_data", title: "demo_data", url: null, snippet: "US" },
+  ]);
+});
+
+test("HubSpot company search exposes only the selected public-facing CRM fields", async () => {
+  const result = await readConnection("hubspot", "Demo", "fixture", async (target, init) => {
+    assert.equal(target, "https://api.hubapi.com/crm/objects/2026-09/companies/search");
+    assert.equal(init.method, "POST");
+    assert.deepEqual(JSON.parse(init.body), {
+      query: "Demo",
+      properties: ["name", "domain"],
+      limit: 10,
+    });
+    return Response.json({
+      results: [
+        { id: "12", properties: { name: "Demo Co", domain: "example.org", phone: "private" } },
+      ],
+    });
+  });
+  assert.deepEqual(result.results, [
+    { id: "12", title: "Demo Co", url: null, snippet: "example.org" },
+  ]);
+});
+
+test("new connector actions require their own verified grants", () => {
+  for (const id of ["calendly", "google-bigquery", "hubspot"]) {
+    const flow = CONNECTION_FLOWS[id];
+    const account = {
+      provider_id: id,
+      status: "connected",
+      token_expires_at: null,
+      granted_scopes: flow.scopes,
+    };
+    assert.equal(canReadConnection(account, id), true);
+    assert.equal(canReadConnection({ ...account, granted_scopes: [] }, id), false);
+    assert.equal(canReadConnection({ ...account, provider_id: "google" }, id), false);
+    assert.equal(canReadConnection({ ...account, status: "revoked" }, id), false);
+  }
+});
+
+test("Calendly uses PKCE with Basic client auth and HubSpot carries the granted portal and scopes", () => {
+  const request = oauthTokenRequest({
+    providerId: "calendly",
+    clientId: "app",
+    clientSecret: "secret",
+    code: "fixture-code",
+    redirectUri: "https://kovagpt.com/callback",
+    verifier: "fixture-verifier",
+  });
+  assert.equal(
+    request.headers.Authorization,
+    "Basic " + Buffer.from("app:secret").toString("base64"),
+  );
+  assert.equal(request.body.get("code_verifier"), "fixture-verifier");
+  assert.equal(request.body.has("client_secret"), false);
+  const fixture = { access_token: "access", refresh_token: "rotate", expires_in: 1800 };
+  const calendlyUser = "https://api.calendly.com/users/fixture-user";
+  assert.equal(
+    selectRefreshTokens("calendly", { ...fixture, owner: calendlyUser }).provider_account_id,
+    calendlyUser,
+  );
+  assert.throws(
+    () => selectRefreshTokens("calendly", { ...fixture, refresh_token: undefined }),
+    /refresh_token_missing/,
+  );
+  assert.deepEqual(
+    selectRefreshTokens("hubspot", {
+      ...fixture,
+      hub_id: 123,
+      scopes: ["oauth", "crm.objects.companies.read"],
+    }),
+    { ...fixture, provider_account_id: "123", scope: "oauth crm.objects.companies.read" },
+  );
+  const invalid = selectRefreshTokens("hubspot", {
+    ...fixture,
+    hub_id: "unverified",
+    scopes: ["oauth", "crm.objects.companies.read other"],
+    scope: "crm.objects.companies.read",
+  });
+  assert.equal(invalid.scope, undefined);
+  assert.equal(invalid.provider_account_id, undefined);
 });

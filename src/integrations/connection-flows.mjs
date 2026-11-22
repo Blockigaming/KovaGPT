@@ -1,6 +1,38 @@
 // Client-safe descriptions of implemented read operations. Deployment readiness
 // and the user's granted scopes are checked separately on the server.
+export const BIGQUERY_READ_SCOPE = "https://www.googleapis.com/auth/bigquery.readonly";
+
+export function calendlyUserUri(value) {
+  return typeof value === "string" &&
+    /^https:\/\/api\.calendly\.com\/users\/[a-zA-Z0-9_-]{1,128}$/u.test(value)
+    ? value
+    : "";
+}
+
 export const CONNECTION_FLOWS = {
+  calendly: {
+    provider: "calendly",
+    scopes: ["users:read", "scheduled_events:read"],
+    tool: "calendly_search_events",
+    label: "Calendly",
+    description:
+      "Find upcoming active meetings for the connected Calendly user. Search by title or use 'upcoming' to list the next meetings.",
+  },
+  "google-bigquery": {
+    provider: "google-bigquery",
+    scopes: [BIGQUERY_READ_SCOPE],
+    tool: "bigquery_list_datasets",
+    label: "Google Cloud BigQuery",
+    description:
+      "List dataset names and locations visible to the connected Google Cloud account. Supply the exact Google Cloud project ID.",
+  },
+  hubspot: {
+    provider: "hubspot",
+    scopes: ["crm.objects.companies.read"],
+    tool: "hubspot_search_companies",
+    label: "HubSpot",
+    description: "Search names and domains of companies in the connected HubSpot account.",
+  },
   canva: {
     provider: "canva",
     scopes: ["design:meta:read"],
@@ -143,6 +175,9 @@ export function connectionAuthorizationUrl(provider, value) {
     box: "https://account.box.com/api/oauth2/authorize",
     canva: "https://www.canva.com/api/oauth/authorize",
     figma: "https://www.figma.com/oauth",
+    calendly: "https://auth.calendly.com/oauth/authorize",
+    "google-bigquery": "https://accounts.google.com/o/oauth2/v2/auth",
+    hubspot: "https://app.hubspot.com/oauth/authorize",
     microsoft: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     notion: "https://api.notion.com/v1/oauth/authorize",
     linear: "https://linear.app/oauth/authorize",

@@ -9,6 +9,7 @@ import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { oauthTokenRequest, selectOAuthTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
+import { hasConnectionScopes } from "./connection-flows.mjs";
 import { confirmedHealthScopes } from "@/health/health-read.server.mjs";
 import {
   packSalesforceCredential,
@@ -101,6 +102,10 @@ export async function beginOAuth(input: {
     );
   if (provider.id === "microsoft") params.set("response_mode", "query");
   if (loginHint) params.set("login_hint", loginHint);
+  if (provider.id === "google-bigquery") {
+    params.set("access_type", "offline");
+    params.set("prompt", "consent");
+  }
   if (provider.id === "dropbox") params.set("token_access_type", "offline");
   if (provider.id === "notion") params.set("owner", "user");
   if (verifier) {
@@ -170,34 +175,50 @@ export async function completeOAuth(input: {
     provider.id,
     await readProviderJsonObject(tokenResponse, 64_000),
   );
-  if (["oura", "whoop", "box", "canva", "figma"].includes(provider.id) && !tokens.expires_in)
+  const needsExplicitScopes = ["calendly", "google-bigquery", "hubspot"].includes(provider.id);
+  if (
+    (needsExplicitScopes || ["oura", "whoop", "box", "canva", "figma"].includes(provider.id)) &&
+    !tokens.expires_in
+  )
     throw new Error("oauth_token_expiry_missing");
-  if (["box", "canva", "figma"].includes(provider.id) && !tokens.refresh_token)
+  if (
+    (needsExplicitScopes || ["box", "canva", "figma"].includes(provider.id)) &&
+    !tokens.refresh_token
+  )
     throw new Error("oauth_refresh_token_missing");
   if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
     throw new Error("oauth_scope_verification_failed");
+  if (
+    needsExplicitScopes &&
+    (!tokens.scope ||
+      !hasConnectionScopes(
+        tokens.scope.split(/[ ,]+/u),
+        provider.requiredScopes.filter((scope) => scope !== "openid" && scope !== "email"),
+      ))
+  )
+    throw new Error("oauth_scope_verification_failed");
   await assertLockdownAllows(db, record.owner_id, "connector_write");
-  const profileResponse = await fetch(provider.profileEndpoint, {
-    method: ["linear", "slack", "dropbox"].includes(provider.id) ? "POST" : "GET",
-    redirect: "error",
-    signal: AbortSignal.timeout(15_000),
-    headers: {
-      Authorization: `Bearer ${tokens.access_token}`,
-      Accept: "application/json",
-      "User-Agent": "KovaGPT/1.0",
-      ...(provider.id === "notion" ? { "Notion-Version": "2022-06-28" } : {}),
-      ...(provider.id === "linear" ? { "Content-Type": "application/json" } : {}),
-    },
-    body:
-      provider.id === "linear"
-        ? JSON.stringify({ query: "query { viewer { id name email } }" })
-        : undefined,
-  });
-  if (!profileResponse.ok) throw new Error(`oauth_profile_${profileResponse.status}`);
-  const profile = (await readProviderJsonObject(profileResponse, 128_000)) as Record<
-    string,
-    unknown
-  >;
+  let profile: Record<string, unknown> = { verifiedAccountId: tokens.provider_account_id };
+  if (provider.profileEndpoint) {
+    const profileResponse = await fetch(provider.profileEndpoint, {
+      method: ["linear", "slack", "dropbox"].includes(provider.id) ? "POST" : "GET",
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        Accept: "application/json",
+        "User-Agent": "KovaGPT/1.0",
+        ...(provider.id === "notion" ? { "Notion-Version": "2022-06-28" } : {}),
+        ...(provider.id === "linear" ? { "Content-Type": "application/json" } : {}),
+      },
+      body:
+        provider.id === "linear"
+          ? JSON.stringify({ query: "query { viewer { id name email } }" })
+          : undefined,
+    });
+    if (!profileResponse.ok) throw new Error(`oauth_profile_${profileResponse.status}`);
+    profile = await readProviderJsonObject(profileResponse, 128_000);
+  }
   if (
     (provider.id === "slack" && profile.ok !== true) ||
     (provider.id === "linear" && Array.isArray(profile.errors) && profile.errors.length)
@@ -205,6 +226,8 @@ export async function completeOAuth(input: {
     throw new Error("oauth_profile_failed");
   const providerAccountId = provider.profileId(profile);
   if (!providerAccountId) throw new Error("oauth_profile_identity_missing");
+  if (provider.id === "calendly" && tokens.provider_account_id !== providerAccountId)
+    throw new Error("oauth_profile_identity_mismatch");
   const granted = ["oura", "whoop"].includes(provider.id)
     ? await confirmedHealthScopes(
         provider.id,
@@ -301,8 +324,18 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   let providerRevoked = false;
   const canAttemptRevocation =
     Boolean(provider.revocationEndpoint && token) &&
-    ["github", "slack", "linear", "dropbox", "box", "whoop", "salesforce"].includes(provider.id) &&
-    (!["github", "box"].includes(provider.id) || Boolean(clientId && clientSecret));
+    [
+      "github",
+      "slack",
+      "linear",
+      "dropbox",
+      "box",
+      "whoop",
+      "salesforce",
+      "calendly",
+      "google-bigquery",
+    ].includes(provider.id) &&
+    (!["github", "box", "calendly"].includes(provider.id) || Boolean(clientId && clientSecret));
   if (provider.revocationEndpoint && token && canAttemptRevocation) {
     try {
       const endpoint =
@@ -321,7 +354,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
         headers: {
-          ...(!["salesforce", "box"].includes(provider.id)
+          ...(!["salesforce", "box", "calendly", "google-bigquery"].includes(provider.id)
             ? { Authorization: githubAuthorization ?? `Bearer ${token}` }
             : {}),
           "Content-Type":
@@ -332,13 +365,13 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
         body:
           provider.id === "github"
             ? JSON.stringify({ access_token: token })
-            : provider.id === "box"
+            : ["box", "calendly"].includes(provider.id)
               ? new URLSearchParams({
                   token,
                   client_id: clientId!,
                   client_secret: clientSecret!,
                 })
-              : ["linear", "salesforce"].includes(provider.id)
+              : ["linear", "salesforce", "google-bigquery"].includes(provider.id)
                 ? new URLSearchParams({ token })
                 : undefined,
       });
