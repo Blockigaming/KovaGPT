@@ -756,8 +756,10 @@ test("opening and leaving a connector page never starts OAuth; Connect is explic
   await expect(page).toHaveURL(/\/apps\?plugin=gmail$/u);
   await expect(page.getByRole("heading", { level: 1, name: "Gmail" })).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("article")).toContainText("Capabilities and permissions");
-  await expect(page.getByRole("article")).toContainText("Google’s consent screen");
+  await page.getByRole("tab", { name: "Permissions", exact: true }).click();
+  const permissions = page.getByRole("tabpanel", { name: "Permissions", exact: true });
+  await expect(permissions).toContainText("Capabilities and permissions");
+  await expect(permissions).toContainText("Google’s consent screen");
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
   await page.getByRole("button", { name: "Back to Connections" }).click();
   await expect(trigger).toBeFocused();
@@ -885,6 +887,40 @@ test("connector title links, deep links and browser history restore the director
   await boot(page, emptyGoogle, "https://kova-plugins.test/apps?plugin=github");
   await expect(page.getByRole("article", { name: "GitHub" })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+});
+
+test("all connectors have custom overviews and working permissions pages", async ({ page }) => {
+  test.setTimeout(60_000);
+  await boot(page);
+  const descriptions = new Set<string>();
+  const examples = new Set<string>();
+  for (const { id } of MASTER_CONNECTORS) {
+    const row = page.locator(`[data-plugin-id="${id}"]`);
+    await row.getByRole("link").click();
+    await expect(page).toHaveURL(new RegExp(`/apps\\?plugin=${id}$`, "u"));
+    const detail = page.getByRole("article");
+    const overview = detail.getByRole("tabpanel", { name: "Overview", exact: true });
+    const description = await overview.locator(".kova-connection-overview").innerText();
+    const example = await overview.locator(".kova-connection-example p").innerText();
+    expect(description).toBeTruthy();
+    expect(example).toBeTruthy();
+    descriptions.add(description);
+    examples.add(example);
+    await expect(detail.getByText("Developer", { exact: true })).toBeVisible();
+    await expect(detail.getByRole("heading", { name: "Related connections" })).toBeVisible();
+    await detail.getByRole("tab", { name: "Permissions", exact: true }).click();
+    const permissions = detail.getByRole("tabpanel", { name: "Permissions", exact: true });
+    await expect(permissions.getByRole("heading", { name: "Read access" })).toBeVisible();
+    if (["oura", "sp-global", "interactive-brokers"].includes(id))
+      await expect(permissions.getByRole("heading", { name: "Optional write access" })).toHaveCount(
+        0,
+      );
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await detail.getByRole("button", { name: "Back to Connections" }).click();
+  }
+  expect(descriptions.size).toBe(38);
+  expect(examples.size).toBe(38);
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 

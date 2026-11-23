@@ -1050,22 +1050,25 @@
 .kova-connection-hero {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px 16px;
+  gap: 12px 16px;
   align-items: center;
-  padding: clamp(14px, 3vw, 24px);
-  border: 1px solid var(--border);
-  border-radius: var(--kova-radius-panel);
-  background: var(--card);
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--border);
 }
 .kova-connection-hero .spec400-plugin-logo {
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+}
+.kova-connection-hero .spec400-plugin-logo > span {
+  font-size: 18px;
+  font-weight: 650;
+  text-transform: uppercase;
 }
 .kova-connection-hero h1 {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: clamp(23px, 5vw, 32px);
+  font-size: clamp(24px, 5vw, 34px);
   line-height: 1.18;
   font-weight: 650;
 }
@@ -1073,60 +1076,100 @@
   margin-top: 4px;
   color: var(--muted-foreground);
 }
-.kova-connection-hero .spec400-plugin-status {
-  grid-column: 2;
-  justify-self: start;
-}
-.kova-connection-shortcuts {
+.kova-connection-header-actions {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  grid-column: 2;
+  gap: 10px;
 }
-.kova-connection-shortcuts a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 4px 11px;
+.kova-connection-header-actions button {
   border-radius: 999px;
-  color: var(--muted-foreground);
 }
-.kova-connection-shortcuts a:hover {
-  background: var(--muted);
-  color: var(--foreground);
+.kova-connection-tablist[role="tablist"] {
+  display: flex;
+  width: fit-content;
+  height: auto;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+}
+.kova-connection-tablist [role="tab"] {
+  min-height: 34px;
+  border-radius: 999px;
 }
 .kova-connection-layout {
   display: grid;
-  gap: 20px;
+  gap: clamp(20px, 4cqi, 44px);
   align-items: start;
+  margin-top: 22px;
 }
-.kova-connection-account,
-.kova-connection-sidebar {
+.kova-connection-content,
+.kova-connection-sidebar,
+.kova-connection-tab[data-state="active"] {
   display: grid;
   min-width: 0;
-  gap: 16px;
+  gap: 20px;
 }
-.kova-connection-account,
-.kova-connection-info,
-.kova-connection-permissions {
-  padding: clamp(14px, 3vw, 22px);
-  border: 1px solid var(--border);
-  border-radius: var(--kova-radius-panel);
+.kova-connection-tab[data-state="inactive"] {
+  display: none;
 }
-.kova-connection-sidebar section {
-  display: grid;
-  gap: 10px;
-  background: var(--card);
+.kova-connection-tab {
+  margin: 0;
+}
+.kova-connection-overview {
+  max-width: 68ch;
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
-.kova-connection-sidebar p,
-.kova-connection-sidebar .spec400-plugin-permissions {
+.kova-connection-example {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--kova-radius-panel);
+  background: var(--muted);
+}
+.kova-connection-example > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--muted-foreground);
+}
+.kova-connection-example p {
+  margin-top: 3px;
+}
+.kova-connection-account,
+.kova-connection-permissions {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: clamp(14px, 3cqi, 22px);
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+  overflow-wrap: anywhere;
+}
+.kova-connection-info {
+  display: grid;
+  gap: 17px;
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+.kova-connection-info dt,
+.kova-connection-permissions p {
   color: var(--muted-foreground);
   font-size: 14px;
   line-height: 1.5;
+}
+.kova-connection-info dd {
+  margin: 3px 0 0;
+}
+.kova-connection-info dd span {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  font-size: 13px;
 }
 .kova-connection-info a {
   display: inline-flex;
@@ -1134,12 +1177,25 @@
   align-items: center;
   gap: 4px;
   font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .kova-connection-info a svg {
   width: 14px;
 }
+.kova-connection-permissions ul {
+  margin-top: 6px;
+  padding-inline-start: 20px;
+  list-style: disc;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.kova-connection-permissions h3 {
+  font-size: 14px;
+  font-weight: 620;
+}
 .kova-connection-related {
-  padding-top: 16px;
+  padding-top: 20px;
   border-top: 1px solid var(--border);
 }
 .kova-connection-layout h2,
@@ -1147,21 +1203,16 @@
   font-size: 16px;
   font-weight: 640;
 }
-.kova-connection-account,
-.kova-connection-permissions,
-.kova-connection-related {
-  scroll-margin-top: 16px;
-}
 @container (min-width: 585px) {
   .kova-connection-hero {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
-  .kova-connection-hero .spec400-plugin-status {
+  .kova-connection-header-actions {
     grid-column: auto;
   }
 }
 @container (min-width: 750px) {
   .kova-connection-layout {
-    grid-template-columns: minmax(0, 7fr) minmax(250px, 4fr);
+    grid-template-columns: minmax(0, 7fr) minmax(210px, 3fr);
   }
 }
