@@ -42,6 +42,8 @@ import {
   canWriteChatHistory,
   canSendChatHistory,
   markChatHistoryDirty,
+  registerChatHistoryActivity,
+  waitForChatHistoryWriter,
   chatHistoryView,
   chatHistorySnapshot,
   CHAT_HISTORY_CHANGED_EVENT,
@@ -617,6 +619,9 @@ function KovaGPT() {
     flushPendingContent: () => void;
   } | null>(null);
   const inFlightRef = useRef(false);
+  useEffect(() => {
+    if (userKey) return registerChatHistoryActivity(userKey, () => inFlightRef.current);
+  }, [userKey]);
   const [nextPrompt, setNextPrompt] = useState<NextPrompt | null>(null);
   const nextPromptRef = useRef<NextPrompt | null>(null);
   const nextPromptMountedRef = useRef(false);
@@ -3132,12 +3137,36 @@ function KovaGPT() {
         onPluginContextsChange: (value: typeof pluginContexts) =>
           setPluginSelection(value.length ? { owner: userKey, chat: activeId, value } : null),
       };
+  const currentComposerSendRef = useRef(send);
+  currentComposerSendRef.current = send;
+  const submitComposer = async (tool?: ComposerToolId | null) => {
+    if (!userKey || canSendChatHistory(userKey)) return send(input, attachments, tool);
+
+    const scope = nextPromptScopeRef.current;
+    const revision = composerRevisionRef.current;
+    const ready = await waitForChatHistoryWriter(userKey);
+    // The history event also refreshes the conversation used by the send callback.
+    if (ready) await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    if (
+      !nextPromptMountedRef.current ||
+      !sameNextPromptScope(scope, nextPromptScopeRef.current) ||
+      revision !== composerRevisionRef.current
+    )
+      return;
+    if (!ready) {
+      toast.error(
+        "Chat history couldn’t open. Reload or close any older KovaGPT tabs, then try again. Your draft is still here.",
+      );
+      return;
+    }
+    return currentComposerSendRef.current(input, attachments, tool);
+  };
   const composer = (
     <ChatInput
       activityComposerRef={showEmptyChat ? undefined : activityComposerRef}
       value={principalReady ? input : ""}
       onChange={setInput}
-      onSubmit={(tool) => send(input, attachments, tool)}
+      onSubmit={submitComposer}
       onAskAttachment={canAskAboutAttachment ? askAboutAttachment : undefined}
       onStop={stop}
 
@@ -3157,7 +3186,6 @@ function KovaGPT() {
       }
       latestAssistantReply={latestAssistantReply}
       disabled={!principalReady}
-      sendDisabled={!historyReady}
       saveAttachmentsToLibrary={principalReady && !tempChat}
       attachments={principalReady ? attachments : []}
       onAttachmentsChange={setAttachments}

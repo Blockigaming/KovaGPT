@@ -37,6 +37,17 @@ function harness() {
     legacy: { active: [], archived: [] },
     controls: new Map(),
     channel: null,
+    AbortController,
+    AbortSignal,
+    clearTimeout,
+    timer: undefined,
+    handoffTimer: undefined,
+    releaseWriter: undefined,
+    document: { hasFocus: () => true },
+    requestWriter: () => events.push("requested"),
+    onLockError: (error) => {
+      throw error;
+    },
     event: (phase) => events.push(phase),
     readOnlyRefresh: async () => {},
     loadChatHistoryDevice: async () => null,
@@ -88,14 +99,14 @@ test("a blocked tab waits without stealing or writing and resumes on release", a
   await flush();
   assert.equal(h.view.writable, false);
   assert.equal(h.initialized(), 0);
-  assert.deepEqual(h.events, ["other_tab"]);
+  assert.deepEqual(h.events, ["other_tab", "requested"]);
   assert.equal(h.requests.length, 1);
   const request = h.requests[0];
   const owned = request.acquire({ name: "kova-chat-history:owner-a" });
   await flush();
   assert.equal(h.initialized(), 1);
   assert.equal(h.view.writable, true);
-  assert.deepEqual(h.events, ["other_tab", "connecting"]);
+  assert.deepEqual(h.events, ["other_tab", "requested", "connecting"]);
   h.lifetime.abort();
   await owned;
   request.resolve();
@@ -174,4 +185,25 @@ test("cancelled initialization cannot restore a stopped owner's writable state",
   await owned;
   assert.equal(h.view.writable, false);
   assert.deepEqual(h.events, ["connecting"]);
+});
+
+test("a live writer yields and rejoins behind the requesting tab", async () => {
+  const h = harness();
+  const owned = h.acquire({ name: "kova-chat-history:owner-a" });
+  await flush();
+  assert.equal(h.view.writable, true);
+  const writer = h.context.controller;
+  h.context.releaseWriter();
+  assert.equal(h.view.writable, false);
+  await owned;
+  assert.notEqual(h.context.controller, writer);
+  assert.equal(h.context.controls.size, 0);
+  assert.equal(h.requests.length, 1);
+  const nextOwner = h.requests[0].acquire({ name: "kova-chat-history:owner-a" });
+  await flush();
+  assert.equal(h.view.writable, true);
+  assert.equal(h.initialized(), 2);
+  h.lifetime.abort();
+  await nextOwner;
+  h.requests[0].resolve();
 });
