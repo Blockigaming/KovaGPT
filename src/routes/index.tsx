@@ -1039,15 +1039,16 @@ function KovaGPT() {
   // schedule a write that can overwrite a newer preference from another tab.
   useEffect(() => {
     if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
-    const generation = storageGenerationRef.current;
-    const t = setTimeout(() => {
-      if (generation !== storageGenerationRef.current) return;
-      safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
+    const storage = safeBrowserStorage("localStorage");
+    try {
+      if (!storage) throw new Error("settings_storage_unavailable");
+      storage.setItem(settingsKey(userKey), JSON.stringify(settings));
       window.dispatchEvent(
         new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
       );
-    }, 400);
-    return () => clearTimeout(t);
+    } catch {
+      toast.error("Preferences could not be saved on this device.", { id: "settings-storage" });
+    }
   }, [settings, settingsReady, settingsState.persist, userKey]);
 
   useEffect(() => {

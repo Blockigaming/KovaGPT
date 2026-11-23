@@ -91,7 +91,7 @@ function fixture() {
   const surface = target("Settings dialog");
   const state = {
     activeModal: null,
-    account: null,
+    accounts: [],
     menu,
     toggleSidebar: null,
     openSidebar: null,
@@ -100,9 +100,12 @@ function fixture() {
     focusRequest: 0,
   };
   document.activeElement = opener;
+  document.querySelectorAll = (selector) => {
+    assert.equal(selector, '[aria-label="Account menu"]');
+    return state.accounts;
+  };
   document.querySelector = (selector) => {
     if (selector === '[aria-label="Open menu"]') return state.menu;
-    if (selector === '[aria-label="Account menu"]') return state.account;
     if (selector === '[aria-label="Toggle sidebar"]') return state.toggleSidebar;
     if (selector === '[aria-label="Open sidebar"]') return state.openSidebar;
     assert.equal(selector, '[aria-modal="true"]:not([data-state="closed"]), dialog[open]');
@@ -304,7 +307,9 @@ test("each opening captures its current invoker and URL, including callers witho
 test("desktop Settings restores the Account menu after its opening item unmounts", () => {
   const f = fixture();
   const account = f.target("Account menu");
-  f.state.account = account;
+  const hiddenRail = f.target("Collapsed account menu");
+  hiddenRail.hasLayout = false;
+  f.state.accounts = [hiddenRail, account];
   f.state.menu = null;
   f.open();
   f.opener.isConnected = false;
@@ -317,7 +322,7 @@ test("an unavailable desktop Account menu obeys the existing mobile fallback gua
   for (const property of ["isConnected", "hasLayout", "acceptsFocus"]) {
     const f = fixture();
     const account = f.target("Account menu");
-    f.state.account = account;
+    f.state.accounts = [account];
     account[property] = false;
     f.open();
     f.opener.isConnected = false;
@@ -343,10 +348,11 @@ test("Images Settings restores its visible Toggle sidebar after the mobile drawe
 test("known sidebar fallbacks retain Account, Open menu, Toggle sidebar, Open sidebar order", () => {
   for (const expected of ["Account menu", "Open menu", "Toggle sidebar", "Open sidebar"]) {
     const f = fixture();
-    f.state.account = f.target("Account menu");
+    const account = f.target("Account menu");
+    f.state.accounts = [account];
     f.state.toggleSidebar = f.target("Toggle sidebar");
     f.state.openSidebar = f.target("Open sidebar");
-    const fallbacks = [f.state.account, f.state.menu, f.state.toggleSidebar, f.state.openSidebar];
+    const fallbacks = [account, f.state.menu, f.state.toggleSidebar, f.state.openSidebar];
     for (const target of fallbacks.slice(
       0,
       fallbacks.findIndex((item) => item.name === expected),

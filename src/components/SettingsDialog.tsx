@@ -1316,12 +1316,12 @@ export function SettingsDialog({
             target.focus({ preventScroll: true });
             return document.activeElement === target;
           };
-          // A desktop menu item unmounts when Settings opens; its account
-          // trigger remains available. A closed mobile drawer instead restores
-          // its visible menu opener. Both fallbacks use the same focus guards.
+          // The sidebar can mount both account triggers. Skip the hidden one.
           if (
             !restore(previous) &&
-            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]')) &&
+            !Array.from(document.querySelectorAll<HTMLElement>('[aria-label="Account menu"]')).some(
+              restore,
+            ) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]')) &&
             !restore(document.querySelector<HTMLElement>('[aria-label="Toggle sidebar"]'))
           )
