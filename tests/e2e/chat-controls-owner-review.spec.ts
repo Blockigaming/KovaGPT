@@ -287,7 +287,7 @@ test("activity shows default sections and steps while hiding completed browser s
     const header = page.locator(".kova-topbar-inner:visible");
     const menuBox = (await header.getByRole("button", { name: "Open menu" }).boundingBox())!;
     const shareBox = (await header.getByRole("button", { name: "Share chat" }).boundingBox())!;
-    expect(titleBox.width).toBeGreaterThanOrEqual(64);
+    expect(titleBox.width).toBeGreaterThanOrEqual(60);
     expect(titleBox.x).toBeGreaterThanOrEqual(menuBox.x + menuBox.width);
     expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(shareBox.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

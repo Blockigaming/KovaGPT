@@ -31,6 +31,7 @@ for (const theme of ["dark", "light"] as const) {
         );
         const radius = await page
           .locator(".spec400-plugin-tabs")
+          .first()
           .evaluate((el) => parseFloat(getComputedStyle(el).borderRadius));
         expect(radius).toBeGreaterThanOrEqual(12);
       }
